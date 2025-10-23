@@ -1,0 +1,294 @@
+body {
+    font-family: "Figtree", sans-serif;
+}
+
+h1, h2 {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    color: #800000;
+    margin-bottom: 20px; 
+}
+
+.assign-form {
+    width: 95%;
+    max-width: 1200px;
+    margin: 0 auto 20px auto;
+    padding: 20px;
+    border: 1px solid #800000;
+    border-radius: 35px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.assign-form label {
+    display: block;
+    font-weight: bold;
+    color: maroon;
+    font-size: 15px;
+    margin-bottom: 5px;
+}
+
+.assign-form input, .assign-form select,
+input[type="text"],
+input[type="email"],
+select[multiple] {
+    width: 100%;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    margin-bottom: 10px;
+}
+
+.assign-form input:focus, .assign-form select:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+select[multiple]:focus {
+    border-color: maroon;
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff;
+}
+
+.assign-form button {
+    display: block;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
+    color: #fff;
+    background-color: #800000;
+    border: none;
+    border-radius: 35px;
+    cursor: pointer;
+    width: 20%;
+    box-sizing: border-box;
+    margin: 10px auto;
+}
+
+.assign-form button:hover {
+    background-color: #a52a2a;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.alert-success {
+    background-color: #dff0d8;
+    color: #3c763d;
+    padding: 10px; 
+    margin-bottom: 15px;
+    border: 1px solid #d6e9c6;
+    border-radius: 3px;
+}
+
+table {
+    width: 95%; 
+    max-width: 1200px; 
+    margin: 20px auto;
+    border-collapse: collapse;
+    background-color: #fff;
+    border: 1px solid maroon;
+    border-radius: 35px;
+}
+
+table th, table td {
+    border: 1px solid maroon;
+    padding: 12px;
+    text-align: left;
+}
+
+table th {
+    background-color: maroon;
+    color: white;
+}
+
+table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table tr:hover {
+    background-color: #f1f1f1;
+}
+
+table td {
+    color: #555;
+}
+
+table th {
+    font-weight: bold;
+}
+
+p {
+    text-align: center;
+    border-radius: 35px;
+}
+
+.action-container {
+    display: flex;
+    flex-direction: column; 
+    align-items: center; 
+    gap: 5px; 
+}
+
+.action-button {
+    padding: 8px 12px;
+    border-radius: 5px;
+    text-align: center;
+    cursor: pointer;
+    gap: 10px; 
+    width: 40px; 
+    height: 40px; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.edit-button {
+    background-color: #FFDF00; 
+    color: #800000;
+    border: none;
+}
+
+.delete-button {
+    background-color: transparent; 
+    color: #800000; 
+    border: none;
+}
+
+.edit-button i, .delete-button i {
+    font-size: 16px;
+}
+
+.edit-button:hover {
+    background-color: #990000;
+    color: white;
+}
+
+.delete-button:hover {
+    background-color: #990000;
+    color: white;
+}
+/* Styles for Delete Confirmation Dialog */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.cancel-button,
+.delete-button {
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.cancel-button {
+    background-color: #ddd;
+    color: #333;
+}
+
+.delete-button {
+    background-color: #800000;
+    color: #fff;
+}
+
+.cancel-button:hover {
+    background-color: #b0b0b0;
+}
+
+.delete-button:hover {
+    background-color: #660000;
+}
+/* Snackbar styles */
+.snackbar {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    padding: 16px;
+    border-radius: 4px;
+    font-size: 16px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s, visibility 0.5s;
+}
+
+.snackbar.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.add-snackbar {
+    background-color: #28a745;
+}
+
+.delete-snackbar {
+    background-color: #800000;
+}
+
+/* Position the container relative so the tooltip can be positioned inside it */
+.action-container, .action-container2 {
+    position: relative;
+    display: inline-block;
+}
+
+/* Tooltip text - hidden by default */
+.tooltiptext {
+    visibility: hidden;
+    width: 100px; /* Smaller width */
+    background-color: #800000;
+    color: #f8f6f6;
+    text-align: center;
+    border-radius: 20px; /* Smaller radius for a more compact look */
+    padding: 5px 8px; /* Reduced padding for a smaller tooltip */
+    position: absolute;
+    z-index: 1;
+    bottom: 125%; /* Position the tooltip above the button */
+    left: 50%;
+    transform: translateX(-50%); /* Center the tooltip horizontally */
+    opacity: 0;
+    transition: opacity 0.3s, visibility 0s linear 0.3s; /* Smooth transition for both visibility and opacity */
+    font-weight: bold;
+    font-size: 12px;
+}
+
+/* Show the tooltip when hovering over the button (or link) */
+.action-container:hover .tooltiptext,
+.action-container2:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s; /* Show instantly when hovering */
+}

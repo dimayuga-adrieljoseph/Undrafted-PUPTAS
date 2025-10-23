@@ -1,0 +1,142 @@
+body {
+    font-family: "Figtree", sans-serif;
+}
+
+h1, h2 {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    color: #800000;
+    margin-bottom: 20px; 
+}
+
+form {
+    width: 95%; 
+    max-width: 1200px; 
+    margin: 0 auto 20px auto; 
+    padding: 20px; 
+    border: 1px solid #800000;;
+    border-radius: 35px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px; 
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+form label {
+    display: block;
+    font-weight: bold;
+    color: maroon;
+    font-size: 15px;
+    margin-bottom: 5px; 
+}
+
+form input, form select,
+input[type="text"],
+input[type="email"],
+select[multiple] {
+    width: 100%;
+    padding: 10px;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    margin-bottom: 10px;
+}
+
+form input:focus, form select:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+select[multiple]:focus {
+    border-color: maroon;
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff;
+}
+
+form button {
+    display: block;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: bold;
+    text-align: center;
+    text-decoration: none;
+    color: #fff;
+    background-color: #800000;
+    border: none;
+    border-radius: 35px;
+    cursor: pointer;
+    width: 20%;
+    box-sizing: border-box;
+    margin: 10px auto; 
+}
+
+form button:hover {
+    background-color: #a52a2a;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); 
+}
+
+.text-danger {
+    color: red;
+}
+
+.alert-success {
+    background-color: #dff0d8;
+    color: #3c763d;
+    padding: 10px; 
+    margin-bottom: 15px;
+    border: 1px solid #d6e9c6;
+    border-radius: 3px;
+}
+
+table {
+    width: 95%; 
+    max-width: 1200px; 
+    margin: 20px auto;
+    border-collapse: collapse;
+    background-color: #fff;
+    border: 1px solid maroon;
+    border-radius: 35px;
+}
+
+table th, table td {
+    border: 1px solid maroon;
+    padding: 12px;
+    text-align: left;
+}
+
+table th {
+    background-color: maroon;
+    color: white;
+}
+
+table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table tr:hover {
+    background-color: #f1f1f1;
+}
+
+table td {
+    color: #555;
+}
+
+table th {
+    font-weight: bold;
+}
+
+p {
+    text-align: center;
+    color: maroon;
+    font-weight: bold;
+}
