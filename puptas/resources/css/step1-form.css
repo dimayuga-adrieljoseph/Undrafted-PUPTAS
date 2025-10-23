@@ -1,0 +1,93 @@
+/* Apply to the body */
+body {
+    background-image:
+      linear-gradient(270deg, rgba(247, 46, 46, 0.941), rgba(255, 136, 25, 0.338), rgba(255, 215, 156, 0.695)),
+      url('/assets/images/5.jpg');
+    background-size: 300% 300%, cover;
+    background-position: 0% 50%, center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    min-height: 100vh;
+    /* animation: moveBackground 10s ease-in-out infinite; */
+  }
+  
+  /* Gradient movement for background */
+  /* @keyframes moveBackground {
+    0% {
+      background-position: 0% 50%, center;
+    }
+    100% {
+      background-position: 100% 50%, center;
+    }
+  }
+   */
+  /* Optional: Ensure forms and logos are unaffected */
+  .authentication-card {
+    position: relative;
+    z-index: 1; /* Keep it above the background */
+  }
+  
+  .authentication-logo {
+    z-index: 2; /* Ensure logo stays on top */
+  }
+  
+  .gradient-flowing-text {
+    background: linear-gradient(90deg, rgba(128, 0, 0, 0.799), rgba(28, 28, 28, 0.902), rgba(211, 0, 0, 0.68));
+    background-size: 200% 100%;
+    background-clip: text;
+    color: transparent;
+    -webkit-background-clip: text;
+    animation: gradientFlow 5s ease-in-out infinite;
+  }
+  
+  /* Keyframes for the flowing gradient animation */
+  @keyframes gradientFlow {
+    0% {
+        background-position: 100% 0;
+      }
+      25% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 100%;
+      }
+      75% {
+        background-position: 0% 50%;
+      }
+      100% {
+        background-position: 100% 0;
+      }
+  }
+
+
+
+  
+/* Global Styles for Two-Column Form Layout */
+.two-column-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two equal columns */
+    gap: 24px; /* Gap between columns */
+    margin-top: 20px;
+  }
+  
+  /* Ensure labels and inputs are aligned correctly */
+  .two-column-form div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Space between label and input */
+  }
+  
+  /* Add extra styling to make it clear which columns they belong to */
+  .two-column-form .column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  /* Visual indicator for mobile - Stack the fields */
+  @media (max-width: 768px) {
+    .two-column-form {
+      grid-template-columns: 1fr; /* Stack in a single column */
+    }
+  }
+  

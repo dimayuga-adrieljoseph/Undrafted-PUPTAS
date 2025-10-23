@@ -1,0 +1,61 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+
+class UserSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        DB::table('users')->insert([
+            [
+                'firstname' => 'John',
+                'middlename' => 'A',
+                'lastname' => 'Doe',
+                'birthday' => '2000-05-30',
+                'sex' => 'Male',
+                'contactnumber' => '09123456789',
+                'address' => 'Block 123',
+                'email' => 'admin@gmail.com',
+                'password' => Hash::make('Admin.1234'),
+                'role_id' => 2, // Admin
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'firstname' => 'Jane',
+                'middlename' => 'B',
+                'lastname' => 'Smith',
+                'birthday' => '2001-06-10',
+                'sex' => 'Female',
+                'contactnumber' => '09129876543',
+                'address' => 'Street 456',
+                'email' => 'evaluator@gmail.com',
+                'password' => Hash::make('Evaluator.1234'),
+                'role_id' => 3, // Evaluator
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'firstname' => 'Mark',
+                'middlename' => 'C',
+                'lastname' => 'Reyes',
+                'birthday' => '1999-09-15',
+                'sex' => 'Male',
+                'contactnumber' => '09125557777',
+                'address' => 'Street 789',
+                'email' => 'interviewer@gmail.com',
+                'password' => Hash::make('Interviewer.1234'),
+                'role_id' => 4, // Interviewer
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+    }
+}
