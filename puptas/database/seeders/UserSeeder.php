@@ -15,15 +15,15 @@ class UserSeeder extends Seeder
     {
         DB::table('users')->insert([
             [
-                'firstname' => 'John',
-                'middlename' => 'A',
-                'lastname' => 'Doe',
-                'birthday' => '2000-05-30',
+                'firstname' => 'Adriel Joseph',
+                'middlename' => 'I',
+                'lastname' => 'Dimayuga',
+                'birthday' => '2003-09-13',
                 'sex' => 'Male',
                 'contactnumber' => '09123456789',
                 'address' => 'Block 123',
-                'email' => 'admin@gmail.com',
-                'password' => Hash::make('Admin.1234'),
+                'email' => 'dimayuga.adrieljoseph03@gmail.com',
+                'password' => Hash::make('12345678'),
                 'role_id' => 2, // Admin
                 'created_at' => now(),
                 'updated_at' => now(),

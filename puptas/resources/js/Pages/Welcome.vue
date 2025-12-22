@@ -43,7 +43,7 @@ const isHoveringIcon = ref(false);
     <div class="absolute right-10 top-1/4 flex flex-col items-center justify-center space-y-4 w-[250px] h-[450px] px-8 py-10 shadow-lg rounded-2xl border-1 border-[#9E122C]">
       <!-- Registration Section -->
       <div class="text-center">
-        <h2 class="text-xl font-semibold text-gray-700">Create your account</h2>
+        <h2 class="text-xl font-semibold text-[#9E122C]">Create your account</h2>
         <p class="text-gray-600 mt-2 text-sm">Start your application by creating an account.</p>
       </div>
 
