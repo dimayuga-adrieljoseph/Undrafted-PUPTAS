@@ -427,27 +427,6 @@ onMounted(() => {
           </template> -->
 
                     <li>
-                        <NavLink
-                            :href="route('add_user_vue')"
-                            :active="isManageActive"
-                            class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
-                            :class="{
-                                'active-link': isManageActive,
-                                'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                            }"
-                        >
-                            <div class="w-6 flex justify-center">
-                                <FontAwesomeIcon
-                                    icon="user-group"
-                                    class="text-xl"
-                                />
-                            </div>
-                            <span v-if="isSidebarOpen" class="whitespace-nowrap"
-                                >Manage Users</span
-                            >
-                        </NavLink>
-                    </li>
-                    <li>
                         <div
                             @click="
                                 isMaintenanceDropdownOpen =
