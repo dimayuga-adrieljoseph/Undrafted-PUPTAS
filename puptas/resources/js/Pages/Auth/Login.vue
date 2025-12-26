@@ -45,13 +45,7 @@ const submit = () => {
 
         <div
             class="absolute right-0 top-0 h-full w-full md:w-[30%] z-10 flex justify-center items-center px-6 sm:px-10 p-6 transition-all"
-            style="
-                background: linear-gradient(
-                    to bottom right,
-                    rgba(253, 186, 116, 0.7),
-                    rgba(239, 68, 68, 0.7)
-                );
-            "
+            style=" background: rgba(139, 0, 0, 0.7); "
         >
             <div class="w-full max-w-md">
                 <!-- bg-white/25 rounded-lg shadow-lg p-8 md:p-10 -->
@@ -61,17 +55,17 @@ const submit = () => {
                 </div>
 
                 <!-- Heading -->
-                <h2 class="text-2xl font-bold text-center text-[#800000] mb-6">
+                <h2 class="text-2xl font-bold text-center text-[white] mb-6">
                     Log In
                 </h2>
 
                 <!-- Status Message -->
-                <div
+                <!-- <div
                     v-if="status"
-                    class="mb-4 font-medium text-sm text-green-600 dark:text-green-400"
+                    class="mb-4 font-medium text-sm text-green-600"
                 >
                     {{ status }}
-                </div>
+                </div> -->
 
                 <!-- Login Form -->
                 <form @submit.prevent="submit" class="space-y-4 relative">
@@ -207,7 +201,7 @@ const submit = () => {
                             class="border-[#800000] focus:ring-[#800000]"
                             :disabled="form.processing"
                         />
-                        <span class="ms-2 text-sm text-[#800000]"
+                        <span class="ms-2 text-sm text-[white]"
                             >Remember me</span
                         >
                     </div>
@@ -223,7 +217,7 @@ const submit = () => {
                         </Link>
 
                         <PrimaryButton
-                            class="w-full py-3 bg-[#800000] text-white font-bold rounded-md hover:bg-[#a30000] transition flex items-center justify-center"
+                            class="w-full py-3 bg-[#FFD700] text-white font-bold rounded-md hover:bg-[#FFC31B] transition flex items-center justify-center"
                             :class="{
                                 'opacity-25 cursor-not-allowed':
                                     form.processing,
@@ -237,10 +231,10 @@ const submit = () => {
 
                 <!-- Register Link -->
                 <div class="mt-4 text-center">
-                    <span class="text-sm text-[#800000]">No account yet?</span>
+                    <span class="text-sm text-[white]">No account yet?</span>
                     <Link
                         :href="route('register')"
-                        class="ml-1 text-sm font-semibold text-[#DC3545] hover:text-[#800000] underline"
+                        class="ml-1 text-sm font-semibold text-[#FFD700] hover:text-[#FFC31B] underline"
                     >
                         Sign up now.
                     </Link>

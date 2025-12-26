@@ -472,12 +472,12 @@ const submit = async () => {
     <AuthenticationCard wide>
         <template #logo>
             <div class="flex items-center space-x-4">
-                <AuthenticationCardLogo />
-                <h1
-                    class="text-5xl font-black bg-gradient-to-r from-[rgba(128,0,0,0.7)] via-black to-orange-500 bg-clip-text text-transparent tracking-wide gradient-flowing-text"
-                >
-                    PUPT ADMISSION SYSTEM
-                </h1>
+            <AuthenticationCardLogo />
+            <h1
+                class="text-5xl font-black text-[#8B0000]"
+            >
+                PUPT ADMISSION SYSTEM
+            </h1>
             </div>
         </template>
 
