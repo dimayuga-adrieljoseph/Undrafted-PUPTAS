@@ -1,7 +1,7 @@
 <template>
     <AppLayout>
         <iframe
-            src="/legacy/add-user"
+            src="/legacy/manage-users"
             class="w-full h-screen border-0"
         ></iframe>
     </AppLayout>
