@@ -11,7 +11,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Run ProgramSeeder first if users depend on programs
+        // Seed reference data first, then users (custom users table has no `name` column)
         $this->call([
             ProgramSeeder::class,
             UserSeeder::class,
