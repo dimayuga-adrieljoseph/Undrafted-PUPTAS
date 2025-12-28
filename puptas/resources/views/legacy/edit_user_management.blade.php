@@ -76,12 +76,6 @@
                             <input id="middlename" class="form-input" type="text" name="middlename" 
                                    value="{{ old('middlename', $user->middlename) }}" autocomplete="middlename" />
                         </div>
-
-                        <div class="form-group half-width">
-                            <label for="extension_name">Extension Name</label>
-                            <input id="extension_name" class="form-input" type="text" name="extension_name" 
-                                   value="{{ old('extension_name', $user->extension_name) }}" autocomplete="extension_name" />
-                        </div>
                     </div>
 
                     <div class="form-row">
@@ -114,7 +108,13 @@
                                    autocomplete="new-password" 
                                    pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}" />
                             <span class="form-error" id="password-error"></span>
-                            <small style="color: #666;">Min 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character</small>
+                            <small style="color: #666; display: block; margin-top: 5px;">
+                                <strong>Password Requirements:</strong><br>
+                                • At least 8 characters<br>
+                                • One uppercase letter (A-Z)<br>
+                                • One lowercase letter (a-z)<br>
+                                • One number (0-9)<br>
+                            </small>
                         </div>
 
                         <div class="form-group half-width">

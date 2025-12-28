@@ -50,7 +50,6 @@ class UserController extends Controller
             'firstname' => ['required', 'string', 'max:255'],
             'lastname' => ['required', 'string', 'max:255'],
             'middlename' => ['nullable', 'string', 'max:255'],
-            'extension_name' => ['nullable', 'string', 'max:255'],
             'role_id' => ['required', Rule::in([1, 2, 3, 4, 5, 6])],
             'program' => ['nullable', 'string', Rule::requiredIf($request->role_id == 1)],
 
@@ -68,7 +67,6 @@ class UserController extends Controller
             'firstname' => $request->firstname,
             'lastname' => $request->lastname,
             'middlename' => $request->middlename,
-            'extension_name' => $request->extension_name,
             'program' => $request->role_id == 1 ? $request->program : null,
             
             'email' => $request->email,
@@ -139,7 +137,6 @@ class UserController extends Controller
             'firstname' => ['required', 'string', 'max:255'],
             'lastname' => ['required', 'string', 'max:255'],
             'middlename' => ['nullable', 'string', 'max:255'],
-            'extension_name' => ['nullable', 'string', 'max:255'],
             'role_id' => ['required', Rule::in([1, 2, 3, 4, 5, 6])],
             'program' => ['nullable', 'string'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
@@ -155,7 +152,6 @@ class UserController extends Controller
         $user->firstname = $request->firstname;
         $user->lastname = $request->lastname;
         $user->middlename = $request->middlename;
-        $user->extension_name = $request->extension_name;
         $user->program = $request->role_id == 1 ? $request->program : null;
         $user->email = $request->email;
         $user->contactnumber = $request->contactnumber;

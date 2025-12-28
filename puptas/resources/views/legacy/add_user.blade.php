@@ -125,6 +125,13 @@
                         <label for="password">Password <span class="required">*</span></label>
                         <input id="password" class="form-input" type="password" name="password" required autocomplete="new-password" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}" />
                         <span class="form-error" id="password-error"></span>
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            <strong>Password Requirements:</strong><br>
+                            • At least 8 characters<br>
+                            • One uppercase letter (A-Z)<br>
+                            • One lowercase letter (a-z)<br>
+                            • One number (0-9)<br>
+                        </small>
                     </div>
 
                     <div class="form-group half-width">
