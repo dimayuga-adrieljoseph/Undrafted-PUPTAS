@@ -292,6 +292,12 @@ Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::cla
 
 use App\Http\Controllers\UserController;
 
+// User Management Routes
+Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.index');
+Route::get('/legacy/users/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
+Route::post('/legacy/users/{id}/update', [UserController::class, 'update'])->name('users.update');
+Route::delete('/legacy/users/{id}/delete', [UserController::class, 'destroy'])->name('users.destroy');
+
 // show form
 Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
 
