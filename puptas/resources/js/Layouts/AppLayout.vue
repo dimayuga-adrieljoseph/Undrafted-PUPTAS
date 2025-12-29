@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted, computed } from "vue";
+import { ref, watch, onMounted, onUnmounted, computed } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
 import ApplicationMark from "@/Components/ApplicationMark.vue";
 import DropdownLink from "@/Components/DropdownLink.vue";
@@ -45,20 +45,43 @@ const page = usePage();
 const { isLoading, start, finish } = useGlobalLoading();
 
 const user = computed(() => page.props.auth.user);
-const jetstream = computed(() => page.props.jetstream);
-const currentTeam = computed(() => user.value.current_team);
-const allTeams = computed(() => user.value.all_teams || []);
+// const jetstream = computed(() => page.props.jetstream);
+// const currentTeam = computed(() => user.value.current_team);
+// const allTeams = computed(() => user.value.all_teams || []);
 
-const isSidebarOpen = ref(true);
 const isTeamMenuOpen = ref(false);
 const isUserMenuOpen = ref(false);
 const isPasserDropdownOpen = ref(false);
 const isScheduleMenuOpen = ref(false);
 const isMaintenanceDropdownOpen = ref(false);
 
-const toggleSidebar = () => {
-    isSidebarOpen.value = !isSidebarOpen.value;
+const isSidebarOpen = ref(false);
+const isSidebarPinned = ref(false);
+
+const onSidebarEnter = () => {
+    isSidebarOpen.value = true;
 };
+
+const onSidebarLeave = () => {
+    if (!isSidebarPinned.value) {
+        isSidebarOpen.value = false;
+    }
+};
+
+const sidebarRef = ref(null);
+const onSidebarClick = () => {
+    isSidebarPinned.value = true;
+    isSidebarOpen.value = true;
+};
+const onClickOutside = (event) => {
+    if (!isSidebarPinned.value) return;
+
+    if (sidebarRef.value && !sidebarRef.value.contains(event.target)) {
+        isSidebarPinned.value = false;
+        isSidebarOpen.value = false;
+    }
+};
+
 
 const isActiveRoute = (routeName) => route().current(routeName);
 const isListPassersActive = computed(() => isActiveRoute("lists"));
@@ -96,17 +119,17 @@ const toggleMenu = (menu) => {
     }
 };
 
-const switchToTeam = (team) => {
-    router
-        .put(
-            route("current-team.update"),
-            { team_id: team.id },
-            { preserveState: false }
-        )
-        .then(() => {
-            isTeamMenuOpen.value = true;
-        });
-};
+// const switchToTeam = (team) => {
+//     router
+//         .put(
+//             route("current-team.update"),
+//             { team_id: team.id },
+//             { preserveState: false }
+//         )
+//         .then(() => {
+//             isTeamMenuOpen.value = true;
+//         });
+// };
 
 watch(
     () => page.props.url,
@@ -136,6 +159,7 @@ const logout = () => {
 let listenersRegistered = false;
 
 onMounted(() => {
+    document.addEventListener("click", onClickOutside);
     if (!listenersRegistered) {
         router.on("start", start);
         router.on("finish", finish);
@@ -146,6 +170,10 @@ onMounted(() => {
     const saved = localStorage.getItem("darkMode") === "true";
     isDarkMode.value = saved;
     document.documentElement.classList.toggle("dark", saved);
+});
+
+onUnmounted(() => {
+    document.removeEventListener("click", onClickOutside);
 });
 
 function toggleDarkMode() {
@@ -166,11 +194,16 @@ onMounted(() => {
     <div class="flex min-h-screen bg-[#FCECDF]">
         <!-- Sidebar -->
         <div
+            ref="sidebarRef"
+            @mouseenter="onSidebarEnter"
+            @mouseleave="onSidebarLeave"
+            @click.stop="onSidebarClick"
             :class="[
                 'sidebar relative overflow-hidden text-white shadow-md transition-all duration-300 ease-in-out',
                 isSidebarOpen ? 'w-72 p-6' : 'w-20 p-4',
             ]"
         >
+
             <div class="mb-10 flex items-center justify-center">
                 <Link :href="route('dashboard')">
                     <ApplicationMark
@@ -178,15 +211,6 @@ onMounted(() => {
                         class="block h-10 w-auto"
                     />
                 </Link>
-                <button
-                    @click="toggleSidebar"
-                    class="text-white focus:outline-none"
-                >
-                    <FontAwesomeIcon
-                        :icon="isSidebarOpen ? 'arrow-left' : 'bars'"
-                        class="text-2xl p-4 transform transition-transform duration-300 ease-in-out"
-                    />
-                </button>
             </div>
 
             <nav>
@@ -195,7 +219,7 @@ onMounted(() => {
                         <NavLink
                             :href="route('dashboard')"
                             :active="isDashboardActive"
-                            class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
+                            class="block w-full rounded-lg transition hover:bg-[#FFD700]"
                             :class="{
                                 'active-link': isDashboardActive,
                                 'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
@@ -215,10 +239,8 @@ onMounted(() => {
 
                     <li>
                         <div
-                            @click="
-                                isPasserDropdownOpen = !isPasserDropdownOpen
-                            "
-                            class="block cursor-pointer rounded-lg transition hover:bg-[#FBCB77] hover:text-[#9E122C]"
+                            @click="isSidebarOpen && (isPasserDropdownOpen = !isPasserDropdownOpen)"
+                            class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]"
                             :class="{
                                 'active-link':
                                     isPasserDropdownOpen ||
@@ -257,7 +279,7 @@ onMounted(() => {
                             >
                                 <NavLink
                                     :href="route('upload.form')"
-                                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FBCB77]"
+                                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]"
                                     :class="{
                                         'active-link': isUploadFormActive,
                                     }"
@@ -267,7 +289,7 @@ onMounted(() => {
 
                                 <NavLink
                                     :href="route('lists')"
-                                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FBCB77]"
+                                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]"
                                     :class="{
                                         'active-link': isListPassersActive,
                                     }"
@@ -282,7 +304,7 @@ onMounted(() => {
                         <NavLink
                             :href="route('applications')"
                             :active="isApplicationsActive"
-                            class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
+                            class="block w-full rounded-lg transition hover:bg-[#FFD700]"
                             :class="{
                                 'active-link': isApplicationsActive,
                                 'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
@@ -304,7 +326,7 @@ onMounted(() => {
                         <NavLink
                             :href="route('schedules.index')"
                             :active="isScheduleActive"
-                            class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
+                            class="block w-full rounded-lg transition hover:bg-[#FFD700]"
                             :class="{
                                 'active-link': isScheduleActive,
                                 'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
@@ -326,7 +348,7 @@ onMounted(() => {
                         <NavLink
                             :href="route('programs.index')"
                             :active="isProgramsActive"
-                            class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
+                            class="block w-full rounded-lg transition hover:bg-[#FFD700]"
                             :class="{
                                 'active-link': isProgramsActive,
                                 'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
@@ -344,95 +366,31 @@ onMounted(() => {
                         </NavLink>
                     </li>
 
-                    <!-- <template v-if="jetstream.hasTeamFeatures">
-            <li>
-              <div
-                @click="toggleMenu('team')"
-                class="block cursor-pointer rounded-lg transition hover:bg-[#FBCB77] hover:text-[#9E122C]"
-                :class="{
-                  'active-link': isTeamMenuOpen || isTeamsActive,
-                  'flex items-center justify-between py-3 px-4 text-lg font-semibold': true,
-                }"
-              >
-                <div class="flex items-center space-x-3">
-                  <div class="w-6 flex justify-center">
-                    <FontAwesomeIcon icon="users" class="text-xl" />
-                  </div>
-                  <span v-if="isSidebarOpen" class="whitespace-nowrap">
-                    Team Management
-                    <p class="text-sm ml-9">({{ currentTeam?.name ?? '' }})</p>
-                  </span>
-                </div>
-                <FontAwesomeIcon
-                  :icon="isTeamMenuOpen ? 'caret-down' : 'caret-right'"
-                />
-              </div>
-              <transition name="slide-fade">
-                <div
-                  v-show="isTeamMenuOpen && isSidebarOpen"
-                  class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2"
-                >
-                  <DropdownLink
-                    :href="route('teams.show', currentTeam)"
-                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FBCB77]"
-                    :class="{ 'active-link': isActiveRoute('teams.show') }"
-                  >
-                    Team Settings
-                  </DropdownLink>
-
-                  <DropdownLink
-                    v-if="jetstream.canCreateTeams"
-                    :href="route('teams.create')"
-                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FBCB77]"
-                    :class="{ 'active-link': isActiveRoute('teams.create') }"
-                  >
-                    Create New Team
-                  </DropdownLink>
-
-                  <template v-if="allTeams.length > 1">
-                    <div class="border-t border-gray-200 dark:border-gray-600" />
-                    <div class="block px-4 py-2 text-xs text-[#FBCB77]">
-                      Switch Teams
-                    </div>
-
-                    <template v-for="team in allTeams" :key="team.id">
-                      <form @submit.prevent="switchToTeam(team)">
-                        <DropdownLink as="button" class="w-full">
-                          <div class="flex items-center">
-                            <svg
-                              v-if="team.id === user.current_team_id"
-                              class="me-2 size-5 text-green-400"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke-width="1.5"
-                              stroke="currentColor"
+                    <li>
+                        <NavLink
+                            :href="route('add_user_vue')"
+                            :active="isManageActive"
+                            class="block w-full rounded-lg transition hover:bg-[#FFD700]"
+                            :class="{
+                                'active-link': isManageActive,
+                                'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
+                            }"
+                        >
+                            <div class="w-6 flex justify-center">
+                                <FontAwesomeIcon
+                                    icon="user-group"
+                                    class="text-xl"
+                                />
+                            </div>
+                            <span v-if="isSidebarOpen" class="whitespace-nowrap"
+                                >Manage Users</span
                             >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
-
-                            <div>{{ team.name }}</div>
-                          </div>
-                        </DropdownLink>
-                      </form>
-                    </template>
-                  </template>
-                </div>
-              </transition>
-            </li>
-          </template> -->
-
+                        </NavLink>
+                    </li>
                     <li>
                         <div
-                            @click="
-                                isMaintenanceDropdownOpen =
-                                    !isMaintenanceDropdownOpen
-                            "
-                            class="block cursor-pointer rounded-lg transition hover:bg-[#FBCB77] hover:text-[#9E122C]"
+                            @click="isSidebarOpen && (isMaintenanceDropdownOpen = !isMaintenanceDropdownOpen)"
+                            class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]"
                             :class="{
                                 'active-link':
                                     isMaintenanceOpen ||
@@ -473,7 +431,7 @@ onMounted(() => {
                             >
                                 <NavLink
                                     :href="route('add_user_vue')"
-                                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FBCB77]"
+                                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]"
                                     :class="{
                                         'active-link': isManageActive,
                                     }"
@@ -483,7 +441,7 @@ onMounted(() => {
 
                                 <NavLink
                                     :href="route('assign_user_vue')"
-                                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FBCB77]"
+                                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]"
                                     :class="{
                                         'active-link': isAssignActive,
                                     }"
@@ -496,8 +454,8 @@ onMounted(() => {
 
                     <li>
                         <div
-                            @click="toggleMenu('user')"
-                            class="block cursor-pointer rounded-lg transition hover:bg-[#FBCB77] hover:text-[#9E122C]"
+                            @click="isSidebarOpen && toggleMenu('user')"
+                            class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]"
                             :class="{
                                 'active-link':
                                     isUserMenuOpen || isUserSettingsActive,
@@ -533,7 +491,7 @@ onMounted(() => {
                             >
                                 <DropdownLink
                                     :href="route('profile.show')"
-                                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FBCB77]"
+                                    class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]"
                                     :class="{
                                         'active-link':
                                             isActiveRoute('profile.show'),
@@ -549,7 +507,7 @@ onMounted(() => {
                         <form @submit.prevent="logout">
                             <button
                                 type="submit"
-                                class="cursor-pointer flex w-full items-center justify-between rounded-lg py-3 px-4 text-lg font-semibold hover:bg-[#FBCB77] hover:text-[#9E122C] transition focus:outline-none"
+                                class="cursor-pointer flex w-full items-center justify-between rounded-lg py-3 px-4 text-lg font-semibold hover:bg-[#FFD700] hover:text-[#9E122C] transition focus:outline-none"
                             >
                                 <div class="flex items-center space-x-3">
                                     <div class="w-6 flex justify-center">
@@ -574,9 +532,10 @@ onMounted(() => {
         <!-- Main Content -->
         <div
             :class="[
-                'flex-1 bg-gradient-to-br from-orange-200 to-red-400 p-6 transition-all',
-                isSidebarOpen ? 'ml-0' : 'ml-16',
+                'flex-1 bg-gradient-to-br from-orange-200 to-red-400 p-6 transition-all duration-300',
+                isSidebarOpen ? 'ml-72' : 'ml-20',
             ]"
+
         >
             <main>
                 <div
@@ -675,7 +634,7 @@ onMounted(() => {
 }
 
 .active-link {
-    background-color: #fbcb77 !important;
+    background-color: #FFD700 !important;
     color: #9e122c;
     width: 100%;
     display: flex;
@@ -686,20 +645,8 @@ onMounted(() => {
 
 /* Sidebar styles */
 .sidebar {
-    background-color: #9e122c;
+    background-color: #8B0000;
     position: relative;
-}
-
-.sidebar::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: url("/assets/images/2.jpg"); /* Replace with your actual image path */
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center;
-    opacity: 0.2; /* Adjust opacity to control overlay strength */
-    z-index: 0;
 }
 
 .sidebar > * {

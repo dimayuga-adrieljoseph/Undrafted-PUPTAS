@@ -13,7 +13,7 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('users')->insert([
+        $users = [
             [
                 'firstname' => 'Adriel Joseph',
                 'middlename' => 'I',
@@ -24,7 +24,7 @@ class UserSeeder extends Seeder
                 'address' => 'Block 123',
                 'email' => 'dimayuga.adrieljoseph03@gmail.com',
                 'password' => Hash::make('12345678'),
-                'role_id' => 2, // Admin
+                'role_id' => 2,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -38,7 +38,7 @@ class UserSeeder extends Seeder
                 'address' => 'Street 456',
                 'email' => 'evaluator@gmail.com',
                 'password' => Hash::make('Evaluator.1234'),
-                'role_id' => 3, // Evaluator
+                'role_id' => 3,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -52,10 +52,17 @@ class UserSeeder extends Seeder
                 'address' => 'Street 789',
                 'email' => 'interviewer@gmail.com',
                 'password' => Hash::make('Interviewer.1234'),
-                'role_id' => 4, // Interviewer
+                'role_id' => 4,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-        ]);
+        ];
+
+        foreach ($users as $user) {
+            DB::table('users')->updateOrInsert(
+                ['email' => $user['email']],
+                $user
+            );
+        }
     }
 }
