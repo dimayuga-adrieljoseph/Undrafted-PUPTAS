@@ -15,6 +15,7 @@ class UserSeeder extends Seeder
     {
         $users = [
             [
+                'salutation' => 'Mr.',
                 'firstname' => 'Adriel Joseph',
                 'middlename' => 'I',
                 'lastname' => 'Dimayuga',
@@ -29,6 +30,7 @@ class UserSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'salutation' => 'Ms.',
                 'firstname' => 'Jane',
                 'middlename' => 'B',
                 'lastname' => 'Smith',
@@ -43,6 +45,7 @@ class UserSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'salutation' => 'Mr.',
                 'firstname' => 'Mark',
                 'middlename' => 'C',
                 'lastname' => 'Reyes',

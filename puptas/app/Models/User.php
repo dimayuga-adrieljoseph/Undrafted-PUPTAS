@@ -35,13 +35,19 @@ class User extends Authenticatable
      * @var array<int, string>
      */
 
-    protected $fillable = ['email', 'password', 'role_id','firstname',
+    protected $fillable = [
+        'email',
+        'password',
+        'role_id',
+        'firstname',
         'middlename',
         'lastname',
+        'salutation',
         'birthday',
         'sex',
         'contactnumber',
-        'address',];
+        'address',
+    ];
 
     public function role()
     {
@@ -54,15 +60,15 @@ class User extends Authenticatable
     }
 
     public function userFiles()
-{
-    return $this->hasMany(UserFile::class);
-}
+    {
+        return $this->hasMany(UserFile::class);
+    }
 
 
     public function application()
-{
-    return $this->hasOne(Application::class);
-}
+    {
+        return $this->hasOne(Application::class);
+    }
 
     public function program()
     {
@@ -71,17 +77,21 @@ class User extends Authenticatable
 
     public function programs(): BelongsToMany
     {
-        return $this->belongsToMany(Program::class, 
-            'program_user', 'user_id', 'program_id')
-                ->withPivot('role_id')
-                ->withTimestamps();
+        return $this->belongsToMany(
+            Program::class,
+            'program_user',
+            'user_id',
+            'program_id'
+        )
+            ->withPivot('role_id')
+            ->withTimestamps();
     }
 
-// User.php
-public function grades()
-{
-    return $this->hasOne(Grade::class);
-}
+    // User.php
+    public function grades()
+    {
+        return $this->hasOne(Grade::class);
+    }
 
 
 
