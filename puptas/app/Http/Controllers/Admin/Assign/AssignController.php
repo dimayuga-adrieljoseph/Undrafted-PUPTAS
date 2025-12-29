@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Admin\Assign;
 
 use App\Http\Controllers\Controller;
@@ -7,9 +8,11 @@ use App\Models\User;
 use App\Models\Program;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Mail\UserCreated;
 use Illuminate\Support\Facades\DB;
+use Exception;
 
 class AssignController extends Controller
 {
@@ -20,8 +23,10 @@ class AssignController extends Controller
         $assignedUsers = User::whereIn('role_id', [3, 4])
             ->with('programs')->get();
 
-        return view('legacy.assignment', 
-            compact('programs', 'assignedUsers'));
+        return view(
+            'legacy.assignment',
+            compact('programs', 'assignedUsers')
+        );
     }
 
     public function storeUser(Request $request)
@@ -30,7 +35,7 @@ class AssignController extends Controller
             'salutation' => 'required|string|max:5',
             'lastname' => 'required|string|max:255',
             'firstname' => 'required|string|max:255',
-            'contactnumber' => ['required', 'string', 'max:10'],
+            'contactnumber' => ['required', 'string', 'max:15'],
             'email' => 'required|email|unique:users,email',
             'role' => 'required|in:3,4',
             'programs' => 'required|array',
@@ -58,46 +63,56 @@ class AssignController extends Controller
                     'user_id' => $user->id,
                     'program_id' => $programId,
                     'role_id' => $request->role,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
 
-            Mail::to($user->email)->send(new UserCreated($user, $password));
-
             DB::commit();
 
-            return redirect()->back()->with('success',
-                'User created and assigned to programs successfully.');
+            // Try to send email, but don't fail the entire operation if it fails
+            try {
+                Mail::to($user->email)->send(new UserCreated($user, $password));
+            } catch (Exception $emailException) {
+                Log::warning('Failed to send welcome email: ' . $emailException->getMessage());
+            }
 
+            return redirect()->route('admin.users.create')->with('success', 'User created successfully.');
         } catch (Exception $e) {
             DB::rollBack();
 
             Log::error($e->getMessage());
 
-            return redirect()->back()->with('error', 
-                'There was an error creating the user or assigning the programs.
-                Please try again.');
+            return redirect()->back()->withInput()->with(
+                'error',
+                'Failed to create user. Please try again.'
+            );
         }
     }
 
-    public function editUser($id){
+    public function editUser($id)
+    {
 
         $user = User::findOrFail($id);
         $programs = Program::all();
 
         $assignedPrograms = $user->programs->pluck('program_id')->toArray();
 
-        return view('legacy.edit_user', 
-            compact('user', 'programs', 'assignedPrograms'));
+        return view(
+            'legacy.edit_user',
+            compact('user', 'programs', 'assignedPrograms')
+        );
     }
 
-    public function updateUser(Request $request, $id){
+    public function updateUser(Request $request, $id)
+    {
         $user = User::findOrFail($id);
 
         $request->validate([
             'salutation' => 'required|string|max:5',
             'lastname' => 'required|string|max:255',
             'firstname' => 'required|string|max:255',
-            'contactnumber' => 'required|string|max:10',
+            'contactnumber' => 'required|string|max:15',
             'email' => 'required|email|unique:users,email,' . $user->id . ',id',
             'role' => 'required|in:3,4',
             'programs' => 'required|array',
@@ -113,9 +128,9 @@ class AssignController extends Controller
         ]);
 
         $syncData = [];
-            foreach ($request->programs as $programId) {
-                $syncData[$programId] = ['role_id' => $request->role];
-            }
+        foreach ($request->programs as $programId) {
+            $syncData[$programId] = ['role_id' => $request->role];
+        }
 
         $user->programs()->sync($syncData);
 
@@ -123,8 +138,9 @@ class AssignController extends Controller
             ->with('success', 'User updated successfully.');
     }
 
-    public function deleteUser($id){
-    
+    public function deleteUser($id)
+    {
+
         $user = User::findOrFail($id);
 
         $user->programs()->detach();
@@ -134,5 +150,4 @@ class AssignController extends Controller
         return redirect()->route('admin.users.create')
             ->with('success');
     }
-
 }

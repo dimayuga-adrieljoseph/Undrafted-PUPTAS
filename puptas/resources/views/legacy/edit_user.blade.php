@@ -1,8 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <link rel="stylesheet" href="{{ asset('assets/maintenance/assignee/edit.css') }}">
 </head>
+
+@if (session('error'))
+<div class="error-message">
+    {{ session('error') }}
+</div>
+@endif
+
+@if ($errors->any())
+<div class="error-message">
+    <ul>
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
+
 <h1>Edit Assigned User</h1>
 
 <form action="{{ route('admin.users.update', $user->id) }}" method="POST">
@@ -59,9 +77,9 @@
         <label for="programs">Assign to Programs:</label>
         <select name="programs[]" multiple required>
             @foreach($programs as $program)
-                <option value="{{ $program->id }}" {{ in_array($program->id, $assignedPrograms) ? 'selected' : '' }}>
-                    {{ $program->name }}
-                </option>
+            <option value="{{ $program->id }}" {{ in_array($program->id, $assignedPrograms) ? 'selected' : '' }}>
+                {{ $program->name }}
+            </option>
             @endforeach
         </select>
     </div>
@@ -71,4 +89,5 @@
         <button type="submit">Update User</button>
     </div>
 </form>
+
 </html>
