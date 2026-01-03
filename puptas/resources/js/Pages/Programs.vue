@@ -130,7 +130,6 @@ const toggleSortOrder = () => {
   <AppLayout title="Programs">
     <div class="max-w-7xl mx-auto p-6">
       <h2 class="text-2xl font-bold text-[#9E122C] mb-4">Programs List</h2>
-
       <Link
         href="/addindex"
         class="fixed bottom-6 right-6 bg-[#9E122C] hover:bg-[#EE6A43] text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all group"

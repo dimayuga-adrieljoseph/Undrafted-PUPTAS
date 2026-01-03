@@ -1,3 +1,187 @@
+<script setup>
+import AppLayout from '@/Layouts/AppLayout.vue'
+import { ref, onMounted, computed } from 'vue'
+import VueCal from 'vue-cal'
+import 'vue-cal/dist/vuecal.css'
+import axios from 'axios'
+
+const modalOpen = ref(false)
+const eventListModalOpen = ref(false)
+const editingEvent = ref(null)
+const selectedDateEvents = ref([])
+
+const form = ref({
+  name: '',
+  date: '',
+  startTime: '',
+  endTime: ''
+})
+
+const events = ref([])
+
+function toLocalDateString(date) {
+  const tzoffset = date.getTimezoneOffset() * 60000 // offset in ms
+  return new Date(date.getTime() - tzoffset).toISOString().slice(0, 10)
+}
+
+async function fetchSchedules() {
+  try {
+    const res = await axios.get('/schedules', {
+      headers: { Accept: 'application/json' }
+    })
+    const dataArray = Array.isArray(res.data) ? res.data : res.data.data || []
+    events.value = dataArray.map(event => ({
+      id: event.id,
+      title: event.name,
+      start: new Date(event.start), // use Date objects here
+      end: new Date(event.end)
+    }))
+  } catch (error) {
+    console.error('Failed to fetch schedules:', error)
+  }
+}
+
+onMounted(() => {
+  fetchSchedules()
+})
+
+const today = new Date()
+today.setHours(0, 0, 0, 0)
+
+const disabledDates = date => date < today
+
+const nearestEvents = computed(() => {
+  const now = new Date()
+  return events.value
+    .filter(e => e.start >= now)
+    .sort((a, b) => a.start - b.start)
+    .slice(0, 5)
+})
+
+function formatDateTime(date) {
+  const d = date instanceof Date ? date : new Date(date)
+  return (
+    d.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }) +
+    ' ' +
+    d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  )
+}
+
+function onDateSelect(payload) {
+  const date = payload.date || payload
+  if (!date) return
+  if (disabledDates(date)) return
+
+  const clickedDateStr = toLocalDateString(date)
+  selectedDateEvents.value = events.value.filter(
+    event => toLocalDateString(event.start) === clickedDateStr
+  )
+
+  if (selectedDateEvents.value.length > 1) {
+    eventListModalOpen.value = true
+  } else if (selectedDateEvents.value.length === 1) {
+    openEventForm(selectedDateEvents.value[0])
+  } else {
+    openEventForm(null, clickedDateStr)
+  }
+}
+
+function openEventForm(event = null, date = null) {
+  editingEvent.value = event
+  if (event) {
+    form.value = {
+      name: event.title,
+      date: toLocalDateString(event.start),
+      startTime: event.start.toISOString().slice(11, 16),
+      endTime: event.end.toISOString().slice(11, 16)
+    }
+  } else if (date) {
+    form.value = {
+      name: '',
+      date,
+      startTime: '09:00',
+      endTime: '10:00'
+    }
+  }
+  modalOpen.value = true
+  eventListModalOpen.value = false
+}
+
+function closeEventListModal() {
+  eventListModalOpen.value = false
+}
+
+function onEventClick(event) {
+  editingEvent.value = event
+  form.value = {
+    name: event.title,
+    date: toLocalDateString(event.start),
+    startTime: event.start.toISOString().slice(11, 16),
+    endTime: event.end.toISOString().slice(11, 16)
+  }
+  modalOpen.value = true
+}
+
+function closeModal() {
+  modalOpen.value = false
+  editingEvent.value = null
+}
+
+async function saveEvent() {
+  if (form.value.endTime <= form.value.startTime) {
+    alert('End time must be after start time.')
+    return
+  }
+
+  const payload = {
+    name: form.value.name,
+    start: `${form.value.date}T${form.value.startTime}`,
+    end: `${form.value.date}T${form.value.endTime}`
+  }
+
+  try {
+    if (editingEvent.value) {
+      await axios.put(`/schedules/${editingEvent.value.id}`, payload, {
+        headers: { Accept: 'application/json' }
+      })
+    } else {
+      await axios.post('/schedules', payload, {
+        headers: { Accept: 'application/json' }
+      })
+    }
+    await fetchSchedules()
+    closeModal()
+  } catch (error) {
+    console.error('Failed to save schedule:', error)
+    alert('Failed to save schedule, please try again.')
+  }
+}
+
+async function deleteEvent(id) {
+  try {
+    await axios.delete(`/schedules/${id}`, {
+      headers: { Accept: 'application/json' }
+    })
+    await fetchSchedules()
+  } catch (error) {
+    console.error('Failed to delete schedule:', error)
+    alert('Failed to delete schedule, please try again.')
+  }
+}
+
+function confirmDelete() {
+  if (!editingEvent.value) return
+  if (confirm('Are you sure you want to delete this schedule?')) {
+    deleteEvent(editingEvent.value.id)
+    closeModal()
+  }
+}
+</script>
+
 <template>
   <AppLayout>
     <h2 class="text-3xl font-semibold text-[#9E122C] mb-6">Schedule Manager</h2>
@@ -184,190 +368,6 @@
     </transition>
   </AppLayout>
 </template>
-
-<script setup>
-import AppLayout from '@/Layouts/AppLayout.vue'
-import { ref, onMounted, computed } from 'vue'
-import VueCal from 'vue-cal'
-import 'vue-cal/dist/vuecal.css'
-import axios from 'axios'
-
-const modalOpen = ref(false)
-const eventListModalOpen = ref(false)
-const editingEvent = ref(null)
-const selectedDateEvents = ref([])
-
-const form = ref({
-  name: '',
-  date: '',
-  startTime: '',
-  endTime: ''
-})
-
-const events = ref([])
-
-function toLocalDateString(date) {
-  const tzoffset = date.getTimezoneOffset() * 60000 // offset in ms
-  return new Date(date.getTime() - tzoffset).toISOString().slice(0, 10)
-}
-
-async function fetchSchedules() {
-  try {
-    const res = await axios.get('/schedules', {
-      headers: { Accept: 'application/json' }
-    })
-    const dataArray = Array.isArray(res.data) ? res.data : res.data.data || []
-    events.value = dataArray.map(event => ({
-      id: event.id,
-      title: event.name,
-      start: new Date(event.start), // use Date objects here
-      end: new Date(event.end)
-    }))
-  } catch (error) {
-    console.error('Failed to fetch schedules:', error)
-  }
-}
-
-onMounted(() => {
-  fetchSchedules()
-})
-
-const today = new Date()
-today.setHours(0, 0, 0, 0)
-
-const disabledDates = date => date < today
-
-const nearestEvents = computed(() => {
-  const now = new Date()
-  return events.value
-    .filter(e => e.start >= now)
-    .sort((a, b) => a.start - b.start)
-    .slice(0, 5)
-})
-
-function formatDateTime(date) {
-  const d = date instanceof Date ? date : new Date(date)
-  return (
-    d.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }) +
-    ' ' +
-    d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-  )
-}
-
-function onDateSelect(payload) {
-  const date = payload.date || payload
-  if (!date) return
-  if (disabledDates(date)) return
-
-  const clickedDateStr = toLocalDateString(date)
-  selectedDateEvents.value = events.value.filter(
-    event => toLocalDateString(event.start) === clickedDateStr
-  )
-
-  if (selectedDateEvents.value.length > 1) {
-    eventListModalOpen.value = true
-  } else if (selectedDateEvents.value.length === 1) {
-    openEventForm(selectedDateEvents.value[0])
-  } else {
-    openEventForm(null, clickedDateStr)
-  }
-}
-
-function openEventForm(event = null, date = null) {
-  editingEvent.value = event
-  if (event) {
-    form.value = {
-      name: event.title,
-      date: toLocalDateString(event.start),
-      startTime: event.start.toISOString().slice(11, 16),
-      endTime: event.end.toISOString().slice(11, 16)
-    }
-  } else if (date) {
-    form.value = {
-      name: '',
-      date,
-      startTime: '09:00',
-      endTime: '10:00'
-    }
-  }
-  modalOpen.value = true
-  eventListModalOpen.value = false
-}
-
-function closeEventListModal() {
-  eventListModalOpen.value = false
-}
-
-function onEventClick(event) {
-  editingEvent.value = event
-  form.value = {
-    name: event.title,
-    date: toLocalDateString(event.start),
-    startTime: event.start.toISOString().slice(11, 16),
-    endTime: event.end.toISOString().slice(11, 16)
-  }
-  modalOpen.value = true
-}
-
-function closeModal() {
-  modalOpen.value = false
-  editingEvent.value = null
-}
-
-async function saveEvent() {
-  if (form.value.endTime <= form.value.startTime) {
-    alert('End time must be after start time.')
-    return
-  }
-
-  const payload = {
-    name: form.value.name,
-    start: `${form.value.date}T${form.value.startTime}`,
-    end: `${form.value.date}T${form.value.endTime}`
-  }
-
-  try {
-    if (editingEvent.value) {
-      await axios.put(`/schedules/${editingEvent.value.id}`, payload, {
-        headers: { Accept: 'application/json' }
-      })
-    } else {
-      await axios.post('/schedules', payload, {
-        headers: { Accept: 'application/json' }
-      })
-    }
-    await fetchSchedules()
-    closeModal()
-  } catch (error) {
-    console.error('Failed to save schedule:', error)
-    alert('Failed to save schedule, please try again.')
-  }
-}
-
-async function deleteEvent(id) {
-  try {
-    await axios.delete(`/schedules/${id}`, {
-      headers: { Accept: 'application/json' }
-    })
-    await fetchSchedules()
-  } catch (error) {
-    console.error('Failed to delete schedule:', error)
-    alert('Failed to delete schedule, please try again.')
-  }
-}
-
-function confirmDelete() {
-  if (!editingEvent.value) return
-  if (confirm('Are you sure you want to delete this schedule?')) {
-    deleteEvent(editingEvent.value.id)
-    closeModal()
-  }
-}
-</script>
 
 <style scoped>
 .fade-enter-active,

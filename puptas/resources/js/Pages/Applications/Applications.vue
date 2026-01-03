@@ -1,8 +1,160 @@
+<script setup>
+import { ref, computed, onMounted, watch } from "vue";
+import { Head } from "@inertiajs/vue3";
+import AppLayout from "@/Layouts/AppLayout.vue";
+
+const users = ref([]);
+const searchQuery = ref("");
+const statusFilter = ref("");
+const selectedUser = ref(null);
+const currentPage = ref(1);
+const itemsPerPage = 10;
+const sortKey = ref("lastname");
+const sortAsc = ref(true);
+const showStatusDropdown = ref(false);
+const selectedUserFiles = ref({});
+
+const fetchUsers = async () => {
+    try {
+        const response = await fetch("/dashboard/users", {
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        if (!response.ok) throw new Error("Failed to fetch users");
+        users.value = await response.json();
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+onMounted(fetchUsers);
+
+const filteredUsers = computed(() => {
+    const q = searchQuery.value.trim().toLowerCase();
+    return users.value
+        .filter((u) => {
+            const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
+            const matchesSearch = fullName.includes(q);
+            const matchesStatus = statusFilter.value
+                ? u.status?.toLowerCase() === statusFilter.value
+                : true;
+            return matchesSearch && matchesStatus;
+        })
+        .sort((a, b) => {
+            const aVal = (a[sortKey.value] || "").toString().toLowerCase();
+            const bVal = (b[sortKey.value] || "").toString().toLowerCase();
+            return sortAsc.value
+                ? aVal.localeCompare(bVal)
+                : bVal.localeCompare(aVal);
+        });
+});
+
+const totalPages = computed(() =>
+    Math.ceil(filteredUsers.value.length / itemsPerPage)
+);
+
+const paginatedUsers = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return filteredUsers.value.slice(start, start + itemsPerPage);
+});
+
+// Reset page when filters/search change
+watch([searchQuery, statusFilter, sortKey, sortAsc], () => {
+    currentPage.value = 1;
+});
+
+const getStatusClass = (status) => {
+    const s = (status || "").toLowerCase();
+    if (s === "accepted") return "bg-green-100 text-green-700";
+    if (s === "pending") return "bg-yellow-100 text-yellow-700";
+    if (s === "rejected") return "bg-red-100 text-red-700";
+    return "bg-gray-100 text-gray-600";
+};
+
+const selectUser = async (user) => {
+    try {
+        const response = await axios.get(
+            `/admin-dashboard/user-files/${user.id}`
+        );
+
+        selectedUser.value = {
+            ...user,
+            application: {
+                ...response.data.user.application,
+                processes: response.data.user.application?.processes || [],
+            },
+            grades: response.data.user.grades || null,
+        };
+
+        selectedUserFiles.value = response.data.uploadedFiles || {};
+        console.log(
+            "User & files:",
+            selectedUser.value,
+            selectedUserFiles.value
+        );
+        console.log("processes:", selectedUser.processes);
+
+        console.log("Processes:", selectedUser.value.application?.processes);
+    } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        selectedUserFiles.value = {};
+        selectedUser.value = null;
+    }
+};
+
+const formatFileKey = (key) => {
+    const map = {
+        file10Front: "Grade 10 Front",
+        file11: "Grade 11 Report",
+        file12: "Grade 12 Report",
+        schoolId: "School ID",
+        nonEnrollCert: "Certificate of Non-Enrollment",
+        psa: "PSA Birth Certificate",
+        goodMoral: "Good Moral Certificate",
+        underOath: "Under Oath Document",
+        photo2x2: "2x2 Photo",
+    };
+    return map[key] || key;
+};
+
+const capitalize = (str) =>
+    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+
+const formatDate = (date) => {
+    const d = new Date(date);
+    return d.toLocaleString(); // or .toLocaleDateString() if you prefer
+};
+
+const closeUserCard = () => {
+    selectedUser.value = null;
+};
+
+const sortBy = (key) => {
+    if (sortKey.value === key) {
+        sortAsc.value = !sortAsc.value;
+    } else {
+        sortKey.value = key;
+        sortAsc.value = true;
+    }
+};
+
+const clearFilters = () => {
+    searchQuery.value = "";
+    statusFilter.value = "";
+    sortKey.value = "lastname";
+    sortAsc.value = true;
+    currentPage.value = 1;
+    showStatusDropdown.value = false;
+};
+</script>
+
 <template>
     <Head title="All Applications" />
     <AppLayout>
         <div
-            class="max-w-7xl mx-auto py-2 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto"
+            class="max-w-7xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto"
         >
             <div
                 class="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-2"
@@ -377,158 +529,6 @@
         </div>
     </AppLayout>
 </template>
-
-<script setup>
-import { ref, computed, onMounted, watch } from "vue";
-import { Head } from "@inertiajs/vue3";
-import AppLayout from "@/Layouts/AppLayout.vue";
-
-const users = ref([]);
-const searchQuery = ref("");
-const statusFilter = ref("");
-const selectedUser = ref(null);
-const currentPage = ref(1);
-const itemsPerPage = 10;
-const sortKey = ref("lastname");
-const sortAsc = ref(true);
-const showStatusDropdown = ref(false);
-const selectedUserFiles = ref({});
-
-const fetchUsers = async () => {
-    try {
-        const response = await fetch("/dashboard/users", {
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json();
-    } catch (err) {
-        console.error(err);
-    }
-};
-
-onMounted(fetchUsers);
-
-const filteredUsers = computed(() => {
-    const q = searchQuery.value.trim().toLowerCase();
-    return users.value
-        .filter((u) => {
-            const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
-            const matchesSearch = fullName.includes(q);
-            const matchesStatus = statusFilter.value
-                ? u.status?.toLowerCase() === statusFilter.value
-                : true;
-            return matchesSearch && matchesStatus;
-        })
-        .sort((a, b) => {
-            const aVal = (a[sortKey.value] || "").toString().toLowerCase();
-            const bVal = (b[sortKey.value] || "").toString().toLowerCase();
-            return sortAsc.value
-                ? aVal.localeCompare(bVal)
-                : bVal.localeCompare(aVal);
-        });
-});
-
-const totalPages = computed(() =>
-    Math.ceil(filteredUsers.value.length / itemsPerPage)
-);
-
-const paginatedUsers = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage;
-    return filteredUsers.value.slice(start, start + itemsPerPage);
-});
-
-// Reset page when filters/search change
-watch([searchQuery, statusFilter, sortKey, sortAsc], () => {
-    currentPage.value = 1;
-});
-
-const getStatusClass = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
-    if (s === "rejected") return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-600";
-};
-
-const selectUser = async (user) => {
-    try {
-        const response = await axios.get(
-            `/admin-dashboard/user-files/${user.id}`
-        );
-
-        selectedUser.value = {
-            ...user,
-            application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
-            },
-            grades: response.data.user.grades || null,
-        };
-
-        selectedUserFiles.value = response.data.uploadedFiles || {};
-        console.log(
-            "User & files:",
-            selectedUser.value,
-            selectedUserFiles.value
-        );
-        console.log("processes:", selectedUser.processes);
-
-        console.log("Processes:", selectedUser.value.application?.processes);
-    } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        selectedUserFiles.value = {};
-        selectedUser.value = null;
-    }
-};
-
-const formatFileKey = (key) => {
-    const map = {
-        file10Front: "Grade 10 Front",
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
-        schoolId: "School ID",
-        nonEnrollCert: "Certificate of Non-Enrollment",
-        psa: "PSA Birth Certificate",
-        goodMoral: "Good Moral Certificate",
-        underOath: "Under Oath Document",
-        photo2x2: "2x2 Photo",
-    };
-    return map[key] || key;
-};
-
-const capitalize = (str) =>
-    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
-
-const formatDate = (date) => {
-    const d = new Date(date);
-    return d.toLocaleString(); // or .toLocaleDateString() if you prefer
-};
-
-const closeUserCard = () => {
-    selectedUser.value = null;
-};
-
-const sortBy = (key) => {
-    if (sortKey.value === key) {
-        sortAsc.value = !sortAsc.value;
-    } else {
-        sortKey.value = key;
-        sortAsc.value = true;
-    }
-};
-
-const clearFilters = () => {
-    searchQuery.value = "";
-    statusFilter.value = "";
-    sortKey.value = "lastname";
-    sortAsc.value = true;
-    currentPage.value = 1;
-    showStatusDropdown.value = false;
-};
-</script>
 
 <style scoped>
 .slide-fade-enter-active,
