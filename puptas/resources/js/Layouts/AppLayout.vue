@@ -1,216 +1,190 @@
 <script setup>
-import { ref, watch, onMounted, onUnmounted, computed } from "vue";
-import { Link, router, usePage } from "@inertiajs/vue3";
-import ApplicationMark from "@/Components/ApplicationMark.vue";
-import DropdownLink from "@/Components/DropdownLink.vue";
-import NavLink from "@/Components/NavLink.vue";
+// Imports
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { library } from "@fortawesome/fontawesome-svg-core";
 import {
-    faArrowLeft,
-    faBars,
-    faTimes,
     faTachometerAlt,
     faUsers,
     faCaretDown,
     faCaretRight,
     faCog,
     faGraduationCap,
-    faRightFromBracket,
     faPencilAlt,
     faEnvelopeOpenText,
     faCalendarCheck,
     faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
-import { library } from "@fortawesome/fontawesome-svg-core";
+
+import DropdownLink from "@/Components/DropdownLink.vue";
+import NavLink from "@/Components/NavLink.vue";
 import { useGlobalLoading } from "@/Composables/useGlobalLoading";
+import { faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
+import ApplicationMark from "@/Components/ApplicationMark.vue";
 
 library.add(
-    faGraduationCap,
-    faArrowLeft,
-    faBars,
-    faTimes,
     faTachometerAlt,
     faUsers,
     faCaretDown,
     faCaretRight,
     faCog,
-    faRightFromBracket,
+    faGraduationCap,
     faPencilAlt,
     faEnvelopeOpenText,
     faCalendarCheck,
     faUserGroup
 );
 
+// Composables
 const page = usePage();
 const { isLoading, start, finish } = useGlobalLoading();
 
-const user = computed(() => page.props.auth.user);
-// const jetstream = computed(() => page.props.jetstream);
-// const currentTeam = computed(() => user.value.current_team);
-// const allTeams = computed(() => user.value.all_teams || []);
-
-const isTeamMenuOpen = ref(false);
-const isUserMenuOpen = ref(false);
-const isPasserDropdownOpen = ref(false);
-const isScheduleMenuOpen = ref(false);
-const isMaintenanceDropdownOpen = ref(false);
-
+// State
 const isSidebarOpen = ref(false);
 const isSidebarPinned = ref(false);
+const sidebarRef = ref(null);
 
+const isUserMenuOpen = ref(false);
+const isPasserDropdownOpen = ref(false);
+const isMaintenanceDropdownOpen = ref(false);
+const isDarkMode = ref(false);
+
+// Computed
+const user = computed(() => page.props.auth.user);
+
+const isActiveRoute = (name) => route().current(name);
+
+const isAnyDropdownOpen = computed(() =>
+    isPasserDropdownOpen.value || isMaintenanceDropdownOpen.value || isUserMenuOpen.value
+);
+
+const isUserSettingsActive = computed(() => isActiveRoute('profile.show'));
+
+const isDashboardActive = computed(() => isActiveRoute("dashboard"));
+const isApplicationsActive = computed(() => isActiveRoute("applications"));
+const isScheduleActive = computed(() => isActiveRoute("schedules.index"));
+const isUploadFormActive = computed(() => isActiveRoute("upload.form"));
+const isListPassersActive = computed(() => isActiveRoute("lists"));
+const isProgramsActive = computed(() => isActiveRoute("programs.index"));
+const isManageActive = computed(() => isActiveRoute("add_user_vue"));
+const isAssignActive = computed(() => isActiveRoute("assign_user_vue"));
+
+const sidebarWidthClass = computed(() =>
+    isSidebarOpen.value ? "w-72 p-6" : "w-20 p-4"
+);
+
+const contentMarginClass = computed(() => "");
+
+// Methods
 const onSidebarEnter = () => {
     isSidebarOpen.value = true;
 };
 
 const onSidebarLeave = () => {
-    if (!isSidebarPinned.value) {
+    if (!isAnyDropdownOpen.value && !isSidebarPinned.value) {
         isSidebarOpen.value = false;
     }
 };
 
-const sidebarRef = ref(null);
-const onSidebarClick = () => {
-    isSidebarPinned.value = true;
-    isSidebarOpen.value = true;
+const pinSidebar = () => {
+    // toggle pinned state
+    isSidebarPinned.value = !isSidebarPinned.value;
+    if (isSidebarPinned.value) {
+        isSidebarOpen.value = true;
+    }
 };
+
 const onClickOutside = (event) => {
-    if (!isSidebarPinned.value) return;
+    if (sidebarRef.value && !sidebarRef.value.contains(event.target) && !isSidebarPinned.value) {
+        // Close all dropdowns
+        isPasserDropdownOpen.value = false;
+        isMaintenanceDropdownOpen.value = false;
+        isUserMenuOpen.value = false;
 
-    if (sidebarRef.value && !sidebarRef.value.contains(event.target)) {
-        isSidebarPinned.value = false;
+        // Collapse sidebar if not hovered
         isSidebarOpen.value = false;
     }
 };
 
+const isSidebarInteractable = computed(() => isSidebarOpen.value);
 
-const isActiveRoute = (routeName) => route().current(routeName);
-const isListPassersActive = computed(() => isActiveRoute("lists"));
-const isApplicationsActive = computed(() => isActiveRoute("applications"));
-const isScheduleActive = computed(() => isActiveRoute("schedules.index"));
-
-const isDashboardActive = computed(() => isActiveRoute("dashboard"));
-const isUploadFormActive = computed(() => isActiveRoute("upload.form"));
-const isTeamsActive = computed(() =>
-    ["teams.show", "teams.create", "teams.index"].some(isActiveRoute)
-);
-const isUserSettingsActive = computed(() =>
-    ["profile.show", "api-tokens.index"].some(isActiveRoute)
-);
-const isProgramsActive = computed(() => isActiveRoute("programs.index"));
-const isManageActive = computed(() => isActiveRoute("add_user_vue"));
-const isAssignActive = computed(() => isActiveRoute("assign_user_vue"));
-
-watch(
-    () => page.props.url,
-    () => {
-        isTeamMenuOpen.value = isTeamsActive.value;
-        isUserMenuOpen.value = isUserSettingsActive.value;
-    },
-    { immediate: true }
-);
-
-const toggleMenu = (menu) => {
-    if (menu === "team") {
-        isTeamMenuOpen.value = !isTeamMenuOpen.value;
-        if (isUserMenuOpen.value) isUserMenuOpen.value = false;
-    } else if (menu === "user") {
-        isUserMenuOpen.value = !isUserMenuOpen.value;
-        if (isTeamMenuOpen.value) isTeamMenuOpen.value = false;
-    }
+const togglePasserMenu = () => {
+    isPasserDropdownOpen.value = !isPasserDropdownOpen.value;
+    if (isPasserDropdownOpen.value) isSidebarOpen.value = true; // always expand when opening dropdown
 };
 
-// const switchToTeam = (team) => {
-//     router
-//         .put(
-//             route("current-team.update"),
-//             { team_id: team.id },
-//             { preserveState: false }
-//         )
-//         .then(() => {
-//             isTeamMenuOpen.value = true;
-//         });
-// };
+const toggleMaintenanceMenu = () => {
+    isMaintenanceDropdownOpen.value = !isMaintenanceDropdownOpen.value;
+    if (isMaintenanceDropdownOpen.value) isSidebarOpen.value = true;
+};
 
-watch(
-    () => page.props.url,
-    () => {
-        isTeamMenuOpen.value = isTeamsActive.value;
-        isUserMenuOpen.value = isUserSettingsActive.value;
+const toggleUserMenu = () => {
+    isUserMenuOpen.value = !isUserMenuOpen.value;
+    if (isUserMenuOpen.value) isSidebarOpen.value = true;
+};
 
-        if (isUploadFormActive.value || isListPassersActive.value) {
-            isPasserDropdownOpen.value = true;
-        } else {
-            isPasserDropdownOpen.value = false;
-        }
-
-        if (isManageActive.value || isAssignActive.value) {
-            isMaintenanceDropdownOpen.value = true;
-        } else {
-            isMaintenanceDropdownOpen.value = false;
-        }
-    },
-    { immediate: true }
-);
+const toggleDarkMode = () => {
+    isDarkMode.value = !isDarkMode.value;
+    document.documentElement.classList.toggle("dark", isDarkMode.value);
+    localStorage.setItem("darkMode", String(isDarkMode.value));
+};
 
 const logout = () => {
     router.post(route("logout"));
 };
 
-let listenersRegistered = false;
+// Watchers
+watch(
+    () => page.props.url,
+    () => {
+        isPasserDropdownOpen.value =
+            isUploadFormActive.value || isListPassersActive.value;
 
+        isMaintenanceDropdownOpen.value =
+            isManageActive.value || isAssignActive.value;
+    },
+    { immediate: true }
+);
+
+// Lifecycle
 onMounted(() => {
     document.addEventListener("click", onClickOutside);
-    if (!listenersRegistered) {
-        router.on("start", start);
-        router.on("finish", finish);
-        router.on("error", finish);
-        listenersRegistered = true;
-    }
 
-    const saved = localStorage.getItem("darkMode") === "true";
-    isDarkMode.value = saved;
-    document.documentElement.classList.toggle("dark", saved);
+    router.on("start", start);
+    router.on("finish", finish);
+    router.on("error", finish);
+
+    const savedDarkMode = localStorage.getItem("darkMode") === "true";
+    isDarkMode.value = savedDarkMode;
+    document.documentElement.classList.toggle("dark", savedDarkMode);
 });
 
 onUnmounted(() => {
     document.removeEventListener("click", onClickOutside);
 });
-
-function toggleDarkMode() {
-    isDarkMode.value = !isDarkMode.value;
-    document.documentElement.classList.toggle("dark", isDarkMode.value);
-    localStorage.setItem("darkMode", String(isDarkMode.value));
-}
-
-const isDarkMode = ref(false);
-
-onMounted(() => {
-    const isDark = localStorage.getItem("darkMode") === "true";
-    document.documentElement.classList.toggle("dark", isDark);
-});
 </script>
 
 <template>
-    <div class="flex min-h-screen bg-[#FCECDF]">
+    <div class="flex min-h-screen">
         <!-- Sidebar -->
         <div
             ref="sidebarRef"
+            class="sidebar fixed left-0 top-0 h-screen z-[9999] pointer-events-auto overflow-hidden text-white shadow-md transition-all duration-300"
+            style="z-index: 9999;"
+            :class="sidebarWidthClass"
             @mouseenter="onSidebarEnter"
             @mouseleave="onSidebarLeave"
-            @click.stop="onSidebarClick"
-            :class="[
-                'sidebar relative overflow-hidden text-white shadow-md transition-all duration-300 ease-in-out',
-                isSidebarOpen ? 'w-72 p-6' : 'w-20 p-4',
-            ]"
+            @click.self.stop="pinSidebar"
         >
 
             <div class="mb-10 flex items-center justify-center">
-                <Link :href="route('dashboard')">
+                <NavLink :href="route('dashboard')">
                     <ApplicationMark
                         v-if="isSidebarOpen"
                         class="block h-10 w-auto"
                     />
-                </Link>
+                </NavLink>
             </div>
 
             <nav>
@@ -239,7 +213,7 @@ onMounted(() => {
 
                     <li>
                         <div
-                            @click="isSidebarOpen && (isPasserDropdownOpen = !isPasserDropdownOpen)"
+                            @click="togglePasserMenu"
                             class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]"
                             :class="{
                                 'active-link':
@@ -367,33 +341,12 @@ onMounted(() => {
                     </li>
 
                     <li>
-                        <NavLink
-                            :href="route('add_user_vue')"
-                            :active="isManageActive"
-                            class="block w-full rounded-lg transition hover:bg-[#FFD700]"
-                            :class="{
-                                'active-link': isManageActive,
-                                'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                            }"
-                        >
-                            <div class="w-6 flex justify-center">
-                                <FontAwesomeIcon
-                                    icon="user-group"
-                                    class="text-xl"
-                                />
-                            </div>
-                            <span v-if="isSidebarOpen" class="whitespace-nowrap"
-                                >Manage Users</span
-                            >
-                        </NavLink>
-                    </li>
-                    <li>
                         <div
-                            @click="isSidebarOpen && (isMaintenanceDropdownOpen = !isMaintenanceDropdownOpen)"
+                            @click="toggleMaintenanceMenu"
                             class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]"
                             :class="{
                                 'active-link':
-                                    isMaintenanceOpen ||
+                                    isMaintenanceDropdownOpen ||
                                     isManageActive ||
                                     isAssignActive,
                                 'flex items-center justify-between py-3 px-4 text-lg font-semibold': true,
@@ -454,7 +407,7 @@ onMounted(() => {
 
                     <li>
                         <div
-                            @click="isSidebarOpen && toggleMenu('user')"
+                            @click="toggleUserMenu"
                             class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]"
                             :class="{
                                 'active-link':
@@ -507,20 +460,16 @@ onMounted(() => {
                         <form @submit.prevent="logout">
                             <button
                                 type="submit"
-                                class="cursor-pointer flex w-full items-center justify-between rounded-lg py-3 px-4 text-lg font-semibold hover:bg-[#FFD700] hover:text-[#9E122C] transition focus:outline-none"
+                                    class="flex w-full items-center justify-between rounded-lg py-3 px-4 text-lg font-semibold transition focus:outline-none
+                                        hover:bg-[#FFD700] hover:text-[#9E122C]"
                             >
                                 <div class="flex items-center space-x-3">
                                     <div class="w-6 flex justify-center">
-                                        <FontAwesomeIcon
-                                            icon="sign-out-alt"
-                                            class="text-xl"
-                                        />
+                                        <FontAwesomeIcon icon="sign-out-alt" class="text-xl" />
                                     </div>
-                                    <span
-                                        v-if="isSidebarOpen"
-                                        class="whitespace-nowrap"
-                                        >Log Out</span
-                                    >
+                                    <span v-if="isSidebarOpen" class="whitespace-nowrap">
+                                        Log Out
+                                    </span>
                                 </div>
                             </button>
                         </form>
@@ -531,11 +480,8 @@ onMounted(() => {
 
         <!-- Main Content -->
         <div
-            :class="[
-                'flex-1 bg-gradient-to-br from-orange-200 to-red-400 p-6 transition-all duration-300',
-                isSidebarOpen ? 'ml-72' : 'ml-20',
-            ]"
-
+        class="flex-1 bg-[#faf6f2] dark:bg-gray-900 p-6 transition-all duration-300"
+        :class="contentMarginClass"
         >
             <main>
                 <div
@@ -544,44 +490,45 @@ onMounted(() => {
                     <h2
                         class="font-semibold text-xl text-[#9E122C] dark:text-gray-200 leading-tight"
                     ></h2>
-
-                    <!-- Profile Avatar with Name -->
-                    <button
-                        @click="toggleDarkMode"
-                        class="text-[#9E122C] dark:text-white transition"
-                        title="Toggle Dark Mode"
-                    >
-                        <FontAwesomeIcon
-                            :icon="isDarkMode ? 'moon' : 'sun'"
-                            class="text-xl"
-                        />
-                    </button>
-                    <div
-                        class="flex items-center space-x-3 bg-white border-4 border-red-400 dark:bg-gray-900 px-2 py-2 rounded-full shadow"
-                    >
-                        <svg
-                            class="w-8 h-8 stroke-[#9E122C]"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
+                    
+                    <div class="flex items-center space-x-3 mb-4">
+                        <!-- Profile Avatar -->
+                        <div
+                            class="flex items-center space-x-3 bg-white border-4 border-red-400 dark:bg-gray-900 px-2 py-2 rounded-full shadow"
                         >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M12 14c3.866 0 7 3.134 7 7H5c0-3.866 3.134-7 7-7z"
-                            />
-                            <circle cx="12" cy="7" r="4" />
-                        </svg>
-                        <div class="text-sm">
-                            <p class="font-sm text-[#9E122C]">
-                                {{ user.lastname }}, {{ user.firstname }}
-                            </p>
-                            <p class="text-gray-600 dark:text-gray-300">
-                                Administrator
-                            </p>
+                            <svg
+                                class="w-8 h-8 stroke-[#9E122C]"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 14c3.866 0 7 3.134 7 7H5c0-3.866 3.134-7 7-7z"
+                                />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            <div class="text-sm">
+                                <p class="font-sm text-[#9E122C]">
+                                    {{ user.lastname }}, {{ user.firstname }}
+                                </p>
+                                <p class="text-gray-600 dark:text-gray-300">
+                                    Administrator
+                                </p>
+                            </div>
                         </div>
+
+                        <!-- Dark Mode Button -->
+                        <button
+                            @click="toggleDarkMode"
+                            class="text-[#9E122C] dark:text-white transition"
+                            title="Toggle Dark Mode"
+                        >
+                            <FontAwesomeIcon :icon="isDarkMode ? faMoon : faSun" class="text-xl" />
+                        </button>
                     </div>
                 </div>
 
