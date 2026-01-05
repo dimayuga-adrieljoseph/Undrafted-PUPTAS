@@ -29,15 +29,12 @@ Route::get('/', function () {
     ]);
 })->name('welcome');
 
-Route::middleware([
-    'auth:sanctum',
-    config('jetstream.auth_session'),
-    'verified',
-])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
-});
+// Route::middleware([
+//     'auth:sanctum',
+//     config('jetstream.auth_session'),
+//     'verified',
+// ])->get('/dashboard', [DashboardController::class, 'index'])
+//   ->name('dashboard');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 //Route::get('/dashboard/insights', [DashboardController::class, 'insights']);
@@ -76,33 +73,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/applicant-dashboard', [ApplicantDashboardController::class, 'index'])
         ->name('applicant.dashboard');
 });
-
-
-
-// Route::get('/home', function () {
-//     if (Auth::check()) {
-//         if (Auth::user()->role_id == 1) {
-//             return redirect('/applicant-dashboard'); // Redirect instead of returning a view
-//         } else {
-//             //return redirect('/dashboard');
-//             return Inertia::render('Dashboard');
-//         }
-//     }
-
-//     return redirect('/login'); // If not authenticated, redirect to login
-// })->middleware(['auth', 'role_id:1,2']);
-
-// Route::get('/home', function () {
-//     if (Auth::user()->role_id == 1) {
-//         return redirect('/applicant-dashboard');
-//     } else {
-//         return Inertia::render('Dashboard');
-//     }
-// })->middleware(['auth', 'role_id:1,2']);
-
-// Route::get('/', function () {
-//     dd(Auth::user()->role_id); // See the actual value
-// });
 
 Route::get('/home', function () {
     $roleId = Auth::user()->role_id;
