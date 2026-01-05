@@ -9,7 +9,6 @@
 
 <body>
 
-
     <div class="flex flex-col min-h-screen">
         <div class="user-types-section w-full max-w-4xl mx-auto p-8">
             <div class="text-center">
@@ -60,7 +59,7 @@
                 <form id="addUserForm" method="POST" action="{{ route('add_user.store') }}">
                     @csrf
 
-                    <!-- <div class="form-row">
+                    {{-- <div class="form-row">
                     <div class="form-group full-width">
                         <label for="salutation">Salutation <span class="required">*</span></label>
                         <select id="salutation" name="salutation" class="form-select" required>
@@ -75,7 +74,7 @@
                         </select>
                         <span class="form-error" id="salutation-error"></span>
                     </div>
-                </div> -->
+                </div> --}}
 
                     <div class="form-row">
                         <div class="form-group half-width">
@@ -129,9 +128,10 @@
                             <small style="color: #666; display: block; margin-top: 5px;">
                                 <strong>Password Requirements:</strong><br>
                                 • At least 8 characters<br>
-                                • One uppercase letter (A-Z)<br>
-                                • One lowercase letter (a-z)<br>
-                                • One number (0-9)<br>
+                                • At least one special characters<br>
+                                • At least one uppercase letter (A-Z)<br>
+                                • At least one lowercase letter (a-z)<br>
+                                • At least one number (0-9)<br>
                             </small>
                         </div>
 

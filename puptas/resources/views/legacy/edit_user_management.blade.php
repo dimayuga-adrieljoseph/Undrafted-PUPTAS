@@ -113,9 +113,10 @@
                             <small style="color: #666; display: block; margin-top: 5px;">
                                 <strong>Password Requirements:</strong><br>
                                 • At least 8 characters<br>
-                                • One uppercase letter (A-Z)<br>
-                                • One lowercase letter (a-z)<br>
-                                • One number (0-9)<br>
+                                • At least one special characters<br>
+                                • At least one uppercase letter (A-Z)<br>
+                                • At least one lowercase letter (a-z)<br>
+                                • At least one number (0-9)<br>
                             </small>
                         </div>
 

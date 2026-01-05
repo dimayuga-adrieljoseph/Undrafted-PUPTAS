@@ -1,3 +1,78 @@
+<script setup>
+import { ref, onMounted } from "vue";
+import axios from "axios";
+
+const userCounts = ref({});
+const programs = ref([]);
+const message = ref("");
+const error = ref("");
+
+const form = ref({
+    salutation: "",
+    firstname: "",
+    lastname: "",
+    middlename: "",
+    extension_name: "",
+    email: "",
+    contact_number: "",
+    password: "",
+    password_confirmation: "",
+    role_id: "",
+    program: "",
+});
+
+const salutations = ["Mr.", "Ms.", "Mrs.", "Sr.", "Mx.", "Prof.", "Dr."];
+const roles = [
+    { id: 1, name: "Applicant" },
+    { id: 2, name: "Admin" },
+    { id: 3, name: "Evaluator" },
+    { id: 4, name: "Interviewer" },
+    { id: 5, name: "Medical Staff" },
+    { id: 6, name: "Registrar" },
+];
+const icons = {
+    "Total Users": "fas fa-users",
+    Applicants: "fas fa-user",
+    Admins: "fas fa-tools",
+    Evaluator: "fas fa-check",
+    Interviewer: "fas fa-edit",
+    "Medical Staff": "fa-solid fa-suitcase-medical",
+    Registrar: "fas fa-user",
+};
+
+const fetchUserStats = async () => {
+    const res = await axios.get("/api/user-stats");
+    userCounts.value = res.data;
+};
+
+const fetchPrograms = async () => {
+    const res = await axios.get("/api/programs");
+    programs.value = res.data;
+};
+
+const submitForm = async () => {
+    message.value = "";
+    error.value = "";
+    try {
+        await axios.post("/api/add-user", form.value);
+        message.value = "User added successfully.";
+        Object.keys(form.value).forEach((k) => (form.value[k] = ""));
+        await fetchUserStats();
+    } catch (e) {
+        error.value = e.response?.data?.message || "Error adding user.";
+    }
+};
+
+onMounted(() => {
+    fetchUserStats();
+    fetchPrograms();
+});
+</script>
+
+<style scoped>
+@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css");
+</style>
+
 <template>
     <div class="flex flex-col min-h-screen">
         <!-- User Types -->
@@ -217,78 +292,3 @@
         </section>
     </div>
 </template>
-
-<script setup>
-import { ref, onMounted } from "vue";
-import axios from "axios";
-
-const userCounts = ref({});
-const programs = ref([]);
-const message = ref("");
-const error = ref("");
-
-const form = ref({
-    salutation: "",
-    firstname: "",
-    lastname: "",
-    middlename: "",
-    extension_name: "",
-    email: "",
-    contact_number: "",
-    password: "",
-    password_confirmation: "",
-    role_id: "",
-    program: "",
-});
-
-const salutations = ["Mr.", "Ms.", "Mrs.", "Sr.", "Mx.", "Prof.", "Dr."];
-const roles = [
-    { id: 1, name: "Applicant" },
-    { id: 2, name: "Admin" },
-    { id: 3, name: "Evaluator" },
-    { id: 4, name: "Interviewer" },
-    { id: 5, name: "Medical Staff" },
-    { id: 6, name: "Registrar" },
-];
-const icons = {
-    "Total Users": "fas fa-users",
-    Applicants: "fas fa-user",
-    Admins: "fas fa-tools",
-    Evaluator: "fas fa-check",
-    Interviewer: "fas fa-edit",
-    "Medical Staff": "fa-solid fa-suitcase-medical",
-    Registrar: "fas fa-user",
-};
-
-const fetchUserStats = async () => {
-    const res = await axios.get("/api/user-stats");
-    userCounts.value = res.data;
-};
-
-const fetchPrograms = async () => {
-    const res = await axios.get("/api/programs");
-    programs.value = res.data;
-};
-
-const submitForm = async () => {
-    message.value = "";
-    error.value = "";
-    try {
-        await axios.post("/api/add-user", form.value);
-        message.value = "User added successfully.";
-        Object.keys(form.value).forEach((k) => (form.value[k] = ""));
-        await fetchUserStats();
-    } catch (e) {
-        error.value = e.response?.data?.message || "Error adding user.";
-    }
-};
-
-onMounted(() => {
-    fetchUserStats();
-    fetchPrograms();
-});
-</script>
-
-<style scoped>
-@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css");
-</style>
