@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
@@ -17,27 +18,27 @@ class UserController extends Controller
     /**
      * Display the user addition form.
      */
-   public function create()
-{
-    $userCountsByRole = User::select('role_id', \DB::raw('count(*) as total'))
-                        ->groupBy('role_id')
-                        ->pluck('total', 'role_id')
-                        ->toArray();
+    public function create()
+    {
+        $userCountsByRole = User::select('role_id', \DB::raw('count(*) as total'))
+            ->groupBy('role_id')
+            ->pluck('total', 'role_id')
+            ->toArray();
 
-    $roles = [
-        1 => 'Applicant',
-        2 => 'Admin',
-        3 => 'Evaluator',
-        4 => 'Interviewer',
-        5 => 'Medical',
-        6 => 'Registrar',
-    ];
+        $roles = [
+            1 => 'Applicant',
+            2 => 'Admin',
+            3 => 'Evaluator',
+            4 => 'Interviewer',
+            5 => 'Medical',
+            6 => 'Registrar',
+        ];
 
-    $totalUsers = User::count();
-    $programs = Program::all(); 
+        $totalUsers = User::count();
+        $programs = Program::all();
 
-    return view('legacy.add_user', compact('userCountsByRole', 'roles', 'totalUsers', 'programs'));
-}
+        return view('legacy.add_user', compact('userCountsByRole', 'roles', 'totalUsers', 'programs'));
+    }
 
     /**
      * Handle an incoming user creation request.
@@ -67,13 +68,16 @@ class UserController extends Controller
             'firstname' => $request->firstname,
             'lastname' => $request->lastname,
             'middlename' => $request->middlename,
-            'program' => $request->role_id == 1 ? $request->program : null,
-            
             'email' => $request->email,
             'contactnumber' => $request->contactnumber,
             'password' => Hash::make($request->password),
             'role_id' => $request->role_id,
         ]);
+
+        // Attach program if role is Applicant and program is provided
+        if ($request->role_id == 1 && $request->filled('program')) {
+            $user->programs()->attach($request->program, ['role_id' => $request->role_id]);
+        }
 
         event(new Registered($user));
 
@@ -86,11 +90,11 @@ class UserController extends Controller
     public function index()
     {
         $users = User::with('role')->orderBy('created_at', 'desc')->get();
-        
+
         $userCountsByRole = User::select('role_id', \DB::raw('count(*) as total'))
-                            ->groupBy('role_id')
-                            ->pluck('total', 'role_id')
-                            ->toArray();
+            ->groupBy('role_id')
+            ->pluck('total', 'role_id')
+            ->toArray();
 
         $roles = [
             1 => 'Applicant',
@@ -113,7 +117,7 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
         $programs = Program::all();
-        
+
         $roles = [
             1 => 'Applicant',
             2 => 'Admin',
@@ -152,7 +156,6 @@ class UserController extends Controller
         $user->firstname = $request->firstname;
         $user->lastname = $request->lastname;
         $user->middlename = $request->middlename;
-        $user->program = $request->role_id == 1 ? $request->program : null;
         $user->email = $request->email;
         $user->contactnumber = $request->contactnumber;
         $user->role_id = $request->role_id;
@@ -163,6 +166,14 @@ class UserController extends Controller
 
         $user->save();
 
+        // Sync program if role is Applicant
+        if ($request->role_id == 1 && $request->filled('program')) {
+            $user->programs()->sync([$request->program => ['role_id' => $request->role_id]]);
+        } elseif ($request->role_id != 1) {
+            // Remove all programs if role is not Applicant
+            $user->programs()->detach();
+        }
+
         return redirect()->route('users.index')->with('status', 'User updated successfully!');
     }
 
@@ -172,9 +183,9 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
-        
+
         // Prevent deleting your own account
-        if ($user->id === auth()->id()) {
+        if ($user->id === auth()->user()->id) {
             return redirect()->route('users.index')->with('error', 'You cannot delete your own account!');
         }
 
