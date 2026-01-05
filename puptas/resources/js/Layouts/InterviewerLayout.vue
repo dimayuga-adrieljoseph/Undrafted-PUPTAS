@@ -1,38 +1,38 @@
 <script setup>
-import { ref, computed, onMounted, watchEffect } from "vue";
-import { usePage, router } from "@inertiajs/vue3";
+import { ref, computed, onMounted, watchEffect } from 'vue'
+import { usePage, router } from '@inertiajs/vue3'
 
 // Import the reusable sidebar
-import Sidebar from "@/Components/Sidebar.vue";
+import Sidebar from '@/Components/Sidebar.vue'
 
-const page = usePage();
-const user = computed(() => page.props.user);
+const page = usePage()
+const user = computed(() => page.props.user)
 
-const isDarkMode = ref(false);
+const isDarkMode = ref(false)
 
 onMounted(() => {
-    const saved = localStorage.getItem("darkMode") === "true";
-    isDarkMode.value = saved;
-    document.documentElement.classList.toggle("dark", saved);
-});
+  const saved = localStorage.getItem('darkMode') === 'true'
+  isDarkMode.value = saved
+  document.documentElement.classList.toggle('dark', saved)
+})
 
 function toggleDarkMode() {
-    isDarkMode.value = !isDarkMode.value;
-    document.documentElement.classList.toggle("dark", isDarkMode.value);
-    localStorage.setItem("darkMode", String(isDarkMode.value));
+  isDarkMode.value = !isDarkMode.value
+  document.documentElement.classList.toggle('dark', isDarkMode.value)
+  localStorage.setItem('darkMode', String(isDarkMode.value))
 }
 
-const isLoading = ref(false);
+const isLoading = ref(false)
 
 onMounted(() => {
-    router.on("start", () => (isLoading.value = true));
-    router.on("finish", () => (isLoading.value = false));
-    router.on("error", () => (isLoading.value = false));
-});
+  router.on('start', () => (isLoading.value = true))
+  router.on('finish', () => (isLoading.value = false))
+  router.on('error', () => (isLoading.value = false))
+})
 
 const logout = () => {
-    router.post(route("logout"));
-};
+  router.post(route('logout'))
+}
 </script>
 
 <template>
@@ -41,7 +41,7 @@ const logout = () => {
     <Sidebar :variant="'interviewer'" />
 
     <!-- Main Content -->
-    <div class="flex-1 p-6 transition-all bg-gradient-to-br from-orange-200 to-red-400 dark:from-gray-100 dark:to-gray-900">
+    <div class="flex-1 bg-[#faf6f2] dark:bg-gray-900 p-6 relative" style="margin-left: var(--sidebar-width, 5rem)">
       <main>
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-2 mb-1">
           <h2 class="font-semibold text-xl text-[#9E122C] dark:text-gray-200 leading-tight"></h2>

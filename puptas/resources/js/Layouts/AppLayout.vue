@@ -1,13 +1,13 @@
 <script setup>
-import Sidebar from "@/Components/Sidebar.vue"
-import { useGlobalLoading } from "@/Composables/useGlobalLoading"
-import { usePage } from "@inertiajs/vue3"
-import { computed, ref, onMounted } from "vue"
+import Sidebar from '@/Components/Sidebar.vue'
+import { useGlobalLoading } from '@/Composables/useGlobalLoading'
+import { usePage } from '@inertiajs/vue3'
+import { computed, ref, onMounted } from 'vue'
 
 // FontAwesome
-import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome"
-import { library } from "@fortawesome/fontawesome-svg-core"
-import { faMoon, faSun } from "@fortawesome/free-solid-svg-icons"
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
 
 library.add(faMoon, faSun)
 
@@ -21,15 +21,15 @@ const user = computed(() => page.props.auth.user)
 const isDarkMode = ref(false)
 
 onMounted(() => {
-    const saved = localStorage.getItem("darkMode") === "true"
+    const saved = localStorage.getItem('darkMode') === 'true'
     isDarkMode.value = saved
-    document.documentElement.classList.toggle("dark", saved)
+    document.documentElement.classList.toggle('dark', saved)
 })
 
 const toggleDarkMode = () => {
     isDarkMode.value = !isDarkMode.value
-    document.documentElement.classList.toggle("dark", isDarkMode.value)
-    localStorage.setItem("darkMode", String(isDarkMode.value))
+    document.documentElement.classList.toggle('dark', isDarkMode.value)
+    localStorage.setItem('darkMode', String(isDarkMode.value))
 }
 
 // `darkModeIcon` removed; template will use array icon syntax for reactivity
@@ -42,7 +42,7 @@ const toggleDarkMode = () => {
         <Sidebar />
 
         <!-- Main Content -->
-        <div class="flex-1 bg-[#faf6f2] dark:bg-gray-900 p-6 relative">
+        <div class="flex-1 bg-[#faf6f2] dark:bg-gray-900 p-6 relative" style="margin-left: var(--sidebar-width, 5rem)">
             <!-- Header -->
             <div class="flex justify-end items-center gap-4 mb-6">
                 <!-- Dark Mode Toggle -->

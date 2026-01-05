@@ -37,11 +37,7 @@ function toggleDarkMode() {
     <Sidebar variant="applicant" />
 
     <!-- Main Content -->
-    <div
-      class="flex-1 p-6 transition-all
-             bg-gradient-to-br from-orange-200 to-red-400
-             dark:from-gray-100 dark:to-gray-900"
-    >
+    <div class="flex-1 bg-[#faf6f2] dark:bg-gray-900 p-6 relative" style="margin-left: var(--sidebar-width, 5rem)">
       <main>
         <!-- Header -->
         <div class="flex justify-end items-center gap-4 mb-4">
