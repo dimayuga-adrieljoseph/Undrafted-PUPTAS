@@ -16,7 +16,7 @@ const { isLoading } = useGlobalLoading()
 
 // Current user
 const page = usePage()
-const user = computed(() => page.props.user)
+const user = computed(() => page.props.auth.user)
 
 // Dark mode (layout-level only)
 const isDarkMode = ref(false)
@@ -36,7 +36,7 @@ function toggleDarkMode() {
 
 <template>
   <div class="flex min-h-screen bg-orange-100 dark:bg-gray-900">
-    <Sidebar variant="interviewer" />
+    <Sidebar variant="evaluator" />
 
     <!-- Main Content -->
     <div class="flex-1 bg-[#faf6f2] dark:bg-gray-900 p-6 relative" style="margin-left: var(--sidebar-width, 5rem)">
@@ -81,7 +81,7 @@ function toggleDarkMode() {
                 {{ user?.lastname }}, {{ user?.firstname }}
               </p>
               <p class="text-xs text-gray-600 dark:text-gray-300">
-                Interviewer
+                Evaluator
               </p>
             </div>
           </div>

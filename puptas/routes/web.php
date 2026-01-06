@@ -167,17 +167,16 @@ Route::post('/get-files', [UserFileController::class, 'getUserApplication']);
 Route::middleware(['auth'])->group(function () {
     Route::get('/evaluator-dashboard', [EvaluatorDashboardController::class, 'index'])
         ->name('evaluator.dashboard');
-});
-
-Route::get('/evaluator-applications', function () {
-    if (Auth::user()?->role_id !== 3) {
-         return redirect()->back()->with('error', 'Unauthorized access.');
-    }
-    return Inertia::render('Applications/EvaluatorApplications', [
-    'user' => Auth::user(),
-]);
-
-})->name('evaluator.applications'); 
+    
+    Route::get('/evaluator-applications', function () {
+        if (Auth::user()?->role_id !== 3) {
+             return redirect()->back()->with('error', 'Unauthorized access.');
+        }
+        return Inertia::render('Applications/EvaluatorApplications', [
+        'user' => Auth::user(),
+    ]);
+    })->name('evaluator.applications');
+}); 
 
 Route::get('/evaluator-dashboard/applicants', [EvaluatorDashboardController::class, 'getUsers']);
 

@@ -6,7 +6,7 @@ import { usePage, router } from '@inertiajs/vue3'
 import Sidebar from '@/Components/Sidebar.vue'
 
 const page = usePage()
-const user = computed(() => page.props.user)
+const user = computed(() => page.props.auth.user)
 
 const isDarkMode = ref(false)
 

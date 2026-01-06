@@ -168,6 +168,9 @@ watch(
         isPasserDropdownOpen.value = isUploadFormActive.value || isListPassersActive.value
 
         isMaintenanceDropdownOpen.value = isManageActive.value || isAssignActive.value
+        
+        // Close user settings dropdown when navigating away from profile/settings pages
+        isUserMenuOpen.value = isUserSettingsActive.value
     },
     { immediate: true }
 )
@@ -251,7 +254,7 @@ onUnmounted(() => {
 
                 <li>
                     <div
-                        @click="toggleMenu('user')"
+                        @click="toggleUserMenu"
                         class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
                         :class="{
                             'active-link':
@@ -378,7 +381,7 @@ onUnmounted(() => {
 
                     <li>
                         <div
-                            @click="toggleMenu('user')"
+                            @click="toggleUserMenu"
                             class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
                             :class="{
                                 'active-link':
@@ -484,7 +487,7 @@ onUnmounted(() => {
 
                 <li>
                     <div
-                        @click="toggleMenu('user')"
+                        @click="toggleUserMenu"
                         class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
                         :class="{
                             'active-link':
@@ -548,20 +551,56 @@ onUnmounted(() => {
                 <li>
                     <NavLink
                         :href="route('evaluator.dashboard')"
-                        :active="isActiveRoute('evaluator.dashboard')"
-                        class="flex items-center space-x-3 py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77]"
-                        :class="{ 'active-link': isActiveRoute('evaluator.dashboard') }"
+                        :active="isDashboardActive"
+                        class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
+                        :class="{
+                            'active-link': isDashboardActive,
+                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
+                        }"
                     >
-                        <FontAwesomeIcon icon="tachometer-alt" class="text-xl" />
-                        <span v-if="isSidebarOpen">My Dashboard</span>
+                        <div class="w-6 flex justify-center">
+                            <FontAwesomeIcon
+                                icon="tachometer-alt"
+                                class="text-xl"
+                            />
+                        </div>
+                        <span v-if="isSidebarOpen" class="whitespace-nowrap"
+                            >My Dashboard</span
+                        >
+                    </NavLink>
+                </li>
+                <li>
+                    <NavLink
+                        :href="route('evaluator.applications')"
+                        :active="isApplicationsActive"
+                        class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
+                        :class="{
+                            'active-link': isApplicationsActive,
+                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
+                        }"
+                    >
+                        <div class="w-6 flex justify-center">
+                            <FontAwesomeIcon
+                                icon="envelope-open-text"
+                                class="text-xl"
+                            />
+                        </div>
+                        <span v-if="isSidebarOpen" class="whitespace-nowrap"
+                            >Applications</span
+                        >
                     </NavLink>
                 </li>
 
                 <li>
                     <div
                         @click="toggleUserMenu"
-                        class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77]"
-                        :class="{ 'active-link': isUserMenuOpen }"
+                        class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
+                        :class="{
+                            'active-link':
+                                isUserMenuOpen ||
+                                isActiveRoute('profile.show') ||
+                                isActiveRoute('api-tokens.index'),
+                        }"
                     >
                         <div class="flex items-center space-x-3">
                             <FontAwesomeIcon icon="cog" class="text-xl" />
@@ -569,10 +608,13 @@ onUnmounted(() => {
                         </div>
                         <FontAwesomeIcon
                             v-if="isSidebarOpen"
-                            :icon="isUserMenuOpen ? 'caret-down' : 'caret-right'"
+                            :icon="
+                                isUserMenuOpen
+                                    ? 'caret-down'
+                                    : 'caret-right'
+                            "
                         />
                     </div>
-
                     <transition name="slide-fade">
                         <div
                             v-show="isUserMenuOpen && isSidebarOpen"
@@ -580,22 +622,30 @@ onUnmounted(() => {
                         >
                             <DropdownLink
                                 :href="route('profile.show')"
-                                class="text-[#FCECDF] py-2 px-4 block hover:bg-[#FBCB77]"
+                                class="text-[#FCECDF] py-2 px-4 block hover:bg-[#FBCB77] transition"
+                                :class="{
+                                    'active-link':
+                                        isActiveRoute('profile.show'),
+                                }"
                             >
                                 Profile
                             </DropdownLink>
                         </div>
                     </transition>
                 </li>
-
                 <li>
                     <form @submit.prevent="logout">
                         <button
                             type="submit"
-                            class="flex w-full items-center space-x-3 py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77]"
+                            class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition focus:outline-none w-full"
                         >
-                            <FontAwesomeIcon icon="sign-out-alt" class="text-xl" />
-                            <span v-if="isSidebarOpen">Log Out</span>
+                            <div class="flex items-center space-x-3">
+                                <FontAwesomeIcon
+                                    icon="sign-out-alt"
+                                    class="text-xl"
+                                />
+                                <span v-if="isSidebarOpen">Log Out</span>
+                            </div>
                         </button>
                     </form>
                 </li>
