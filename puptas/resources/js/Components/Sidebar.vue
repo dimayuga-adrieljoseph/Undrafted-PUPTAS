@@ -189,12 +189,17 @@ onMounted(() => {
 onUnmounted(() => {
     document.removeEventListener('pointerdown', onClickOutside)
 })
+
+// Keep the global CSS variable in sync whenever the sidebar open state changes
+watch(isSidebarOpen, (val) => {
+    document.documentElement.style.setProperty('--sidebar-width', val ? '18rem' : '5rem')
+})
 </script>
 
 <template>
     <div
         ref="sidebarRef"
-        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-md transition-all duration-300"
+        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-md transition-all duration-500 ease-in-out"
         :class="sidebarWidthClass"
         @pointerenter="onSidebarEnter"
         @pointerleave="onSidebarLeave"
@@ -810,5 +815,20 @@ onUnmounted(() => {
 <style scoped>
 .sidebar {
     background-color: #8b0000;
+    /* Only animate width and padding for smoother layout transitions */
+    transition-property: width, padding;
+    transition-duration: 500ms;
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: width, padding;
+}
+
+/* Smoothly fade/slide labels when the sidebar changes width */
+.sidebar .whitespace-nowrap {
+    transition: opacity 260ms ease, transform 260ms ease;
+}
+
+/* Slight performance hint for icons and text */
+.sidebar * {
+    backface-visibility: hidden;
 }
 </style>
