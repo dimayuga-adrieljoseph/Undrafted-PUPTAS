@@ -45,23 +45,23 @@ public function getUsers()
 {
     return response()->json(
         User::with('application.program')
-            ->where('role_id', 1) 
+            ->where('role_id', 1)
+            ->whereHas('application')
             ->get()
-           ->map(function ($user) {
-    return [
-        'id' => $user->id,
-        'firstname' => $user->firstname,
-        'lastname' => $user->lastname,
-        'course' => $user->course,
-        'status' => $user->application->status ?? null,
-        'email' => $user->email,
-        'username' => $user->username,
-        'phone' => $user->phone,
-        'company' => $user->company,
-        'program' => $user->application->program ?? null,
-    ];
-})
-
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'course' => $user->course,
+                    'status' => $user->application->status ?? null,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'phone' => $user->phone,
+                    'company' => $user->company,
+                    'program' => $user->application->program ?? null,
+                ];
+            })
     );
 }
 

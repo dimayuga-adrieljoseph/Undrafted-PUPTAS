@@ -188,8 +188,9 @@ public function returnFiles(Request $request, $userId)
 public function getUsers()
 {
     return response()->json(
-        User::with('application.program') // Assuming a User hasOne Application
-            ->where('role_id', 1) 
+        User::with('application.program')
+            ->where('role_id', 1)
+            ->whereHas('application')
             ->get()
             ->map(function ($user) {
                 return [
@@ -197,11 +198,11 @@ public function getUsers()
                     'firstname' => $user->firstname,
                     'lastname' => $user->lastname,
                     'course' => $user->course,
-                    'status' => $user->application->status ?? null, // status from Application
+                    'status' => $user->application->status ?? null,
                     'email' => $user->email,
                     'username' => $user->username,
                     'phone' => $user->phone,
-                    'company' => $user->company, 
+                    'company' => $user->company,
                     'program' => $user->application->program ?? null,
                 ];
             })
