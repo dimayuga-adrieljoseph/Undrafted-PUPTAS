@@ -81,7 +81,7 @@ class UserController extends Controller
 
         event(new Registered($user));
 
-        return redirect()->route('legacy.add_user')->with('status', 'User added successfully!');
+        return redirect()->route('users.index')->with('status', 'User added successfully!');
     }
 
     /**

@@ -75,7 +75,8 @@
     <!-- Program Assignment -->
     <div>
         <label for="programs">Assign to Programs:</label>
-        <select name="programs[]" multiple required>
+        <small style="display: block; color: #666; margin-bottom: 5px; font-style: italic;">Hold Ctrl (Windows) or Cmd (Mac) to select multiple programs</small>
+        <select name="programs[]" multiple required size="5" style="min-height: 120px;">
             @foreach($programs as $program)
             <option value="{{ $program->id }}" {{ in_array($program->id, $assignedPrograms) ? 'selected' : '' }}>
                 {{ $program->name }}
