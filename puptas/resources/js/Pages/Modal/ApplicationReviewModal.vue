@@ -197,7 +197,6 @@
                                 <button
                                     class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
                                     @click="triggerFileInput('file10Front')"
-                                    :disabled="!canSubmit"
                                 >
                                     Reupload
                                 </button>
@@ -240,7 +239,6 @@
                                 <button
                                     class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
                                     @click="triggerFileInput('file')"
-                                    :disabled="!canSubmit"
                                 >
                                     Reupload
                                 </button>
@@ -275,7 +273,6 @@
                                 <button
                                     class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
                                     @click="triggerFileInput('file11')"
-                                    :disabled="!canSubmit"
                                 >
                                     Reupload
                                 </button>
@@ -310,7 +307,6 @@
                                 <button
                                     class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
                                     @click="triggerFileInput('file12')"
-                                    :disabled="!canSubmit"
                                 >
                                     Reupload
                                 </button>
@@ -348,7 +344,6 @@
                                 <button
                                     class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
                                     @click="triggerFileInput('schoolId')"
-                                    :disabled="!canSubmit"
                                 >
                                     Reupload
                                 </button>
@@ -389,7 +384,6 @@
                                 <button
                                     class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
                                     @click="triggerFileInput('nonEnrollCert')"
-                                    :disabled="!canSubmit"
                                 >
                                     Reupload
                                 </button>
@@ -423,7 +417,7 @@
                                 <button
                                     class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
                                     @click="triggerFileInput('psa')"
-                                    :disabled="!canSubmit"
+
                                 >
                                     Reupload
                                 </button>
@@ -463,7 +457,7 @@
                                 <button
                                     class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
                                     @click="triggerFileInput('goodMoral')"
-                                    :disabled="!canSubmit"
+
                                 >
                                     Reupload
                                 </button>
@@ -503,7 +497,7 @@
                                 <button
                                     class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
                                     @click="triggerFileInput('underOath')"
-                                    :disabled="!canSubmit"
+
                                 >
                                     Reupload
                                 </button>
@@ -541,7 +535,6 @@
                                 <button
                                     class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
                                     @click="triggerFileInput('photo2x2')"
-                                    :disabled="!canSubmit"
                                 >
                                     Reupload
                                 </button>
@@ -766,6 +759,7 @@ const closeImageModal = () => {
 const fileInputRefs = ref({});
 
 const file10FrontInput = ref(null);
+const fileInput = ref(null);
 const file11Input = ref(null);
 const file12Input = ref(null);
 const schoolIdInput = ref(null);
@@ -776,8 +770,9 @@ const underOathInput = ref(null);
 const photo2x2Input = ref(null);
 
 const triggerFileInput = (key) => {
-    const inputs = {
+    const inputRefs = {
         file10Front: file10FrontInput,
+        file: fileInput,
         file11: file11Input,
         file12: file12Input,
         schoolId: schoolIdInput,
@@ -788,7 +783,10 @@ const triggerFileInput = (key) => {
         photo2x2: photo2x2Input,
     };
 
-    inputs[key]?.value?.click();
+    const inputRef = inputRefs[key];
+    if (inputRef && inputRef.value) {
+        inputRef.value.click();
+    }
 };
 
 const reuploadFile = async (event, fieldName) => {
@@ -797,15 +795,20 @@ const reuploadFile = async (event, fieldName) => {
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("field", fieldName); // You must handle this in your backend
+    formData.append("field", fieldName);
 
     try {
-        await axios.post("/user/application/reupload", formData);
+        const response = await axios.post("/user/application/reupload", formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
         showSnackbar("File reuploaded!");
 
-        fetchApplicationData(); // refresh view with new file
+        await fetchApplicationData(); // refresh view with new file
     } catch (err) {
-        showSnackbar("Failed to reupload file.");
+        console.error("Reupload error:", err.response?.data || err);
+        showSnackbar(err.response?.data?.message || "Failed to reupload file.");
     }
 };
 

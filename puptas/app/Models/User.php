@@ -15,6 +15,7 @@ use App\Models\UserFile;
 use App\Models\Application;
 use App\Models\ApplicationProcess;
 use App\Models\Grade;
+use App\Models\ApplicantProfile;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 
@@ -91,6 +92,11 @@ class User extends Authenticatable
     public function grades()
     {
         return $this->hasOne(Grade::class);
+    }
+
+    public function applicantProfile()
+    {
+        return $this->hasOne(ApplicantProfile::class);
     }
 
 
