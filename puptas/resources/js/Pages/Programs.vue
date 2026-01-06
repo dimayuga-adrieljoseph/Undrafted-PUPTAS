@@ -20,8 +20,26 @@ const itemsPerPage = 10;
 const editingProgram = ref(null);
 const isEditing = ref(false);
 
-// CSRF token
-const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+// Get CSRF token from cookie or meta tag
+const getCsrfToken = () => {
+  const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+  if (tokenMeta) {
+    return tokenMeta.getAttribute('content');
+  }
+  // Fallback: get from cookie
+  const cookies = document.cookie.split(';');
+  for (let cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (name === 'XSRF-TOKEN') {
+      return decodeURIComponent(value);
+    }
+  }
+  return null;
+};
+
+// Configure axios defaults
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.defaults.withCredentials = true;
 
 const fetchPrograms = async () => {
   try {
@@ -72,16 +90,27 @@ const startEdit = (program) => {
 
 const saveEdit = async () => {
   try {
-    await axios.put(`/programs/update/${editingProgram.value.id}`, editingProgram.value, {
-      headers: { "X-CSRF-TOKEN": csrfToken }
-    });
+    const response = await axios.put(`/programs/update/${editingProgram.value.id}`, editingProgram.value);
 
+    // Update the local programs array with the saved data
     const index = programs.value.findIndex(p => p.id === editingProgram.value.id);
-    programs.value[index] = { ...editingProgram.value };
+    if (index !== -1) {
+      programs.value[index] = { ...editingProgram.value };
+    }
+    
     isEditing.value = false;
     editingProgram.value = null;
+    
+    // Refresh programs list to ensure data is in sync
+    await fetchPrograms();
+    
+    console.log('Program updated successfully:', response.data);
   } catch (error) {
     console.error("Error updating program:", error);
+    if (error.response) {
+      console.error("Server response:", error.response.data);
+      alert(`Failed to update program: ${error.response.data.message || 'Unknown error'}`);
+    }
   }
 };
 
@@ -93,13 +122,14 @@ const cancelEdit = () => {
 const confirmDeleteProgram = async () => {
   if (!programToDelete.value) return;
   try {
-    await axios.delete(`/programs/delete/${programToDelete.value}`, {
-      headers: { "X-CSRF-TOKEN": csrfToken }
-    });
+    await axios.delete(`/programs/delete/${programToDelete.value}`);
     programs.value = programs.value.filter(p => p.id !== programToDelete.value);
     closeDeleteModal();
   } catch (error) {
     console.error("Error deleting program:", error);
+    if (error.response) {
+      alert(`Failed to delete program: ${error.response.data.message || 'Unknown error'}`);
+    }
   }
 };
 
