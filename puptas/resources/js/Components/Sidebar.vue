@@ -168,6 +168,9 @@ watch(
         isPasserDropdownOpen.value = isUploadFormActive.value || isListPassersActive.value
 
         isMaintenanceDropdownOpen.value = isManageActive.value || isAssignActive.value
+        
+        // Close user settings dropdown when navigating away from profile/settings pages
+        isUserMenuOpen.value = isUserSettingsActive.value
     },
     { immediate: true }
 )
@@ -186,12 +189,17 @@ onMounted(() => {
 onUnmounted(() => {
     document.removeEventListener('pointerdown', onClickOutside)
 })
+
+// Keep the global CSS variable in sync whenever the sidebar open state changes
+watch(isSidebarOpen, (val) => {
+    document.documentElement.style.setProperty('--sidebar-width', val ? '18rem' : '5rem')
+})
 </script>
 
 <template>
     <div
         ref="sidebarRef"
-        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-md transition-all duration-300"
+        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-md transition-all duration-500 ease-in-out"
         :class="sidebarWidthClass"
         @pointerenter="onSidebarEnter"
         @pointerleave="onSidebarLeave"
@@ -251,7 +259,7 @@ onUnmounted(() => {
 
                 <li>
                     <div
-                        @click="toggleMenu('user')"
+                        @click="toggleUserMenu"
                         class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
                         :class="{
                             'active-link':
@@ -378,7 +386,7 @@ onUnmounted(() => {
 
                     <li>
                         <div
-                            @click="toggleMenu('user')"
+                            @click="toggleUserMenu"
                             class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
                             :class="{
                                 'active-link':
@@ -484,7 +492,7 @@ onUnmounted(() => {
 
                 <li>
                     <div
-                        @click="toggleMenu('user')"
+                        @click="toggleUserMenu"
                         class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
                         :class="{
                             'active-link':
@@ -548,20 +556,56 @@ onUnmounted(() => {
                 <li>
                     <NavLink
                         :href="route('evaluator.dashboard')"
-                        :active="isActiveRoute('evaluator.dashboard')"
-                        class="flex items-center space-x-3 py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77]"
-                        :class="{ 'active-link': isActiveRoute('evaluator.dashboard') }"
+                        :active="isDashboardActive"
+                        class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
+                        :class="{
+                            'active-link': isDashboardActive,
+                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
+                        }"
                     >
-                        <FontAwesomeIcon icon="tachometer-alt" class="text-xl" />
-                        <span v-if="isSidebarOpen">My Dashboard</span>
+                        <div class="w-6 flex justify-center">
+                            <FontAwesomeIcon
+                                icon="tachometer-alt"
+                                class="text-xl"
+                            />
+                        </div>
+                        <span v-if="isSidebarOpen" class="whitespace-nowrap"
+                            >My Dashboard</span
+                        >
+                    </NavLink>
+                </li>
+                <li>
+                    <NavLink
+                        :href="route('evaluator.applications')"
+                        :active="isApplicationsActive"
+                        class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
+                        :class="{
+                            'active-link': isApplicationsActive,
+                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
+                        }"
+                    >
+                        <div class="w-6 flex justify-center">
+                            <FontAwesomeIcon
+                                icon="envelope-open-text"
+                                class="text-xl"
+                            />
+                        </div>
+                        <span v-if="isSidebarOpen" class="whitespace-nowrap"
+                            >Applications</span
+                        >
                     </NavLink>
                 </li>
 
                 <li>
                     <div
                         @click="toggleUserMenu"
-                        class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77]"
-                        :class="{ 'active-link': isUserMenuOpen }"
+                        class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
+                        :class="{
+                            'active-link':
+                                isUserMenuOpen ||
+                                isActiveRoute('profile.show') ||
+                                isActiveRoute('api-tokens.index'),
+                        }"
                     >
                         <div class="flex items-center space-x-3">
                             <FontAwesomeIcon icon="cog" class="text-xl" />
@@ -569,10 +613,13 @@ onUnmounted(() => {
                         </div>
                         <FontAwesomeIcon
                             v-if="isSidebarOpen"
-                            :icon="isUserMenuOpen ? 'caret-down' : 'caret-right'"
+                            :icon="
+                                isUserMenuOpen
+                                    ? 'caret-down'
+                                    : 'caret-right'
+                            "
                         />
                     </div>
-
                     <transition name="slide-fade">
                         <div
                             v-show="isUserMenuOpen && isSidebarOpen"
@@ -580,22 +627,30 @@ onUnmounted(() => {
                         >
                             <DropdownLink
                                 :href="route('profile.show')"
-                                class="text-[#FCECDF] py-2 px-4 block hover:bg-[#FBCB77]"
+                                class="text-[#FCECDF] py-2 px-4 block hover:bg-[#FBCB77] transition"
+                                :class="{
+                                    'active-link':
+                                        isActiveRoute('profile.show'),
+                                }"
                             >
                                 Profile
                             </DropdownLink>
                         </div>
                     </transition>
                 </li>
-
                 <li>
                     <form @submit.prevent="logout">
                         <button
                             type="submit"
-                            class="flex w-full items-center space-x-3 py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77]"
+                            class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition focus:outline-none w-full"
                         >
-                            <FontAwesomeIcon icon="sign-out-alt" class="text-xl" />
-                            <span v-if="isSidebarOpen">Log Out</span>
+                            <div class="flex items-center space-x-3">
+                                <FontAwesomeIcon
+                                    icon="sign-out-alt"
+                                    class="text-xl"
+                                />
+                                <span v-if="isSidebarOpen">Log Out</span>
+                            </div>
                         </button>
                     </form>
                 </li>
@@ -760,5 +815,20 @@ onUnmounted(() => {
 <style scoped>
 .sidebar {
     background-color: #8b0000;
+    /* Only animate width and padding for smoother layout transitions */
+    transition-property: width, padding;
+    transition-duration: 500ms;
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: width, padding;
+}
+
+/* Smoothly fade/slide labels when the sidebar changes width */
+.sidebar .whitespace-nowrap {
+    transition: opacity 260ms ease, transform 260ms ease;
+}
+
+/* Slight performance hint for icons and text */
+.sidebar * {
+    backface-visibility: hidden;
 }
 </style>

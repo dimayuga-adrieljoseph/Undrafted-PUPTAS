@@ -1,9 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
+import axios from "axios";
 import { Head } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 
 const users = ref([]);
+const loading = ref(false);
+const fetchError = ref(null);
 const searchQuery = ref("");
 const statusFilter = ref("");
 const selectedUser = ref(null);
@@ -15,17 +18,22 @@ const showStatusDropdown = ref(false);
 const selectedUserFiles = ref({});
 
 const fetchUsers = async () => {
+    loading.value = true;
+    fetchError.value = null;
     try {
-        const response = await fetch("/dashboard/users", {
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json();
+        const response = await axios.get("/dashboard/users");
+        // Ensure we received an array; if not, surface helpful error
+        if (!Array.isArray(response.data)) {
+            fetchError.value = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            users.value = [];
+        } else {
+            users.value = response.data;
+        }
     } catch (err) {
-        console.error(err);
+        console.error("Failed to fetch users:", err);
+        fetchError.value = err.response?.data || err.message || String(err);
+    } finally {
+        loading.value = false;
     }
 };
 
@@ -287,7 +295,9 @@ const clearFilters = () => {
             </div>
 
             <div class="bg-white/20 rounded-xl shadow p-2 overflow-x-auto">
-                <div class="text-sm text-[#4B5563] mb-2">
+                <div v-if="loading" class="text-center text-gray-500 py-4">Loading applicants…</div>
+                <div v-else-if="fetchError" class="text-center text-red-500 py-4">Error: {{ fetchError }}</div>
+                <div v-if="!loading && !fetchError" class="text-sm text-[#4B5563] mb-2">
                     Showing {{ paginatedUsers.length }} of
                     {{ filteredUsers.length }} users
                 </div>
