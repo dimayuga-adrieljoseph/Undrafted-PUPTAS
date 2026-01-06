@@ -274,7 +274,6 @@ Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.
 // handle form submission
 Route::post('/legacy/add-user/store', [UserController::class, 'store'])->name('add_user.store');
 
-
 Route::get('/add-user-vue', function () {
     return Inertia::render('Legacy/AddUser');
 })->name('add_user_vue');
