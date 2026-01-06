@@ -6,6 +6,8 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
+import MedicalLayout from "@/Layouts/MedicalLayout.vue";
+import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
 
 import DeleteUserForm from "@/Pages/Profile/Partials/DeleteUserForm.vue";
 import LogoutOtherBrowserSessionsForm from "@/Pages/Profile/Partials/LogoutOtherBrowserSessionsForm.vue";
@@ -37,6 +39,10 @@ const Layout = computed(() => {
             return EvaluatorLayout;
         case 4:
             return InterviewerLayout;
+        case 5:
+            return MedicalLayout;
+        case 6:
+            return RecordStaffLayout;
         default:
             return ApplicantLayout; // fallback layout
     }
