@@ -174,6 +174,26 @@
                 />
             </div>
         </div>
+
+        <!-- Preview overlay for images -->
+        <div
+            v-if="showImageModal"
+            class="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center"
+            @click="closeImageModal"
+        >
+            <img
+                :src="previewSrc"
+                alt="Preview"
+                class="max-w-[90vw] max-h-[90vh] rounded shadow"
+            />
+            <button
+                class="absolute top-5 right-5 text-white text-3xl font-bold"
+                aria-label="Close preview"
+                @click.stop="closeImageModal"
+            >
+                &times;
+            </button>
+        </div>
     </ApplicantLayout>
 </template>
 
@@ -275,8 +295,26 @@ const reuploadFile = async (e, key) => {
     }
 };
 
+// Preview state
+const showImageModal = ref(false);
+const previewSrc = ref("");
+
+const isPdf = (src) => src?.toLowerCase().endsWith(".pdf");
+
 const openImageModal = (src) => {
-    /* your existing modal logic */
+    if (!src) return;
+    if (isPdf(src)) {
+        // Open PDFs in a new tab for a better preview experience
+        window.open(src, "_blank");
+        return;
+    }
+    previewSrc.value = src;
+    showImageModal.value = true;
+};
+
+const closeImageModal = () => {
+    showImageModal.value = false;
+    previewSrc.value = "";
 };
 const closeModal = () => (showModal.value = false);
 
@@ -286,9 +324,6 @@ onMounted(() => {
 });
 </script>
 
-<style>
-/* hide native file inputs */
-input[type="file"] {
-    display: none;
-}
+<style scoped>
+/* The hidden class is already applied to dashboard file inputs, so no global rule needed */
 </style>
