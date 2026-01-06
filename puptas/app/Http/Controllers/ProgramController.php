@@ -34,33 +34,33 @@ class ProgramController extends Controller
     }
 
     public function update(Request $request, $id)
-{
-    // ✅ Retrieve the program before updating
-    $program = Program::find($id);
+    {
+        // ✅ Retrieve the program before updating
+        $program = Program::find($id);
 
-    // ✅ Check if the program exists
-    if (!$program) {
-        return response()->json(['message' => 'Program not found'], 404);
+        // ✅ Check if the program exists
+        if (!$program) {
+            return response()->json(['message' => 'Program not found'], 404);
+        }
+
+        // ✅ Validate the request data
+        $validatedData = $request->validate([
+            'code' => 'required|string|unique:programs,code,' . $id,
+            'name' => 'required|string',
+            'strand' => 'nullable|string',
+            'math' => 'nullable|integer|min:0',
+            'science' => 'nullable|integer|min:0',
+            'english' => 'nullable|integer|min:0',
+            'gwa' => 'nullable|integer|min:0',
+            'pupcet' => 'nullable|integer|min:0',
+            'slots' => 'required|integer|min:0',
+        ]);
+
+        // ✅ Update the program
+        $program->update($validatedData);
+
+        return response()->json(['message' => 'Program updated successfully', 'program' => $program]);
     }
-
-    // ✅ Validate the request data
-    $validatedData = $request->validate([
-        'code' => 'nullable|string|unique:programs,code,' . $id,
-        'name' => 'nullable|string',
-        'strand' => 'nullable|string',
-        'math' => 'nullable|integer',
-        'science' => 'nullable|integer',
-        'english' => 'nullable|integer',
-        'gwa' => 'nullable|integer',
-        'pupcet' => 'nullable|integer',
-        'slots' => 'nullable|integer',
-    ]);
-
-    // ✅ Update the program
-    $program->update($validatedData);
-
-    return response()->json(['message' => 'Program updated successfully', 'program' => $program]);
-}
 
     // ✅ Delete a program
     public function destroy($id)
