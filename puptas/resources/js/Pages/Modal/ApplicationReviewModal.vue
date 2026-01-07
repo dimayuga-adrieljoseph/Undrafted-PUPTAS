@@ -602,24 +602,31 @@
         </svg>
     </button>
     <!-- End Reopen Modal Icon -->
+    
+    <!-- Image Preview Overlay -->
     <div
         v-if="showImageModal"
-        class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+        class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60]"
+        @click="closeImageModal"
     >
-        <img
-            :src="previewImage"
-            alt="Preview"
-            class="max-w-full max-h-full rounded shadow-lg"
-            @click="closeImageModal"
-        />
+        <div class="relative max-w-[90vw] max-h-[90vh]">
+            <img
+                :src="previewImage"
+                alt="Preview"
+                class="max-w-full max-h-[90vh] object-contain rounded shadow-lg"
+                @click.stop
+                @error="(e) => console.error('Image failed to load:', previewImage)"
+            />
+        </div>
         <button
-            @click="closeImageModal"
+            @click.stop="closeImageModal"
             class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300"
             aria-label="Close preview"
         >
             &times;
         </button>
     </div>
+    
     <!-- Snackbar -->
     <transition name="fade">
         <div
@@ -747,13 +754,26 @@ onMounted(() => {
 const previewImage = ref(null);
 const showImageModal = ref(false);
 
-const openImageModal = (src) => {
+const openImageModal = (fileObj) => {
+    // Handle both string URLs and file objects { url, status }
+    const src = typeof fileObj === 'string' ? fileObj : fileObj?.url;
+    
+    console.log('openImageModal called with:', fileObj);
+    console.log('Extracted URL:', src);
+    
+    if (!src) {
+        console.warn('No valid URL found');
+        return;
+    }
+    
+    // Show image in overlay
     previewImage.value = src;
     showImageModal.value = true;
 };
 
 const closeImageModal = () => {
     showImageModal.value = false;
+    previewImage.value = null;
 };
 
 const fileInputRefs = ref({});
