@@ -69,7 +69,7 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
-import axios from "axios";
+const axios = window.axios;
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { useGlobalLoading } from "@/Composables/useGlobalLoading";
 

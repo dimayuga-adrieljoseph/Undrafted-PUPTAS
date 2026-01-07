@@ -70,7 +70,7 @@
 <script setup>
 import { ref } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
-import axios from "axios";
+const axios = window.axios;
 import { useRouter } from "vue-router";
 
 const selectedBatch = ref("Batch 1");

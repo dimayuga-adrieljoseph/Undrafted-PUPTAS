@@ -640,7 +640,7 @@
 
 <script setup>
 import { defineProps, defineEmits, ref, watch, onMounted, computed } from "vue";
-import axios from "axios";
+const axios = window.axios;
 import { nextTick } from "vue";
 
 const props = defineProps({

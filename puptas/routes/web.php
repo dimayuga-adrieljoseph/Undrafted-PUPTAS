@@ -48,26 +48,28 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
 });
 
 
-Route::get('/programs', function () {
-    return Inertia::render('Programs');  // This is your Inertia page
-})->name('programs.index');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/programs', function () {
+        return Inertia::render('Programs');
+    })->name('programs.index');
 
+    Route::get('/addindex', function () {
+        return Inertia::render('AddProgram');
+    })->name('programs.addindex');
 
-Route::get('/addindex', function () {
-    return Inertia::render('AddProgram');  // This is your Inertia page
-})->name('programs.addindex');
+    // ✅ Fetch programs
+    Route::get('/programs/list', [ProgramController::class, 'index'])->name('programs.list');
 
-// ✅ Fetch programs
-Route::get('/programs/list', [ProgramController::class, 'index'])->name('programs.list');
+    // ✅ Create a new program (POST)
+    Route::post('/programs/store', [ProgramController::class, 'store'])->name('programs.store');
 
-// ✅ Create a new program (POST)
-Route::post('/programs/store', [ProgramController::class, 'store'])->name('programs.store');
+    // ✅ Update program slots (PUT)
+    Route::put('/programs/update/{id}', [ProgramController::class, 'update'])->name('programs.update');
 
-// ✅ Update program slots (PUT)
-Route::put('/programs/update/{id}', [ProgramController::class, 'update'])->name('programs.update');
+    // ✅ Delete a program (DELETE)
+    Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->name('programs.delete');
+});
 
-// ✅ Delete a program (DELETE)
-Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->name('programs.delete');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/applicant-dashboard', [ApplicantDashboardController::class, 'index'])

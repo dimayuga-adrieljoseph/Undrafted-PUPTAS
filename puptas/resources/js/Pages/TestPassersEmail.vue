@@ -733,7 +733,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import axios from "axios";
+const axios = window.axios;
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { QuillEditor } from "@vueup/vue-quill";
 import "@vueup/vue-quill/dist/vue-quill.snow.css";
