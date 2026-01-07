@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
-import axios from "axios";
+const axios = window.axios;
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DeleteModal from "@/Components/DeleteModal.vue";
 import { Head, Link } from '@inertiajs/vue3';
@@ -20,27 +20,6 @@ const itemsPerPage = 10;
 const editingProgram = ref(null);
 const isEditing = ref(false);
 
-// Get CSRF token from cookie or meta tag
-const getCsrfToken = () => {
-  const tokenMeta = document.querySelector('meta[name="csrf-token"]');
-  if (tokenMeta) {
-    return tokenMeta.getAttribute('content');
-  }
-  // Fallback: get from cookie
-  const cookies = document.cookie.split(';');
-  for (let cookie of cookies) {
-    const [name, value] = cookie.trim().split('=');
-    if (name === 'XSRF-TOKEN') {
-      return decodeURIComponent(value);
-    }
-  }
-  return null;
-};
-
-// Configure axios defaults
-axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
-axios.defaults.withCredentials = true;
-
 const fetchPrograms = async () => {
   try {
     const response = await axios.get("/programs/list");
@@ -49,6 +28,8 @@ const fetchPrograms = async () => {
     console.error("Error fetching programs:", error);
   }
 };
+// };
+
 
 onMounted(fetchPrograms);
 
@@ -90,7 +71,10 @@ const startEdit = (program) => {
 
 const saveEdit = async () => {
   try {
-    const response = await axios.put(`/programs/update/${editingProgram.value.id}`, editingProgram.value);
+    const response = await axios.put(
+      `/programs/update/${editingProgram.value.id}`, 
+      editingProgram.value
+    );
 
     // Update the local programs array with the saved data
     const index = programs.value.findIndex(p => p.id === editingProgram.value.id);
@@ -122,7 +106,7 @@ const cancelEdit = () => {
 const confirmDeleteProgram = async () => {
   if (!programToDelete.value) return;
   try {
-    await axios.delete(`/programs/delete/${programToDelete.value}`);
+    await axios.delete(`/programs/delete/${programToDelete.value}`, getAxiosConfig());
     programs.value = programs.value.filter(p => p.id !== programToDelete.value);
     closeDeleteModal();
   } catch (error) {

@@ -199,7 +199,7 @@
 
 <script setup>
 import { defineProps, ref, computed, onMounted } from "vue";
-import axios from "axios";
+const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
 

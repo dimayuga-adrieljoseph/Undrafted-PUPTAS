@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch } from "vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import axios from "axios";
+const axios = window.axios;
 import AuthenticationCard from "@/Components/AuthenticationCard.vue";
 import AuthenticationCardLogo from "@/Components/AuthenticationCardLogo.vue";
 import InputError from "@/Components/InputError.vue";

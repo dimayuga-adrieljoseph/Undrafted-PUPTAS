@@ -46,7 +46,7 @@
   
   <script setup>
   import { ref } from "vue";
-  import axios from "axios";
+  const axios = window.axios;
   import AppLayout from "@/Layouts/AppLayout.vue";
   import { Head, router } from '@inertiajs/vue3';
   
