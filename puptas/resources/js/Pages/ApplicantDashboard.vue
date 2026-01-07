@@ -299,15 +299,8 @@ const reuploadFile = async (e, key) => {
 const showImageModal = ref(false);
 const previewSrc = ref("");
 
-const isPdf = (src) => src?.toLowerCase().endsWith(".pdf");
-
 const openImageModal = (src) => {
     if (!src) return;
-    if (isPdf(src)) {
-        // Open PDFs in a new tab for a better preview experience
-        window.open(src, "_blank");
-        return;
-    }
     previewSrc.value = src;
     showImageModal.value = true;
 };
