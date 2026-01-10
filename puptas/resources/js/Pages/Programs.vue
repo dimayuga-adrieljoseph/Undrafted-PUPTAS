@@ -106,13 +106,15 @@ const cancelEdit = () => {
 const confirmDeleteProgram = async () => {
   if (!programToDelete.value) return;
   try {
-    await axios.delete(`/programs/delete/${programToDelete.value}`, getAxiosConfig());
+    await axios.delete(`/programs/delete/${programToDelete.value}`);
     programs.value = programs.value.filter(p => p.id !== programToDelete.value);
     closeDeleteModal();
   } catch (error) {
     console.error("Error deleting program:", error);
     if (error.response) {
       alert(`Failed to delete program: ${error.response.data.message || 'Unknown error'}`);
+    } else {
+      alert('Failed to delete program. Please try again.');
     }
   }
 };

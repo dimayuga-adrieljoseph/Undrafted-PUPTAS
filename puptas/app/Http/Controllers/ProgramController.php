@@ -65,9 +65,16 @@ class ProgramController extends Controller
     // ✅ Delete a program
     public function destroy($id)
     {
-        $program = Program::findOrFail($id);
-        $program->delete();
-        return response()->json(['message' => 'Program deleted successfully']);
+        try {
+            $program = Program::findOrFail($id);
+            $program->delete();
+            return response()->json(['message' => 'Program deleted successfully'], 200);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'Program not found'], 404);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting program: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to delete program: ' . $e->getMessage()], 500);
+        }
     }
     public function addindex()
     {
