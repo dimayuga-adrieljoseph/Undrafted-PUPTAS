@@ -98,8 +98,8 @@ const isListPassersActive = isActiveRouteFor(['lists'])
 
 const isProgramsActive = isActiveRouteFor(['programs.index'])
 
-const isManageActive = isActiveRouteFor(['add_user_vue'])
-const isAssignActive = isActiveRouteFor(['assign_user_vue'])
+const isManageActive = isActiveRouteFor(['users.index'])
+const isAssignActive = isActiveRouteFor(['admin.users.create'])
 
 const isUserSettingsActive = isActiveRouteFor(['profile.show', 'api-tokens.index'])
 
@@ -125,7 +125,9 @@ const togglePasserMenu = () => {
 
 const toggleMaintenanceMenu = () => {
     isMaintenanceDropdownOpen.value = !isMaintenanceDropdownOpen.value
-    isSidebarOpen.value = true
+    if (isMaintenanceDropdownOpen.value) {
+        isSidebarOpen.value = true
+    }
 }
 
 const toggleUserMenu = () => {
@@ -750,7 +752,7 @@ watch(isSidebarOpen, (val) => {
                     </div>
 
                     <transition name="slide-fade">
-                        <div v-show="isPasserDropdownOpen && isSidebarOpen" class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2">
+                        <div v-show="isPasserDropdownOpen && isSidebarOpen" class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2" @click.stop>
                             <NavLink :href="route('upload.form')" class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" :class="{ 'active-link': isUploadFormActive }">Upload Passer</NavLink>
                             <NavLink :href="route('lists')" class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" :class="{ 'active-link': isListPassersActive }">List Passers</NavLink>
                         </div>
@@ -779,15 +781,45 @@ watch(isSidebarOpen, (val) => {
                 </li>
 
                 <li>
-                    <div @click="toggleMaintenanceMenu" class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]" :class="{ 'active-link': isMaintenanceDropdownOpen || isManageActive || isAssignActive, 'flex items-center justify-between py-3 px-4 text-lg font-semibold': true }">
-                        <div class="flex items-center space-x-3"><div class="w-6 flex justify-center"><FontAwesomeIcon icon="pencil-alt" class="text-xl"/></div><span v-if="isSidebarOpen" class="whitespace-nowrap">Maintenance</span></div>
-                        <FontAwesomeIcon v-if="isSidebarOpen" :icon="isMaintenanceDropdownOpen ? 'caret-down' : 'caret-right'" />
+                    <div 
+                        @click="toggleMaintenanceMenu" 
+                        class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]" 
+                        :class="{ 
+                            'active-link': isMaintenanceDropdownOpen || isManageActive || isAssignActive, 
+                            'flex items-center justify-between py-3 px-4 text-lg font-semibold': true 
+                        }"
+                    >
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 flex justify-center">
+                                <FontAwesomeIcon icon="pencil-alt" class="text-xl"/>
+                            </div>
+                            <span v-if="isSidebarOpen" class="whitespace-nowrap">Maintenance</span>
+                        </div>
+                        <FontAwesomeIcon 
+                            v-if="isSidebarOpen" 
+                            :icon="isMaintenanceDropdownOpen ? 'caret-down' : 'caret-right'" 
+                        />
                     </div>
-
                     <transition name="slide-fade">
-                        <div v-show="isMaintenanceDropdownOpen && isSidebarOpen" class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2">
-                            <NavLink :href="route('add_user_vue')" class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" :class="{ 'active-link': isManageActive }">Manage Users</NavLink>
-                            <NavLink :href="route('assign_user_vue')" class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" :class="{ 'active-link': isAssignActive }">Assign Program</NavLink>
+                        <div 
+                            v-show="isMaintenanceDropdownOpen && isSidebarOpen" 
+                            class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2"
+                            @click.stop
+                        >
+                            <NavLink 
+                                :href="route('users.index')" 
+                                class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" 
+                                :class="{ 'active-link': isManageActive }"
+                            >
+                                Manage Users
+                            </NavLink>
+                            <NavLink 
+                                :href="route('admin.users.create')" 
+                                class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" 
+                                :class="{ 'active-link': isAssignActive }"
+                            >
+                                Assign Program
+                            </NavLink>
                         </div>
                     </transition>
                 </li>
@@ -798,7 +830,7 @@ watch(isSidebarOpen, (val) => {
                         <FontAwesomeIcon v-if="isSidebarOpen" :icon="isUserMenuOpen ? 'caret-down' : 'caret-right'" />
                     </div>
                     <transition name="slide-fade">
-                        <div v-show="isUserMenuOpen && isSidebarOpen" class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2">
+                        <div v-show="isUserMenuOpen && isSidebarOpen" class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2" @click.stop>
                             <DropdownLink :href="route('profile.show')" class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" :class="{ 'active-link': isActiveRoute('profile.show') }">Profile</DropdownLink>
                         </div>
                     </transition>
@@ -830,5 +862,21 @@ watch(isSidebarOpen, (val) => {
 /* Slight performance hint for icons and text */
 .sidebar * {
     backface-visibility: hidden;
+}
+
+/* Dropdown transition styles */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+    transition: all 0.3s ease;
+}
+
+.slide-fade-enter-from {
+    transform: translateY(-10px);
+    opacity: 0;
+}
+
+.slide-fade-leave-to {
+    transform: translateY(-10px);
+    opacity: 0;
 }
 </style>
