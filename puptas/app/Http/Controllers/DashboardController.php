@@ -58,17 +58,9 @@ class DashboardController extends Controller
         $returned[]  = $applications->where('year', $year)->where('status', 'returned')->sum('count');
     }
 
-    // Get recent applicants with their applications
-    $recentApplicants = User::with(['application.program', 'role'])
-        ->where('role_id', 1)
-        ->whereHas('application')
-        ->orderBy('created_at', 'desc')
-        ->limit(10)
-        ->get();
-
     return Inertia::render('Dashboard', [
         'user' => $user,
-        'allUsers' => $recentApplicants,
+        'allUsers' => User::all(),
         'summary' => $summary,
         'registrationUrl' => url('/register'),
         'chartData' => [

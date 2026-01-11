@@ -13,7 +13,6 @@ use Illuminate\Support\Str;
 use App\Mail\UserCreated;
 use Illuminate\Support\Facades\DB;
 use Exception;
-use Inertia\Inertia;
 
 class AssignController extends Controller
 {
@@ -24,10 +23,10 @@ class AssignController extends Controller
         $assignedUsers = User::whereIn('role_id', [3, 4])
             ->with('programs')->get();
 
-        return Inertia::render('Legacy/Assign', [
-            'programs' => $programs,
-            'assignedUsers' => $assignedUsers,
-        ]);
+        return view(
+            'legacy.assignment',
+            compact('programs', 'assignedUsers')
+        );
     }
 
     public function storeUser(Request $request)
@@ -97,13 +96,12 @@ class AssignController extends Controller
         $user = User::findOrFail($id);
         $programs = Program::all();
 
-        $assignedPrograms = $user->programs->pluck('id')->toArray();
+        $assignedPrograms = $user->programs->pluck('program_id')->toArray();
 
-        return Inertia::render('Legacy/EditAssignedUser', [
-            'user' => $user,
-            'programs' => $programs,
-            'assignedPrograms' => $assignedPrograms,
-        ]);
+        return view(
+            'legacy.edit_user',
+            compact('user', 'programs', 'assignedPrograms')
+        );
     }
 
     public function updateUser(Request $request, $id)

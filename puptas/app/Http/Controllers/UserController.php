@@ -12,7 +12,6 @@ use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Program;
-use Inertia\Inertia;
 
 class UserController extends Controller
 {
@@ -38,12 +37,7 @@ class UserController extends Controller
         $totalUsers = User::count();
         $programs = Program::all();
 
-        return Inertia::render('Legacy/AddUser', [
-            'userCountsByRole' => $userCountsByRole,
-            'roles' => $roles,
-            'totalUsers' => $totalUsers,
-            'programs' => $programs,
-        ]);
+        return view('legacy.add_user', compact('userCountsByRole', 'roles', 'totalUsers', 'programs'));
     }
 
     /**
@@ -95,7 +89,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::with(['role', 'programs'])->orderBy('created_at', 'desc')->get();
+        $users = User::with('role')->orderBy('created_at', 'desc')->get();
 
         $userCountsByRole = User::select('role_id', \DB::raw('count(*) as total'))
             ->groupBy('role_id')
@@ -113,12 +107,7 @@ class UserController extends Controller
 
         $totalUsers = User::count();
 
-        return Inertia::render('Legacy/ManageUsers', [
-            'users' => $users,
-            'userCountsByRole' => $userCountsByRole,
-            'roles' => $roles,
-            'totalUsers' => $totalUsers,
-        ]);
+        return view('legacy.manage_users', compact('users', 'userCountsByRole', 'roles', 'totalUsers'));
     }
 
     /**
@@ -126,7 +115,7 @@ class UserController extends Controller
      */
     public function edit($id)
     {
-        $user = User::with('programs')->findOrFail($id);
+        $user = User::findOrFail($id);
         $programs = Program::all();
 
         $roles = [
@@ -138,11 +127,7 @@ class UserController extends Controller
             6 => 'Registrar',
         ];
 
-        return Inertia::render('Legacy/EditUser', [
-            'user' => $user,
-            'programs' => $programs,
-            'roles' => $roles,
-        ]);
+        return view('legacy.edit_user_management', compact('user', 'programs', 'roles'));
     }
 
     /**
