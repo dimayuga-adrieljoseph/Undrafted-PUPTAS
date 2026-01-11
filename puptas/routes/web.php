@@ -263,30 +263,19 @@ Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::cla
 
 use App\Http\Controllers\UserController;
 
-// User Management Routes
-Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.index');
-Route::get('/legacy/users/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
-Route::post('/legacy/users/{id}/update', [UserController::class, 'update'])->name('users.update');
-Route::delete('/legacy/users/{id}/delete', [UserController::class, 'destroy'])->name('users.destroy');
-
-// show form
-Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
-
-// handle form submission
-Route::post('/legacy/add-user/store', [UserController::class, 'store'])->name('add_user.store');
-
-Route::get('/add-user-vue', function () {
-    return Inertia::render('Legacy/AddUser');
-})->name('add_user_vue');
-
-//assign interviewer and evaluator
-Route::get('/admin/users/create', [AssignController::class, 'createUserForm'])->name('admin.users.create')->middleware('auth');
-Route::post('/admin/users/store', [AssignController::class, 'storeUser'])->name('admin.users.store')->middleware('auth');
-//actions for assigned users
-Route::get('/admin/users/edit/{id}', [AssignController::class, 'editUser'])->name('admin.users.edit');
-Route::post('/admin/users/update/{id}', [AssignController::class, 'updateUser'])->name('admin.users.update');
-Route::delete('/admin/users/delete/{id}', [AssignController::class, 'deleteUser'])->name('admin.users.delete');
-
-Route::get('/assign-user-vue', function () {
-    return Inertia::render('Legacy/Assign');
-})->name('assign_user_vue');
+// User Management Routes (Protected)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/legacy/users/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
+    Route::post('/legacy/users/{id}/update', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/legacy/users/{id}/delete', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
+    Route::post('/legacy/add-user/store', [UserController::class, 'store'])->name('add_user.store');
+    
+    // Assign interviewer and evaluator
+    Route::get('/admin/users/create', [AssignController::class, 'createUserForm'])->name('admin.users.create');
+    Route::post('/admin/users/store', [AssignController::class, 'storeUser'])->name('admin.users.store');
+    Route::get('/admin/users/edit/{id}', [AssignController::class, 'editUser'])->name('admin.users.edit');
+    Route::post('/admin/users/update/{id}', [AssignController::class, 'updateUser'])->name('admin.users.update');
+    Route::delete('/admin/users/delete/{id}', [AssignController::class, 'deleteUser'])->name('admin.users.delete');
+});

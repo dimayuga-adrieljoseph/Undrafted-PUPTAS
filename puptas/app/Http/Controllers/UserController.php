@@ -12,6 +12,7 @@ use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Program;
+use Inertia\Inertia;
 
 class UserController extends Controller
 {
@@ -37,7 +38,12 @@ class UserController extends Controller
         $totalUsers = User::count();
         $programs = Program::all();
 
-        return view('legacy.add_user', compact('userCountsByRole', 'roles', 'totalUsers', 'programs'));
+        return Inertia::render('Legacy/AddUser', [
+            'userCountsByRole' => $userCountsByRole,
+            'roles' => $roles,
+            'totalUsers' => $totalUsers,
+            'programs' => $programs,
+        ]);
     }
 
     /**
@@ -107,7 +113,12 @@ class UserController extends Controller
 
         $totalUsers = User::count();
 
-        return view('legacy.manage_users', compact('users', 'userCountsByRole', 'roles', 'totalUsers'));
+        return Inertia::render('Legacy/ManageUsers', [
+            'users' => $users,
+            'userCountsByRole' => $userCountsByRole,
+            'roles' => $roles,
+            'totalUsers' => $totalUsers,
+        ]);
     }
 
     /**
@@ -127,7 +138,11 @@ class UserController extends Controller
             6 => 'Registrar',
         ];
 
-        return view('legacy.edit_user_management', compact('user', 'programs', 'roles'));
+        return Inertia::render('Legacy/EditUser', [
+            'user' => $user,
+            'programs' => $programs,
+            'roles' => $roles,
+        ]);
     }
 
     /**

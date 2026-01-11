@@ -174,7 +174,7 @@
                                 <td
                                     class="py-2 text-gray-600 dark:text-gray-300"
                                 >
-                                    {{ user.program.code || "—" }}
+                                    {{ user.application?.program?.code || "—" }}
                                 </td>
                                 <td class="py-2">
                                     <span
