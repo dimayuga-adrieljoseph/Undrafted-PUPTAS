@@ -1,22 +1,23 @@
 <script setup>
 import Sidebar from '@/Components/Sidebar.vue'
 import { useGlobalLoading } from '@/Composables/useGlobalLoading'
-import { usePage, router } from '@inertiajs/vue3'
+import { usePage } from '@inertiajs/vue3'
 import { computed, ref, onMounted } from 'vue'
 
 // FontAwesome
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
+import { faMoon, faSun, faBell } from '@fortawesome/free-solid-svg-icons'
 
-library.add(faMoon, faSun)
+library.add(faMoon, faSun, faBell)
 
 const { isLoading } = useGlobalLoading()
 
+// User
 const page = usePage()
 const user = computed(() => page.props.auth.user)
 
-// Dark mode (layout-level only)
+// Dark mode
 const isDarkMode = ref(false)
 
 onMounted(() => {
@@ -25,7 +26,7 @@ onMounted(() => {
   document.documentElement.classList.toggle('dark', saved)
 })
 
-function toggleDarkMode() {
+const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value
   document.documentElement.classList.toggle('dark', isDarkMode.value)
   localStorage.setItem('darkMode', String(isDarkMode.value))
@@ -33,92 +34,122 @@ function toggleDarkMode() {
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-orange-100 dark:bg-gray-900">
+  <div class="min-h-screen flex bg-gradient-to-br from-orange-50 to-[#faf6f2]
+              dark:from-gray-950 dark:to-gray-900">
+    <!-- Sidebar -->
     <Sidebar variant="applicant" />
 
-    <!-- Main Content -->
-    <div class="flex-1 bg-[#faf6f2] dark:bg-gray-900 p-6 relative" style="margin-left: var(--sidebar-width, 5rem)">
-      <main>
-        <!-- Header -->
-        <div class="flex justify-end items-center gap-4 mb-4">
+    <!-- Main Area -->
+    <div
+      class="flex-1 flex flex-col"
+      style="margin-left: var(--sidebar-width, 5rem)"
+    >
+      <!-- Top Bar -->
+      <header
+        class="sticky top-0 z-40 h-16 px-6 flex items-center justify-between
+               bg-white/80 backdrop-blur border-b border-gray-200
+               dark:bg-gray-900/80 dark:border-gray-800"
+      >
+        <!-- Page Title -->
+        <slot name="title">
+          <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
+            Applicant Portal
+          </h1>
+        </slot>
+
+        <!-- Right Controls -->
+        <div class="flex items-center gap-4">
+          <!-- Notifications (optional) -->
+          <button
+            class="relative text-gray-500 hover:text-[#9E122C]
+                   dark:hover:text-white transition"
+          >
+            <FontAwesomeIcon :icon="['fas', 'bell']" class="text-lg" />
+          </button>
+
           <!-- Dark Mode Toggle -->
           <button
             @click="toggleDarkMode"
-            class="text-[#9E122C] dark:text-white transition"
-            title="Toggle Dark Mode"
+            class="w-9 h-9 rounded-lg flex items-center justify-center
+                   bg-gray-100 hover:bg-gray-200
+                   dark:bg-gray-800 dark:hover:bg-gray-700 transition"
           >
             <FontAwesomeIcon
-              :icon="isDarkMode ? faMoon : faSun"
-              class="text-xl"
+              :icon="['fas', isDarkMode ? 'moon' : 'sun']"
+              class="text-gray-700 dark:text-gray-200"
             />
           </button>
 
-          <!-- Profile Pill -->
+          <!-- User Pill -->
           <div
-            class="flex items-center space-x-3 bg-white border-4 border-red-400
-                   dark:bg-gray-900 px-2 py-2 rounded-full shadow"
+            class="flex items-center gap-3 px-3 py-1.5 rounded-full
+                   bg-white border border-gray-200 shadow-sm
+                   dark:bg-gray-900 dark:border-gray-700"
           >
-            <svg
-              class="w-8 h-8 stroke-[#9E122C]"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            <div
+              class="w-9 h-9 rounded-full flex items-center justify-center
+                     bg-[#9E122C]/10 text-[#9E122C] font-semibold"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 14c3.866 0 7 3.134 7 7H5c0-3.866 3.134-7 7-7z"
-              />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-
-            <div class="text-sm leading-tight">
-              <p class="font-semibold text-[#9E122C]">
-                {{ user?.lastname }}, {{ user?.firstname }}
+              {{ user?.firstname?.charAt(0) }}{{ user?.lastname?.charAt(0) }}
+            </div>
+            <div class="hidden sm:block leading-tight">
+              <p class="text-sm font-medium text-gray-800 dark:text-gray-100">
+                {{ user?.firstname }} {{ user?.lastname }}
               </p>
-              <p class="text-xs text-gray-600 dark:text-gray-300">
+              <p class="text-xs text-gray-500 dark:text-gray-400">
                 Applicant
               </p>
             </div>
           </div>
         </div>
+      </header>
 
-        <!-- Page Content -->
-        <slot />
-
-        <!-- Global Loading -->
+      <!-- Content -->
+      <main class="flex-1 p-6 overflow-y-auto">
         <div
-          v-if="isLoading"
-          class="fixed inset-0 z-50 bg-black/30 flex flex-col items-center justify-center"
+          class="max-w-[1200px] mx-auto rounded-2xl p-6
+                 bg-white shadow-sm border border-gray-200
+                 dark:bg-gray-900 dark:border-gray-800"
         >
-          <svg
-            class="animate-spin h-16 w-16 text-[#9E122C] mb-4"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            />
-            <path
-              class="opacity-50"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-            />
-          </svg>
-
-          <p class="text-lg font-semibold text-[#9E122C]">
-            Loading, please wait...
-          </p>
+          <slot />
         </div>
       </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div
+      v-if="isLoading"
+      class="fixed inset-0 z-[999] bg-black/40 backdrop-blur-sm
+             flex items-center justify-center"
+    >
+      <div
+        class="px-6 py-4 rounded-xl bg-white shadow-lg
+               dark:bg-gray-900 flex flex-col items-center gap-3"
+      >
+        <svg
+          class="animate-spin h-8 w-8 text-[#9E122C]"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          />
+          <path
+            class="opacity-50"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+          />
+        </svg>
+        <span class="font-medium text-gray-800 dark:text-gray-100">
+          Loading, please wait...
+        </span>
+      </div>
     </div>
   </div>
 </template>

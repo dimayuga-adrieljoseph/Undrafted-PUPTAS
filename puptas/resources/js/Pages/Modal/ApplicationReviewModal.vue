@@ -1,141 +1,76 @@
-<!-- resources/js/Components/ApplicationReviewModal.vue -->
 <template>
-    <!-- Paste the modal HTML here (everything inside v-if="showModal") -->
-    <!-- Modal -->
     <div
         v-if="showModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
     >
         <div
-            class="bg-gradient-to-br from-orange-200 to-red-400 dark:bg-gray-900 rounded-lg shadow-lg max-w-5xl w-full p-6 overflow-auto max-h-[90vh] relative"
+            class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-5xl w-full p-6 overflow-auto max-h-[90vh] relative"
             style="min-width: 700px"
         >
+            <!-- Close Button -->
             <button
                 @click="closeModal"
-                class="absolute top-3 right-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-3xl font-bold"
+                class="absolute top-3 right-3 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white text-3xl font-bold"
                 aria-label="Close modal"
             >
                 &times;
             </button>
 
+            <!-- Loading / Error / Content -->
             <template v-if="loading">
-                <p>Loading application data...</p>
+                <p class="text-gray-700">Loading application data...</p>
             </template>
 
             <template v-else-if="error">
-                <p class="text-red-600 dark:text-red-400">
-                    {{ error }}
-                </p>
+                <p class="text-red-600 dark:text-red-400">{{ error }}</p>
             </template>
 
             <template v-else-if="applicationData">
-                <h2
-                    class="text-xl font-bold mb-4 text-gray-900 dark:text-white"
-                >
+                <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
                     Review Your Application
                 </h2>
 
                 <div class="grid grid-cols-2 gap-8">
-                    <!-- Left Column: Personal + High School Details -->
+                    <!-- Left Column: Personal + High School -->
                     <div>
-                        <section>
-                            <h3
-                                class="font-semibold mb-2 text-gray-800 dark:text-gray-300"
-                            >
-                                Personal Details
-                            </h3>
-                            <p>
-                                <strong>Name:</strong>
-                                {{ applicationData.firstname }}
-                                {{ applicationData.middlename }}
-                                {{ applicationData.lastname }}
-                            </p>
-                            <p>
-                                <strong>Birthday:</strong>
-                                {{ applicationData.birthday }}
-                            </p>
-                            <p>
-                                <strong>Sex/Gender:</strong>
-                                {{ applicationData.sex }}
-                            </p>
-                            <p>
-                                <strong>Contact Number:</strong>
-                                +63{{ applicationData.contactnumber }}
-                            </p>
-                            <p>
-                                <strong>Address:</strong>
-                                {{ applicationData.address }}
-                            </p>
-                            <p>
-                                <strong>Email:</strong>
-                                {{ applicationData.email }}
-                            </p>
+                        <section class="mb-6">
+                            <h3 class="font-semibold mb-2 text-gray-800 dark:text-gray-300">Personal Details</h3>
+                            <p><strong>Name:</strong> {{ applicationData.firstname }} {{ applicationData.middlename }} {{ applicationData.lastname }}</p>
+                            <p><strong>Birthday:</strong> {{ applicationData.birthday }}</p>
+                            <p><strong>Sex/Gender:</strong> {{ applicationData.sex }}</p>
+                            <p><strong>Contact:</strong> +63{{ applicationData.contactnumber }}</p>
+                            <p><strong>Address:</strong> {{ applicationData.address }}</p>
+                            <p><strong>Email:</strong> {{ applicationData.email }}</p>
                         </section>
 
-                        <section class="mt-6">
-                            <h3
-                                class="font-semibold mb-2 text-gray-800 dark:text-gray-300"
-                            >
-                                High School Details
-                            </h3>
-                            <p>
-                                <strong>School:</strong>
-                                {{ applicationData.school }}
-                            </p>
-                            <p>
-                                <strong>School Address:</strong>
-                                {{ applicationData.schoolAdd }}
-                            </p>
-                            <p>
-                                <strong>School Year:</strong>
-                                {{ applicationData.schoolyear }}
-                            </p>
-                            <p>
-                                <strong>Date Graduated:</strong>
-                                {{ applicationData.dateGrad }}
-                            </p>
-                            <p>
-                                <strong>Strand:</strong>
-                                {{ applicationData.strand }}
-                            </p>
-                            <p>
-                                <strong>Track:</strong>
-                                {{ applicationData.track }}
-                            </p>
+                        <section class="mb-6">
+                            <h3 class="font-semibold mb-2 text-gray-800 dark:text-gray-300">High School Details</h3>
+                            <p><strong>School:</strong> {{ applicationData.school }}</p>
+                            <p><strong>School Address:</strong> {{ applicationData.schoolAdd }}</p>
+                            <p><strong>School Year:</strong> {{ applicationData.schoolyear }}</p>
+                            <p><strong>Date Graduated:</strong> {{ applicationData.dateGrad }}</p>
+                            <p><strong>Strand:</strong> {{ applicationData.strand }}</p>
+                            <p><strong>Track:</strong> {{ applicationData.track }}</p>
                         </section>
+
                         <div class="mt-4">
-                            <label
-                                for="programSelect"
-                                class="block text-sm font-medium text-gray-700"
-                            >
-                                Choose Your Program
-                            </label>
+                            <label class="block text-sm font-medium text-gray-700">Choose Your Program</label>
                             <select
-                                id="programSelect"
                                 v-model="selectedProgramId"
-                                class="mt-1 block w-full rounded border-gray-300 shadow-sm"
+                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-maroon-500 focus:border-maroon-500"
                             >
                                 <option value="">-- Select Program --</option>
-                                <option
-                                    v-for="program in eligiblePrograms"
-                                    :key="program.id"
-                                    :value="program.id"
-                                >
+                                <option v-for="program in eligiblePrograms" :key="program.id" :value="program.id">
                                     {{ program.name }} ({{ program.code }})
                                 </option>
                             </select>
                         </div>
+
                         <div class="mt-4">
-                            <label
-                                for="secondProgramSelect"
-                                class="block text-sm font-medium text-gray-700"
-                            >
-                                Choose Your Second Program
-                            </label>
+                            <label class="block text-sm font-medium text-gray-700">Choose Your Second Program</label>
                             <select
-                                id="secondProgramSelect"
                                 v-model="secondChoiceId"
-                                class="mt-1 block w-full rounded border-gray-300 shadow-sm"
+                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-maroon-500 focus:border-maroon-500"
                             >
                                 <option value="">-- Select Program --</option>
                                 <option
@@ -152,389 +87,23 @@
 
                     <!-- Right Column: Uploaded Documents -->
                     <section>
-                        <h3
-                            class="font-semibold mb-2 text-gray-800 dark:text-gray-300"
-                        >
-                            Uploaded Documents
-                        </h3>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div class="image-wrapper">
-                                <p>Grade 10 Front:</p>
+                        <h3 class="font-semibold mb-2 text-gray-800 dark:text-gray-300">Uploaded Documents</h3>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div v-for="(file, key) in applicationData.uploadedFiles" :key="key" class="image-wrapper">
+                                <p class="text-sm font-medium text-gray-700 mb-1">{{ formatFileName(key) }}</p>
                                 <img
-                                    v-if="
-                                        applicationData.uploadedFiles
-                                            .file10Front
-                                    "
-                                    :src="
-                                        applicationData.uploadedFiles
-                                            .file10Front?.url
-                                    "
-                                    alt="Grade 10 Front"
-                                    class="max-h-20 object-contain border rounded"
-                                    @click="
-                                        openImageModal(
-                                            applicationData.uploadedFiles
-                                                .file10Front
-                                        )
-                                    "
+                                    v-if="file"
+                                    :src="file?.url"
+                                    alt="Uploaded Document"
+                                    class="max-h-20 object-cover rounded border border-gray-300 cursor-pointer hover:scale-105 transition-transform duration-200"
+                                    @click="openImageModal(file)"
                                 />
                                 <div v-else class="placeholder">
                                     No Image Uploaded
                                 </div>
-
-                                <!-- Hidden File Input -->
-                                <input
-                                    type="file"
-                                    ref="file10FrontInput"
-                                    style="display: none"
-                                    accept="image/*,.pdf"
-                                    @change="
-                                        (e) => reuploadFile(e, 'file10Front')
-                                    "
-                                />
-
-                                <!-- Reupload Button -->
                                 <button
-                                    class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
-                                    @click="triggerFileInput('file10Front')"
-                                >
-                                    Reupload
-                                </button>
-                            </div>
-
-                            <div class="image-wrapper">
-                                <p>Grade 10 Back:</p>
-                                <img
-                                    v-if="
-                                        applicationData.uploadedFiles
-                                            .file10_back
-                                    "
-                                    :src="
-                                        applicationData.uploadedFiles
-                                            .file10_back?.url
-                                    "
-                                    alt="Grade 10 Front"
-                                    class="max-h-20 object-contain border rounded"
-                                    @click="
-                                        openImageModal(
-                                            applicationData.uploadedFiles
-                                                .file10_back
-                                        )
-                                    "
-                                />
-                                <div v-else class="placeholder">
-                                    No Image Uploaded
-                                </div>
-
-                                <!-- Hidden File Input -->
-                                <input
-                                    type="file"
-                                    ref="fileInput"
-                                    style="display: none"
-                                    accept="image/*,.pdf"
-                                    @change="(e) => reuploadFile(e, 'file')"
-                                />
-
-                                <!-- Reupload Button -->
-                                <button
-                                    class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
-                                    @click="triggerFileInput('file')"
-                                >
-                                    Reupload
-                                </button>
-                            </div>
-
-                            <div class="image-wrapper">
-                                <p>Grade 11 Report:</p>
-                                <img
-                                    v-if="applicationData.uploadedFiles.file11"
-                                    :src="
-                                        applicationData.uploadedFiles.file11
-                                            ?.url
-                                    "
-                                    alt="Grade 11 Report"
-                                    class="max-h-20 object-contain border rounded"
-                                    @click="
-                                        openImageModal(
-                                            applicationData.uploadedFiles.file11
-                                        )
-                                    "
-                                />
-                                <div v-else class="placeholder">
-                                    No Image Uploaded
-                                </div>
-                                <input
-                                    type="file"
-                                    ref="file11Input"
-                                    style="display: none"
-                                    accept="image/*,.pdf"
-                                    @change="(e) => reuploadFile(e, 'file11')"
-                                />
-                                <button
-                                    class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
-                                    @click="triggerFileInput('file11')"
-                                >
-                                    Reupload
-                                </button>
-                            </div>
-
-                            <div class="image-wrapper">
-                                <p>Grade 12 Report:</p>
-                                <img
-                                    v-if="applicationData.uploadedFiles.file12"
-                                    :src="
-                                        applicationData.uploadedFiles.file12
-                                            ?.url
-                                    "
-                                    alt="Grade 12 Report"
-                                    class="max-h-20 object-contain border rounded"
-                                    @click="
-                                        openImageModal(
-                                            applicationData.uploadedFiles.file12
-                                        )
-                                    "
-                                />
-                                <div v-else class="placeholder">
-                                    No Image Uploaded
-                                </div>
-                                <input
-                                    type="file"
-                                    ref="file12Input"
-                                    style="display: none"
-                                    accept="image/*,.pdf"
-                                    @change="(e) => reuploadFile(e, 'file12')"
-                                />
-                                <button
-                                    class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
-                                    @click="triggerFileInput('file12')"
-                                >
-                                    Reupload
-                                </button>
-                            </div>
-
-                            <div class="image-wrapper">
-                                <p>School ID:</p>
-                                <img
-                                    v-if="
-                                        applicationData.uploadedFiles.schoolId
-                                    "
-                                    :src="
-                                        applicationData.uploadedFiles.schoolId
-                                            ?.url
-                                    "
-                                    alt="School ID"
-                                    class="max-h-20 object-contain border rounded"
-                                    @click="
-                                        openImageModal(
-                                            applicationData.uploadedFiles
-                                                .schoolId
-                                        )
-                                    "
-                                />
-                                <div v-else class="placeholder">
-                                    No Image Uploaded
-                                </div>
-                                <input
-                                    type="file"
-                                    ref="schoolIdInput"
-                                    style="display: none"
-                                    accept="image/*,.pdf"
-                                    @change="(e) => reuploadFile(e, 'schoolId')"
-                                />
-                                <button
-                                    class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
-                                    @click="triggerFileInput('schoolId')"
-                                >
-                                    Reupload
-                                </button>
-                            </div>
-
-                            <div class="image-wrapper">
-                                <p>Certificate of Non-Enrollment:</p>
-                                <img
-                                    v-if="
-                                        applicationData.uploadedFiles
-                                            .nonEnrollCert
-                                    "
-                                    :src="
-                                        applicationData.uploadedFiles
-                                            .nonEnrollCert?.url
-                                    "
-                                    alt="Non-Enrollment Certificate"
-                                    class="max-h-20 object-contain border rounded"
-                                    @click="
-                                        openImageModal(
-                                            applicationData.uploadedFiles
-                                                .nonEnrollCert
-                                        )
-                                    "
-                                />
-                                <div v-else class="placeholder">
-                                    No Image Uploaded
-                                </div>
-                                <input
-                                    type="file"
-                                    ref="nonEnrollCertInput"
-                                    style="display: none"
-                                    accept="image/*,.pdf"
-                                    @change="
-                                        (e) => reuploadFile(e, 'nonEnrollCert')
-                                    "
-                                />
-                                <button
-                                    class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
-                                    @click="triggerFileInput('nonEnrollCert')"
-                                >
-                                    Reupload
-                                </button>
-                            </div>
-
-                            <div class="image-wrapper">
-                                <p>PSA Birth Certificate:</p>
-                                <img
-                                    v-if="applicationData.uploadedFiles.psa"
-                                    :src="
-                                        applicationData.uploadedFiles.psa?.url
-                                    "
-                                    alt="PSA"
-                                    class="max-h-20 object-contain border rounded"
-                                    @click="
-                                        openImageModal(
-                                            applicationData.uploadedFiles.psa
-                                        )
-                                    "
-                                />
-                                <div v-else class="placeholder">
-                                    No Image Uploaded
-                                </div>
-                                <input
-                                    type="file"
-                                    ref="psaInput"
-                                    style="display: none"
-                                    accept="image/*,.pdf"
-                                    @change="(e) => reuploadFile(e, 'psa')"
-                                />
-                                <button
-                                    class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
-                                    @click="triggerFileInput('psa')"
-
-                                >
-                                    Reupload
-                                </button>
-                            </div>
-
-                            <div class="image-wrapper">
-                                <p>Good Moral Certificate:</p>
-                                <img
-                                    v-if="
-                                        applicationData.uploadedFiles.goodMoral
-                                    "
-                                    :src="
-                                        applicationData.uploadedFiles.goodMoral
-                                            ?.url
-                                    "
-                                    alt="Good Moral"
-                                    class="max-h-20 object-contain border rounded"
-                                    @click="
-                                        openImageModal(
-                                            applicationData.uploadedFiles
-                                                .goodMoral
-                                        )
-                                    "
-                                />
-                                <div v-else class="placeholder">
-                                    No Image Uploaded
-                                </div>
-                                <input
-                                    type="file"
-                                    ref="goodMoralInput"
-                                    style="display: none"
-                                    accept="image/*,.pdf"
-                                    @change="
-                                        (e) => reuploadFile(e, 'goodMoral')
-                                    "
-                                />
-                                <button
-                                    class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
-                                    @click="triggerFileInput('goodMoral')"
-
-                                >
-                                    Reupload
-                                </button>
-                            </div>
-
-                            <div class="image-wrapper">
-                                <p>Under Oath Document:</p>
-                                <img
-                                    v-if="
-                                        applicationData.uploadedFiles.underOath
-                                    "
-                                    :src="
-                                        applicationData.uploadedFiles.underOath
-                                            ?.url
-                                    "
-                                    alt="Under Oath"
-                                    class="max-h-20 object-contain border rounded"
-                                    @click="
-                                        openImageModal(
-                                            applicationData.uploadedFiles
-                                                .underOath
-                                        )
-                                    "
-                                />
-                                <div v-else class="placeholder">
-                                    No Image Uploaded
-                                </div>
-                                <input
-                                    type="file"
-                                    ref="underOathInput"
-                                    style="display: none"
-                                    accept="image/*,.pdf"
-                                    @change="
-                                        (e) => reuploadFile(e, 'underOath')
-                                    "
-                                />
-                                <button
-                                    class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
-                                    @click="triggerFileInput('underOath')"
-
-                                >
-                                    Reupload
-                                </button>
-                            </div>
-
-                            <div class="image-wrapper">
-                                <p>2x2 Photo:</p>
-                                <img
-                                    v-if="
-                                        applicationData.uploadedFiles.photo2x2
-                                    "
-                                    :src="
-                                        applicationData.uploadedFiles.photo2x2
-                                            ?.url
-                                    "
-                                    alt="2x2 Photo"
-                                    class="max-h-20 object-contain border rounded"
-                                    @click="
-                                        openImageModal(
-                                            applicationData.uploadedFiles
-                                                .photo2x2
-                                        )
-                                    "
-                                />
-                                <div v-else class="placeholder">
-                                    No Image Uploaded
-                                </div>
-                                <input
-                                    type="file"
-                                    ref="photo2x2Input"
-                                    style="display: none"
-                                    accept="image/*,.pdf"
-                                    @change="(e) => reuploadFile(e, 'photo2x2')"
-                                />
-                                <button
-                                    class="mt-1 px-2 py-1 bg-white/50 text-black text-xs rounded hover:bg-red-400"
-                                    @click="triggerFileInput('photo2x2')"
+                                    class="mt-1 px-3 py-1 bg-gray-100 hover:bg-maroon-100 text-gray-800 rounded text-xs shadow-sm"
+                                    @click="triggerFileInput(key)"
                                 >
                                     Reupload
                                 </button>
@@ -543,17 +112,18 @@
                     </section>
                 </div>
 
+                <!-- Footer Buttons -->
                 <div class="flex justify-end space-x-4 mt-6">
                     <button
                         @click="closeModal"
-                        class="px-4 py-2 bg-gray-400 rounded hover:bg-gray-500 text-gray-800"
+                        class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-800"
                     >
                         Cancel
                     </button>
                     <button
                         :disabled="!canSubmit"
                         @click="submitApplication"
-                        class="px-4 py-2 rounded text-white"
+                        class="px-4 py-2 rounded-lg text-white"
                         :class="{
                             'bg-gray-400 cursor-not-allowed': !canSubmit,
                             'bg-maroon-700 hover:bg-maroon-900': canSubmit,
@@ -561,23 +131,17 @@
                     >
                         Submit Application
                     </button>
-                    <p
-                        v-if="applicationData?.status && !canSubmit"
-                        class="text-sm text-gray-600 mt-2"
-                    >
-                        Application already
-                        <strong>{{ applicationData.status }}</strong
-                        >.
+                    <p v-if="applicationData?.status && !canSubmit" class="text-sm text-gray-600 mt-2">
+                        Application already <strong>{{ applicationData.status }}</strong>.
                     </p>
                 </div>
             </template>
 
             <template v-else>
-                <p>No application data found.</p>
+                <p class="text-gray-700">No application data found.</p>
             </template>
         </div>
     </div>
-    <!-- Reopen Modal Icon -->
     <button
         v-if="!showModal"
         @click="openModal"
@@ -639,6 +203,14 @@
 </template>
 
 <script setup>
+/* Your existing script stays the same */
+const formatFileName = (key) => {
+    return key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .replace(/_/g, ' ');
+};
+
 import { defineProps, defineEmits, ref, watch, onMounted, computed } from "vue";
 const axios = window.axios;
 import { nextTick } from "vue";
@@ -845,25 +417,21 @@ const fetchEligiblePrograms = async () => {
 </script>
 
 <style scoped>
-.bg-maroon-700 {
-    background-color: #800000;
-}
-.bg-maroon-900 {
-    background-color: #660000;
-}
+/* Modern minor redesign styles */
+.bg-maroon-700 { background-color: #800000; }
+.bg-maroon-900 { background-color: #660000; }
 
-/* Smaller placeholder styling */
 .placeholder {
-    background-color: #f3f4f6;
+    background-color: #f9fafb;
     min-height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #d1d5db;
+    border: 1px dashed #d1d5db;
     color: #9ca3af;
     font-style: italic;
     font-size: 0.75rem;
-    border-radius: 0.375rem;
+    border-radius: 0.5rem;
     text-align: center;
     padding: 0 4px;
 }
@@ -878,30 +446,20 @@ const fetchEligiblePrograms = async () => {
 .image-wrapper img {
     width: 100px;
     height: 100px;
-    object-fit: cover; /* Crop and center image nicely */
-    border-radius: 0.375rem;
-    border: 1px solid #d1d5db;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
     background-color: #fff;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.image-wrapper img:hover {
+    transform: scale(1.05);
 }
 
 .grid.grid-cols-2 {
-    gap: 1rem;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.5s;
-}
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
-
-/* Optional: cap modal scroll on smaller screens */
-@media (max-width: 768px) {
-    .image-wrapper img {
-        width: 80px;
-        height: 80px;
-    }
+    gap: 1.25rem;
 }
 </style>
+
