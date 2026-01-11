@@ -253,7 +253,7 @@
                                 <td class="py-2 text-center">
                                     <button
                                         @click.prevent="openEditModal(passer)"
-                                        class="text-black hover:text-gray-700 relative group"
+                                        class="text-white hover:text-orange-800 relative group"
                                         aria-label="Edit"
                                     >
                                         <svg

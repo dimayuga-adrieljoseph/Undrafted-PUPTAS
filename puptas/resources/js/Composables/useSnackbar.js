@@ -1,33 +1,19 @@
-import { ref } from 'vue'
+// Composables/useSnackbar.js
+import { reactive } from "vue";
 
-const snackbar = ref({
+const snackbar = reactive({
   show: false,
-  message: '',
-  type: 'success',
-})
-
-let timeoutId = null
+  message: "",
+  type: "success",
+});
 
 export function useSnackbar() {
-  function show(message, type = 'success', duration = 3000) {
-    snackbar.value.message = message
-    snackbar.value.type = type
-    snackbar.value.show = true
+  const show = (message, type = "success") => {
+    snackbar.message = message;
+    snackbar.type = type;
+    snackbar.show = true;
+    setTimeout(() => (snackbar.show = false), 3000);
+  };
 
-    if (timeoutId) clearTimeout(timeoutId)
-    timeoutId = setTimeout(() => {
-      snackbar.value.show = false
-    }, duration)
-  }
-
-  function hide() {
-    snackbar.value.show = false
-    if (timeoutId) clearTimeout(timeoutId)
-  }
-
-  return {
-    snackbar,
-    show,
-    hide,
-  }
+  return { snackbar, show };
 }

@@ -5,13 +5,14 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import DeleteModal from "@/Components/DeleteModal.vue";
 import { Head, Link } from '@inertiajs/vue3';
 
+// State
 const programs = ref([]);
 const deleteModalOpen = ref(false);
 const programToDelete = ref(null);
 
 const searchQuery = ref("");
 const filterStrand = ref("");
-const sortKey = ref("name");  // default sort by name
+const sortKey = ref("name");
 const sortAsc = ref(true);
 
 const currentPage = ref(1);
@@ -20,6 +21,7 @@ const itemsPerPage = 10;
 const editingProgram = ref(null);
 const isEditing = ref(false);
 
+// Fetch programs
 const fetchPrograms = async () => {
   try {
     const response = await axios.get("/programs/list");
@@ -28,12 +30,10 @@ const fetchPrograms = async () => {
     console.error("Error fetching programs:", error);
   }
 };
-// };
-
 
 onMounted(fetchPrograms);
 
-// Filter programs by search and strand
+// Computed filtered & sorted programs
 const filteredPrograms = computed(() => {
   let filtered = programs.value.filter(p => {
     const search = searchQuery.value.toLowerCase();
@@ -41,8 +41,7 @@ const filteredPrograms = computed(() => {
     const matchesStrand = filterStrand.value ? p.strand === filterStrand.value : true;
     return matchesSearch && matchesStrand;
   });
-  
-  // Sort filtered list
+
   filtered.sort((a, b) => {
     const aVal = (a[sortKey.value] || "").toString().toLowerCase();
     const bVal = (b[sortKey.value] || "").toString().toLowerCase();
@@ -59,11 +58,12 @@ const paginatedPrograms = computed(() => {
   return filteredPrograms.value.slice(start, start + itemsPerPage);
 });
 
-// Reset page when filters/search changes
+// Watch filters
 watch([searchQuery, filterStrand, sortKey, sortAsc], () => {
   currentPage.value = 1;
 });
 
+// Editing
 const startEdit = (program) => {
   editingProgram.value = { ...program };
   isEditing.value = true;
@@ -75,26 +75,14 @@ const saveEdit = async () => {
       `/programs/update/${editingProgram.value.id}`, 
       editingProgram.value
     );
-
-    // Update the local programs array with the saved data
     const index = programs.value.findIndex(p => p.id === editingProgram.value.id);
-    if (index !== -1) {
-      programs.value[index] = { ...editingProgram.value };
-    }
-    
+    if (index !== -1) programs.value[index] = { ...editingProgram.value };
     isEditing.value = false;
     editingProgram.value = null;
-    
-    // Refresh programs list to ensure data is in sync
     await fetchPrograms();
-    
-    console.log('Program updated successfully:', response.data);
   } catch (error) {
-    console.error("Error updating program:", error);
-    if (error.response) {
-      console.error("Server response:", error.response.data);
-      alert(`Failed to update program: ${error.response.data.message || 'Unknown error'}`);
-    }
+    console.error(error);
+    alert(error.response?.data?.message || "Failed to update program");
   }
 };
 
@@ -103,6 +91,7 @@ const cancelEdit = () => {
   isEditing.value = false;
 };
 
+// Delete
 const confirmDeleteProgram = async () => {
   if (!programToDelete.value) return;
   try {
@@ -110,12 +99,7 @@ const confirmDeleteProgram = async () => {
     programs.value = programs.value.filter(p => p.id !== programToDelete.value);
     closeDeleteModal();
   } catch (error) {
-    console.error("Error deleting program:", error);
-    if (error.response) {
-      alert(`Failed to delete program: ${error.response.data.message || 'Unknown error'}`);
-    } else {
-      alert('Failed to delete program. Please try again.');
-    }
+    alert(error.response?.data?.message || "Failed to delete program");
   }
 };
 
@@ -129,6 +113,7 @@ const closeDeleteModal = () => {
   programToDelete.value = null;
 };
 
+// Filters
 const clearFilters = () => {
   searchQuery.value = "";
   filterStrand.value = "";
@@ -144,8 +129,10 @@ const toggleSortOrder = () => {
 
 <template>
   <AppLayout title="Programs">
-    <div class="max-w-7xl mx-auto p-6">
-      <h2 class="text-2xl font-bold text-[#9E122C] mb-4">Programs List</h2>
+    <div class="max-w-7xl mx-auto p-6 space-y-6">
+      <h2 class="text-3xl font-bold text-[#9E122C]">Programs List</h2>
+
+      <!-- Floating Add Button -->
       <Link
         href="/addindex"
         class="fixed bottom-6 right-6 bg-[#9E122C] hover:bg-[#EE6A43] text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-all group"
@@ -154,155 +141,98 @@ const toggleSortOrder = () => {
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
-        <span class="absolute bottom-16 right-1/2 translate-x-1/2 bg-gray-900 text-white text-sm rounded-lg px-3 py-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-          Add Program
-        </span>
       </Link>
 
-      <!-- Filters Row -->
-      <div class="flex flex-wrap items-center gap-4 mb-4">
-        <!-- Search -->
+      <!-- Filters -->
+      <div class="flex flex-wrap items-center gap-4">
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search programs..."
-          class="flex-grow max-w-xs p-2 border border-[#EE6A43] rounded-lg text-gray-900 placeholder-gray-700 focus:ring-[#9E122C] focus:border-[#9E122C]"
+          class="flex-grow max-w-xs p-3 border border-[#EE6A43] rounded-lg focus:ring-[#9E122C] focus:border-[#9E122C]"
         />
-
-        <!-- Filter Strand -->
         <select
           v-model="filterStrand"
-          class="p-2 border border-[#EE6A43] rounded-lg text-gray-900"
+          class="p-3 border border-[#EE6A43] rounded-lg w-40 md:w-50 lg:w-70 focus:outline-none focus:ring-2 focus:ring-[#9E122C] transition"
         >
           <option value="">All Strands</option>
           <option
             v-for="strand in [...new Set(programs.map(p => p.strand).filter(Boolean))]"
             :key="strand"
             :value="strand"
-          >{{ strand }}</option>
+          >
+            {{ strand }}
+          </option>
         </select>
-
-        <!-- Sort Key -->
-        <select
-          v-model="sortKey"
-          class="p-2 border border-[#EE6A43] rounded-lg text-gray-900"
-        >
-          <option value="name">Sort by Name</option>
-          <option value="code">Sort by Code</option>
-          <option value="strand">Sort by Strand</option>
-          <option value="math">Sort by Math</option>
-          <option value="science">Sort by Science</option>
-          <option value="english">Sort by English</option>
-          <option value="gwa">Sort by GWA</option>
-          <option value="pupcet">Sort by PUPCET</option>
-          <option value="slots">Sort by Slots</option>
+        <select v-model="sortKey" class="p-3 border border-[#EE6A43] rounded-lg">
+          <option value="name">Name</option>
+          <option value="code">Code</option>
+          <option value="strand">Strand</option>
+          <option value="math">Math</option>
+          <option value="science">Science</option>
+          <option value="english">English</option>
+          <option value="gwa">GWA</option>
+          <option value="pupcet">PUPCET</option>
+          <option value="slots">Slots</option>
         </select>
-
-        <!-- Sort Order Toggle -->
-        <button
-          @click="toggleSortOrder"
-          class="px-3 py-2 border border-[#9E122C] rounded-lg text-[#9E122C] hover:bg-[#FDE8EA] transition"
-          :title="sortAsc ? 'Ascending' : 'Descending'"
-        >
-          {{ sortAsc ? 'Asc ↑' : 'Desc ↓' }}
-        </button>
-
-        <!-- Clear Filters -->
-        <button
-          @click="clearFilters"
-          class="px-3 py-2 border border-[#9E122C] rounded-lg text-[#9E122C] hover:bg-[#FDE8EA] transition"
-        >
-          Clear Filters
-        </button>
+        <button @click="toggleSortOrder" class="px-4 py-2 border border-[#9E122C] rounded-lg hover:bg-[#FDE8EA] transition">{{ sortAsc ? 'Asc ↑' : 'Desc ↓' }}</button>
+        <button @click="clearFilters" class="px-4 py-2 border border-[#9E122C] rounded-lg hover:bg-[#FDE8EA] transition">Clear</button>
       </div>
 
-      <!-- Table -->
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse border border-gray-300">
-          <thead>
-            <tr class="bg-[#FBCB77]">
-              <th class="border border-gray-300 p-2">Code</th>
-              <th class="border border-gray-300 p-2">Name</th>
-              <th class="border border-gray-300 p-2">Strand</th>
-              <th class="border border-gray-300 p-2">Math</th>
-              <th class="border border-gray-300 p-2">Science</th>
-              <th class="border border-gray-300 p-2">English</th>
-              <th class="border border-gray-300 p-2">GWA</th>
-              <th class="border border-gray-300 p-2">PUPCET</th>
-              <th class="border border-gray-300 p-2">Slots</th>
-              <th class="border border-gray-300 p-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="program in paginatedPrograms"
-              :key="program.id"
-              class="hover:bg-gray-200"
-            >
-              <template v-if="editingProgram && editingProgram.id === program.id">
-                <td class="border p-2"><input v-model="editingProgram.code" class="border p-1 w-full" /></td>
-                <td class="border p-2"><input v-model="editingProgram.name" class="border p-1 w-full" /></td>
-                <td class="border p-2"><input v-model="editingProgram.strand" class="border p-1 w-full" /></td>
-                <td class="border p-2"><input v-model="editingProgram.math" type="number" class="border p-1 w-full" /></td>
-                <td class="border p-2"><input v-model="editingProgram.science" type="number" class="border p-1 w-full" /></td>
-                <td class="border p-2"><input v-model="editingProgram.english" type="number" class="border p-1 w-full" /></td>
-                <td class="border p-2"><input v-model="editingProgram.gwa" type="number" class="border p-1 w-full" /></td>
-                <td class="border p-2"><input v-model="editingProgram.pupcet" type="number" class="border p-1 w-full" /></td>
-                <td class="border p-2"><input v-model="editingProgram.slots" type="number" class="border p-1 w-full" /></td>
-                <td class="border p-2 space-x-2">
-                  <button @click="saveEdit" class="bg-[#9E122C] text-white px-2 py-1 rounded">Save</button>
-                  <button @click="cancelEdit" class="bg-gray-400 text-white px-2 py-1 rounded">Cancel</button>
-                </td>
-              </template>
-              <template v-else>
-                <td class="border p-2">{{ program.code }}</td>
-                <td class="border p-2">{{ program.name }}</td>
-                <td class="border p-2">{{ program.strand || 'N/A' }}</td>
-                <td class="border p-2">{{ program.math }}</td>
-                <td class="border p-2">{{ program.science }}</td>
-                <td class="border p-2">{{ program.english }}</td>
-                <td class="border p-2">{{ program.gwa }}</td>
-                <td class="border p-2">{{ program.pupcet }}</td>
-                <td class="border p-2">{{ program.slots }}</td>
-                <td class="border p-2">
-                  <div class="flex gap-2 justify-center">
-                    <button @click="startEdit(program)" class="bg-[#FFFFFF] hover:bg-[#A9A9A9] text-white p-2 rounded-full shadow-md transition-all relative group">
-                      ✏️
-                      <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">Edit</span>
-                    </button>
-                    <button @click="openDeleteModal(program.id)" class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-md transition-all relative group">
-                      🗑️
-                      <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">Delete</span>
-                    </button>
-                  </div>
-                </td>
-              </template>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <!-- Cards Grid -->
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div v-for="program in paginatedPrograms" :key="program.id" class="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition relative">
+          
+          <template v-if="editingProgram && editingProgram.id === program.id">
+            <div class="space-y-2">
+              <input v-model="editingProgram.code" placeholder="Code" class="border p-2 w-full rounded" />
+              <input v-model="editingProgram.name" placeholder="Name" class="border p-2 w-full rounded" />
+              <input v-model="editingProgram.strand" placeholder="Strand" class="border p-2 w-full rounded" />
+              <div class="grid grid-cols-3 gap-2">
+                <input v-model="editingProgram.math" type="number" placeholder="Math" class="border p-2 w-full rounded" />
+                <input v-model="editingProgram.science" type="number" placeholder="Science" class="border p-2 w-full rounded" />
+                <input v-model="editingProgram.english" type="number" placeholder="English" class="border p-2 w-full rounded" />
+                <input v-model="editingProgram.gwa" type="number" placeholder="GWA" class="border p-2 w-full rounded" />
+                <input v-model="editingProgram.pupcet" type="number" placeholder="PUPCET" class="border p-2 w-full rounded" />
+                <input v-model="editingProgram.slots" type="number" placeholder="Slots" class="border p-2 w-full rounded" />
+              </div>
+              <div class="flex gap-2 justify-end">
+                <button @click="saveEdit" class="bg-[#9E122C] text-white px-3 py-1 rounded">Save</button>
+                <button @click="cancelEdit" class="bg-gray-400 text-white px-3 py-1 rounded">Cancel</button>
+              </div>
+            </div>
+          </template>
 
-      <!-- Pagination Controls -->
-      <div class="flex justify-between items-center mt-4 text-sm text-gray-700">
-        <div>
-          Showing {{ paginatedPrograms.length }} of {{ filteredPrograms.length }} programs
+          <template v-else>
+            <div class="space-y-1">
+              <h3 class="text-lg font-semibold text-[#9E122C]">{{ program.name }}</h3>
+              <p class="text-gray-600">Code: {{ program.code }}</p>
+              <p class="text-gray-600">Strand: {{ program.strand || 'N/A' }}</p>
+              <div class="grid grid-cols-3 gap-2 mt-2 text-sm text-gray-700">
+                <div>Math: {{ program.math }}</div>
+                <div>Science: {{ program.science }}</div>
+                <div>English: {{ program.english }}</div>
+                <div>GWA: {{ program.gwa }}</div>
+                <div>PUPCET: {{ program.pupcet }}</div>
+                <div>Slots: {{ program.slots }}</div>
+              </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-3">
+              <button @click="startEdit(program)" class="bg-[#FBBF77] hover:bg-[#FBCB77] text-white px-3 py-1 rounded shadow">Edit</button>
+              <button @click="openDeleteModal(program.id)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded shadow">Delete</button>
+            </div>
+          </template>
+
         </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="flex justify-between items-center mt-6 text-sm text-gray-700">
+        <div>Showing {{ paginatedPrograms.length }} of {{ filteredPrograms.length }} programs</div>
         <div class="flex gap-2 items-center">
-          <button
-            @click="currentPage--"
-            :disabled="currentPage === 1"
-            class="px-3 py-1 border rounded disabled:opacity-50"
-          >
-            Previous
-          </button>
+          <button @click="currentPage--" :disabled="currentPage === 1" class="px-3 py-1 border rounded disabled:opacity-50">Previous</button>
           <span>Page {{ currentPage }} of {{ totalPages }}</span>
-          <button
-            @click="currentPage++"
-            :disabled="currentPage === totalPages"
-            class="px-3 py-1 border rounded disabled:opacity-50"
-          >
-            Next
-          </button>
+          <button @click="currentPage++" :disabled="currentPage === totalPages" class="px-3 py-1 border rounded disabled:opacity-50">Next</button>
         </div>
       </div>
 
@@ -312,32 +242,12 @@ const toggleSortOrder = () => {
 </template>
 
 <style>
-/* Custom Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 5px;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #FBCB77; border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: #9E122C; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #EE6A43; }
 
-::-webkit-scrollbar-track {
-  background: #FBCB77;
-  border-radius: 5px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #9E122C;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #EE6A43;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter,
-.fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter, .fade-leave-to { opacity: 0; }
 </style>
