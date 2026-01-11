@@ -106,7 +106,7 @@ const cancelEdit = () => {
 const confirmDeleteProgram = async () => {
   if (!programToDelete.value) return;
   try {
-    await axios.delete(`/programs/delete/${programToDelete.value}`, getAxiosConfig());
+    await axios.delete(`/programs/delete/${programToDelete.value}`);
     programs.value = programs.value.filter(p => p.id !== programToDelete.value);
     closeDeleteModal();
   } catch (error) {
