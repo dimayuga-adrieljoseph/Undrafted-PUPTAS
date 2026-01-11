@@ -1,1 +1,0 @@
-import{d as t,o}from"./app-CbT4YxG1.js";const e={src:"/assets/images/pup_logo.png",alt:"Logo",style:{width:"100px",height:"100px"}},n={__name:"AuthenticationCardLogo",setup(s){return(a,_)=>(o(),t("img",e))}};export{n as _};

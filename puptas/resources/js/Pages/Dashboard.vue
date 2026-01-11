@@ -54,10 +54,10 @@
             >
               <td class="px-4 py-2 text-gray-800 dark:text-gray-100">{{ user.lastname }}</td>
               <td class="px-4 py-2 text-gray-800 dark:text-gray-100">{{ user.firstname }}</td>
-              <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ user.program?.code || "—" }}</td>
+              <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ user.application?.program?.code || "—" }}</td>
               <td class="px-4 py-2">
-                <span :class="getStatusClass(user.status)" class="px-2 py-1 rounded text-xs font-semibold">
-                  {{ user.status || "Unknown" }}
+                <span :class="getStatusClass(user.application?.status)" class="px-2 py-1 rounded text-xs font-semibold">
+                  {{ user.application?.status || "Unknown" }}
                 </span>
               </td>
             </tr>
@@ -139,12 +139,10 @@ const getStatusClass = (status) => {
 };
 
 const displayedUsers = computed(() => {
-  // Filter users with role 'applicant'
-  const applicants = users.value.filter(u => u.role?.toLowerCase() === 'applicant');
+  // Controller already filters for applicants only
+  if (!searchQuery.value.trim()) return users.value.slice(0, 4);
 
-  if (!searchQuery.value.trim()) return applicants.slice(0, 4);
-
-  return applicants.filter(u =>
+  return users.value.filter(u =>
     `${u.firstname} ${u.lastname}`.toLowerCase().includes(searchQuery.value.toLowerCase())
   );
 });

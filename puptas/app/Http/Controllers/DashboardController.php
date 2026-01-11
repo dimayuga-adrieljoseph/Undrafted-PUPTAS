@@ -60,7 +60,11 @@ class DashboardController extends Controller
 
     return Inertia::render('Dashboard', [
         'user' => $user,
-        'allUsers' => User::all(),
+        'allUsers' => User::with(['application.program', 'role'])
+            ->where('role_id', 1)
+            ->whereHas('application')
+            ->orderBy('created_at', 'desc')
+            ->get(),
         'summary' => $summary,
         'registrationUrl' => url('/register'),
         'chartData' => [
