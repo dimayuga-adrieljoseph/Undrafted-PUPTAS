@@ -11,15 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('program_user', function (Blueprint $table) {
-            $table->id('program_user_id');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+        Schema::create('program_capacity_logs', function (Blueprint $table) {
+            $table->id();
             $table->foreignId('program_id')->constrained()->onDelete('cascade');
-            $table->foreignId('role_id')->constrained()->onDelete('restrict');
+            $table->integer('slots_total');
+            $table->integer('slots_used');
+            $table->integer('slots_available');
+            $table->timestamp('recorded_at');
             $table->timestamps();
 
-            $table->unique(['user_id', 'program_id']);
-            $table->index('role_id');
+            $table->index('program_id');
+            $table->index('recorded_at');
         });
     }
 
@@ -28,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('program_user');
+        Schema::dropIfExists('program_capacity_logs');
     }
 };

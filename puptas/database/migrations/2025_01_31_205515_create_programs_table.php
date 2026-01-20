@@ -12,17 +12,18 @@ return new class extends Migration
     public function up()
     {
         Schema::create('programs', function (Blueprint $table) {
-            $table->id(); // Auto-increment ID
-            $table->string('code')->unique();
+            $table->id();
+            $table->string('code', 50)->unique();
             $table->string('name');
-            $table->string('strand')->nullable();
-            $table->integer('math')->nullable();
-            $table->integer('science')->nullable();
-            $table->integer('english')->nullable();
-            $table->integer('gwa')->nullable();
-            $table->integer('pupcet')->nullable();
-            $table->integer('slots')->default(0); 
+            $table->string('strand', 100)->nullable();
+            $table->decimal('math', 5, 2)->nullable();
+            $table->decimal('science', 5, 2)->nullable();
+            $table->decimal('english', 5, 2)->nullable();
+            $table->decimal('gwa', 5, 2)->nullable();
+            $table->decimal('pupcet', 6, 2)->nullable();
+            $table->integer('slots')->default(0);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
