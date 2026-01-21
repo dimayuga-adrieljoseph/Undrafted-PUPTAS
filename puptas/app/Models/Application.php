@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\UserFile;
 use App\Models\User;
 use App\Models\ApplicationProcess;
@@ -11,13 +12,20 @@ use App\Models\ApplicationProcess;
 class Application extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'user_id',
         'status',
         'submitted_at',
-         'program_id',           // ← this must be here
-    'second_choice_id',     // ← and this too
+        'program_id',
+        'second_choice_id',
+        'enrollment_status',
+        'enrollment_position',
+    ];
+
+    protected $casts = [
+        'submitted_at' => 'datetime',
     ];
 
     public function user()
@@ -26,10 +34,10 @@ class Application extends Model
     }
 
     // app/Models/Application.php
-public function files()
-{
-    return $this->hasMany(UserFile::class, 'user_id', 'user_id');
-}
+    public function files()
+    {
+        return $this->hasMany(UserFile::class, 'user_id', 'user_id');
+    }
 
 
     public function processes()
@@ -38,10 +46,17 @@ public function files()
     }
 
     public function program()
-{
-    return $this->belongsTo(Program::class);
-}
+    {
+        return $this->belongsTo(Program::class);
+    }
 
+    public function secondChoice()
+    {
+        return $this->belongsTo(Program::class, 'second_choice_id');
+    }
 
-    
+    public function complaints()
+    {
+        return $this->hasMany(Complaint::class);
+    }
 }

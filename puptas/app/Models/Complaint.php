@@ -2,33 +2,30 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Application;
-use App\Models\ApplicationProcess;
-
-
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class UserFile extends Model
+class Complaint extends Model
 {
     use SoftDeletes;
 
     protected $fillable = [
         'user_id',
         'application_id',
-        'application_process_id',
         'type',
-        'file_path',
-        'original_name',
+        'subject',
+        'description',
+        'priority',
         'status',
-        'comment',
+        'assigned_to',
+        'resolution',
+        'resolved_at',
+        'resolved_by',
     ];
 
     protected $casts = [
-        'uploadedFiles' => 'array',
+        'resolved_at' => 'datetime',
     ];
-
 
     public function user()
     {
@@ -40,8 +37,13 @@ class UserFile extends Model
         return $this->belongsTo(Application::class);
     }
 
-    public function applicationProcess()
+    public function assignedTo()
     {
-        return $this->belongsTo(ApplicationProcess::class);
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function resolvedBy()
+    {
+        return $this->belongsTo(User::class, 'resolved_by');
     }
 }
