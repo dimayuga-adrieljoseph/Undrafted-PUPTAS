@@ -12,7 +12,7 @@ class ProgramController extends Controller
     {
         return response()->json(Program::all()); // Or return data for Vue.js
     }
-    
+
 
     // ✅ Create a new program
     public function store(Request $request)
@@ -21,11 +21,11 @@ class ProgramController extends Controller
             'code' => 'required|unique:programs',
             'name' => 'required',
             'strand' => 'nullable|string',
-            'math' => 'nullable|integer',
-            'science' => 'nullable|integer',
-            'english' => 'nullable|integer',
-            'gwa' => 'nullable|integer',
-            'pupcet' => 'nullable|integer',
+            'math' => 'nullable|numeric|min:0|max:100',
+            'science' => 'nullable|numeric|min:0|max:100',
+            'english' => 'nullable|numeric|min:0|max:100',
+            'gwa' => 'nullable|numeric|min:0|max:5',
+            'pupcet' => 'nullable|numeric|min:0|max:100',
             'slots' => 'required|integer'
         ]);
 
@@ -48,11 +48,11 @@ class ProgramController extends Controller
             'code' => 'required|string|unique:programs,code,' . $id,
             'name' => 'required|string',
             'strand' => 'nullable|string',
-            'math' => 'nullable|integer|min:0',
-            'science' => 'nullable|integer|min:0',
-            'english' => 'nullable|integer|min:0',
-            'gwa' => 'nullable|integer|min:0',
-            'pupcet' => 'nullable|integer|min:0',
+            'math' => 'nullable|numeric|min:0|max:100',
+            'science' => 'nullable|numeric|min:0|max:100',
+            'english' => 'nullable|numeric|min:0|max:100',
+            'gwa' => 'nullable|numeric|min:0|max:5',
+            'pupcet' => 'nullable|numeric|min:0|max:100',
             'slots' => 'required|integer|min:0',
         ]);
 
@@ -80,5 +80,4 @@ class ProgramController extends Controller
     {
         return response()->json(Program::all()); // Or return data for Vue.js
     }
-
 }
