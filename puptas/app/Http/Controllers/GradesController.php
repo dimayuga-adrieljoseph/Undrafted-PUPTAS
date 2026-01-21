@@ -5,23 +5,13 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Grade;
 use App\Models\User;
+use App\Rules\ValidationRules;
 
 class GradesController extends Controller
 {
     public function store(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'english' => 'required|numeric|min:0|max:100',
-            'mathematics' => 'required|numeric|min:0|max:100',
-            'science' => 'required|numeric|min:0|max:100',
-            'g11_first_sem' => 'required|numeric|min:0|max:100',
-            'g11_second_sem' => 'required|numeric|min:0|max:100',
-            'g12_first_sem' => 'required|numeric|min:0|max:100',
-            'g12_second_sem' => 'required|numeric|min:0|max:100',
-        ]);
-
-        // Try to find the user, retrying if necessary
+        $request->validate(ValidationRules::gradeImport());
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {

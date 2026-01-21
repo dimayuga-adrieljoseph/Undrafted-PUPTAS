@@ -12,6 +12,7 @@ use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Program;
+use App\Rules\ValidationRules;
 use Inertia\Inertia;
 
 class UserController extends Controller
@@ -53,22 +54,7 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'firstname' => ['required', 'string', 'max:255'],
-            'lastname' => ['required', 'string', 'max:255'],
-            'middlename' => ['nullable', 'string', 'max:255'],
-            'role_id' => ['required', Rule::in([1, 2, 3, 4, 5, 6])],
-            'program' => ['nullable', 'string', Rule::requiredIf($request->role_id == 1)],
-
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'contactnumber' => ['required', 'string', 'max:15'],
-            'password' => [
-                'required',
-                'string',
-                'min:8',
-                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.]).+$/',
-            ],
-        ]);
+        $request->validate(ValidationRules::userStore());
 
         $user = User::create([
             'firstname' => $request->firstname,
@@ -152,21 +138,7 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        $request->validate([
-            'firstname' => ['required', 'string', 'max:255'],
-            'lastname' => ['required', 'string', 'max:255'],
-            'middlename' => ['nullable', 'string', 'max:255'],
-            'role_id' => ['required', Rule::in([1, 2, 3, 4, 5, 6])],
-            'program' => ['nullable', 'string'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'contactnumber' => ['required', 'string', 'max:15'],
-            'password' => [
-                'nullable',
-                'string',
-                'min:8',
-                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.]).+$/',
-            ],
-        ]);
+        $request->validate(ValidationRules::userUpdate($id));
 
         $user->firstname = $request->firstname;
         $user->lastname = $request->lastname;

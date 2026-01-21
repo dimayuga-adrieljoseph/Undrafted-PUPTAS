@@ -6,28 +6,13 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\UserFile;
 use Illuminate\Support\Facades\Storage;
+use App\Rules\ValidationRules;
 
 class UserFileController extends Controller
 {
     public function uploadFiles(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-            'application_id' => 'nullable|exists:applications,id',
-            'file10Front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file10Back' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file11' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file12' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file11Front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file12Front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileId' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileNonEnroll' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'filePSA' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileGoodMoral' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileUnderOath' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'filePhoto2x2' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-        ]);
-
+        $request->validate(ValidationRules::userFileUpload());
 
         $user = User::where('email', $request->email)->firstOrFail();
 
@@ -45,7 +30,6 @@ class UserFileController extends Controller
             'fileUnderOath' => 'under_oath',
             'filePhoto2x2' => 'photo_2x2',
         ];
-
 
         foreach ($filesToSave as $inputName => $type) {
             if ($request->hasFile($inputName)) {

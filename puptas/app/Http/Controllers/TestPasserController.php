@@ -11,19 +11,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\TestPasserEmail;
 use Symfony\Component\Mime\Part\TextPart;
 use Illuminate\Validation\Rule;
-
-class TestPasserController extends Controller
-{
-    // Get grouped passers by school year and batch number
-
-
-    public function index()
-    {
-        $passers = TestPasser::all()
-            ->groupBy(['school_year', 'batch_number'])
-            ->map(function ($batches) {
-                return $batches->map(function ($passers) {
-                    return $passers->values(); // reset keys, convert collection to array-like
+use App\Rules\ValidationRules;
                 });
             });
 
@@ -99,28 +87,7 @@ class TestPasserController extends Controller
         $passer = TestPasser::findOrFail($id);
 
         // Validate input
-        $validatedData = $request->validate([
-            'surname' => 'required|string|max:255',
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'date_of_birth' => 'nullable|date',
-            'address' => 'nullable|string|max:255',
-            'school_address' => 'nullable|string|max:255',
-            'shs_school' => 'nullable|string|max:255',
-            'strand' => 'nullable|string|max:255',
-            'year_graduated' => 'nullable|digits:4|integer|min:1900|max:' . date('Y'),
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-                Rule::unique('test_passers')->ignore($passer->test_passer_id, 'test_passer_id'),
-            ],
-            'reference_number' => 'nullable|string|max:255',
-            'batch_number' => 'nullable|string|max:255',
-            'school_year' => 'nullable|string|max:255',
-            'user_id' => 'nullable|exists:users,id',
-            'status' => 'nullable|in:pending,registered,inactive',
-        ]);
+        $validatedData = $request->validate(ValidationRules::testPasserUpdate($id));
 
         // Update passer with validated data
         $passer->update($validatedData);
@@ -134,23 +101,7 @@ class TestPasserController extends Controller
     public function store(Request $request)
     {
         // Validate input
-        $validated = $request->validate([
-            'surname' => 'required|string|max:255',
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'date_of_birth' => 'nullable|date',
-            'address' => 'nullable|string|max:255',
-            'school_address' => 'nullable|string|max:255',
-            'shs_school' => 'nullable|string|max:255',
-            'strand' => 'nullable|string|max:255',
-            'year_graduated' => 'nullable|digits:4|integer|min:1900|max:' . (date('Y') + 1),
-            'email' => 'required|email|unique:test_passers,email',
-            'reference_number' => 'nullable|string|max:255',
-            'batch_number' => 'nullable|string|max:255',
-            'school_year' => 'nullable|string|max:255',
-            'user_id' => 'nullable|exists:users,id',
-            'status' => 'nullable|in:pending,registered,inactive',
-        ]);
+        $validated = $request->validate(ValidationRules::testPasserStore());
 
         // Set default status if not provided
         $validated['status'] = $validated['status'] ?? 'pending';

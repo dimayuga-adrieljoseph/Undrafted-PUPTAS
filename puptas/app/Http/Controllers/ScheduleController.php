@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 
 use App\Http\Controllers\Controller;
 use App\Models\Schedule;
+use App\Rules\ValidationRules;
 use Inertia\Inertia;
 
 class ScheduleController extends Controller
@@ -27,15 +28,7 @@ class ScheduleController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'start' => 'required|date',
-            'end' => 'required|date|after:start',
-            'type' => 'required|in:application_deadline,exam_schedule,interview_schedule,result_release,enrollment_period',
-            'description' => 'nullable|string',
-            'location' => 'nullable|string|max:255',
-            'affected_programs' => 'nullable|array',
-        ]);
+        $validated = $request->validate(ValidationRules::scheduleStore());
 
         $schedule = Schedule::create([
             'name' => $validated['name'],
@@ -61,17 +54,7 @@ class ScheduleController extends Controller
     {
         $schedule = Schedule::findOrFail($id);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'start' => 'required|date',
-            'end' => 'required|date|after:start',
-            'type' => 'required|in:application_deadline,exam_schedule,interview_schedule,result_release,enrollment_period',
-            'description' => 'nullable|string',
-            'location' => 'nullable|string|max:255',
-            'affected_programs' => 'nullable|array',
-        ]);
-
-        $schedule->update($validated);
+        $validated = $request->validate(ValidationRules::scheduleUpdate($id));
 
         return response()->json($schedule);
     }

@@ -7,6 +7,7 @@ use App\Models\Complaint;
 use App\Models\Application;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use App\Rules\ValidationRules;
 
 class ComplaintController extends Controller
 {
@@ -31,13 +32,7 @@ class ComplaintController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'application_id' => 'nullable|exists:applications,id',
-            'type' => 'required|in:technical,process,delay,documentation,other',
-            'subject' => 'required|string|max:255',
-            'description' => 'required|string',
-            'priority' => 'required|in:low,medium,high,urgent',
-        ]);
+        $validated = $request->validate(ValidationRules::complaintStore());
 
         $complaint = Complaint::create([
             'user_id' => Auth::id(),
@@ -77,12 +72,7 @@ class ComplaintController extends Controller
             abort(403, 'Applicants cannot update complaints directly.');
         }
 
-        $validated = $request->validate([
-            'status' => 'nullable|in:open,in_progress,resolved,closed',
-            'priority' => 'nullable|in:low,medium,high,urgent',
-            'assigned_to' => 'nullable|exists:users,id',
-            'resolution' => 'nullable|string',
-        ]);
+        $validated = $request->validate(ValidationRules::complaintUpdate());
 
         if (isset($validated['status']) && $validated['status'] == 'resolved' && !$complaint->resolved_at) {
             $validated['resolved_at'] = now();
@@ -106,9 +96,7 @@ class ComplaintController extends Controller
             abort(403, 'Only administrators can assign complaints.');
         }
 
-        $validated = $request->validate([
-            'assigned_to' => 'required|exists:users,id',
-        ]);
+        $validated = $request->validate(ValidationRules::complaintAssign());
 
         $complaint->update([
             'assigned_to' => $validated['assigned_to'],
@@ -125,9 +113,7 @@ class ComplaintController extends Controller
     {
         $complaint = Complaint::findOrFail($id);
 
-        $validated = $request->validate([
-            'resolution' => 'required|string',
-        ]);
+        $validated = $request->validate(ValidationRules::complaintResolve());
 
         $complaint->update([
             'status' => 'resolved',

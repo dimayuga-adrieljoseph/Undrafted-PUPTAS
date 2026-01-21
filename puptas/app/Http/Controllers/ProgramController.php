@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Program;
+use App\Rules\ValidationRules;
 
 class ProgramController extends Controller
 {
@@ -17,17 +18,7 @@ class ProgramController extends Controller
     // ✅ Create a new program
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'code' => 'required|unique:programs',
-            'name' => 'required',
-            'strand' => 'nullable|string',
-            'math' => 'nullable|numeric|min:0|max:100',
-            'science' => 'nullable|numeric|min:0|max:100',
-            'english' => 'nullable|numeric|min:0|max:100',
-            'gwa' => 'nullable|numeric|min:0|max:5',
-            'pupcet' => 'nullable|numeric|min:0|max:100',
-            'slots' => 'required|integer'
-        ]);
+        $validated = $request->validate(ValidationRules::programStore());
 
         $program = Program::create($validated);
         return response()->json($program, 201);
@@ -44,17 +35,7 @@ class ProgramController extends Controller
         }
 
         // ✅ Validate the request data
-        $validatedData = $request->validate([
-            'code' => 'required|string|unique:programs,code,' . $id,
-            'name' => 'required|string',
-            'strand' => 'nullable|string',
-            'math' => 'nullable|numeric|min:0|max:100',
-            'science' => 'nullable|numeric|min:0|max:100',
-            'english' => 'nullable|numeric|min:0|max:100',
-            'gwa' => 'nullable|numeric|min:0|max:5',
-            'pupcet' => 'nullable|numeric|min:0|max:100',
-            'slots' => 'required|integer|min:0',
-        ]);
+        $validatedData = $request->validate(ValidationRules::programUpdate($id));
 
         // ✅ Update the program
         $program->update($validatedData);
