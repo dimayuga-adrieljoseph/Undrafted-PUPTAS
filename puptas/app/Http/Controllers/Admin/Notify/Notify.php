@@ -27,7 +27,7 @@ class Notify extends Controller
     //     return redirect()->back()->with('error', 'Unauthorized access.');
     // }
 
-    return Inertia::render('UploadForm'); // Vue component name
+    return Inertia::render('Uploads/Form'); // Vue component name
 }
     public function handleUpload(Request $request)
     {

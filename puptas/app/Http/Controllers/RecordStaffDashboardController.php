@@ -34,7 +34,7 @@ class RecordStaffDashboardController extends Controller
 
         $programs = Program::withCount('applications')->get();
 
-        return Inertia::render('Dashboards/RecordStaffDashboard', [
+        return Inertia::render('Dashboard/Records', [
             'user' => $user,
             'allUsers' => User::all(),
             'programs' => $programs,
