@@ -14,7 +14,17 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
-    resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
+    // Support resolving pages from both ./Pages and ./pages
+    resolve: (name) => {
+        const upperPages = import.meta.glob('./Pages/**/*.vue');
+        const lowerPages = import.meta.glob('./pages/**/*.vue');
+        const page = upperPages[`./Pages/${name}.vue`] || lowerPages[`./pages/${name}.vue`];
+        if (!page) {
+            console.error(`Inertia page not found: ${name}`);
+            throw new Error(`Page not found: ${name}`);
+        }
+        return page().then(module => module.default);
+    },
     setup({ el, App, props, plugin }) {
         // Update axios CSRF token on initial page load
         if (props.initialPage.props.csrf_token && window.axios) {

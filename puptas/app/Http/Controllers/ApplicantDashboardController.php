@@ -17,7 +17,7 @@ class ApplicantDashboardController extends Controller
         return redirect()->back()->with('error', 'Unauthorized access.');
     }
 
-    return Inertia::render('ApplicantDashboard', [
+    return Inertia::render('Dashboard/Applicant', [
         'user' => $user,
     ]);
         
