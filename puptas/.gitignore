@@ -5,6 +5,8 @@
 
 /storage/*.key
 /storage/pail
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
 /vendor
 .env
 .env.backup
