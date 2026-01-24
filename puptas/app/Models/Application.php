@@ -54,9 +54,4 @@ class Application extends Model
     {
         return $this->belongsTo(Program::class, 'second_choice_id');
     }
-
-    public function complaints()
-    {
-        return $this->hasMany(Complaint::class);
-    }
 }

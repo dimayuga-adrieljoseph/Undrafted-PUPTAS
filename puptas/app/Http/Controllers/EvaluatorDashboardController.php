@@ -95,11 +95,23 @@ class EvaluatorDashboardController extends Controller
             'status' => 'returned',
         ]);
 
-        ApplicationProcess::create([
-            'application_id' => $application->id,
-            'stage' => 'evaluator',
+        // Update existing in-progress evaluator process
+        $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
+            ->where('stage', 'evaluator')
+            ->where('status', 'in_progress')
+            ->first();
+
+        if (!$evaluatorProcess) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        $evaluatorProcess->update([
             'status' => 'returned',
-            'notes' => $note,
+            'action' => 'returned',
+            'reviewer_notes' => $note,
+            'files_affected' => json_encode($fileTypes),
             'performed_by' => auth()->id(),
         ]);
 
@@ -141,11 +153,23 @@ class EvaluatorDashboardController extends Controller
         $application->status = 'returned';
         $application->save();
 
-        ApplicationProcess::create([
-            'application_id' => $application->id,
-            'stage' => 'evaluator',
+        // Update existing in-progress evaluator process
+        $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
+            ->where('stage', 'evaluator')
+            ->where('status', 'in_progress')
+            ->first();
+
+        if (!$evaluatorProcess) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        $evaluatorProcess->update([
             'status' => 'returned',
-            'notes' => $request->note,
+            'action' => 'returned',
+            'reviewer_notes' => $request->note,
+            'files_affected' => json_encode($files),
             'performed_by' => auth()->id(),
         ]);
 
@@ -219,15 +243,34 @@ class EvaluatorDashboardController extends Controller
         $application = Application::where('user_id', $userId)->firstOrFail();
         $this->ensureStage($application, ['submitted', 'returned'], 'endorse');
 
-        $application->status = 'endorsed';
-        $application->save();
+        // Keep status as 'submitted' - it moves through stages via processes
+        // Only final stage (records) should set to 'accepted'
 
+        // Update existing in-progress evaluator process instead of creating new one
+        $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
+            ->where('stage', 'evaluator')
+            ->where('status', 'in_progress')
+            ->first();
+
+        if (!$evaluatorProcess) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        $evaluatorProcess->update([
+            'status' => 'completed',
+            'action' => 'passed',
+            'reviewer_notes' => $request->note,
+            'performed_by' => auth()->id(),
+        ]);
+
+        // Create next stage process
         ApplicationProcess::create([
             'application_id' => $application->id,
-            'stage' => 'evaluator',
-            'status' => 'endorsed',
-            'notes' => $request->note,
-            'performed_by' => auth()->id(),
+            'stage' => 'interviewer',
+            'status' => 'in_progress',
+            'performed_by' => null,
         ]);
 
         return response()->json([

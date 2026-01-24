@@ -106,7 +106,16 @@ class MedicalDashboardController extends Controller
         $this->ensureRole(5);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['accepted'], 'return files');
+
+        // Check if interviewer stage is completed
+        $interviewerCompleted = $application->processes()
+            ->where('stage', 'interviewer')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$interviewerCompleted) {
+            abort(409, "Cannot return files - interviewer stage not completed.");
+        }
 
         $fileTypes = $validated['files'];
         $note = $validated['note'];
@@ -122,11 +131,23 @@ class MedicalDashboardController extends Controller
             'status' => 'returned',
         ]);
 
-        ApplicationProcess::create([
-            'application_id' => $application->id,
-            'stage' => 'medical',
+        $inProgress = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'in_progress')
+            ->latest()
+            ->first();
+
+        if (!$inProgress) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        $inProgress->update([
             'status' => 'returned',
-            'notes' => $note,
+            'action' => 'returned',
+            'reviewer_notes' => $note,
+            'files_affected' => json_encode($fileTypes),
             'performed_by' => auth()->id(),
         ]);
 
@@ -147,7 +168,16 @@ class MedicalDashboardController extends Controller
         $this->ensureRole(5);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['accepted'], 'return application');
+
+        // Check if interviewer stage is completed
+        $interviewerCompleted = $application->processes()
+            ->where('stage', 'interviewer')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$interviewerCompleted) {
+            abort(409, "Cannot return application - interviewer stage not completed.");
+        }
 
         $files = $request->input('files');
 
@@ -168,11 +198,23 @@ class MedicalDashboardController extends Controller
         $application->status = 'returned';
         $application->save();
 
-        ApplicationProcess::create([
-            'application_id' => $application->id,
-            'stage' => 'medical',
+        $inProgress = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'in_progress')
+            ->latest()
+            ->first();
+
+        if (!$inProgress) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        $inProgress->update([
             'status' => 'returned',
-            'notes' => $request->note,
+            'action' => 'returned',
+            'reviewer_notes' => $request->note,
+            'files_affected' => json_encode($files),
             'performed_by' => auth()->id(),
         ]);
 
@@ -216,21 +258,44 @@ class MedicalDashboardController extends Controller
         $this->ensureRole(5);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['accepted'], 'clear medically');
+
+        // Check if interviewer stage is completed
+        $interviewerCompleted = $application->processes()
+            ->where('stage', 'interviewer')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$interviewerCompleted) {
+            abort(409, "Cannot clear medically - interviewer stage not completed.");
+        }
 
         try {
             DB::transaction(function () use ($application, $userId) {
 
-                $application->status = 'medical_cleared';
-                $application->save();
+                // Close current medical in-progress process
+                $inProgress = $application->processes()
+                    ->where('stage', 'medical')
+                    ->where('status', 'in_progress')
+                    ->latest()
+                    ->first();
 
+                if (!$inProgress) {
+                    throw new \Exception('This action has already been completed or is not available.');
+                }
 
+                $inProgress->update([
+                    'status' => 'completed',
+                    'action' => 'passed',
+                    'reviewer_notes' => 'Medically cleared',
+                    'performed_by' => auth()->id(),
+                ]);
+
+                // Create next stage (records)
                 ApplicationProcess::create([
                     'application_id' => $application->id,
-                    'stage' => 'medical',
-                    'status' => 'medical cleared',
-                    'notes' => 'cleared by medical staff',
-                    'performed_by' => auth()->id(),
+                    'stage' => 'records',
+                    'status' => 'in_progress',
+                    'performed_by' => null,
                 ]);
             });
 
@@ -249,8 +314,6 @@ class MedicalDashboardController extends Controller
 
     private function ensureStage(Application $application, array $allowedStatuses, string $action): void
     {
-        if (!in_array($application->status, $allowedStatuses, true)) {
-            abort(409, "Cannot {$action} while status is '{$application->status}'.");
-        }
+        // This method is deprecated - now using process-based validation
     }
 }

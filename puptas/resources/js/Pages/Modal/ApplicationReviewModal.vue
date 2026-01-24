@@ -301,9 +301,9 @@ const submitApplication = async () => {
             closeModal();
         }, 1000);
     } catch (e) {
-        showSnackbar(
-            "Failed to submit application. Choose programs before submitting."
-        );
+        const errorMsg = e.response?.data?.message || e.response?.data?.errors?.program_id?.[0] || "Failed to submit application. Choose programs before submitting.";
+        showSnackbar(errorMsg);
+        console.error('Submit error:', e.response?.data);
     }
 };
 

@@ -58,8 +58,8 @@ class ValidationRules
             'math' => 'nullable|numeric|min:0|max:100',
             'science' => 'nullable|numeric|min:0|max:100',
             'english' => 'nullable|numeric|min:0|max:100',
-            'gwa' => 'nullable|numeric|min:0|max:5',
-            'pupcet' => 'nullable|numeric|min:0|max:100',
+            'gwa' => 'nullable|numeric|min:1|max:100',
+            'pupcet' => 'nullable|numeric|min:0',
             'slots' => 'required|integer|min:1',
         ];
     }
@@ -73,8 +73,8 @@ class ValidationRules
             'math' => 'nullable|numeric|min:0|max:100',
             'science' => 'nullable|numeric|min:0|max:100',
             'english' => 'nullable|numeric|min:0|max:100',
-            'gwa' => 'nullable|numeric|min:0|max:5',
-            'pupcet' => 'nullable|numeric|min:0|max:100',
+            'gwa' => 'nullable|numeric|min:1|max:100',
+            'pupcet' => 'nullable|numeric|min:0',
             'slots' => 'required|integer|min:1',
         ];
     }
@@ -262,44 +262,6 @@ class ValidationRules
             'school_year' => 'nullable|string|max:20',
             'user_id' => 'nullable|exists:users,id',
             'status' => 'nullable|in:pending,registered,inactive',
-        ];
-    }
-
-    /**
-     * Complaint validation rules
-     */
-    public static function complaintStore()
-    {
-        return [
-            'application_id' => 'nullable|exists:applications,id',
-            'type' => 'required|in:technical,process,delay,documentation,other',
-            'subject' => 'required|string|max:255',
-            'description' => 'required|string|max:2000',
-            'priority' => 'required|in:low,medium,high,urgent',
-        ];
-    }
-
-    public static function complaintUpdate()
-    {
-        return [
-            'status' => 'nullable|in:open,in_progress,resolved,closed',
-            'priority' => 'nullable|in:low,medium,high,urgent',
-            'assigned_to' => 'nullable|exists:users,id',
-            'resolution' => 'nullable|string|max:2000',
-        ];
-    }
-
-    public static function complaintAssign()
-    {
-        return [
-            'assigned_to' => 'required|exists:users,id',
-        ];
-    }
-
-    public static function complaintResolve()
-    {
-        return [
-            'resolution' => 'required|string|max:2000',
         ];
     }
 }

@@ -105,7 +105,7 @@ class ConfirmationController extends Controller
                 ->processes()
                 ->with('performedBy:id,firstname,lastname')   // ← eager-load user
                 ->orderBy('created_at')
-                ->get(['stage', 'status', 'notes', 'performed_by', 'created_at'])
+                ->get(['stage', 'status', 'action', 'decision_reason', 'reviewer_notes', 'performed_by', 'created_at'])
                 : [],
             'program_id' => $application?->program_id,
             'second_choice_id' => $application?->second_choice_id,
@@ -161,15 +161,7 @@ class ConfirmationController extends Controller
                 'second_choice_id' => $validated['second_choice_id'] ?? null,
             ]);
 
-            // 2) Log the submission as a completed process
-            $application->processes()->create([
-                'stage' => 'submission',
-                'status' => 'completed',
-                'notes' => 'Application submitted.',
-                'performed_by' => $user->id,
-            ]);
-
-            // 3) Create the next in-flight process (evaluator)
+            // Create the next in-flight process (evaluator)
             $application->processes()->create([
                 'stage' => 'evaluator',
                 'status' => 'in_progress',

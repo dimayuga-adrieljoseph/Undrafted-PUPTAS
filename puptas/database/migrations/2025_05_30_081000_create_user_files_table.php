@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('user_files', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('application_id')->constrained()->onDelete('cascade');
+            $table->foreignId('application_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('application_process_id')->nullable()->constrained('application_processes')->nullOnDelete();
             $table->string('type');
             $table->string('file_path');

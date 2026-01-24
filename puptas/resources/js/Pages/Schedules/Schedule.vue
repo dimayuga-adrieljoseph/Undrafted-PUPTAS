@@ -4,6 +4,7 @@ import { ref, onMounted, computed } from 'vue'
 import VueCal from 'vue-cal'
 import 'vue-cal/dist/vuecal.css'
 import axios from 'axios'
+import { enumOptions } from '@/utils/enums'
 
 const modalOpen = ref(false)
 const eventListModalOpen = ref(false)
@@ -14,7 +15,11 @@ const form = ref({
   name: '',
   date: '',
   startTime: '',
-  endTime: ''
+  endTime: '',
+  type: 'application_deadline',
+  description: '',
+  location: '',
+  affected_programs: []
 })
 
 const events = ref([])
@@ -97,14 +102,22 @@ function openEventForm(event = null, date = null) {
       name: event.title,
       date: toLocalDateString(event.start),
       startTime: event.start.toISOString().slice(11, 16),
-      endTime: event.end.toISOString().slice(11, 16)
+      endTime: event.end.toISOString().slice(11, 16),
+      type: event.type || 'application_deadline',
+      description: event.description || '',
+      location: event.location || '',
+      affected_programs: event.affected_programs || []
     }
   } else if (date) {
     form.value = {
       name: '',
       date,
       startTime: '09:00',
-      endTime: '10:00'
+      endTime: '10:00',
+      type: 'application_deadline',
+      description: '',
+      location: '',
+      affected_programs: []
     }
   }
   modalOpen.value = true
@@ -121,7 +134,11 @@ function onEventClick(event) {
     name: event.title,
     date: toLocalDateString(event.start),
     startTime: event.start.toISOString().slice(11, 16),
-    endTime: event.end.toISOString().slice(11, 16)
+    endTime: event.end.toISOString().slice(11, 16),
+    type: event.type || 'application_deadline',
+    description: event.description || '',
+    location: event.location || '',
+    affected_programs: event.affected_programs || []
   }
   modalOpen.value = true
 }
@@ -140,7 +157,11 @@ async function saveEvent() {
   const payload = {
     name: form.value.name,
     start: `${form.value.date}T${form.value.startTime}`,
-    end: `${form.value.date}T${form.value.endTime}`
+    end: `${form.value.date}T${form.value.endTime}`,
+    type: form.value.type,
+    description: form.value.description || null,
+    location: form.value.location || null,
+    affected_programs: form.value.affected_programs || null
   }
 
   try {

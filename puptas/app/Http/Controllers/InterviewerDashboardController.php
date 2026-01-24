@@ -96,7 +96,36 @@ class InterviewerDashboardController extends Controller
         $this->ensureRole(4);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['endorsed', 'transferred'], 'accept');
+
+        // Check if evaluator stage is completed
+        $evaluatorCompleted = $application->processes()
+            ->where('stage', 'evaluator')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$evaluatorCompleted) {
+            abort(409, "Cannot accept - evaluator stage not completed.");
+        }
+
+        // Block repeat accepts or already-finalized applications
+        if (!in_array($application->status, ['submitted', 'returned', 'transferred'], true)) {
+            return response()->json([
+                'message' => 'Application is no longer available for interviewer approval.',
+            ], 409);
+        }
+
+        // Ensure there is an interviewer in-progress record to close
+        $interviewerInProgress = $application->processes()
+            ->where('stage', 'interviewer')
+            ->where('status', 'in_progress')
+            ->latest()
+            ->first();
+
+        if (!$interviewerInProgress) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
 
         $grades = Grade::where('user_id', $userId)->first();
 
@@ -105,7 +134,7 @@ class InterviewerDashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($application, $grades, $userId) {
+            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress) {
                 $program = Program::lockForUpdate()->findOrFail($application->program_id);
 
                 if ($program->slots <= 0) {
@@ -128,12 +157,20 @@ class InterviewerDashboardController extends Controller
                 $program->slots -= 1;
                 $program->save();
 
+                // Close current interviewer in-progress process
+                $interviewerInProgress->update([
+                    'status' => 'completed',
+                    'action' => 'passed',
+                    'reviewer_notes' => 'Accepted by interviewer',
+                    'performed_by' => auth()->id(),
+                ]);
+
+                // Create next stage (medical)
                 ApplicationProcess::create([
                     'application_id' => $application->id,
-                    'stage' => 'interview',
-                    'status' => 'accepted',
-                    'notes' => 'Accepted by interviewer',
-                    'performed_by' => auth()->id(),
+                    'stage' => 'medical',
+                    'status' => 'in_progress',
+                    'performed_by' => null,
                 ]);
             });
 
@@ -166,7 +203,16 @@ class InterviewerDashboardController extends Controller
         \Log::info("🚀 Transfer requested for user {$userId} to program {$validated['program_id']}");
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['endorsed', 'transferred'], 'transfer');
+
+        // Check if evaluator stage is completed
+        $evaluatorCompleted = $application->processes()
+            ->where('stage', 'evaluator')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$evaluatorCompleted) {
+            abort(409, "Cannot transfer - evaluator stage not completed.");
+        }
 
         $grades = Grade::where('user_id', $userId)->first();
 
@@ -203,12 +249,32 @@ class InterviewerDashboardController extends Controller
             $program->save();
             \Log::info("📉 Program slots updated. New slots: {$program->slots}");
 
+            // Close current interviewer in-progress process
+            $inProgress = $application->processes()
+                ->where('stage', 'interviewer')
+                ->where('status', 'in_progress')
+                ->latest()
+                ->first();
+
+            if (!$inProgress) {
+                return response()->json([
+                    'message' => 'This action has already been completed or is not available.',
+                ], 409);
+            }
+
+            $inProgress->update([
+                'status' => 'completed',
+                'action' => 'transferred',
+                'reviewer_notes' => 'Transferred to program ID ' . $program->id,
+                'performed_by' => auth()->id(),
+            ]);
+
+            // Create next stage (medical)
             ApplicationProcess::create([
                 'application_id' => $application->id,
-                'stage' => 'interviewer',
-                'status' => 'transferred',
-                'notes' => 'Transferred to program ID ' . $program->id,
-                'performed_by' => auth()->id(),
+                'stage' => 'medical',
+                'status' => 'in_progress',
+                'performed_by' => null,
             ]);
 
             \Log::info("📝 ApplicationProcess logged for application {$application->id}");
@@ -228,8 +294,7 @@ class InterviewerDashboardController extends Controller
 
     private function ensureStage(Application $application, array $allowedStatuses, string $action): void
     {
-        if (!in_array($application->status, $allowedStatuses, true)) {
-            abort(409, "Cannot {$action} while status is '{$application->status}'.");
-        }
+        // This method is deprecated - now using process-based validation
+        // Kept for backward compatibility but should not be called
     }
 }

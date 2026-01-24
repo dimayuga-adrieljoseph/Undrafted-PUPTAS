@@ -17,25 +17,25 @@
         </div>
   
         <div>
-          <label class="text-sm font-medium text-[#9E122C]">Math</label>
-          <input v-model="newProgram.math" type="number" class="border p-2 rounded w-full mb-2" />
+          <label class="text-sm font-medium text-[#9E122C]">Math Requirement (0-100)</label>
+          <input v-model.number="newProgram.math" type="number" step="0.01" min="0" max="100" class="border p-2 rounded w-full mb-2" />
   
-          <label class="text-sm font-medium text-[#9E122C]">Science</label>
-          <input v-model="newProgram.science" type="number" class="border p-2 rounded w-full mb-2" />
+          <label class="text-sm font-medium text-[#9E122C]">Science Requirement (0-100)</label>
+          <input v-model.number="newProgram.science" type="number" step="0.01" min="0" max="100" class="border p-2 rounded w-full mb-2" />
   
-          <label class="text-sm font-medium text-[#9E122C]">English</label>
-          <input v-model="newProgram.english" type="number" class="border p-2 rounded w-full mb-2" />
+          <label class="text-sm font-medium text-[#9E122C]">English Requirement (0-100)</label>
+          <input v-model.number="newProgram.english" type="number" step="0.01" min="0" max="100" class="border p-2 rounded w-full mb-2" />
         </div>
       </div>
   
-      <label class="text-sm font-medium text-[#9E122C]">GWA Requirement</label>
-      <input v-model="newProgram.gwa" type="number" class="border p-2 rounded w-full mb-2" />
+      <label class="text-sm font-medium text-[#9E122C]">GWA Requirement (1.00 - 100.00)</label>
+      <input v-model.number="newProgram.gwa" type="number" step="0.01" min="1" max="100" class="border p-2 rounded w-full mb-2" />
+
+      <label class="text-sm font-medium text-[#9E122C]">PUPCET Score (0+)</label>
+      <input v-model.number="newProgram.pupcet" type="number" step="0.01" min="0" class="border p-2 rounded w-full mb-2" />
   
-      <label class="text-sm font-medium text-[#9E122C]">PUPCET Score</label>
-      <input v-model="newProgram.pupcet" type="number" class="border p-2 rounded w-full mb-2" />
-  
-      <label class="text-sm font-medium text-[#9E122C]">Slots</label>
-      <input v-model="newProgram.slots" type="number" class="border p-2 rounded w-full mb-2" />
+      <label class="text-sm font-medium text-[#9E122C]">Available Slots</label>
+      <input v-model.number="newProgram.slots" type="number" step="1" min="1" class="border p-2 rounded w-full mb-2" />
   
       <button @click="addProgram" class="bg-[#9E122C] text-white px-4 py-2 rounded-lg hover:bg-[#EE6A43] w-full">
         Add Program
@@ -59,9 +59,9 @@
     math: 0,
     science: 0,
     english: 0,
-    gwa: 0,
+    gwa: 1,
     pupcet: 0,
-    slots: 0,
+    slots: 1,
   });
   
   // Get CSRF Token from Laravel
@@ -73,7 +73,7 @@
     const response = await axios.post("/programs/store", newProgram.value);
    
     // Reset form
-    newProgram.value = { code: "", name: "", strand: "", math: 0, science: 0, english: 0, gwa: 0, pupcet: 0, slots: 0 };
+    newProgram.value = { code: "", name: "", strand: "", math: 0, science: 0, english: 0, gwa: 1, pupcet: 0, slots: 1 };
     router.get('/programs');
 
   } catch (error) {

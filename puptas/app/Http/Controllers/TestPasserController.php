@@ -12,16 +12,28 @@ use App\Mail\TestPasserEmail;
 use Symfony\Component\Mime\Part\TextPart;
 use Illuminate\Validation\Rule;
 use App\Rules\ValidationRules;
-                });
-            });
+
+class TestPasserController extends Controller
+{
+    public function index()
+    {
+        $passers = TestPasser::all();
+
+        // Group passers by school_year then batch_number to match frontend expectations
+        $groupedPassers = $passers->groupBy([
+            function ($passer) {
+                return $passer->school_year ?? 'Unknown';
+            },
+            function ($passer) {
+                return $passer->batch_number ?? 'Unbatched';
+            },
+        ]);
 
         return Inertia::render('TestPassersEmail', [
-            'groupedPassers' => $passers,
+            'groupedPassers' => $groupedPassers,
             'registrationUrl' => url('/register'),
         ]);
     }
-
-
 
     public function sendEmails(Request $request)
     {

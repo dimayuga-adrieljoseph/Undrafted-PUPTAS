@@ -101,21 +101,6 @@ class User extends Authenticatable
         return $this->hasOne(ApplicantProfile::class);
     }
 
-    public function complaints()
-    {
-        return $this->hasMany(Complaint::class);
-    }
-
-    public function assignedComplaints()
-    {
-        return $this->hasMany(Complaint::class, 'assigned_to');
-    }
-
-    public function resolvedComplaints()
-    {
-        return $this->hasMany(Complaint::class, 'resolved_by');
-    }
-
     public function testPasser()
     {
         return $this->hasOne(TestPasser::class);
