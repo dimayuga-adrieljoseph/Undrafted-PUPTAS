@@ -39,7 +39,7 @@ class UserController extends Controller
         $totalUsers = User::count();
         $programs = Program::all();
 
-        return Inertia::render('Legacy/AddUser', [
+        return Inertia::render('UserManagement/AddUser', [
             'userCountsByRole' => $userCountsByRole,
             'roles' => $roles,
             'totalUsers' => $totalUsers,
@@ -99,7 +99,7 @@ class UserController extends Controller
 
         $totalUsers = User::count();
 
-        return Inertia::render('Legacy/ManageUsers', [
+        return Inertia::render('UserManagement/ManageUsers', [
             'users' => $users,
             'userCountsByRole' => $userCountsByRole,
             'roles' => $roles,
@@ -124,7 +124,7 @@ class UserController extends Controller
             6 => 'Registrar',
         ];
 
-        return Inertia::render('Legacy/EditUser', [
+        return Inertia::render('UserManagement/EditUser', [
             'user' => $user,
             'programs' => $programs,
             'roles' => $roles,

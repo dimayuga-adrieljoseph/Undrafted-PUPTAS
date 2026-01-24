@@ -32,7 +32,7 @@ class InterviewerDashboardController extends Controller
         ];
 
 
-        return Inertia::render('Dashboards/InterviewerDashboard', [
+        return Inertia::render('Dashboard/Interviewer', [
             'user' => $user,
             'allUsers' => User::all(),
             'summary' => $summary,

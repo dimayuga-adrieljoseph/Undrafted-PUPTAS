@@ -50,11 +50,11 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/programs', function () {
-        return Inertia::render('Programs');
+        return Inertia::render('Programs/Index');
     })->name('programs.index');
 
     Route::get('/addindex', function () {
-        return Inertia::render('AddProgram');
+        return Inertia::render('Programs/Create');
     })->name('programs.addindex');
 
     // ✅ Fetch programs
@@ -115,11 +115,11 @@ Route::middleware(['auth'])->get('/test-passers/form', [Notify::class, 'showUplo
 
 
 Route::get('/dashboard-panel', function () {
-    return Inertia::render('Dashboards/DashboardPanel');
+    return Inertia::render('Dashboard/Panel');
 })->middleware(['auth'])->name('dashboard.panel');
 
 Route::get('/applications', function () {
-    return Inertia::render('Applications/Applications');
+    return Inertia::render('Applications/Index');
 })->name('applications');
 
 Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
@@ -174,7 +174,7 @@ Route::middleware(['auth'])->group(function () {
         if (Auth::user()?->role_id !== 3) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
-        return Inertia::render('Applications/EvaluatorApplications', [
+        return Inertia::render('Applications/Evaluator', [
             'user' => Auth::user(),
         ]);
     })->name('evaluator.applications');
@@ -208,7 +208,7 @@ Route::get('/interviewer-applications', function () {
     if (Auth::user()?->role_id !== 4) {
         return redirect()->back()->with('error', 'Unauthorized access.');
     }
-    return Inertia::render('Applications/InterviewerApplication', [
+    return Inertia::render('Applications/Interviewer', [
         'user' => Auth::user(),
     ]);
 })->name('interviewer.applications');
@@ -232,7 +232,7 @@ Route::get('/medical-applications', function () {
     if (Auth::user()?->role_id !== 5) {
         return redirect()->back()->with('error', 'Unauthorized access.');
     }
-    return Inertia::render('Applications/MedicalApplications', [
+    return Inertia::render('Applications/Medical', [
         'user' => Auth::user(),
     ]);
 })->name('medical.applications');
@@ -250,7 +250,7 @@ Route::get('/recordstaff-applications', function () {
     if (Auth::user()?->role_id !== 6) {
         return redirect()->back()->with('error', 'Unauthorized access.');
     }
-    return Inertia::render('Applications/RecordStaffApplication', [
+    return Inertia::render('Applications/Records', [
         'user' => Auth::user(),
     ]);
 })->name('recordstaff.applications');

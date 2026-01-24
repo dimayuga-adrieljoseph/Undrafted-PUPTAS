@@ -29,7 +29,7 @@ class TestPasserController extends Controller
             },
         ]);
 
-        return Inertia::render('TestPassersEmail', [
+        return Inertia::render('TestPassers/Email', [
             'groupedPassers' => $groupedPassers,
             'registrationUrl' => url('/register'),
         ]);

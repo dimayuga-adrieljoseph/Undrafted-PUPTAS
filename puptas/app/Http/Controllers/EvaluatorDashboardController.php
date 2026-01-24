@@ -30,7 +30,7 @@ class EvaluatorDashboardController extends Controller
             'returned' => Application::where('status', 'returned')->count(),
         ];
 
-        return Inertia::render('Dashboards/EvaluatorDashboard', [
+        return Inertia::render('Dashboard/Evaluator', [
             'user' => $user,
             'allUsers' => User::all(),
             'summary' => $summary,

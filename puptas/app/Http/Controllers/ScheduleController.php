@@ -21,7 +21,7 @@ class ScheduleController extends Controller
         }
 
         // Return Inertia page for normal browser requests
-        return Inertia::render('Schedules/Schedule', [
+        return Inertia::render('Schedules/Index', [
             'schedules' => $schedules,
         ]);
     }
