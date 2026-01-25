@@ -17,6 +17,8 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
         "maatwebsite/excel": "^3.1",
+        "setasign/fpdi": "^2.3",
+        "tecnickcom/tcpdf": "^6.6",
         "thiagoalessio/tesseract_ocr": "^2.13",
         "tightenco/ziggy": "^2.0"
     },
