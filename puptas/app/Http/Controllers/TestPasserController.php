@@ -275,14 +275,14 @@ public function update(Request $request, $id)
         }
 
         // Check if file exists
-        $filePath = 'tmp/' . $filename;
+        $filePath = storage_path('app/tmp/' . $filename);
         
-        if (!\Storage::exists($filePath)) {
+        if (!file_exists($filePath)) {
             abort(404, 'File not found');
         }
 
         // Return file download response
-        return \Storage::download($filePath, $filename, [
+        return response()->download($filePath, $filename, [
             'Content-Type' => 'application/pdf',
         ]);
     }
