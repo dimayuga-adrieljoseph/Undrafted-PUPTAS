@@ -33,7 +33,7 @@ class MedicalDashboardController extends Controller
             'returned' => Application::where('status', 'returned')->count(),
         ];
 
-        return Inertia::render('Dashboards/MedicalDashboard', [
+        return Inertia::render('Dashboard/Medical', [
             'user' => $user,
             'allUsers' => User::all(),
             'summary' => $summary,

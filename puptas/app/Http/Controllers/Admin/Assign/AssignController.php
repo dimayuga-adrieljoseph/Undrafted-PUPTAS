@@ -24,7 +24,7 @@ class AssignController extends Controller
         $assignedUsers = User::whereIn('role_id', [3, 4])
             ->with('programs')->get();
 
-        return Inertia::render('Legacy/Assign', [
+        return Inertia::render('UserManagement/Assign', [
             'programs' => $programs,
             'assignedUsers' => $assignedUsers,
         ]);
@@ -99,7 +99,7 @@ class AssignController extends Controller
 
         $assignedPrograms = $user->programs->pluck('program_id')->toArray();
 
-        return Inertia::render('Legacy/EditAssignedUser', [
+        return Inertia::render('UserManagement/EditAssignedUser', [
             'user' => $user,
             'programs' => $programs,
             'assignedPrograms' => $assignedPrograms,

@@ -29,7 +29,7 @@ public function index()
             });
         });
 
-    return Inertia::render('TestPassersEmail', [
+    return Inertia::render('TestPassers/Email', [
         'groupedPassers' => $passers,
         'registrationUrl' => url('/register'),
     ]);

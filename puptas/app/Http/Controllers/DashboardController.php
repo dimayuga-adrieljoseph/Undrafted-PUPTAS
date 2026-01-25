@@ -58,7 +58,7 @@ class DashboardController extends Controller
         $returned[]  = $applications->where('year', $year)->where('status', 'returned')->sum('count');
     }
 
-    return Inertia::render('Dashboard', [
+    return Inertia::render('Dashboard/Admin', [
         'user' => $user,
         'allUsers' => User::with(['application.program', 'role'])
             ->where('role_id', 1)
