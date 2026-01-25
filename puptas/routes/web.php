@@ -118,6 +118,10 @@ Route::get('/dashboard-panel', function () {
     return Inertia::render('Dashboard/Panel');
 })->middleware(['auth'])->name('dashboard.panel');
 
+// SAR Form Download - Public route for test passers
+Route::get('/sar/download/{filename}/{reference}', [TestPasserController::class, 'downloadSar'])
+    ->name('sar.passer-download');
+
 Route::get('/applications', function () {
     return Inertia::render('Applications/Index');
 })->name('applications');

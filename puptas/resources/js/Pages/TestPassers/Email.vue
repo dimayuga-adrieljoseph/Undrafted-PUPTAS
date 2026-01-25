@@ -313,6 +313,7 @@
                         >
                             <option value="default">Default Template</option>
                             <option value="custom">Custom Template</option>
+                            <option value="sar">SAR Template (Downloadable PDF)</option>
                         </select>
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -332,7 +333,49 @@
                     </div>
                 </div>
 
-                <div v-if="templateType === 'custom'" class="mt-4">
+                <div v-if="templateType === 'sar'" class="mt-4 p-4 border rounded bg-blue-50 border-blue-300">
+                    <div class="flex items-start gap-3 mb-4">
+                        <svg class="h-6 w-6 text-blue-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <div>
+                            <h4 class="font-semibold text-blue-900 mb-2">SAR Form Template</h4>
+                            <p class="text-sm text-blue-800">
+                                Each selected passer will receive an email with a download link to their personalized <strong>Student Admission Record (SAR)</strong> PDF.
+                                The PDF will be generated automatically using their information from the uploaded Excel file.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-4 rounded border border-blue-200">
+                        <h5 class="font-semibold text-gray-700 mb-3">Set Enrollment Date & Time</h5>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Enrollment Date</label>
+                                <input 
+                                    type="date" 
+                                    v-model="sarEnrollmentDate"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Enrollment Time</label>
+                                <input 
+                                    type="time" 
+                                    v-model="sarEnrollmentTime"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-2">
+                            This date and time will be used for all selected passers' SAR forms.
+                        </p>
+                    </div>
+                </div>
+
+                <div v-else-if="templateType === 'custom'" class="mt-4">
                     <label>Email Template (Rich Text):</label>
                     <QuillEditor
                         v-model="emailTemplate"
@@ -830,6 +873,8 @@ const emailTemplate = ref(
 );
 
 const templateType = ref("default");
+const sarEnrollmentDate = ref(new Date().toISOString().split('T')[0]);
+const sarEnrollmentTime = ref('09:00');
 const defaultTemplatePreview = `
   <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
     <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
@@ -973,13 +1018,27 @@ const sendEmails = async () => {
         ? quillContainer.innerHTML
         : emailTemplate.value;
 
+    // Validate SAR template requirements
+    if (templateType.value === 'sar') {
+        if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
+            show("Please set enrollment date and time for SAR forms.", "error");
+            return;
+        }
+    }
+
     start();
     try {
         await axios.post("/test-passers/send-emails", {
             passer_ids: selectedPassers.value,
             message_template: messageHtml,
+            template_type: templateType.value,
+            enrollment_date: sarEnrollmentDate.value,
+            enrollment_time: sarEnrollmentTime.value,
         });
-        show("Emails sent successfully!", "success");
+        const successMsg = templateType.value === 'sar' 
+            ? 'SAR PDFs generated and emails sent successfully!' 
+            : 'Emails sent successfully!';
+        show(successMsg, "success");
         selectedPassers.value = [];
     } catch (error) {
         show("Failed to send emails.", "error");
