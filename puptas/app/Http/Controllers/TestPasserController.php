@@ -245,14 +245,14 @@ class TestPasserController extends Controller
         }
 
         // Check if file exists
-        $filePath = 'tmp/' . $filename;
-
-        if (!\Storage::exists($filePath)) {
+        $filePath = storage_path('app/tmp/' . $filename);
+        
+        if (!file_exists($filePath)) {
             abort(404, 'File not found');
         }
 
         // Return file download response
-        return \Storage::download($filePath, $filename, [
+        return response()->download($filePath, $filename, [
             'Content-Type' => 'application/pdf',
         ]);
     }
