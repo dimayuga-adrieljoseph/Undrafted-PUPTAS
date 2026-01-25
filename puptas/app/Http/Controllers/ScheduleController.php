@@ -3,40 +3,42 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Schedule;
-Use Inertia\Inertia;
+use App\Rules\ValidationRules;
+use Inertia\Inertia;
 
 class ScheduleController extends Controller
 {
     public function index(Request $request)
-{
-    $schedules = Schedule::orderBy('start')->get();
+    {
+        $schedules = Schedule::orderBy('start')->get();
 
-    if ($request->wantsJson()) {
-        // Return JSON data for AJAX/Axios requests
-        return response()->json($schedules);
+        if ($request->wantsJson()) {
+            // Return JSON data for AJAX/Axios requests
+            return response()->json($schedules);
+        }
+
+        // Return Inertia page for normal browser requests
+        return Inertia::render('Schedules/Index', [
+            'schedules' => $schedules,
+        ]);
     }
-
-    // Return Inertia page for normal browser requests
-    return Inertia::render('Schedules/Index', [
-        'schedules' => $schedules,
-    ]);
-}
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'start' => 'required|date',
-            'end' => 'required|date|after:start',
-        ]);
+        $validated = $request->validate(ValidationRules::scheduleStore());
 
         $schedule = Schedule::create([
             'name' => $validated['name'],
             'start' => $validated['start'],
             'end' => $validated['end'],
+            'type' => $validated['type'],
+            'description' => $validated['description'] ?? null,
+            'location' => $validated['location'] ?? null,
+            'created_by' => auth()->id(),
+            'affected_programs' => $validated['affected_programs'] ?? null,
         ]);
 
         return response()->json($schedule, 201);
@@ -52,13 +54,17 @@ class ScheduleController extends Controller
     {
         $schedule = Schedule::findOrFail($id);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'start' => 'required|date',
-            'end' => 'required|date|after:start',
-        ]);
+        $validated = $request->validate(ValidationRules::scheduleUpdate($id));
 
-        $schedule->update($validated);
+        $schedule->update([
+            'name' => $validated['name'],
+            'start' => $validated['start'],
+            'end' => $validated['end'],
+            'type' => $validated['type'],
+            'description' => $validated['description'] ?? null,
+            'location' => $validated['location'] ?? null,
+            'affected_programs' => $validated['affected_programs'] ?? null,
+        ]);
 
         return response()->json($schedule);
     }

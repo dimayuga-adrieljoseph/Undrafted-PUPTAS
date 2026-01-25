@@ -19,11 +19,19 @@
               Track your progress and uploaded documents.
             </p>
           </div>
-          <div v-if="applicationStatus" class="flex items-center gap-2">
-            <span class="font-medium text-gray-700 dark:text-gray-300">Status:</span>
-            <span :class="`px-4 py-1 rounded-full text-white font-semibold ${getBadgeClass(applicationStatus)}`">
-              {{ capitalize(applicationStatus) }}
-            </span>
+          <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div v-if="applicationStatus" class="flex items-center gap-2">
+              <span class="font-medium text-gray-700 dark:text-gray-300">Application Status:</span>
+              <span :class="`px-4 py-1 rounded-full text-white font-semibold ${getBadgeClass(applicationStatus)}`">
+                {{ capitalize(applicationStatus) }}
+              </span>
+            </div>
+            <div v-if="enrollmentStatus" class="flex items-center gap-2">
+              <span class="font-medium text-gray-700 dark:text-gray-300">Enrollment Status:</span>
+              <span :class="`px-4 py-2 rounded-full text-white font-semibold ${getEnrollmentBadgeClass(enrollmentStatus)}`">
+                {{ capitalize(enrollmentStatus.replace(/_/g, " ")) }}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -161,6 +169,7 @@ const loading = ref(false);
 const error = ref("");
 const fileStatuses = ref({});
 const applicationStatus = ref("");
+const enrollmentStatus = ref("");
 const applicationProcesses = ref([]);
 const fileInputRefs = ref({});
 const showImageModal = ref(false);
@@ -184,6 +193,15 @@ const getBadgeClass = (status) => {
   }
 };
 
+const getEnrollmentBadgeClass = (status) => {
+  switch ((status || "").toLowerCase()) {
+    case "pending": return "bg-yellow-500 border-yellow-500";
+    case "temporary": return "bg-yellow-500 border-yellow-500";
+    case "officially_enrolled": return "bg-green-500 border-green-500";
+    default: return "bg-gray-500 border-gray-500";
+  }
+};
+
 const fetchData = async () => {
   loading.value = true;
   error.value = "";
@@ -191,6 +209,7 @@ const fetchData = async () => {
     const { data } = await axios.get("/user/application");
     fileStatuses.value = data.uploadedFiles || {};
     applicationStatus.value = data.status || "";
+    enrollmentStatus.value = data.enrollment_status || "";
     applicationProcesses.value = data.processes || [];
   } catch {
     error.value = "Could not load application data.";

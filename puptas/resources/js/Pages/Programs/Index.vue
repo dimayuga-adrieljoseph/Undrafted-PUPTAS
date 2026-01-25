@@ -192,8 +192,8 @@ const toggleSortOrder = () => {
                 <input v-model="editingProgram.math" type="number" placeholder="Math" class="border p-2 w-full rounded" />
                 <input v-model="editingProgram.science" type="number" placeholder="Science" class="border p-2 w-full rounded" />
                 <input v-model="editingProgram.english" type="number" placeholder="English" class="border p-2 w-full rounded" />
-                <input v-model="editingProgram.gwa" type="number" placeholder="GWA" class="border p-2 w-full rounded" />
-                <input v-model="editingProgram.pupcet" type="number" placeholder="PUPCET" class="border p-2 w-full rounded" />
+                <input v-model="editingProgram.gwa" type="number" step="0.01" min="1" max="100" placeholder="GWA (1-100)" class="border p-2 w-full rounded" />
+                <input v-model="editingProgram.pupcet" type="number" step="0.01" min="0" placeholder="PUPCET" class="border p-2 w-full rounded" />
                 <input v-model="editingProgram.slots" type="number" placeholder="Slots" class="border p-2 w-full rounded" />
               </div>
               <div class="flex gap-2 justify-end">

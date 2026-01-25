@@ -13,15 +13,17 @@ return new class extends Migration
     {
         Schema::create('grades', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Links to users table
-            $table->string('english');
-            $table->string('mathematics');
-            $table->string('science');
-            $table->string('g11_first_sem');
-            $table->string('g11_second_sem');
-            $table->string('g12_first_sem');
-            $table->string('g12_second_sem');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->decimal('english', 5, 2)->nullable();
+            $table->decimal('mathematics', 5, 2)->nullable();
+            $table->decimal('science', 5, 2)->nullable();
+            $table->decimal('g11_first_sem', 5, 2)->nullable();
+            $table->decimal('g11_second_sem', 5, 2)->nullable();
+            $table->decimal('g12_first_sem', 5, 2)->nullable();
+            $table->decimal('g12_second_sem', 5, 2)->nullable();
             $table->timestamps();
+
+            $table->index('user_id');
         });
     }
 

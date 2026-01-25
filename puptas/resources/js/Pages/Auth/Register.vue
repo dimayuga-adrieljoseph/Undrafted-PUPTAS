@@ -365,6 +365,9 @@ const extractNameOnly = async (file, outputRef) => {
 
 // Form Submission
 const submit = async () => {
+    // Add loading feedback
+    isProcessing.value = true;
+    
     await form.post(route("register"), {
         onSuccess: async () => {
             try {
@@ -463,11 +466,21 @@ const submit = async () => {
             } catch (error) {
                 console.error("Error uploading files or grades:", error);
                 alert("Failed to upload files or grades. Please try again.");
+            } finally {
+                isProcessing.value = false;
             }
         },
         onError: (errors) => {
             console.error("Registration error:", errors);
+            isProcessing.value = false;
+            
+            // Show user-friendly error messages
+            const errorMessages = Object.values(errors).flat().join('\n');
+            alert(`Registration failed:\n\n${errorMessages || 'Please check your inputs and try again.'}`);
         },
+        onFinish: () => {
+            isProcessing.value = false;
+        }
     });
 };
 </script>
@@ -796,8 +809,10 @@ const submit = async () => {
                     </div>
 
                     <div class="flex justify-between mt-8">
-                        <PrimaryButton @click="step = 9">Back</PrimaryButton>
-                        <PrimaryButton @click="submit">Submit Application</PrimaryButton>
+                        <PrimaryButton @click="step = 9" :disabled="isProcessing || form.processing">Back</PrimaryButton>
+                        <PrimaryButton @click="submit" :disabled="isProcessing || form.processing">
+                            {{ isProcessing || form.processing ? 'Submitting...' : 'Submit Application' }}
+                        </PrimaryButton>
                     </div>
                 </div>
 

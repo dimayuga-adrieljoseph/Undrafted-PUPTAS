@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('test_passers', function (Blueprint $table) {
             $table->id('test_passer_id');
+            $table->foreignId('user_id')->nullable()->unique()->constrained()->nullOnDelete();
             $table->string('surname');
             $table->string('first_name');
             $table->string('middle_name')->nullable();
@@ -26,7 +27,10 @@ return new class extends Migration
             $table->string('reference_number')->nullable();
             $table->string('batch_number')->nullable();
             $table->string('school_year')->nullable();
+            $table->enum('status', ['pending', 'registered', 'application_completed'])->default('pending');
             $table->timestamps();
+
+            $table->index('email');
         });
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\UserFile;
 use Illuminate\Support\Facades\Storage;
@@ -95,11 +96,23 @@ class EvaluatorDashboardController extends Controller
             'status' => 'returned',
         ]);
 
-        ApplicationProcess::create([
-            'application_id' => $application->id,
-            'stage' => 'evaluator',
+        // Update existing in-progress evaluator process
+        $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
+            ->where('stage', 'evaluator')
+            ->whereIn('status', ['in_progress', 'returned'])
+            ->first();
+
+        if (!$evaluatorProcess) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        $evaluatorProcess->update([
             'status' => 'returned',
-            'notes' => $note,
+            'action' => 'returned',
+            'reviewer_notes' => $note,
+            'files_affected' => json_encode($fileTypes),
             'performed_by' => auth()->id(),
         ]);
 
@@ -141,11 +154,23 @@ class EvaluatorDashboardController extends Controller
         $application->status = 'returned';
         $application->save();
 
-        ApplicationProcess::create([
-            'application_id' => $application->id,
-            'stage' => 'evaluator',
+        // Update existing in-progress evaluator process
+        $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
+            ->where('stage', 'evaluator')
+            ->whereIn('status', ['in_progress', 'returned'])
+            ->first();
+
+        if (!$evaluatorProcess) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        $evaluatorProcess->update([
             'status' => 'returned',
-            'notes' => $request->note,
+            'action' => 'returned',
+            'reviewer_notes' => $request->note,
+            'files_affected' => json_encode($files),
             'performed_by' => auth()->id(),
         ]);
 
@@ -219,16 +244,45 @@ class EvaluatorDashboardController extends Controller
         $application = Application::where('user_id', $userId)->firstOrFail();
         $this->ensureStage($application, ['submitted', 'returned'], 'endorse');
 
-        $application->status = 'endorsed';
-        $application->save();
+        DB::transaction(function () use ($application, $userId, $request) {
+            // Update existing evaluator process (can be in_progress or returned status)
+            $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
+                ->where('stage', 'evaluator')
+                ->whereIn('status', ['in_progress', 'returned'])
+                ->first();
 
-        ApplicationProcess::create([
-            'application_id' => $application->id,
-            'stage' => 'evaluator',
-            'status' => 'endorsed',
-            'notes' => $request->note,
-            'performed_by' => auth()->id(),
-        ]);
+            if (!$evaluatorProcess) {
+                throw new \Exception('This action has already been completed or is not available.');
+            }
+
+            $evaluatorProcess->update([
+                'status' => 'completed',
+                'action' => 'passed',
+                'reviewer_notes' => $request->note,
+                'performed_by' => auth()->id(),
+            ]);
+
+            // Update file statuses from 'returned' to 'approved' when passing the application
+            $updatedCount = UserFile::where('user_id', $userId)
+                ->where('status', 'returned')
+                ->update(['status' => 'approved', 'comment' => null]);
+
+            \Log::info("Updated {$updatedCount} files from 'returned' to 'approved' for user {$userId}");
+
+            // Update application status back to submitted
+            $statusUpdated = Application::where('id', $application->id)
+                ->update(['status' => 'submitted']);
+
+            \Log::info("Updated application status to 'submitted' for application {$application->id}, result: {$statusUpdated}");
+
+            // Create next stage process
+            ApplicationProcess::create([
+                'application_id' => $application->id,
+                'stage' => 'interviewer',
+                'status' => 'in_progress',
+                'performed_by' => null,
+            ]);
+        });
 
         return response()->json([
             'message' => 'Application successfully passed to the next step.',

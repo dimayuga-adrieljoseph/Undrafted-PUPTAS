@@ -27,7 +27,7 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
-})->name('welcome');
+})->middleware('guest')->name('welcome');
 
 // Route::middleware([
 //     'auth:sanctum',
@@ -173,16 +173,16 @@ Route::post('/get-files', [UserFileController::class, 'getUserApplication']);
 Route::middleware(['auth'])->group(function () {
     Route::get('/evaluator-dashboard', [EvaluatorDashboardController::class, 'index'])
         ->name('evaluator.dashboard');
-    
+
     Route::get('/evaluator-applications', function () {
         if (Auth::user()?->role_id !== 3) {
-             return redirect()->back()->with('error', 'Unauthorized access.');
+            return redirect()->back()->with('error', 'Unauthorized access.');
         }
         return Inertia::render('Applications/Evaluator', [
-        'user' => Auth::user(),
-    ]);
+            'user' => Auth::user(),
+        ]);
     })->name('evaluator.applications');
-}); 
+});
 
 Route::get('/evaluator-dashboard/applicants', [EvaluatorDashboardController::class, 'getUsers']);
 
@@ -191,7 +191,7 @@ Route::post('/evaluator/pass-application/{userId}', [EvaluatorDashboardControlle
 Route::get('/dashboard/user-files/{id}', [EvaluatorDashboardController::class, 'getUserFiles']);
 Route::post('/dashboard/return-files/{user}', [EvaluatorDashboardController::class, 'returnApplication'])->name('return.files');
 
-Route::get('/test-update-file/{fileId}', function($fileId) {
+Route::get('/test-update-file/{fileId}', function ($fileId) {
     $file = \App\Models\UserFile::findOrFail($fileId);
     $file->status = 'returned';
     $file->comment = 'Test note';
@@ -210,12 +210,11 @@ Route::get('/interviewer-dashboard/application/{id}', [InterviewerDashboardContr
 
 Route::get('/interviewer-applications', function () {
     if (Auth::user()?->role_id !== 4) {
-         return redirect()->back()->with('error', 'Unauthorized access.');
+        return redirect()->back()->with('error', 'Unauthorized access.');
     }
     return Inertia::render('Applications/Interviewer', [
-    'user' => Auth::user(),
-]);
-
+        'user' => Auth::user(),
+    ]);
 })->name('interviewer.applications');
 
 Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
@@ -235,12 +234,11 @@ Route::post('/medical-dashboard/accept/{id}', [MedicalDashboardController::class
 
 Route::get('/medical-applications', function () {
     if (Auth::user()?->role_id !== 5) {
-         return redirect()->back()->with('error', 'Unauthorized access.');
+        return redirect()->back()->with('error', 'Unauthorized access.');
     }
     return Inertia::render('Applications/Medical', [
-    'user' => Auth::user(),
-]);
-
+        'user' => Auth::user(),
+    ]);
 })->name('medical.applications');
 
 Route::get('/medical-dashboard/applicants', [MedicalDashboardController::class, 'getUsers']);
@@ -254,12 +252,11 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/recordstaff-applications', function () {
     if (Auth::user()?->role_id !== 6) {
-         return redirect()->back()->with('error', 'Unauthorized access.');
+        return redirect()->back()->with('error', 'Unauthorized access.');
     }
     return Inertia::render('Applications/Records', [
-    'user' => Auth::user(),
-]);
-
+        'user' => Auth::user(),
+    ]);
 })->name('recordstaff.applications');
 
 Route::post('/record-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
@@ -275,7 +272,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/legacy/users/{id}/delete', [UserController::class, 'destroy'])->name('users.destroy');
     Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
     Route::post('/legacy/add-user/store', [UserController::class, 'store'])->name('add_user.store');
-    
+
     // Assign interviewer and evaluator
     Route::get('/admin/users/create', [AssignController::class, 'createUserForm'])->name('admin.users.create');
     Route::post('/admin/users/store', [AssignController::class, 'storeUser'])->name('admin.users.store');

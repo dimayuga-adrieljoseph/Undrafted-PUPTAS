@@ -84,7 +84,16 @@ class RecordStaffDashboardController extends Controller
         $this->ensureRole(6);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['medical_cleared', 'temporary enrolled', 'officially_enrolled'], 'return files');
+
+        // Check if medical stage is completed
+        $medicalCompleted = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$medicalCompleted) {
+            abort(409, "Cannot return files - medical stage not completed.");
+        }
 
         $fileTypes = $validated['files'];
         $note = $validated['note'];
@@ -100,11 +109,23 @@ class RecordStaffDashboardController extends Controller
             'status' => 'returned',
         ]);
 
-        ApplicationProcess::create([
-            'application_id' => $application->id,
-            'stage' => 'record',
+        $inProgress = $application->processes()
+            ->where('stage', 'records')
+            ->where('status', 'in_progress')
+            ->latest()
+            ->first();
+
+        if (!$inProgress) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        $inProgress->update([
             'status' => 'returned',
-            'notes' => $note,
+            'action' => 'returned',
+            'reviewer_notes' => $note,
+            'files_affected' => json_encode($fileTypes),
             'performed_by' => auth()->id(),
         ]);
 
@@ -125,7 +146,16 @@ class RecordStaffDashboardController extends Controller
         $this->ensureRole(6);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['medical_cleared', 'temporary enrolled', 'officially_enrolled'], 'return application');
+
+        // Check if medical stage is completed
+        $medicalCompleted = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$medicalCompleted) {
+            abort(409, "Cannot return application - medical stage not completed.");
+        }
 
         $files = $request->input('files');
 
@@ -146,11 +176,23 @@ class RecordStaffDashboardController extends Controller
         $application->status = 'returned';
         $application->save();
 
-        ApplicationProcess::create([
-            'application_id' => $application->id,
-            'stage' => 'record',
+        $inProgress = $application->processes()
+            ->where('stage', 'records')
+            ->where('status', 'in_progress')
+            ->latest()
+            ->first();
+
+        if (!$inProgress) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        $inProgress->update([
             'status' => 'returned',
-            'notes' => $request->note,
+            'action' => 'returned',
+            'reviewer_notes' => $request->note,
+            'files_affected' => json_encode($files),
             'performed_by' => auth()->id(),
         ]);
 
@@ -194,27 +236,53 @@ class RecordStaffDashboardController extends Controller
         $this->ensureRole(6);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['medical_cleared'], 'tag as enrolled');
+
+        // Check if medical stage is completed
+        $medicalCompleted = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$medicalCompleted) {
+            abort(409, "Cannot tag as enrolled - medical stage not completed.");
+        }
 
         try {
-            DB::transaction(function () use ($application, $userId) {
+            // Update the application enrollment status
+            Application::where('id', $application->id)
+                ->update([
+                    'status' => 'accepted',
+                    'enrollment_status' => 'officially_enrolled',
+                ]);
 
-                $application->status = 'officially_enrolled';
-                $application->save();
+            // Update or create the records process entry
+            $recordsProcess = $application->processes()
+                ->where('stage', 'records')
+                ->latest()
+                ->first();
 
-
-                ApplicationProcess::create([
-                    'application_id' => $application->id,
-                    'stage' => 'record',
-                    'status' => 'Enrolled',
-                    'notes' => 'tagged by record staff',
+            if ($recordsProcess) {
+                $recordsProcess->update([
+                    'status' => 'completed',
+                    'action' => 'transferred',
+                    'decision_reason' => 'officially_enrolled',
                     'performed_by' => auth()->id(),
                 ]);
-            });
+            } else {
+                // Create new records process if it doesn't exist
+                ApplicationProcess::create([
+                    'application_id' => $application->id,
+                    'stage' => 'records',
+                    'status' => 'completed',
+                    'action' => 'transferred',
+                    'decision_reason' => 'officially_enrolled',
+                    'performed_by' => auth()->id(),
+                ]);
+            }
 
-            return response()->json(['message' => 'Tagged as enrolled.']);
+            return response()->json(['message' => 'Tagged as officially enrolled.']);
         } catch (\Throwable $e) {
-            \Log::error("❌ Accept failed: " . $e->getMessage());
+            \Log::error("❌ Tag failed: " . $e->getMessage());
             return response()->json(['message' => $e->getMessage()], 400);
         }
     }
@@ -224,27 +292,38 @@ class RecordStaffDashboardController extends Controller
         $this->ensureRole(6);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['officially_enrolled', 'temporary enrolled'], 'untag');
+
+        // Check if application is accepted
+        if ($application->status !== 'accepted') {
+            abort(409, "Cannot untag - application must be accepted.");
+        }
 
         try {
-            DB::transaction(function () use ($application, $userId) {
+            // Update the application enrollment status
+            Application::where('id', $application->id)
+                ->update([
+                    'status' => 'waitlist',
+                    'enrollment_status' => 'temporary',
+                ]);
 
-                $application->status = 'temporary enrolled';
-                $application->save();
+            // Update the records process entry
+            $recordsProcess = $application->processes()
+                ->where('stage', 'records')
+                ->latest()
+                ->first();
 
-
-                ApplicationProcess::create([
-                    'application_id' => $application->id,
-                    'stage' => 'record',
-                    'status' => 'Temporary Enrolled',
-                    'notes' => 'Reverted to temporary enrolled',
+            if ($recordsProcess) {
+                $recordsProcess->update([
+                    'status' => 'in_progress',
+                    'action' => 'returned',
+                    'decision_reason' => 'temporary',
                     'performed_by' => auth()->id(),
                 ]);
-            });
+            }
 
-            return response()->json(['message' => 'Reverted to Temporary Enrolled.']);
+            return response()->json(['message' => 'Reverted to temporary enrollment.']);
         } catch (\Throwable $e) {
-            \Log::error("❌ Accept failed: " . $e->getMessage());
+            \Log::error("❌ Untag failed: " . $e->getMessage());
             return response()->json(['message' => $e->getMessage()], 400);
         }
     }
@@ -258,8 +337,6 @@ class RecordStaffDashboardController extends Controller
 
     private function ensureStage(Application $application, array $allowedStatuses, string $action): void
     {
-        if (!in_array($application->status, $allowedStatuses, true)) {
-            abort(409, "Cannot {$action} while status is '{$application->status}'.");
-        }
+        // This method is deprecated - now using process-based validation
     }
 }

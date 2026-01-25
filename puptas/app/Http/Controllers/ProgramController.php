@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Program;
+use App\Rules\ValidationRules;
 
 class ProgramController extends Controller
 {
@@ -12,22 +13,12 @@ class ProgramController extends Controller
     {
         return response()->json(Program::all()); // Or return data for Vue.js
     }
-    
+
 
     // ✅ Create a new program
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'code' => 'required|unique:programs',
-            'name' => 'required',
-            'strand' => 'nullable|string',
-            'math' => 'nullable|integer',
-            'science' => 'nullable|integer',
-            'english' => 'nullable|integer',
-            'gwa' => 'nullable|integer',
-            'pupcet' => 'nullable|integer',
-            'slots' => 'required|integer'
-        ]);
+        $validated = $request->validate(ValidationRules::programStore());
 
         $program = Program::create($validated);
         return response()->json($program, 201);
@@ -44,17 +35,7 @@ class ProgramController extends Controller
         }
 
         // ✅ Validate the request data
-        $validatedData = $request->validate([
-            'code' => 'required|string|unique:programs,code,' . $id,
-            'name' => 'required|string',
-            'strand' => 'nullable|string',
-            'math' => 'nullable|integer|min:0',
-            'science' => 'nullable|integer|min:0',
-            'english' => 'nullable|integer|min:0',
-            'gwa' => 'nullable|integer|min:0',
-            'pupcet' => 'nullable|integer|min:0',
-            'slots' => 'required|integer|min:0',
-        ]);
+        $validatedData = $request->validate(ValidationRules::programUpdate($id));
 
         // ✅ Update the program
         $program->update($validatedData);
@@ -80,5 +61,4 @@ class ProgramController extends Controller
     {
         return response()->json(Program::all()); // Or return data for Vue.js
     }
-
 }
