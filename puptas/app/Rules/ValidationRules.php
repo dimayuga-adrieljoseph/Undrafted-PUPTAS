@@ -198,9 +198,9 @@ class ValidationRules
     {
         return [
             'name' => 'required|string|max:255',
-            'start' => 'required|date|date_format:Y-m-d H:i:s',
-            'end' => 'required|date|date_format:Y-m-d H:i:s|after:start',
-            'type' => 'required|in:application_deadline,exam_schedule,interview_schedule,result_release,enrollment_period',
+            'start' => 'required|date',
+            'end' => 'required|date|after:start',
+            'type' => 'required|in:application,interview,medical,announcement,other',
             'description' => 'nullable|string|max:1000',
             'location' => 'nullable|string|max:255',
             'affected_programs' => 'nullable|array',
@@ -211,9 +211,9 @@ class ValidationRules
     {
         return [
             'name' => 'required|string|max:255',
-            'start' => 'required|date|date_format:Y-m-d H:i:s',
-            'end' => 'required|date|date_format:Y-m-d H:i:s|after:start',
-            'type' => 'required|in:application_deadline,exam_schedule,interview_schedule,result_release,enrollment_period',
+            'start' => 'required|date',
+            'end' => 'required|date|after:start',
+            'type' => 'required|in:application,interview,medical,announcement,other',
             'description' => 'nullable|string|max:1000',
             'location' => 'nullable|string|max:255',
             'affected_programs' => 'nullable|array',
@@ -232,15 +232,15 @@ class ValidationRules
             'date_of_birth' => 'nullable|date',
             'address' => 'nullable|string|max:500',
             'school_address' => 'nullable|string|max:500',
-            'shs_school' => 'nullable|string|max:255',
-            'strand' => 'nullable|string|max:100',
-            'year_graduated' => 'nullable|digits:4|integer|min:1900|max:' . (date('Y') + 1),
+            'shs_school' => 'required|string|max:255',
+            'strand' => 'required|string|max:100',
+            'year_graduated' => 'required|digits:4|integer|min:1900|max:' . (date('Y') + 1),
             'email' => 'required|email|unique:test_passers,email',
-            'reference_number' => 'nullable|string|max:100',
-            'batch_number' => 'nullable|string|max:50',
-            'school_year' => 'nullable|string|max:20',
+            'reference_number' => 'required|string|max:100|unique:test_passers,reference_number',
+            'batch_number' => 'required|string|max:50',
+            'school_year' => 'required|string|max:20',
             'user_id' => 'nullable|exists:users,id',
-            'status' => 'nullable|in:pending,registered,inactive',
+            'status' => 'nullable|in:pending,registered,application_completed',
         ];
     }
 
@@ -253,15 +253,15 @@ class ValidationRules
             'date_of_birth' => 'nullable|date',
             'address' => 'nullable|string|max:500',
             'school_address' => 'nullable|string|max:500',
-            'shs_school' => 'nullable|string|max:255',
-            'strand' => 'nullable|string|max:100',
-            'year_graduated' => 'nullable|digits:4|integer|min:1900|max:' . date('Y'),
+            'shs_school' => 'required|string|max:255',
+            'strand' => 'required|string|max:100',
+            'year_graduated' => 'required|digits:4|integer|min:1900|max:' . date('Y'),
             'email' => "required|email|unique:test_passers,email,{$testPasserId},test_passer_id",
-            'reference_number' => 'nullable|string|max:100',
-            'batch_number' => 'nullable|string|max:50',
-            'school_year' => 'nullable|string|max:20',
+            'reference_number' => "required|string|max:100|unique:test_passers,reference_number,{$testPasserId},test_passer_id",
+            'batch_number' => 'required|string|max:50',
+            'school_year' => 'required|string|max:20',
             'user_id' => 'nullable|exists:users,id',
-            'status' => 'nullable|in:pending,registered,inactive',
+            'status' => 'nullable|in:pending,registered,application_completed',
         ];
     }
 }

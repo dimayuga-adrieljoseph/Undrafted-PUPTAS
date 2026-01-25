@@ -107,6 +107,7 @@ class ConfirmationController extends Controller
                 ->orderBy('created_at')
                 ->get(['stage', 'status', 'action', 'decision_reason', 'reviewer_notes', 'performed_by', 'created_at'])
                 : [],
+            'enrollment_status' => $application?->enrollment_status ?? null,
             'program_id' => $application?->program_id,
             'second_choice_id' => $application?->second_choice_id,
 

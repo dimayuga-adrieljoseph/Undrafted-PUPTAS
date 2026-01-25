@@ -16,7 +16,7 @@ const form = ref({
   date: '',
   startTime: '',
   endTime: '',
-  type: 'application_deadline',
+  type: 'application',
   description: '',
   location: '',
   affected_programs: []
@@ -103,7 +103,7 @@ function openEventForm(event = null, date = null) {
       date: toLocalDateString(event.start),
       startTime: event.start.toISOString().slice(11, 16),
       endTime: event.end.toISOString().slice(11, 16),
-      type: event.type || 'application_deadline',
+      type: event.type || 'application',
       description: event.description || '',
       location: event.location || '',
       affected_programs: event.affected_programs || []
@@ -114,7 +114,7 @@ function openEventForm(event = null, date = null) {
       date,
       startTime: '09:00',
       endTime: '10:00',
-      type: 'application_deadline',
+      type: 'application',
       description: '',
       location: '',
       affected_programs: []
@@ -135,7 +135,7 @@ function onEventClick(event) {
     date: toLocalDateString(event.start),
     startTime: event.start.toISOString().slice(11, 16),
     endTime: event.end.toISOString().slice(11, 16),
-    type: event.type || 'application_deadline',
+    type: event.type || 'application',
     description: event.description || '',
     location: event.location || '',
     affected_programs: event.affected_programs || []
@@ -306,9 +306,9 @@ function confirmDelete() {
 
     <!-- Create/Edit modal -->
     <transition name="fade">
-      <div v-if="modalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative" @click.stop>
-          <h3 class="text-xl font-semibold mb-4 text-[#9E122C]">
+      <div v-if="modalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto p-6 relative" @click.stop>
+          <h3 class="text-xl font-semibold mb-4 text-[#9E122C] sticky top-0 bg-white">
             {{ editingEvent ? 'Edit Schedule' : 'Create Schedule' }}
           </h3>
 
@@ -347,37 +347,66 @@ function confirmDelete() {
               class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[#9E122C]"
             />
 
+            <label class="block mb-2 font-medium text-gray-700">Type</label>
+            <select
+              v-model="form.type"
+              required
+              class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[#9E122C]"
+            >
+              <option value="application">Application</option>
+              <option value="interview">Interview</option>
+              <option value="medical">Medical</option>
+              <option value="announcement">Announcement</option>
+              <option value="other">Other</option>
+            </select>
+
+            <label class="block mb-2 font-medium text-gray-700">Description (Optional)</label>
+            <textarea
+              v-model="form.description"
+              rows="3"
+              class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[#9E122C]"
+              placeholder="Add details about this schedule..."
+            ></textarea>
+
+            <label class="block mb-2 font-medium text-gray-700">Location (Optional)</label>
+            <input
+              v-model="form.location"
+              type="text"
+              class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[#9E122C]"
+              placeholder="e.g., Room 101, Building A"
+            />
+
             <button
               type="button"
-              class="px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
+              class="w-full px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition mb-4"
               @click="openEventForm(null, form.date)"
             >
               Create New Event on this Date
             </button>
 
             <!-- Buttons -->
-            <div class="flex justify-between mt-6">
-              <div v-if="editingEvent">
+            <div class="flex flex-col sm:flex-row gap-3 justify-between sticky bottom-0 bg-white pt-4 border-t">
+              <div v-if="editingEvent" class="w-full sm:w-auto">
                 <button
                   type="button"
                   @click="confirmDelete"
-                  class="px-5 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition"
+                  class="w-full px-5 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition"
                 >
                   Delete
                 </button>
               </div>
 
-              <div class="flex gap-3 justify-end flex-grow">
+              <div class="flex gap-3 justify-end flex-grow w-full">
                 <button
                   type="button"
                   @click="closeModal"
-                  class="px-5 py-2 rounded border hover:bg-gray-100 transition"
+                  class="flex-1 sm:flex-none px-5 py-2 rounded border hover:bg-gray-100 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  class="px-5 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
+                  class="flex-1 sm:flex-none px-5 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
                 >
                   Save
                 </button>

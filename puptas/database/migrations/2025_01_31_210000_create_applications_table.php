@@ -16,9 +16,9 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('program_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('second_choice_id')->nullable()->constrained('programs')->onDelete('set null');
-            $table->enum('status', ['draft', 'submitted', 'returned', 'accepted', 'rejected', 'waitlist'])->default('draft');
+            $table->enum('status', ['draft', 'submitted', 'returned', 'accepted', 'rejected', 'waitlist', 'transferred'])->default('draft');
             $table->timestamp('submitted_at')->nullable();
-            $table->enum('enrollment_status', ['pending', 'enrolled', 'rejected', 'waitlist'])->default('pending');
+            $table->enum('enrollment_status', ['pending', 'temporary', 'officially_enrolled'])->default('pending');
             $table->integer('enrollment_position')->nullable();
             $table->timestamps();
             $table->softDeletes();

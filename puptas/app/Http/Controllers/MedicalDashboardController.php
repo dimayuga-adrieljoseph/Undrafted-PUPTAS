@@ -272,10 +272,10 @@ class MedicalDashboardController extends Controller
         try {
             DB::transaction(function () use ($application, $userId) {
 
-                // Close current medical in-progress process
+                // Close current medical process (can be in_progress or returned)
                 $inProgress = $application->processes()
                     ->where('stage', 'medical')
-                    ->where('status', 'in_progress')
+                    ->whereIn('status', ['in_progress', 'returned'])
                     ->latest()
                     ->first();
 
@@ -289,6 +289,19 @@ class MedicalDashboardController extends Controller
                     'reviewer_notes' => 'Medically cleared',
                     'performed_by' => auth()->id(),
                 ]);
+
+                // Update file statuses from 'returned' to 'approved' when accepting the application
+                $updatedCount = UserFile::where('user_id', $userId)
+                    ->where('status', 'returned')
+                    ->update(['status' => 'approved', 'comment' => null]);
+
+                \Log::info("Updated {$updatedCount} files from 'returned' to 'approved' for user {$userId}");
+
+                // Update application status back to submitted
+                $statusUpdated = Application::where('id', $application->id)
+                    ->update(['status' => 'submitted']);
+
+                \Log::info("Updated application status to 'submitted' for application {$application->id}, result: {$statusUpdated}");
 
                 // Create next stage (records)
                 ApplicationProcess::create([

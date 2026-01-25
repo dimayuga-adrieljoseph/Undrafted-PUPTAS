@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Schedule;
 use App\Rules\ValidationRules;
@@ -55,6 +55,16 @@ class ScheduleController extends Controller
         $schedule = Schedule::findOrFail($id);
 
         $validated = $request->validate(ValidationRules::scheduleUpdate($id));
+
+        $schedule->update([
+            'name' => $validated['name'],
+            'start' => $validated['start'],
+            'end' => $validated['end'],
+            'type' => $validated['type'],
+            'description' => $validated['description'] ?? null,
+            'location' => $validated['location'] ?? null,
+            'affected_programs' => $validated['affected_programs'] ?? null,
+        ]);
 
         return response()->json($schedule);
     }

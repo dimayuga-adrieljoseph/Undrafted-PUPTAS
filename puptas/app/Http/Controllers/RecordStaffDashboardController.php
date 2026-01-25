@@ -248,33 +248,41 @@ class RecordStaffDashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($application, $userId) {
+            // Update the application enrollment status
+            Application::where('id', $application->id)
+                ->update([
+                    'status' => 'accepted',
+                    'enrollment_status' => 'officially_enrolled',
+                ]);
 
-                $application->status = 'accepted';
-                $application->save();
+            // Update or create the records process entry
+            $recordsProcess = $application->processes()
+                ->where('stage', 'records')
+                ->latest()
+                ->first();
 
-
-                $inProgress = $application->processes()
-                    ->where('stage', 'records')
-                    ->where('status', 'in_progress')
-                    ->latest()
-                    ->first();
-
-                if (!$inProgress) {
-                    throw new \Exception('This action has already been completed or is not available.');
-                }
-
-                $inProgress->update([
+            if ($recordsProcess) {
+                $recordsProcess->update([
                     'status' => 'completed',
-                    'action' => 'accepted',
-                    'reviewer_notes' => 'Officially enrolled by records staff',
+                    'action' => 'transferred',
+                    'decision_reason' => 'officially_enrolled',
                     'performed_by' => auth()->id(),
                 ]);
-            });
+            } else {
+                // Create new records process if it doesn't exist
+                ApplicationProcess::create([
+                    'application_id' => $application->id,
+                    'stage' => 'records',
+                    'status' => 'completed',
+                    'action' => 'transferred',
+                    'decision_reason' => 'officially_enrolled',
+                    'performed_by' => auth()->id(),
+                ]);
+            }
 
-            return response()->json(['message' => 'Tagged as enrolled.']);
+            return response()->json(['message' => 'Tagged as officially enrolled.']);
         } catch (\Throwable $e) {
-            \Log::error("❌ Accept failed: " . $e->getMessage());
+            \Log::error("❌ Tag failed: " . $e->getMessage());
             return response()->json(['message' => $e->getMessage()], 400);
         }
     }
@@ -291,33 +299,31 @@ class RecordStaffDashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($application, $userId) {
+            // Update the application enrollment status
+            Application::where('id', $application->id)
+                ->update([
+                    'status' => 'waitlist',
+                    'enrollment_status' => 'temporary',
+                ]);
 
-                $application->status = 'waitlist';
-                $application->save();
+            // Update the records process entry
+            $recordsProcess = $application->processes()
+                ->where('stage', 'records')
+                ->latest()
+                ->first();
 
-
-                $inProgress = $application->processes()
-                    ->where('stage', 'records')
-                    ->where('status', 'in_progress')
-                    ->latest()
-                    ->first();
-
-                if (!$inProgress) {
-                    throw new \Exception('This action has already been completed or is not available.');
-                }
-
-                $inProgress->update([
-                    'status' => 'completed',
-                    'action' => 'transferred',
-                    'reviewer_notes' => 'Reverted to temporary enrolled status',
+            if ($recordsProcess) {
+                $recordsProcess->update([
+                    'status' => 'in_progress',
+                    'action' => 'returned',
+                    'decision_reason' => 'temporary',
                     'performed_by' => auth()->id(),
                 ]);
-            });
+            }
 
-            return response()->json(['message' => 'Reverted to Temporary Enrolled.']);
+            return response()->json(['message' => 'Reverted to temporary enrollment.']);
         } catch (\Throwable $e) {
-            \Log::error("❌ Accept failed: " . $e->getMessage());
+            \Log::error("❌ Untag failed: " . $e->getMessage());
             return response()->json(['message' => $e->getMessage()], 400);
         }
     }

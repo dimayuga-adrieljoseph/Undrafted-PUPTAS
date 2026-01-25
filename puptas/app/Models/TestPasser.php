@@ -26,6 +26,10 @@ class TestPasser extends Model
         'status'
     ];
 
+    protected $casts = [
+        'status' => 'string',
+    ];
+
     public $timestamps = true;
 
     public function user()
