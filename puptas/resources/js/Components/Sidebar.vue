@@ -17,6 +17,12 @@ import {
     faMoon,
     faSun,
     faSignOutAlt,
+    faUpload,
+    faList,
+    faWrench,
+    faUserShield,
+    faHome,
+    faUserCircle,
 } from '@fortawesome/free-solid-svg-icons'
 
 import NavLink from '@/Components/NavLink.vue'
@@ -36,13 +42,18 @@ library.add(
     faUserGroup,
     faMoon,
     faSun,
-    faSignOutAlt
+    faSignOutAlt,
+    faUpload,
+    faList,
+    faWrench,
+    faUserShield,
+    faHome,
+    faUserCircle
 )
 
 const page = usePage()
 const user = computed(() => page.props.auth.user)
 
-// Variant prop: allow different sidebar variants (e.g., 'applicant')
 const props = defineProps({
     variant: {
         type: String,
@@ -67,14 +78,14 @@ const isAnyDropdownOpen = computed(() =>
     isUserMenuOpen.value || isPasserDropdownOpen.value || isMaintenanceDropdownOpen.value
 )
 
-const sidebarWidthClass = computed(() => (isSidebarOpen.value ? 'w-72 p-6' : 'w-20 p-4'))
+const sidebarWidthClass = computed(() => 
+    isSidebarOpen.value ? 'w-72 px-6 py-8' : 'w-20 px-4 py-8'
+)
 
 /* ---------------- ROUTE ACTIVE ---------------- */
-// Helper function: returns a computed boolean if the current route matches any in the array
 const isActiveRouteFor = (routeNames = []) =>
     computed(() => routeNames.some(name => isActiveRoute(name)))
 
-// Example usage in sidebar
 const isDashboardActive = isActiveRouteFor([
     'dashboard',
     'record.dashboard',
@@ -89,20 +100,16 @@ const isApplicationsActive = isActiveRouteFor([
     'recordstaff.applications',
     'medical.applications',
     'interviewer.applications',
+    'evaluator.applications',
 ])
 
 const isScheduleActive = isActiveRouteFor(['schedules.index'])
-
 const isUploadFormActive = isActiveRouteFor(['upload.form'])
 const isListPassersActive = isActiveRouteFor(['lists'])
-
 const isProgramsActive = isActiveRouteFor(['programs.index'])
-
 const isManageActive = isActiveRouteFor(['users.index'])
 const isAssignActive = isActiveRouteFor(['admin.users.create'])
-
 const isUserSettingsActive = isActiveRouteFor(['profile.show', 'api-tokens.index'])
-
 
 /* ---------------- INTERACTION ---------------- */
 const onSidebarEnter = () => (isSidebarOpen.value = true)
@@ -133,13 +140,6 @@ const toggleUserMenu = () => {
     isSidebarOpen.value = true
 }
 
-// Local toggle used by compact variants that show a manual collapse button
-const toggleLocalSidebar = () => {
-    isSidebarOpen.value = !isSidebarOpen.value
-    // update CSS variable so layouts adjust margin automatically
-    document.documentElement.style.setProperty('--sidebar-width', isSidebarOpen.value ? '18rem' : '5rem')
-}
-
 const toggleDarkMode = () => {
     isDarkMode.value = !isDarkMode.value
     document.documentElement.classList.toggle('dark', isDarkMode.value)
@@ -166,10 +166,7 @@ watch(
     () => page.props.url,
     () => {
         isPasserDropdownOpen.value = isUploadFormActive.value || isListPassersActive.value
-
         isMaintenanceDropdownOpen.value = isManageActive.value || isAssignActive.value
-        
-        // Close user settings dropdown when navigating away from profile/settings pages
         isUserMenuOpen.value = isUserSettingsActive.value
     },
     { immediate: true }
@@ -182,7 +179,7 @@ onMounted(() => {
     const savedDark = localStorage.getItem('darkMode') === 'true'
     isDarkMode.value = savedDark
     document.documentElement.classList.toggle('dark', savedDark)
-    // initialize CSS variable used by layouts to offset main content
+    
     document.documentElement.style.setProperty('--sidebar-width', isSidebarOpen.value ? '18rem' : '5rem')
 })
 
@@ -190,7 +187,6 @@ onUnmounted(() => {
     document.removeEventListener('pointerdown', onClickOutside)
 })
 
-// Keep the global CSS variable in sync whenever the sidebar open state changes
 watch(isSidebarOpen, (val) => {
     document.documentElement.style.setProperty('--sidebar-width', val ? '18rem' : '5rem')
 })
@@ -199,636 +195,454 @@ watch(isSidebarOpen, (val) => {
 <template>
     <div
         ref="sidebarRef"
-        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-md transition-all duration-500 ease-in-out"
+        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-2xl transition-all duration-300 ease-out"
         :class="sidebarWidthClass"
         @pointerenter="onSidebarEnter"
         @pointerleave="onSidebarLeave"
         @click.self.stop="pinSidebar"
     >
-        <!-- Logo -->
-        <div class="mb-10 flex items-center justify-between px-4">
-            <NavLink :href="route('dashboard')">
-                <ApplicationMark v-if="isSidebarOpen" class="h-10" />
-            </NavLink>
+        <!-- Header Section -->
+        <div class="sidebar-header mb-8 flex items-center">
+            <div class="flex items-center gap-3">
+                <div class="sidebar-logo-container">
+                    <NavLink :href="route('dashboard')" class="block">
+                        <ApplicationMark v-if="isSidebarOpen" class="h-8" />
+                        <div v-else class="w-8 h-8 rounded-full bg-gradient-to-br from-[#FFD700] to-[#FBCB77] flex items-center justify-center">
+                            <span class="text-[#9E122C] font-bold text-sm">PUP</span>
+                        </div>
+                    </NavLink>
+                </div>
+                <div v-if="isSidebarOpen" class="flex-1">
+                    <h1 class="text-lg font-bold text-white">PUP Portal</h1>
+                    <p class="text-xs text-gray-300 mt-0.5">Management System</p>
+                </div>
+            </div>
         </div>
-        <!-- ================= RECORD VARIANT ================= -->
-        <nav v-if="props.variant === 'record'">
-            <ul class="space-y-6">
-                <li>
-                    <NavLink
-                        :href="route('record.dashboard')"
-                        :active="isDashboardActive"
-                        class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
-                        :class="{
-                            'active-link': isDashboardActive,
-                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                        }"
-                    >
-                        <div class="w-6 flex justify-center">
-                            <FontAwesomeIcon
-                                icon="tachometer-alt"
-                                class="text-xl"
-                            />
-                        </div>
-                        <span v-if="isSidebarOpen" class="whitespace-nowrap"
-                            >My Dashboard</span
-                        >
-                    </NavLink>
-                </li>
-                <li>
-                    <NavLink
-                        :href="route('recordstaff.applications')"
-                        :active="isApplicationsActive"
-                        class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
-                        :class="{
-                            'active-link': isApplicationsActive,
-                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                        }"
-                    >
-                        <div class="w-6 flex justify-center">
-                            <FontAwesomeIcon
-                                icon="envelope-open-text"
-                                class="text-xl"
-                            />
-                        </div>
-                        <span v-if="isSidebarOpen" class="whitespace-nowrap"
-                            >Applications</span
-                        >
-                    </NavLink>
-                </li>
 
-                <li>
-                    <div
-                        @click.stop="toggleUserMenu"
-                        class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
-                        :class="{
-                            'active-link':
-                                isUserMenuOpen ||
-                                isActiveRoute('profile.show') ||
-                                isActiveRoute('api-tokens.index'),
-                        }"
-                    >
-                        <div class="flex items-center space-x-3">
-                            <FontAwesomeIcon icon="cog" class="text-xl" />
-                            <span v-if="isSidebarOpen">User Settings</span>
-                        </div>
-                        <FontAwesomeIcon
-                            v-if="isSidebarOpen"
-                            :icon="
-                                isUserMenuOpen
-                                    ? 'caret-down'
-                                    : 'caret-right'
-                            "
-                        />
-                    </div>
-                    <transition name="slide-fade">
-                        <div
-                            v-show="isUserMenuOpen && isSidebarOpen"
-                            class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2"
-                        >
-                            <DropdownLink
-                                :href="route('profile.show')"
-                                class="text-[#FCECDF] py-2 px-4 block hover:bg-[#FBCB77] transition"
-                                :class="{
-                                    'active-link':
-                                        isActiveRoute('profile.show'),
-                                }"
-                            >
-                                Profile
-                            </DropdownLink>
-                            <!-- <DropdownLink 
-                                v-if="$page.props.jetstream.hasApiFeatures" 
-                                :href="route('api-tokens.index')" 
-                                class="text-[#FCECDF] py-2 px-4 block hover:bg-[#FBCB77] transition"
-                                :class="{ 'active-link': isActiveRoute('api-tokens.index') }"
-                            >
-                                API Tokens
-                            </DropdownLink> -->
-                        </div>
-                    </transition>
-                </li>
-
-                <!-- <li>
-                    <NavLink 
-                        :href="route('programs.index')" 
-                        :active="isActiveRoute('programs.index')" 
-                        class="flex items-center space-x-3 py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
-                        :class="{ 'active-link': isActiveRoute('programs.index') }"
-                    >
-                        <FontAwesomeIcon icon="graduation-cap" class="text-xl" /> 
-                        <span v-if="isSidebarOpen">Programs</span>
-                    </NavLink>
-                </li> -->
-
-                <li>
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition focus:outline-none w-full"
-                        >
-                            <div class="flex items-center space-x-3">
-                                <FontAwesomeIcon
-                                    icon="sign-out-alt"
-                                    class="text-xl"
-                                />
-                                <span v-if="isSidebarOpen">Log Out</span>
-                            </div>
-                        </button>
-                    </form>
-                </li>
-            </ul>
-        </nav>
-        <!-- ================= MEDICAL VARIANT ================= -->
-        <nav v-else-if="props.variant === 'medical'">
-                <ul class="space-y-6">
+        <!-- Navigation Content -->
+        <div class="sidebar-content">
+            <!-- ================= ADMIN VARIANT ================= -->
+            <nav v-if="!['record', 'medical', 'interviewer', 'evaluator', 'applicant'].includes(props.variant)">
+                <ul class="space-y-2">
+                    <!-- Dashboard -->
                     <li>
                         <NavLink
-                            :href="route('medical.dashboard')"
+                            :href="route('dashboard')"
                             :active="isDashboardActive"
-                            class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
-                            :class="{
-                                'active-link': isDashboardActive,
-                                'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                            }"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isDashboardActive }"
                         >
-                            <div class="w-6 flex justify-center">
-                                <FontAwesomeIcon
-                                    icon="tachometer-alt"
-                                    class="text-xl"
-                                />
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="tachometer-alt" class="text-lg" />
                             </div>
-                            <span v-if="isSidebarOpen" class="whitespace-nowrap"
-                                >My Dashboard</span
-                            >
-                        </NavLink>
-                    </li>
-                    <li>
-                        <NavLink
-                            :href="route('medical.applications')"
-                            :active="isApplicationsActive"
-                            class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
-                            :class="{
-                                'active-link': isApplicationsActive,
-                                'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                            }"
-                        >
-                            <div class="w-6 flex justify-center">
-                                <FontAwesomeIcon
-                                    icon="envelope-open-text"
-                                    class="text-xl"
-                                />
-                            </div>
-                            <span v-if="isSidebarOpen" class="whitespace-nowrap"
-                                >Applications</span
-                            >
+                            <span v-if="isSidebarOpen" class="nav-label">Dashboard</span>
+                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isDashboardActive }"></div>
                         </NavLink>
                     </li>
 
+                    <!-- Passer Management Dropdown -->
                     <li>
                         <div
-                            @click.stop="toggleUserMenu"
-                            class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
-                            :class="{
-                                'active-link':
-                                    isUserMenuOpen ||
-                                    isActiveRoute('profile.show') ||
-                                    isActiveRoute('api-tokens.index'),
-                            }"
+                            @click.stop="togglePasserMenu"
+                            class="nav-item group cursor-pointer"
+                            :class="{ 'nav-item-active': isPasserDropdownOpen || isUploadFormActive || isListPassersActive }"
                         >
-                            <div class="flex items-center space-x-3">
-                                <FontAwesomeIcon icon="cog" class="text-xl" />
-                                <span v-if="isSidebarOpen">User Settings</span>
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="users" class="text-lg" />
                             </div>
-                            <FontAwesomeIcon
-                                v-if="isSidebarOpen"
-                                :icon="
-                                    isUserMenuOpen
-                                        ? 'caret-down'
-                                        : 'caret-right'
-                                "
-                            />
+                            <span v-if="isSidebarOpen" class="nav-label">Passers</span>
+                            <div class="flex items-center gap-2">
+                                <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isPasserDropdownOpen || isUploadFormActive || isListPassersActive }"></div>
+                                <FontAwesomeIcon 
+                                    v-if="isSidebarOpen"
+                                    :icon="isPasserDropdownOpen ? 'caret-down' : 'caret-right'"
+                                    class="text-xs text-gray-400 transition-transform duration-200"
+                                    :class="{ 'rotate-90': isPasserDropdownOpen }"
+                                />
+                            </div>
                         </div>
-                        <transition name="slide-fade">
-                            <div
-                                v-show="isUserMenuOpen && isSidebarOpen"
-                                class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2"
-                            >
-                                <DropdownLink
-                                    :href="route('profile.show')"
-                                    class="text-[#FCECDF] py-2 px-4 block hover:bg-[#FBCB77] transition"
-                                    :class="{
-                                        'active-link':
-                                            isActiveRoute('profile.show'),
-                                    }"
+
+                        <!-- Dropdown Content -->
+                        <transition
+                            enter-active-class="transition-all duration-200 ease-out"
+                            leave-active-class="transition-all duration-150 ease-in"
+                            enter-from-class="opacity-0 max-h-0"
+                            enter-to-class="opacity-100 max-h-40"
+                            leave-from-class="opacity-100 max-h-40"
+                            leave-to-class="opacity-0 max-h-0"
+                        >
+                            <div v-show="isPasserDropdownOpen && isSidebarOpen" class="dropdown-content ml-10 mt-1 space-y-1">
+                                <NavLink 
+                                    :href="route('upload.form')" 
+                                    class="dropdown-item"
+                                    :class="{ 'dropdown-item-active': isUploadFormActive }"
                                 >
-                                    Profile
-                                </DropdownLink>
+                                    <FontAwesomeIcon icon="upload" class="text-xs mr-2" />
+                                    Upload Passer
+                                </NavLink>
+                                <NavLink 
+                                    :href="route('lists')" 
+                                    class="dropdown-item"
+                                    :class="{ 'dropdown-item-active': isListPassersActive }"
+                                >
+                                    <FontAwesomeIcon icon="list" class="text-xs mr-2" />
+                                    List Passers
+                                </NavLink>
                             </div>
                         </transition>
                     </li>
+
+                    <!-- Applications -->
                     <li>
-                        <form @submit.prevent="logout">
-                            <button
-                                type="submit"
-                                class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition focus:outline-none w-full"
-                            >
-                                <div class="flex items-center space-x-3">
-                                    <FontAwesomeIcon
-                                        icon="sign-out-alt"
-                                        class="text-xl"
-                                    />
-                                    <span v-if="isSidebarOpen">Log Out</span>
-                                </div>
-                            </button>
-                        </form>
+                        <NavLink 
+                            :href="route('applications')" 
+                            :active="isApplicationsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isApplicationsActive }"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="envelope-open-text" class="text-lg" />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">Applications</span>
+                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isApplicationsActive }"></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Schedules -->
+                    <li>
+                        <NavLink 
+                            :href="route('schedules.index')" 
+                            :active="isScheduleActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isScheduleActive }"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="calendar-check" class="text-lg" />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">Schedules</span>
+                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isScheduleActive }"></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Programs -->
+                    <li>
+                        <NavLink 
+                            :href="route('programs.index')" 
+                            :active="isProgramsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isProgramsActive }"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="graduation-cap" class="text-lg" />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">Programs</span>
+                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isProgramsActive }"></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Maintenance Dropdown -->
+                    <li>
+                        <div
+                            @click.stop="toggleMaintenanceMenu"
+                            class="nav-item group cursor-pointer"
+                            :class="{ 'nav-item-active': isMaintenanceDropdownOpen || isManageActive || isAssignActive }"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="wrench" class="text-lg" />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">Maintenance</span>
+                            <div class="flex items-center gap-2">
+                                <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isMaintenanceDropdownOpen || isManageActive || isAssignActive }"></div>
+                                <FontAwesomeIcon 
+                                    v-if="isSidebarOpen"
+                                    :icon="isMaintenanceDropdownOpen ? 'caret-down' : 'caret-right'"
+                                    class="text-xs text-gray-400 transition-transform duration-200"
+                                    :class="{ 'rotate-90': isMaintenanceDropdownOpen }"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Dropdown Content -->
+                        <transition
+                            enter-active-class="transition-all duration-200 ease-out"
+                            leave-active-class="transition-all duration-150 ease-in"
+                            enter-from-class="opacity-0 max-h-0"
+                            enter-to-class="opacity-100 max-h-40"
+                            leave-from-class="opacity-100 max-h-40"
+                            leave-to-class="opacity-0 max-h-0"
+                        >
+                            <div v-show="isMaintenanceDropdownOpen && isSidebarOpen" class="dropdown-content ml-10 mt-1 space-y-1">
+                                <NavLink 
+                                    :href="route('users.index')" 
+                                    class="dropdown-item"
+                                    :class="{ 'dropdown-item-active': isManageActive }"
+                                >
+                                    <FontAwesomeIcon icon="user-shield" class="text-xs mr-2" />
+                                    Manage Users
+                                </NavLink>
+                                <NavLink 
+                                    :href="route('admin.users.create')" 
+                                    class="dropdown-item"
+                                    :class="{ 'dropdown-item-active': isAssignActive }"
+                                >
+                                    <FontAwesomeIcon icon="user-group" class="text-xs mr-2" />
+                                    Assign Program
+                                </NavLink>
+                            </div>
+                        </transition>
                     </li>
                 </ul>
-        </nav>
-        <!-- ================= INTERVIEWER VARIANT ================= -->
-        <nav v-else-if="props.variant === 'interviewer'">
-            <ul class="space-y-6">
-                <li>
-                    <NavLink
-                        :href="route('interviewer.dashboard')"
-                        :active="isDashboardActive"
-                        class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
-                        :class="{
-                            'active-link': isDashboardActive,
-                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                        }"
-                    >
-                        <div class="w-6 flex justify-center">
-                            <FontAwesomeIcon
-                                icon="tachometer-alt"
-                                class="text-xl"
-                            />
-                        </div>
-                        <span v-if="isSidebarOpen" class="whitespace-nowrap"
-                            >My Dashboard</span
-                        >
-                    </NavLink>
-                </li>
-                <li>
-                    <NavLink
-                        :href="route('interviewer.applications')"
-                        :active="isApplicationsActive"
-                        class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
-                        :class="{
-                            'active-link': isApplicationsActive,
-                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                        }"
-                    >
-                        <div class="w-6 flex justify-center">
-                            <FontAwesomeIcon
-                                icon="envelope-open-text"
-                                class="text-xl"
-                            />
-                        </div>
-                        <span v-if="isSidebarOpen" class="whitespace-nowrap"
-                            >Applications</span
-                        >
-                    </NavLink>
-                </li>
+            </nav>
 
+            <!-- ================= STAFF VARIANTS ================= -->
+            <nav v-else-if="['record', 'medical', 'interviewer', 'evaluator'].includes(props.variant)">
+                <ul class="space-y-2">
+                    <!-- Dashboard -->
+                    <li>
+                        <NavLink
+                            :href="route(props.variant + '.dashboard')"
+                            :active="isDashboardActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isDashboardActive }"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="tachometer-alt" class="text-lg" />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">Dashboard</span>
+                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isDashboardActive }"></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Applications -->
+                    <li>
+                        <NavLink
+                            :href="route(props.variant + '.applications')"
+                            :active="isApplicationsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isApplicationsActive }"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="envelope-open-text" class="text-lg" />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">Applications</span>
+                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isApplicationsActive }"></div>
+                        </NavLink>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- ================= APPLICANT VARIANT ================= -->
+            <nav v-else-if="props.variant === 'applicant'">
+                <ul class="space-y-2">
+                    <li>
+                        <NavLink
+                            :href="route('applicant.dashboard')"
+                            :active="isDashboardActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isDashboardActive }"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="home" class="text-lg" />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">Dashboard</span>
+                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isDashboardActive }"></div>
+                        </NavLink>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Bottom Section -->
+        <div class="sidebar-footer mt-auto pt-8 border-t border-white/10">
+            <ul class="space-y-2">
+                <!-- User Settings -->
                 <li>
                     <div
                         @click.stop="toggleUserMenu"
-                        class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
-                        :class="{
-                            'active-link':
-                                isUserMenuOpen ||
-                                isActiveRoute('profile.show') ||
-                                isActiveRoute('api-tokens.index'),
-                        }"
+                        class="nav-item group cursor-pointer"
+                        :class="{ 'nav-item-active': isUserMenuOpen || isUserSettingsActive }"
                     >
-                        <div class="flex items-center space-x-3">
-                            <FontAwesomeIcon icon="cog" class="text-xl" />
-                            <span v-if="isSidebarOpen">User Settings</span>
+                        <div class="nav-icon">
+                            <FontAwesomeIcon icon="cog" class="text-lg" />
                         </div>
-                        <FontAwesomeIcon
-                            v-if="isSidebarOpen"
-                            :icon="
-                                isUserMenuOpen
-                                    ? 'caret-down'
-                                    : 'caret-right'
-                            "
-                        />
+                        <span v-if="isSidebarOpen" class="nav-label">Settings</span>
+                        <div class="flex items-center gap-2">
+                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isUserMenuOpen || isUserSettingsActive }"></div>
+                            <FontAwesomeIcon 
+                                v-if="isSidebarOpen"
+                                :icon="isUserMenuOpen ? 'caret-down' : 'caret-right'"
+                                class="text-xs text-gray-400 transition-transform duration-200"
+                                :class="{ 'rotate-90': isUserMenuOpen }"
+                            />
+                        </div>
                     </div>
-                    <transition name="slide-fade">
-                        <div
-                            v-show="isUserMenuOpen && isSidebarOpen"
-                            class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2"
-                        >
-                            <DropdownLink
-                                :href="route('profile.show')"
-                                class="text-[#FCECDF] py-2 px-4 block hover:bg-[#FBCB77] transition"
-                                :class="{
-                                    'active-link':
-                                        isActiveRoute('profile.show'),
-                                }"
+
+                    <!-- Dropdown Content -->
+                    <transition
+                        enter-active-class="transition-all duration-200 ease-out"
+                        leave-active-class="transition-all duration-150 ease-in"
+                        enter-from-class="opacity-0 max-h-0"
+                        enter-to-class="opacity-100 max-h-32"
+                        leave-from-class="opacity-100 max-h-32"
+                        leave-to-class="opacity-0 max-h-0"
+                    >
+                        <div v-show="isUserMenuOpen && isSidebarOpen" class="dropdown-content ml-10 mt-1 space-y-1">
+                            <DropdownLink 
+                                :href="route('profile.show')" 
+                                class="dropdown-item"
+                                :class="{ 'dropdown-item-active': isActiveRoute('profile.show') }"
                             >
+                                <FontAwesomeIcon icon="user-circle" class="text-xs mr-2" />
                                 Profile
                             </DropdownLink>
+                            <button
+                                @click="toggleDarkMode"
+                                class="dropdown-item w-full text-left"
+                            >
+                                <FontAwesomeIcon :icon="isDarkMode ? 'sun' : 'moon'" class="text-xs mr-2" />
+                                {{ isDarkMode ? 'Light Mode' : 'Dark Mode' }}
+                            </button>
                         </div>
                     </transition>
                 </li>
+
+                <!-- Logout -->
                 <li>
                     <form @submit.prevent="logout">
                         <button
                             type="submit"
-                            class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition focus:outline-none w-full"
+                            class="nav-item group w-full text-left cursor-pointer hover:bg-red-600/20 transition-colors duration-200"
                         >
-                            <div class="flex items-center space-x-3">
-                                <FontAwesomeIcon
-                                    icon="sign-out-alt"
-                                    class="text-xl"
-                                />
-                                <span v-if="isSidebarOpen">Log Out</span>
+                            <div class="nav-icon text-red-300">
+                                <FontAwesomeIcon icon="sign-out-alt" class="text-lg" />
                             </div>
+                            <span v-if="isSidebarOpen" class="nav-label text-red-300">Logout</span>
                         </button>
                     </form>
                 </li>
             </ul>
-        </nav>
-        <!-- ================= EVALUATOR VARIANT ================= -->
-        <nav v-else-if="props.variant === 'evaluator'">
-            <ul class="space-y-6">
-                <li>
-                    <NavLink
-                        :href="route('evaluator.dashboard')"
-                        :active="isDashboardActive"
-                        class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
-                        :class="{
-                            'active-link': isDashboardActive,
-                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                        }"
-                    >
-                        <div class="w-6 flex justify-center">
-                            <FontAwesomeIcon
-                                icon="tachometer-alt"
-                                class="text-xl"
-                            />
-                        </div>
-                        <span v-if="isSidebarOpen" class="whitespace-nowrap"
-                            >My Dashboard</span
-                        >
-                    </NavLink>
-                </li>
-                <li>
-                    <NavLink
-                        :href="route('evaluator.applications')"
-                        :active="isApplicationsActive"
-                        class="block w-full rounded-lg transition hover:bg-[#FBCB77]"
-                        :class="{
-                            'active-link': isApplicationsActive,
-                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                        }"
-                    >
-                        <div class="w-6 flex justify-center">
-                            <FontAwesomeIcon
-                                icon="envelope-open-text"
-                                class="text-xl"
-                            />
-                        </div>
-                        <span v-if="isSidebarOpen" class="whitespace-nowrap"
-                            >Applications</span
-                        >
-                    </NavLink>
-                </li>
-
-                <li>
-                    <div
-                        @click.stop="toggleUserMenu"
-                        class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition"
-                        :class="{
-                            'active-link':
-                                isUserMenuOpen ||
-                                isActiveRoute('profile.show') ||
-                                isActiveRoute('api-tokens.index'),
-                        }"
-                    >
-                        <div class="flex items-center space-x-3">
-                            <FontAwesomeIcon icon="cog" class="text-xl" />
-                            <span v-if="isSidebarOpen">User Settings</span>
-                        </div>
-                        <FontAwesomeIcon
-                            v-if="isSidebarOpen"
-                            :icon="
-                                isUserMenuOpen
-                                    ? 'caret-down'
-                                    : 'caret-right'
-                            "
-                        />
-                    </div>
-                    <transition name="slide-fade">
-                        <div
-                            v-show="isUserMenuOpen && isSidebarOpen"
-                            class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2"
-                        >
-                            <DropdownLink
-                                :href="route('profile.show')"
-                                class="text-[#FCECDF] py-2 px-4 block hover:bg-[#FBCB77] transition"
-                                :class="{
-                                    'active-link':
-                                        isActiveRoute('profile.show'),
-                                }"
-                            >
-                                Profile
-                            </DropdownLink>
-                        </div>
-                    </transition>
-                </li>
-                <li>
-                    <form @submit.prevent="logout">
-                        <button
-                            type="submit"
-                            class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition focus:outline-none w-full"
-                        >
-                            <div class="flex items-center space-x-3">
-                                <FontAwesomeIcon
-                                    icon="sign-out-alt"
-                                    class="text-xl"
-                                />
-                                <span v-if="isSidebarOpen">Log Out</span>
-                            </div>
-                        </button>
-                    </form>
-                </li>
-            </ul>
-        </nav>
-
-        <!-- ================= APPLICANT VARIANT ================= -->
-        <nav v-else-if="props.variant === 'applicant'">
-            <ul class="space-y-6">
-                <li>
-                    <NavLink
-                        :href="route('applicant.dashboard')"
-                        :active="isActiveRoute('applicant.dashboard')"
-                        class="flex items-center space-x-3 py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] transition"
-                        :class="{ 'active-link': isActiveRoute('applicant.dashboard') }"
-                    >
-                        <FontAwesomeIcon icon="tachometer-alt" class="text-xl" />
-                        <span v-if="isSidebarOpen">My Dashboard</span>
-                    </NavLink>
-                </li>
-
-                <li>
-                    <div @click.stop="toggleUserMenu" class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition" :class="{ 'active-link': isUserMenuOpen || isActiveRoute('profile.show') || isActiveRoute('api-tokens.index') }">
-                        <div class="flex items-center space-x-3">
-                            <FontAwesomeIcon icon="cog" class="text-xl" />
-                            <span v-if="isSidebarOpen">User Settings</span>
-                        </div>
-                        <FontAwesomeIcon v-if="isSidebarOpen" :icon="isUserMenuOpen ? 'caret-down' : 'caret-right'" />
-                    </div>
-
-                    <transition name="slide-fade">
-                        <div v-show="isUserMenuOpen && isSidebarOpen" class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2">
-                            <DropdownLink :href="route('profile.show')" class="text-[#FCECDF] py-2 px-4 block hover:bg-[#FBCB77] transition" :class="{ 'active-link': isActiveRoute('profile.show') }">
-                                Profile
-                            </DropdownLink>
-                        </div>
-                    </transition>
-                </li>
-
-                <li>
-                    <form @submit.prevent="logout">
-                        <button type="submit" class="cursor-pointer flex items-center justify-between py-3 px-4 text-lg font-semibold rounded-lg hover:bg-[#FBCB77] hover:text-[#9E122C] transition focus:outline-none w-full">
-                            <div class="flex items-center space-x-3">
-                                <FontAwesomeIcon icon="sign-out-alt" class="text-xl" />
-                                <span v-if="isSidebarOpen">Log Out</span>
-                            </div>
-                        </button>
-                    </form>
-                </li>
-            </ul>
-        </nav>
-
-<!-- ================= ADMIN VARIANT ================= -->
-        <nav v-else>
-            <ul class="space-y-6">
-                <li>
-                    <NavLink
-                        :href="route('dashboard')"
-                        :active="isDashboardActive"
-                        class="block w-full rounded-lg transition hover:bg-[#FFD700]"
-                        :class="{
-                            'active-link': isDashboardActive,
-                            'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true,
-                        }"
-                    >
-                        <div class="w-6 flex justify-center">
-                            <FontAwesomeIcon
-                                icon="tachometer-alt"
-                                class="text-xl"
-                            />
-                        </div>
-                        <span v-if="isSidebarOpen" class="whitespace-nowrap">Dashboard</span>
-                    </NavLink>
-                </li>
-                <li>
-                    <div
-                        @click.stop="togglePasserMenu"
-                        class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]"
-                        :class="{
-                            'active-link':
-                                isPasserDropdownOpen ||
-                                isUploadFormActive ||
-                                isListPassersActive,
-                            'flex items-center justify-between py-3 px-4 text-lg font-semibold': true,
-                        }"
-                    >
-                        <div class="flex items-center space-x-3">
-                            <div class="w-6 flex justify-center">
-                                <FontAwesomeIcon
-                                    icon="pencil-alt"
-                                    class="text-xl"
-                                />
-                            </div>
-                            <span v-if="isSidebarOpen" class="whitespace-nowrap">Upload Passer</span>
-                        </div>
-                        <FontAwesomeIcon v-if="isSidebarOpen" :icon="isPasserDropdownOpen ? 'caret-down' : 'caret-right'" />
-                    </div>
-
-                    <transition name="slide-fade">
-                        <div v-show="isPasserDropdownOpen && isSidebarOpen" class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2">
-                            <NavLink :href="route('upload.form')" class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" :class="{ 'active-link': isUploadFormActive }">Upload Passer</NavLink>
-                            <NavLink :href="route('lists')" class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" :class="{ 'active-link': isListPassersActive }">List Passers</NavLink>
-                        </div>
-                    </transition>
-                </li>
-
-                <li>
-                    <NavLink :href="route('applications')" :active="isApplicationsActive" class="block w-full rounded-lg transition hover:bg-[#FFD700]" :class="{ 'active-link': isApplicationsActive, 'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true }">
-                        <div class="w-6 flex justify-center"><FontAwesomeIcon icon="envelope-open-text" class="text-xl"/></div>
-                        <span v-if="isSidebarOpen" class="whitespace-nowrap">Applications</span>
-                    </NavLink>
-                </li>
-
-                <li>
-                    <NavLink :href="route('schedules.index')" :active="isScheduleActive" class="block w-full rounded-lg transition hover:bg-[#FFD700]" :class="{ 'active-link': isScheduleActive, 'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true }">
-                        <div class="w-6 flex justify-center"><FontAwesomeIcon icon="calendar-check" class="text-xl"/></div>
-                        <span v-if="isSidebarOpen" class="whitespace-nowrap">Schedules</span>
-                    </NavLink>
-                </li>
-
-                <li>
-                    <NavLink :href="route('programs.index')" :active="isProgramsActive" class="block w-full rounded-lg transition hover:bg-[#FFD700]" :class="{ 'active-link': isProgramsActive, 'flex items-center space-x-3 py-3 px-4 text-lg font-semibold': true }">
-                        <div class="w-6 flex justify-center"><FontAwesomeIcon icon="graduation-cap" class="text-xl"/></div>
-                        <span v-if="isSidebarOpen" class="whitespace-nowrap">Programs</span>
-                    </NavLink>
-                </li>
-
-                <li>
-                    <div @click.stop="toggleMaintenanceMenu" class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]" :class="{ 'active-link': isMaintenanceDropdownOpen || isManageActive || isAssignActive, 'flex items-center justify-between py-3 px-4 text-lg font-semibold': true }">
-                        <div class="flex items-center space-x-3"><div class="w-6 flex justify-center"><FontAwesomeIcon icon="pencil-alt" class="text-xl"/></div><span v-if="isSidebarOpen" class="whitespace-nowrap">Maintenance</span></div>
-                        <FontAwesomeIcon v-if="isSidebarOpen" :icon="isMaintenanceDropdownOpen ? 'caret-down' : 'caret-right'" />
-                    </div>
-
-                    <transition name="slide-fade">
-                        <div v-show="isMaintenanceDropdownOpen && isSidebarOpen" class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2">
-                            <NavLink :href="route('users.index')" class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" :class="{ 'active-link': isManageActive }">Manage Users</NavLink>
-                            <NavLink :href="route('admin.users.create')" class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" :class="{ 'active-link': isAssignActive }">Assign Program</NavLink>
-                        </div>
-                    </transition>
-                </li>
-
-                <li>
-                    <div @click.stop="toggleUserMenu" class="block cursor-pointer rounded-lg transition hover:bg-[#FFD700] hover:text-[#9E122C]" :class="{ 'active-link': isUserMenuOpen || isUserSettingsActive, 'flex items-center justify-between py-3 px-4 text-lg font-semibold': true }">
-                        <div class="flex items-center space-x-3"><div class="w-6 flex justify-center"><FontAwesomeIcon icon="cog" class="text-xl"/></div><span v-if="isSidebarOpen" class="whitespace-nowrap">User Settings</span></div>
-                        <FontAwesomeIcon v-if="isSidebarOpen" :icon="isUserMenuOpen ? 'caret-down' : 'caret-right'" />
-                    </div>
-                    <transition name="slide-fade">
-                        <div v-show="isUserMenuOpen && isSidebarOpen" class="ml-6 space-y-2 bg-[#EE6A43] rounded-lg mt-2">
-                            <DropdownLink :href="route('profile.show')" class="block w-full rounded-lg px-4 py-2 transition hover:bg-[#FFD700]" :class="{ 'active-link': isActiveRoute('profile.show') }">Profile</DropdownLink>
-                        </div>
-                    </transition>
-                </li>
-
-                <li>
-                    <form @submit.prevent="logout"><button type="submit" class="flex w-full items-center justify-between rounded-lg py-3 px-4 text-lg font-semibold transition focus:outline-none hover:bg-[#FFD700] hover:text-[#9E122C]"><div class="flex items-center space-x-3"><div class="w-6 flex justify-center"><FontAwesomeIcon icon="sign-out-alt" class="text-xl"/></div><span v-if="isSidebarOpen" class="whitespace-nowrap">Log Out</span></div></button></form>
-                </li>
-            </ul>
-        </nav>
+        </div>
     </div>
 </template>
 
 <style scoped>
 .sidebar {
-    background-color: #8b0000;
-    /* Only animate width and padding for smoother layout transitions */
+    background: linear-gradient(180deg, #9E122C 0%, #800000 100%);
+    display: flex;
+    flex-direction: column;
     transition-property: width, padding;
-    transition-duration: 500ms;
-    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
-    will-change: width, padding;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Smoothly fade/slide labels when the sidebar changes width */
-.sidebar .whitespace-nowrap {
-    transition: opacity 260ms ease, transform 260ms ease;
+/* Navigation Items */
+.nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative overflow-hidden;
 }
 
-/* Slight performance hint for icons and text */
-.sidebar * {
-    backface-visibility: hidden;
+.nav-item:not(.nav-item-active):hover {
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%, rgba(251, 203, 119, 0.1) 100%);
+    transform: translateX(4px);
+}
+
+.nav-item-active {
+    background: linear-gradient(90deg, #FFD700 0%, #FBCB77 100%);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.25);
+}
+
+.nav-item-active .nav-label {
+    @apply text-[#9E122C] font-semibold;
+}
+
+.nav-item-active .nav-icon {
+    @apply text-[#9E122C];
+}
+
+.nav-icon {
+    @apply w-6 h-6 flex items-center justify-center text-white transition-colors duration-200;
+}
+
+.nav-label {
+    @apply flex-1 text-sm font-medium text-white transition-all duration-200 whitespace-nowrap overflow-hidden;
+}
+
+.nav-indicator {
+    @apply w-1.5 h-1.5 rounded-full bg-white/50 transition-all duration-200;
+}
+
+.nav-indicator.active {
+    @apply bg-[#9E122C] scale-125;
+}
+
+/* Dropdown Styles */
+.dropdown-content {
+    @apply overflow-hidden;
+}
+
+.dropdown-item {
+    @apply flex items-center px-3 py-2 text-xs rounded-lg transition-all duration-150 text-gray-300 hover:text-white hover:bg-white/10;
+}
+
+.dropdown-item-active {
+    @apply text-white bg-white/20 font-medium;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+    @apply transition-all duration-300;
+}
+
+/* Animations for collapsed state */
+.sidebar:not(.w-72) .nav-label {
+    @apply opacity-0 w-0;
+}
+
+.sidebar:not(.w-72) .nav-indicator {
+    @apply opacity-0;
+}
+
+.sidebar:not(.w-72) .nav-item {
+    @apply px-3 justify-center;
+}
+
+/* Scrollbar Styling */
+.sidebar-content {
+    @apply flex-1 overflow-y-auto overflow-x-hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.sidebar-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive Adjustments */
+@media (max-height: 640px) {
+    .sidebar {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    
+    .nav-item {
+        @apply py-2;
+    }
+}
+
+/* Dark Mode Support */
+.dark .sidebar {
+    background: linear-gradient(180deg, #7a0e23 0%, #600000 100%);
 }
 </style>
