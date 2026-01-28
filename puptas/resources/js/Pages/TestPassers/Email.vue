@@ -1,416 +1,3 @@
-<script setup>
-import { ref, computed, watch, onMounted } from "vue";
-const axios = window.axios;
-import AppLayout from "@/Layouts/AppLayout.vue";
-import { QuillEditor } from "@vueup/vue-quill";
-import "@vueup/vue-quill/dist/vue-quill.snow.css";
-import { useGlobalLoading } from "@/Composables/useGlobalLoading";
-import { useSnackbar } from "@/Composables/useSnackbar";
-
-// Scroll functionality
-const scrollWrapper = ref(null);
-const scrollAmount = 200;
-const showScrollUp = ref(false);
-const showScrollDown = ref(true);
-
-const scrollUp = () => {
-    if (scrollWrapper.value) {
-        scrollWrapper.value.scrollBy({
-            top: -scrollAmount,
-            behavior: "smooth",
-        });
-    }
-};
-
-const scrollDown = () => {
-    if (scrollWrapper.value) {
-        scrollWrapper.value.scrollBy({
-            top: scrollAmount,
-            behavior: "smooth"
-        });
-    }
-};
-
-const handleScroll = () => {
-    if (!scrollWrapper.value) return;
-    
-    const scrollTop = scrollWrapper.value.scrollTop;
-    const scrollHeight = scrollWrapper.value.scrollHeight;
-    const clientHeight = scrollWrapper.value.clientHeight;
-
-    showScrollUp.value = scrollTop > 10;
-    showScrollDown.value = scrollTop < 10;
-
-    if (scrollHeight <= clientHeight) {
-        showScrollUp.value = false;
-        showScrollDown.value = false;
-    }
-};
-
-onMounted(() => {
-    handleScroll();
-});
-
-// Template types for selection
-const templateTypes = [
-    { label: 'Default', value: 'default' },
-    { label: 'Custom', value: 'custom' },
-    { label: 'SAR Form', value: 'sar' }
-];
-
-// Snackbar functionality
-const { snackbar, show } = useSnackbar();
-
-function debounce(fn, delay) {
-    let timeout;
-    return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => fn(...args), delay);
-    };
-}
-
-const { start, finish } = useGlobalLoading();
-
-const props = defineProps({
-    groupedPassers: Object,
-    registrationUrl: String,
-});
-
-// Email template and settings
-const emailTemplate = ref(`
-    <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
-        <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-            <h1 style="color: #800000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
-            <p style="font-size: 16px; color: #333; text-align: center;">
-                You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
-            </p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="${props.registrationUrl}" 
-                style="background-color: #800000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
-                Complete Your Registration
-                </a>
-            </div>
-            <p style="font-size: 14px; color: #555; text-align: center;">
-                If you have any questions or need help, please contact our admissions office.
-            </p>
-        </div>
-    </div>
-`.trim());
-
-const templateType = ref("default");
-const sarEnrollmentDate = ref(new Date().toISOString().split('T')[0]);
-const sarEnrollmentTime = ref('09:00');
-const defaultTemplatePreview = `
-    <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
-        <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-            <h1 style="color: #800000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
-            <p style="font-size: 16px; color: #333; text-align: center;">
-                You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
-            </p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="${props.registrationUrl}" 
-                style="background-color: #800000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
-                Complete Your Registration
-                </a>
-            </div>
-            <p style="font-size: 14px; color: #555; text-align: center;">
-                If you have any questions or need help, please contact our admissions office.
-            </p>
-        </div>
-    </div>
-`.trim();
-
-const flatPassers = ref([]);
-
-watch(
-    () => props.groupedPassers,
-    (newVal) => {
-        const result = [];
-        if (newVal) {
-            for (const schoolYear in newVal) {
-                for (const batchNumber in newVal[schoolYear]) {
-                    newVal[schoolYear][batchNumber].forEach((passer) => {
-                        result.push({
-                            ...passer,
-                            schoolYear,
-                            batchNumber,
-                        });
-                    });
-                }
-            }
-        }
-        flatPassers.value = result;
-    },
-    { immediate: true }
-);
-
-const searchTerm = ref("");
-const debouncedSearchTerm = ref("");
-const filterSchoolYear = ref("");
-const filterBatchNumber = ref("");
-const sortKey = ref("surname");
-const sortOrder = ref("asc");
-const currentPage = ref(1);
-const itemsPerPage = 10;
-
-const onSearchInput = debounce(() => {
-    debouncedSearchTerm.value = searchTerm.value.toLowerCase();
-    currentPage.value = 1;
-}, 300);
-
-watch([filterSchoolYear, filterBatchNumber, sortKey, sortOrder], () => {
-    currentPage.value = 1;
-});
-
-const schoolYears = computed(() => {
-    const years = new Set(flatPassers.value.map((p) => p.schoolYear));
-    return Array.from(years).sort();
-});
-
-const batchNumbers = computed(() => {
-    const batches = new Set(flatPassers.value.map((p) => p.batchNumber));
-    return Array.from(batches).sort();
-});
-
-const filteredPassers = computed(() => {
-    return flatPassers.value.filter((passer) => {
-        const search = debouncedSearchTerm.value;
-        const matchesSearch =
-            passer.surname.toLowerCase().includes(search) ||
-            passer.first_name.toLowerCase().includes(search) ||
-            passer.email.toLowerCase().includes(search);
-
-        const matchesSchoolYear = filterSchoolYear.value
-            ? passer.schoolYear === filterSchoolYear.value
-            : true;
-
-        const matchesBatch = filterBatchNumber.value
-            ? passer.batchNumber === filterBatchNumber.value
-            : true;
-
-        return matchesSearch && matchesSchoolYear && matchesBatch;
-    });
-});
-
-const sortedPassers = computed(() => {
-    return filteredPassers.value.slice().sort((a, b) => {
-        const key = sortKey.value;
-        let valA = a[key]?.toString().toLowerCase() || "";
-        let valB = b[key]?.toString().toLowerCase() || "";
-
-        if (valA < valB) return sortOrder.value === "asc" ? -1 : 1;
-        if (valA > valB) return sortOrder.value === "asc" ? 1 : -1;
-        return 0;
-    });
-});
-
-const totalPages = computed(() =>
-    Math.ceil(sortedPassers.value.length / itemsPerPage)
-);
-
-// Pagination range for display
-const visiblePages = computed(() => {
-    const pages = [];
-    const maxVisible = 5;
-    
-    if (totalPages.value <= maxVisible) {
-        for (let i = 1; i <= totalPages.value; i++) {
-            pages.push(i);
-        }
-    } else {
-        let start = Math.max(1, currentPage.value - 2);
-        let end = Math.min(totalPages.value, start + maxVisible - 1);
-        
-        if (end - start + 1 < maxVisible) {
-            start = end - maxVisible + 1;
-        }
-        
-        for (let i = start; i <= end; i++) {
-            pages.push(i);
-        }
-    }
-    
-    return pages;
-});
-
-const paginatedPassers = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage;
-    return sortedPassers.value.slice(start, start + itemsPerPage);
-});
-
-const selectedPassers = ref([]);
-
-// Fix: Check if ALL filtered passers are selected (not just current page)
-const areAllSelected = computed(() => {
-    if (!filteredPassers.value.length) return false;
-    
-    // Get all IDs from filtered passers
-    const allFilteredIds = filteredPassers.value.map(p => p.test_passer_id);
-    
-    // Check if ALL filtered IDs are in selectedPassers
-    return allFilteredIds.every(id => selectedPassers.value.includes(id));
-});
-
-const areAllSelectedOnCurrentPage = computed(() => {
-    if (!paginatedPassers.value.length) return false;
-    return paginatedPassers.value.every((p) =>
-        selectedPassers.value.includes(p.test_passer_id)
-    );
-});
-
-const toggleSelectAll = (isSelected) => {
-    if (isSelected) {
-        // Select ALL filtered passers (not just current page)
-        const allFilteredIds = filteredPassers.value.map(p => p.test_passer_id);
-        const newIds = allFilteredIds.filter(id => !selectedPassers.value.includes(id));
-        selectedPassers.value.push(...newIds);
-    } else {
-        // Deselect ALL filtered passers
-        const filteredIdsSet = new Set(filteredPassers.value.map(p => p.test_passer_id));
-        selectedPassers.value = selectedPassers.value.filter(id => !filteredIdsSet.has(id));
-    }
-};
-
-const sendEmails = async () => {
-    const quillContainer = document.querySelector(".ql-editor");
-    const messageHtml = quillContainer
-        ? quillContainer.innerHTML
-        : emailTemplate.value;
-
-    if (templateType.value === 'sar') {
-        if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
-            show("Please set enrollment date and time for SAR forms.", "error");
-            return;
-        }
-    }
-
-    start();
-    try {
-        await axios.post("/test-passers/send-emails", {
-            passer_ids: selectedPassers.value,
-            message_template: messageHtml,
-            template_type: templateType.value,
-            enrollment_date: sarEnrollmentDate.value,
-            enrollment_time: sarEnrollmentTime.value,
-        });
-        const successMsg = templateType.value === 'sar' 
-            ? 'SAR PDFs generated and emails sent successfully!' 
-            : 'Emails sent successfully!';
-        show(successMsg, "success");
-        selectedPassers.value = [];
-    } catch (error) {
-        show("Failed to send emails.", "error");
-        console.error(error);
-    } finally {
-        finish();
-    }
-};
-
-// Modal state
-const showEditModal = ref(false);
-const editingPasser = ref(null);
-const saving = ref(false);
-
-function openEditModal(passer) {
-    editingPasser.value = { ...passer };
-    showEditModal.value = true;
-}
-
-function closeEditModal() {
-    showEditModal.value = false;
-    editingPasser.value = null;
-}
-
-async function savePasser() {
-    saving.value = true;
-    start();
-    try {
-        await axios.put(
-            `/test-passers/${editingPasser.value.test_passer_id}`,
-            editingPasser.value
-        );
-        show("Passer updated successfully!", "success");
-
-        const index = flatPassers.value.findIndex(
-            (p) => p.test_passer_id === editingPasser.value.test_passer_id
-        );
-        if (index !== -1) {
-            flatPassers.value[index] = { ...editingPasser.value };
-        }
-
-        closeEditModal();
-    } catch (error) {
-        show("Failed to update passer.", "error");
-        console.error(error);
-    } finally {
-        finish();
-        saving.value = false;
-    }
-}
-
-const showAddModal = ref(false);
-const newPasser = ref({
-    surname: "",
-    first_name: "",
-    middle_name: "",
-    date_of_birth: "",
-    address: "",
-    school_address: "",
-    shs_school: "",
-    strand: "",
-    year_graduated: "",
-    email: "",
-    reference_number: "",
-    batch_number: "",
-    school_year: "",
-});
-
-function openAddModal() {
-    newPasser.value = {
-        surname: "",
-        first_name: "",
-        middle_name: "",
-        date_of_birth: "",
-        address: "",
-        school_address: "",
-        shs_school: "",
-        strand: "",
-        year_graduated: "",
-        email: "",
-        reference_number: "",
-        batch_number: "",
-        school_year: "",
-    };
-    showAddModal.value = true;
-}
-
-function closeAddModal() {
-    showAddModal.value = false;
-}
-
-async function saveNewPasser() {
-    saving.value = true;
-    start();
-    try {
-        const response = await axios.post(
-            "/test-passers-store",
-            newPasser.value
-        );
-        show("Passer added successfully!", "success");
-
-        flatPassers.value.unshift(response.data);
-
-        closeAddModal();
-    } catch (error) {
-        show("Failed to add passer.", "error");
-        console.error(error);
-    } finally {
-        finish();
-        saving.value = false;
-    }
-}
-</script>
-
 <template>
     <div
         ref="scrollWrapper"
@@ -916,439 +503,434 @@ async function saveNewPasser() {
                 </div>
             </div>
 
-            <!-- Edit Modal -->
-            <div
-                v-if="showEditModal"
-                class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 overflow-auto z-50"
-            >
-                <div
-                    class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] p-6 relative shadow-2xl overflow-y-auto"
-                >
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900">
-                            Edit Passer Details
-                        </h2>
-                        <button
-                            @click="closeEditModal"
-                            class="p-2 hover:bg-gray-100 rounded-lg transition"
-                        >
-                            <svg class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+            <!-- Modals -->
+            <EditPasserModal
+                :show="showEditModal"
+                :passer="editingPasser"
+                :saving="saving"
+                @close="closeEditModal"
+                @save="savePasser"
+            />
 
-                    <form
-                        @submit.prevent="savePasser"
-                        class="grid grid-cols-2 gap-x-6 gap-y-4"
-                    >
-                        <!-- Personal Information -->
-                        <div class="col-span-2 grid grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Surname *
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.surname"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    First Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.first_name"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Middle Name
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.middle_name"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                        </div>
+            <AddPasserModal
+                :show="showAddModal"
+                :saving="saving"
+                @close="closeAddModal"
+                @save="saveNewPasser"
+            />
 
-                        <!-- Contact Information -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Email *
-                                </label>
-                                <input
-                                    type="email"
-                                    v-model="editingPasser.email"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Date of Birth
-                                </label>
-                                <input
-                                    type="date"
-                                    v-model="editingPasser.date_of_birth"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Address -->
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Address
-                            </label>
-                            <input
-                                type="text"
-                                v-model="editingPasser.address"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                            />
-                        </div>
-
-                        <!-- School Information -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    SHS School
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.shs_school"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    School Address
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.school_address"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="col-span-2 grid grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Strand
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.strand"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Year Graduated
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.year_graduated"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Reference Number
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.reference_number"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Batch Information -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    School Year *
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.school_year"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                    placeholder="e.g., 2023-2024"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Batch Number *
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.batch_number"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                    placeholder="e.g., 1"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Modal Actions -->
-                        <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                            <button
-                                type="button"
-                                @click="closeEditModal"
-                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                :disabled="saving"
-                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <span v-if="saving">Saving...</span>
-                                <span v-else>Save Changes</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Add Modal -->
-            <div
-                v-if="showAddModal"
-                class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 overflow-auto z-50"
-            >
-                <div
-                    class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] p-6 relative shadow-2xl overflow-y-auto"
-                >
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900">
-                            Add New Passer
-                        </h2>
-                        <button
-                            @click="closeAddModal"
-                            class="p-2 hover:bg-gray-100 rounded-lg transition"
-                        >
-                            <svg class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <form
-                        @submit.prevent="saveNewPasser"
-                        class="grid grid-cols-2 gap-x-6 gap-y-4"
-                    >
-                        <!-- Personal Information -->
-                        <div class="col-span-2 grid grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Surname *
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="newPasser.surname"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    First Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="newPasser.first_name"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Middle Name
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="newPasser.middle_name"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Contact Information -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Email *
-                                </label>
-                                <input
-                                    type="email"
-                                    v-model="newPasser.email"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Date of Birth
-                                </label>
-                                <input
-                                    type="date"
-                                    v-model="newPasser.date_of_birth"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Address -->
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Address
-                            </label>
-                            <input
-                                type="text"
-                                v-model="newPasser.address"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                            />
-                        </div>
-
-                        <!-- School Information -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    SHS School
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="newPasser.shs_school"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    School Address
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="newPasser.school_address"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="col-span-2 grid grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Strand
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="newPasser.strand"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Year Graduated
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="newPasser.year_graduated"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Reference Number
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="newPasser.reference_number"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Batch Information -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    School Year *
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="newPasser.school_year"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                    placeholder="e.g., 2023-2024"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Batch Number *
-                                </label>
-                                <input
-                                    type="text"
-                                    v-model="newPasser.batch_number"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
-                                    placeholder="e.g., 1"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Modal Actions -->
-                        <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                            <button
-                                type="button"
-                                @click="closeAddModal"
-                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                :disabled="saving"
-                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <span v-if="saving">Saving...</span>
-                                <span v-else>Add Passer</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Snackbar -->
-            <div
-                v-if="snackbar.show"
-                :class="[
-                    'fixed z-50 top-4 right-4 px-6 py-4 rounded-xl shadow-lg text-white font-semibold animate-slide-in',
-                    snackbar.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-                ]"
-            >
-                <div class="flex items-center">
-                    <svg v-if="snackbar.type === 'success'" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <svg v-else class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {{ snackbar.message }}
-                </div>
-            </div>
+            <Snackbar
+                :show="snackbar.show"
+                :message="snackbar.message"
+                :type="snackbar.type"
+            />
         </AppLayout>
     </div>
 </template>
+
+<script setup>
+import { ref, computed, watch, onMounted } from "vue";
+const axios = window.axios;
+import AppLayout from "@/Layouts/AppLayout.vue";
+import { QuillEditor } from "@vueup/vue-quill";
+import "@vueup/vue-quill/dist/vue-quill.snow.css";
+import { useGlobalLoading } from "@/Composables/useGlobalLoading";
+import { useSnackbar } from "@/Composables/useSnackbar";
+
+// Import modals
+import EditPasserModal from "../Modal/EditPasserModal.vue";
+import AddPasserModal from "../Modal/AddPasserModal.vue";
+import Snackbar from "../../Components/Snackbar.vue";
+
+// Scroll functionality
+const scrollWrapper = ref(null);
+const scrollAmount = 200;
+const showScrollUp = ref(false);
+const showScrollDown = ref(true);
+
+const scrollUp = () => {
+    if (scrollWrapper.value) {
+        scrollWrapper.value.scrollBy({
+            top: -scrollAmount,
+            behavior: "smooth",
+        });
+    }
+};
+
+const scrollDown = () => {
+    if (scrollWrapper.value) {
+        scrollWrapper.value.scrollBy({
+            top: scrollAmount,
+            behavior: "smooth"
+        });
+    }
+};
+
+const handleScroll = () => {
+    if (!scrollWrapper.value) return;
+    
+    const scrollTop = scrollWrapper.value.scrollTop;
+    const scrollHeight = scrollWrapper.value.scrollHeight;
+    const clientHeight = scrollWrapper.value.clientHeight;
+
+    showScrollUp.value = scrollTop > 10;
+    showScrollDown.value = scrollTop < 10;
+
+    if (scrollHeight <= clientHeight) {
+        showScrollUp.value = false;
+        showScrollDown.value = false;
+    }
+};
+
+onMounted(() => {
+    handleScroll();
+});
+
+// Template types for selection
+const templateTypes = [
+    { label: 'Default', value: 'default' },
+    { label: 'Custom', value: 'custom' },
+    { label: 'SAR Form', value: 'sar' }
+];
+
+// Snackbar functionality
+const { snackbar, show } = useSnackbar();
+
+function debounce(fn, delay) {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn(...args), delay);
+    };
+}
+
+const { start, finish } = useGlobalLoading();
+
+const props = defineProps({
+    groupedPassers: Object,
+    registrationUrl: String,
+});
+
+// Email template and settings
+const emailTemplate = ref(`
+    <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
+        <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
+            <h1 style="color: #800000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
+            <p style="font-size: 16px; color: #333; text-align: center;">
+                You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${props.registrationUrl}" 
+                style="background-color: #800000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
+                Complete Your Registration
+                </a>
+            </div>
+            <p style="font-size: 14px; color: #555; text-align: center;">
+                If you have any questions or need help, please contact our admissions office.
+            </p>
+        </div>
+    </div>
+`.trim());
+
+const templateType = ref("default");
+const sarEnrollmentDate = ref(new Date().toISOString().split('T')[0]);
+const sarEnrollmentTime = ref('09:00');
+const defaultTemplatePreview = `
+    <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
+        <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
+            <h1 style="color: #800000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
+            <p style="font-size: 16px; color: #333; text-align: center;">
+                You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${props.registrationUrl}" 
+                style="background-color: #800000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
+                Complete Your Registration
+                </a>
+            </div>
+            <p style="font-size: 14px; color: #555; text-align: center;">
+                If you have any questions or need help, please contact our admissions office.
+            </p>
+        </div>
+    </div>
+`.trim();
+
+const flatPassers = ref([]);
+
+watch(
+    () => props.groupedPassers,
+    (newVal) => {
+        const result = [];
+        if (newVal) {
+            for (const schoolYear in newVal) {
+                for (const batchNumber in newVal[schoolYear]) {
+                    newVal[schoolYear][batchNumber].forEach((passer) => {
+                        result.push({
+                            ...passer,
+                            schoolYear,
+                            batchNumber,
+                        });
+                    });
+                }
+            }
+        }
+        flatPassers.value = result;
+    },
+    { immediate: true }
+);
+
+const searchTerm = ref("");
+const debouncedSearchTerm = ref("");
+const filterSchoolYear = ref("");
+const filterBatchNumber = ref("");
+const sortKey = ref("surname");
+const sortOrder = ref("asc");
+const currentPage = ref(1);
+const itemsPerPage = 10;
+
+const onSearchInput = debounce(() => {
+    debouncedSearchTerm.value = searchTerm.value.toLowerCase();
+    currentPage.value = 1;
+}, 300);
+
+watch([filterSchoolYear, filterBatchNumber, sortKey, sortOrder], () => {
+    currentPage.value = 1;
+});
+
+const schoolYears = computed(() => {
+    const years = new Set(flatPassers.value.map((p) => p.schoolYear));
+    return Array.from(years).sort();
+});
+
+const batchNumbers = computed(() => {
+    const batches = new Set(flatPassers.value.map((p) => p.batchNumber));
+    return Array.from(batches).sort();
+});
+
+const filteredPassers = computed(() => {
+    return flatPassers.value.filter((passer) => {
+        const search = debouncedSearchTerm.value;
+        const matchesSearch =
+            passer.surname.toLowerCase().includes(search) ||
+            passer.first_name.toLowerCase().includes(search) ||
+            passer.email.toLowerCase().includes(search);
+
+        const matchesSchoolYear = filterSchoolYear.value
+            ? passer.schoolYear === filterSchoolYear.value
+            : true;
+
+        const matchesBatch = filterBatchNumber.value
+            ? passer.batchNumber === filterBatchNumber.value
+            : true;
+
+        return matchesSearch && matchesSchoolYear && matchesBatch;
+    });
+});
+
+const sortedPassers = computed(() => {
+    return filteredPassers.value.slice().sort((a, b) => {
+        const key = sortKey.value;
+        let valA = a[key]?.toString().toLowerCase() || "";
+        let valB = b[key]?.toString().toLowerCase() || "";
+
+        if (valA < valB) return sortOrder.value === "asc" ? -1 : 1;
+        if (valA > valB) return sortOrder.value === "asc" ? 1 : -1;
+        return 0;
+    });
+});
+
+const totalPages = computed(() =>
+    Math.ceil(sortedPassers.value.length / itemsPerPage)
+);
+
+// Pagination range for display
+const visiblePages = computed(() => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    if (totalPages.value <= maxVisible) {
+        for (let i = 1; i <= totalPages.value; i++) {
+            pages.push(i);
+        }
+    } else {
+        let start = Math.max(1, currentPage.value - 2);
+        let end = Math.min(totalPages.value, start + maxVisible - 1);
+        
+        if (end - start + 1 < maxVisible) {
+            start = end - maxVisible + 1;
+        }
+        
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+    }
+    
+    return pages;
+});
+
+const paginatedPassers = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return sortedPassers.value.slice(start, start + itemsPerPage);
+});
+
+const selectedPassers = ref([]);
+
+// Fix: Check if ALL filtered passers are selected (not just current page)
+const areAllSelected = computed(() => {
+    if (!filteredPassers.value.length) return false;
+    
+    // Get all IDs from filtered passers
+    const allFilteredIds = filteredPassers.value.map(p => p.test_passer_id);
+    
+    // Check if ALL filtered IDs are in selectedPassers
+    return allFilteredIds.every(id => selectedPassers.value.includes(id));
+});
+
+const areAllSelectedOnCurrentPage = computed(() => {
+    if (!paginatedPassers.value.length) return false;
+    return paginatedPassers.value.every((p) =>
+        selectedPassers.value.includes(p.test_passer_id)
+    );
+});
+
+const toggleSelectAll = (isSelected) => {
+    if (isSelected) {
+        // Select ALL filtered passers (not just current page)
+        const allFilteredIds = filteredPassers.value.map(p => p.test_passer_id);
+        const newIds = allFilteredIds.filter(id => !selectedPassers.value.includes(id));
+        selectedPassers.value.push(...newIds);
+    } else {
+        // Deselect ALL filtered passers
+        const filteredIdsSet = new Set(filteredPassers.value.map(p => p.test_passer_id));
+        selectedPassers.value = selectedPassers.value.filter(id => !filteredIdsSet.has(id));
+    }
+};
+
+const sendEmails = async () => {
+    const quillContainer = document.querySelector(".ql-editor");
+    const messageHtml = quillContainer
+        ? quillContainer.innerHTML
+        : emailTemplate.value;
+
+    if (templateType.value === 'sar') {
+        if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
+            show("Please set enrollment date and time for SAR forms.", "error");
+            return;
+        }
+    }
+
+    start();
+    try {
+        await axios.post("/test-passers/send-emails", {
+            passer_ids: selectedPassers.value,
+            message_template: messageHtml,
+            template_type: templateType.value,
+            enrollment_date: sarEnrollmentDate.value,
+            enrollment_time: sarEnrollmentTime.value,
+        });
+        const successMsg = templateType.value === 'sar' 
+            ? 'SAR PDFs generated and emails sent successfully!' 
+            : 'Emails sent successfully!';
+        show(successMsg, "success");
+        selectedPassers.value = [];
+    } catch (error) {
+        show("Failed to send emails.", "error");
+        console.error(error);
+    } finally {
+        finish();
+    }
+};
+
+// Modal state
+const showEditModal = ref(false);
+const editingPasser = ref(null);
+const saving = ref(false);
+
+function openEditModal(passer) {
+    editingPasser.value = { ...passer };
+    showEditModal.value = true;
+}
+
+function closeEditModal() {
+    showEditModal.value = false;
+    editingPasser.value = null;
+}
+
+async function savePasser() {
+    saving.value = true;
+    start();
+    try {
+        await axios.put(
+            `/test-passers/${editingPasser.value.test_passer_id}`,
+            editingPasser.value
+        );
+        show("Passer updated successfully!", "success");
+
+        const index = flatPassers.value.findIndex(
+            (p) => p.test_passer_id === editingPasser.value.test_passer_id
+        );
+        if (index !== -1) {
+            flatPassers.value[index] = { ...editingPasser.value };
+        }
+
+        closeEditModal();
+    } catch (error) {
+        show("Failed to update passer.", "error");
+        console.error(error);
+    } finally {
+        finish();
+        saving.value = false;
+    }
+}
+
+const showAddModal = ref(false);
+const newPasserData = ref({});
+
+function openAddModal() {
+    newPasserData.value = {
+        surname: "",
+        first_name: "",
+        middle_name: "",
+        date_of_birth: "",
+        address: "",
+        school_address: "",
+        shs_school: "",
+        strand: "",
+        year_graduated: "",
+        email: "",
+        reference_number: "",
+        batch_number: "",
+        school_year: "",
+    };
+    showAddModal.value = true;
+}
+
+function closeAddModal() {
+    showAddModal.value = false;
+}
+
+async function saveNewPasser(passerData) {
+    saving.value = true;
+    start();
+    try {
+        const response = await axios.post(
+            "/test-passers-store",
+            passerData
+        );
+        show("Passer added successfully!", "success");
+
+        flatPassers.value.unshift(response.data);
+
+        closeAddModal();
+    } catch (error) {
+        show("Failed to add passer.", "error");
+        console.error(error);
+    } finally {
+        finish();
+        saving.value = false;
+    }
+}
+</script>
 
 <style>
 .scroll-wrapper {
@@ -1374,22 +956,6 @@ async function saveNewPasser() {
 
 .scroll-wrapper::-webkit-scrollbar-thumb:hover {
     background: #a1a1a1;
-}
-
-/* Animation for snackbar */
-@keyframes slide-in {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-.animate-slide-in {
-    animation: slide-in 0.3s ease-out;
 }
 
 /* Custom Quill Editor Styling */
