@@ -297,6 +297,7 @@ const closePrivacyModal = () => {
                                             <option value="HUMSS">HUMSS (Humanities & Social Sciences)</option>
                                             <option value="ABM">ABM (Accountancy, Business & Management)</option>
                                             <option value="TVL">TVL (Technical-Vocational-Livelihood)</option>
+                                            <option value="ICT">ICT (Information and Communications Technology)</option>
                                             <option value="GAS">GAS (General Academic Strand)</option>
                                             <option value="SPORTS">Sports Track</option>
                                             <option value="ARTS">Arts & Design Track</option>
