@@ -74,13 +74,32 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/applicant-dashboard', [ApplicantDashboardController::class, 'index'])
         ->name('applicant.dashboard');
+
+    // ABM Grade Input
+    Route::get('/grades/abm', [GradesController::class, 'showAbmGradeForm'])
+        ->name('grades.abm.form');
+    Route::post('/grades/abm', [GradesController::class, 'storeAbmGrades'])
+        ->name('grades.abm.store');
+
+    // ICT Grade Input
+    Route::get('/grades/ict', [GradesController::class, 'showIctGradeForm'])
+        ->name('grades.ict.form');
+    Route::post('/grades/ict', [GradesController::class, 'storeAbmGrades'])
+        ->name('grades.ict.store');
 });
 
 Route::get('/home', function () {
     $roleId = Auth::user()->role_id;
 
     if ($roleId == 1) {
-        return redirect('/applicant-dashboard');
+        // Check if applicant has already submitted grades
+        $hasGrades = \App\Models\Grade::where('user_id', Auth::id())->exists();
+
+        if ($hasGrades) {
+            return redirect('/applicant-dashboard');
+        } else {
+            return redirect('/grades/abm');
+        }
     }
 
     if ($roleId == 2) {

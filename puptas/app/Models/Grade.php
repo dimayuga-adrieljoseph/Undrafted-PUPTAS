@@ -14,8 +14,6 @@ class Grade extends Model
         'english',
         'mathematics',
         'science',
-        'g11_first_sem',
-        'g11_second_sem',
         'g12_first_sem',
         'g12_second_sem',
     ];
@@ -24,8 +22,6 @@ class Grade extends Model
         'english' => 'decimal:2',
         'mathematics' => 'decimal:2',
         'science' => 'decimal:2',
-        'g11_first_sem' => 'decimal:2',
-        'g11_second_sem' => 'decimal:2',
         'g12_first_sem' => 'decimal:2',
         'g12_second_sem' => 'decimal:2',
     ];

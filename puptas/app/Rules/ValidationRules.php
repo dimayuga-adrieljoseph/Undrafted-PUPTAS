@@ -89,8 +89,6 @@ class ValidationRules
             'english' => 'required|numeric|min:0|max:100',
             'mathematics' => 'required|numeric|min:0|max:100',
             'science' => 'required|numeric|min:0|max:100',
-            'g11_first_sem' => 'required|numeric|min:0|max:100',
-            'g11_second_sem' => 'required|numeric|min:0|max:100',
             'g12_first_sem' => 'required|numeric|min:0|max:100',
             'g12_second_sem' => 'required|numeric|min:0|max:100',
         ];
@@ -103,8 +101,6 @@ class ValidationRules
             'english' => 'required|numeric|min:0|max:100',
             'mathematics' => 'required|numeric|min:0|max:100',
             'science' => 'required|numeric|min:0|max:100',
-            'g11_first_sem' => 'required|numeric|min:0|max:100',
-            'g11_second_sem' => 'required|numeric|min:0|max:100',
             'g12_first_sem' => 'required|numeric|min:0|max:100',
             'g12_second_sem' => 'required|numeric|min:0|max:100',
         ];

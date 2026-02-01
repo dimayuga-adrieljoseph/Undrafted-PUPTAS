@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\Program;
+use Illuminate\Support\Facades\DB;
 
 class ProgramSeeder extends Seeder
 {
@@ -13,17 +12,150 @@ class ProgramSeeder extends Seeder
      */
     public function run(): void
     {
-
-        $programs = [
-            ['code' => 'BSIT', 'name' => 'Bachelor of Science in Information Technology', 'strand' => 'STEM', 'math' => 85, 'science' => 85, 'english' => 85, 'gwa' => 90, 'pupcet' => 120, 'slots' => 50],
-            ['code' => 'BSBA-HRM', 'name' => 'BSBA - Human Resource Management', 'strand' => 'ABM', 'math' => 80, 'science' => 80, 'english' => 80, 'gwa' => 85, 'pupcet' => 120, 'slots' => 30],
-        ];
-
-        foreach ($programs as $program) {
-            Program::updateOrCreate(
-                ['code' => $program['code']],
-                $program
-            );
-        }
+        DB::table('programs')->insert([
+            [
+                'code' => 'BSBA-HRM',
+                'name' => 'Bachelor of Science in Business Administration - Human Resource Management',
+                'strand' => 'ABM, other with bridging',
+                'math' => 82,
+                'science' => 82,
+                'english' => 82,
+                'gwa' => 82,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'BSBA-MM',
+                'name' => 'Bachelor of Science in Business Administration - Marketing Management',
+                'strand' => 'ABM, other with bridging',
+                'math' => 82,
+                'science' => 82,
+                'english' => 82,
+                'gwa' => 82,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'BSECE',
+                'name' => 'Bachelor of Science in Electronics and Communications Engineering',
+                'strand' => 'STEM, other with bridging',
+                'math' => 86,
+                'science' => 86,
+                'english' => 86,
+                'gwa' => 88,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'BSED-ENGLISH',
+                'name' => 'Bachelor of Science in Education - English',
+                'strand' => 'Open to all',
+                'math' => 85,
+                'science' => 85,
+                'english' => 87,
+                'gwa' => 85,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'BSED-MATH',
+                'name' => 'Bachelor of Science in Education - Mathematics',
+                'strand' => 'Open to all',
+                'math' => 87,
+                'science' => 85,
+                'english' => 85,
+                'gwa' => 85,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'BSIT',
+                'name' => 'Bachelor of Science in Information Technology',
+                'strand' => 'STEM, TECH-VOC, ICT, GAS',
+                'math' => 85,
+                'science' => 85,
+                'english' => 85,
+                'gwa' => 90,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'BSME',
+                'name' => 'Bachelor of Science in Mechanical Engineering',
+                'strand' => 'STEM, other with bridging',
+                'math' => 86,
+                'science' => 86,
+                'english' => 86,
+                'gwa' => 88,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'BSOA',
+                'name' => 'Bachelor of Science in Office Administration',
+                'strand' => 'ABM, other with bridging',
+                'math' => 82,
+                'science' => 82,
+                'english' => 82,
+                'gwa' => 82,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'DIT',
+                'name' => 'Diploma in Information Technology',
+                'strand' => 'Open to all',
+                'math' => 82,
+                'science' => 82,
+                'english' => 82,
+                'gwa' => 82,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'DOMT',
+                'name' => 'Diploma in Office Management and Technology',
+                'strand' => 'ABM, GAS, other with bridging',
+                'math' => 82,
+                'science' => 82,
+                'english' => 82,
+                'gwa' => 82,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'code' => 'BSPSYCH',
+                'name' => 'Bachelor of Science in Psychology',
+                'strand' => 'Open to all',
+                'math' => 85,
+                'science' => 85,
+                'english' => 85,
+                'gwa' => 85,
+                'pupcet' => 100,
+                'slots' => 50,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
     }
 }
