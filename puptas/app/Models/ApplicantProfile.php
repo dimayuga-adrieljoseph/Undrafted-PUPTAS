@@ -17,6 +17,8 @@ class ApplicantProfile extends Model
         'date_graduated',
         'strand',
         'track',
+        'first_choice_program',
+        'second_choice_program',
     ];
 
     protected $casts = [
@@ -26,5 +28,15 @@ class ApplicantProfile extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function firstChoiceProgram()
+    {
+        return $this->belongsTo(Program::class, 'first_choice_program');
+    }
+
+    public function secondChoiceProgram()
+    {
+        return $this->belongsTo(Program::class, 'second_choice_program');
     }
 }
