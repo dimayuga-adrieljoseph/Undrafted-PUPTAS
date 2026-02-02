@@ -1,89 +1,224 @@
 <template>
   <Head title="Dashboard" />
   <AppLayout>
-    <!-- Summary Cards Section -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 px-4 md:px-8">
+    <!-- Header Section -->
+    <div class="px-4 md:px-8 mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Admissions Dashboard</h1>
+          <p class="text-gray-600 dark:text-gray-400 mt-2">Welcome back! Here's an overview of your application data.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-8 mb-8">
       <div
         v-for="(item, index) in summaryItems"
         :key="index"
-        class="bg-white dark:bg-gray-800 border-l-4 border-[#9E122C] rounded-xl p-6 shadow hover:shadow-lg transition transform hover:-translate-y-1 cursor-pointer"
+        class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
       >
-        <div class="flex items-center mb-4">
-          <div class="p-3 bg-[#9E122C] rounded-full text-white mr-3 flex items-center justify-center">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">{{ item.label }}</p>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ item.value.toLocaleString() }}</p>
+          </div>
+          <div :class="[
+            'p-3 rounded-lg',
+            index === 0 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300' :
+            index === 1 ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300' :
+            index === 2 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300' :
+            'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300'
+          ]">
             <component :is="item.icon" class="w-6 h-6" />
           </div>
-          <p class="text-gray-700 dark:text-gray-200 font-medium">{{ item.label }}</p>
         </div>
-        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ item.value }}</p>
+        <div class="mt-4">
+          <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div 
+              :class="[
+                'h-full rounded-full',
+                index === 0 ? 'bg-blue-500' :
+                index === 1 ? 'bg-green-500' :
+                index === 2 ? 'bg-yellow-500' :
+                'bg-red-500'
+              ]"
+              :style="{ width: item.percentage + '%' }"
+            ></div>
+          </div>
+          <p class="text-right text-xs text-gray-500 dark:text-gray-400 mt-2">{{ item.percentage }}% of total</p>
+        </div>
       </div>
     </div>
 
-    <!-- Charts + Table Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8 px-4 md:px-8">
-      <!-- Line Chart -->
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow border border-red-300">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Applications Overview
-        </h3>
-        <LineChart :chart-data="chartDataset" class="h-60 w-full" />
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-8">
+      <!-- Left Column: Chart -->
+      <div class="lg:col-span-2">
+        <!-- Chart Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Monthly application trends</p>
+          </div>
+          
+          <div class="flex flex-wrap gap-4 mb-6">
+            <div class="flex items-center space-x-2">
+              <div class="w-3 h-3 rounded-full bg-[#2563EB]"></div>
+              <span class="text-sm text-gray-600 dark:text-gray-400">Submitted</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <div class="w-3 h-3 rounded-full bg-[#10B981]"></div>
+              <span class="text-sm text-gray-600 dark:text-gray-400">Accepted</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <div class="w-3 h-3 rounded-full bg-[#F59E0B]"></div>
+              <span class="text-sm text-gray-600 dark:text-gray-400">Returned</span>
+            </div>
+          </div>
+          
+          <div class="h-80">
+            <LineChart :chart-data="chartDataset" :options="chartOptions" class="w-full h-full" />
+          </div>
+        </div>
       </div>
 
-      <!-- Recent Applications -->
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow border border-red-300 overflow-x-auto">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Applications</h3>
-          <Link href="/applications" class="text-sm text-[#9E122C] hover:underline hover:text-[#b51834] transition">
-            See all
-          </Link>
-        </div>
-        <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th class="px-4 py-2 text-left text-gray-500 dark:text-gray-200">Last Name</th>
-              <th class="px-4 py-2 text-left text-gray-500 dark:text-gray-200">First Name</th>
-              <th class="px-4 py-2 text-left text-gray-500 dark:text-gray-200">Course</th>
-              <th class="px-4 py-2 text-left text-gray-500 dark:text-gray-200">Status</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-            <tr
+      <!-- Right Column: Recent Applications -->
+      <div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Recent Applications</h3>
+              <p class="text-gray-600 dark:text-gray-400 text-sm">Latest applicant submissions</p>
+            </div>
+            <Link href="/applications" 
+                  class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition">
+              View All
+            </Link>
+          </div>
+          
+          <div class="space-y-3">
+            <div
               v-for="user in displayedUsers"
               :key="user.id"
               @click="selectUser(user)"
-              class="cursor-pointer hover:bg-[#FBCB77]/40 dark:hover:bg-gray-700 transition"
+              class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer"
             >
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-100">{{ user.lastname }}</td>
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-100">{{ user.firstname }}</td>
-              <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ user.application?.program?.code || "—" }}</td>
-              <td class="px-4 py-2">
-                <span :class="getStatusClass(user.application?.status)" class="px-2 py-1 rounded text-xs font-semibold">
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold">
+                    {{ user.firstname[0] }}{{ user.lastname[0] }}
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-gray-900 dark:text-white">
+                      {{ user.firstname }} {{ user.lastname }}
+                    </h4>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm">{{ user.email }}</p>
+                  </div>
+                </div>
+                <span :class="getStatusClass(user.application?.status)" 
+                      class="px-3 py-1 rounded-full text-xs font-semibold">
                   {{ user.application?.status || "Unknown" }}
                 </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p class="text-gray-500 dark:text-gray-400">Course</p>
+                  <p class="text-gray-900 dark:text-white font-medium">{{ user.application?.program?.code || "—" }}</p>
+                </div>
+                <div>
+                  <p class="text-gray-500 dark:text-gray-400">Applied</p>
+                  <p class="text-gray-900 dark:text-white font-medium">{{ formatDate(user.application?.created_at) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- User Info Panel -->
-    <transition name="slide-fade">
-      <div
-        v-if="selectedUser"
-        class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl overflow-y-auto"
-      >
-        <button
-          class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
-          @click="closeUserCard"
-        >
-          Close
-        </button>
+    <!-- User Detail Modal -->
+    <transition name="fade">
+      <div v-if="selectedUser" class="fixed inset-0 z-50">
+        <div class="fixed inset-0 bg-black/50" @click="closeUserCard"></div>
+        
+        <div class="relative min-h-screen flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-xl font-bold text-gray-900 dark:text-white">Applicant Details</h3>
+                  <p class="text-gray-600 dark:text-gray-400">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
+                </div>
+                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+                  <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
 
-        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">User Information</h3>
-        <div class="space-y-2">
-          <p class="text-gray-800 dark:text-gray-200 font-medium">Name: {{ selectedUser.lastname }}, {{ selectedUser.firstname }}</p>
-          <p class="text-gray-700 dark:text-gray-400">Email: {{ selectedUser.email }}</p>
-          <p class="text-gray-700 dark:text-gray-400">Phone: {{ selectedUser.phone || "—" }}</p>
+            <!-- Modal Content -->
+            <div class="p-6 overflow-y-auto max-h-[60vh]">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Personal Info -->
+                <div class="space-y-4">
+                  <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Personal Information</h4>
+                  <div class="space-y-3">
+                    <div>
+                      <label class="text-sm text-gray-500 dark:text-gray-400">Full Name</label>
+                      <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
+                    </div>
+                    <div>
+                      <label class="text-sm text-gray-500 dark:text-gray-400">Email Address</label>
+                      <p class="text-gray-900 dark:text-white">{{ selectedUser.email }}</p>
+                    </div>
+                    <div>
+                      <label class="text-sm text-gray-500 dark:text-gray-400">Phone Number</label>
+                      <p class="text-gray-900 dark:text-white">{{ selectedUser.phone || "—" }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Application Info -->
+                <div class="space-y-4">
+                  <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Application Details</h4>
+                  <div class="space-y-3">
+                    <div>
+                      <label class="text-sm text-gray-500 dark:text-gray-400">Course/Program</label>
+                      <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.program?.name || "—" }}</p>
+                      <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.program?.code || "" }}</p>
+                    </div>
+                    <div>
+                      <label class="text-sm text-gray-500 dark:text-gray-400">Status</label>
+                      <span :class="getStatusClass(selectedUser.application?.status)" 
+                            class="px-3 py-1 rounded-full text-sm font-semibold">
+                        {{ selectedUser.application?.status || "Unknown" }}
+                      </span>
+                    </div>
+                    <div>
+                      <label class="text-sm text-gray-500 dark:text-gray-400">Applied On</label>
+                      <p class="text-gray-900 dark:text-white">{{ formatDate(selectedUser.application?.created_at) }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+                <button @click="closeUserCard" 
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                  Close
+                </button>
+                <Link :href="`/applications/${selectedUser.application?.id || ''}`"
+                      class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium">
+                  View Full Application
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </transition>
@@ -91,12 +226,32 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import { LineChart } from "vue-chart-3";
 import AppLayout from "@/Layouts/AppLayout.vue";
-import { Chart as ChartJS, LineController, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Title, Legend } from "chart.js";
-ChartJS.register(LineController, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Title, Legend);
+import { 
+  Chart as ChartJS, 
+  LineController, 
+  LineElement, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  Tooltip, 
+  Legend, 
+  Filler 
+} from "chart.js";
+
+ChartJS.register(
+  LineController, 
+  LineElement, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  Tooltip, 
+  Legend, 
+  Filler
+);
 
 const props = defineProps({
   allUsers: Array,
@@ -110,59 +265,157 @@ const props = defineProps({
   },
 });
 
-const users = ref(props.allUsers || []);
 const selectedUser = ref(null);
 const searchQuery = ref("");
 
-const summaryItems = [
-  { label: "Total Applications", value: props.summary.total, icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" /></svg>' } },
-  { label: "Accepted", value: props.summary.accepted, icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>' } },
-  { label: "Pending", value: props.summary.pending, icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" /></svg>' } },
-  { label: "Returned", value: props.summary.returned, icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>' } },
-];
+// Simplified summary items
+const summaryItems = computed(() => [
+  { 
+    label: "Total Applications", 
+    value: props.summary.total, 
+    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>' },
+    percentage: 100
+  },
+  { 
+    label: "Accepted", 
+    value: props.summary.accepted, 
+    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
+    percentage: props.summary.total > 0 ? Math.round((props.summary.accepted / props.summary.total) * 100) : 0
+  },
+  { 
+    label: "Pending", 
+    value: props.summary.pending, 
+    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
+    percentage: props.summary.total > 0 ? Math.round((props.summary.pending / props.summary.total) * 100) : 0
+  },
+  { 
+    label: "Returned", 
+    value: props.summary.returned, 
+    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>' },
+    percentage: props.summary.total > 0 ? Math.round((props.summary.returned / props.summary.total) * 100) : 0
+  },
+]);
+
+// Chart configuration
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      titleColor: '#1f2937',
+      bodyColor: '#374151',
+      borderColor: '#e5e7eb',
+      borderWidth: 1,
+      cornerRadius: 8,
+      padding: 12,
+    }
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      ticks: { color: '#6b7280' }
+    },
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(107, 114, 128, 0.1)' },
+      ticks: { 
+        color: '#6b7280',
+        callback: (value) => value.toLocaleString()
+      }
+    }
+  }
+};
 
 const chartDataset = computed(() => ({
-  labels: props.chartData.years || [],
+  labels: props.chartData.years || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   datasets: [
-    { label: "Submitted", data: props.chartData.submitted, borderColor: "#2563EB", backgroundColor: "rgba(37, 99, 235, 0.2)", tension: 0.4 },
-    { label: "Accepted", data: props.chartData.accepted, borderColor: "#10B981", backgroundColor: "rgba(16, 185, 129, 0.2)", tension: 0.4 },
-    { label: "Returned", data: props.chartData.returned, borderColor: "#F59E0B", backgroundColor: "rgba(245, 158, 11, 0.2)", tension: 0.4 },
+    { 
+      label: "Submitted", 
+      data: props.chartData.submitted || [], 
+      borderColor: "#2563EB",
+      backgroundColor: "rgba(37, 99, 235, 0.1)",
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: "#2563EB",
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 2,
+      pointRadius: 4,
+    },
+    { 
+      label: "Accepted", 
+      data: props.chartData.accepted || [], 
+      borderColor: "#10B981",
+      backgroundColor: "rgba(16, 185, 129, 0.1)",
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: "#10B981",
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 2,
+      pointRadius: 4,
+    },
+    { 
+      label: "Returned", 
+      data: props.chartData.returned || [], 
+      borderColor: "#F59E0B",
+      backgroundColor: "rgba(245, 158, 11, 0.1)",
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: "#F59E0B",
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 2,
+      pointRadius: 4,
+    },
   ],
 }));
 
 const getStatusClass = (status) => {
   const s = (status || "").toLowerCase();
-  if (s === "accepted") return "bg-green-100 text-green-700";
-  if (s === "pending") return "bg-yellow-100 text-yellow-700";
-  if (s === "returned") return "bg-red-100 text-red-700";
-  return "bg-gray-100 text-gray-600";
+  if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+  if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+  if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+  return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
 };
 
 const displayedUsers = computed(() => {
-  // Controller already filters for applicants only
-  if (!searchQuery.value.trim()) return users.value.slice(0, 4);
-
-  return users.value.filter(u =>
-    `${u.firstname} ${u.lastname}`.toLowerCase().includes(searchQuery.value.toLowerCase())
+  const users = props.allUsers || [];
+  const query = searchQuery.value.trim().toLowerCase();
+  
+  if (!query) return users.slice(0, 5);
+  
+  return users.filter(user => 
+    `${user.firstname} ${user.lastname}`.toLowerCase().includes(query) ||
+    user.email.toLowerCase().includes(query)
   );
 });
+
+const formatDate = (dateString) => {
+  if (!dateString) return "—";
+  return new Date(dateString).toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+};
 
 const selectUser = (user) => {
   selectedUser.value = user;
 };
+
 const closeUserCard = () => {
   selectedUser.value = null;
 };
 </script>
 
 <style scoped>
-.slide-fade-enter-active,
-.slide-fade-leave-active {
-  transition: all 0.3s ease;
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
 }
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-  transform: translateX(100%);
+
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 </style>
