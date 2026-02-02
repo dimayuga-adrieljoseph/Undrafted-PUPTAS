@@ -86,6 +86,18 @@ Route::middleware(['auth'])->group(function () {
         ->name('grades.ict.form');
     Route::post('/grades/ict', [GradesController::class, 'storeAbmGrades'])
         ->name('grades.ict.store');
+
+    // HUMSS Grade Input
+    Route::get('/grades/humss', [GradesController::class, 'showHumssGradeForm'])
+        ->name('grades.humss.form');
+    Route::post('/grades/humss', [GradesController::class, 'storeHumssGrades'])
+        ->name('grades.humss.store');
+
+    // GAS Grade Input
+    Route::get('/grades/gas', [GradesController::class, 'showGasGradeForm'])
+        ->name('grades.gas.form');
+    Route::post('/grades/gas', [GradesController::class, 'storeGasGrades'])
+        ->name('grades.gas.store');
 });
 
 Route::get('/home', function () {
@@ -98,7 +110,35 @@ Route::get('/home', function () {
         if ($hasGrades) {
             return redirect('/applicant-dashboard');
         } else {
-            return redirect('/grades/abm');
+            // Get user's strand from applicant profile
+            $profile = \App\Models\ApplicantProfile::where('user_id', Auth::id())->first();
+            $strand = $profile?->strand;
+
+            // If no strand is set, redirect to applicant dashboard
+            if (!$strand) {
+                return redirect('/applicant-dashboard');
+            }
+
+            // Redirect based on strand
+            $strandUpper = strtoupper(trim($strand));
+            switch ($strandUpper) {
+                case 'ABM':
+                    return redirect('/grades/abm');
+                case 'ICT':
+                    return redirect('/grades/ict');
+                case 'HUMSS':
+                    return redirect('/grades/humss');
+                case 'GAS':
+                    return redirect('/grades/gas');
+                case 'STEM':
+                case 'TVL':
+                case 'SPORTS':
+                case 'ARTS':
+                    // These strands don't have grade input forms yet
+                    return redirect('/applicant-dashboard');
+                default:
+                    return redirect('/applicant-dashboard');
+            }
         }
     }
 

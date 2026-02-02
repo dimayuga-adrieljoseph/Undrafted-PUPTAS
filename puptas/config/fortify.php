@@ -73,10 +73,70 @@ return [
     |
     */
 
-    'home' => '/home',
-    // 'home' => function () {
-    //     return auth()->user()->role_id == 1 ? '/applicant-dashboard' : '/dashboard';
-    // },
+    'home' => function () {
+        $roleId = auth()->user()->role_id;
+        
+        if ($roleId == 1) {
+            // Check if applicant has already submitted grades
+            $hasGrades = \App\Models\Grade::where('user_id', auth()->id())->exists();
+
+            if ($hasGrades) {
+                return '/applicant-dashboard';
+            } else {
+                // Get user's strand from applicant profile
+                $profile = \App\Models\ApplicantProfile::where('user_id', auth()->id())->first();
+                $strand = $profile?->strand;
+
+                // If no strand is set, redirect to applicant dashboard
+                if (!$strand) {
+                    return '/applicant-dashboard';
+                }
+
+                // Redirect based on strand
+                $strandUpper = strtoupper(trim($strand));
+                switch ($strandUpper) {
+                    case 'ABM':
+                        return '/grades/abm';
+                    case 'ICT':
+                        return '/grades/ict';
+                    case 'HUMSS':
+                        return '/grades/humss';
+                    case 'GAS':
+                        return '/grades/gas';
+                    case 'STEM':
+                    case 'TVL':
+                    case 'SPORTS':
+                    case 'ARTS':
+                        // These strands don't have grade input forms yet
+                        return '/applicant-dashboard';
+                    default:
+                        return '/applicant-dashboard';
+                }
+            }
+        }
+
+        if ($roleId == 2) {
+            return '/dashboard';
+        }
+
+        if ($roleId == 3) {
+            return '/evaluator-dashboard';
+        }
+
+        if ($roleId == 4) {
+            return '/interviewer-dashboard';
+        }
+
+        if ($roleId == 5) {
+            return '/medical-dashboard';
+        }
+
+        if ($roleId == 6) {
+            return '/record-dashboard';
+        }
+
+        return '/';
+    },
 
     /*
     |--------------------------------------------------------------------------

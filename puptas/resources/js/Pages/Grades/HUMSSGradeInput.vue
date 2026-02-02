@@ -1,7 +1,7 @@
 <template>
   <ApplicantLayout>
     <div class="max-w-4xl mx-auto p-6">
-      <h1 class="text-xl font-bold mb-4">ABM Strand Grade Input</h1>
+      <h1 class="text-xl font-bold mb-4">HUMSS Strand Grade Input</h1>
       <p class="mb-6">Enter your academic grades for Grade 11 and Grade 12</p>
 
       <form @submit.prevent="submitForm">
@@ -41,7 +41,7 @@
           <div class="mb-6">
             <h3 class="font-semibold mb-2">English-Related Subjects</h3>
             <div class="mb-2">
-              <label class="block text-sm">Oral Communication</label>
+              <label class="block text-sm">Oral Communication in Context</label>
               <input
                 v-model.number="form.g11_oral_communication"
                 type="number"
@@ -52,7 +52,7 @@
               />
             </div>
             <div class="mb-2">
-              <label class="block text-sm">21st Century Literature from Philippines and the World</label>
+              <label class="block text-sm">21st Century Literature from the Philippines and the World</label>
               <input
                 v-model.number="form.g11_21st_century_lit"
                 type="number"
@@ -74,7 +74,7 @@
               />
             </div>
             <div class="mb-2">
-              <label class="block text-sm">Reading and Writing</label>
+              <label class="block text-sm">Reading and Writing Skills</label>
               <input
                 v-model.number="form.g11_reading_writing"
                 type="number"
@@ -94,17 +94,6 @@
               <label class="block text-sm">Earth and Life Science</label>
               <input
                 v-model.number="form.g11_earth_life_science"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-2">
-              <label class="block text-sm">Physical Science</label>
-              <input
-                v-model.number="form.g11_physical_science"
                 type="number"
                 min="0"
                 max="100"
@@ -343,7 +332,6 @@
           </div>
         </div>
 
-            <!-- Program Choice Selection -->
         <!-- Program Choices -->
         <div class="border p-3 mb-6">
           <h3 class="font-semibold mb-3 text-red-600">* Choose Your Programs (Required)</h3>
@@ -461,7 +449,6 @@ const form = reactive({
   g11_academic_professional: null,
   g11_reading_writing: null,
   g11_earth_life_science: null,
-  g11_physical_science: null,
   // Grade 12 Math subjects
   g12_math_subject_1: '',
   g12_math_grade_1: null,
@@ -516,8 +503,7 @@ const englishAverage = computed(() => {
 
 const scienceAverage = computed(() => {
   const grades = [
-    form.g11_earth_life_science, 
-    form.g11_physical_science,
+    form.g11_earth_life_science,
     form.g12_science_grade_1,
     form.g12_science_grade_2
   ].filter(g => g !== null && g !== '')
@@ -570,7 +556,7 @@ const notQualifiedPrograms = computed(() => {
   })
 })
 
-const currentStrand = computed(() => (props.strand || 'ABM').toUpperCase())
+const currentStrand = computed(() => (props.strand || 'HUMSS').toUpperCase())
 
 const isStrandAllowed = (program) => {
   const strandValue = (program.strand || '').toString().toUpperCase()
@@ -630,7 +616,7 @@ const submitForm = async () => {
 
   console.log('Saving grades with payload:', payload)
   
-  router.post('/grades/abm', payload, {
+  router.post('/grades/humss', payload, {
     preserveState: true,
     preserveScroll: true,
     onSuccess: (response) => {
