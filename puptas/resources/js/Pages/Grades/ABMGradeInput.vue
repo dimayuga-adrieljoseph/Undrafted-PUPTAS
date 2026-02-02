@@ -1,5 +1,5 @@
 <template>
-  <AppLayout>
+  <ApplicantLayout>
     <div class="max-w-4xl mx-auto p-6">
       <h1 class="text-xl font-bold mb-4">ABM Strand Grade Input</h1>
       <p class="mb-6">Enter your academic grades for Grade 11 and Grade 12</p>
@@ -433,13 +433,13 @@
         </div>
       </form>
     </div>
-  </AppLayout>
+  </ApplicantLayout>
 </template>
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
-import AppLayout from '@/Layouts/AppLayout.vue'
+import ApplicantLayout from '@/Layouts/ApplicantLayout.vue'
 
 const page = usePage()
 const props = defineProps({
