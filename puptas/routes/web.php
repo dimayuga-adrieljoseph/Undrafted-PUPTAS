@@ -98,6 +98,18 @@ Route::middleware(['auth'])->group(function () {
         ->name('grades.gas.form');
     Route::post('/grades/gas', [GradesController::class, 'storeGasGrades'])
         ->name('grades.gas.store');
+
+    // STEM Grade Input
+    Route::get('/grades/stem', [GradesController::class, 'showStemGradeForm'])
+        ->name('grades.stem.form');
+    Route::post('/grades/stem', [GradesController::class, 'storeStemGrades'])
+        ->name('grades.stem.store');
+    
+    // TVL Grade Input
+    Route::get('/grades/tvl', [GradesController::class, 'showTvlGradeForm'])
+        ->name('grades.tvl.form');
+    Route::post('/grades/tvl', [GradesController::class, 'storeTvlGrades'])
+        ->name('grades.tvl.store');
 });
 
 Route::get('/home', function () {
@@ -131,6 +143,7 @@ Route::get('/home', function () {
                 case 'GAS':
                     return redirect('/grades/gas');
                 case 'STEM':
+                    return redirect('/grades/stem');
                 case 'TVL':
                 case 'SPORTS':
                 case 'ARTS':
