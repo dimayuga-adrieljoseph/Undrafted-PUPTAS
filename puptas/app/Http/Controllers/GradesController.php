@@ -42,6 +42,36 @@ class GradesController extends Controller
         ]);
     }
 
+    public function showHumssGradeForm()
+    {
+        $user = Auth::user();
+        $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
+        $programs = Program::all();
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+
+        return inertia('Grades/HUMSSGradeInput', [
+            'grade' => $grade,
+            'user' => $user,
+            'programs' => $programs,
+            'strand' => $profile?->strand,
+        ]);
+    }
+
+    public function showGasGradeForm()
+    {
+        $user = Auth::user();
+        $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
+        $programs = Program::all();
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+
+        return inertia('Grades/GASGradeInput', [
+            'grade' => $grade,
+            'user' => $user,
+            'programs' => $programs,
+            'strand' => $profile?->strand,
+        ]);
+    }
+
     public function storeAbmGrades(Request $request)
     {
         $user = Auth::user();
@@ -81,10 +111,91 @@ class GradesController extends Controller
             ]
         );
 
-        return response()->json([
-            'message' => 'Grades and program choices saved successfully',
-            'grade' => $grade,
+        return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
+    }
+
+    public function storeHumssGrades(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            // Computed averages from frontend
+            'mathematics' => 'required|numeric|min:0|max:100',
+            'english' => 'required|numeric|min:0|max:100',
+            'science' => 'required|numeric|min:0|max:100',
+            'g12_first_sem' => 'required|numeric|min:0|max:100',
+            'g12_second_sem' => 'required|numeric|min:0|max:100',
+            // Program choices
+            'first_choice_program' => 'required|exists:programs,id',
+            'second_choice_program' => 'required|exists:programs,id|different:first_choice_program',
         ]);
+
+        // Calculate GWA from semester grades
+        $g12_gwa = ($validated['g12_first_sem'] + $validated['g12_second_sem']) / 2;
+
+        $grade = Grade::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'mathematics' => $validated['mathematics'],
+                'english' => $validated['english'],
+                'science' => $validated['science'],
+                'g12_first_sem' => $validated['g12_first_sem'],
+                'g12_second_sem' => $validated['g12_second_sem'],
+            ]
+        );
+
+        // Save program choices to applicant profile
+        ApplicantProfile::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'first_choice_program' => $validated['first_choice_program'],
+                'second_choice_program' => $validated['second_choice_program'],
+            ]
+        );
+
+        return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
+    }
+
+    public function storeGasGrades(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            // Computed averages from frontend
+            'mathematics' => 'required|numeric|min:0|max:100',
+            'english' => 'required|numeric|min:0|max:100',
+            'science' => 'required|numeric|min:0|max:100',
+            'g12_first_sem' => 'required|numeric|min:0|max:100',
+            'g12_second_sem' => 'required|numeric|min:0|max:100',
+            // Program choices
+            'first_choice_program' => 'required|exists:programs,id',
+            'second_choice_program' => 'required|exists:programs,id|different:first_choice_program',
+        ]);
+
+        // Calculate GWA from semester grades
+        $g12_gwa = ($validated['g12_first_sem'] + $validated['g12_second_sem']) / 2;
+
+        $grade = Grade::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'mathematics' => $validated['mathematics'],
+                'english' => $validated['english'],
+                'science' => $validated['science'],
+                'g12_first_sem' => $validated['g12_first_sem'],
+                'g12_second_sem' => $validated['g12_second_sem'],
+            ]
+        );
+
+        // Save program choices to applicant profile
+        ApplicantProfile::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'first_choice_program' => $validated['first_choice_program'],
+                'second_choice_program' => $validated['second_choice_program'],
+            ]
+        );
+
+        return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
     }
 
     public function store(Request $request)

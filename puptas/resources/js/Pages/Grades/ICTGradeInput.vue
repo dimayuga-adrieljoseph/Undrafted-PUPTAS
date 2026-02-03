@@ -438,7 +438,7 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
-import { usePage } from '@inertiajs/vue3'
+import { usePage, router } from '@inertiajs/vue3'
 import ApplicantLayout from '@/Layouts/ApplicantLayout.vue'
 
 const page = usePage()
@@ -628,31 +628,30 @@ const submitForm = async () => {
     second_choice_program: form.second_choice_program,
   }
 
-  try {
-    const response = await fetch('/grades/ict', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-      },
-      body: JSON.stringify(payload),
-    })
-
-    const data = await response.json()
-
-    if (response.ok) {
+  console.log('Saving grades with payload:', payload)
+  
+  router.post('/grades/ict', payload, {
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: (response) => {
+      console.log('Success response:', response)
       successMessage.value = 'Grades and program choices saved successfully!'
+      alert('✅ Grades saved successfully! Redirecting to dashboard...')
       setTimeout(() => {
-        window.location.href = '/applicant-dashboard'
-      }, 1500)
-    } else {
-      errors.value = data.errors || {}
-    }
-  } catch (error) {
-    console.error('Error:', error)
-    errors.value = { general: 'An error occurred while saving. Please try again.' }
-  } finally {
-    loading.value = false
-  }
+        router.visit('/applicant-dashboard')
+      }, 1000)
+      loading.value = false
+    },
+    onError: (errorResponse) => {
+      console.error('Error response:', errorResponse)
+      errors.value = errorResponse
+      const firstError = Object.values(errorResponse)[0]
+      alert('❌ ' + (firstError || 'Failed to save grades. Please check the form.'))
+      loading.value = false
+    },
+    onFinish: () => {
+      loading.value = false
+    },
+  })
 }
 </script>

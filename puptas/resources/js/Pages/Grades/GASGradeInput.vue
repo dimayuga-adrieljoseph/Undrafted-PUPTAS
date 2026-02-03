@@ -1,7 +1,7 @@
 <template>
   <ApplicantLayout>
     <div class="max-w-4xl mx-auto p-6">
-      <h1 class="text-xl font-bold mb-4">ABM Strand Grade Input</h1>
+      <h1 class="text-xl font-bold mb-4">GAS Strand Grade Input</h1>
       <p class="mb-6">Enter your academic grades for Grade 11 and Grade 12</p>
 
       <form @submit.prevent="submitForm">
@@ -343,7 +343,6 @@
           </div>
         </div>
 
-            <!-- Program Choice Selection -->
         <!-- Program Choices -->
         <div class="border p-3 mb-6">
           <h3 class="font-semibold mb-3 text-red-600">* Choose Your Programs (Required)</h3>
@@ -570,7 +569,7 @@ const notQualifiedPrograms = computed(() => {
   })
 })
 
-const currentStrand = computed(() => (props.strand || 'ABM').toUpperCase())
+const currentStrand = computed(() => (props.strand || 'GAS').toUpperCase())
 
 const isStrandAllowed = (program) => {
   const strandValue = (program.strand || '').toString().toUpperCase()
@@ -630,7 +629,7 @@ const submitForm = async () => {
 
   console.log('Saving grades with payload:', payload)
   
-  router.post('/grades/abm', payload, {
+  router.post('/grades/gas', payload, {
     preserveState: true,
     preserveScroll: true,
     onSuccess: (response) => {
