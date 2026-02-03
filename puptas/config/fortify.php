@@ -104,7 +104,9 @@ return [
                     case 'GAS':
                         return '/grades/gas';
                     case 'STEM':
+                        return '/grades/stem';
                     case 'TVL':
+                        return '/grades/tvl';
                     case 'SPORTS':
                     case 'ARTS':
                         // These strands don't have grade input forms yet
