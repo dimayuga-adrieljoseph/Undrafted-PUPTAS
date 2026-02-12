@@ -143,6 +143,7 @@ class UserController extends Controller
         $user->firstname = $request->firstname;
         $user->lastname = $request->lastname;
         $user->middlename = $request->middlename;
+        $user->extension_name = $request->extension_name; // Added
         $user->email = $request->email;
         $user->contactnumber = $request->contactnumber;
         $user->role_id = $request->role_id;
@@ -153,17 +154,28 @@ class UserController extends Controller
 
         $user->save();
 
-        // Sync program if role is Applicant
-        if ($request->role_id == 1 && $request->filled('program')) {
-            $user->programs()->sync([$request->program => ['role_id' => $request->role_id]]);
-        } elseif ($request->role_id != 1) {
-            // Remove all programs if role is not Applicant
-            $user->programs()->detach();
+        // Handle program assignments based on role
+        $programsToSync = [];
+        
+        if ($request->role_id == 1 && $request->filled('applicant_program')) {
+            // For Applicants: use applicant_program field (using program code)
+            $program = Program::where('code', $request->applicant_program)->first();
+            if ($program) {
+                $programsToSync[$program->id] = ['role_id' => $request->role_id];
+            }
+        } elseif (in_array($request->role_id, [3, 4]) && $request->filled('program')) {
+            // For Evaluators (3) and Interviewers (4): use program field (using program code)
+            $program = Program::where('code', $request->program)->first();
+            if ($program) {
+                $programsToSync[$program->id] = ['role_id' => $request->role_id];
+            }
         }
+        
+        // Sync the programs
+        $user->programs()->sync($programsToSync);
 
         return redirect()->route('users.index')->with('status', 'User updated successfully!');
     }
-
     /**
      * Remove the specified user from storage.
      */

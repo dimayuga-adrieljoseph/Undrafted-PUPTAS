@@ -2,6 +2,8 @@
 
 namespace App\Rules;
 
+use Illuminate\Validation\Rule;
+
 /**
  * Validation Rules for PUPTAS
  * 
@@ -18,14 +20,18 @@ class ValidationRules
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
             'middlename' => 'nullable|string|max:255',
-            'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])/i',
-            'role_id' => 'required|exists:roles,id|in:1,2,3,4,5,6',
+            'extension_name' => 'nullable|string|in:Jr.,Sr.,II,III,IV', // Added
+            'email' => 'required|string|email|max:255|unique:users|regex:/^[a-z0-9._%+\-]+@gmail\.com$/', // Added Gmail validation
+            'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/',
+            'role_id' => 'required|integer|in:1,2,3,4,5,6', // Changed from exists:roles,id
+            'program' => 'nullable|string|exists:programs,code', // Added for evaluators & interviewers
+            'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
+            // These fields might not be in your form anymore, but keeping for compatibility
             'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
-            'contactnumber' => 'required|string|max:15',
+            'contactnumber' => 'required|string|regex:/^\d{10}$/', // Changed to 10-digit validation
             'address' => 'nullable|string|max:500',
+            'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
 
@@ -35,14 +41,25 @@ class ValidationRules
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
             'middlename' => 'nullable|string|max:255',
-            'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.',
-            'email' => "required|string|email|max:255|unique:users,email,{$userId}",
-            'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])/i',
-            'role_id' => 'required|exists:roles,id|in:1,2,3,4,5,6',
+            'extension_name' => 'nullable|string|in:Jr.,Sr.,II,III,IV', // Added
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users')->ignore($userId),
+                'regex:/^[a-z0-9._%+\-]+@gmail\.com$/'
+            ], // Added Gmail validation with proper Rule syntax
+            'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/',
+            'role_id' => 'required|integer|in:1,2,3,4,5,6', // Changed from exists:roles,id
+            'program' => 'nullable|string|exists:programs,code', // Added for evaluators & interviewers
+            'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
+
             'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
-            'contactnumber' => 'required|string|max:15',
+            'contactnumber' => 'required|string|regex:/^\d{10}$/', // Changed to 10-digit validation
             'address' => 'nullable|string|max:500',
+            'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
 

@@ -20,7 +20,7 @@
         <img src="https://img.icons8.com/ios-filled/30/800000/domain.png" alt="Website"> 
     </a> 
     <br> 
-    <strong>Developed by the JAMS Team</strong> 
+    <strong>Developed by the JAMS Team, Enhanced by Team Undrafted</strong> 
 </p>
 
 ---
@@ -39,8 +39,8 @@ The **PUP Taguig Admission System (PUPTAS)** is a web-based platform designed to
 
 Use the following credentials for demo access:
 
-- **Username/Email:** admissionteam@puptas.online
-- **Password:** Sample@123
+- **Username/Email:** 
+- **Password:** 
 
 ---
 
@@ -68,23 +68,21 @@ Admins can generate reports detailing the number of applications, pending evalua
 
 ---
 
-## 👥 Meet the JAMS Team
+## 👥 Meet Team Undrafed
 
 | Name                     | GitHub Profile                                                      |
 | ------------------------ | ------------------------------------------------------------------- |
-| Casabuena, Angel Rose    | [casabuena-angelrose](https://github.com/casabuena-angelrose)       |
-| Danay, Mary Joy          | [danay-maryjoy](https://github.com/danay-maryjoy)                   |
-| Dupo, Judy Ann           | [dupo-judyann](https://github.com/dupo-judyann)                     |
-| Sanchez, Samantha Nicole | [sanchez-samanthaNicole](https://github.com/Sanchez-SamanthaNicole) |
+| Dimayuga, Adriel Joseph  |                                                                     |
+| Managbanag, John Mark    |                                                                     |
+| Manicio, Dion            |                                                                     |
+| Dazo, Rollan             |                                                                     |
 
 ---
 
 ## 🌐 Connect with Us
 
 <p align="center">
-  <a href="mailto:admissionteam@puptas.online"><img src="https://img.icons8.com/ios-glyphs/30/800000/email.png" alt="Email"></a>
-  <a href="https://twitter.com/puptas"><img src="https://img.icons8.com/ios-glyphs/30/800000/twitter.png" alt="Twitter"></a>
-  <a href="https://instagram.com/puptas"><img src="https://img.icons8.com/ios-glyphs/30/800000/instagram-new.png" alt="Instagram"></a>
+  <!-- add info here -->
 </p>
 
 ---
