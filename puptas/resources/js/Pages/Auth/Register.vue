@@ -1,8 +1,13 @@
 <script setup>
 import { ref } from "vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
+
 import TermsOfServiceModal from '@/Pages/Modal/TermsofServiceModal.vue'
 import PrivacyPolicyModal from '@/Pages/Modal/PrivacyPolicyModal.vue'
+
+// Modal control variables
+const showTermsModal = ref(false);
+const showPrivacyModal = ref(false);
 
 const form = useForm({
     lastname: "",
@@ -24,14 +29,6 @@ const form = useForm({
     terms: false,
 });
 
-// Modal states
-const showTermsModal = ref(false);
-const showPrivacyModal = ref(false);
-
-const submit = () => {
-    form.post(route("register"));
-};
-
 // Modal control functions
 const openTermsModal = () => {
     showTermsModal.value = true;
@@ -48,6 +45,13 @@ const closeTermsModal = () => {
 const closePrivacyModal = () => {
     showPrivacyModal.value = false;
 };
+
+// Submit function
+const submit = () => {
+    form.post(route('register'), {
+        onFinish: () => form.reset('password', 'password_confirmation'),
+    });
+};
 </script>
 
 <template>
@@ -58,7 +62,6 @@ const closePrivacyModal = () => {
     <PrivacyPolicyModal :show="showPrivacyModal" @close="closePrivacyModal" />
     
     <div class="min-h-screen bg-white-500 flex flex-col items-center justify-center p-4">
-
         <!-- Main Container -->
         <div class="relative w-full max-w-6xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
             <!-- Header Section with School Colors -->
@@ -88,7 +91,6 @@ const closePrivacyModal = () => {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Left Side - Form Sections -->
                     <div class="lg:col-span-2">
-
                         <form @submit.prevent="submit" class="space-y-8">
                             <!-- Section 1: Personal Information -->
                             <div class="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">

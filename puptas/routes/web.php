@@ -18,7 +18,8 @@ use App\Http\Controllers\InterviewerDashboardController;
 use App\Http\Controllers\MedicalDashboardController;
 use App\Http\Controllers\RecordStaffDashboardController;
 use App\Http\Controllers\Admin\Assign\AssignController;
-
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\Admin\Notify\Notify;
 
 Route::get('/', function () {
     return Inertia::render('Auth/Login', [
@@ -29,16 +30,7 @@ Route::get('/', function () {
     ]);
 })->middleware('guest')->name('welcome');
 
-// Route::middleware([
-//     'auth:sanctum',
-//     config('jetstream.auth_session'),
-//     'verified',
-// ])->get('/dashboard', [DashboardController::class, 'index'])
-//   ->name('dashboard');
-
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-//Route::get('/dashboard/insights', [DashboardController::class, 'insights']);
-
 Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
 
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
@@ -46,7 +38,6 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $exists = \App\Models\User::where('email', $request->email)->exists();
     return response()->json(['taken' => $exists]);
 });
-
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/programs', function () {
@@ -61,15 +52,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/programs/list', [ProgramController::class, 'index'])->name('programs.list');
 
     // ✅ Create a new program (POST)
-    Route::post('/programs/store', [ProgramController::class, 'store'])->name('programs.store');
+    Route::post('/programs', [ProgramController::class, 'store'])->name('programs.store');
 
-    // ✅ Update program slots (PUT)
-    Route::put('/programs/update/{id}', [ProgramController::class, 'update'])->name('programs.update');
+    // ✅ Update program (PUT)
+    Route::put('/programs/{program}', [ProgramController::class, 'update'])->name('programs.update');
 
     // ✅ Delete a program (DELETE)
-    Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->name('programs.delete');
+    Route::delete('/programs/{program}', [ProgramController::class, 'destroy'])->name('programs.delete');
 });
-
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/applicant-dashboard', [ApplicantDashboardController::class, 'index'])
@@ -116,22 +106,18 @@ Route::get('/home', function () {
     $roleId = Auth::user()->role_id;
 
     if ($roleId == 1) {
-        // Check if applicant has already submitted grades
         $hasGrades = \App\Models\Grade::where('user_id', Auth::id())->exists();
 
         if ($hasGrades) {
             return redirect('/applicant-dashboard');
         } else {
-            // Get user's strand from applicant profile
             $profile = \App\Models\ApplicantProfile::where('user_id', Auth::id())->first();
             $strand = $profile?->strand;
 
-            // If no strand is set, redirect to applicant dashboard
             if (!$strand) {
                 return redirect('/applicant-dashboard');
             }
 
-            // Redirect based on strand
             $strandUpper = strtoupper(trim($strand));
             switch ($strandUpper) {
                 case 'ABM':
@@ -147,7 +133,6 @@ Route::get('/home', function () {
                 case 'TVL':
                 case 'SPORTS':
                 case 'ARTS':
-                    // These strands don't have grade input forms yet
                     return redirect('/applicant-dashboard');
                 default:
                     return redirect('/applicant-dashboard');
@@ -175,16 +160,11 @@ Route::get('/home', function () {
         return redirect('/record-dashboard');
     }
 
-    // fallback (optional)
     return redirect('/');
 })->middleware(['auth'])->name('home');
 
-// routes/web.php (or routes/api.php if you're using API routes)
-use App\Http\Controllers\Admin\Notify\Notify;
-
 Route::middleware(['auth'])->post('/test-passers/upload', [Notify::class, 'handleUpload']);
 Route::middleware(['auth'])->get('/test-passers/form', [Notify::class, 'showUploadForm'])->name('upload.form');
-
 
 Route::get('/dashboard-panel', function () {
     return Inertia::render('Dashboard/Panel');
@@ -200,7 +180,6 @@ Route::get('/applications', function () {
 
 Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
 
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
     Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
@@ -210,13 +189,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/test-passers/upload', [TestPasserController::class, 'upload'])->name('upload');
 });
 
-Route::put('/test-passers/{id}', [TestPasserController::class, 'update']);
-
+Route::put('/test-passers/{test_passer}', [TestPasserController::class, 'update'])->name('test-passers.update');
 Route::post('/test-passers-store', [TestPasserController::class, 'store']);
-
-// Route::get('/schedules', function () {
-//     return Inertia::render('Schedules/Schedule');
-// })->name('schedules');
 
 Route::resource('schedules', ScheduleController::class)
     ->names([
@@ -229,15 +203,11 @@ Route::resource('schedules', ScheduleController::class)
         'destroy' => 'schedules.destroy',
     ]);
 
-
 Route::middleware(['auth'])->group(function () {
     Route::get('/user/application', [ConfirmationController::class, 'show']);
-
     Route::post('/user/application/submit', [ConfirmationController::class, 'submit']);
     Route::post('/user/application/reupload', [ConfirmationController::class, 'reupload']);
 });
-
-
 
 Route::post('/upload-files', [UserFileController::class, 'uploadFiles']);
 Route::post('/get-files', [UserFileController::class, 'getUserApplication']);
@@ -257,9 +227,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::get('/evaluator-dashboard/applicants', [EvaluatorDashboardController::class, 'getUsers']);
-
 Route::post('/evaluator/pass-application/{userId}', [EvaluatorDashboardController::class, 'passApplication']);
-
 Route::get('/dashboard/user-files/{id}', [EvaluatorDashboardController::class, 'getUserFiles']);
 Route::post('/dashboard/return-files/{user}', [EvaluatorDashboardController::class, 'returnApplication'])->name('return.files');
 
@@ -279,7 +247,6 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/interviewer-dashboard/applicants', [InterviewerDashboardController::class, 'getUsers']);
 Route::get('/interviewer-dashboard/application/{id}', [InterviewerDashboardController::class, 'getUserFiles']);
 
-
 Route::get('/interviewer-applications', function () {
     if (Auth::user()?->role_id !== 4) {
         return redirect()->back()->with('error', 'Unauthorized access.');
@@ -291,10 +258,7 @@ Route::get('/interviewer-applications', function () {
 
 Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
 Route::post('/interviewer-dashboard/transfer/{id}', [InterviewerDashboardController::class, 'transfertoProgram']);
-// routes/web.php
 Route::get('/interviewer-dashboard/programs', [InterviewerDashboardController::class, 'getPrograms']);
-//Route::post('/interviewer-dashboard/transfer/{userId}', [InterviewerDashboardController::class, 'transferToProgram']);
-
 Route::get('/user/eligible-programs', [ConfirmationController::class, 'getEligiblePrograms']);
 
 Route::middleware(['auth'])->group(function () {
@@ -334,18 +298,27 @@ Route::get('/recordstaff-applications', function () {
 Route::post('/record-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
 Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);
 
-use App\Http\Controllers\UserController;
-
 // User Management Routes (Protected)
 Route::middleware(['auth'])->group(function () {
+    // Legacy routes (keep for backward compatibility if needed)
     Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.index');
-    Route::get('/legacy/users/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::post('/legacy/users/{id}/update', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/legacy/users/{id}/delete', [UserController::class, 'destroy'])->name('users.destroy');
     Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
     Route::post('/legacy/add-user/store', [UserController::class, 'store'])->name('add_user.store');
+    
+    // RESTful User Routes with proper HTTP methods
+    Route::get('/users', [UserController::class, 'index'])->name('users.index'); // Alternative
+    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+    Route::post('/users', [UserController::class, 'store'])->name('users.store');
+    Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    
+    // Legacy edit/update routes for compatibility (optional)
+    Route::get('/legacy/users/{id}/edit', [UserController::class, 'edit'])->name('legacy.users.edit');
+    Route::post('/legacy/users/{id}/update', [UserController::class, 'update'])->name('legacy.users.update');
+    Route::delete('/legacy/users/{id}/delete', [UserController::class, 'destroy'])->name('legacy.users.destroy');
 
-    // Assign interviewer and evaluator
+    // Assign interviewer and evaluator routes (keep as POST if they're working)
     Route::get('/admin/users/create', [AssignController::class, 'createUserForm'])->name('admin.users.create');
     Route::post('/admin/users/store', [AssignController::class, 'storeUser'])->name('admin.users.store');
     Route::get('/admin/users/edit/{id}', [AssignController::class, 'editUser'])->name('admin.users.edit');
