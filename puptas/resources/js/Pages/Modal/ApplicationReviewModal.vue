@@ -1,275 +1,259 @@
 <template>
+    <!-- Modal -->
     <div
         v-if="showModal"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+        @click.self="closeModal"
     >
-        <div
-            class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-5xl w-full p-6 overflow-auto max-h-[90vh] relative"
-            style="min-width: 700px"
-        >
-            <!-- Close Button -->
-            <button
-                @click="closeModal"
-                class="absolute top-3 right-3 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white text-3xl font-bold"
-                aria-label="Close modal"
-            >
-                &times;
-            </button>
-
-            <!-- Loading / Error / Content -->
-            <template v-if="loading">
-                <p class="text-gray-700">Loading application data...</p>
-            </template>
-
-            <template v-else-if="error">
-                <p class="text-red-600 dark:text-red-400">{{ error }}</p>
-            </template>
-
-            <template v-else-if="applicationData">
-                <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-                    Review Your Application
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-auto relative">
+            <!-- Header -->
+            <div class="sticky top-0 bg-white dark:bg-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                    Applicant Information
                 </h2>
+                <button
+                    @click="closeModal"
+                    class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-2xl"
+                >
+                    &times;
+                </button>
+            </div>
 
-                <div class="grid grid-cols-2 gap-8">
-                    <!-- Left Column: Personal + High School -->
+            <!-- Body -->
+            <div class="p-6">
+                <!-- Loading State -->
+                <div v-if="loading" class="text-center py-8">
+                    <p class="text-gray-600 dark:text-gray-400">Loading...</p>
+                </div>
+
+                <!-- Error State -->
+                <div v-else-if="error" class="text-center py-8">
+                    <p class="text-red-600 dark:text-red-400">{{ error }}</p>
+                </div>
+
+                <!-- Content -->
+                <div v-else-if="applicationData" class="space-y-6">
+                    <!-- Status Badge -->
+                    <div class="flex justify-end">
+                        <span :class="`px-3 py-1 rounded-full text-sm font-medium text-white ${getStatusClass(applicationData.status)}`">
+                            {{ formatStatus(applicationData.status) }}
+                        </span>
+                    </div>
+
+                    <!-- Personal Information -->
                     <div>
-                        <section class="mb-6">
-                            <h3 class="font-semibold mb-2 text-gray-800 dark:text-gray-300">Personal Details</h3>
-                            <p><strong>Name:</strong> {{ applicationData.firstname }} {{ applicationData.middlename }} {{ applicationData.lastname }}</p>
-                            <p><strong>Birthday:</strong> {{ applicationData.birthday }}</p>
-                            <p><strong>Sex/Gender:</strong> {{ applicationData.sex }}</p>
-                            <p><strong>Contact:</strong> +63{{ applicationData.contactnumber }}</p>
-                            <p><strong>Address:</strong> {{ applicationData.address }}</p>
-                            <p><strong>Email:</strong> {{ applicationData.email }}</p>
-                        </section>
-
-                        <section class="mb-6">
-                            <h3 class="font-semibold mb-2 text-gray-800 dark:text-gray-300">High School Details</h3>
-                            <p><strong>School:</strong> {{ applicationData.school }}</p>
-                            <p><strong>School Address:</strong> {{ applicationData.schoolAdd }}</p>
-                            <p><strong>School Year:</strong> {{ applicationData.schoolyear }}</p>
-                            <p><strong>Date Graduated:</strong> {{ applicationData.dateGrad }}</p>
-                            <p><strong>Strand:</strong> {{ applicationData.strand }}</p>
-                            <p><strong>Track:</strong> {{ applicationData.track }}</p>
-                        </section>
-
-                        <div class="mt-4">
-                            <label class="block text-sm font-medium text-gray-700">Choose Your Program</label>
-                            <select
-                                v-model="selectedProgramId"
-                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-maroon-500 focus:border-maroon-500"
-                            >
-                                <option value="">-- Select Program --</option>
-                                <option v-for="program in eligiblePrograms" :key="program.id" :value="program.id">
-                                    {{ program.name }} ({{ program.code }})
-                                </option>
-                            </select>
-                        </div>
-
-                        <div class="mt-4">
-                            <label class="block text-sm font-medium text-gray-700">Choose Your Second Program</label>
-                            <select
-                                v-model="secondChoiceId"
-                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-maroon-500 focus:border-maroon-500"
-                            >
-                                <option value="">-- Select Program --</option>
-                                <option
-                                    v-for="program in eligiblePrograms"
-                                    :key="program.id"
-                                    :value="program.id"
-                                    :disabled="program.id === selectedProgramId"
-                                >
-                                    {{ program.name }} ({{ program.code }})
-                                </option>
-                            </select>
+                        <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">Personal Information</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Full Name</p>
+                                <p class="font-medium">{{ applicationData.firstname }} {{ applicationData.middlename }} {{ applicationData.lastname }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Email</p>
+                                <p class="font-medium">{{ applicationData.email }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Birthday</p>
+                                <p class="font-medium">{{ formatDate(applicationData.birthday) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Sex/Gender</p>
+                                <p class="font-medium">{{ applicationData.sex }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Contact</p>
+                                <p class="font-medium">{{ formatContact(applicationData.contactnumber) }}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Address</p>
+                                <p class="font-medium">{{ applicationData.address }}</p>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Right Column: Uploaded Documents -->
-                    <section>
-                        <h3 class="font-semibold mb-2 text-gray-800 dark:text-gray-300">Uploaded Documents</h3>
-                        <div class="grid grid-cols-3 gap-3">
-                            <div v-for="(file, key) in applicationData.uploadedFiles" :key="key" class="image-wrapper">
-                                <p class="text-sm font-medium text-gray-700 mb-1">{{ formatFileName(key) }}</p>
-                                <img
-                                    v-if="file"
-                                    :src="file?.url"
-                                    alt="Uploaded Document"
-                                    class="max-h-20 object-cover rounded border border-gray-300 cursor-pointer hover:scale-105 transition-transform duration-200"
-                                    @click="openImageModal(file)"
-                                />
-                                <div v-else class="placeholder">
-                                    No Image Uploaded
-                                </div>
-                                <button
-                                    class="mt-1 px-3 py-1 bg-gray-100 hover:bg-maroon-100 text-gray-800 rounded text-xs shadow-sm"
-                                    @click="triggerFileInput(key)"
-                                >
-                                    Reupload
-                                </button>
+                    <!-- Educational Background -->
+                    <div>
+                        <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">Educational Background</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">School</p>
+                                <p class="font-medium">{{ applicationData.school }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">School Address</p>
+                                <p class="font-medium">{{ applicationData.schoolAdd }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">School Year</p>
+                                <p class="font-medium">{{ applicationData.schoolyear }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Date Graduated</p>
+                                <p class="font-medium">{{ formatDate(applicationData.dateGrad) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Strand</p>
+                                <p class="font-medium">{{ applicationData.strand }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Track</p>
+                                <p class="font-medium">{{ applicationData.track }}</p>
                             </div>
                         </div>
-                    </section>
+                    </div>
+
+                    <!-- Program Choices -->
+                    <div v-if="applicationData.program_id">
+                        <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">Program Choices</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">First Choice</p>
+                                <p class="font-medium">{{ getProgramName(applicationData.program_id) || 'Not selected' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Second Choice</p>
+                                <p class="font-medium">{{ getProgramName(applicationData.second_choice_id) || 'Not selected' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Documents -->
+                    <div>
+                        <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">Uploaded Documents</h3>
+                        <div class="grid grid-cols-4 gap-3">
+                            <div v-for="(file, key) in applicationData.uploadedFiles" :key="key" class="text-center">
+                                <div class="mb-1">
+                                    <img
+                                        v-if="file?.url"
+                                        :src="file.url"
+                                        :alt="formatFileName(key)"
+                                        class="w-full h-16 object-cover rounded border cursor-pointer hover:opacity-75"
+                                        @click="openImageModal(file)"
+                                    />
+                                    <div v-else class="w-full h-16 bg-gray-100 dark:bg-gray-800 rounded border border-dashed flex items-center justify-center">
+                                        <span class="text-xs text-gray-400">No file</span>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ formatFileName(key) }}</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Footer Buttons -->
-                <div class="flex justify-end space-x-4 mt-6">
-                    <button
-                        @click="closeModal"
-                        class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-800"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        :disabled="!canSubmit"
-                        @click="submitApplication"
-                        class="px-4 py-2 rounded-lg text-white"
-                        :class="{
-                            'bg-gray-400 cursor-not-allowed': !canSubmit,
-                            'bg-maroon-700 hover:bg-maroon-900': canSubmit,
-                        }"
-                    >
-                        Submit Application
-                    </button>
-                    <p v-if="applicationData?.status && !canSubmit" class="text-sm text-gray-600 mt-2">
-                        Application already <strong>{{ applicationData.status }}</strong>.
-                    </p>
+                <!-- No Data -->
+                <div v-else class="text-center py-8">
+                    <p class="text-gray-600 dark:text-gray-400">No application data found.</p>
                 </div>
-            </template>
+            </div>
 
-            <template v-else>
-                <p class="text-gray-700">No application data found.</p>
-            </template>
+            <!-- Footer -->
+            <div class="sticky bottom-0 bg-white dark:bg-gray-900 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                <button
+                    @click="closeModal"
+                    class="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg"
+                >
+                    Close
+                </button>
+            </div>
         </div>
     </div>
-    <button
-        v-if="!showModal"
-        @click="openModal"
-        aria-label="Open Application Modal"
-        class="fixed bottom-8 right-8 bg-maroon-700 hover:bg-maroon-900 text-white p-8 rounded-full shadow-lg focus:outline-none"
-        title="Review Application"
-    >
-        <!-- You can replace this SVG with any icon you prefer -->
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-        >
-            <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-        </svg>
-    </button>
-    <!-- End Reopen Modal Icon -->
-    
-    <!-- Image Preview Overlay -->
+
+    <!-- Image Preview Modal -->
     <div
         v-if="showImageModal"
-        class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60]"
+        class="fixed inset-0 z-[60] bg-black bg-opacity-90 flex items-center justify-center"
         @click="closeImageModal"
     >
-        <div class="relative max-w-[90vw] max-h-[90vh]">
+        <div class="relative max-w-3xl max-h-[90vh]">
             <img
                 :src="previewImage"
                 alt="Preview"
-                class="max-w-full max-h-[90vh] object-contain rounded shadow-lg"
+                class="max-w-full max-h-[90vh] object-contain"
                 @click.stop
-                @error="(e) => console.error('Image failed to load:', previewImage)"
             />
+            <button
+                @click.stop="closeImageModal"
+                class="absolute top-2 right-2 text-white text-3xl hover:text-gray-300"
+            >
+                &times;
+            </button>
         </div>
-        <button
-            @click.stop="closeImageModal"
-            class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300"
-            aria-label="Close preview"
-        >
-            &times;
-        </button>
     </div>
-    
-    <!-- Snackbar -->
-    <transition name="fade">
-        <div
-            v-if="snackbar.visible"
-            class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded shadow-lg z-50"
-        >
-            {{ snackbar.message }}
-        </div>
-    </transition>
 </template>
 
 <script setup>
-/* Your existing script stays the same */
-const formatFileName = (key) => {
-    return key
-        .replace(/([A-Z])/g, ' $1')
-        .replace(/^./, str => str.toUpperCase())
-        .replace(/_/g, ' ');
-};
-
-import { defineProps, defineEmits, ref, watch, onMounted, computed } from "vue";
-const axios = window.axios;
-import { nextTick } from "vue";
+import { ref, watch, onMounted } from "vue";
 
 const props = defineProps({
     show: Boolean,
     userEmail: String,
 });
 
-const emit = defineEmits(["close", "reupload"]);
+const emit = defineEmits(["close"]);
 
-watch(
-    () => props.show,
-    async (visible) => {
-        if (visible) await fetchApplicationData();
-    }
-);
-
-const selectedProgramId = ref("");
-const secondChoiceId = ref("");
-
+// State
 const showModal = ref(false);
 const loading = ref(false);
 const error = ref("");
 const applicationData = ref(null);
-const snackbar = ref({
-    visible: false,
-    message: "",
+const eligiblePrograms = ref([]);
+const previewImage = ref(null);
+const showImageModal = ref(false);
+
+// Watch for prop changes
+watch(() => props.show, async (visible) => {
+    showModal.value = visible;
+    if (visible) {
+        await fetchApplicationData();
+        await fetchEligiblePrograms();
+    }
 });
 
-const showSnackbar = (msg, duration = 3000) => {
-    snackbar.value.message = msg;
-    snackbar.value.visible = true;
-    setTimeout(() => {
-        snackbar.value.visible = false;
-    }, duration);
+// Helper Functions
+const formatStatus = (status) => {
+    if (!status) return 'Unknown';
+    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
 };
 
-const canSubmit = computed(() => {
-    const status = applicationData.value?.status;
-    return !status || ["draft", "returned"].includes(status);
-});
+const getStatusClass = (status) => {
+    switch ((status || "").toLowerCase()) {
+        case "approved": case "completed": return "bg-green-600";
+        case "pending": case "submitted": return "bg-blue-600";
+        case "in_progress": case "processing": return "bg-yellow-600";
+        case "rejected": case "returned": return "bg-red-600";
+        case "draft": return "bg-gray-600";
+        default: return "bg-gray-500";
+    }
+};
 
+const formatDate = (date) => {
+    if (!date) return 'Not provided';
+    return date;
+};
+
+const formatContact = (contact) => {
+    if (!contact) return 'Not provided';
+    return contact;
+};
+
+const formatFileName = (key) => {
+    if (!key) return '';
+    return key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/^./, str => str.toUpperCase());
+};
+
+const getProgramName = (programId) => {
+    if (!programId || !eligiblePrograms.value.length) return null;
+    const program = eligiblePrograms.value.find(p => p.id === programId);
+    return program ? program.name : null;
+};
+
+// Data fetching
 const fetchApplicationData = async () => {
     loading.value = true;
     error.value = "";
     try {
-        const response = await axios.get("/user/application");
+        const response = await window.axios.get("/user/application");
         applicationData.value = response.data;
-
-        console.log("Application status:", applicationData.value?.status);
-        await fetchEligiblePrograms();
-
-        console.log("Setting selected:", response.data.program_id);
-
-        nextTick(() => {
-            selectedProgramId.value = response.data.program_id ?? "";
-            secondChoiceId.value = response.data.second_choice_id ?? "";
-        });
     } catch (e) {
         error.value = "Failed to load application data.";
     } finally {
@@ -277,68 +261,24 @@ const fetchApplicationData = async () => {
     }
 };
 
-const openModal = () => {
-    showModal.value = true;
-    fetchApplicationData();
+const fetchEligiblePrograms = async () => {
+    try {
+        const response = await window.axios.get("/user/eligible-programs");
+        eligiblePrograms.value = response.data.programs || [];
+    } catch (e) {
+        console.error("Failed to load programs:", e);
+    }
 };
 
+// Modal functions
 const closeModal = () => {
     showModal.value = false;
+    emit("close");
 };
-
-const submitApplication = async () => {
-    try {
-        await axios.post("/user/application/submit", {
-            program_id: selectedProgramId.value,
-            second_choice_id: secondChoiceId.value || null,
-        });
-        await fetchApplicationData(); // Refresh local modal data
-        emit("refreshDashboard"); // 🔥 Tell parent to update dashboard
-        showSnackbar("Application submitted!");
-
-        // Optional delay to keep modal open briefly before closing
-        setTimeout(() => {
-            closeModal();
-        }, 1000);
-    } catch (e) {
-        showSnackbar(
-            "Failed to submit application. Choose programs before submitting."
-        );
-    }
-};
-
-// Open modal on page load
-onMounted(() => {
-    openModal();
-    fileInputRefs.value = {
-        file10Front: null,
-        file11: null,
-        file12: null,
-        schoolId: null,
-        nonEnrollCert: null,
-        psa: null,
-        goodMoral: null,
-        underOath: null,
-        photo2x2: null,
-    };
-});
-
-const previewImage = ref(null);
-const showImageModal = ref(false);
 
 const openImageModal = (fileObj) => {
-    // Handle both string URLs and file objects { url, status }
     const src = typeof fileObj === 'string' ? fileObj : fileObj?.url;
-    
-    console.log('openImageModal called with:', fileObj);
-    console.log('Extracted URL:', src);
-    
-    if (!src) {
-        console.warn('No valid URL found');
-        return;
-    }
-    
-    // Show image in overlay
+    if (!src) return;
     previewImage.value = src;
     showImageModal.value = true;
 };
@@ -348,118 +288,12 @@ const closeImageModal = () => {
     previewImage.value = null;
 };
 
-const fileInputRefs = ref({});
-
-const file10FrontInput = ref(null);
-const fileInput = ref(null);
-const file11Input = ref(null);
-const file12Input = ref(null);
-const schoolIdInput = ref(null);
-const nonEnrollCertInput = ref(null);
-const psaInput = ref(null);
-const goodMoralInput = ref(null);
-const underOathInput = ref(null);
-const photo2x2Input = ref(null);
-
-const triggerFileInput = (key) => {
-    const inputRefs = {
-        file10Front: file10FrontInput,
-        file: fileInput,
-        file11: file11Input,
-        file12: file12Input,
-        schoolId: schoolIdInput,
-        nonEnrollCert: nonEnrollCertInput,
-        psa: psaInput,
-        goodMoral: goodMoralInput,
-        underOath: underOathInput,
-        photo2x2: photo2x2Input,
-    };
-
-    const inputRef = inputRefs[key];
-    if (inputRef && inputRef.value) {
-        inputRef.value.click();
+// Make sure modal opens when prop is true on mount
+onMounted(() => {
+    if (props.show) {
+        showModal.value = true;
+        fetchApplicationData();
+        fetchEligiblePrograms();
     }
-};
-
-const reuploadFile = async (event, fieldName) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("field", fieldName);
-
-    try {
-        const response = await axios.post("/user/application/reupload", formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        });
-        showSnackbar("File reuploaded!");
-
-        await fetchApplicationData(); // refresh view with new file
-    } catch (err) {
-        console.error("Reupload error:", err.response?.data || err);
-        showSnackbar(err.response?.data?.message || "Failed to reupload file.");
-    }
-};
-
-const eligiblePrograms = ref([]);
-
-const fetchEligiblePrograms = async () => {
-    try {
-        const response = await axios.get("/user/eligible-programs");
-        eligiblePrograms.value = response.data.programs;
-    } catch (e) {
-        console.error("Failed to load eligible programs");
-    }
-};
+});
 </script>
-
-<style scoped>
-/* Modern minor redesign styles */
-.bg-maroon-700 { background-color: #800000; }
-.bg-maroon-900 { background-color: #660000; }
-
-.placeholder {
-    background-color: #f9fafb;
-    min-height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px dashed #d1d5db;
-    color: #9ca3af;
-    font-style: italic;
-    font-size: 0.75rem;
-    border-radius: 0.5rem;
-    text-align: center;
-    padding: 0 4px;
-}
-
-.image-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-
-.image-wrapper img {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 0.5rem;
-    border: 1px solid #e5e7eb;
-    background-color: #fff;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.image-wrapper img:hover {
-    transform: scale(1.05);
-}
-
-.grid.grid-cols-2 {
-    gap: 1.25rem;
-}
-</style>
-

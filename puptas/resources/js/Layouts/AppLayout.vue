@@ -60,15 +60,6 @@ const toggleDarkMode = () => {
 
         <!-- Right Controls -->
         <div class="flex items-center gap-5">
-          <!-- Notifications -->
-          <button
-            class="relative text-gray-500 hover:text-[#9E122C] dark:hover:text-white transition"
-          >
-            <FontAwesomeIcon :icon="['fas', 'bell']" class="text-lg" />
-            <span
-              class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#9E122C]"
-            />
-          </button>
 
           <!-- Dark Mode Toggle -->
           <button
