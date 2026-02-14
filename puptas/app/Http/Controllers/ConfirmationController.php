@@ -108,8 +108,9 @@ class ConfirmationController extends Controller
                 ->get(['stage', 'status', 'action', 'decision_reason', 'reviewer_notes', 'performed_by', 'created_at'])
                 : [],
             'enrollment_status' => $application?->enrollment_status ?? null,
-            'program_id' => $application?->program_id,
-            'second_choice_id' => $application?->second_choice_id,
+            // FIX: Return program choices from applications table, fallback to applicant_profiles
+            'program_id' => $application?->program_id ?? $profile?->first_choice_program,
+            'second_choice_id' => $application?->second_choice_id ?? $profile?->second_choice_program,
 
 
 
@@ -121,6 +122,11 @@ class ConfirmationController extends Controller
         $user = Auth::user();
 
         \Log::info('📥 Incoming submit data', $request->all());
+
+        // FIX: Auto-populate from applicant_profile if not provided
+        $profile = $user->applicantProfile;
+        $defaultProgramId = $profile?->first_choice_program;
+        $defaultSecondChoice = $profile?->second_choice_program;
 
         $validated = $request->validate([
             'program_id' => 'required|exists:programs,id',
@@ -138,7 +144,12 @@ class ConfirmationController extends Controller
 
         $application = Application::firstOrCreate(
             ['user_id' => $user->id],
-            ['status' => 'draft'],
+            [
+                'status' => 'draft',
+                // Auto-populate with saved program choices from applicant_profiles
+                'program_id' => $defaultProgramId,
+                'second_choice_id' => $defaultSecondChoice,
+            ],
 
         );
 

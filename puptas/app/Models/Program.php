@@ -3,12 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Application;
 
 class Program extends Model
 {
-    use SoftDeletes;
 
     protected $fillable = [
         'code',
@@ -39,6 +37,16 @@ class Program extends Model
     {
         return $this->belongsToMany(User::class, 'program_user', 'program_id', 'user_id')
             ->withPivot('role_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get all strands associated with this program
+     * Many-to-many through program_strand junction table
+     */
+    public function strands()
+    {
+        return $this->belongsToMany(Strand::class, 'program_strand', 'program_id', 'strand_id')
             ->withTimestamps();
     }
 }

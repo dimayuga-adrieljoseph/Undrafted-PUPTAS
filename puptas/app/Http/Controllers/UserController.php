@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\AuditLog;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -156,7 +157,7 @@ class UserController extends Controller
 
         // Handle program assignments based on role
         $programsToSync = [];
-        
+
         if ($request->role_id == 1 && $request->filled('applicant_program')) {
             // For Applicants: use applicant_program field (using program code)
             $program = Program::where('code', $request->applicant_program)->first();
@@ -170,7 +171,7 @@ class UserController extends Controller
                 $programsToSync[$program->id] = ['role_id' => $request->role_id];
             }
         }
-        
+
         // Sync the programs
         $user->programs()->sync($programsToSync);
 
@@ -186,6 +187,30 @@ class UserController extends Controller
         // Prevent deleting your own account
         if ($user->id === auth()->user()->id) {
             return redirect()->route('users.index')->with('error', 'You cannot delete your own account!');
+        }
+
+        // Log deletion for audit purposes
+        try {
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'model_type' => 'User',
+                'model_id' => $user->id,
+                'action' => 'deleted',
+                'old_values' => [
+                    'email' => $user->email,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'role_id' => $user->role_id,
+                    'deleted_by' => auth()->user()->email,
+                ],
+                'new_values' => null,
+                'ip_address' => request()->ip(),
+            ]);
+        } catch (\Exception $e) {
+            logger()->error('Failed to create audit log during user deletion', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
         }
 
         $user->delete();
