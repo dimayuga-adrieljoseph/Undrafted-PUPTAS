@@ -84,7 +84,7 @@ Route::middleware(['auth'])->group(function () {
     // ICT Grade Input
     Route::get('/grades/ict', [GradesController::class, 'showIctGradeForm'])
         ->name('grades.ict.form');
-    Route::post('/grades/ict', [GradesController::class, 'storeAbmGrades'])
+    Route::post('/grades/ict', [GradesController::class, 'storeIctGrades'])
         ->name('grades.ict.store');
 });
 
