@@ -39,4 +39,14 @@ class Program extends Model
             ->withPivot('role_id')
             ->withTimestamps();
     }
+
+    /**
+     * Get all strands associated with this program
+     * Many-to-many through program_strand junction table
+     */
+    public function strands()
+    {
+        return $this->belongsToMany(Strand::class, 'program_strand', 'program_id', 'strand_id')
+            ->withTimestamps();
+    }
 }
