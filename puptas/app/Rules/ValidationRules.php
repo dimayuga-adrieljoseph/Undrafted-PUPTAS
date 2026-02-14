@@ -175,8 +175,6 @@ class ValidationRules
         return [
             'email' => 'required|email|exists:users,email',
             'application_id' => 'nullable|exists:applications,id',
-            'file10Front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file10Back' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'file11' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'file12' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'file11Front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
