@@ -26,7 +26,6 @@ class DeleteUser implements DeletesUsers
             $this->logDeletion($user);
 
             $this->deleteTeams($user);
-            $user->deleteProfilePhoto();
             $user->tokens->each->delete();
             $user->delete();
         });
