@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Imports\TestPassersImport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\TestPasser;
+use App\Models\SarGeneration;
  use Inertia\Inertia;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\TestPasserEmail;
@@ -13,6 +14,7 @@ use App\Mail\SarFormEmail;
 use App\Services\SarFormService;
 use Symfony\Component\Mime\Part\TextPart;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 class TestPasserController extends Controller
 {
@@ -91,6 +93,9 @@ private function sendSarEmails($passers, $enrollmentDate, $enrollmentTime)
     $errors = [];
 
     foreach ($passers as $passer) {
+        $sarGeneration = null;
+        $emailSuccess = false;
+        
         try {
             // Prepare SAR data from test passer
             $sarData = $this->prepareSarDataFromPasser($passer, $enrollmentDate, $enrollmentTime);
@@ -105,10 +110,29 @@ private function sendSarEmails($passers, $enrollmentDate, $enrollmentTime)
                     'reference' => $passer->reference_number
                 ]);
                 
+                // Create SAR generation record BEFORE sending email (no sent_at yet)
+                $sarGeneration = SarGeneration::create([
+                    'test_passer_id' => $passer->test_passer_id,
+                    'filename' => $result['filename'],
+                    'file_path' => $result['pdf_path'],
+                    'enrollment_date' => $enrollmentDate,
+                    'enrollment_time' => $enrollmentTime,
+                    'sent_to_email' => $passer->email,
+                    'created_by_user_id' => auth()->id(),
+                    'email_sent_successfully' => false,
+                ]);
+                
                 // Send email with download link
                 Mail::to($passer->email)
                     ->send(new SarFormEmail($passer, $downloadUrl));
                 
+                // Mark as sent successfully
+                $sarGeneration->update([
+                    'sent_at' => now(),
+                    'email_sent_successfully' => true,
+                ]);
+                
+                $emailSuccess = true;
                 $successCount++;
             } else {
                 $failedCount++;
@@ -123,10 +147,13 @@ private function sendSarEmails($passers, $enrollmentDate, $enrollmentTime)
             $errors[] = [
                 'passer' => $passer->first_name . ' ' . $passer->surname,
                 'email' => $passer->email,
-                'error' => $e->getMessage()
+                'error' => 'Failed to send email'
             ];
+            
+            // Log detailed error for debugging
             \Log::error('SAR email failed for passer: ' . $passer->test_passer_id, [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
         }
     }
@@ -277,13 +304,176 @@ public function update(Request $request, $id)
         // Check if file exists
         $filePath = 'tmp/' . $filename;
         
-        if (!\Storage::exists($filePath)) {
+        if (!Storage::exists($filePath)) {
             abort(404, 'File not found');
         }
 
         // Return file download response
-        return \Storage::download($filePath, $filename, [
+        return Storage::download($filePath, $filename, [
             'Content-Type' => 'application/pdf',
         ]);
+    }
+
+    /**
+     * Get all SAR generations for admin viewing
+     */
+    public function getSarGenerations(Request $request)
+    {
+        $query = SarGeneration::with('testPasser')
+            ->orderBy('sent_at', 'desc');
+
+        // Filter by school year if provided
+        if ($request->has('school_year') && $request->school_year) {
+            $query->whereHas('testPasser', function($q) use ($request) {
+                $q->where('school_year', $request->school_year);
+            });
+        }
+
+        // Filter by batch if provided
+        if ($request->has('batch_number') && $request->batch_number) {
+            $query->whereHas('testPasser', function($q) use ($request) {
+                $q->where('batch_number', $request->batch_number);
+            });
+        }
+
+        // Search by name or reference number
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->whereHas('testPasser', function($q) use ($search) {
+                $q->where('reference_number', 'like', "%{$search}%")
+                  ->orWhere('surname', 'like', "%{$search}%")
+                  ->orWhere('first_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $sarGenerations = $query->paginate(20);
+
+        return response()->json($sarGenerations);
+    }
+
+    /**
+     * Admin download SAR PDF
+     */
+    public function adminDownloadSar($id)
+    {
+        $sarGeneration = SarGeneration::findOrFail($id);
+        
+        // Build full file path
+        $fullPath = storage_path('app/' . $sarGeneration->file_path);
+        
+        // Check if file exists
+        if (!file_exists($fullPath)) {
+            \Log::error('SAR file not found', ['path' => $fullPath, 'id' => $id]);
+            abort(404, 'File not found or expired');
+        }
+
+        // Return file download response
+        return response()->download($fullPath, $sarGeneration->filename, [
+            'Content-Type' => 'application/pdf',
+        ]);
+    }
+
+    /**
+     * Admin preview SAR PDF (inline view)
+     */
+    public function adminPreviewSar($id)
+    {
+        $sarGeneration = SarGeneration::findOrFail($id);
+        
+        // Build full file path
+        $fullPath = storage_path('app/' . $sarGeneration->file_path);
+        
+        // Check if file exists
+        if (!file_exists($fullPath)) {
+            \Log::error('SAR file not found for preview', ['path' => $fullPath, 'id' => $id]);
+            abort(404, 'File not found or expired');
+        }
+
+        // Return file for inline viewing
+        return response()->file($fullPath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $sarGeneration->filename . '"',
+        ]);
+    }
+
+    /**
+     * Preview SAR email template
+     */
+    public function previewSarEmailTemplate(Request $request)
+    {
+        $request->validate([
+            'passer_id' => 'required|exists:test_passers,test_passer_id',
+        ]);
+
+        $passer = TestPasser::findOrFail($request->passer_id);
+        
+        // Generate a sample download URL (won't actually work, just for preview)
+        $downloadUrl = route('sar.passer-download', [
+            'filename' => 'PREVIEW_SAR_' . $passer->reference_number . '_SAMPLE.pdf',
+            'reference' => $passer->reference_number
+        ]);
+
+        // Return the email view directly
+        return view('emails.sar-form', [
+            'passerName' => trim($passer->surname . ', ' . $passer->first_name . ' ' . ($passer->middle_name ?? '')),
+            'referenceNumber' => $passer->reference_number,
+            'downloadUrl' => $downloadUrl,
+        ]);
+    }
+
+    /**
+     * Preview SAR PDF Form with sample data
+     */
+    public function previewSarPdfTemplate(Request $request)
+    {
+        $request->validate([
+            'passer_id' => 'required|exists:test_passers,test_passer_id',
+            'enrollment_date' => 'required|string',
+            'enrollment_time' => 'required|string',
+        ]);
+
+        $passer = TestPasser::findOrFail($request->passer_id);
+        $enrollmentDate = $request->enrollment_date;
+        $enrollmentTime = $request->enrollment_time;
+
+        try {
+            // Prepare SAR data from test passer
+            $sarData = $this->prepareSarDataFromPasser($passer, $enrollmentDate, $enrollmentTime);
+            
+            // Generate SAR PDF
+            $sarService = app(SarFormService::class);
+            $result = $sarService->generateSarPdf($sarData);
+            
+            if ($result['success']) {
+                $fullPath = storage_path('app/' . $result['pdf_path']);
+                
+                if (file_exists($fullPath)) {
+                    // Read PDF content before deletion
+                    $pdfContent = file_get_contents($fullPath);
+                    
+                    // Delete temporary preview file
+                    unlink($fullPath);
+                    
+                    // Return PDF for inline preview
+                    return response($pdfContent, 200, [
+                        'Content-Type' => 'application/pdf',
+                        'Content-Disposition' => 'inline; filename="PREVIEW_' . $result['filename'] . '"',
+                    ]);
+                }
+            }
+            
+            return response()->json(['error' => 'Failed to generate preview'], 500);
+        } catch (\Exception $e) {
+            // Log detailed error for debugging
+            \Log::error('SAR PDF preview failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'passer_id' => $passer->test_passer_id
+            ]);
+            
+            // Return sanitized error message to user
+            return response()->json(['error' => 'Failed to generate preview'], 500);
+        }
     }
 }
