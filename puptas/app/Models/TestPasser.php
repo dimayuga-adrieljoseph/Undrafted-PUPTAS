@@ -36,4 +36,12 @@ class TestPasser extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Get the SAR generations for this test passer
+     */
+    public function sarGenerations()
+    {
+        return $this->hasMany(SarGeneration::class, 'test_passer_id', 'test_passer_id');
+    }
 }
