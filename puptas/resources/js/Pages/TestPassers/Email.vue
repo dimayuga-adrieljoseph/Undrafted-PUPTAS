@@ -1354,6 +1354,12 @@ const previewSarPdfForm = async () => {
     showSarPdfPreview.value = true;
     
     try {
+        // Revoke previous blob URL to prevent memory leak
+        if (sarPdfPreviewUrl.value) {
+            URL.revokeObjectURL(sarPdfPreviewUrl.value);
+            sarPdfPreviewUrl.value = '';
+        }
+        
         // Create a FormData object for the POST request
         const formData = new FormData();
         formData.append('passer_id', selectedPassers.value[0]);

@@ -184,12 +184,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
     Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
     
-    // Admin SAR Management Routes
-    Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
-    Route::get('/admin/sar/{id}/download', [TestPasserController::class, 'adminDownloadSar'])->name('admin.sar-download');
-    Route::get('/admin/sar/{id}/preview', [TestPasserController::class, 'adminPreviewSar'])->name('admin.sar-preview');
-    Route::post('/admin/sar/preview-email-template', [TestPasserController::class, 'previewSarEmailTemplate'])->name('admin.sar-preview-email');
-    Route::post('/admin/sar/preview-pdf-template', [TestPasserController::class, 'previewSarPdfTemplate'])->name('admin.sar-preview-pdf');
+    // Admin SAR Management Routes - Restricted to Admin (2) and Registrar (6)
+    Route::middleware(['role:2,6'])->group(function () {
+        Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
+        Route::get('/admin/sar/{id}/download', [TestPasserController::class, 'adminDownloadSar'])->name('admin.sar-download');
+        Route::get('/admin/sar/{id}/preview', [TestPasserController::class, 'adminPreviewSar'])->name('admin.sar-preview');
+        Route::post('/admin/sar/preview-email-template', [TestPasserController::class, 'previewSarEmailTemplate'])->name('admin.sar-preview-email');
+        Route::post('/admin/sar/preview-pdf-template', [TestPasserController::class, 'previewSarPdfTemplate'])->name('admin.sar-preview-pdf');
+    });
 });
 
 Route::middleware(['auth:sanctum'])->group(function () {

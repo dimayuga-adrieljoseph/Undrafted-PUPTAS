@@ -93,6 +93,9 @@ private function sendSarEmails($passers, $enrollmentDate, $enrollmentTime)
     $errors = [];
 
     foreach ($passers as $passer) {
+        $sarGeneration = null;
+        $emailSuccess = false;
+        
         try {
             // Prepare SAR data from test passer
             $sarData = $this->prepareSarDataFromPasser($passer, $enrollmentDate, $enrollmentTime);
@@ -107,21 +110,29 @@ private function sendSarEmails($passers, $enrollmentDate, $enrollmentTime)
                     'reference' => $passer->reference_number
                 ]);
                 
-                // Save SAR generation record
-                SarGeneration::create([
+                // Create SAR generation record BEFORE sending email (no sent_at yet)
+                $sarGeneration = SarGeneration::create([
                     'test_passer_id' => $passer->test_passer_id,
                     'filename' => $result['filename'],
                     'file_path' => $result['pdf_path'],
                     'enrollment_date' => $enrollmentDate,
                     'enrollment_time' => $enrollmentTime,
-                    'sent_at' => now(),
                     'sent_to_email' => $passer->email,
+                    'created_by_user_id' => auth()->id(),
+                    'email_sent_successfully' => false,
                 ]);
                 
                 // Send email with download link
                 Mail::to($passer->email)
                     ->send(new SarFormEmail($passer, $downloadUrl));
                 
+                // Mark as sent successfully
+                $sarGeneration->update([
+                    'sent_at' => now(),
+                    'email_sent_successfully' => true,
+                ]);
+                
+                $emailSuccess = true;
                 $successCount++;
             } else {
                 $failedCount++;
@@ -136,10 +147,13 @@ private function sendSarEmails($passers, $enrollmentDate, $enrollmentTime)
             $errors[] = [
                 'passer' => $passer->first_name . ' ' . $passer->surname,
                 'email' => $passer->email,
-                'error' => $e->getMessage()
+                'error' => 'Failed to send email'
             ];
+            
+            // Log detailed error for debugging
             \Log::error('SAR email failed for passer: ' . $passer->test_passer_id, [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
         }
     }
@@ -435,8 +449,14 @@ public function update(Request $request, $id)
                 $fullPath = storage_path('app/' . $result['pdf_path']);
                 
                 if (file_exists($fullPath)) {
+                    // Read PDF content before deletion
+                    $pdfContent = file_get_contents($fullPath);
+                    
+                    // Delete temporary preview file
+                    unlink($fullPath);
+                    
                     // Return PDF for inline preview
-                    return response()->file($fullPath, [
+                    return response($pdfContent, 200, [
                         'Content-Type' => 'application/pdf',
                         'Content-Disposition' => 'inline; filename="PREVIEW_' . $result['filename'] . '"',
                     ]);
@@ -445,8 +465,15 @@ public function update(Request $request, $id)
             
             return response()->json(['error' => 'Failed to generate preview'], 500);
         } catch (\Exception $e) {
-            \Log::error('SAR PDF preview failed', ['error' => $e->getMessage()]);
-            return response()->json(['error' => 'Failed to generate SAR preview: ' . $e->getMessage()], 500);
+            // Log detailed error for debugging
+            \Log::error('SAR PDF preview failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'passer_id' => $passer->test_passer_id
+            ]);
+            
+            // Return sanitized error message to user
+            return response()->json(['error' => 'Failed to generate preview'], 500);
         }
     }
 }

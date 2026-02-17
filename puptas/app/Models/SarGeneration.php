@@ -14,10 +14,13 @@ class SarGeneration extends Model
         'enrollment_time',
         'sent_at',
         'sent_to_email',
+        'created_by_user_id',
+        'email_sent_successfully',
     ];
 
     protected $casts = [
         'sent_at' => 'datetime',
+        'email_sent_successfully' => 'boolean',
     ];
 
     /**
@@ -26,5 +29,13 @@ class SarGeneration extends Model
     public function testPasser()
     {
         return $this->belongsTo(TestPasser::class, 'test_passer_id', 'test_passer_id');
+    }
+
+    /**
+     * Get the user who created/sent this SAR
+     */
+    public function createdBy()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by_user_id');
     }
 }
