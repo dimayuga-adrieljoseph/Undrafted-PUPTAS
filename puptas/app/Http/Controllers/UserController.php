@@ -82,7 +82,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::with('role')->orderBy('created_at', 'desc')->get();
+       $users = User::with(['role', 'programs', 'applicantProfile.firstChoiceProgram'])->orderBy('created_at', 'desc')->get();
 
         $userCountsByRole = User::select('role_id', \DB::raw('count(*) as total'))
             ->groupBy('role_id')
