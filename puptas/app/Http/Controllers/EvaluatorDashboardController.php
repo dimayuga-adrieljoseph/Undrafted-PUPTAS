@@ -51,9 +51,8 @@ class EvaluatorDashboardController extends Controller
         $files = $user->files->keyBy('type');
 
         $uploadedFiles = [
-            'file10Front'   => isset($files['file10_front']) ? Storage::url($files['file10_front']->file_path) : null,
-            'file11'        => isset($files['file10_front']) ? Storage::url($files['file10_front']->file_path) : null,
-            'file12'        => isset($files['file10_front']) ? Storage::url($files['file10_front']->file_path) : null,
+            'file11'        => isset($files['file11_back']) ? Storage::url($files['file11_back']->file_path) : null,
+            'file12'        => isset($files['file12_back']) ? Storage::url($files['file12_back']->file_path) : null,
             'schoolId'      => isset($files['school_id']) ? Storage::url($files['school_id']->file_path) : null,
             'nonEnrollCert' => isset($files['non_enroll_cert']) ? Storage::url($files['non_enroll_cert']->file_path) : null,
             'psa'           => isset($files['psa']) ? Storage::url($files['psa']->file_path) : null,
@@ -140,8 +139,7 @@ class EvaluatorDashboardController extends Controller
         \Log::info('Files array received:', ['files' => $files]);
 
         $keyMap = [
-            'file10Front'   => 'file10_front',
-            'file11'        => 'file11',
+            'file11'        => 'file11_back',
             'file12'        => 'file12',
             'schoolId'      => 'school_id',
             'nonEnrollCert' => 'non_enroll_cert',

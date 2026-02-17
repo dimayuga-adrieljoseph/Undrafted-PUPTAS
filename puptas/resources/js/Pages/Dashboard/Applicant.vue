@@ -1,3 +1,189 @@
+<script setup>
+import { defineProps, ref, computed, onMounted } from "vue";
+const axios = window.axios;
+import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
+import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
+
+const props = defineProps({ user: Object });
+
+const showModal = ref(false);
+const loading = ref(false);
+const error = ref("");
+const fileStatuses = ref({});
+const applicationStatus = ref("");
+const enrollmentStatus = ref("");
+const applicationProcesses = ref([]);
+const showImageModal = ref(false);
+const previewSrc = ref("");
+const uploadingKeys = ref([]);
+const fileUploadProgress = ref({});
+const uploadErrors = ref({});
+
+// File statuses come directly from the backend
+const stepKeys = computed(() => Object.keys(fileStatuses.value));
+
+const uploadedCount = computed(() => {
+  return Object.values(fileStatuses.value).filter(f => f?.url).length;
+});
+
+const uploadProgressPercentage = computed(() => {
+  if (!stepKeys.value.length) return 0;
+  return (uploadedCount.value / stepKeys.value.length) * 100;
+});
+
+const formatKey = (key) => key.replace(/([A-Z])/g, " $1").toUpperCase();
+const formatStage = (stage) => stage.charAt(0).toUpperCase() + stage.slice(1).replace("_", " ");
+const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const formatTimestamp = (ts) => ts ? new Date(ts).toLocaleString(undefined, { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" }) : "";
+
+const getStatusShort = (status) => {
+  switch ((status || "").toLowerCase()) {
+    case "approved": case "completed": return "OK";
+    case "pending": case "submitted": return "PD";
+    case "in_progress": case "processing": return "IP";
+    case "rejected": case "returned": return "RJ";
+    case "draft": return "DR";
+    default: return "PD";
+  }
+};
+
+const getStatusIconBg = (status) => {
+  switch ((status || "").toLowerCase()) {
+    case "approved": case "completed": return "bg-green-600";
+    case "pending": case "submitted": return "bg-blue-600";
+    case "in_progress": case "processing": return "bg-yellow-600";
+    case "rejected": case "returned": return "bg-red-600";
+    case "draft": return "bg-gray-600";
+    default: return "bg-gray-600";
+  }
+};
+
+const getEnrollmentIconBg = (status) => {
+  switch ((status || "").toLowerCase()) {
+    case "pending": return "bg-yellow-600";
+    case "temporary": return "bg-blue-600";
+    case "officially_enrolled": return "bg-green-600";
+    default: return "bg-gray-600";
+  }
+};
+
+const getBadgeClass = (status) => {
+  switch ((status || "").toLowerCase()) {
+    case "approved": case "completed": return "bg-green-500";
+    case "pending": case "submitted": return "bg-blue-500";
+    case "in_progress": case "processing": return "bg-yellow-500";
+    case "rejected": case "returned": return "bg-red-500";
+    case "draft": return "bg-gray-400";
+    default: return "bg-gray-500";
+  }
+};
+
+const getEnrollmentBadgeClass = (status) => {
+  switch ((status || "").toLowerCase()) {
+    case "pending": return "bg-yellow-500";
+    case "temporary": return "bg-yellow-500";
+    case "officially_enrolled": return "bg-green-500";
+    default: return "bg-gray-500";
+  }
+};
+
+const fetchData = async () => {
+  loading.value = true;
+  error.value = "";
+  try {
+    const { data } = await axios.get("/user/application");
+    fileStatuses.value = data.uploadedFiles || {};
+    applicationStatus.value = data.status || "";
+    enrollmentStatus.value = data.enrollment_status || "";
+    applicationProcesses.value = data.processes || [];
+  } catch {
+    error.value = "Could not load application data.";
+  } finally {
+    loading.value = false;
+  }
+};
+
+const triggerFileInput = (key) => {
+  const input = document.getElementById('file-input-' + key);
+  if (input) {
+    input.value = '';
+    input.click();
+  }
+};
+
+const reuploadFile = async (e, key) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    uploadErrors.value[key] = "File size must be less than 5MB";
+    setTimeout(() => {
+      delete uploadErrors.value[key];
+    }, 5000);
+    return;
+  }
+
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+  if (!validTypes.includes(file.type)) {
+    uploadErrors.value[key] = "Please upload an image or PDF file";
+    setTimeout(() => {
+      delete uploadErrors.value[key];
+    }, 5000);
+    return;
+  }
+
+  uploadingKeys.value.push(key);
+  fileUploadProgress.value[key] = 0;
+  delete uploadErrors.value[key];
+
+  const form = new FormData();
+  form.append("file", file);
+  form.append("field", key);
+
+  try {
+    const { data } = await axios.post("/user/application/reupload", form, {
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          fileUploadProgress.value[key] = percentCompleted;
+        }
+      }
+    });
+    
+    fileStatuses.value[key] = { url: data.url, status: data.status };
+    await fetchData();
+  } catch (error) {
+    uploadErrors.value[key] = error.response?.data?.message || "Failed to upload file.";
+    setTimeout(() => {
+      delete uploadErrors.value[key];
+    }, 5000);
+  } finally {
+    uploadingKeys.value = uploadingKeys.value.filter(k => k !== key);
+    delete fileUploadProgress.value[key];
+  }
+};
+
+const openImageModal = (src) => { 
+  if(!src) return; 
+  previewSrc.value = src; 
+  showImageModal.value = true; 
+  document.body.style.overflow = 'hidden';
+};
+
+const closeImageModal = () => { 
+  showImageModal.value = false; 
+  previewSrc.value = ""; 
+  document.body.style.overflow = '';
+};
+
+const closeModal = () => (showModal.value = false);
+
+onMounted(() => { 
+  fetchData(); 
+});
+</script>
+
 <template>
   <ApplicantLayout title="Applicant Dashboard">
     <template #header>
@@ -262,193 +448,6 @@
     </div>
   </ApplicantLayout>
 </template>
-
-<script setup>
-import { defineProps, ref, computed, onMounted } from "vue";
-const axios = window.axios;
-import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
-import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
-
-const props = defineProps({ user: Object });
-
-const showModal = ref(false);
-const loading = ref(false);
-const error = ref("");
-const fileStatuses = ref({});
-const applicationStatus = ref("");
-const enrollmentStatus = ref("");
-const applicationProcesses = ref([]);
-const showImageModal = ref(false);
-const previewSrc = ref("");
-const uploadingKeys = ref([]);
-const fileUploadProgress = ref({});
-const uploadErrors = ref({});
-
-// Since backend no longer sends file10_front and file10_back,
-// we can use fileStatuses directly
-const stepKeys = computed(() => Object.keys(fileStatuses.value));
-
-const uploadedCount = computed(() => {
-  return Object.values(fileStatuses.value).filter(f => f?.url).length;
-});
-
-const uploadProgressPercentage = computed(() => {
-  if (!stepKeys.value.length) return 0;
-  return (uploadedCount.value / stepKeys.value.length) * 100;
-});
-
-const formatKey = (key) => key.replace(/([A-Z])/g, " $1").toUpperCase();
-const formatStage = (stage) => stage.charAt(0).toUpperCase() + stage.slice(1).replace("_", " ");
-const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-const formatTimestamp = (ts) => ts ? new Date(ts).toLocaleString(undefined, { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" }) : "";
-
-const getStatusShort = (status) => {
-  switch ((status || "").toLowerCase()) {
-    case "approved": case "completed": return "OK";
-    case "pending": case "submitted": return "PD";
-    case "in_progress": case "processing": return "IP";
-    case "rejected": case "returned": return "RJ";
-    case "draft": return "DR";
-    default: return "PD";
-  }
-};
-
-const getStatusIconBg = (status) => {
-  switch ((status || "").toLowerCase()) {
-    case "approved": case "completed": return "bg-green-600";
-    case "pending": case "submitted": return "bg-blue-600";
-    case "in_progress": case "processing": return "bg-yellow-600";
-    case "rejected": case "returned": return "bg-red-600";
-    case "draft": return "bg-gray-600";
-    default: return "bg-gray-600";
-  }
-};
-
-const getEnrollmentIconBg = (status) => {
-  switch ((status || "").toLowerCase()) {
-    case "pending": return "bg-yellow-600";
-    case "temporary": return "bg-blue-600";
-    case "officially_enrolled": return "bg-green-600";
-    default: return "bg-gray-600";
-  }
-};
-
-const getBadgeClass = (status) => {
-  switch ((status || "").toLowerCase()) {
-    case "approved": case "completed": return "bg-green-500";
-    case "pending": case "submitted": return "bg-blue-500";
-    case "in_progress": case "processing": return "bg-yellow-500";
-    case "rejected": case "returned": return "bg-red-500";
-    case "draft": return "bg-gray-400";
-    default: return "bg-gray-500";
-  }
-};
-
-const getEnrollmentBadgeClass = (status) => {
-  switch ((status || "").toLowerCase()) {
-    case "pending": return "bg-yellow-500";
-    case "temporary": return "bg-yellow-500";
-    case "officially_enrolled": return "bg-green-500";
-    default: return "bg-gray-500";
-  }
-};
-
-const fetchData = async () => {
-  loading.value = true;
-  error.value = "";
-  try {
-    const { data } = await axios.get("/user/application");
-    fileStatuses.value = data.uploadedFiles || {};
-    applicationStatus.value = data.status || "";
-    enrollmentStatus.value = data.enrollment_status || "";
-    applicationProcesses.value = data.processes || [];
-  } catch {
-    error.value = "Could not load application data.";
-  } finally {
-    loading.value = false;
-  }
-};
-
-const triggerFileInput = (key) => {
-  const input = document.getElementById('file-input-' + key);
-  if (input) {
-    input.value = '';
-    input.click();
-  }
-};
-
-const reuploadFile = async (e, key) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const maxSize = 5 * 1024 * 1024;
-  if (file.size > maxSize) {
-    uploadErrors.value[key] = "File size must be less than 5MB";
-    setTimeout(() => {
-      delete uploadErrors.value[key];
-    }, 5000);
-    return;
-  }
-
-  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
-  if (!validTypes.includes(file.type)) {
-    uploadErrors.value[key] = "Please upload an image or PDF file";
-    setTimeout(() => {
-      delete uploadErrors.value[key];
-    }, 5000);
-    return;
-  }
-
-  uploadingKeys.value.push(key);
-  fileUploadProgress.value[key] = 0;
-  delete uploadErrors.value[key];
-
-  const form = new FormData();
-  form.append("file", file);
-  form.append("field", key);
-
-  try {
-    const { data } = await axios.post("/user/application/reupload", form, {
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          fileUploadProgress.value[key] = percentCompleted;
-        }
-      }
-    });
-    
-    fileStatuses.value[key] = { url: data.url, status: data.status };
-    await fetchData();
-  } catch (error) {
-    uploadErrors.value[key] = error.response?.data?.message || "Failed to upload file.";
-    setTimeout(() => {
-      delete uploadErrors.value[key];
-    }, 5000);
-  } finally {
-    uploadingKeys.value = uploadingKeys.value.filter(k => k !== key);
-    delete fileUploadProgress.value[key];
-  }
-};
-
-const openImageModal = (src) => { 
-  if(!src) return; 
-  previewSrc.value = src; 
-  showImageModal.value = true; 
-  document.body.style.overflow = 'hidden';
-};
-
-const closeImageModal = () => { 
-  showImageModal.value = false; 
-  previewSrc.value = ""; 
-  document.body.style.overflow = '';
-};
-
-const closeModal = () => (showModal.value = false);
-
-onMounted(() => { 
-  fetchData(); 
-});
-</script>
 
 <style scoped>
 /* Custom colors */

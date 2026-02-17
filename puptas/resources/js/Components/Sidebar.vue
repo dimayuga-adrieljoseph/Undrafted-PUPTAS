@@ -75,10 +75,12 @@ const isDarkMode = ref(false)
 const isActiveRoute = (name) => route().current(name)
 
 const isAnyDropdownOpen = computed(() =>
-    isUserMenuOpen.value || isPasserDropdownOpen.value || isMaintenanceDropdownOpen.value
+    isUserMenuOpen.value ||
+    isPasserDropdownOpen.value ||
+    isMaintenanceDropdownOpen.value
 )
 
-const sidebarWidthClass = computed(() => 
+const sidebarWidthClass = computed(() =>
     isSidebarOpen.value ? 'w-72 px-6 py-8' : 'w-20 px-4 py-8'
 )
 
@@ -109,7 +111,10 @@ const isListPassersActive = isActiveRouteFor(['lists'])
 const isProgramsActive = isActiveRouteFor(['programs.index'])
 const isManageActive = isActiveRouteFor(['users.index'])
 const isAssignActive = isActiveRouteFor(['admin.users.create'])
-const isUserSettingsActive = isActiveRouteFor(['profile.show', 'api-tokens.index'])
+const isUserSettingsActive = isActiveRouteFor([
+    'profile.show',
+    'api-tokens.index'
+])
 
 /* ---------------- INTERACTION ---------------- */
 const onSidebarEnter = () => (isSidebarOpen.value = true)
@@ -165,8 +170,10 @@ const onClickOutside = (event) => {
 watch(
     () => page.props.url,
     () => {
-        isPasserDropdownOpen.value = isUploadFormActive.value || isListPassersActive.value
-        isMaintenanceDropdownOpen.value = isManageActive.value || isAssignActive.value
+        isPasserDropdownOpen.value =
+            isUploadFormActive.value || isListPassersActive.value
+        isMaintenanceDropdownOpen.value =
+            isManageActive.value || isAssignActive.value
         isUserMenuOpen.value = isUserSettingsActive.value
     },
     { immediate: true }
@@ -179,8 +186,11 @@ onMounted(() => {
     const savedDark = localStorage.getItem('darkMode') === 'true'
     isDarkMode.value = savedDark
     document.documentElement.classList.toggle('dark', savedDark)
-    
-    document.documentElement.style.setProperty('--sidebar-width', isSidebarOpen.value ? '18rem' : '5rem')
+
+    document.documentElement.style.setProperty(
+        '--sidebar-width',
+        isSidebarOpen.value ? '18rem' : '5rem'
+    )
 })
 
 onUnmounted(() => {
@@ -188,14 +198,19 @@ onUnmounted(() => {
 })
 
 watch(isSidebarOpen, (val) => {
-    document.documentElement.style.setProperty('--sidebar-width', val ? '18rem' : '5rem')
+    document.documentElement.style.setProperty(
+        '--sidebar-width',
+        val ? '18rem' : '5rem'
+    )
 })
 </script>
 
 <template>
     <div
         ref="sidebarRef"
-        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-2xl transition-all duration-300 ease-out"
+        class="sidebar fixed left-0 top-0 h-screen z-[9999]
+            overflow-hidden text-white shadow-2xl transition-all
+            duration-300 ease-out"
         :class="sidebarWidthClass"
         @pointerenter="onSidebarEnter"
         @pointerleave="onSidebarLeave"
@@ -206,15 +221,27 @@ watch(isSidebarOpen, (val) => {
             <div class="flex items-center gap-3">
                 <div class="sidebar-logo-container">
                     <NavLink :href="route('dashboard')" class="block">
-                        <ApplicationMark v-if="isSidebarOpen" class="h-8" />
-                        <div v-else class="w-8 h-8 rounded-full bg-gradient-to-br from-[#FFD700] to-[#FBCB77] flex items-center justify-center">
-                            <span class="text-[#9E122C] font-bold text-sm">PUP</span>
+                        <ApplicationMark
+                            v-if="isSidebarOpen"
+                            class="h-8"
+                        />
+                        <div
+                            v-else
+                            class="w-8 h-8 rounded-full bg-gradient-to-br
+                                from-[#FFD700] to-[#FBCB77] flex items-center
+                                justify-center"
+                        >
+                            <span class="text-[#9E122C] font-bold text-sm">
+                                PUP
+                            </span>
                         </div>
                     </NavLink>
                 </div>
                 <div v-if="isSidebarOpen" class="flex-1">
                     <h1 class="text-lg font-bold text-white">PUP Portal</h1>
-                    <p class="text-xs text-gray-300 mt-0.5">Management System</p>
+                    <p class="text-xs text-gray-300 mt-0.5">
+                        Management System
+                    </p>
                 </div>
             </div>
         </div>
@@ -222,7 +249,10 @@ watch(isSidebarOpen, (val) => {
         <!-- Navigation Content -->
         <div class="sidebar-content">
             <!-- ================= ADMIN VARIANT ================= -->
-            <nav v-if="!['record', 'medical', 'interviewer', 'evaluator', 'applicant'].includes(props.variant)">
+            <nav
+                v-if="!['record', 'medical', 'interviewer', 'evaluator',
+                    'applicant'].includes(props.variant)"
+            >
                 <ul class="space-y-2">
                     <!-- Dashboard -->
                     <li>
@@ -233,10 +263,19 @@ watch(isSidebarOpen, (val) => {
                             :class="{ 'nav-item-active': isDashboardActive }"
                         >
                             <div class="nav-icon">
-                                <FontAwesomeIcon icon="tachometer-alt" class="text-lg" />
+                                <FontAwesomeIcon
+                                    icon="tachometer-alt"
+                                    class="text-lg"
+                                />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">Dashboard</span>
-                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isDashboardActive }"></div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Dashboard
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ 'active': isDashboardActive }"
+                            ></div>
                         </NavLink>
                     </li>
 
@@ -245,18 +284,34 @@ watch(isSidebarOpen, (val) => {
                         <div
                             @click.stop="togglePasserMenu"
                             class="nav-item group cursor-pointer"
-                            :class="{ 'nav-item-active': isPasserDropdownOpen || isUploadFormActive || isListPassersActive }"
+                            :class="{
+                                'nav-item-active': isPasserDropdownOpen ||
+                                    isUploadFormActive || isListPassersActive
+                            }"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon icon="users" class="text-lg" />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">Passers</span>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Passers
+                            </span>
                             <div class="flex items-center gap-2">
-                                <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isPasserDropdownOpen || isUploadFormActive || isListPassersActive }"></div>
-                                <FontAwesomeIcon 
+                                <div
                                     v-if="isSidebarOpen"
-                                    :icon="isPasserDropdownOpen ? 'caret-down' : 'caret-right'"
-                                    class="text-xs text-gray-400 transition-transform duration-200"
+                                    class="nav-indicator"
+                                    :class="{
+                                        'active': isPasserDropdownOpen ||
+                                            isUploadFormActive ||
+                                            isListPassersActive
+                                    }"
+                                ></div>
+                                <FontAwesomeIcon
+                                    v-if="isSidebarOpen"
+                                    :icon="isPasserDropdownOpen
+                                        ? 'caret-down'
+                                        : 'caret-right'"
+                                    class="text-xs text-gray-400
+                                        transition-transform duration-200"
                                     :class="{ 'rotate-90': isPasserDropdownOpen }"
                                 />
                             </div>
@@ -264,28 +319,43 @@ watch(isSidebarOpen, (val) => {
 
                         <!-- Dropdown Content -->
                         <transition
-                            enter-active-class="transition-all duration-200 ease-out"
-                            leave-active-class="transition-all duration-150 ease-in"
+                            enter-active-class="transition-all duration-200
+                                ease-out"
+                            leave-active-class="transition-all duration-150
+                                ease-in"
                             enter-from-class="opacity-0 max-h-0"
                             enter-to-class="opacity-100 max-h-40"
                             leave-from-class="opacity-100 max-h-40"
                             leave-to-class="opacity-0 max-h-0"
                         >
-                            <div v-show="isPasserDropdownOpen && isSidebarOpen" class="dropdown-content ml-10 mt-1 space-y-1">
-                                <NavLink 
-                                    :href="route('upload.form')" 
+                            <div
+                                v-show="isPasserDropdownOpen && isSidebarOpen"
+                                class="dropdown-content ml-10 mt-1 space-y-1"
+                            >
+                                <NavLink
+                                    :href="route('upload.form')"
                                     class="dropdown-item"
-                                    :class="{ 'dropdown-item-active': isUploadFormActive }"
+                                    :class="{
+                                        'dropdown-item-active': isUploadFormActive
+                                    }"
                                 >
-                                    <FontAwesomeIcon icon="upload" class="text-xs mr-2" />
+                                    <FontAwesomeIcon
+                                        icon="upload"
+                                        class="text-xs mr-2"
+                                    />
                                     Upload Passer
                                 </NavLink>
-                                <NavLink 
-                                    :href="route('lists')" 
+                                <NavLink
+                                    :href="route('lists')"
                                     class="dropdown-item"
-                                    :class="{ 'dropdown-item-active': isListPassersActive }"
+                                    :class="{
+                                        'dropdown-item-active': isListPassersActive
+                                    }"
                                 >
-                                    <FontAwesomeIcon icon="list" class="text-xs mr-2" />
+                                    <FontAwesomeIcon
+                                        icon="list"
+                                        class="text-xs mr-2"
+                                    />
                                     List Passers
                                 </NavLink>
                             </div>
@@ -294,49 +364,76 @@ watch(isSidebarOpen, (val) => {
 
                     <!-- Applications -->
                     <li>
-                        <NavLink 
-                            :href="route('applications')" 
+                        <NavLink
+                            :href="route('applications')"
                             :active="isApplicationsActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isApplicationsActive }"
                         >
                             <div class="nav-icon">
-                                <FontAwesomeIcon icon="envelope-open-text" class="text-lg" />
+                                <FontAwesomeIcon
+                                    icon="envelope-open-text"
+                                    class="text-lg"
+                                />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">Applications</span>
-                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isApplicationsActive }"></div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Applications
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ 'active': isApplicationsActive }"
+                            ></div>
                         </NavLink>
                     </li>
 
                     <!-- Schedules -->
                     <li>
-                        <NavLink 
-                            :href="route('schedules.index')" 
+                        <NavLink
+                            :href="route('schedules.index')"
                             :active="isScheduleActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isScheduleActive }"
                         >
                             <div class="nav-icon">
-                                <FontAwesomeIcon icon="calendar-check" class="text-lg" />
+                                <FontAwesomeIcon
+                                    icon="calendar-check"
+                                    class="text-lg"
+                                />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">Schedules</span>
-                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isScheduleActive }"></div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Schedules
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ 'active': isScheduleActive }"
+                            ></div>
                         </NavLink>
                     </li>
 
                     <!-- Programs -->
                     <li>
-                        <NavLink 
-                            :href="route('programs.index')" 
+                        <NavLink
+                            :href="route('programs.index')"
                             :active="isProgramsActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isProgramsActive }"
                         >
                             <div class="nav-icon">
-                                <FontAwesomeIcon icon="graduation-cap" class="text-lg" />
+                                <FontAwesomeIcon
+                                    icon="graduation-cap"
+                                    class="text-lg"
+                                />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">Programs</span>
-                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isProgramsActive }"></div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Programs
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ 'active': isProgramsActive }"
+                            ></div>
                         </NavLink>
                     </li>
 
@@ -345,47 +442,80 @@ watch(isSidebarOpen, (val) => {
                         <div
                             @click.stop="toggleMaintenanceMenu"
                             class="nav-item group cursor-pointer"
-                            :class="{ 'nav-item-active': isMaintenanceDropdownOpen || isManageActive || isAssignActive }"
+                            :class="{
+                                'nav-item-active': isMaintenanceDropdownOpen ||
+                                    isManageActive || isAssignActive
+                            }"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon icon="wrench" class="text-lg" />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">Maintenance</span>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Maintenance
+                            </span>
                             <div class="flex items-center gap-2">
-                                <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isMaintenanceDropdownOpen || isManageActive || isAssignActive }"></div>
-                                <FontAwesomeIcon 
+                                <div
                                     v-if="isSidebarOpen"
-                                    :icon="isMaintenanceDropdownOpen ? 'caret-down' : 'caret-right'"
-                                    class="text-xs text-gray-400 transition-transform duration-200"
-                                    :class="{ 'rotate-90': isMaintenanceDropdownOpen }"
+                                    class="nav-indicator"
+                                    :class="{
+                                        'active': isMaintenanceDropdownOpen ||
+                                            isManageActive || isAssignActive
+                                    }"
+                                ></div>
+                                <FontAwesomeIcon
+                                    v-if="isSidebarOpen"
+                                    :icon="isMaintenanceDropdownOpen
+                                        ? 'caret-down'
+                                        : 'caret-right'"
+                                    class="text-xs text-gray-400
+                                        transition-transform duration-200"
+                                    :class="{
+                                        'rotate-90': isMaintenanceDropdownOpen
+                                    }"
                                 />
                             </div>
                         </div>
 
                         <!-- Dropdown Content -->
                         <transition
-                            enter-active-class="transition-all duration-200 ease-out"
-                            leave-active-class="transition-all duration-150 ease-in"
+                            enter-active-class="transition-all duration-200
+                                ease-out"
+                            leave-active-class="transition-all duration-150
+                                ease-in"
                             enter-from-class="opacity-0 max-h-0"
                             enter-to-class="opacity-100 max-h-40"
                             leave-from-class="opacity-100 max-h-40"
                             leave-to-class="opacity-0 max-h-0"
                         >
-                            <div v-show="isMaintenanceDropdownOpen && isSidebarOpen" class="dropdown-content ml-10 mt-1 space-y-1">
-                                <NavLink 
-                                    :href="route('users.index')" 
+                            <div
+                                v-show="isMaintenanceDropdownOpen &&
+                                    isSidebarOpen"
+                                class="dropdown-content ml-10 mt-1 space-y-1"
+                            >
+                                <NavLink
+                                    :href="route('users.index')"
                                     class="dropdown-item"
-                                    :class="{ 'dropdown-item-active': isManageActive }"
+                                    :class="{
+                                        'dropdown-item-active': isManageActive
+                                    }"
                                 >
-                                    <FontAwesomeIcon icon="user-shield" class="text-xs mr-2" />
+                                    <FontAwesomeIcon
+                                        icon="user-shield"
+                                        class="text-xs mr-2"
+                                    />
                                     Manage Users
                                 </NavLink>
-                                <NavLink 
-                                    :href="route('admin.users.create')" 
+                                <NavLink
+                                    :href="route('admin.users.create')"
                                     class="dropdown-item"
-                                    :class="{ 'dropdown-item-active': isAssignActive }"
+                                    :class="{
+                                        'dropdown-item-active': isAssignActive
+                                    }"
                                 >
-                                    <FontAwesomeIcon icon="user-group" class="text-xs mr-2" />
+                                    <FontAwesomeIcon
+                                        icon="user-group"
+                                        class="text-xs mr-2"
+                                    />
                                     Assign Program
                                 </NavLink>
                             </div>
@@ -395,7 +525,10 @@ watch(isSidebarOpen, (val) => {
             </nav>
 
             <!-- ================= STAFF VARIANTS ================= -->
-            <nav v-else-if="['record', 'medical', 'interviewer', 'evaluator'].includes(props.variant)">
+            <nav
+                v-else-if="['record', 'medical', 'interviewer', 'evaluator']
+                    .includes(props.variant)"
+            >
                 <ul class="space-y-2">
                     <!-- Dashboard -->
                     <li>
@@ -406,10 +539,19 @@ watch(isSidebarOpen, (val) => {
                             :class="{ 'nav-item-active': isDashboardActive }"
                         >
                             <div class="nav-icon">
-                                <FontAwesomeIcon icon="tachometer-alt" class="text-lg" />
+                                <FontAwesomeIcon
+                                    icon="tachometer-alt"
+                                    class="text-lg"
+                                />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">Dashboard</span>
-                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isDashboardActive }"></div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Dashboard
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ 'active': isDashboardActive }"
+                            ></div>
                         </NavLink>
                     </li>
 
@@ -422,10 +564,19 @@ watch(isSidebarOpen, (val) => {
                             :class="{ 'nav-item-active': isApplicationsActive }"
                         >
                             <div class="nav-icon">
-                                <FontAwesomeIcon icon="envelope-open-text" class="text-lg" />
+                                <FontAwesomeIcon
+                                    icon="envelope-open-text"
+                                    class="text-lg"
+                                />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">Applications</span>
-                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isApplicationsActive }"></div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Applications
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ 'active': isApplicationsActive }"
+                            ></div>
                         </NavLink>
                     </li>
                 </ul>
@@ -444,8 +595,14 @@ watch(isSidebarOpen, (val) => {
                             <div class="nav-icon">
                                 <FontAwesomeIcon icon="home" class="text-lg" />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">Dashboard</span>
-                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isDashboardActive }"></div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Dashboard
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ 'active': isDashboardActive }"
+                            ></div>
                         </NavLink>
                     </li>
                 </ul>
@@ -460,18 +617,33 @@ watch(isSidebarOpen, (val) => {
                     <div
                         @click.stop="toggleUserMenu"
                         class="nav-item group cursor-pointer"
-                        :class="{ 'nav-item-active': isUserMenuOpen || isUserSettingsActive }"
+                        :class="{
+                            'nav-item-active': isUserMenuOpen ||
+                                isUserSettingsActive
+                        }"
                     >
                         <div class="nav-icon">
                             <FontAwesomeIcon icon="cog" class="text-lg" />
                         </div>
-                        <span v-if="isSidebarOpen" class="nav-label">Settings</span>
+                        <span v-if="isSidebarOpen" class="nav-label">
+                            Settings
+                        </span>
                         <div class="flex items-center gap-2">
-                            <div v-if="isSidebarOpen" class="nav-indicator" :class="{ 'active': isUserMenuOpen || isUserSettingsActive }"></div>
-                            <FontAwesomeIcon 
+                            <div
                                 v-if="isSidebarOpen"
-                                :icon="isUserMenuOpen ? 'caret-down' : 'caret-right'"
-                                class="text-xs text-gray-400 transition-transform duration-200"
+                                class="nav-indicator"
+                                :class="{
+                                    'active': isUserMenuOpen ||
+                                        isUserSettingsActive
+                                }"
+                            ></div>
+                            <FontAwesomeIcon
+                                v-if="isSidebarOpen"
+                                :icon="isUserMenuOpen
+                                    ? 'caret-down'
+                                    : 'caret-right'"
+                                class="text-xs text-gray-400
+                                    transition-transform duration-200"
                                 :class="{ 'rotate-90': isUserMenuOpen }"
                             />
                         </div>
@@ -479,27 +651,40 @@ watch(isSidebarOpen, (val) => {
 
                     <!-- Dropdown Content -->
                     <transition
-                        enter-active-class="transition-all duration-200 ease-out"
+                        enter-active-class="transition-all duration-200
+                            ease-out"
                         leave-active-class="transition-all duration-150 ease-in"
                         enter-from-class="opacity-0 max-h-0"
                         enter-to-class="opacity-100 max-h-32"
                         leave-from-class="opacity-100 max-h-32"
                         leave-to-class="opacity-0 max-h-0"
                     >
-                        <div v-show="isUserMenuOpen && isSidebarOpen" class="dropdown-content ml-10 mt-1 space-y-1">
-                            <DropdownLink 
-                                :href="route('profile.show')" 
+                        <div
+                            v-show="isUserMenuOpen && isSidebarOpen"
+                            class="dropdown-content ml-10 mt-1 space-y-1"
+                        >
+                            <DropdownLink
+                                :href="route('profile.show')"
                                 class="dropdown-item"
-                                :class="{ 'dropdown-item-active': isActiveRoute('profile.show') }"
+                                :class="{
+                                    'dropdown-item-active':
+                                        isActiveRoute('profile.show')
+                                }"
                             >
-                                <FontAwesomeIcon icon="user-circle" class="text-xs mr-2" />
+                                <FontAwesomeIcon
+                                    icon="user-circle"
+                                    class="text-xs mr-2"
+                                />
                                 Profile
                             </DropdownLink>
                             <button
                                 @click="toggleDarkMode"
                                 class="dropdown-item w-full text-left"
                             >
-                                <FontAwesomeIcon :icon="isDarkMode ? 'sun' : 'moon'" class="text-xs mr-2" />
+                                <FontAwesomeIcon
+                                    :icon="isDarkMode ? 'sun' : 'moon'"
+                                    class="text-xs mr-2"
+                                />
                                 {{ isDarkMode ? 'Light Mode' : 'Dark Mode' }}
                             </button>
                         </div>
@@ -511,12 +696,22 @@ watch(isSidebarOpen, (val) => {
                     <form @submit.prevent="logout">
                         <button
                             type="submit"
-                            class="nav-item group w-full text-left cursor-pointer hover:bg-red-600/20 transition-colors duration-200"
+                            class="nav-item group w-full text-left
+                                cursor-pointer hover:bg-red-600/20
+                                transition-colors duration-200"
                         >
                             <div class="nav-icon text-red-300">
-                                <FontAwesomeIcon icon="sign-out-alt" class="text-lg" />
+                                <FontAwesomeIcon
+                                    icon="sign-out-alt"
+                                    class="text-lg"
+                                />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label text-red-300">Logout</span>
+                            <span
+                                v-if="isSidebarOpen"
+                                class="nav-label text-red-300"
+                            >
+                                Logout
+                            </span>
                         </button>
                     </form>
                 </li>
@@ -537,11 +732,13 @@ watch(isSidebarOpen, (val) => {
 
 /* Navigation Items */
 .nav-item {
-    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative overflow-hidden;
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all
+        duration-200 relative overflow-hidden;
 }
 
 .nav-item:not(.nav-item-active):hover {
-    background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%, rgba(251, 203, 119, 0.1) 100%);
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%,
+        rgba(251, 203, 119, 0.1) 100%);
     transform: translateX(4px);
 }
 
@@ -559,11 +756,13 @@ watch(isSidebarOpen, (val) => {
 }
 
 .nav-icon {
-    @apply w-6 h-6 flex items-center justify-center text-white transition-colors duration-200;
+    @apply w-6 h-6 flex items-center justify-center text-white
+        transition-colors duration-200;
 }
 
 .nav-label {
-    @apply flex-1 text-sm font-medium text-white transition-all duration-200 whitespace-nowrap overflow-hidden;
+    @apply flex-1 text-sm font-medium text-white transition-all duration-200
+        whitespace-nowrap overflow-hidden;
 }
 
 .nav-indicator {
@@ -580,7 +779,8 @@ watch(isSidebarOpen, (val) => {
 }
 
 .dropdown-item {
-    @apply flex items-center px-3 py-2 text-xs rounded-lg transition-all duration-150 text-gray-300 hover:text-white hover:bg-white/10;
+    @apply flex items-center px-3 py-2 text-xs rounded-lg transition-all
+        duration-150 text-gray-300 hover:text-white hover:bg-white/10;
 }
 
 .dropdown-item-active {
@@ -635,7 +835,7 @@ watch(isSidebarOpen, (val) => {
         padding-top: 1rem;
         padding-bottom: 1rem;
     }
-    
+
     .nav-item {
         @apply py-2;
     }

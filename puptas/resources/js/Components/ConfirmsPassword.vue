@@ -15,7 +15,8 @@ defineProps({
     },
     content: {
         type: String,
-        default: 'For your security, please confirm your password to continue.',
+        default: 'For your security, please confirm your password ' +
+            'to continue.',
     },
     button: {
         type: String,

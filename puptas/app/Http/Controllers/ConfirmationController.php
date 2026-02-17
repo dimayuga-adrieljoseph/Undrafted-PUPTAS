@@ -48,16 +48,6 @@ class ConfirmationController extends Controller
             'status' => $status,
 
             'uploadedFiles' => [
-                'file10Front' => isset($files['file10_front']) ? [
-                    'url' => Storage::url($files['file10_front']->file_path),
-                    'status' => $files['file10_front']->status,
-                ] : null,
-
-                'file10_back' => isset($files['file10_back']) ? [
-                    'url' => Storage::url($files['file10_back']->file_path),
-                    'status' => $files['file10_back']->status,
-                ] : null,
-
                 'file11' => isset($files['file11_back']) ? [
                     'url' => Storage::url($files['file11_back']->file_path),
                     'status' => $files['file11_back']->status,
@@ -193,15 +183,13 @@ class ConfirmationController extends Controller
     public function reupload(Request $request)
     {
         $request->validate([
-            'field' => 'required|string|in:file10Front,file,file11,file12,schoolId,nonEnrollCert,psa,goodMoral,underOath,photo2x2',
+            'field' => 'required|string|in:file11,file12,schoolId,nonEnrollCert,psa,goodMoral,underOath,photo2x2',
             'file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
 
         $user = auth()->user(); // Assumes the user is logged in
 
         $map = [
-            'file10Front' => 'file10_front',
-            'file' => 'file10_back',
             'file11' => 'file11_back',
             'file12' => 'file12_back',
             'schoolId' => 'school_id',

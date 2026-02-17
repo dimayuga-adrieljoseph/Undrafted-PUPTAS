@@ -572,7 +572,6 @@ const closeUserCard = () => {
 
 const formatFileKey = (key) => {
     const map = {
-        file10Front: "Grade 10 Front",
         file11: "Grade 11 Report",
         file12: "Grade 12 Report",
         schoolId: "School ID",

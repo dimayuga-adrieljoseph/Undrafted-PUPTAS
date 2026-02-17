@@ -1,3 +1,314 @@
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { LineChart } from "vue-chart-3";
+import { Head, Link } from "@inertiajs/vue3";
+import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
+import {
+    Chart as ChartJS,
+    LineController,
+    LineElement,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    Tooltip,
+    Title,
+    Legend,
+} from "chart.js";
+
+ChartJS.register(
+    LineController,
+    LineElement,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    Tooltip,
+    Title,
+    Legend
+);
+
+import { usePage } from "@inertiajs/vue3";
+
+const page = usePage();
+const users = ref(page.props.users || []);
+
+const props = defineProps({
+    user: Object,
+    allUsers: Array,
+    summary: {
+        type: Object,
+        default: () => ({
+            total: 0,
+            accepted: 0,
+            pending: 0,
+            returned: 0,
+        }),
+    },
+});
+
+//const users = ref([]);
+const selectedUser = ref(null);
+const isLoading = ref(true);
+const errorMessage = ref("");
+const searchQuery = ref("");
+const selectedUserFiles = ref({});
+const selectedProgramId = ref("");
+const snackbar = ref({
+    visible: false,
+    message: "",
+});
+
+const showSnackbar = (msg, duration = 3000) => {
+    snackbar.value.message = msg;
+    snackbar.value.visible = true;
+    setTimeout(() => {
+        snackbar.value.visible = false;
+    }, duration);
+};
+
+const chartData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [
+        {
+            label: "Submitted",
+            data: [5, 20, 35, 50, 70, 90],
+            borderColor: "#2563EB",
+            backgroundColor: "rgba(37, 99, 235, 0.2)",
+            tension: 0.4,
+        },
+        {
+            label: "Accepted",
+            data: [2, 10, 15, 25, 40, 60],
+            borderColor: "#10B981",
+            backgroundColor: "rgba(16, 185, 129, 0.2)",
+            tension: 0.4,
+        },
+    ],
+};
+
+const getStatusClass = (status) => {
+    const s = (status || "").toLowerCase();
+    if (s === "accepted") return "bg-green-100 text-green-700";
+    if (s === "pending") return "bg-yellow-100 text-yellow-700";
+    if (s === "rejected") return "bg-red-100 text-red-700";
+    return "bg-gray-100 text-gray-600";
+};
+
+// const users = ref([]);
+// const isLoading = ref(true);
+// const errorMessage = ref("");
+
+const fetchUsers = async () => {
+    try {
+        const response = await fetch("/interviewer-dashboard/applicants", {
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        if (!response.ok) throw new Error("Failed to fetch users");
+        users.value = await response.json(); // same as Evaluator
+    } catch (error) {
+        errorMessage.value = error.message;
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+onMounted(fetchUsers);
+
+onMounted(() => {
+    fetchUsers();
+    fetchPrograms();
+});
+
+const filteredUsers = computed(() => {
+    if (!searchQuery.value.trim()) return users.value;
+    return users.value.filter((user) => {
+        if (!user.name) return false;
+        return user.name
+            .toLowerCase()
+            .includes(searchQuery.value.toLowerCase());
+    });
+});
+
+const displayedUsers = computed(() => {
+    if (searchQuery.value.trim()) return filteredUsers.value;
+    return users.value.slice(0, 4);
+});
+
+const selectUser = async (user) => {
+    try {
+        const response = await axios.get(
+            `/interviewer-dashboard/application/${user.id}`
+        );
+
+        selectedUser.value = {
+            ...user,
+            application: {
+                ...response.data.user.application,
+                processes: response.data.user.application?.processes || [],
+                program: response.data.user.application?.program || null,
+            },
+            grades: response.data.user.grades || null,
+        };
+
+        selectedUserFiles.value = response.data.uploadedFiles || {};
+        console.log("Full user data:", response.data.user);
+        console.log("Grades check:", response.data.user.grades);
+
+        // ✅ Add this line to load programs into the dropdown
+        await fetchPrograms();
+
+        console.log(
+            "User & files:",
+            selectedUser.value,
+            selectedUserFiles.value
+        );
+    } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        selectedUserFiles.value = {};
+        selectedUser.value = null;
+    }
+};
+
+const closeUserCard = () => {
+    selectedUser.value = null;
+};
+
+const formatFileKey = (key) => {
+    const map = {
+        file11: "Grade 11 Report",
+        file12: "Grade 12 Report",
+        schoolId: "School ID",
+        nonEnrollCert: "Certificate of Non-Enrollment",
+        psa: "PSA Birth Certificate",
+        goodMoral: "Good Moral Certificate",
+        underOath: "Under Oath Document",
+        photo2x2: "2x2 Photo",
+    };
+    return map[key] || key;
+};
+
+const previewImage = ref(null);
+const showImageModal = ref(false);
+
+const openImageModal = (src) => {
+    previewImage.value = src;
+    showImageModal.value = true;
+};
+
+const closeImageModal = () => {
+    showImageModal.value = false;
+};
+
+const isEvaluating = ref(false);
+const filesToReturn = ref({});
+
+const returnNote = ref("");
+
+const startEvaluation = () => {
+    isEvaluating.value = true;
+    filesToReturn.value = [];
+    returnNote.value = "";
+};
+
+const cancelEvaluation = () => {
+    isEvaluating.value = false;
+    filesToReturn.value = [];
+    returnNote.value = "";
+};
+
+const submitReturn = async () => {
+    const selected = Object.keys(filesToReturn.value).filter(
+        (k) => filesToReturn.value[k]
+    );
+    if (selected.length === 0 || !returnNote.value.trim()) {
+        alert("Please select files and enter a return note.");
+        return;
+    }
+
+    try {
+        await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
+            files: selected,
+            note: returnNote.value.trim(),
+        });
+
+        alert("Files returned and application status logged.");
+
+        isEvaluating.value = false;
+        filesToReturn.value = {};
+        returnNote.value = "";
+
+        // ✅ Refetch updated user list & status counts
+        await fetchUsers();
+        await selectUser(selectedUser.value);
+    } catch (error) {
+        console.error(error);
+        alert("Return failed.");
+    }
+};
+
+const capitalize = (str) =>
+    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+
+const formatDate = (date) => {
+    const d = new Date(date);
+    return d.toLocaleString(); // or .toLocaleDateString() if you prefer
+};
+
+const acceptApplication = async () => {
+    try {
+        await axios.post(
+            `/interviewer-dashboard/accept/${selectedUser.value.id}`
+        );
+        showSnackbar("Application accepted.");
+        selectedUser.value = null;
+        await fetchUsers();
+    } catch (e) {
+        console.error("Accept failed:", e);
+        const msg =
+            e.response?.data?.message ||
+            "Failed to accept application due to an unexpected error.";
+        showSnackbar(msg);
+    }
+};
+
+const transferApplication = async () => {
+    try {
+        await axios.post(
+            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
+            {
+                program_id: selectedProgramId.value,
+            }
+        );
+        alert("Applicant transferred successfully!");
+        selectedUser.value = null;
+        selectedProgramId.value = "";
+        fetchUsers();
+    } catch (e) {
+        console.error("Transfer failed", e);
+
+        // ✅ Fix: use `e` not `error`
+        if (e.response?.data?.message) {
+            showSnackbar(e.response.data.message); // ✅ show server message
+        } else {
+            showSnackbar("Transfer failed due to an unexpected error.");
+        }
+    }
+};
+
+const availablePrograms = ref([]);
+
+const fetchPrograms = async () => {
+    try {
+        const response = await axios.get("/interviewer-dashboard/programs");
+        availablePrograms.value = response.data.programs;
+    } catch (e) {
+        console.error("Failed to load programs", e);
+    }
+};
+</script>
+
 <template>
     <Head title="Interviewer Dashboard" />
     <InterviewerLayout>
@@ -414,318 +725,6 @@
         </div>
     </InterviewerLayout>
 </template>
-
-<script setup>
-import { ref, computed, onMounted } from "vue";
-import { LineChart } from "vue-chart-3";
-import { Head, Link } from "@inertiajs/vue3";
-import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
-import {
-    Chart as ChartJS,
-    LineController,
-    LineElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    Tooltip,
-    Title,
-    Legend,
-} from "chart.js";
-
-ChartJS.register(
-    LineController,
-    LineElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    Tooltip,
-    Title,
-    Legend
-);
-
-import { usePage } from "@inertiajs/vue3";
-
-const page = usePage();
-const users = ref(page.props.users || []);
-
-const props = defineProps({
-    user: Object,
-    allUsers: Array,
-    summary: {
-        type: Object,
-        default: () => ({
-            total: 0,
-            accepted: 0,
-            pending: 0,
-            returned: 0,
-        }),
-    },
-});
-
-//const users = ref([]);
-const selectedUser = ref(null);
-const isLoading = ref(true);
-const errorMessage = ref("");
-const searchQuery = ref("");
-const selectedUserFiles = ref({});
-const selectedProgramId = ref("");
-const snackbar = ref({
-    visible: false,
-    message: "",
-});
-
-const showSnackbar = (msg, duration = 3000) => {
-    snackbar.value.message = msg;
-    snackbar.value.visible = true;
-    setTimeout(() => {
-        snackbar.value.visible = false;
-    }, duration);
-};
-
-const chartData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-        {
-            label: "Submitted",
-            data: [5, 20, 35, 50, 70, 90],
-            borderColor: "#2563EB",
-            backgroundColor: "rgba(37, 99, 235, 0.2)",
-            tension: 0.4,
-        },
-        {
-            label: "Accepted",
-            data: [2, 10, 15, 25, 40, 60],
-            borderColor: "#10B981",
-            backgroundColor: "rgba(16, 185, 129, 0.2)",
-            tension: 0.4,
-        },
-    ],
-};
-
-const getStatusClass = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
-    if (s === "rejected") return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-600";
-};
-
-// const users = ref([]);
-// const isLoading = ref(true);
-// const errorMessage = ref("");
-
-const fetchUsers = async () => {
-    try {
-        const response = await fetch("/interviewer-dashboard/applicants", {
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json(); // same as Evaluator
-    } catch (error) {
-        errorMessage.value = error.message;
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-onMounted(fetchUsers);
-
-onMounted(() => {
-    fetchUsers();
-    fetchPrograms();
-});
-
-const filteredUsers = computed(() => {
-    if (!searchQuery.value.trim()) return users.value;
-    return users.value.filter((user) => {
-        if (!user.name) return false;
-        return user.name
-            .toLowerCase()
-            .includes(searchQuery.value.toLowerCase());
-    });
-});
-
-const displayedUsers = computed(() => {
-    if (searchQuery.value.trim()) return filteredUsers.value;
-    return users.value.slice(0, 4);
-});
-
-const selectUser = async (user) => {
-    try {
-        const response = await axios.get(
-            `/interviewer-dashboard/application/${user.id}`
-        );
-
-        selectedUser.value = {
-            ...user,
-            application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
-                program: response.data.user.application?.program || null,
-            },
-            grades: response.data.user.grades || null,
-        };
-
-        selectedUserFiles.value = response.data.uploadedFiles || {};
-        console.log("Full user data:", response.data.user);
-        console.log("Grades check:", response.data.user.grades);
-
-        // ✅ Add this line to load programs into the dropdown
-        await fetchPrograms();
-
-        console.log(
-            "User & files:",
-            selectedUser.value,
-            selectedUserFiles.value
-        );
-    } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        selectedUserFiles.value = {};
-        selectedUser.value = null;
-    }
-};
-
-const closeUserCard = () => {
-    selectedUser.value = null;
-};
-
-const formatFileKey = (key) => {
-    const map = {
-        file10Front: "Grade 10 Front",
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
-        schoolId: "School ID",
-        nonEnrollCert: "Certificate of Non-Enrollment",
-        psa: "PSA Birth Certificate",
-        goodMoral: "Good Moral Certificate",
-        underOath: "Under Oath Document",
-        photo2x2: "2x2 Photo",
-    };
-    return map[key] || key;
-};
-
-const previewImage = ref(null);
-const showImageModal = ref(false);
-
-const openImageModal = (src) => {
-    previewImage.value = src;
-    showImageModal.value = true;
-};
-
-const closeImageModal = () => {
-    showImageModal.value = false;
-};
-
-const isEvaluating = ref(false);
-const filesToReturn = ref({});
-
-const returnNote = ref("");
-
-const startEvaluation = () => {
-    isEvaluating.value = true;
-    filesToReturn.value = [];
-    returnNote.value = "";
-};
-
-const cancelEvaluation = () => {
-    isEvaluating.value = false;
-    filesToReturn.value = [];
-    returnNote.value = "";
-};
-
-const submitReturn = async () => {
-    const selected = Object.keys(filesToReturn.value).filter(
-        (k) => filesToReturn.value[k]
-    );
-    if (selected.length === 0 || !returnNote.value.trim()) {
-        alert("Please select files and enter a return note.");
-        return;
-    }
-
-    try {
-        await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
-            files: selected,
-            note: returnNote.value.trim(),
-        });
-
-        alert("Files returned and application status logged.");
-
-        isEvaluating.value = false;
-        filesToReturn.value = {};
-        returnNote.value = "";
-
-        // ✅ Refetch updated user list & status counts
-        await fetchUsers();
-        await selectUser(selectedUser.value);
-    } catch (error) {
-        console.error(error);
-        alert("Return failed.");
-    }
-};
-
-const capitalize = (str) =>
-    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
-
-const formatDate = (date) => {
-    const d = new Date(date);
-    return d.toLocaleString(); // or .toLocaleDateString() if you prefer
-};
-
-const acceptApplication = async () => {
-    try {
-        await axios.post(
-            `/interviewer-dashboard/accept/${selectedUser.value.id}`
-        );
-        showSnackbar("Application accepted.");
-        selectedUser.value = null;
-        await fetchUsers();
-    } catch (e) {
-        console.error("Accept failed:", e);
-        const msg =
-            e.response?.data?.message ||
-            "Failed to accept application due to an unexpected error.";
-        showSnackbar(msg);
-    }
-};
-
-const transferApplication = async () => {
-    try {
-        await axios.post(
-            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
-            {
-                program_id: selectedProgramId.value,
-            }
-        );
-        alert("Applicant transferred successfully!");
-        selectedUser.value = null;
-        selectedProgramId.value = "";
-        fetchUsers();
-    } catch (e) {
-        console.error("Transfer failed", e);
-
-        // ✅ Fix: use `e` not `error`
-        if (e.response?.data?.message) {
-            showSnackbar(e.response.data.message); // ✅ show server message
-        } else {
-            showSnackbar("Transfer failed due to an unexpected error.");
-        }
-    }
-};
-
-const availablePrograms = ref([]);
-
-const fetchPrograms = async () => {
-    try {
-        const response = await axios.get("/interviewer-dashboard/programs");
-        availablePrograms.value = response.data.programs;
-    } catch (e) {
-        console.error("Failed to load programs", e);
-    }
-};
-</script>
 
 <style scoped>
 .slide-fade-enter-active,

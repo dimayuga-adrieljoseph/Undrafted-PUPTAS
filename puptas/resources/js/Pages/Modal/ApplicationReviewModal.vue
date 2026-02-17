@@ -102,10 +102,42 @@
                         </div>
                     </div>
 
-                    <!-- Program Choices -->
-                    <div v-if="applicationData.program_id">
+                    <!-- Program Choices - Show selection if not submitted, display if submitted -->
+                    <div>
                         <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">Program Choices</h3>
-                        <div class="grid grid-cols-2 gap-4">
+                        
+                        <!-- If application is draft and not yet submitted, show selection -->
+                        <div v-if="canSubmit" class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">First Choice <span class="text-red-500">*</span></label>
+                                <select
+                                    v-model="selectedProgramId"
+                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-maroon-500 focus:border-maroon-500"
+                                    :disabled="submitting"
+                                >
+                                    <option value="">Select a program</option>
+                                    <option v-for="program in eligiblePrograms" :key="program.id" :value="program.id">
+                                        {{ program.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Second Choice (Optional)</label>
+                                <select
+                                    v-model="selectedSecondChoiceId"
+                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-maroon-500 focus:border-maroon-500"
+                                    :disabled="submitting"
+                                >
+                                    <option value="">Select a program</option>
+                                    <option v-for="program in filteredSecondChoicePrograms" :key="program.id" :value="program.id">
+                                        {{ program.name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- If already submitted, display the choices -->
+                        <div v-else-if="applicationData.program_id" class="grid grid-cols-2 gap-4">
                             <div>
                                 <p class="text-sm text-gray-600 dark:text-gray-400">First Choice</p>
                                 <p class="font-medium">{{ getProgramName(applicationData.program_id) || 'Not selected' }}</p>
@@ -114,6 +146,11 @@
                                 <p class="text-sm text-gray-600 dark:text-gray-400">Second Choice</p>
                                 <p class="font-medium">{{ getProgramName(applicationData.second_choice_id) || 'Not selected' }}</p>
                             </div>
+                        </div>
+
+                        <!-- No program selected yet -->
+                        <div v-else class="text-gray-500 dark:text-gray-400 text-sm">
+                            No program choices selected yet.
                         </div>
                     </div>
 
@@ -138,6 +175,16 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Submit Error -->
+                    <div v-if="submitError" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                        <p class="text-red-600 dark:text-red-400 text-sm">{{ submitError }}</p>
+                    </div>
+
+                    <!-- Submit Success -->
+                    <div v-if="submitSuccess" class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                        <p class="text-green-600 dark:text-green-400 text-sm">{{ submitSuccess }}</p>
+                    </div>
                 </div>
 
                 <!-- No Data -->
@@ -147,12 +194,34 @@
             </div>
 
             <!-- Footer -->
-            <div class="sticky bottom-0 bg-white dark:bg-gray-900 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+            <div class="sticky bottom-0 bg-white dark:bg-gray-900 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
                 <button
                     @click="closeModal"
                     class="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg"
                 >
                     Close
+                </button>
+                
+                <!-- Submit Button - Only show if can submit -->
+                <button
+                    v-if="canSubmit"
+                    @click="submitApplication"
+                    :disabled="!canSubmitApplication || submitting"
+                    :class="[
+                        'px-6 py-2 rounded-lg font-medium transition-all',
+                        canSubmitApplication && !submitting
+                            ? 'bg-maroon-700 hover:bg-maroon-800 text-white shadow-md hover:shadow-lg'
+                            : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    ]"
+                >
+                    <span v-if="submitting" class="flex items-center gap-2">
+                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Submitting...
+                    </span>
+                    <span v-else>Submit Application</span>
                 </button>
             </div>
         </div>
@@ -182,14 +251,14 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, computed } from "vue";
 
 const props = defineProps({
     show: Boolean,
     userEmail: String,
 });
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits(["close", "refreshDashboard"]);
 
 // State
 const showModal = ref(false);
@@ -200,10 +269,45 @@ const eligiblePrograms = ref([]);
 const previewImage = ref(null);
 const showImageModal = ref(false);
 
+// Submit state
+const selectedProgramId = ref("");
+const selectedSecondChoiceId = ref("");
+const submitting = ref(false);
+const submitError = ref("");
+const submitSuccess = ref("");
+
+// Computed: Check if application can be submitted (draft status)
+const canSubmit = computed(() => {
+    return applicationData.value?.status === 'draft' || !applicationData.value?.status;
+});
+
+// Computed: Check if all required documents are uploaded
+const allDocumentsUploaded = computed(() => {
+    if (!applicationData.value?.uploadedFiles) return false;
+    const files = applicationData.value.uploadedFiles;
+    return Object.values(files).every(file => file?.url);
+});
+
+// Computed: Check if application can be submitted (all conditions)
+const canSubmitApplication = computed(() => {
+    return canSubmit.value && 
+           allDocumentsUploaded.value && 
+           selectedProgramId.value &&
+           eligiblePrograms.value.length > 0;
+});
+
+// Computed: Filter out first choice from second choice options
+const filteredSecondChoicePrograms = computed(() => {
+    if (!selectedProgramId.value) return eligiblePrograms.value;
+    return eligiblePrograms.value.filter(p => p.id !== selectedProgramId.value);
+});
+
 // Watch for prop changes
 watch(() => props.show, async (visible) => {
     showModal.value = visible;
     if (visible) {
+        submitError.value = "";
+        submitSuccess.value = "";
         await fetchApplicationData();
         await fetchEligiblePrograms();
     }
@@ -254,6 +358,14 @@ const fetchApplicationData = async () => {
     try {
         const response = await window.axios.get("/user/application");
         applicationData.value = response.data;
+        
+        // Pre-populate program selections if they exist
+        if (response.data.program_id) {
+            selectedProgramId.value = response.data.program_id;
+        }
+        if (response.data.second_choice_id) {
+            selectedSecondChoiceId.value = response.data.second_choice_id;
+        }
     } catch (e) {
         error.value = "Failed to load application data.";
     } finally {
@@ -267,6 +379,50 @@ const fetchEligiblePrograms = async () => {
         eligiblePrograms.value = response.data.programs || [];
     } catch (e) {
         console.error("Failed to load programs:", e);
+    }
+};
+
+// Submit application
+const submitApplication = async () => {
+    if (!selectedProgramId.value) {
+        submitError.value = "Please select a first choice program.";
+        return;
+    }
+
+    submitting.value = true;
+    submitError.value = "";
+    submitSuccess.value = "";
+
+    try {
+        const payload = {
+            program_id: selectedProgramId.value,
+            second_choice_id: selectedSecondChoiceId.value || null,
+        };
+
+        const response = await window.axios.post("/user/application/submit", payload);
+        
+        submitSuccess.value = response.data.message || "Application submitted successfully!";
+        
+        // Update local application data
+        if (applicationData.value) {
+            applicationData.value.status = response.data.status;
+            applicationData.value.program_id = selectedProgramId.value;
+            applicationData.value.second_choice_id = selectedSecondChoiceId.value || null;
+        }
+
+        // Emit refresh event to parent
+        emit("refreshDashboard");
+
+        // Close modal after a short delay
+        setTimeout(() => {
+            closeModal();
+        }, 1500);
+
+    } catch (e) {
+        const message = e.response?.data?.message || "Failed to submit application. Please try again.";
+        submitError.value = message;
+    } finally {
+        submitting.value = false;
     }
 };
 
@@ -297,3 +453,20 @@ onMounted(() => {
     }
 });
 </script>
+
+<style scoped>
+/* Custom maroon colors for PUP */
+.bg-maroon-700 { background-color: #800000; }
+.hover\:bg-maroon-800:hover { background-color: #660000; }
+.focus\:ring-maroon-500:focus { --tw-ring-color: #800000; }
+.focus\:border-maroon-500:focus { border-color: #800000; }
+
+/* Loading animation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+</style>

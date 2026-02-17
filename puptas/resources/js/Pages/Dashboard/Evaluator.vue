@@ -1,3 +1,300 @@
+<script setup>
+import { ref, computed } from "vue";
+import { LineChart } from "vue-chart-3";
+import { Head, Link } from "@inertiajs/vue3";
+import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
+import { 
+    Chart as ChartJS, 
+    LineController, 
+    LineElement, 
+    CategoryScale, 
+    LinearScale, 
+    PointElement, 
+    Tooltip, 
+    Legend, 
+    Filler 
+} from "chart.js";
+
+ChartJS.register(
+    LineController, 
+    LineElement, 
+    CategoryScale, 
+    LinearScale, 
+    PointElement, 
+    Tooltip, 
+    Legend, 
+    Filler
+);
+
+const props = defineProps({
+    user: Object,
+    allUsers: Array,
+    summary: {
+        type: Object,
+        default: () => ({
+            total: 0,
+            accepted: 0,
+            pending: 0,
+            returned: 0,
+        }),
+    },
+});
+
+// State
+const selectedUser = ref(null);
+const selectedUserFiles = ref({});
+const searchQuery = ref("");
+const previewImage = ref(null);
+const showImageModal = ref(false);
+const isEvaluating = ref(false);
+const filesToReturn = ref({});
+const returnNote = ref("");
+
+// Filter to get only applicants (users with applications)
+const applicantsOnly = computed(() => {
+    return (props.allUsers || []).filter(user => {
+        // Check if user has an application
+        return user.application && 
+               user.application.id && 
+               user.application.status !== undefined;
+    });
+});
+
+// Summary items with icons and percentages
+const summaryItems = computed(() => [
+    { 
+        label: "Total Applications", 
+        value: props.summary?.total ?? 0, 
+        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>' },
+        percentage: 100
+    },
+    { 
+        label: "Accepted", 
+        value: props.summary?.accepted ?? 0, 
+        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
+        percentage: props.summary?.total > 0 ? Math.round((props.summary.accepted / props.summary.total) * 100) : 0
+    },
+    { 
+        label: "Pending", 
+        value: props.summary?.pending ?? 0, 
+        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
+        percentage: props.summary?.total > 0 ? Math.round((props.summary.pending / props.summary.total) * 100) : 0
+    },
+    { 
+        label: "Returned", 
+        value: props.summary?.returned ?? 0, 
+        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>' },
+        percentage: props.summary?.total > 0 ? Math.round((props.summary.returned / props.summary.total) * 100) : 0
+    },
+]);
+
+// Chart options
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            titleColor: '#1f2937',
+            bodyColor: '#374151',
+            borderColor: '#e5e7eb',
+            borderWidth: 1,
+            cornerRadius: 8,
+            padding: 12,
+        }
+    },
+    scales: {
+        x: {
+            grid: { display: false },
+            ticks: { color: '#6b7280' }
+        },
+        y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(107, 114, 128, 0.1)' },
+            ticks: { 
+                color: '#6b7280',
+                callback: (value) => value.toLocaleString()
+            }
+        }
+    }
+};
+
+// Chart data
+const chartData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [
+        { 
+            label: "Submitted", 
+            data: [5, 20, 35, 50, 70, 90], 
+            borderColor: "#2563EB",
+            backgroundColor: "rgba(37, 99, 235, 0.1)",
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "#2563EB",
+            pointBorderColor: "#ffffff",
+            pointBorderWidth: 2,
+            pointRadius: 4,
+        },
+        { 
+            label: "Accepted", 
+            data: [2, 10, 15, 25, 40, 60], 
+            borderColor: "#10B981",
+            backgroundColor: "rgba(16, 185, 129, 0.1)",
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "#10B981",
+            pointBorderColor: "#ffffff",
+            pointBorderWidth: 2,
+            pointRadius: 4,
+        },
+    ],
+};
+
+// Display only applicants in the recent applications section
+const displayedApplicants = computed(() => {
+    const applicants = applicantsOnly.value;
+    const query = searchQuery.value.trim().toLowerCase();
+    
+    if (!query) return applicants.slice(0, 5);
+    
+    return applicants.filter(applicant => 
+        `${applicant.firstname} ${applicant.lastname}`.toLowerCase().includes(query) ||
+        applicant.email?.toLowerCase().includes(query)
+    );
+});
+
+// Methods
+const getStatusClass = (status) => {
+    const s = (status || "").toLowerCase();
+    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
+};
+
+const formatDate = (dateString) => {
+    if (!dateString) return "—";
+    return new Date(dateString).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+    });
+};
+
+const formatFileKey = (key) => {
+    const map = {
+        file11: "Grade 11 Report",
+        file12: "Grade 12 Report",
+        schoolId: "School ID",
+        nonEnrollCert: "Certificate of Non-Enrollment",
+        psa: "PSA Birth Certificate",
+        goodMoral: "Good Moral Certificate",
+        underOath: "Under Oath Document",
+        photo2x2: "2x2 Photo",
+    };
+    return map[key] || key;
+};
+
+const capitalize = (str) =>
+    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ') : "";
+
+// User selection and file fetching
+const selectUser = async (user) => {
+    try {
+        const response = await axios.get(`/dashboard/user-files/${user.id}`);
+
+        selectedUser.value = {
+            ...user,
+            application: {
+                ...response.data.user.application,
+                processes: response.data.user.application?.processes || [],
+            },
+        };
+
+        selectedUserFiles.value = response.data.uploadedFiles || {};
+    } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        selectedUserFiles.value = {};
+        selectedUser.value = null;
+    }
+};
+
+const closeUserCard = () => {
+    selectedUser.value = null;
+    isEvaluating.value = false;
+    filesToReturn.value = {};
+    returnNote.value = "";
+};
+
+// Image modal
+const openImageModal = (src) => {
+    previewImage.value = src;
+    showImageModal.value = true;
+};
+
+const closeImageModal = () => {
+    showImageModal.value = false;
+};
+
+// Evaluation controls
+const startEvaluation = () => {
+    isEvaluating.value = true;
+    filesToReturn.value = {};
+    returnNote.value = "";
+};
+
+const cancelEvaluation = () => {
+    isEvaluating.value = false;
+    filesToReturn.value = {};
+    returnNote.value = "";
+};
+
+const submitReturn = async () => {
+    const selected = Object.keys(filesToReturn.value).filter(
+        (k) => filesToReturn.value[k]
+    );
+    if (selected.length === 0 || !returnNote.value.trim()) {
+        alert("Please select files and enter a return note.");
+        return;
+    }
+
+    try {
+        await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
+            files: selected,
+            note: returnNote.value.trim(),
+        });
+
+        alert("Files returned and application status logged.");
+        closeUserCard();
+        
+        // Note: You might want to refresh the user list here
+    } catch (error) {
+        console.error(error);
+        alert("Return failed.");
+    }
+};
+
+const submitPass = async () => {
+    try {
+        await axios.post(
+            `/evaluator/pass-application/${selectedUser.value.id}`,
+            {
+                note: returnNote.value || "",
+            }
+        );
+
+        alert("Application successfully passed to the next step.");
+        closeUserCard();
+        
+        // Note: You might want to refresh the user list here
+    } catch (error) {
+        console.error("Error passing application:", error);
+        alert("Failed to pass application.");
+    }
+};
+</script>
+
 <template>
     <Head title="Dashboard" />
     <EvaluatorLayout>
@@ -351,304 +648,6 @@
         </transition>
     </EvaluatorLayout>
 </template>
-
-<script setup>
-import { ref, computed } from "vue";
-import { LineChart } from "vue-chart-3";
-import { Head, Link } from "@inertiajs/vue3";
-import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
-import { 
-    Chart as ChartJS, 
-    LineController, 
-    LineElement, 
-    CategoryScale, 
-    LinearScale, 
-    PointElement, 
-    Tooltip, 
-    Legend, 
-    Filler 
-} from "chart.js";
-
-ChartJS.register(
-    LineController, 
-    LineElement, 
-    CategoryScale, 
-    LinearScale, 
-    PointElement, 
-    Tooltip, 
-    Legend, 
-    Filler
-);
-
-const props = defineProps({
-    user: Object,
-    allUsers: Array,
-    summary: {
-        type: Object,
-        default: () => ({
-            total: 0,
-            accepted: 0,
-            pending: 0,
-            returned: 0,
-        }),
-    },
-});
-
-// State
-const selectedUser = ref(null);
-const selectedUserFiles = ref({});
-const searchQuery = ref("");
-const previewImage = ref(null);
-const showImageModal = ref(false);
-const isEvaluating = ref(false);
-const filesToReturn = ref({});
-const returnNote = ref("");
-
-// Filter to get only applicants (users with applications)
-const applicantsOnly = computed(() => {
-    return (props.allUsers || []).filter(user => {
-        // Check if user has an application
-        return user.application && 
-               user.application.id && 
-               user.application.status !== undefined;
-    });
-});
-
-// Summary items with icons and percentages
-const summaryItems = computed(() => [
-    { 
-        label: "Total Applications", 
-        value: props.summary?.total ?? 0, 
-        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>' },
-        percentage: 100
-    },
-    { 
-        label: "Accepted", 
-        value: props.summary?.accepted ?? 0, 
-        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
-        percentage: props.summary?.total > 0 ? Math.round((props.summary.accepted / props.summary.total) * 100) : 0
-    },
-    { 
-        label: "Pending", 
-        value: props.summary?.pending ?? 0, 
-        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
-        percentage: props.summary?.total > 0 ? Math.round((props.summary.pending / props.summary.total) * 100) : 0
-    },
-    { 
-        label: "Returned", 
-        value: props.summary?.returned ?? 0, 
-        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>' },
-        percentage: props.summary?.total > 0 ? Math.round((props.summary.returned / props.summary.total) * 100) : 0
-    },
-]);
-
-// Chart options
-const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { display: false },
-        tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#1f2937',
-            bodyColor: '#374151',
-            borderColor: '#e5e7eb',
-            borderWidth: 1,
-            cornerRadius: 8,
-            padding: 12,
-        }
-    },
-    scales: {
-        x: {
-            grid: { display: false },
-            ticks: { color: '#6b7280' }
-        },
-        y: {
-            beginAtZero: true,
-            grid: { color: 'rgba(107, 114, 128, 0.1)' },
-            ticks: { 
-                color: '#6b7280',
-                callback: (value) => value.toLocaleString()
-            }
-        }
-    }
-};
-
-// Chart data
-const chartData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-        { 
-            label: "Submitted", 
-            data: [5, 20, 35, 50, 70, 90], 
-            borderColor: "#2563EB",
-            backgroundColor: "rgba(37, 99, 235, 0.1)",
-            fill: true,
-            tension: 0.4,
-            pointBackgroundColor: "#2563EB",
-            pointBorderColor: "#ffffff",
-            pointBorderWidth: 2,
-            pointRadius: 4,
-        },
-        { 
-            label: "Accepted", 
-            data: [2, 10, 15, 25, 40, 60], 
-            borderColor: "#10B981",
-            backgroundColor: "rgba(16, 185, 129, 0.1)",
-            fill: true,
-            tension: 0.4,
-            pointBackgroundColor: "#10B981",
-            pointBorderColor: "#ffffff",
-            pointBorderWidth: 2,
-            pointRadius: 4,
-        },
-    ],
-};
-
-// Display only applicants in the recent applications section
-const displayedApplicants = computed(() => {
-    const applicants = applicantsOnly.value;
-    const query = searchQuery.value.trim().toLowerCase();
-    
-    if (!query) return applicants.slice(0, 5);
-    
-    return applicants.filter(applicant => 
-        `${applicant.firstname} ${applicant.lastname}`.toLowerCase().includes(query) ||
-        applicant.email?.toLowerCase().includes(query)
-    );
-});
-
-// Methods
-const getStatusClass = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
-    if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-};
-
-const formatDate = (dateString) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-    });
-};
-
-const formatFileKey = (key) => {
-    const map = {
-        file10Front: "Grade 10 Front",
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
-        schoolId: "School ID",
-        nonEnrollCert: "Certificate of Non-Enrollment",
-        psa: "PSA Birth Certificate",
-        goodMoral: "Good Moral Certificate",
-        underOath: "Under Oath Document",
-        photo2x2: "2x2 Photo",
-    };
-    return map[key] || key;
-};
-
-const capitalize = (str) =>
-    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ') : "";
-
-// User selection and file fetching
-const selectUser = async (user) => {
-    try {
-        const response = await axios.get(`/dashboard/user-files/${user.id}`);
-
-        selectedUser.value = {
-            ...user,
-            application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
-            },
-        };
-
-        selectedUserFiles.value = response.data.uploadedFiles || {};
-    } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        selectedUserFiles.value = {};
-        selectedUser.value = null;
-    }
-};
-
-const closeUserCard = () => {
-    selectedUser.value = null;
-    isEvaluating.value = false;
-    filesToReturn.value = {};
-    returnNote.value = "";
-};
-
-// Image modal
-const openImageModal = (src) => {
-    previewImage.value = src;
-    showImageModal.value = true;
-};
-
-const closeImageModal = () => {
-    showImageModal.value = false;
-};
-
-// Evaluation controls
-const startEvaluation = () => {
-    isEvaluating.value = true;
-    filesToReturn.value = {};
-    returnNote.value = "";
-};
-
-const cancelEvaluation = () => {
-    isEvaluating.value = false;
-    filesToReturn.value = {};
-    returnNote.value = "";
-};
-
-const submitReturn = async () => {
-    const selected = Object.keys(filesToReturn.value).filter(
-        (k) => filesToReturn.value[k]
-    );
-    if (selected.length === 0 || !returnNote.value.trim()) {
-        alert("Please select files and enter a return note.");
-        return;
-    }
-
-    try {
-        await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
-            files: selected,
-            note: returnNote.value.trim(),
-        });
-
-        alert("Files returned and application status logged.");
-        closeUserCard();
-        
-        // Note: You might want to refresh the user list here
-    } catch (error) {
-        console.error(error);
-        alert("Return failed.");
-    }
-};
-
-const submitPass = async () => {
-    try {
-        await axios.post(
-            `/evaluator/pass-application/${selectedUser.value.id}`,
-            {
-                note: returnNote.value || "",
-            }
-        );
-
-        alert("Application successfully passed to the next step.");
-        closeUserCard();
-        
-        // Note: You might want to refresh the user list here
-    } catch (error) {
-        console.error("Error passing application:", error);
-        alert("Failed to pass application.");
-    }
-};
-</script>
 
 <style scoped>
 .fade-enter-active,
