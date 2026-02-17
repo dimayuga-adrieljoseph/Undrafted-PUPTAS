@@ -293,6 +293,15 @@ public function update(Request $request, $id)
             abort(404, 'Invalid reference number');
         }
 
+        // Sanitize filename to prevent path traversal attacks
+        $filename = basename($filename);
+        
+        // Block any path traversal attempts
+        if (strpos($filename, '..') !== false || strpos($filename, '/') !== false || strpos($filename, '\\') !== false) {
+            \Log::warning('SAR download blocked: path traversal attempt detected');
+            abort(403, 'Invalid filename');
+        }
+
         // Construct the expected filename pattern
         $expectedFilenamePattern = 'SAR_' . $reference . '_';
         
@@ -301,16 +310,21 @@ public function update(Request $request, $id)
             abort(403, 'Unauthorized access');
         }
 
-        // Build full file path
+        // Build full file path (sanitized filename prevents traversal)
         $fullPath = storage_path('app/tmp/' . $filename);
+        
+        // Verify the resolved path is still within the tmp directory
+        $realPath = realpath($fullPath);
+        $allowedDir = realpath(storage_path('app/tmp'));
+        
+        if (!$realPath || strpos($realPath, $allowedDir) !== 0) {
+            \Log::warning('SAR download blocked: path outside allowed directory');
+            abort(403, 'Invalid file path');
+        }
         
         // Check if file exists
         if (!file_exists($fullPath)) {
-            \Log::error('SAR file not found for applicant download', [
-                'filename' => $filename,
-                'reference' => $reference,
-                'path' => $fullPath
-            ]);
+            \Log::error('SAR file not found for applicant download');
             abort(404, 'File not found or expired');
         }
 
