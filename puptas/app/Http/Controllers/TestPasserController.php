@@ -310,26 +310,17 @@ public function update(Request $request, $id)
             abort(403, 'Unauthorized access');
         }
 
-        // Build full file path (sanitized filename prevents traversal)
-        $fullPath = storage_path('app/tmp/' . $filename);
-        
-        // Verify the resolved path is still within the tmp directory
-        $realPath = realpath($fullPath);
-        $allowedDir = realpath(storage_path('app/tmp'));
-        
-        if (!$realPath || strpos($realPath, $allowedDir) !== 0) {
-            \Log::warning('SAR download blocked: path outside allowed directory');
-            abort(403, 'Invalid file path');
-        }
+        // Use sar_tmp disk for consistent file access
+        $disk = Storage::disk('sar_tmp');
         
         // Check if file exists
-        if (!file_exists($fullPath)) {
+        if (!$disk->exists($filename)) {
             \Log::error('SAR file not found for applicant download');
             abort(404, 'File not found or expired');
         }
 
         // Return file download response
-        return response()->download($fullPath, $filename, [
+        return response()->download($disk->path($filename), $filename, [
             'Content-Type' => 'application/pdf',
         ]);
     }
@@ -379,17 +370,17 @@ public function update(Request $request, $id)
     {
         $sarGeneration = SarGeneration::findOrFail($id);
         
-        // Build full file path
-        $fullPath = storage_path('app/' . $sarGeneration->file_path);
+        // Use sar_tmp disk for consistent file access
+        $disk = Storage::disk('sar_tmp');
         
         // Check if file exists
-        if (!file_exists($fullPath)) {
-            \Log::error('SAR file not found', ['path' => $fullPath, 'id' => $id]);
+        if (!$disk->exists($sarGeneration->filename)) {
+            \Log::error('SAR file not found', ['id' => $id]);
             abort(404, 'File not found or expired');
         }
 
         // Return file download response
-        return response()->download($fullPath, $sarGeneration->filename, [
+        return response()->download($disk->path($sarGeneration->filename), $sarGeneration->filename, [
             'Content-Type' => 'application/pdf',
         ]);
     }
@@ -401,17 +392,17 @@ public function update(Request $request, $id)
     {
         $sarGeneration = SarGeneration::findOrFail($id);
         
-        // Build full file path
-        $fullPath = storage_path('app/' . $sarGeneration->file_path);
+        // Use sar_tmp disk for consistent file access
+        $disk = Storage::disk('sar_tmp');
         
         // Check if file exists
-        if (!file_exists($fullPath)) {
-            \Log::error('SAR file not found for preview', ['path' => $fullPath, 'id' => $id]);
+        if (!$disk->exists($sarGeneration->filename)) {
+            \Log::error('SAR file not found for preview', ['id' => $id]);
             abort(404, 'File not found or expired');
         }
 
-        // Return file for inline viewing
-        return response()->file($fullPath, [
+        // Return PDF for inline preview
+        return response()->file($disk->path($sarGeneration->filename), [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="' . $sarGeneration->filename . '"',
         ]);
@@ -466,14 +457,15 @@ public function update(Request $request, $id)
             $result = $sarService->generateSarPdf($sarData);
             
             if ($result['success']) {
-                $fullPath = storage_path('app/' . $result['pdf_path']);
+                // Use sar_tmp disk for consistent file access
+                $disk = Storage::disk('sar_tmp');
                 
-                if (file_exists($fullPath)) {
+                if ($disk->exists($result['filename'])) {
                     // Read PDF content before deletion
-                    $pdfContent = file_get_contents($fullPath);
+                    $pdfContent = $disk->get($result['filename']);
                     
                     // Delete temporary preview file
-                    unlink($fullPath);
+                    $disk->delete($result['filename']);
                     
                     // Return PDF for inline preview
                     return response($pdfContent, 200, [

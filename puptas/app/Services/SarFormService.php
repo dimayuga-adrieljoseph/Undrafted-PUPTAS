@@ -25,10 +25,11 @@ use Illuminate\Validation\ValidationException;
  */
 class SarFormService
 {
-    protected string $tmpDirectory = 'tmp';
+    protected string $tmpDirectory = '';
     protected string $templatePath;
     protected array $fieldPositions;
     protected bool $debugMode = false;
+    protected string $disk = 'sar_tmp';
     
     public function __construct()
     {
@@ -63,32 +64,26 @@ class SarFormService
             // Generate PDF with FPDI overlay
             $pdfContent = $this->generatePdfWithOverlay($validated);
             
-            // Save to storage/app/tmp
-            $path = $this->tmpDirectory . '/' . $filename;
-            $fullPath = storage_path('app/' . $path);
+            // Save to sar_tmp disk (storage/app/tmp)
+            $disk = Storage::disk($this->disk);
+            $disk->put($filename, $pdfContent);
             
-            // Ensure tmp directory exists
-            $tmpDir = dirname($fullPath);
-            if (!is_dir($tmpDir)) {
-                mkdir($tmpDir, 0755, true);
-            }
-            
-            // Write PDF content directly
-            file_put_contents($fullPath, $pdfContent);
+            // Get file size
+            $fileSize = $disk->size($filename);
             
             // Generate download URL (public download route)
             $downloadUrl = route('sar.passer-download', [
-                'filename' => basename($path),
+                'filename' => $filename,
                 'reference' => $validated['reference_number']
             ]);
             
             return [
                 'success' => true,
                 'id' => $rowData['id'] ?? null,
-                'pdf_path' => $path,
+                'pdf_path' => 'tmp/' . $filename,
                 'pdf_url' => $downloadUrl,
-                'filename' => basename($path),
-                'size_bytes' => filesize($fullPath),
+                'filename' => $filename,
+                'size_bytes' => $fileSize,
             ];
             
         } catch (ValidationException $e) {
@@ -531,14 +526,20 @@ class SarFormService
     public function cleanupTempFiles(int $olderThanHours = 24): int
     {
         $deletedCount = 0;
-        $files = Storage::files($this->tmpDirectory);
+        $disk = Storage::disk($this->disk);
+        $files = $disk->files();
         $cutoffTime = now()->subHours($olderThanHours);
         
         foreach ($files as $file) {
-            $lastModified = Storage::lastModified($file);
+            // Only process SAR PDF files
+            if (!str_starts_with($file, 'SAR_') || !str_ends_with($file, '.pdf')) {
+                continue;
+            }
+            
+            $lastModified = $disk->lastModified($file);
             
             if ($lastModified < $cutoffTime->timestamp) {
-                Storage::delete($file);
+                $disk->delete($file);
                 $deletedCount++;
             }
         }
