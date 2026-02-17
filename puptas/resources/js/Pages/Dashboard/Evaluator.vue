@@ -493,7 +493,7 @@ const submitPass = async () => {
                                         >
                                             Start Evaluation
                                         </button>
-                                        <Link :href="`/applications/${selectedUser.application?.id || ''}`"
+                                        <Link :href="`/applications/user/${selectedUser.id}`"
                                               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex-1 text-center">
                                             View Full Details
                                         </Link>

@@ -395,7 +395,7 @@ const closeUserCard = () => {
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                   Close
                 </button>
-                <Link :href="`/applications/${selectedUser.id}`"
+                <Link :href="`/applications/user/${selectedUser.id}`"
                       class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium">
                   View Full Application
                 </Link>

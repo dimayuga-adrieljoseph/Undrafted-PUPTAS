@@ -33,12 +33,27 @@ Route::get('/', function () {
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
 
-// Admin view application details route
-Route::get('/applications/{id}', function ($id) {
+// View applicant details route - expects user ID, restricted to admin
+Route::get('/applications/user/{user}', function ($user) {
+    // Validate ID is numeric
+    if (!is_numeric($user)) {
+        abort(404);
+    }
+    
+    // Verify user exists and is an applicant
+    $applicant = \App\Models\User::where('id', $user)
+        ->where('role_id', 1)
+        ->whereHas('application')
+        ->first();
+    
+    if (!$applicant) {
+        abort(404);
+    }
+    
     return Inertia::render('Applications/Index', [
-        'selectedUserId' => $id
+        'selectedUserId' => (int) $user
     ]);
-})->middleware(['auth'])->name('applications.show');
+})->middleware(['auth', 'role:2'])->whereNumber('user')->name('applications.show');
 
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $request->validate(['email' => 'required|email']);
