@@ -94,7 +94,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('grades.stem.form');
     Route::post('/grades/stem', [GradesController::class, 'storeStemGrades'])
         ->name('grades.stem.store');
-    
+
     // TVL Grade Input
     Route::get('/grades/tvl', [GradesController::class, 'showTvlGradeForm'])
         ->name('grades.tvl.form');
@@ -304,7 +304,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.index');
     Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
     Route::post('/legacy/add-user/store', [UserController::class, 'store'])->name('add_user.store');
-    
+
     // RESTful User Routes with proper HTTP methods
     Route::get('/users', [UserController::class, 'index'])->name('users.index'); // Alternative
     Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
@@ -312,7 +312,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-    
+
     // Legacy edit/update routes for compatibility (optional)
     Route::get('/legacy/users/{id}/edit', [UserController::class, 'edit'])->name('legacy.users.edit');
     Route::post('/legacy/users/{id}/update', [UserController::class, 'update'])->name('legacy.users.update');
