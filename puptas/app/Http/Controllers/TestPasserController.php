@@ -301,15 +301,21 @@ public function update(Request $request, $id)
             abort(403, 'Unauthorized access');
         }
 
-        // Check if file exists
-        $filePath = 'tmp/' . $filename;
+        // Build full file path
+        $fullPath = storage_path('app/tmp/' . $filename);
         
-        if (!Storage::exists($filePath)) {
-            abort(404, 'File not found');
+        // Check if file exists
+        if (!file_exists($fullPath)) {
+            \Log::error('SAR file not found for applicant download', [
+                'filename' => $filename,
+                'reference' => $reference,
+                'path' => $fullPath
+            ]);
+            abort(404, 'File not found or expired');
         }
 
         // Return file download response
-        return Storage::download($filePath, $filename, [
+        return response()->download($fullPath, $filename, [
             'Content-Type' => 'application/pdf',
         ]);
     }
