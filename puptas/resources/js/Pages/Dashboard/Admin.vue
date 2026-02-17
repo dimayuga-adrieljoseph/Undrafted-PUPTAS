@@ -1,3 +1,186 @@
+<script setup>
+import { ref, computed } from "vue";
+import { Head, Link } from "@inertiajs/vue3";
+import { LineChart } from "vue-chart-3";
+import AppLayout from "@/Layouts/AppLayout.vue";
+import { 
+  Chart as ChartJS, 
+  LineController, 
+  LineElement, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  Tooltip, 
+  Legend, 
+  Filler 
+} from "chart.js";
+
+ChartJS.register(
+  LineController, 
+  LineElement, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  Tooltip, 
+  Legend, 
+  Filler
+);
+
+const props = defineProps({
+  allUsers: Array,
+  summary: {
+    type: Object,
+    default: () => ({ total: 0, accepted: 0, pending: 0, returned: 0 }),
+  },
+  chartData: {
+    type: Object,
+    default: () => ({ submitted: [], accepted: [], returned: [], years: [] }),
+  },
+});
+
+const selectedUser = ref(null);
+const searchQuery = ref("");
+
+// Simplified summary items
+const summaryItems = computed(() => [
+  { 
+    label: "Total Applications", 
+    value: props.summary.total, 
+    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>' },
+    percentage: 100
+  },
+  { 
+    label: "Accepted", 
+    value: props.summary.accepted, 
+    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
+    percentage: props.summary.total > 0 ? Math.round((props.summary.accepted / props.summary.total) * 100) : 0
+  },
+  { 
+    label: "Pending", 
+    value: props.summary.pending, 
+    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
+    percentage: props.summary.total > 0 ? Math.round((props.summary.pending / props.summary.total) * 100) : 0
+  },
+  { 
+    label: "Returned", 
+    value: props.summary.returned, 
+    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>' },
+    percentage: props.summary.total > 0 ? Math.round((props.summary.returned / props.summary.total) * 100) : 0
+  },
+]);
+
+// Chart configuration
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      titleColor: '#1f2937',
+      bodyColor: '#374151',
+      borderColor: '#e5e7eb',
+      borderWidth: 1,
+      cornerRadius: 8,
+      padding: 12,
+    }
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      ticks: { color: '#6b7280' }
+    },
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(107, 114, 128, 0.1)' },
+      ticks: { 
+        color: '#6b7280',
+        callback: (value) => value.toLocaleString()
+      }
+    }
+  }
+};
+
+const chartDataset = computed(() => ({
+  labels: props.chartData.years || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  datasets: [
+    { 
+      label: "Submitted", 
+      data: props.chartData.submitted || [], 
+      borderColor: "#2563EB",
+      backgroundColor: "rgba(37, 99, 235, 0.1)",
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: "#2563EB",
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 2,
+      pointRadius: 4,
+    },
+    { 
+      label: "Accepted", 
+      data: props.chartData.accepted || [], 
+      borderColor: "#10B981",
+      backgroundColor: "rgba(16, 185, 129, 0.1)",
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: "#10B981",
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 2,
+      pointRadius: 4,
+    },
+    { 
+      label: "Returned", 
+      data: props.chartData.returned || [], 
+      borderColor: "#F59E0B",
+      backgroundColor: "rgba(245, 158, 11, 0.1)",
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: "#F59E0B",
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 2,
+      pointRadius: 4,
+    },
+  ],
+}));
+
+const getStatusClass = (status) => {
+  const s = (status || "").toLowerCase();
+  if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+  if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+  if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+  return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
+};
+
+const displayedUsers = computed(() => {
+  const users = props.allUsers || [];
+  const query = searchQuery.value.trim().toLowerCase();
+  
+  if (!query) return users.slice(0, 5);
+  
+  return users.filter(user => 
+    `${user.firstname} ${user.lastname}`.toLowerCase().includes(query) ||
+    user.email.toLowerCase().includes(query)
+  );
+});
+
+const formatDate = (dateString) => {
+  if (!dateString) return "—";
+  return new Date(dateString).toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+};
+
+const selectUser = (user) => {
+  selectedUser.value = user;
+};
+
+const closeUserCard = () => {
+  selectedUser.value = null;
+};
+</script>
+
 <template>
   <Head title="Dashboard" />
   <AppLayout>
@@ -224,189 +407,6 @@
     </transition>
   </AppLayout>
 </template>
-
-<script setup>
-import { ref, computed } from "vue";
-import { Head, Link } from "@inertiajs/vue3";
-import { LineChart } from "vue-chart-3";
-import AppLayout from "@/Layouts/AppLayout.vue";
-import { 
-  Chart as ChartJS, 
-  LineController, 
-  LineElement, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
-  Tooltip, 
-  Legend, 
-  Filler 
-} from "chart.js";
-
-ChartJS.register(
-  LineController, 
-  LineElement, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
-  Tooltip, 
-  Legend, 
-  Filler
-);
-
-const props = defineProps({
-  allUsers: Array,
-  summary: {
-    type: Object,
-    default: () => ({ total: 0, accepted: 0, pending: 0, returned: 0 }),
-  },
-  chartData: {
-    type: Object,
-    default: () => ({ submitted: [], accepted: [], returned: [], years: [] }),
-  },
-});
-
-const selectedUser = ref(null);
-const searchQuery = ref("");
-
-// Simplified summary items
-const summaryItems = computed(() => [
-  { 
-    label: "Total Applications", 
-    value: props.summary.total, 
-    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>' },
-    percentage: 100
-  },
-  { 
-    label: "Accepted", 
-    value: props.summary.accepted, 
-    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
-    percentage: props.summary.total > 0 ? Math.round((props.summary.accepted / props.summary.total) * 100) : 0
-  },
-  { 
-    label: "Pending", 
-    value: props.summary.pending, 
-    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
-    percentage: props.summary.total > 0 ? Math.round((props.summary.pending / props.summary.total) * 100) : 0
-  },
-  { 
-    label: "Returned", 
-    value: props.summary.returned, 
-    icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>' },
-    percentage: props.summary.total > 0 ? Math.round((props.summary.returned / props.summary.total) * 100) : 0
-  },
-]);
-
-// Chart configuration
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      titleColor: '#1f2937',
-      bodyColor: '#374151',
-      borderColor: '#e5e7eb',
-      borderWidth: 1,
-      cornerRadius: 8,
-      padding: 12,
-    }
-  },
-  scales: {
-    x: {
-      grid: { display: false },
-      ticks: { color: '#6b7280' }
-    },
-    y: {
-      beginAtZero: true,
-      grid: { color: 'rgba(107, 114, 128, 0.1)' },
-      ticks: { 
-        color: '#6b7280',
-        callback: (value) => value.toLocaleString()
-      }
-    }
-  }
-};
-
-const chartDataset = computed(() => ({
-  labels: props.chartData.years || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-  datasets: [
-    { 
-      label: "Submitted", 
-      data: props.chartData.submitted || [], 
-      borderColor: "#2563EB",
-      backgroundColor: "rgba(37, 99, 235, 0.1)",
-      fill: true,
-      tension: 0.4,
-      pointBackgroundColor: "#2563EB",
-      pointBorderColor: "#ffffff",
-      pointBorderWidth: 2,
-      pointRadius: 4,
-    },
-    { 
-      label: "Accepted", 
-      data: props.chartData.accepted || [], 
-      borderColor: "#10B981",
-      backgroundColor: "rgba(16, 185, 129, 0.1)",
-      fill: true,
-      tension: 0.4,
-      pointBackgroundColor: "#10B981",
-      pointBorderColor: "#ffffff",
-      pointBorderWidth: 2,
-      pointRadius: 4,
-    },
-    { 
-      label: "Returned", 
-      data: props.chartData.returned || [], 
-      borderColor: "#F59E0B",
-      backgroundColor: "rgba(245, 158, 11, 0.1)",
-      fill: true,
-      tension: 0.4,
-      pointBackgroundColor: "#F59E0B",
-      pointBorderColor: "#ffffff",
-      pointBorderWidth: 2,
-      pointRadius: 4,
-    },
-  ],
-}));
-
-const getStatusClass = (status) => {
-  const s = (status || "").toLowerCase();
-  if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-  if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
-  if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-  return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-};
-
-const displayedUsers = computed(() => {
-  const users = props.allUsers || [];
-  const query = searchQuery.value.trim().toLowerCase();
-  
-  if (!query) return users.slice(0, 5);
-  
-  return users.filter(user => 
-    `${user.firstname} ${user.lastname}`.toLowerCase().includes(query) ||
-    user.email.toLowerCase().includes(query)
-  );
-});
-
-const formatDate = (dateString) => {
-  if (!dateString) return "—";
-  return new Date(dateString).toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric', 
-    year: 'numeric' 
-  });
-};
-
-const selectUser = (user) => {
-  selectedUser.value = user;
-};
-
-const closeUserCard = () => {
-  selectedUser.value = null;
-};
-</script>
 
 <style scoped>
 .fade-enter-active,

@@ -18,7 +18,9 @@ createInertiaApp({
     resolve: (name) => {
         const upperPages = import.meta.glob('./Pages/**/*.vue');
         const lowerPages = import.meta.glob('./pages/**/*.vue');
-        const page = upperPages[`./Pages/${name}.vue`] || lowerPages[`./pages/${name}.vue`];
+        const page =
+            upperPages[`./Pages/${name}.vue`] ||
+            lowerPages[`./pages/${name}.vue`];
         if (!page) {
             console.error(`Inertia page not found: ${name}`);
             throw new Error(`Page not found: ${name}`);
@@ -28,7 +30,8 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         // Update axios CSRF token on initial page load
         if (props.initialPage.props.csrf_token && window.axios) {
-            window.axios.defaults.headers.common['X-CSRF-TOKEN'] = props.initialPage.props.csrf_token;
+            window.axios.defaults.headers.common['X-CSRF-TOKEN'] =
+                props.initialPage.props.csrf_token;
         }
         
         const app = createApp({ render: () => h(App, props) })

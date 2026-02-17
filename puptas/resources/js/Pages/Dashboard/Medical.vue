@@ -1,12 +1,338 @@
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { LineChart } from "vue-chart-3";
+import { Head, Link } from "@inertiajs/vue3";
+import MedicalLayout from "@/Layouts/MedicalLayout.vue";
+import {
+    Chart as ChartJS,
+    LineController,
+    LineElement,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    Tooltip,
+    Title,
+    Legend,
+} from "chart.js";
+
+ChartJS.register(
+    LineController,
+    LineElement,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    Tooltip,
+    Title,
+    Legend
+);
+
+import { usePage } from "@inertiajs/vue3";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { faBolt } from "@fortawesome/free-solid-svg-icons";
+
+const page = usePage();
+const users = ref(page.props.users || []);
+
+const props = defineProps({
+    user: Object,
+    allUsers: Array,
+    summary: {
+        type: Object,
+        default: () => ({
+            total: 0,
+            accepted: 0,
+            pending: 0,
+            returned: 0,
+        }),
+    },
+});
+
+//const users = ref([]);
+const selectedUser = ref(null);
+const isLoading = ref(true);
+const errorMessage = ref("");
+const searchQuery = ref("");
+const selectedUserFiles = ref({});
+const selectedProgramId = ref("");
+const snackbar = ref({
+    visible: false,
+    message: "",
+});
+
+const showSnackbar = (msg, duration = 3000) => {
+    snackbar.value.message = msg;
+    snackbar.value.visible = true;
+    setTimeout(() => {
+        snackbar.value.visible = false;
+    }, duration);
+};
+
+const chartData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [
+        {
+            label: "Submitted",
+            data: [5, 20, 35, 50, 70, 90],
+            borderColor: "#2563EB",
+            backgroundColor: "rgba(37, 99, 235, 0.2)",
+            tension: 0.4,
+        },
+        {
+            label: "Accepted",
+            data: [2, 10, 15, 25, 40, 60],
+            borderColor: "#10B981",
+            backgroundColor: "rgba(16, 185, 129, 0.2)",
+            tension: 0.4,
+        },
+    ],
+};
+
+const getStatusClass = (status) => {
+    const s = (status || "").toLowerCase();
+    if (s === "accepted") return "bg-green-100 text-green-700";
+    if (s === "pending") return "bg-yellow-100 text-yellow-700";
+    if (s === "rejected") return "bg-red-100 text-red-700";
+    return "bg-gray-100 text-gray-600";
+};
+
+const fetchUsers = async () => {
+    try {
+        const response = await fetch("/medical-dashboard/applicants", {
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        if (!response.ok) throw new Error("Failed to fetch users");
+        users.value = await response.json();
+    } catch (error) {
+        errorMessage.value = error.message;
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchUsers();
+    fetchPrograms();
+});
+
+const filteredUsers = computed(() => {
+    if (!searchQuery.value.trim()) return users.value;
+    return users.value.filter((user) => {
+        if (!user.name) return false;
+        return user.name
+            .toLowerCase()
+            .includes(searchQuery.value.toLowerCase());
+    });
+});
+
+const displayedUsers = computed(() => {
+    if (searchQuery.value.trim()) return filteredUsers.value;
+    return users.value.slice(0, 4);
+});
+
+const selectUser = async (user) => {
+    try {
+        const response = await axios.get(
+            `/medical-dashboard/application/${user.id}`
+        );
+
+        selectedUser.value = {
+            ...user,
+            application: {
+                ...response.data.user.application,
+                processes: response.data.user.application?.processes || [],
+                program: response.data.user.application?.program || null,
+            },
+            grades: response.data.user.grades || null,
+        };
+
+        selectedUserFiles.value = response.data.uploadedFiles || {};
+        console.log("Full user data:", response.data.user);
+        console.log("Grades check:", response.data.user.grades);
+
+        // ✅ Add this line to load programs into the dropdown
+        await fetchPrograms();
+
+        console.log(
+            "User & files:",
+            selectedUser.value,
+            selectedUserFiles.value
+        );
+    } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        selectedUserFiles.value = {};
+        selectedUser.value = null;
+    }
+};
+
+const closeUserCard = () => {
+    selectedUser.value = null;
+};
+
+const formatFileKey = (key) => {
+    const map = {
+        file11: "Grade 11 Report",
+        file12: "Grade 12 Report",
+        schoolId: "School ID",
+        nonEnrollCert: "Certificate of Non-Enrollment",
+        psa: "PSA Birth Certificate",
+        goodMoral: "Good Moral Certificate",
+        underOath: "Under Oath Document",
+        photo2x2: "2x2 Photo",
+    };
+    return map[key] || key;
+};
+
+const previewImage = ref(null);
+const showImageModal = ref(false);
+
+const openImageModal = (src) => {
+    previewImage.value = src;
+    showImageModal.value = true;
+};
+
+const closeImageModal = () => {
+    showImageModal.value = false;
+};
+
+const isEvaluating = ref(false);
+const filesToReturn = ref({});
+
+const returnNote = ref("");
+
+const startEvaluation = () => {
+    isEvaluating.value = true;
+    filesToReturn.value = [];
+    returnNote.value = "";
+};
+
+const cancelEvaluation = () => {
+    isEvaluating.value = false;
+    filesToReturn.value = [];
+    returnNote.value = "";
+};
+
+const submitReturn = async () => {
+    const selected = Object.keys(filesToReturn.value).filter(
+        (k) => filesToReturn.value[k]
+    );
+    if (selected.length === 0 || !returnNote.value.trim()) {
+        alert("Please select files and enter a return note.");
+        return;
+    }
+
+    try {
+        await axios.post(`/medical/return-files/${selectedUser.value.id}`, {
+            files: selected,
+            note: returnNote.value.trim(),
+        });
+
+        alert("Files returned and application status logged.");
+
+        isEvaluating.value = false;
+        filesToReturn.value = {};
+        returnNote.value = "";
+
+        // ✅ Refetch updated user list & status counts
+        await fetchUsers();
+        await selectUser(selectedUser.value);
+    } catch (error) {
+        console.error(error);
+        alert("Return failed.");
+    }
+};
+
+const capitalize = (str) =>
+    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+
+const formatDate = (date) => {
+    const d = new Date(date);
+    return d.toLocaleString(); // or .toLocaleDateString() if you prefer
+};
+
+const acceptApplication = async () => {
+    try {
+        await axios.post(`/medical-dashboard/accept/${selectedUser.value.id}`);
+        showSnackbar("Application cleared.");
+        selectedUser.value = null;
+        await fetchUsers();
+    } catch (e) {
+        console.error("Accept failed:", e);
+        const msg =
+            e.response?.data?.message ||
+            "Failed to accept application due to an unexpected error.";
+        showSnackbar(msg);
+    }
+};
+
+const transferApplication = async () => {
+    try {
+        await axios.post(
+            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
+            {
+                program_id: selectedProgramId.value,
+            }
+        );
+        alert("Applicant transferred successfully!");
+        selectedUser.value = null;
+        selectedProgramId.value = "";
+        fetchUsers();
+    } catch (e) {
+        console.error("Transfer failed", e);
+
+        // ✅ Fix: use `e` not `error`
+        if (e.response?.data?.message) {
+            showSnackbar(e.response.data.message); // ✅ show server message
+        } else {
+            showSnackbar("Transfer failed due to an unexpected error.");
+        }
+    }
+};
+
+const availablePrograms = ref([]);
+
+const fetchPrograms = async () => {
+    try {
+        const response = await axios.get("/interviewer-dashboard/programs");
+        availablePrograms.value = response.data.programs;
+    } catch (e) {
+        console.error("Failed to load programs", e);
+    }
+};
+</script>
+
 <template>
     <Head title="Medical Dashboard" />
     <MedicalLayout>
         <!-- Summary Boxes -->
         <div
-            class="flex flex-wrap justify-center gap-[6rem] px-4 py-4 max-w-full overflow-hidden"
+            class="flex 
+            flex-wrap 
+            justify-center 
+            gap-[6rem] 
+            px-4 
+            py-4 
+            max-w-full 
+            overflow-hidden"
         >
             <div
-                class="w-[180px] h-[180px] bg-red-200 border-4 border-white rounded-2xl shadow-xl flex flex-col items-center justify-center text-center hover:scale-105 transition-transform duration-300"
+                class="w-[180px]
+                 h-[180px] 
+                 bg-red-200 
+                 border-4 
+                 border-white 
+                 rounded-2xl 
+                 shadow-xl 
+                 flex 
+                 flex-col 
+                 items-center 
+                 justify-center 
+                 text-center 
+                 hover:scale-105 
+                 transition-transform 
+                 duration-300"
             >
                 <div class="bg-[#9E122C] p-4 rounded-full mb-3">
                     <svg
@@ -32,7 +358,21 @@
             </div>
 
             <div
-                class="w-[180px] h-[180px] bg-red-200 border-4 border-white rounded-2xl shadow-xl flex flex-col items-center justify-center text-center hover:scale-105 transition-transform duration-300"
+                class="w-[180px] 
+                h-[180px] 
+                bg-red-200 
+                border-4 
+                border-white 
+                rounded-2xl 
+                shadow-xl 
+                flex 
+                flex-col 
+                items-center 
+                justify-center 
+                text-center 
+                hover:scale-105 
+                transition-transform 
+                duration-300"
             >
                 <div class="bg-[#9E122C] p-4 rounded-full mb-3">
                     <svg
@@ -56,7 +396,21 @@
             </div>
 
             <div
-                class="w-[180px] h-[180px] bg-red-200 border-4 border-white rounded-2xl shadow-xl flex flex-col items-center justify-center text-center hover:scale-105 transition-transform duration-300"
+                class="w-[180px] 
+                h-[180px] 
+                bg-red-200 
+                border-4 
+                border-white 
+                rounded-2xl 
+                shadow-xl 
+                flex 
+                flex-col 
+                items-center 
+                justify-center 
+                text-center 
+                hover:scale-105 
+                transition-transform 
+                duration-300"
             >
                 <div class="bg-[#9E122C] p-4 rounded-full mb-3">
                     <svg
@@ -80,7 +434,21 @@
             </div>
 
             <div
-                class="w-[180px] h-[180px] bg-red-200 border-4 border-white rounded-2xl shadow-xl flex flex-col items-center justify-center text-center hover:scale-105 transition-transform duration-300"
+                class="w-[180px] 
+                h-[180px] 
+                bg-red-200 
+                border-4 
+                border-white 
+                rounded-2xl 
+                shadow-xl 
+                flex 
+                flex-col 
+                items-center 
+                justify-center 
+                text-center 
+                hover:scale-105 
+                transition-transform 
+                duration-300"
             >
                 <div class="bg-[#9E122C] p-4 rounded-full mb-3">
                     <svg
@@ -109,10 +477,21 @@
             <div class="flex flex-col md:flex-row gap-6">
                 <!-- Chart Section -->
                 <div
-                    class="flex-1 bg-white dark:bg-gray-800 p-6 rounded-xl shadow border-2 border-red-400"
+                    class="flex-1 
+                    bg-white 
+                    dark:bg-gray-800 
+                    p-6 
+                    rounded-xl 
+                    shadow 
+                    border-2 
+                    border-red-400"
                 >
                     <h3
-                        class="text-lg font-semibold text-gray-900 dark:text-white mb-4"
+                        class="text-lg 
+                        font-semibold 
+                        text-gray-900 
+                        dark:text-white 
+                        mb-4"
                     >
                         Applications Overview
                     </h3>
@@ -121,7 +500,13 @@
 
                 <!-- Users Table -->
                 <div
-                    class="flex-1 bg-white dark:bg-gray-800 p-6 rounded-xl shadow border-2 border-red-400"
+                    class="flex-1 
+                    bg-white 
+                    dark:bg-gray-800 
+                    p-6 rounded-xl 
+                    shadow 
+                    border-2 
+                    border-red-400"
                 >
                     <div class="flex items-center justify-between mb-4">
                         <h3
@@ -131,7 +516,11 @@
                         </h3>
                         <Link
                             href="/medical-applications"
-                            class="text-sm text-[#9E122C] hover:underline hover:text-[#b51834] transition"
+                            class="text-sm 
+                            text-[#9E122C] 
+                            hover:underline 
+                            hover:text-[#b51834] 
+                            transition"
                         >
                             See all
                         </Link>
@@ -162,24 +551,34 @@
                                 class="cursor-pointer hover:bg-[#FBCB77]"
                             >
                                 <td
-                                    class="py-2 text-gray-800 dark:text-gray-100"
+                                    class="py-2 
+                                    text-gray-800 
+                                    dark:text-gray-100"
                                 >
                                     {{ user.lastname }}
                                 </td>
                                 <td
-                                    class="py-2 text-gray-800 dark:text-gray-100"
+                                    class="py-2 
+                                    text-gray-800 
+                                    dark:text-gray-100"
                                 >
                                     {{ user.firstname }}
                                 </td>
                                 <td
-                                    class="py-2 text-gray-600 dark:text-gray-300"
+                                    class="py-2 
+                                    text-gray-600 
+                                    dark:text-gray-300"
                                 >
                                     {{ user.application?.program?.code || "—" }}
                                 </td>
                                 <td class="py-2">
                                     <span
                                         :class="getStatusClass(user.status)"
-                                        class="px-2 py-1 rounded text-xs font-semibold"
+                                        class="px-2 
+                                        py-1 
+                                        rounded 
+                                        text-xs 
+                                        font-semibold"
                                     >
                                         {{ user.status || "Unknown" }}
                                     </span>
@@ -194,16 +593,40 @@
             <transition name="slide-fade">
                 <div
                     v-if="selectedUser"
-                    class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
+                    class="fixed 
+                    top-0 
+                    right-0 
+                    w-full 
+                    md:w-1/3 
+                    h-full 
+                    bg-white 
+                    dark:bg-gray-900 
+                    p-6 z-50 shadow-xl 
+                    shadow-red-200 
+                    transition 
+                    duration-300 
+                    ease-in-out 
+                    overflow-y-auto"
                 >
                     <button
-                        class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
+                        class="mt-6 
+                        px-4 
+                        py-2 
+                        rounded 
+                        bg-[#9E122C] 
+                        text-white 
+                        hover:bg-[#EE6A43] 
+                        transition"
                         @click="closeUserCard"
                     >
                         Close
                     </button>
                     <h3
-                        class="text-xl font-semibold text-gray-900 dark:text-white mb-2"
+                        class="text-xl 
+                        font-semibold 
+                        text-gray-900 
+                        dark:text-white 
+                        mb-2"
                     >
                         User Information
                     </h3>
@@ -216,7 +639,8 @@
                     </p>
 
                     <div
-                        class="mt-3 p-2 border rounded bg-gray-100 dark:bg-gray-800"
+                        class="mt-3 
+                        p-2 border rounded bg-gray-100 dark:bg-gray-800"
                     >
                         <h4
                             class="text-sm font-bold text-gray-700 dark:text-white mb-1"
@@ -427,312 +851,6 @@
         </div>
     </MedicalLayout>
 </template>
-
-<script setup>
-import { ref, computed, onMounted } from "vue";
-import { LineChart } from "vue-chart-3";
-import { Head, Link } from "@inertiajs/vue3";
-import MedicalLayout from "@/Layouts/MedicalLayout.vue";
-import {
-    Chart as ChartJS,
-    LineController,
-    LineElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    Tooltip,
-    Title,
-    Legend,
-} from "chart.js";
-
-ChartJS.register(
-    LineController,
-    LineElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    Tooltip,
-    Title,
-    Legend
-);
-
-import { usePage } from "@inertiajs/vue3";
-import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { faBolt } from "@fortawesome/free-solid-svg-icons";
-
-const page = usePage();
-const users = ref(page.props.users || []);
-
-const props = defineProps({
-    user: Object,
-    allUsers: Array,
-    summary: {
-        type: Object,
-        default: () => ({
-            total: 0,
-            accepted: 0,
-            pending: 0,
-            returned: 0,
-        }),
-    },
-});
-
-//const users = ref([]);
-const selectedUser = ref(null);
-const isLoading = ref(true);
-const errorMessage = ref("");
-const searchQuery = ref("");
-const selectedUserFiles = ref({});
-const selectedProgramId = ref("");
-const snackbar = ref({
-    visible: false,
-    message: "",
-});
-
-const showSnackbar = (msg, duration = 3000) => {
-    snackbar.value.message = msg;
-    snackbar.value.visible = true;
-    setTimeout(() => {
-        snackbar.value.visible = false;
-    }, duration);
-};
-
-const chartData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-        {
-            label: "Submitted",
-            data: [5, 20, 35, 50, 70, 90],
-            borderColor: "#2563EB",
-            backgroundColor: "rgba(37, 99, 235, 0.2)",
-            tension: 0.4,
-        },
-        {
-            label: "Accepted",
-            data: [2, 10, 15, 25, 40, 60],
-            borderColor: "#10B981",
-            backgroundColor: "rgba(16, 185, 129, 0.2)",
-            tension: 0.4,
-        },
-    ],
-};
-
-const getStatusClass = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
-    if (s === "rejected") return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-600";
-};
-
-const fetchUsers = async () => {
-    try {
-        const response = await fetch("/medical-dashboard/applicants", {
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json();
-    } catch (error) {
-        errorMessage.value = error.message;
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-onMounted(() => {
-    fetchUsers();
-    fetchPrograms();
-});
-
-const filteredUsers = computed(() => {
-    if (!searchQuery.value.trim()) return users.value;
-    return users.value.filter((user) => {
-        if (!user.name) return false;
-        return user.name
-            .toLowerCase()
-            .includes(searchQuery.value.toLowerCase());
-    });
-});
-
-const displayedUsers = computed(() => {
-    if (searchQuery.value.trim()) return filteredUsers.value;
-    return users.value.slice(0, 4);
-});
-
-const selectUser = async (user) => {
-    try {
-        const response = await axios.get(
-            `/medical-dashboard/application/${user.id}`
-        );
-
-        selectedUser.value = {
-            ...user,
-            application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
-                program: response.data.user.application?.program || null,
-            },
-            grades: response.data.user.grades || null,
-        };
-
-        selectedUserFiles.value = response.data.uploadedFiles || {};
-        console.log("Full user data:", response.data.user);
-        console.log("Grades check:", response.data.user.grades);
-
-        // ✅ Add this line to load programs into the dropdown
-        await fetchPrograms();
-
-        console.log(
-            "User & files:",
-            selectedUser.value,
-            selectedUserFiles.value
-        );
-    } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        selectedUserFiles.value = {};
-        selectedUser.value = null;
-    }
-};
-
-const closeUserCard = () => {
-    selectedUser.value = null;
-};
-
-const formatFileKey = (key) => {
-    const map = {
-        file10Front: "Grade 10 Front",
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
-        schoolId: "School ID",
-        nonEnrollCert: "Certificate of Non-Enrollment",
-        psa: "PSA Birth Certificate",
-        goodMoral: "Good Moral Certificate",
-        underOath: "Under Oath Document",
-        photo2x2: "2x2 Photo",
-    };
-    return map[key] || key;
-};
-
-const previewImage = ref(null);
-const showImageModal = ref(false);
-
-const openImageModal = (src) => {
-    previewImage.value = src;
-    showImageModal.value = true;
-};
-
-const closeImageModal = () => {
-    showImageModal.value = false;
-};
-
-const isEvaluating = ref(false);
-const filesToReturn = ref({});
-
-const returnNote = ref("");
-
-const startEvaluation = () => {
-    isEvaluating.value = true;
-    filesToReturn.value = [];
-    returnNote.value = "";
-};
-
-const cancelEvaluation = () => {
-    isEvaluating.value = false;
-    filesToReturn.value = [];
-    returnNote.value = "";
-};
-
-const submitReturn = async () => {
-    const selected = Object.keys(filesToReturn.value).filter(
-        (k) => filesToReturn.value[k]
-    );
-    if (selected.length === 0 || !returnNote.value.trim()) {
-        alert("Please select files and enter a return note.");
-        return;
-    }
-
-    try {
-        await axios.post(`/medical/return-files/${selectedUser.value.id}`, {
-            files: selected,
-            note: returnNote.value.trim(),
-        });
-
-        alert("Files returned and application status logged.");
-
-        isEvaluating.value = false;
-        filesToReturn.value = {};
-        returnNote.value = "";
-
-        // ✅ Refetch updated user list & status counts
-        await fetchUsers();
-        await selectUser(selectedUser.value);
-    } catch (error) {
-        console.error(error);
-        alert("Return failed.");
-    }
-};
-
-const capitalize = (str) =>
-    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
-
-const formatDate = (date) => {
-    const d = new Date(date);
-    return d.toLocaleString(); // or .toLocaleDateString() if you prefer
-};
-
-const acceptApplication = async () => {
-    try {
-        await axios.post(`/medical-dashboard/accept/${selectedUser.value.id}`);
-        showSnackbar("Application cleared.");
-        selectedUser.value = null;
-        await fetchUsers();
-    } catch (e) {
-        console.error("Accept failed:", e);
-        const msg =
-            e.response?.data?.message ||
-            "Failed to accept application due to an unexpected error.";
-        showSnackbar(msg);
-    }
-};
-
-const transferApplication = async () => {
-    try {
-        await axios.post(
-            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
-            {
-                program_id: selectedProgramId.value,
-            }
-        );
-        alert("Applicant transferred successfully!");
-        selectedUser.value = null;
-        selectedProgramId.value = "";
-        fetchUsers();
-    } catch (e) {
-        console.error("Transfer failed", e);
-
-        // ✅ Fix: use `e` not `error`
-        if (e.response?.data?.message) {
-            showSnackbar(e.response.data.message); // ✅ show server message
-        } else {
-            showSnackbar("Transfer failed due to an unexpected error.");
-        }
-    }
-};
-
-const availablePrograms = ref([]);
-
-const fetchPrograms = async () => {
-    try {
-        const response = await axios.get("/interviewer-dashboard/programs");
-        availablePrograms.value = response.data.programs;
-    } catch (e) {
-        console.error("Failed to load programs", e);
-    }
-};
-</script>
 
 <style scoped>
 .slide-fade-enter-active,
