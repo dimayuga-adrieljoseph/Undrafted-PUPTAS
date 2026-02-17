@@ -307,8 +307,8 @@ Route::get('/recordstaff-applications', function () {
 Route::post('/record-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
 Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);
 
-// User Management Routes (Protected)
-Route::middleware(['auth'])->group(function () {
+// User Management Routes (Protected - Admin Only)
+Route::middleware(['auth', 'role:2'])->group(function () {
     // Legacy routes (keep for backward compatibility if needed)
     Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.index');
     Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
