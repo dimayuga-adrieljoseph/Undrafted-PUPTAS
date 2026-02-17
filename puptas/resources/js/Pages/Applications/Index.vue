@@ -4,6 +4,13 @@ const axios = window.axios;
 import { Head } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 
+const props = defineProps({
+    selectedUserId: {
+        type: [Number, String],
+        default: null
+    }
+});
+
 const users = ref([]);
 const loading = ref(false);
 const fetchError = ref(null);
@@ -28,6 +35,14 @@ const fetchUsers = async () => {
             users.value = [];
         } else {
             users.value = response.data;
+            
+            // If selectedUserId is provided, automatically select that user
+            if (props.selectedUserId) {
+                const user = users.value.find(u => u.id == props.selectedUserId);
+                if (user) {
+                    await selectUser(user);
+                }
+            }
         }
     } catch (err) {
         console.error("Failed to fetch users:", err);

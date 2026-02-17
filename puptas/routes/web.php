@@ -33,6 +33,13 @@ Route::get('/', function () {
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
 
+// Admin view application details route
+Route::get('/applications/{id}', function ($id) {
+    return Inertia::render('Applications/Index', [
+        'selectedUserId' => $id
+    ]);
+})->middleware(['auth'])->name('applications.show');
+
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $request->validate(['email' => 'required|email']);
     $exists = \App\Models\User::where('email', $request->email)->exists();
