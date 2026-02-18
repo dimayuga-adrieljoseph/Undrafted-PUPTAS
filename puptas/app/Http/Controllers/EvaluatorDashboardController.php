@@ -50,20 +50,9 @@ class EvaluatorDashboardController extends Controller
 
         $files = $user->files->keyBy('type');
 
-        $uploadedFiles = [
-            'file11'        => isset($files['file11_back']) ? Storage::url($files['file11_back']->file_path) : null,
-            'file12'        => isset($files['file12_back']) ? Storage::url($files['file12_back']->file_path) : null,
-            'schoolId'      => isset($files['school_id']) ? Storage::url($files['school_id']->file_path) : null,
-            'nonEnrollCert' => isset($files['non_enroll_cert']) ? Storage::url($files['non_enroll_cert']->file_path) : null,
-            'psa'           => isset($files['psa']) ? Storage::url($files['psa']->file_path) : null,
-            'goodMoral'     => isset($files['good_moral']) ? Storage::url($files['good_moral']->file_path) : null,
-            'underOath'     => isset($files['under_oath']) ? Storage::url($files['under_oath']->file_path) : null,
-            'photo2x2'      => isset($files['photo_2x2']) ? Storage::url($files['photo_2x2']->file_path) : null,
-        ];
-
         return response()->json([
             'user' => $user,
-            'uploadedFiles' => $uploadedFiles,
+            'uploadedFiles' => FileMapper::formatFilesUrls($files),
         ]);
     }
 
@@ -138,16 +127,7 @@ class EvaluatorDashboardController extends Controller
 
         \Log::info('Files array received:', ['files' => $files]);
 
-        $keyMap = [
-            'file11'        => 'file11_back',
-            'file12'        => 'file12',
-            'schoolId'      => 'school_id',
-            'nonEnrollCert' => 'non_enroll_cert',
-            'psa'           => 'psa',
-            'goodMoral'     => 'good_moral',
-            'underOath'     => 'under_oath',
-            'photo2x2'      => 'photo_2x2',
-        ];
+        // Use centralized FileMapper mapping
 
         $application->status = 'returned';
         $application->save();
