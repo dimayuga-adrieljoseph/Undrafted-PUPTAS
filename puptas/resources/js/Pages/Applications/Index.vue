@@ -4,9 +4,17 @@ const axios = window.axios;
 import { Head } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 
+const props = defineProps({
+    selectedUserId: {
+        type: [Number, String],
+        default: null
+    }
+});
+
 const users = ref([]);
 const loading = ref(false);
 const fetchError = ref(null);
+const userNotFoundError = ref(null);
 const searchQuery = ref("");
 const statusFilter = ref("");
 const selectedUser = ref(null);
@@ -28,6 +36,18 @@ const fetchUsers = async () => {
             users.value = [];
         } else {
             users.value = response.data;
+            
+            // If selectedUserId is provided (from route param), automatically select that user
+            // Note: This expects a user ID, not an application ID
+            if (props.selectedUserId) {
+                const user = users.value.find(u => u.id == props.selectedUserId);
+                if (user) {
+                    await selectUser(user);
+                } else {
+                    // User not found - show error message
+                    userNotFoundError.value = `Applicant with ID ${props.selectedUserId} not found. They may have been deleted or you may not have permission to view this record.`;
+                }
+            }
         }
     } catch (err) {
         console.error("Failed to fetch users:", err);
@@ -154,6 +174,7 @@ const clearFilters = () => {
     sortAsc.value = true;
     currentPage.value = 1;
     showStatusDropdown.value = false;
+    userNotFoundError.value = null;
 };
 </script>
 
@@ -163,6 +184,22 @@ const clearFilters = () => {
         <div
             class="max-w-7xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto"
         >
+            <!-- User Not Found Error Message -->
+            <div v-if="userNotFoundError" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-start">
+                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <div class="flex-1">
+                    <p class="font-semibold">Applicant Not Found</p>
+                    <p class="text-sm">{{ userNotFoundError }}</p>
+                </div>
+                <button @click="userNotFoundError = null" class="ml-4 text-red-700 hover:text-red-900">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+            </div>
+
             <div
                 class="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-2"
             >
