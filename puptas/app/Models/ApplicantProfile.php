@@ -21,6 +21,16 @@ class ApplicantProfile extends Model
         'second_choice_program',
     ];
 
+    /**
+     * The attributes that should be hidden for serialization.
+     * These fields contain sensitive information and should not be exposed in API responses.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'school_address',
+    ];
+
     protected $casts = [
         'date_graduated' => 'date',
     ];

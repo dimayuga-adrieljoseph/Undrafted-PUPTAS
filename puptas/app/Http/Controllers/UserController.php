@@ -82,7 +82,17 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::with('role')->orderBy('created_at', 'desc')->get();
+       $users = User::select('id', 'firstname', 'middlename', 'lastname', 'email', 'contactnumber', 'role_id', 'created_at')
+            ->with([
+                'role:id,name',
+                'programs:id,name,code',
+                'applicantProfile' => function($query) {
+                    $query->select('user_id', 'first_choice_program');
+                },
+                'applicantProfile.firstChoiceProgram:id,name,code'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         $userCountsByRole = User::select('role_id', \DB::raw('count(*) as total'))
             ->groupBy('role_id')
@@ -99,6 +109,28 @@ class UserController extends Controller
         ];
 
         $totalUsers = User::count();
+
+        // Audit log for viewing sensitive user data
+        try {
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'model_type' => 'User',
+                'model_id' => null,
+                'action' => 'viewed_user_listing',
+                'old_values' => null,
+                'new_values' => [
+                    'total_users_viewed' => $users->count(),
+                    'includes_applicant_profiles' => true,
+                    'timestamp' => now()->toIso8601String(),
+                ],
+                'ip_address' => request()->ip(),
+            ]);
+        } catch (\Exception $e) {
+            logger()->error('Failed to create audit log for user listing view', [
+                'actor_id' => auth()->id(),
+                'error' => $e->getMessage()
+            ]);
+        }
 
         return Inertia::render('UserManagement/ManageUsers', [
             'users' => $users,
