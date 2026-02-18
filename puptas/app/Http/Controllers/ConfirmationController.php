@@ -11,6 +11,7 @@ use App\Models\Application;
 use App\Models\ApplicationProcess;
 use App\Models\Program;
 use App\Models\Grade;
+use App\Helpers\FileMapper;
 
 class ConfirmationController extends Controller
 {
@@ -47,47 +48,7 @@ class ConfirmationController extends Controller
 
             'status' => $status,
 
-            'uploadedFiles' => [
-                'file11' => isset($files['file11_back']) ? [
-                    'url' => Storage::url($files['file11_back']->file_path),
-                    'status' => $files['file11_back']->status,
-                ] : null,
-
-                'file12' => isset($files['file12_back']) ? [
-                    'url' => Storage::url($files['file12_back']->file_path),
-                    'status' => $files['file12_back']->status,
-                ] : null,
-
-                'schoolId' => isset($files['school_id']) ? [
-                    'url' => Storage::url($files['school_id']->file_path),
-                    'status' => $files['school_id']->status,
-                ] : null,
-
-                'nonEnrollCert' => isset($files['non_enroll_cert']) ? [
-                    'url' => Storage::url($files['non_enroll_cert']->file_path),
-                    'status' => $files['non_enroll_cert']->status,
-                ] : null,
-
-                'psa' => isset($files['psa']) ? [
-                    'url' => Storage::url($files['psa']->file_path),
-                    'status' => $files['psa']->status,
-                ] : null,
-
-                'goodMoral' => isset($files['good_moral']) ? [
-                    'url' => Storage::url($files['good_moral']->file_path),
-                    'status' => $files['good_moral']->status,
-                ] : null,
-
-                'underOath' => isset($files['under_oath']) ? [
-                    'url' => Storage::url($files['under_oath']->file_path),
-                    'status' => $files['under_oath']->status,
-                ] : null,
-
-                'photo2x2' => isset($files['photo_2x2']) ? [
-                    'url' => Storage::url($files['photo_2x2']->file_path),
-                    'status' => $files['photo_2x2']->status,
-                ] : null,
-            ],
+            'uploadedFiles' => FileMapper::formatFiles($files),
 
             // inside your show() response()->json([...])
             'processes' => $application
@@ -183,25 +144,14 @@ class ConfirmationController extends Controller
     public function reupload(Request $request)
     {
         $request->validate([
-            'field' => 'required|string|in:file11,file12,schoolId,nonEnrollCert,psa,goodMoral,underOath,photo2x2',
+            'field' => 'required|string|in:' . FileMapper::getValidFileFields(),
             'file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
 
         $user = auth()->user(); // Assumes the user is logged in
 
-        $map = [
-            'file11' => 'file11_back',
-            'file12' => 'file12_back',
-            'schoolId' => 'school_id',
-            'nonEnrollCert' => 'non_enroll_cert',
-            'psa' => 'psa',
-            'goodMoral' => 'good_moral',
-            'underOath' => 'under_oath',
-            'photo2x2' => 'photo_2x2',
-        ];
-
         $inputName = $request->input('field');
-        $type = $map[$inputName] ?? null;
+        $type = FileMapper::MAPPING[$inputName] ?? null;
 
         if (!$type) {
             return response()->json(['message' => 'Invalid field name'], 400);
