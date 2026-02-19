@@ -324,7 +324,7 @@ Route::get('/recordstaff-applications', function () {
     return Inertia::render('Applications/Records', [
         'user' => Auth::user(),
     ]);
-})->name('recordstaff.applications');
+})->name('record.applications');
 
 Route::post('/record-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
 Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);

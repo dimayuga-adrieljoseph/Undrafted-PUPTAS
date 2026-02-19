@@ -14,7 +14,7 @@ library.add(faMoon, faSun, faBell)
 const { isLoading } = useGlobalLoading()
 
 const page = usePage()
-const user = computed(() => page.props.auth.user)
+const user = computed(() => page.props.auth?.user ?? null)
 
 // Dark mode
 const isDarkMode = ref(false)

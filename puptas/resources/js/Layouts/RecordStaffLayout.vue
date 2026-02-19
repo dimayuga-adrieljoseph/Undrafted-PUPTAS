@@ -1,7 +1,6 @@
 <script setup>
 import Sidebar from '@/Components/Sidebar.vue'
-import { useGlobalLoading } from '@/Composables/useGlobalLoading'
-import { usePage } from '@inertiajs/vue3'
+import { usePage, router } from '@inertiajs/vue3'
 import { computed, ref, onMounted } from 'vue'
 
 // FontAwesome
@@ -10,9 +9,6 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
 
 library.add(faMoon, faSun)
-
-// Global loading
-const { isLoading } = useGlobalLoading()
 
 // Auth-safe user access
 const page = usePage()
@@ -32,6 +28,14 @@ const toggleDarkMode = () => {
     document.documentElement.classList.toggle('dark', isDarkMode.value)
     localStorage.setItem('darkMode', String(isDarkMode.value))
 }
+
+// Loading (Inertia navigation)
+const isLoading = ref(false)
+onMounted(() => {
+    router.on('start', () => (isLoading.value = true))
+    router.on('finish', () => (isLoading.value = false))
+    router.on('error', () => (isLoading.value = false))
+})
 </script>
 
 <template>
