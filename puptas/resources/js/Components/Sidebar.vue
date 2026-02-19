@@ -52,7 +52,7 @@ library.add(
 )
 
 const page = usePage()
-const user = computed(() => page.props.auth.user)
+const user = computed(() => page.props.auth?.user ?? null)
 
 const props = defineProps({
     variant: {

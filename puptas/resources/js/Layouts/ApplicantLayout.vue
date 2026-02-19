@@ -15,7 +15,7 @@ const { isLoading } = useGlobalLoading()
 
 // User
 const page = usePage()
-const user = computed(() => page.props.auth.user)
+const user = computed(() => page.props.auth?.user ?? null)
 
 // Dark mode
 const isDarkMode = ref(false)

@@ -11,7 +11,7 @@ import { faMoon, faSun, faBell } from '@fortawesome/free-solid-svg-icons'
 library.add(faMoon, faSun, faBell)
 
 const page = usePage()
-const user = computed(() => page.props.auth.user)
+const user = computed(() => page.props.auth?.user ?? null)
 
 // Dark mode
 const isDarkMode = ref(false)
