@@ -13,6 +13,7 @@ use App\Models\ApplicationProcess;
 use App\Models\Program;
 use App\Models\Grade;
 use Illuminate\Support\Facades\DB;
+use App\Helpers\FileMapper;
 
 class InterviewerDashboardController extends Controller
 {
@@ -278,11 +279,5 @@ class InterviewerDashboardController extends Controller
         if (!Auth::user() || Auth::user()->role_id !== $roleId) {
             abort(403, 'Unauthorized access.');
         }
-    }
-
-    private function ensureStage(Application $application, array $allowedStatuses, string $action): void
-    {
-        // This method is deprecated - now using process-based validation
-        // Kept for backward compatibility but should not be called
     }
 }

@@ -11,7 +11,8 @@ use App\Models\UserFile;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Application;
 use App\Models\ApplicationProcess;
-
+use App\Helpers\FileMapper;
+use App\Helpers\FileMapper;
 
 
 class EvaluatorDashboardController extends Controller
@@ -68,23 +69,11 @@ class EvaluatorDashboardController extends Controller
         $this->ensureRole(3);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['submitted', 'returned'], 'return files');
 
         $fileTypes = $validated['files'];
         $note = $validated['note'];
 
-        $updated = UserFile::where('user_id', $userId)
-            ->whereIn('type', $fileTypes)
-            ->update([
-                'status' => 'returned',
-                'comment' => $note,
-            ]);
-
-        $application->update([
-            'status' => 'returned',
-        ]);
-
-        // Update existing in-progress evaluator process
+        // Validate process exists BEFORE making any changes
         $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
             ->where('stage', 'evaluator')
             ->whereIn('status', ['in_progress', 'returned'])
@@ -96,17 +85,30 @@ class EvaluatorDashboardController extends Controller
             ], 409);
         }
 
-        $evaluatorProcess->update([
-            'status' => 'returned',
-            'action' => 'returned',
-            'reviewer_notes' => $note,
-            'files_affected' => json_encode($fileTypes),
-            'performed_by' => auth()->id(),
-        ]);
+        // Wrap all mutations in transaction
+        DB::transaction(function () use ($userId, $fileTypes, $note, $application, $evaluatorProcess) {
+            UserFile::where('user_id', $userId)
+                ->whereIn('type', $fileTypes)
+                ->update([
+                    'status' => 'returned',
+                    'comment' => $note,
+                ]);
+
+            $application->update([
+                'status' => 'returned',
+            ]);
+
+            $evaluatorProcess->update([
+                'status' => 'returned',
+                'action' => 'returned',
+                'reviewer_notes' => $note,
+                'files_affected' => json_encode($fileTypes),
+                'performed_by' => auth()->id(),
+            ]);
+        });
 
         return response()->json([
             'message' => 'Files returned successfully.',
-            'updated' => $updated,
         ]);
     }
 
@@ -121,18 +123,12 @@ class EvaluatorDashboardController extends Controller
         $this->ensureRole(3);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['submitted', 'returned'], 'return application');
 
         $files = $request->input('files');
 
         \Log::info('Files array received:', ['files' => $files]);
 
-        // Use centralized FileMapper mapping
-
-        $application->status = 'returned';
-        $application->save();
-
-        // Update existing in-progress evaluator process
+        // Validate process exists BEFORE making any changes
         $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
             ->where('stage', 'evaluator')
             ->whereIn('status', ['in_progress', 'returned'])
@@ -144,41 +140,59 @@ class EvaluatorDashboardController extends Controller
             ], 409);
         }
 
-        $evaluatorProcess->update([
-            'status' => 'returned',
-            'action' => 'returned',
-            'reviewer_notes' => $request->note,
-            'files_affected' => json_encode($files),
-            'performed_by' => auth()->id(),
-        ]);
+        // Use centralized FileMapper mapping
+        $keyMap = [
+            'file11'        => 'file11_back',
+            'file12'        => 'file12',
+            'schoolId'      => 'school_id',
+            'nonEnrollCert' => 'non_enroll_cert',
+            'psa'           => 'psa',
+            'goodMoral'     => 'good_moral',
+            'underOath'     => 'under_oath',
+            'photo2x2'      => 'photo_2x2',
+        ];
 
         $updatedFiles = [];
         $notFoundFiles = [];
 
-        foreach ($files as $fileKey) {
-            $dbKey = $keyMap[$fileKey] ?? $fileKey;
+        // Wrap all mutations in transaction
+        DB::transaction(function () use ($application, $evaluatorProcess, $request, $files, $userId, $keyMap, &$updatedFiles, &$notFoundFiles) {
+            $application->status = 'returned';
+            $application->save();
 
-            \Log::info("Processing file key: {$fileKey} mapped to DB key: {$dbKey}");
+            $evaluatorProcess->update([
+                'status' => 'returned',
+                'action' => 'returned',
+                'reviewer_notes' => $request->note,
+                'files_affected' => json_encode($files),
+                'performed_by' => auth()->id(),
+            ]);
 
-            $file = \App\Models\UserFile::where('user_id', $userId)
-                ->where('type', $dbKey)
-                ->first();
+            foreach ($files as $fileKey) {
+                $dbKey = $keyMap[$fileKey] ?? $fileKey;
 
-            if (!$file) {
-                \Log::warning("UserFile not found for user_id={$userId}, type={$dbKey}");
-                $notFoundFiles[] = $dbKey;
-                continue;
+                \Log::info("Processing file key: {$fileKey} mapped to DB key: {$dbKey}");
+
+                $file = \App\Models\UserFile::where('user_id', $userId)
+                    ->where('type', $dbKey)
+                    ->first();
+
+                if (!$file) {
+                    \Log::warning("UserFile not found for user_id={$userId}, type={$dbKey}");
+                    $notFoundFiles[] = $dbKey;
+                    continue;
+                }
+
+                $file->status = 'returned';
+                $file->comment = $request->note;
+
+                $saved = $file->save();
+
+                \Log::info("Saved UserFile ID {$file->id} with status 'returned' and comment. Save success: " . ($saved ? 'true' : 'false'));
+
+                $updatedFiles[] = $dbKey;
             }
-
-            $file->status = 'returned';
-            $file->comment = $request->note;
-
-            $saved = $file->save();
-
-            \Log::info("Saved UserFile ID {$file->id} with status 'returned' and comment. Save success: " . ($saved ? 'true' : 'false'));
-
-            $updatedFiles[] = $dbKey;
-        }
+        });
 
         return response()->json([
             'message' => 'Application returned and tracked.',
@@ -220,7 +234,6 @@ class EvaluatorDashboardController extends Controller
         $this->ensureRole(3);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['submitted', 'returned'], 'endorse');
 
         DB::transaction(function () use ($application, $userId, $request) {
             // Update existing evaluator process (can be in_progress or returned status)
@@ -271,13 +284,6 @@ class EvaluatorDashboardController extends Controller
     {
         if (!Auth::user() || Auth::user()->role_id !== $roleId) {
             abort(403, 'Unauthorized access.');
-        }
-    }
-
-    private function ensureStage(Application $application, array $allowedStatuses, string $action): void
-    {
-        if (!in_array($application->status, $allowedStatuses, true)) {
-            abort(409, "Cannot {$action} while status is '{$application->status}'.");
         }
     }
 }
