@@ -109,17 +109,7 @@ class MedicalDashboardController extends Controller
         $fileTypes = $validated['files'];
         $note = $validated['note'];
 
-        $updated = UserFile::where('user_id', $userId)
-            ->whereIn('type', $fileTypes)
-            ->update([
-                'status' => 'returned',
-                'comment' => $note,
-            ]);
-
-        $application->update([
-            'status' => 'returned',
-        ]);
-
+        // Validate process exists BEFORE making any changes
         $inProgress = $application->processes()
             ->where('stage', 'medical')
             ->where('status', 'in_progress')
@@ -132,17 +122,30 @@ class MedicalDashboardController extends Controller
             ], 409);
         }
 
-        $inProgress->update([
-            'status' => 'returned',
-            'action' => 'returned',
-            'reviewer_notes' => $note,
-            'files_affected' => json_encode($fileTypes),
-            'performed_by' => auth()->id(),
-        ]);
+        // Wrap all mutations in transaction
+        DB::transaction(function () use ($userId, $fileTypes, $note, $application, $inProgress) {
+            UserFile::where('user_id', $userId)
+                ->whereIn('type', $fileTypes)
+                ->update([
+                    'status' => 'returned',
+                    'comment' => $note,
+                ]);
+
+            $application->update([
+                'status' => 'returned',
+            ]);
+
+            $inProgress->update([
+                'status' => 'returned',
+                'action' => 'returned',
+                'reviewer_notes' => $note,
+                'files_affected' => json_encode($fileTypes),
+                'performed_by' => auth()->id(),
+            ]);
+        });
 
         return response()->json([
             'message' => 'Files returned successfully.',
-            'updated' => $updated,
         ]);
     }
 
@@ -172,20 +175,7 @@ class MedicalDashboardController extends Controller
 
         \Log::info('Files array received:', ['files' => $files]);
 
-        $keyMap = [
-            'file11'        => 'file11_back',
-            'file12'        => 'file12',
-            'schoolId'      => 'school_id',
-            'nonEnrollCert' => 'non_enroll_cert',
-            'psa'           => 'psa',
-            'goodMoral'     => 'good_moral',
-            'underOath'     => 'under_oath',
-            'photo2x2'      => 'photo_2x2',
-        ];
-
-        $application->status = 'returned';
-        $application->save();
-
+        // Validate process exists BEFORE making any changes
         $inProgress = $application->processes()
             ->where('stage', 'medical')
             ->where('status', 'in_progress')
@@ -198,41 +188,58 @@ class MedicalDashboardController extends Controller
             ], 409);
         }
 
-        $inProgress->update([
-            'status' => 'returned',
-            'action' => 'returned',
-            'reviewer_notes' => $request->note,
-            'files_affected' => json_encode($files),
-            'performed_by' => auth()->id(),
-        ]);
+        $keyMap = [
+            'file11'        => 'file11_back',
+            'file12'        => 'file12',
+            'schoolId'      => 'school_id',
+            'nonEnrollCert' => 'non_enroll_cert',
+            'psa'           => 'psa',
+            'goodMoral'     => 'good_moral',
+            'underOath'     => 'under_oath',
+            'photo2x2'      => 'photo_2x2',
+        ];
 
         $updatedFiles = [];
         $notFoundFiles = [];
 
-        foreach ($files as $fileKey) {
-            $dbKey = $keyMap[$fileKey] ?? $fileKey;
+        // Wrap all mutations in transaction
+        DB::transaction(function () use ($application, $inProgress, $request, $files, $userId, $keyMap, &$updatedFiles, &$notFoundFiles) {
+            $application->status = 'returned';
+            $application->save();
 
-            \Log::info("Processing file key: {$fileKey} mapped to DB key: {$dbKey}");
+            $inProgress->update([
+                'status' => 'returned',
+                'action' => 'returned',
+                'reviewer_notes' => $request->note,
+                'files_affected' => json_encode($files),
+                'performed_by' => auth()->id(),
+            ]);
 
-            $file = \App\Models\UserFile::where('user_id', $userId)
-                ->where('type', $dbKey)
-                ->first();
+            foreach ($files as $fileKey) {
+                $dbKey = $keyMap[$fileKey] ?? $fileKey;
 
-            if (!$file) {
-                \Log::warning("UserFile not found for user_id={$userId}, type={$dbKey}");
-                $notFoundFiles[] = $dbKey;
-                continue;
+                \Log::info("Processing file key: {$fileKey} mapped to DB key: {$dbKey}");
+
+                $file = \App\Models\UserFile::where('user_id', $userId)
+                    ->where('type', $dbKey)
+                    ->first();
+
+                if (!$file) {
+                    \Log::warning("UserFile not found for user_id={$userId}, type={$dbKey}");
+                    $notFoundFiles[] = $dbKey;
+                    continue;
+                }
+
+                $file->status = 'returned';
+                $file->comment = $request->note;
+
+                $saved = $file->save();
+
+                \Log::info("Saved UserFile ID {$file->id} with status 'returned' and comment. Save success: " . ($saved ? 'true' : 'false'));
+
+                $updatedFiles[] = $dbKey;
             }
-
-            $file->status = 'returned';
-            $file->comment = $request->note;
-
-            $saved = $file->save();
-
-            \Log::info("Saved UserFile ID {$file->id} with status 'returned' and comment. Save success: " . ($saved ? 'true' : 'false'));
-
-            $updatedFiles[] = $dbKey;
-        }
+        });
 
         return response()->json([
             'message' => 'Application returned and tracked.',
@@ -312,5 +319,4 @@ class MedicalDashboardController extends Controller
             abort(403, 'Unauthorized access.');
         }
     }
-
 }
