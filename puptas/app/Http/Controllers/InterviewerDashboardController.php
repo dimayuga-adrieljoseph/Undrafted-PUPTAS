@@ -280,9 +280,4 @@ class InterviewerDashboardController extends Controller
         }
     }
 
-    private function ensureStage(Application $application, array $allowedStatuses, string $action): void
-    {
-        // This method is deprecated - now using process-based validation
-        // Kept for backward compatibility but should not be called
-    }
 }

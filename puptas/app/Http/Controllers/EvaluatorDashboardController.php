@@ -68,7 +68,6 @@ class EvaluatorDashboardController extends Controller
         $this->ensureRole(3);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['submitted', 'returned'], 'return files');
 
         $fileTypes = $validated['files'];
         $note = $validated['note'];
@@ -121,7 +120,6 @@ class EvaluatorDashboardController extends Controller
         $this->ensureRole(3);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['submitted', 'returned'], 'return application');
 
         $files = $request->input('files');
 
@@ -220,7 +218,6 @@ class EvaluatorDashboardController extends Controller
         $this->ensureRole(3);
 
         $application = Application::where('user_id', $userId)->firstOrFail();
-        $this->ensureStage($application, ['submitted', 'returned'], 'endorse');
 
         DB::transaction(function () use ($application, $userId, $request) {
             // Update existing evaluator process (can be in_progress or returned status)
@@ -274,10 +271,4 @@ class EvaluatorDashboardController extends Controller
         }
     }
 
-    private function ensureStage(Application $application, array $allowedStatuses, string $action): void
-    {
-        if (!in_array($application->status, $allowedStatuses, true)) {
-            abort(409, "Cannot {$action} while status is '{$application->status}'.");
-        }
-    }
 }

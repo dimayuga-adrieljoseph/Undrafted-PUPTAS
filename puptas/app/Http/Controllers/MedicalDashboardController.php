@@ -313,8 +313,4 @@ class MedicalDashboardController extends Controller
         }
     }
 
-    private function ensureStage(Application $application, array $allowedStatuses, string $action): void
-    {
-        // This method is deprecated - now using process-based validation
-    }
 }
