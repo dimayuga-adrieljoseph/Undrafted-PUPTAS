@@ -64,7 +64,7 @@ class RecordStaffDashboardController extends Controller
             ->exists();
 
         if (!$medicalCompleted) {
-            abort(409, "Cannot proceed - medical stage not completed.");
+            abort(409, "Cannot proceed - prerequisite verification not completed.");
         }
     }
 

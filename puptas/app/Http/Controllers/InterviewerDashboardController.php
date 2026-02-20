@@ -61,7 +61,7 @@ class InterviewerDashboardController extends Controller
             ->exists();
 
         if (!$evaluatorCompleted) {
-            abort(409, "Cannot proceed - evaluator stage not completed.");
+            abort(409, "Cannot proceed - prerequisite verification not completed.");
         }
     }
 

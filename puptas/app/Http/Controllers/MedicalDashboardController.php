@@ -86,7 +86,7 @@ class MedicalDashboardController extends Controller
             ->exists();
 
         if (!$interviewerCompleted) {
-            abort(409, "Cannot proceed - interviewer stage not completed.");
+            abort(409, "Cannot proceed - prerequisite verification not completed.");
         }
     }
 

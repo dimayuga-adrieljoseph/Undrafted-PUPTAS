@@ -17,7 +17,12 @@ trait ManagesApplicationFiles
      */
     public function getUserFiles($id)
     {
-        $user = User::with(['application.program', 'application.processes', 'files', 'grades'])->findOrFail($id);
+        $user = User::with([
+            'application.program',
+            'application.processes.performedBy:id,firstname,lastname',
+            'files',
+            'grades'
+        ])->findOrFail($id);
 
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
@@ -38,7 +43,7 @@ trait ManagesApplicationFiles
     {
         $validated = $request->validate([
             'files' => 'required|array',
-            'files.*' => 'string',
+            'files.*' => 'string|in:' . \App\Helpers\FileMapper::getValidFileFields(),
             'note' => 'required|string|max:1000',
         ]);
 
@@ -62,30 +67,37 @@ trait ManagesApplicationFiles
         }
 
         // Wrap all mutations in transaction
-        DB::transaction(function () use ($userId, $fileTypes, $note, $application, $inProgress) {
-            UserFile::where('user_id', $userId)
-                ->whereIn('type', $fileTypes)
-                ->update([
+        try {
+            DB::transaction(function () use ($userId, $fileTypes, $note, $application, $inProgress) {
+                UserFile::where('user_id', $userId)
+                    ->whereIn('type', $fileTypes)
+                    ->update([
+                        'status' => 'returned',
+                        'comment' => $note,
+                    ]);
+
+                $application->update([
                     'status' => 'returned',
-                    'comment' => $note,
                 ]);
 
-            $application->update([
-                'status' => 'returned',
-            ]);
+                $inProgress->update([
+                    'status' => 'returned',
+                    'action' => 'returned',
+                    'reviewer_notes' => $note,
+                    'files_affected' => $fileTypes,
+                    'performed_by' => auth()->id(),
+                ]);
+            });
 
-            $inProgress->update([
-                'status' => 'returned',
-                'action' => 'returned',
-                'reviewer_notes' => $note,
-                'files_affected' => json_encode($fileTypes),
-                'performed_by' => auth()->id(),
+            return response()->json([
+                'message' => 'Files returned successfully.',
             ]);
-        });
-
-        return response()->json([
-            'message' => 'Files returned successfully.',
-        ]);
+        } catch (\Throwable $e) {
+            \Log::error('Failed to return files', ['stage' => $this->getCurrentStage()]);
+            return response()->json([
+                'message' => 'Failed to return files. Please try again.',
+            ], 500);
+        }
     }
 
     /**
@@ -95,7 +107,7 @@ trait ManagesApplicationFiles
     {
         $request->validate([
             'files' => 'required|array',
-            'files.*' => 'string',
+            'files.*' => 'string|in:' . \App\Helpers\FileMapper::getValidFileFields(),
             'note' => 'required|string|min:3',
         ]);
 
@@ -124,43 +136,50 @@ trait ManagesApplicationFiles
         $notFoundFiles = [];
 
         // Wrap all mutations in transaction
-        DB::transaction(function () use ($application, $inProgress, $request, $files, $userId, $keyMap, &$updatedFiles, &$notFoundFiles) {
-            $application->status = 'returned';
-            $application->save();
+        try {
+            DB::transaction(function () use ($application, $inProgress, $request, $files, $userId, $keyMap, &$updatedFiles, &$notFoundFiles) {
+                $application->status = 'returned';
+                $application->save();
 
-            $inProgress->update([
-                'status' => 'returned',
-                'action' => 'returned',
-                'reviewer_notes' => $request->note,
-                'files_affected' => json_encode($files),
-                'performed_by' => auth()->id(),
-            ]);
+                $inProgress->update([
+                    'status' => 'returned',
+                    'action' => 'returned',
+                    'reviewer_notes' => $request->note,
+                    'files_affected' => $files,
+                    'performed_by' => auth()->id(),
+                ]);
 
-            foreach ($files as $fileKey) {
-                $dbKey = $keyMap[$fileKey] ?? $fileKey;
+                foreach ($files as $fileKey) {
+                    $dbKey = $keyMap[$fileKey] ?? $fileKey;
 
-                $file = UserFile::where('user_id', $userId)
-                    ->where('type', $dbKey)
-                    ->first();
+                    $file = UserFile::where('user_id', $userId)
+                        ->where('type', $dbKey)
+                        ->first();
 
-                if (!$file) {
-                    $notFoundFiles[] = $dbKey;
-                    continue;
+                    if (!$file) {
+                        $notFoundFiles[] = $dbKey;
+                        continue;
+                    }
+
+                    $file->status = 'returned';
+                    $file->comment = $request->note;
+                    $file->save();
+
+                    $updatedFiles[] = $dbKey;
                 }
+            });
 
-                $file->status = 'returned';
-                $file->comment = $request->note;
-                $file->save();
-
-                $updatedFiles[] = $dbKey;
-            }
-        });
-
-        return response()->json([
-            'message' => 'Application returned and tracked.',
-            'updated_files' => $updatedFiles,
-            'not_found_files' => $notFoundFiles,
-        ]);
+            return response()->json([
+                'message' => 'Application returned and tracked.',
+                'updated_files' => $updatedFiles,
+                'not_found_files' => $notFoundFiles,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Failed to return application', ['stage' => $this->getCurrentStage()]);
+            return response()->json([
+                'message' => 'Failed to return application. Please try again.',
+            ], 500);
+        }
     }
 
     /**
