@@ -14,9 +14,11 @@ use App\Models\Program;
 use App\Models\Grade;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\FileMapper;
+use App\Http\Traits\ManagesApplicationFiles;
 
 class InterviewerDashboardController extends Controller
 {
+    use ManagesApplicationFiles;
     public function index()
     {
         $user = Auth::user();
@@ -40,21 +42,30 @@ class InterviewerDashboardController extends Controller
         ]);
     }
 
-    public function getUserFiles($id)
+    protected function getCurrentStage(): string
     {
-        $user = User::with(['application.program', 'application.processes', 'files', 'grades'])->findOrFail($id);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        $files = $user->files->keyBy('type');
-
-        return response()->json([
-            'user' => $user,
-            'uploadedFiles' => FileMapper::formatFilesUrls($files),
-        ]);
+        return 'interviewer';
     }
+
+    protected function getRoleId(): int
+    {
+        return 4;
+    }
+
+    protected function checkPrerequisiteStage($application)
+    {
+        // Check if evaluator stage is completed
+        $evaluatorCompleted = $application->processes()
+            ->where('stage', 'evaluator')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$evaluatorCompleted) {
+            abort(409, "Cannot proceed - evaluator stage not completed.");
+        }
+    }
+
+    // getUserFiles() method provided by ManagesApplicationFiles trait
 
     public function getUsers()
     {

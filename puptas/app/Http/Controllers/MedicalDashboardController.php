@@ -14,11 +14,13 @@ use App\Models\Program;
 use App\Models\Grade;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\FileMapper;
+use App\Http\Traits\ManagesApplicationFiles;
 
 
 
 class MedicalDashboardController extends Controller
 {
+    use ManagesApplicationFiles;
     public function index()
     {
         $user = Auth::user();
@@ -65,37 +67,18 @@ class MedicalDashboardController extends Controller
         );
     }
 
-
-
-    public function getUserFiles($id)
+    protected function getCurrentStage(): string
     {
-        $user = User::with(['application.processes.performedBy:id,firstname,lastname', 'files', 'application.program'])->findOrFail($id);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        $files = $user->files->keyBy('type');
-
-        return response()->json([
-            'user' => $user,
-            'uploadedFiles' => FileMapper::formatFilesUrls($files),
-        ]);
+        return 'medical';
     }
 
-
-    public function returnFiles(Request $request, $userId)
+    protected function getRoleId(): int
     {
-        $validated = $request->validate([
-            'files' => 'required|array',
-            'files.*' => 'string',
-            'note' => 'required|string|max:1000',
-        ]);
+        return 5;
+    }
 
-        $this->ensureRole(5);
-
-        $application = Application::where('user_id', $userId)->firstOrFail();
-
+    protected function checkPrerequisiteStage($application)
+    {
         // Check if interviewer stage is completed
         $interviewerCompleted = $application->processes()
             ->where('stage', 'interviewer')
@@ -103,150 +86,15 @@ class MedicalDashboardController extends Controller
             ->exists();
 
         if (!$interviewerCompleted) {
-            abort(409, "Cannot return files - interviewer stage not completed.");
+            abort(409, "Cannot proceed - interviewer stage not completed.");
         }
-
-        $fileTypes = $validated['files'];
-        $note = $validated['note'];
-
-        // Validate process exists BEFORE making any changes
-        $inProgress = $application->processes()
-            ->where('stage', 'medical')
-            ->where('status', 'in_progress')
-            ->latest()
-            ->first();
-
-        if (!$inProgress) {
-            return response()->json([
-                'message' => 'This action has already been completed or is not available.',
-            ], 409);
-        }
-
-        // Wrap all mutations in transaction
-        DB::transaction(function () use ($userId, $fileTypes, $note, $application, $inProgress) {
-            UserFile::where('user_id', $userId)
-                ->whereIn('type', $fileTypes)
-                ->update([
-                    'status' => 'returned',
-                    'comment' => $note,
-                ]);
-
-            $application->update([
-                'status' => 'returned',
-            ]);
-
-            $inProgress->update([
-                'status' => 'returned',
-                'action' => 'returned',
-                'reviewer_notes' => $note,
-                'files_affected' => json_encode($fileTypes),
-                'performed_by' => auth()->id(),
-            ]);
-        });
-
-        return response()->json([
-            'message' => 'Files returned successfully.',
-        ]);
     }
 
-    public function returnApplication(Request $request, $userId)
-    {
-        $request->validate([
-            'files' => 'required|array',
-            'files.*' => 'string',
-            'note' => 'required|string|min:3',
-        ]);
+    // getUserFiles() method provided by ManagesApplicationFiles trait
 
-        $this->ensureRole(5);
+    // returnFiles() method provided by ManagesApplicationFiles trait
 
-        $application = Application::where('user_id', $userId)->firstOrFail();
-
-        // Check if interviewer stage is completed
-        $interviewerCompleted = $application->processes()
-            ->where('stage', 'interviewer')
-            ->where('status', 'completed')
-            ->exists();
-
-        if (!$interviewerCompleted) {
-            abort(409, "Cannot return application - interviewer stage not completed.");
-        }
-
-        $files = $request->input('files');
-
-        \Log::info('Files array received:', ['files' => $files]);
-
-        // Validate process exists BEFORE making any changes
-        $inProgress = $application->processes()
-            ->where('stage', 'medical')
-            ->where('status', 'in_progress')
-            ->latest()
-            ->first();
-
-        if (!$inProgress) {
-            return response()->json([
-                'message' => 'This action has already been completed or is not available.',
-            ], 409);
-        }
-
-        $keyMap = [
-            'file11'        => 'file11_back',
-            'file12'        => 'file12',
-            'schoolId'      => 'school_id',
-            'nonEnrollCert' => 'non_enroll_cert',
-            'psa'           => 'psa',
-            'goodMoral'     => 'good_moral',
-            'underOath'     => 'under_oath',
-            'photo2x2'      => 'photo_2x2',
-        ];
-
-        $updatedFiles = [];
-        $notFoundFiles = [];
-
-        // Wrap all mutations in transaction
-        DB::transaction(function () use ($application, $inProgress, $request, $files, $userId, $keyMap, &$updatedFiles, &$notFoundFiles) {
-            $application->status = 'returned';
-            $application->save();
-
-            $inProgress->update([
-                'status' => 'returned',
-                'action' => 'returned',
-                'reviewer_notes' => $request->note,
-                'files_affected' => json_encode($files),
-                'performed_by' => auth()->id(),
-            ]);
-
-            foreach ($files as $fileKey) {
-                $dbKey = $keyMap[$fileKey] ?? $fileKey;
-
-                \Log::info("Processing file key: {$fileKey} mapped to DB key: {$dbKey}");
-
-                $file = \App\Models\UserFile::where('user_id', $userId)
-                    ->where('type', $dbKey)
-                    ->first();
-
-                if (!$file) {
-                    \Log::warning("UserFile not found for user_id={$userId}, type={$dbKey}");
-                    $notFoundFiles[] = $dbKey;
-                    continue;
-                }
-
-                $file->status = 'returned';
-                $file->comment = $request->note;
-
-                $saved = $file->save();
-
-                \Log::info("Saved UserFile ID {$file->id} with status 'returned' and comment. Save success: " . ($saved ? 'true' : 'false'));
-
-                $updatedFiles[] = $dbKey;
-            }
-        });
-
-        return response()->json([
-            'message' => 'Application returned and tracked.',
-            'updated_files' => $updatedFiles,
-            'not_found_files' => $notFoundFiles,
-        ]);
-    }
+    // returnApplication() method provided by ManagesApplicationFiles trait
 
     public function accept($userId)
     {

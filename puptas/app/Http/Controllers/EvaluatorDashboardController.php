@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Application;
 use App\Models\ApplicationProcess;
 use App\Helpers\FileMapper;
+use App\Http\Traits\ManagesApplicationFiles;
 
 
 class EvaluatorDashboardController extends Controller
 {
+    use ManagesApplicationFiles;
     public function index()
     {
         $user = Auth::user();
@@ -38,167 +40,19 @@ class EvaluatorDashboardController extends Controller
         ]);
     }
 
-
-
-    public function getUserFiles($id)
+    protected function getCurrentStage(): string
     {
-        $user = User::with(['application.processes', 'files'])->findOrFail($id);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        $files = $user->files->keyBy('type');
-
-        return response()->json([
-            'user' => $user,
-            'uploadedFiles' => FileMapper::formatFilesUrls($files),
-        ]);
+        return 'evaluator';
     }
 
-
-    public function returnFiles(Request $request, $userId)
+    protected function getRoleId(): int
     {
-        $validated = $request->validate([
-            'files' => 'required|array',
-            'files.*' => 'string',
-            'note' => 'required|string|max:1000',
-        ]);
-
-        $this->ensureRole(3);
-
-        $application = Application::where('user_id', $userId)->firstOrFail();
-
-        $fileTypes = $validated['files'];
-        $note = $validated['note'];
-
-        // Validate process exists BEFORE making any changes
-        $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
-            ->where('stage', 'evaluator')
-            ->whereIn('status', ['in_progress', 'returned'])
-            ->first();
-
-        if (!$evaluatorProcess) {
-            return response()->json([
-                'message' => 'This action has already been completed or is not available.',
-            ], 409);
-        }
-
-        // Wrap all mutations in transaction
-        DB::transaction(function () use ($userId, $fileTypes, $note, $application, $evaluatorProcess) {
-            UserFile::where('user_id', $userId)
-                ->whereIn('type', $fileTypes)
-                ->update([
-                    'status' => 'returned',
-                    'comment' => $note,
-                ]);
-
-            $application->update([
-                'status' => 'returned',
-            ]);
-
-            $evaluatorProcess->update([
-                'status' => 'returned',
-                'action' => 'returned',
-                'reviewer_notes' => $note,
-                'files_affected' => json_encode($fileTypes),
-                'performed_by' => auth()->id(),
-            ]);
-        });
-
-        return response()->json([
-            'message' => 'Files returned successfully.',
-        ]);
+        return 3;
     }
 
-    public function returnApplication(Request $request, $userId)
-    {
-        $request->validate([
-            'files' => 'required|array',
-            'files.*' => 'string',
-            'note' => 'required|string|min:3',
-        ]);
+    // returnFiles() method provided by ManagesApplicationFiles trait
 
-        $this->ensureRole(3);
-
-        $application = Application::where('user_id', $userId)->firstOrFail();
-
-        $files = $request->input('files');
-
-        \Log::info('Files array received:', ['files' => $files]);
-
-        // Validate process exists BEFORE making any changes
-        $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
-            ->where('stage', 'evaluator')
-            ->whereIn('status', ['in_progress', 'returned'])
-            ->first();
-
-        if (!$evaluatorProcess) {
-            return response()->json([
-                'message' => 'This action has already been completed or is not available.',
-            ], 409);
-        }
-
-        // Use centralized FileMapper mapping
-        $keyMap = [
-            'file11'        => 'file11_back',
-            'file12'        => 'file12',
-            'schoolId'      => 'school_id',
-            'nonEnrollCert' => 'non_enroll_cert',
-            'psa'           => 'psa',
-            'goodMoral'     => 'good_moral',
-            'underOath'     => 'under_oath',
-            'photo2x2'      => 'photo_2x2',
-        ];
-
-        $updatedFiles = [];
-        $notFoundFiles = [];
-
-        // Wrap all mutations in transaction
-        DB::transaction(function () use ($application, $evaluatorProcess, $request, $files, $userId, $keyMap, &$updatedFiles, &$notFoundFiles) {
-            $application->status = 'returned';
-            $application->save();
-
-            $evaluatorProcess->update([
-                'status' => 'returned',
-                'action' => 'returned',
-                'reviewer_notes' => $request->note,
-                'files_affected' => json_encode($files),
-                'performed_by' => auth()->id(),
-            ]);
-
-            foreach ($files as $fileKey) {
-                $dbKey = $keyMap[$fileKey] ?? $fileKey;
-
-                \Log::info("Processing file key: {$fileKey} mapped to DB key: {$dbKey}");
-
-                $file = \App\Models\UserFile::where('user_id', $userId)
-                    ->where('type', $dbKey)
-                    ->first();
-
-                if (!$file) {
-                    \Log::warning("UserFile not found for user_id={$userId}, type={$dbKey}");
-                    $notFoundFiles[] = $dbKey;
-                    continue;
-                }
-
-                $file->status = 'returned';
-                $file->comment = $request->note;
-
-                $saved = $file->save();
-
-                \Log::info("Saved UserFile ID {$file->id} with status 'returned' and comment. Save success: " . ($saved ? 'true' : 'false'));
-
-                $updatedFiles[] = $dbKey;
-            }
-        });
-
-        return response()->json([
-            'message' => 'Application returned and tracked.',
-            'updated_files' => $updatedFiles,
-            'not_found_files' => $notFoundFiles,
-        ]);
-    }
+    // returnApplication() method provided by ManagesApplicationFiles trait
 
     public function getUsers()
     {
