@@ -117,16 +117,8 @@ trait ManagesApplicationFiles
             ], 409);
         }
 
-        $keyMap = [
-            'file11'        => 'file11_back',
-            'file12'        => 'file12',
-            'schoolId'      => 'school_id',
-            'nonEnrollCert' => 'non_enroll_cert',
-            'psa'           => 'psa',
-            'goodMoral'     => 'good_moral',
-            'underOath'     => 'under_oath',
-            'photo2x2'      => 'photo_2x2',
-        ];
+        // Use canonical file mapping from FileMapper
+        $keyMap = \App\Helpers\FileMapper::MAPPING;
 
         $updatedFiles = [];
         $notFoundFiles = [];
