@@ -11,7 +11,7 @@ import {
     LinearScale,
     PointElement,
     Tooltip,
-    Title,
+    Filler,
     Legend,
 } from "chart.js";
 
@@ -22,7 +22,7 @@ ChartJS.register(
     LinearScale,
     PointElement,
     Tooltip,
-    Title,
+    Filler,
     Legend
 );
 
@@ -45,7 +45,6 @@ const props = defineProps({
     },
 });
 
-//const users = ref([]);
 const selectedUser = ref(null);
 const isLoading = ref(true);
 const errorMessage = ref("");
@@ -55,14 +54,80 @@ const selectedProgramId = ref("");
 const snackbar = ref({
     visible: false,
     message: "",
+    type: "success", // success, error, info
 });
 
-const showSnackbar = (msg, duration = 3000) => {
+const showSnackbar = (msg, type = "success", duration = 3000) => {
     snackbar.value.message = msg;
+    snackbar.value.type = type;
     snackbar.value.visible = true;
     setTimeout(() => {
         snackbar.value.visible = false;
     }, duration);
+};
+
+// Summary items with icons and percentages
+const summaryItems = computed(() => [
+    { 
+        label: "Total Applications", 
+        value: props.summary?.total ?? 0, 
+        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>' },
+        percentage: 100,
+        color: 'blue'
+    },
+    { 
+        label: "Accepted", 
+        value: props.summary?.accepted ?? 0, 
+        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
+        percentage: props.summary?.total > 0 ? Math.round((props.summary.accepted / props.summary.total) * 100) : 0,
+        color: 'green'
+    },
+    { 
+        label: "Pending", 
+        value: props.summary?.pending ?? 0, 
+        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
+        percentage: props.summary?.total > 0 ? Math.round((props.summary.pending / props.summary.total) * 100) : 0,
+        color: 'yellow'
+    },
+    { 
+        label: "Returned", 
+        value: props.summary?.returned ?? 0, 
+        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>' },
+        percentage: props.summary?.total > 0 ? Math.round((props.summary.returned / props.summary.total) * 100) : 0,
+        color: 'red'
+    },
+]);
+
+// Chart options
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            titleColor: '#1f2937',
+            bodyColor: '#374151',
+            borderColor: '#e5e7eb',
+            borderWidth: 1,
+            cornerRadius: 8,
+            padding: 12,
+        }
+    },
+    scales: {
+        x: {
+            grid: { display: false },
+            ticks: { color: '#6b7280' }
+        },
+        y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(107, 114, 128, 0.1)' },
+            ticks: { 
+                color: '#6b7280',
+                callback: (value) => value.toLocaleString()
+            }
+        }
+    }
 };
 
 const chartData = {
@@ -72,30 +137,58 @@ const chartData = {
             label: "Submitted",
             data: [5, 20, 35, 50, 70, 90],
             borderColor: "#2563EB",
-            backgroundColor: "rgba(37, 99, 235, 0.2)",
+            backgroundColor: "rgba(37, 99, 235, 0.1)",
+            fill: true,
             tension: 0.4,
+            pointBackgroundColor: "#2563EB",
+            pointBorderColor: "#ffffff",
+            pointBorderWidth: 2,
+            pointRadius: 4,
         },
         {
             label: "Accepted",
             data: [2, 10, 15, 25, 40, 60],
             borderColor: "#10B981",
-            backgroundColor: "rgba(16, 185, 129, 0.2)",
+            backgroundColor: "rgba(16, 185, 129, 0.1)",
+            fill: true,
             tension: 0.4,
+            pointBackgroundColor: "#10B981",
+            pointBorderColor: "#ffffff",
+            pointBorderWidth: 2,
+            pointRadius: 4,
+        },
+        {
+            label: "Returned",
+            data: [1, 3, 5, 8, 12, 15],
+            borderColor: "#F59E0B",
+            backgroundColor: "rgba(245, 158, 11, 0.1)",
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "#F59E0B",
+            pointBorderColor: "#ffffff",
+            pointBorderWidth: 2,
+            pointRadius: 4,
         },
     ],
 };
 
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
-    if (s === "rejected") return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-600";
+    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
 };
 
-// const users = ref([]);
-// const isLoading = ref(true);
-// const errorMessage = ref("");
+const getButtonClass = (type) => {
+    const classes = {
+        primary: 'bg-[#9E122C] text-white hover:bg-[#b51834]',
+        success: 'bg-green-600 text-white hover:bg-green-700',
+        danger: 'bg-red-600 text-white hover:bg-red-700',
+        secondary: 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+    };
+    return classes[type] || classes.secondary;
+};
 
 const fetchUsers = async () => {
     try {
@@ -106,15 +199,13 @@ const fetchUsers = async () => {
             },
         });
         if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json(); // same as Evaluator
+        users.value = await response.json();
     } catch (error) {
         errorMessage.value = error.message;
     } finally {
         isLoading.value = false;
     }
 };
-
-onMounted(fetchUsers);
 
 onMounted(() => {
     fetchUsers();
@@ -123,17 +214,19 @@ onMounted(() => {
 
 const filteredUsers = computed(() => {
     if (!searchQuery.value.trim()) return users.value;
+    const query = searchQuery.value.toLowerCase();
     return users.value.filter((user) => {
-        if (!user.name) return false;
-        return user.name
-            .toLowerCase()
-            .includes(searchQuery.value.toLowerCase());
+        return (
+            user.firstname?.toLowerCase().includes(query) ||
+            user.lastname?.toLowerCase().includes(query) ||
+            user.email?.toLowerCase().includes(query)
+        );
     });
 });
 
 const displayedUsers = computed(() => {
     if (searchQuery.value.trim()) return filteredUsers.value;
-    return users.value.slice(0, 4);
+    return users.value.slice(0, 5);
 });
 
 const selectUser = async (user) => {
@@ -153,26 +246,18 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-        console.log("Full user data:", response.data.user);
-        console.log("Grades check:", response.data.user.grades);
-
-        // ✅ Add this line to load programs into the dropdown
         await fetchPrograms();
-
-        console.log(
-            "User & files:",
-            selectedUser.value,
-            selectedUserFiles.value
-        );
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         selectedUserFiles.value = {};
         selectedUser.value = null;
+        showSnackbar("Failed to load applicant data", "error");
     }
 };
 
 const closeUserCard = () => {
     selectedUser.value = null;
+    selectedProgramId.value = "";
 };
 
 const formatFileKey = (key) => {
@@ -180,7 +265,7 @@ const formatFileKey = (key) => {
         file11: "Grade 11 Report",
         file12: "Grade 12 Report",
         schoolId: "School ID",
-        nonEnrollCert: "Certificate of Non-Enrollment",
+        nonEnrollCert: "Non-Enrollment Cert",
         psa: "PSA Birth Certificate",
         goodMoral: "Good Moral Certificate",
         underOath: "Under Oath Document",
@@ -201,59 +286,18 @@ const closeImageModal = () => {
     showImageModal.value = false;
 };
 
-const isEvaluating = ref(false);
-const filesToReturn = ref({});
-
-const returnNote = ref("");
-
-const startEvaluation = () => {
-    isEvaluating.value = true;
-    filesToReturn.value = [];
-    returnNote.value = "";
-};
-
-const cancelEvaluation = () => {
-    isEvaluating.value = false;
-    filesToReturn.value = [];
-    returnNote.value = "";
-};
-
-const submitReturn = async () => {
-    const selected = Object.keys(filesToReturn.value).filter(
-        (k) => filesToReturn.value[k]
-    );
-    if (selected.length === 0 || !returnNote.value.trim()) {
-        alert("Please select files and enter a return note.");
-        return;
-    }
-
-    try {
-        await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
-            files: selected,
-            note: returnNote.value.trim(),
-        });
-
-        alert("Files returned and application status logged.");
-
-        isEvaluating.value = false;
-        filesToReturn.value = {};
-        returnNote.value = "";
-
-        // ✅ Refetch updated user list & status counts
-        await fetchUsers();
-        await selectUser(selectedUser.value);
-    } catch (error) {
-        console.error(error);
-        alert("Return failed.");
-    }
-};
-
 const capitalize = (str) =>
-    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ') : "";
 
 const formatDate = (date) => {
-    const d = new Date(date);
-    return d.toLocaleString(); // or .toLocaleDateString() if you prefer
+    if (!date) return "—";
+    return new Date(date).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 };
 
 const acceptApplication = async () => {
@@ -261,19 +305,22 @@ const acceptApplication = async () => {
         await axios.post(
             `/interviewer-dashboard/accept/${selectedUser.value.id}`
         );
-        showSnackbar("Application accepted.");
+        showSnackbar("Application accepted successfully", "success");
         selectedUser.value = null;
         await fetchUsers();
     } catch (e) {
         console.error("Accept failed:", e);
-        const msg =
-            e.response?.data?.message ||
-            "Failed to accept application due to an unexpected error.";
-        showSnackbar(msg);
+        const msg = e.response?.data?.message || "Failed to accept application";
+        showSnackbar(msg, "error");
     }
 };
 
 const transferApplication = async () => {
+    if (!selectedProgramId.value) {
+        showSnackbar("Please select a program to transfer to", "error");
+        return;
+    }
+
     try {
         await axios.post(
             `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
@@ -281,19 +328,14 @@ const transferApplication = async () => {
                 program_id: selectedProgramId.value,
             }
         );
-        alert("Applicant transferred successfully!");
+        showSnackbar("Applicant transferred successfully", "success");
         selectedUser.value = null;
         selectedProgramId.value = "";
         fetchUsers();
     } catch (e) {
         console.error("Transfer failed", e);
-
-        // ✅ Fix: use `e` not `error`
-        if (e.response?.data?.message) {
-            showSnackbar(e.response.data.message); // ✅ show server message
-        } else {
-            showSnackbar("Transfer failed due to an unexpected error.");
-        }
+        const msg = e.response?.data?.message || "Transfer failed";
+        showSnackbar(msg, "error");
     }
 };
 
@@ -312,475 +354,399 @@ const fetchPrograms = async () => {
 <template>
     <Head title="Interviewer Dashboard" />
     <InterviewerLayout>
-        <!-- Summary Boxes -->
-        <div
-            class="flex flex-wrap justify-center gap-[6rem] px-4 py-4 max-w-full overflow-hidden"
-        >
-            <div
-                class="w-[180px] h-[180px] bg-red-200 border-4 border-white rounded-2xl shadow-xl flex flex-col items-center justify-center text-center hover:scale-105 transition-transform duration-300"
-            >
-                <div class="bg-[#9E122C] p-4 rounded-full mb-3">
-                    <svg
-                        class="w-8 h-8 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M3 7h18M3 12h18M3 17h18"
-                        />
+        <!-- Header Section -->
+        <div class="px-4 md:px-8 mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Interviewer Dashboard</h1>
+                    <p class="text-gray-600 dark:text-gray-400 mt-2">Conduct interviews and evaluate applicant responses.</p>
+                </div>
+                <div class="relative w-full md:w-64">
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Search applicants..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                    />
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
-                <p class="text-gray-700 text-base font-medium">
-                    Total Applications
-                </p>
-                <p class="text-3xl font-bold text-gray-900">
-                    {{ props.summary?.total ?? 0 }}
-                </p>
-            </div>
-
-            <div
-                class="w-[180px] h-[180px] bg-red-200 border-4 border-white rounded-2xl shadow-xl flex flex-col items-center justify-center text-center hover:scale-105 transition-transform duration-300"
-            >
-                <div class="bg-[#9E122C] p-4 rounded-full mb-3">
-                    <svg
-                        class="w-8 h-8 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M5 13l4 4L19 7"
-                        />
-                    </svg>
-                </div>
-                <p class="text-gray-700 text-base font-medium">Accepted</p>
-                <p class="text-3xl font-bold text-gray-900">
-                    {{ props.summary?.accepted ?? 0 }}
-                </p>
-            </div>
-
-            <div
-                class="w-[180px] h-[180px] bg-red-200 border-4 border-white rounded-2xl shadow-xl flex flex-col items-center justify-center text-center hover:scale-105 transition-transform duration-300"
-            >
-                <div class="bg-[#9E122C] p-4 rounded-full mb-3">
-                    <svg
-                        class="w-8 h-8 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 8v4l3 3"
-                        />
-                    </svg>
-                </div>
-                <p class="text-gray-700 text-base font-medium">Pending</p>
-                <p class="text-3xl font-bold text-gray-900">
-                    {{ props.summary?.pending ?? 0 }}
-                </p>
-            </div>
-
-            <div
-                class="w-[180px] h-[180px] bg-red-200 border-4 border-white rounded-2xl shadow-xl flex flex-col items-center justify-center text-center hover:scale-105 transition-transform duration-300"
-            >
-                <div class="bg-[#9E122C] p-4 rounded-full mb-3">
-                    <svg
-                        class="w-8 h-8 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                        />
-                    </svg>
-                </div>
-                <p class="text-gray-700 text-base font-medium">Returned</p>
-                <p class="text-3xl font-bold text-gray-900">
-                    {{ props.summary?.returned ?? 0 }}
-                </p>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="py-8 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto">
-            <div class="flex flex-col md:flex-row gap-6">
-                <!-- Chart Section -->
-                <div
-                    class="flex-1 bg-white dark:bg-gray-800 p-6 rounded-xl shadow border-2 border-red-400"
-                >
-                    <h3
-                        class="text-lg font-semibold text-gray-900 dark:text-white mb-4"
-                    >
-                        Applications Overview
-                    </h3>
-                    <LineChart :chart-data="chartData" class="h-60 w-full" />
-                </div>
-
-                <!-- Users Table -->
-                <div
-                    class="flex-1 bg-white dark:bg-gray-800 p-6 rounded-xl shadow border-2 border-red-400"
-                >
-                    <div class="flex items-center justify-between mb-4">
-                        <h3
-                            class="text-lg font-semibold text-gray-900 dark:text-white"
-                        >
-                            Recent Applications
-                        </h3>
-                        <Link
-                            href="/interviewer-applications"
-                            class="text-sm text-[#9E122C] hover:underline hover:text-[#b51834] transition"
-                        >
-                            See all
-                        </Link>
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-8 mb-8">
+            <div
+                v-for="(item, index) in summaryItems"
+                :key="index"
+                class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
+            >
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">{{ item.label }}</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ item.value.toLocaleString() }}</p>
                     </div>
+                    <div :class="[
+                        'p-3 rounded-lg',
+                        item.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300' :
+                        item.color === 'green' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300' :
+                        item.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300' :
+                        'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300'
+                    ]">
+                        <component :is="item.icon" class="w-6 h-6" />
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div 
+                            :class="[
+                                'h-full rounded-full',
+                                item.color === 'blue' ? 'bg-blue-500' :
+                                item.color === 'green' ? 'bg-green-500' :
+                                item.color === 'yellow' ? 'bg-yellow-500' :
+                                'bg-red-500'
+                            ]"
+                            :style="{ width: item.percentage + '%' }"
+                        ></div>
+                    </div>
+                    <p class="text-right text-xs text-gray-500 dark:text-gray-400 mt-2">{{ item.percentage }}% of total</p>
+                </div>
+            </div>
+        </div>
 
-                    <table class="min-w-full text-sm">
-                        <thead>
-                            <tr>
-                                <th class="text-left text-gray-500 pb-2">
-                                    Last Name
-                                </th>
-                                <th class="text-left text-gray-500 pb-2">
-                                    First Name
-                                </th>
-                                <th class="text-left text-gray-500 pb-2">
-                                    Course
-                                </th>
-                                <th class="text-left text-gray-500 pb-2">
-                                    Status
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            <tr
-                                v-for="user in displayedUsers"
-                                :key="user.id"
-                                @click="selectUser(user)"
-                                class="cursor-pointer hover:bg-[#FBCB77]"
-                            >
-                                <td
-                                    class="py-2 text-gray-800 dark:text-gray-100"
-                                >
-                                    {{ user.lastname }}
-                                </td>
-                                <td
-                                    class="py-2 text-gray-800 dark:text-gray-100"
-                                >
-                                    {{ user.firstname }}
-                                </td>
-                                <td
-                                    class="py-2 text-gray-600 dark:text-gray-300"
-                                >
-                                    {{ user.application?.program?.code || "—" }}
-                                </td>
-                                <td class="py-2">
-                                    <span
-                                        :class="getStatusClass(user.status)"
-                                        class="px-2 py-1 rounded text-xs font-semibold"
-                                    >
-                                        {{ user.status || "Unknown" }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-8">
+            <!-- Left Column: Chart -->
+            <div class="lg:col-span-2">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                    <div class="mb-6">
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm">Monthly interview trends</p>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-4 mb-6">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-[#2563EB]"></div>
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Submitted</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-[#10B981]"></div>
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Accepted</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-[#F59E0B]"></div>
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Returned</span>
+                        </div>
+                    </div>
+                    
+                    <div class="h-80">
+                        <LineChart :chart-data="chartData" :options="chartOptions" class="w-full h-full" />
+                    </div>
                 </div>
             </div>
 
-            <!-- User Info Modal -->
-            <transition name="slide-fade">
-                <div
-                    v-if="selectedUser"
-                    class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
-                >
-                    <button
-                        class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
-                        @click="closeUserCard"
-                    >
-                        Close
-                    </button>
-                    <h3
-                        class="text-xl font-semibold text-gray-900 dark:text-white mb-2"
-                    >
-                        User Information
-                    </h3>
-                    <p class="text-gray-800 dark:text-gray-200 font-medium">
-                        Name: {{ selectedUser.lastname }},
-                        {{ selectedUser.firstname }}
-                    </p>
-                    <p class="text-gray-700 dark:text-gray-400">
-                        Email: {{ selectedUser.email }}
-                    </p>
-                    <h4
-                        class="text-sm font-bold text-gray-700 dark:text-white mb-1"
-                    >
-                        Grades
-                    </h4>
-                    <p class="text-sm text-gray-700 dark:text-gray-300">
-                        Math: {{ selectedUser?.grades?.mathematics ?? "—" }}
-                    </p>
-                    <p class="text-sm text-gray-700 dark:text-gray-300">
-                        Science: {{ selectedUser?.grades?.science ?? "—" }}
-                    </p>
-                    <p class="text-sm text-gray-700 dark:text-gray-300">
-                        English: {{ selectedUser?.grades?.english ?? "—" }}
-                    </p>
-
-                    <div
-                        class="mt-3 p-2 border rounded bg-gray-100 dark:bg-gray-800"
-                    >
-                        <h4
-                            class="text-sm font-bold text-gray-700 dark:text-white mb-1"
-                        >
-                            Current Program for Acceptance:
-                        </h4>
-                        <p class="text-sm text-gray-800 dark:text-gray-300">
-                            {{ selectedUser?.application?.program?.code }} -
-                            {{ selectedUser?.application?.program?.name }}
-                            ({{ selectedUser?.application?.program?.slots }}
-                            slots left)
-                        </p>
+            <!-- Right Column: Recent Applications -->
+            <div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Pending Interviews</h3>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm">Applicants ready for interview</p>
+                        </div>
+                        <Link href="/interviewer-applications" 
+                              class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition">
+                            View All
+                        </Link>
                     </div>
-
-                    <div class="mt-4">
-                        <label class="block mb-1 text-sm font-semibold"
-                            >Transfer to Program</label
+                    
+                    <div class="space-y-3">
+                        <div
+                            v-for="applicant in displayedUsers"
+                            :key="applicant.id"
+                            @click="selectUser(applicant)"
+                            class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer"
                         >
-                        <select
-                            v-model="selectedProgramId"
-                            class="w-full border rounded p-2"
-                        >
-                            <option disabled value="">
-                                -- Select Program --
-                            </option>
-                            <option
-                                v-for="p in availablePrograms"
-                                :key="p.id"
-                                :value="p.id"
-                            >
-                                {{ p.code }} - {{ p.name }} ({{ p.slots }}
-                                slots left)
-                            </option>
-                        </select>
-                        <!-- Accept and Transfer buttons -->
-                        <div class="mt-4 flex justify-end space-x-2">
-                            <button
-                                @click="acceptApplication"
-                                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                            >
-                                Accept
-                            </button>
-                            <button
-                                @click="transferApplication"
-                                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
-                                Transfer
-                            </button>
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold">
+                                        {{ applicant.firstname?.[0] || '' }}{{ applicant.lastname?.[0] || '' }}
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 dark:text-white">
+                                            {{ applicant.firstname }} {{ applicant.lastname }}
+                                        </h4>
+                                        <p class="text-gray-600 dark:text-gray-400 text-sm">{{ applicant.email }}</p>
+                                    </div>
+                                </div>
+                                <span :class="getStatusClass(applicant.status)" 
+                                      class="px-3 py-1 rounded-full text-xs font-semibold">
+                                    {{ applicant.status || "Pending" }}
+                                </span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <p class="text-gray-500 dark:text-gray-400">Course</p>
+                                    <p class="text-gray-900 dark:text-white font-medium">{{ applicant.application?.program?.code || "—" }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-500 dark:text-gray-400">Applied</p>
+                                    <p class="text-gray-900 dark:text-white font-medium">{{ formatDate(applicant.application?.created_at) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Empty state -->
+                        <div v-if="displayedUsers.length === 0" class="text-center py-8">
+                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            <p class="text-gray-500 dark:text-gray-400">No pending interviews</p>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <section class="mt-3 text-sm">
-                        <h4 class="font-semibold mb-1 text-base">
-                            Uploaded Documents
-                        </h4>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div
-                                v-for="(src, key) in selectedUserFiles"
-                                :key="key"
-                                class="flex flex-col items-start space-y-1"
-                            >
-                                <div class="flex items-center space-x-2 w-full">
-                                    <input
-                                        v-if="isEvaluating"
-                                        type="checkbox"
-                                        :id="key"
-                                        v-model="filesToReturn[key]"
-                                        class="h-4 w-4 mt-1"
-                                    />
-                                    <label
-                                        :for="key"
-                                        class="text-xs font-medium truncate w-full"
-                                    >
-                                        {{ formatFileKey(key) }}
-                                    </label>
+        <!-- Applicant Detail Modal -->
+        <transition name="fade">
+            <div v-if="selectedUser" class="fixed inset-0 z-50">
+                <div class="fixed inset-0 bg-black/50" @click="closeUserCard"></div>
+                
+                <div class="relative min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <!-- Modal Header -->
+                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Interview Details</h3>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
                                 </div>
-                                <div class="w-full">
-                                    <img
-                                        v-if="src"
-                                        :src="src"
-                                        alt="Uploaded Document"
-                                        class="h-16 w-full object-contain border rounded cursor-pointer"
-                                        @click="openImageModal(src)"
-                                    />
-                                    <div
-                                        v-else
-                                        class="h-16 flex items-center justify-center text-[10px] italic text-gray-400 border rounded"
+                                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+                                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Modal Content -->
+                        <div class="p-6 overflow-y-auto flex-1">
+                            <!-- Applicant Info Grid -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                                <!-- Personal Info -->
+                                <div class="lg:col-span-2">
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Applicant Information</h4>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Full Name</p>
+                                            <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Email Address</p>
+                                            <p class="text-gray-900 dark:text-white">{{ selectedUser.email }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Program</p>
+                                            <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.program?.name || "—" }}</p>
+                                            <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.program?.code || "" }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
+                                            <span :class="getStatusClass(selectedUser.status)" 
+                                                  class="px-3 py-1 rounded-full text-sm font-semibold inline-block">
+                                                {{ selectedUser.status || "Pending" }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Program Transfer -->
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Transfer Program</h4>
+                                    <select
+                                        v-model="selectedProgramId"
+                                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                                     >
-                                        No Image
+                                        <option disabled value="">Select Program</option>
+                                        <option
+                                            v-for="p in availablePrograms"
+                                            :key="p.id"
+                                            :value="p.id"
+                                        >
+                                            {{ p.code }} - {{ p.name }} ({{ p.slots }} slots)
+                                        </option>
+                                    </select>
+
+                                    <div class="flex space-x-2">
+                                        <button
+                                            @click="acceptApplication"
+                                            :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium']"
+                                        >
+                                            Accept
+                                        </button>
+                                        <button
+                                            @click="transferApplication"
+                                            :class="[getButtonClass('primary'), 'flex-1 px-4 py-2 rounded-lg transition font-medium']"
+                                        >
+                                            Transfer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Grades Section -->
+                            <div class="mb-8">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Academic Grades</h4>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
+                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics || "—" }}</p>
+                                    </div>
+                                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Science</p>
+                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.science || "—" }}</p>
+                                    </div>
+                                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">English</p>
+                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.english || "—" }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Uploaded Documents -->
+                            <div class="mb-8">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    <div
+                                        v-for="(src, key) in selectedUserFiles"
+                                        :key="key"
+                                        class="group relative"
+                                    >
+                                        <!-- Document Card -->
+                                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                                            <div class="relative">
+                                                <img
+                                                    v-if="src"
+                                                    :src="src"
+                                                    :alt="formatFileKey(key)"
+                                                    class="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition"
+                                                    @click="openImageModal(src)"
+                                                />
+                                                <div
+                                                    v-else
+                                                    class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
+                                                >
+                                                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Document Label -->
+                                            <div class="p-2 border-t border-gray-200 dark:border-gray-700">
+                                                <p class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate" :title="formatFileKey(key)">
+                                                    {{ formatFileKey(key) }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Application History -->
+                            <div v-if="selectedUser?.application?.processes?.length">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Timeline</h4>
+                                <div class="space-y-3">
+                                    <div
+                                        v-for="(process, index) in selectedUser.application.processes"
+                                        :key="index"
+                                        class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                                    >
+                                        <div :class="[
+                                            'w-3 h-3 rounded-full mt-1.5 flex-shrink-0',
+                                            process.status === 'completed' ? 'bg-green-500' :
+                                            process.status === 'in_progress' ? 'bg-yellow-500' :
+                                            'bg-red-500'
+                                        ]"></div>
+                                        <div class="flex-1">
+                                            <div class="flex justify-between items-start">
+                                                <div>
+                                                    <p class="font-semibold text-gray-900 dark:text-white">
+                                                        {{ capitalize(process.stage) }}
+                                                    </p>
+                                                    <p v-if="process.notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                                        {{ process.notes }}
+                                                    </p>
+                                                </div>
+                                                <span :class="[
+                                                    'px-2 py-1 rounded-full text-xs font-semibold',
+                                                    process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                                                    process.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                                ]">
+                                                    {{ capitalize(process.status) }}
+                                                </span>
+                                            </div>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                                {{ formatDate(process.created_at) }}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Application History -->
-                        <section
-                            v-if="selectedUser?.application?.processes?.length"
-                            class="mt-4"
-                        >
-                            <h4
-                                class="font-semibold mb-2 text-base text-gray-800 dark:text-gray-200"
-                            >
-                                Application History
-                            </h4>
-                            <ul
-                                class="border-l-2 border-red-400 pl-3 space-y-2"
-                            >
-                                <li
-                                    v-for="(process, index) in selectedUser
-                                        .application.processes"
-                                    :key="index"
-                                    class="relative"
-                                >
-                                    <div
-                                        class="absolute -left-[10px] top-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"
-                                    ></div>
-                                    <p
-                                        class="text-sm font-semibold text-gray-900 dark:text-white"
-                                    >
-                                        {{ capitalize(process.stage) }} -
-                                        <span
-                                            :class="{
-                                                'text-green-600':
-                                                    process.status ===
-                                                    'completed',
-                                                'text-yellow-600':
-                                                    process.status ===
-                                                    'in_progress',
-                                                'text-red-600':
-                                                    process.status ===
-                                                    'returned',
-                                            }"
-                                        >
-                                            {{ capitalize(process.status) }}
-                                        </span>
-                                    </p>
-                                    <p
-                                        v-if="process.notes"
-                                        class="text-xs text-gray-500 italic"
-                                    >
-                                        Note: {{ process.notes }}
-                                    </p>
-                                    <p class="text-xs text-gray-400">
-                                        {{ formatDate(process.created_at) }}
-                                    </p>
-                                </li>
-                            </ul>
-                        </section>
-                    </section>
+                    </div>
                 </div>
-            </transition>
-            <!-- Snackbar -->
-            <transition name="fade">
-                <div
-                    v-if="snackbar.visible"
-                    class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded shadow-lg z-50"
-                >
-                    {{ snackbar.message }}
-                </div>
-            </transition>
-
-            <!-- Image Preview Modal -->
-            <div
-                v-if="showImageModal"
-                class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
-                @click.self="closeImageModal"
-            >
-                <img
-                    :src="previewImage"
-                    alt="Preview"
-                    class="max-w-full max-h-full rounded shadow-lg"
-                />
-                <button
-                    @click="closeImageModal"
-                    class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300"
-                    aria-label="Close preview"
-                >
-                    &times;
-                </button>
             </div>
-        </div>
+        </transition>
+
+        <!-- Image Preview Modal -->
+        <transition name="fade">
+            <div v-if="showImageModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div class="fixed inset-0 bg-black/80" @click="closeImageModal"></div>
+                <div class="relative z-10 max-w-4xl max-h-[90vh]">
+                    <img
+                        :src="previewImage"
+                        alt="Document Preview"
+                        class="max-w-full max-h-[80vh] rounded-lg shadow-2xl"
+                    />
+                    <button
+                        @click="closeImageModal"
+                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition"
+                    >
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Snackbar Notification -->
+        <transition name="fade">
+            <div
+                v-if="snackbar.visible"
+                :class="[
+                    'fixed bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50',
+                    snackbar.type === 'success' ? 'bg-green-600 text-white' :
+                    snackbar.type === 'error' ? 'bg-red-600 text-white' :
+                    'bg-blue-600 text-white'
+                ]"
+            >
+                {{ snackbar.message }}
+            </div>
+        </transition>
     </InterviewerLayout>
 </template>
 
 <style scoped>
-.slide-fade-enter-active,
-.slide-fade-leave-active {
-    transition: all 0.3s ease;
-}
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-    transform: translateX(100%);
-    opacity: 0;
-}
-
-/* Smaller placeholder styling */
-.placeholder {
-    background-color: #f3f4f6;
-    min-height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #d1d5db;
-    color: #9ca3af;
-    font-style: italic;
-    font-size: 0.75rem;
-    border-radius: 0.375rem;
-    text-align: center;
-    padding: 0 4px;
-}
-
-.image-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-
-.image-wrapper img {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 0.375rem;
-    border: 1px solid #d1d5db;
-    background-color: #fff;
-    cursor: pointer;
-}
-
-@media (max-width: 768px) {
-    .image-wrapper img {
-        width: 80px;
-        height: 80px;
-    }
-}
-
 .fade-enter-active,
 .fade-leave-active {
-    transition: opacity 0.5s;
+    transition: opacity 0.3s ease;
 }
+
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;

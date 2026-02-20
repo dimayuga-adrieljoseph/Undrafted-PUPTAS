@@ -188,10 +188,6 @@ Route::get('/home', function () {
 Route::middleware(['auth'])->post('/test-passers/upload', [Notify::class, 'handleUpload']);
 Route::middleware(['auth'])->get('/test-passers/form', [Notify::class, 'showUploadForm'])->name('upload.form');
 
-Route::get('/dashboard-panel', function () {
-    return Inertia::render('Dashboard/Panel');
-})->middleware(['auth'])->name('dashboard.panel');
-
 // SAR Form Download - Public route for test passers
 Route::get('/sar/download/{filename}/{reference}', [TestPasserController::class, 'downloadSar'])
     ->name('sar.passer-download');
