@@ -108,8 +108,6 @@ trait ManagesApplicationFiles
 
         $files = $request->input('files');
 
-        \Log::info('Files array received:', ['files' => $files]);
-
         // Validate process exists BEFORE making any changes
         $inProgress = $this->getInProgressProcess($application);
 
@@ -149,24 +147,18 @@ trait ManagesApplicationFiles
             foreach ($files as $fileKey) {
                 $dbKey = $keyMap[$fileKey] ?? $fileKey;
 
-                \Log::info("Processing file key: {$fileKey} mapped to DB key: {$dbKey}");
-
                 $file = UserFile::where('user_id', $userId)
                     ->where('type', $dbKey)
                     ->first();
 
                 if (!$file) {
-                    \Log::warning("UserFile not found for user_id={$userId}, type={$dbKey}");
                     $notFoundFiles[] = $dbKey;
                     continue;
                 }
 
                 $file->status = 'returned';
                 $file->comment = $request->note;
-
-                $saved = $file->save();
-
-                \Log::info("Saved UserFile ID {$file->id} with status 'returned' and comment. Save success: " . ($saved ? 'true' : 'false'));
+                $file->save();
 
                 $updatedFiles[] = $dbKey;
             }
