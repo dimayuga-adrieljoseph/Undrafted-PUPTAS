@@ -15,29 +15,25 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\Program;
 use App\Rules\ValidationRules;
 use Inertia\Inertia;
+use App\Services\UserService;
 
 class UserController extends Controller
 {
+    protected UserService $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
     /**
      * Display the user addition form.
      */
     public function create()
     {
-        $userCountsByRole = User::select('role_id', \DB::raw('count(*) as total'))
-            ->groupBy('role_id')
-            ->pluck('total', 'role_id')
-            ->toArray();
-
-        $roles = [
-            1 => 'Applicant',
-            2 => 'Admin',
-            3 => 'Evaluator',
-            4 => 'Interviewer',
-            5 => 'Medical',
-            6 => 'Registrar',
-        ];
-
-        $totalUsers = User::count();
+        $userCountsByRole = $this->userService->getUserCountsByRole();
+        $roles = $this->userService->getRoleDefinitions();
+        $totalUsers = $this->userService->getTotalUserCount();
         $programs = Program::all();
 
         return Inertia::render('UserManagement/AddUser', [
@@ -57,20 +53,7 @@ class UserController extends Controller
     {
         $request->validate(ValidationRules::userStore());
 
-        $user = User::create([
-            'firstname' => $request->firstname,
-            'lastname' => $request->lastname,
-            'middlename' => $request->middlename,
-            'email' => $request->email,
-            'contactnumber' => $request->contactnumber,
-            'password' => Hash::make($request->password),
-            'role_id' => $request->role_id,
-        ]);
-
-        // Attach program if role is Applicant and program is provided
-        if ($request->role_id == 1 && $request->filled('program')) {
-            $user->programs()->attach($request->program, ['role_id' => $request->role_id]);
-        }
+        $user = $this->userService->createUser($request->all());
 
         event(new Registered($user));
 
@@ -82,55 +65,13 @@ class UserController extends Controller
      */
     public function index()
     {
-       $users = User::select('id', 'firstname', 'middlename', 'lastname', 'email', 'contactnumber', 'role_id', 'created_at')
-            ->with([
-                'role:id,name',
-                'programs:id,name,code',
-                'applicantProfile' => function($query) {
-                    $query->select('user_id', 'first_choice_program');
-                },
-                'applicantProfile.firstChoiceProgram:id,name,code'
-            ])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $userCountsByRole = User::select('role_id', \DB::raw('count(*) as total'))
-            ->groupBy('role_id')
-            ->pluck('total', 'role_id')
-            ->toArray();
-
-        $roles = [
-            1 => 'Applicant',
-            2 => 'Admin',
-            3 => 'Evaluator',
-            4 => 'Interviewer',
-            5 => 'Medical',
-            6 => 'Registrar',
-        ];
-
-        $totalUsers = User::count();
+        $users = $this->userService->getAllUsersWithDetails();
+        $userCountsByRole = $this->userService->getUserCountsByRole();
+        $roles = $this->userService->getRoleDefinitions();
+        $totalUsers = $this->userService->getTotalUserCount();
 
         // Audit log for viewing sensitive user data
-        try {
-            AuditLog::create([
-                'user_id' => auth()->id(),
-                'model_type' => 'User',
-                'model_id' => null,
-                'action' => 'viewed_user_listing',
-                'old_values' => null,
-                'new_values' => [
-                    'total_users_viewed' => $users->count(),
-                    'includes_applicant_profiles' => true,
-                    'timestamp' => now()->toIso8601String(),
-                ],
-                'ip_address' => request()->ip(),
-            ]);
-        } catch (\Exception $e) {
-            logger()->error('Failed to create audit log for user listing view', [
-                'actor_id' => auth()->id(),
-                'error' => $e->getMessage()
-            ]);
-        }
+        $this->userService->logUserListingView(auth()->id(), $users->count());
 
         return Inertia::render('UserManagement/ManageUsers', [
             'users' => $users,
@@ -147,15 +88,7 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
         $programs = Program::all();
-
-        $roles = [
-            1 => 'Applicant',
-            2 => 'Admin',
-            3 => 'Evaluator',
-            4 => 'Interviewer',
-            5 => 'Medical',
-            6 => 'Registrar',
-        ];
+        $roles = $this->userService->getRoleDefinitions();
 
         return Inertia::render('UserManagement/EditUser', [
             'user' => $user,
