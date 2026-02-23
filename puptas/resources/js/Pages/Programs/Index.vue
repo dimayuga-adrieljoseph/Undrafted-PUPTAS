@@ -72,7 +72,7 @@ const startEdit = (program) => {
 const saveEdit = async () => {
   try {
     const response = await axios.put(
-      `/programs/update/${editingProgram.value.id}`, 
+      `/programs/${editingProgram.value.id}`,
       editingProgram.value
     );
     const index = programs.value.findIndex(p => p.id === editingProgram.value.id);
@@ -95,7 +95,7 @@ const cancelEdit = () => {
 const confirmDeleteProgram = async () => {
   if (!programToDelete.value) return;
   try {
-    await axios.delete(`/programs/delete/${programToDelete.value}`);
+    await axios.delete(`/programs/${programToDelete.value}`);
     programs.value = programs.value.filter(p => p.id !== programToDelete.value);
     closeDeleteModal();
   } catch (error) {

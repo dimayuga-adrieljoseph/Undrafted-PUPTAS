@@ -70,7 +70,7 @@
   // ✅ Function to Add Program
   const addProgram = async () => {
   try {
-    const response = await axios.post("/programs/store", newProgram.value);
+    const response = await axios.post("/programs", newProgram.value);
    
     // Reset form
     newProgram.value = { code: "", name: "", strand: "", math: 0, science: 0, english: 0, gwa: 1, pupcet: 0, slots: 1 };
