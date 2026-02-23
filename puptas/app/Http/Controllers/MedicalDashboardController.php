@@ -5,66 +5,58 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
-use App\Models\UserFile;
-use Illuminate\Support\Facades\Storage;
 use App\Models\Application;
+use App\Models\UserFile;
 use App\Models\ApplicationProcess;
-use App\Models\Program;
-use App\Models\Grade;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
-
-
+use App\Services\ApplicationService;
+use App\Services\ApplicationProcessService;
+use App\Services\DashboardService;
+use App\Services\UserService;
 
 class MedicalDashboardController extends Controller
 {
     use ManagesApplicationFiles;
+
+    protected ApplicationService $applicationService;
+    protected ApplicationProcessService $processService;
+    protected DashboardService $dashboardService;
+    protected UserService $userService;
+
+    public function __construct(
+        ApplicationService $applicationService,
+        ApplicationProcessService $processService,
+        DashboardService $dashboardService,
+        UserService $userService
+    ) {
+        $this->applicationService = $applicationService;
+        $this->processService = $processService;
+        $this->dashboardService = $dashboardService;
+        $this->userService = $userService;
+    }
+
     public function index()
     {
         $user = Auth::user();
 
-        if ($user->role_id !== 5) {
+        if (!$this->dashboardService->verifyRoleAccess($user, 5)) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $summary = [
-            'total' => Application::count(),
-            'accepted' => Application::where('status', 'accepted')->count(),
-            'pending' => Application::where('status', 'submitted')->count(),
-            'returned' => Application::where('status', 'returned')->count(),
-        ];
+        $dashboardData = $this->dashboardService->getCommonDashboardData();
 
         return Inertia::render('Dashboard/Medical', [
             'user' => $user,
-            'allUsers' => User::all(),
-            'summary' => $summary,
+            'allUsers' => $dashboardData['allUsers'],
+            'summary' => $dashboardData['summary'],
         ]);
     }
 
     public function getUsers()
     {
-        return response()->json(
-            User::with('application.program')
-                ->where('role_id', 1)
-                ->whereHas('application')
-                ->get()
-                ->map(function ($user) {
-                    return [
-                        'id' => $user->id,
-                        'firstname' => $user->firstname,
-                        'lastname' => $user->lastname,
-                        'course' => $user->course,
-                        'status' => $user->application->status ?? null,
-                        'email' => $user->email,
-                        'username' => $user->username,
-                        'phone' => $user->phone,
-                        'company' => $user->company,
-                        'program' => $user->application->program ?? null,
-                    ];
-                })
-        );
+        return response()->json($this->userService->getApplicantsWithApplications());
     }
 
     protected function getCurrentStage(): string
@@ -80,14 +72,11 @@ class MedicalDashboardController extends Controller
     protected function checkPrerequisiteStage($application)
     {
         // Check if interviewer stage is completed
-        $interviewerCompleted = $application->processes()
-            ->where('stage', 'interviewer')
-            ->where('status', 'completed')
-            ->exists();
-
-        if (!$interviewerCompleted) {
-            abort(409, "Cannot proceed - prerequisite verification not completed.");
-        }
+        $this->applicationService->ensureStageCompleted(
+            $application, 
+            'interviewer', 
+            "Cannot proceed - prerequisite verification not completed."
+        );
     }
 
     // getUserFiles() method provided by ManagesApplicationFiles trait
@@ -100,17 +89,14 @@ class MedicalDashboardController extends Controller
     {
         $this->ensureRole(5);
 
-        $application = Application::where('user_id', $userId)->firstOrFail();
+        $application = $this->applicationService->getApplicationByUserId($userId);
 
         // Check if interviewer stage is completed
-        $interviewerCompleted = $application->processes()
-            ->where('stage', 'interviewer')
-            ->where('status', 'completed')
-            ->exists();
-
-        if (!$interviewerCompleted) {
-            abort(409, "Cannot clear medically - interviewer stage not completed.");
-        }
+        $this->applicationService->ensureStageCompleted(
+            $application, 
+            'interviewer', 
+            "Cannot clear medically - interviewer stage not completed."
+        );
 
         try {
             DB::transaction(function () use ($application, $userId) {
