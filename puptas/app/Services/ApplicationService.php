@@ -128,9 +128,8 @@ class ApplicationService
 
             $process->update([
                 'status' => 'completed',
-                'processed_by' => $processedBy,
-                'note' => $note,
-                'completed_at' => now(),
+                'performed_by' => $processedBy,
+                'reviewer_notes' => $note,
             ]);
 
             return $process->fresh();
@@ -160,15 +159,11 @@ class ApplicationService
             ];
 
             if ($processedBy !== null) {
-                $data['processed_by'] = $processedBy;
+                $data['performed_by'] = $processedBy;
             }
 
             if ($note !== null) {
-                $data['note'] = $note;
-            }
-
-            if ($status === 'completed') {
-                $data['completed_at'] = now();
+                $data['reviewer_notes'] = $note;
             }
 
             return ApplicationProcess::updateOrCreate(

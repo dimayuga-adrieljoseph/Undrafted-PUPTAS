@@ -54,9 +54,8 @@ class ApplicationProcessService
             // Mark current stage as completed
             $currentProcess->update([
                 'status' => 'completed',
-                'processed_by' => $processedBy,
-                'note' => $note,
-                'completed_at' => now(),
+                'performed_by' => $processedBy,
+                'reviewer_notes' => $note,
             ]);
 
             // Create next stage if provided
@@ -73,8 +72,8 @@ class ApplicationProcessService
                 'stage' => $currentStage,
                 'status' => 'completed',
                 'next_stage' => $nextStage,
-                'note' => $note,
-                'processed_by_id' => $processedBy,
+                'reviewer_notes' => $note,
+                'performed_by_id' => $processedBy,
             ];
 
             // Audit log for stage progression
@@ -128,16 +127,17 @@ class ApplicationProcessService
                 ->whereIn('status', ['in_progress', 'completed'])
                 ->first();
 
-            if ($process) {
-                $oldState['process_status'] = $process->status;
-                
-                $process->update([
-                    'status' => 'returned',
-                    'processed_by' => $processedBy,
-                    'note' => $reason,
-                    'completed_at' => null,
-                ]);
+            if (!$process) {
+                throw new \Exception("Cannot return application - no process record found for stage '{$stage}'.");
             }
+
+            $oldState['process_status'] = $process->status;
+            
+            $process->update([
+                'status' => 'returned',
+                'performed_by' => $processedBy,
+                'reviewer_notes' => $reason,
+            ]);
 
             // Update application status
             $application->update([
@@ -150,7 +150,7 @@ class ApplicationProcessService
                 'stage' => $stage,
                 'process_status' => 'returned',
                 'reason' => $reason,
-                'processed_by_id' => $processedBy,
+                'performed_by_id' => $processedBy,
             ];
 
             // Audit log for application return
