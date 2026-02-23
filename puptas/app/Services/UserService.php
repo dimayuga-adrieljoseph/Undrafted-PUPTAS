@@ -110,6 +110,32 @@ class UserService
                 $user->programs()->attach($data['program'], ['role_id' => $data['role_id']]);
             }
 
+            // Audit log for user creation
+            try {
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'model_type' => 'User',
+                    'model_id' => $user->id,
+                    'action' => 'created',
+                    'old_values' => null,
+                    'new_values' => [
+                        'email' => $user->email,
+                        'firstname' => $user->firstname,
+                        'lastname' => $user->lastname,
+                        'middlename' => $user->middlename,
+                        'role_id' => $user->role_id,
+                        'contactnumber' => $user->contactnumber,
+                        'created_by' => auth()->user()->email ?? 'system',
+                    ],
+                    'ip_address' => request()->ip(),
+                ]);
+            } catch (\Exception $e) {
+                logger()->error('Failed to create audit log for user creation', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+
             return $user;
         });
     }
@@ -126,6 +152,16 @@ class UserService
         return DB::transaction(function () use ($userId, $data) {
             $user = User::findOrFail($userId);
             
+            // Capture old values for audit trail
+            $oldValues = [
+                'email' => $user->email,
+                'firstname' => $user->firstname,
+                'lastname' => $user->lastname,
+                'middlename' => $user->middlename,
+                'contactnumber' => $user->contactnumber,
+                'role_id' => $user->role_id,
+            ];
+            
             $updateData = [
                 'firstname' => $data['firstname'],
                 'lastname' => $data['lastname'],
@@ -139,6 +175,36 @@ class UserService
             }
 
             $user->update($updateData);
+            
+            // Capture new values for audit trail
+            $newValues = [
+                'email' => $user->email,
+                'firstname' => $user->firstname,
+                'lastname' => $user->lastname,
+                'middlename' => $user->middlename,
+                'contactnumber' => $user->contactnumber,
+                'role_id' => $user->role_id,
+                'password_changed' => !empty($data['password']),
+                'updated_by' => auth()->user()->email ?? 'system',
+            ];
+
+            // Audit log for user update
+            try {
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'model_type' => 'User',
+                    'model_id' => $user->id,
+                    'action' => 'updated',
+                    'old_values' => $oldValues,
+                    'new_values' => $newValues,
+                    'ip_address' => request()->ip(),
+                ]);
+            } catch (\Exception $e) {
+                logger()->error('Failed to create audit log for user update', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
 
             return $user->fresh();
         });
@@ -152,8 +218,44 @@ class UserService
      */
     public function deleteUser(int $userId): bool
     {
-        $user = User::findOrFail($userId);
-        return $user->delete();
+        return DB::transaction(function () use ($userId) {
+            $user = User::findOrFail($userId);
+            
+            // Capture user data before deletion for audit trail
+            $deletedUserData = [
+                'email' => $user->email,
+                'firstname' => $user->firstname,
+                'lastname' => $user->lastname,
+                'middlename' => $user->middlename,
+                'role_id' => $user->role_id,
+                'contactnumber' => $user->contactnumber,
+                'deleted_by' => auth()->user()->email ?? 'system',
+            ];
+            
+            $deleted = $user->delete();
+            
+            // Audit log for user deletion
+            if ($deleted) {
+                try {
+                    AuditLog::create([
+                        'user_id' => auth()->id(),
+                        'model_type' => 'User',
+                        'model_id' => $userId,
+                        'action' => 'deleted',
+                        'old_values' => $deletedUserData,
+                        'new_values' => null,
+                        'ip_address' => request()->ip(),
+                    ]);
+                } catch (\Exception $e) {
+                    logger()->error('Failed to create audit log for user deletion', [
+                        'user_id' => $userId,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            return $deleted;
+        });
     }
 
     /**
