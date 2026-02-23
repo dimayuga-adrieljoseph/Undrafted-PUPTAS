@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\Program;
 use App\Models\AuditLog;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -106,8 +107,21 @@ class UserService
             ]);
 
             // Attach program if role is Applicant and program is provided
-            if ($data['role_id'] == 1 && !empty($data['program'])) {
-                $user->programs()->attach($data['program'], ['role_id' => $data['role_id']]);
+            if ($data['role_id'] == 1 && !empty($data['applicant_program'])) {
+                // Look up program by code to get the ID
+                $program = Program::where('code', $data['applicant_program'])->first();
+                if ($program) {
+                    $user->programs()->attach($program->id, ['role_id' => $data['role_id']]);
+                }
+            }
+            
+            // Attach program for Evaluators (3) and Interviewers (4)
+            if (in_array($data['role_id'], [3, 4]) && !empty($data['program'])) {
+                // Look up program by code to get the ID
+                $program = Program::where('code', $data['program'])->first();
+                if ($program) {
+                    $user->programs()->attach($program->id, ['role_id' => $data['role_id']]);
+                }
             }
 
             // Audit log for user creation
