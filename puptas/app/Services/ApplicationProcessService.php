@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Application;
 use App\Models\ApplicationProcess;
+use App\Models\AuditLog;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -43,6 +44,13 @@ class ApplicationProcessService
                 throw new \Exception('This action has already been completed or is not available.');
             }
 
+            // Capture old state for audit trail
+            $oldState = [
+                'stage' => $currentStage,
+                'status' => $currentProcess->status,
+                'application_status' => $application->status,
+            ];
+
             // Mark current stage as completed
             $currentProcess->update([
                 'status' => 'completed',
@@ -57,6 +65,34 @@ class ApplicationProcessService
                     'application_id' => $application->id,
                     'stage' => $nextStage,
                     'status' => 'in_progress',
+                ]);
+            }
+
+            // Capture new state for audit trail
+            $newState = [
+                'stage' => $currentStage,
+                'status' => 'completed',
+                'next_stage' => $nextStage,
+                'note' => $note,
+                'processed_by_id' => $processedBy,
+            ];
+
+            // Audit log for stage progression
+            try {
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'model_type' => 'ApplicationProcess',
+                    'model_id' => $currentProcess->id,
+                    'action' => 'stage_passed',
+                    'old_values' => $oldState,
+                    'new_values' => $newState,
+                    'ip_address' => request()->ip(),
+                ]);
+            } catch (\Exception $e) {
+                logger()->error('Failed to create audit log for application stage progression', [
+                    'application_id' => $application->id,
+                    'stage' => $currentStage,
+                    'error' => $e->getMessage()
                 ]);
             }
 
@@ -80,6 +116,12 @@ class ApplicationProcessService
         string $reason
     ): Application {
         return DB::transaction(function () use ($application, $stage, $processedBy, $reason) {
+            // Capture old state for audit trail
+            $oldState = [
+                'application_status' => $application->status,
+                'stage' => $stage,
+            ];
+
             // Update the application process for this stage
             $process = ApplicationProcess::where('application_id', $application->id)
                 ->where('stage', $stage)
@@ -87,6 +129,8 @@ class ApplicationProcessService
                 ->first();
 
             if ($process) {
+                $oldState['process_status'] = $process->status;
+                
                 $process->update([
                     'status' => 'returned',
                     'processed_by' => $processedBy,
@@ -99,6 +143,34 @@ class ApplicationProcessService
             $application->update([
                 'status' => 'returned',
             ]);
+
+            // Capture new state for audit trail
+            $newState = [
+                'application_status' => 'returned',
+                'stage' => $stage,
+                'process_status' => 'returned',
+                'reason' => $reason,
+                'processed_by_id' => $processedBy,
+            ];
+
+            // Audit log for application return
+            try {
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'model_type' => 'Application',
+                    'model_id' => $application->id,
+                    'action' => 'application_returned',
+                    'old_values' => $oldState,
+                    'new_values' => $newState,
+                    'ip_address' => request()->ip(),
+                ]);
+            } catch (\Exception $e) {
+                logger()->error('Failed to create audit log for application return', [
+                    'application_id' => $application->id,
+                    'stage' => $stage,
+                    'error' => $e->getMessage()
+                ]);
+            }
 
             return $application->fresh();
         });
