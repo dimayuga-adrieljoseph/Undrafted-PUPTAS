@@ -44,7 +44,7 @@ class RecordStaffDashboardController extends Controller
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $dashboardData = $this->dashboardService->getDashboardDataWithPrograms();
+        $dashboardData = $this->dashboardService->getRecordsDashboardData();
 
         return Inertia::render('Dashboard/Records', [
             'user' => $user,

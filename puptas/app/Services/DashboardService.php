@@ -32,7 +32,7 @@ class DashboardService
     public function getCommonDashboardData(): array
     {
         return [
-            'allUsers' => User::all(),
+            'allUsers' => User::with('application.program')->whereHas('application')->get(),
             'summary' => $this->applicationService->getApplicationSummary(),
         ];
     }
@@ -125,5 +125,79 @@ class DashboardService
     public function getApplicantsForDashboard()
     {
         return $this->userService->getApplicantsWithApplications();
+    }
+
+    /**
+     * Get applicants pending for a specific stage
+     *
+     * @param string $stage
+     * @return \Illuminate\Support\Collection
+     */
+    public function getApplicantsPendingForStage(string $stage)
+    {
+        return User::with('application.program')
+            ->whereHas('application', function ($query) use ($stage) {
+                $query->whereHas('processes', function ($q) use ($stage) {
+                    $q->where('stage', $stage)
+                      ->whereIn('status', ['in_progress', 'returned']);
+                });
+            })
+            ->get();
+    }
+
+    /**
+     * Get dashboard data for evaluator with pending applications
+     *
+     * @return array
+     */
+    public function getEvaluatorDashboardData(): array
+    {
+        return [
+            'allUsers' => $this->getApplicantsPendingForStage('evaluator'),
+            'summary' => $this->applicationService->getApplicationSummary(),
+            'chartData' => $this->getApplicationChartData(),
+        ];
+    }
+
+    /**
+     * Get dashboard data for interviewer with pending applications
+     *
+     * @return array
+     */
+    public function getInterviewerDashboardData(): array
+    {
+        return [
+            'allUsers' => $this->getApplicantsPendingForStage('interviewer'),
+            'summary' => $this->applicationService->getApplicationSummary(),
+            'chartData' => $this->getApplicationChartData(),
+        ];
+    }
+
+    /**
+     * Get dashboard data for medical with pending applications
+     *
+     * @return array
+     */
+    public function getMedicalDashboardData(): array
+    {
+        return [
+            'allUsers' => $this->getApplicantsPendingForStage('medical'),
+            'summary' => $this->applicationService->getApplicationSummary(),
+            'chartData' => $this->getApplicationChartData(),
+        ];
+    }
+
+    /**
+     * Get dashboard data for records staff with pending applications
+     *
+     * @return array
+     */
+    public function getRecordsDashboardData(): array
+    {
+        return [
+            'allUsers' => $this->getApplicantsPendingForStage('records'),
+            'programs' => Program::withCount('applications')->get(),
+            'summary' => $this->applicationService->getApplicationSummary(),
+        ];
     }
 }

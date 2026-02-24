@@ -45,7 +45,7 @@ class MedicalDashboardController extends Controller
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $dashboardData = $this->dashboardService->getDashboardDataWithCharts();
+        $dashboardData = $this->dashboardService->getMedicalDashboardData();
 
         return Inertia::render('Dashboard/Medical', [
             'user' => $user,

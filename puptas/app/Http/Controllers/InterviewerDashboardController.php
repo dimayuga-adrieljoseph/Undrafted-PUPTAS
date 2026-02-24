@@ -45,7 +45,7 @@ class InterviewerDashboardController extends Controller
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $dashboardData = $this->dashboardService->getDashboardDataWithCharts();
+        $dashboardData = $this->dashboardService->getInterviewerDashboardData();
 
         return Inertia::render('Dashboard/Interviewer', [
             'user' => $user,
