@@ -45,7 +45,7 @@ class EvaluatorDashboardController extends Controller
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $dashboardData = $this->dashboardService->getDashboardDataWithCharts();
+        $dashboardData = $this->dashboardService->getEvaluatorDashboardData();
 
         return Inertia::render('Dashboard/Evaluator', [
             'user' => $user,
