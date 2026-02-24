@@ -129,7 +129,7 @@ class RecordStaffDashboardController extends Controller
             return response()->json(['message' => 'Tagged as officially enrolled.']);
         } catch (\Throwable $e) {
             \Log::error("❌ Tag failed: " . $e->getMessage());
-            return response()->json(['message' => $e->getMessage()], 400);
+            return response()->json(['message' => 'An error occurred while tagging the enrollment.'], 400);
         }
     }
 
@@ -170,7 +170,7 @@ class RecordStaffDashboardController extends Controller
             return response()->json(['message' => 'Reverted to temporary enrollment.']);
         } catch (\Throwable $e) {
             \Log::error("❌ Untag failed: " . $e->getMessage());
-            return response()->json(['message' => $e->getMessage()], 400);
+            return response()->json(['message' => 'An error occurred while reverting the enrollment.'], 400);
         }
     }
 

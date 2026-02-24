@@ -164,7 +164,7 @@ class InterviewerDashboardController extends Controller
             return response()->json(['message' => 'Application accepted.']);
         } catch (\Throwable $e) {
             \Log::error("❌ Accept failed: " . $e->getMessage());
-            return response()->json(['message' => $e->getMessage()], 400);
+            return response()->json(['message' => 'An error occurred while accepting the application.'], 400);
         }
     }
 
