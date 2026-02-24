@@ -24,9 +24,9 @@ class UserService
      */
     public function getApplicantsWithApplications(): Collection
     {
-        return User::with('application.program')
+        return User::with('currentApplication.program')
             ->where('role_id', 1)
-            ->whereHas('application')
+            ->whereHas('currentApplication')
             ->get()
             ->map(function ($user) {
                 return [
@@ -34,12 +34,12 @@ class UserService
                     'firstname' => $user->firstname,
                     'lastname' => $user->lastname,
                     'course' => $user->course,
-                    'status' => $user->application->status ?? null,
+                    'status' => $user->currentApplication->status ?? null,
                     'email' => $user->email,
                     'username' => $user->username,
                     'phone' => $user->phone,
                     'company' => $user->company,
-                    'program' => $user->application->program ?? null,
+                    'program' => $user->currentApplication->program ?? null,
                 ];
             });
     }
@@ -58,7 +58,16 @@ class UserService
                 'applicantProfile' => function($query) {
                     $query->select('user_id', 'first_choice_program');
                 },
-                'applicantProfile.firstChoiceProgram:id,name,code'
+                'applicantProfile.firstChoiceProgram:id,name,code',
+                // Use deterministic relationships instead of plain application()
+                'currentApplication' => function($query) {
+                    $query->select('id', 'user_id', 'program_id', 'enrollment_status');
+                },
+                'currentApplication.program:id,name,code',
+                'officiallyEnrolledApplication' => function($query) {
+                    $query->select('id', 'user_id', 'program_id', 'enrollment_status');
+                },
+                'officiallyEnrolledApplication.program:id,name,code'
             ])
             ->orderBy('created_at', 'desc')
             ->get();

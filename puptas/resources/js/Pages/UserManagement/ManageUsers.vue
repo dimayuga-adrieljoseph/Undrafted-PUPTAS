@@ -201,18 +201,33 @@
                 
                 <td class="col-program">
                   <div class="program-tags">
-                    <!-- Show first choice program for applicants (role_id = 1) -->
-                    <span v-if="user.role_id === 1 && user.applicant_profile?.first_choice_program" class="program-tag">
-                      {{ user.applicant_profile.first_choice_program.name }}
-                    </span>
-                    <!-- Show programs for other roles -->
-                    <span v-else-if="user.programs?.length" class="program-tag">
-                      {{ user.programs[0].name }}
-                      <span v-if="user.programs.length > 1" class="tag-count">
-                        +{{ user.programs.length - 1 }}
+                    <!-- For applicants: prioritize officially enrolled, then current application, then first choice -->
+                    <template v-if="user.role_id === 1">
+                      <!-- Show officially enrolled program (deterministic) -->
+                      <span v-if="user.officially_enrolled_application?.program" class="program-tag">
+                        {{ user.officially_enrolled_application.program.name }}
                       </span>
-                    </span>
-                    <span v-else class="program-tag empty">—</span>
+                      <!-- Show current application program if not officially enrolled -->
+                      <span v-else-if="user.current_application?.program" class="program-tag">
+                        {{ user.current_application.program.name }}
+                      </span>
+                      <!-- Fallback to first choice program -->
+                      <span v-else-if="user.applicant_profile?.first_choice_program" class="program-tag">
+                        {{ user.applicant_profile.first_choice_program.name }}
+                      </span>
+                      <!-- No program data -->
+                      <span v-else class="program-tag empty">—</span>
+                    </template>
+                    <!-- Show programs for other roles (evaluators, interviewers, etc.) -->
+                    <template v-else>
+                      <span v-if="user.programs?.length" class="program-tag">
+                        {{ user.programs[0].name }}
+                        <span v-if="user.programs.length > 1" class="tag-count">
+                          +{{ user.programs.length - 1 }}
+                        </span>
+                      </span>
+                      <span v-else class="program-tag empty">—</span>
+                    </template>
                   </div>
                 </td>
                 
