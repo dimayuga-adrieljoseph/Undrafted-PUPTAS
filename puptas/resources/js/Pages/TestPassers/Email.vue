@@ -735,8 +735,156 @@
                         @submit.prevent="savePasser"
                         class="grid grid-cols-2 gap-x-6 gap-y-4"
                     >
-                        <!-- Form fields remain the same -->
-                        <!-- ... -->
+                        <!-- Personal Information -->
+                        <div class="col-span-2 grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Surname *</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.surname"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.first_name"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Middle Name</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.middle_name"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                                <input
+                                    type="email"
+                                    v-model="editingPasser.email"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                                <input
+                                    type="date"
+                                    v-model="editingPasser.date_of_birth"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Address -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                            <input
+                                type="text"
+                                v-model="editingPasser.address"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                            />
+                        </div>
+
+                        <!-- School Information -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">SHS School</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.shs_school"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">School Address</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.school_address"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="col-span-2 grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Strand</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.strand"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Year Graduated</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.year_graduated"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Reference Number</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.reference_number"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Batch Information -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">School Year *</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.school_year"
+                                    required
+                                    placeholder="e.g., 2023-2024"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Batch Number *</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.batch_number"
+                                    required
+                                    placeholder="e.g., 1"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Modal Actions -->
+                        <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                            <button
+                                type="button"
+                                @click="closeEditModal"
+                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="saving"
+                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span v-if="saving">Saving...</span>
+                                <span v-else>Save Changes</span>
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -767,8 +915,156 @@
                         @submit.prevent="saveNewPasser"
                         class="grid grid-cols-2 gap-x-6 gap-y-4"
                     >
-                        <!-- Form fields remain the same -->
-                        <!-- ... -->
+                        <!-- Personal Information -->
+                        <div class="col-span-2 grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Surname *</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.surname"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.first_name"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Middle Name</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.middle_name"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                                <input
+                                    type="email"
+                                    v-model="newPasserData.email"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                                <input
+                                    type="date"
+                                    v-model="newPasserData.date_of_birth"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Address -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                            <input
+                                type="text"
+                                v-model="newPasserData.address"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                            />
+                        </div>
+
+                        <!-- School Information -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">SHS School</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.shs_school"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">School Address</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.school_address"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="col-span-2 grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Strand</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.strand"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Year Graduated</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.year_graduated"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Reference Number</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.reference_number"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Batch Information -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">School Year *</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.school_year"
+                                    required
+                                    placeholder="e.g., 2023-2024"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Batch Number *</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.batch_number"
+                                    required
+                                    placeholder="e.g., 1"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Modal Actions -->
+                        <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                            <button
+                                type="button"
+                                @click="closeAddModal"
+                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="saving"
+                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span v-if="saving">Saving...</span>
+                                <span v-else>Add Passer</span>
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -1226,13 +1522,13 @@ function closeAddModal() {
     showAddModal.value = false;
 }
 
-async function saveNewPasser(passerData) {
+async function saveNewPasser() {
     saving.value = true;
     start();
     try {
         const response = await axios.post(
             "/test-passers-store",
-            passerData
+            newPasserData.value
         );
         show("Passer added successfully!", "success");
 
