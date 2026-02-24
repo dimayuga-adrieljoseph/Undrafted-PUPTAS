@@ -61,11 +61,11 @@ class UserService
                 'applicantProfile.firstChoiceProgram:id,name,code',
                 // Use deterministic relationships instead of plain application()
                 'currentApplication' => function($query) {
-                    $query->select('id', 'user_id', 'program_id', 'enrollment_status');
+                    $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
                 },
                 'currentApplication.program:id,name,code',
                 'officiallyEnrolledApplication' => function($query) {
-                    $query->select('id', 'user_id', 'program_id', 'enrollment_status');
+                    $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
                 },
                 'officiallyEnrolledApplication.program:id,name,code'
             ])
