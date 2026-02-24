@@ -201,8 +201,12 @@
                 
                 <td class="col-program">
                   <div class="program-tags">
-                    <!-- Show first choice program for applicants (role_id = 1) -->
-                    <span v-if="user.role_id === 1 && user.applicant_profile?.first_choice_program" class="program-tag">
+                    <!-- Show enrolled program for officially enrolled applicants -->
+                    <span v-if="user.role_id === 1 && user.application?.enrollment_status === 'officially_enrolled' && user.application?.program" class="program-tag">
+                      {{ user.application.program.name }}
+                    </span>
+                    <!-- Show first choice program for other applicants -->
+                    <span v-else-if="user.role_id === 1 && user.applicant_profile?.first_choice_program" class="program-tag">
                       {{ user.applicant_profile.first_choice_program.name }}
                     </span>
                     <!-- Show programs for other roles -->

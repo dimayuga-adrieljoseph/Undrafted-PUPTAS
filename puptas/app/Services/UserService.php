@@ -58,7 +58,11 @@ class UserService
                 'applicantProfile' => function($query) {
                     $query->select('user_id', 'first_choice_program');
                 },
-                'applicantProfile.firstChoiceProgram:id,name,code'
+                'applicantProfile.firstChoiceProgram:id,name,code',
+                'application' => function($query) {
+                    $query->select('id', 'user_id', 'program_id', 'enrollment_status');
+                },
+                'application.program:id,name,code'
             ])
             ->orderBy('created_at', 'desc')
             ->get();
