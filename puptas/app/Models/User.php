@@ -65,10 +65,41 @@ class User extends Authenticatable
         return $this->hasMany(UserFile::class);
     }
 
+    /**
+     * Get all applications for this user
+     */
+    public function applications()
+    {
+        return $this->hasMany(Application::class);
+    }
 
+    /**
+     * Legacy non-deterministic relationship - deprecated
+     * Use currentApplication() or officiallyEnrolledApplication() instead
+     */
     public function application()
     {
         return $this->hasOne(Application::class);
+    }
+
+    /**
+     * Get the latest (current) application for this user
+     * This is the deterministic way to get a user's application
+     */
+    public function currentApplication()
+    {
+        return $this->hasOne(Application::class)->latestOfMany();
+    }
+
+    /**
+     * Get the latest officially enrolled application for this user
+     * Returns null if user has no officially enrolled applications
+     */
+    public function officiallyEnrolledApplication()
+    {
+        return $this->hasOne(Application::class)
+            ->where('enrollment_status', 'officially_enrolled')
+            ->latestOfMany();
     }
 
     public function program()

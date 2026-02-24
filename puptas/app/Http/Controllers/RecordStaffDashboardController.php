@@ -64,6 +64,11 @@ class RecordStaffDashboardController extends Controller
         return 6;
     }
 
+    public function getUsers()
+    {
+        return response()->json($this->userService->getApplicantsWithApplications());
+    }
+
     protected function checkPrerequisiteStage($application)
     {
         // Check if medical stage is completed
