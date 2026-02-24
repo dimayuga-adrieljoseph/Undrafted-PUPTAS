@@ -145,7 +145,7 @@ class MedicalDashboardController extends Controller
             return response()->json(['message' => 'Medical Cleared.']);
         } catch (\Throwable $e) {
             \Log::error("❌ Accept failed: " . $e->getMessage());
-            return response()->json(['message' => $e->getMessage()], 400);
+            return response()->json(['message' => 'An error occurred while processing the medical clearance.'], 400);
         }
     }
     private function ensureRole(int $roleId): void

@@ -55,7 +55,21 @@ class ConfirmationController extends Controller
                 'submitted_at' => $application->submitted_at,
             ]);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+            \Log::error('Application submission failed', [
+                'user_id' => $user->id,
+                'status_code' => $e->getStatusCode(),
+                'exception_class' => get_class($e),
+            ]);
+            
+            // Return generic message for client, actual message logged for debugging
+            $safeMessages = [
+                409 => 'Application has already been submitted.',
+                422 => 'Unable to submit application. Please ensure all requirements are met.',
+            ];
+            
+            return response()->json([
+                'message' => $safeMessages[$e->getStatusCode()] ?? 'An error occurred while submitting your application.'
+            ], $e->getStatusCode());
         }
     }
 
@@ -79,7 +93,13 @@ class ConfirmationController extends Controller
 
             return response()->json($result);
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
+            \Log::warning('File reupload failed', [
+                'user_id' => $user->id,
+                'field' => $inputName,
+                'exception_class' => get_class($e),
+            ]);
+            
+            return response()->json(['message' => 'Invalid file field specified.'], 400);
         }
     }
 
