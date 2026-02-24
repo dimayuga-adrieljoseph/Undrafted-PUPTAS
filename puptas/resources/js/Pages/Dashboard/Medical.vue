@@ -45,6 +45,10 @@ const props = defineProps({
             returned: 0,
         }),
     },
+    chartData: {
+        type: Object,
+        default: () => ({ submitted: [], accepted: [], returned: [], years: [] }),
+    },
 });
 
 const selectedUser = ref(null);
@@ -132,12 +136,13 @@ const chartOptions = {
     }
 };
 
-const chartData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+// Chart data - computed from props
+const chartDataset = computed(() => ({
+    labels: props.chartData.years || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     datasets: [
         {
             label: "Submitted",
-            data: [5, 20, 35, 50, 70, 90],
+            data: props.chartData.submitted || [],
             borderColor: "#2563EB",
             backgroundColor: "rgba(37, 99, 235, 0.1)",
             fill: true,
@@ -149,7 +154,7 @@ const chartData = {
         },
         {
             label: "Cleared",
-            data: [2, 10, 15, 25, 40, 60],
+            data: props.chartData.accepted || [],
             borderColor: "#10B981",
             backgroundColor: "rgba(16, 185, 129, 0.1)",
             fill: true,
@@ -161,7 +166,7 @@ const chartData = {
         },
         {
             label: "Pending Medical",
-            data: [3, 7, 12, 18, 22, 25],
+            data: props.chartData.returned || [],
             borderColor: "#F59E0B",
             backgroundColor: "rgba(245, 158, 11, 0.1)",
             fill: true,
@@ -172,7 +177,7 @@ const chartData = {
             pointRadius: 4,
         },
     ],
-};
+}));
 
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
@@ -452,7 +457,7 @@ const clearMedical = async () => {
                     </div>
                     
                     <div class="h-80">
-                        <LineChart :chart-data="chartData" :options="chartOptions" class="w-full h-full" />
+                        <LineChart :chart-data="chartDataset" :options="chartOptions" class="w-full h-full" />
                     </div>
                 </div>
             </div>
