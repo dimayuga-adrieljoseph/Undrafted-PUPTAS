@@ -88,7 +88,9 @@ class User extends Authenticatable
      */
     public function currentApplication()
     {
-        return $this->hasOne(Application::class)->latestOfMany();
+        return $this->hasOne(Application::class)
+            ->select('applications.*')
+            ->latestOfMany();
     }
 
     /**
@@ -98,6 +100,7 @@ class User extends Authenticatable
     public function officiallyEnrolledApplication()
     {
         return $this->hasOne(Application::class)
+            ->select('applications.*')
             ->where('enrollment_status', 'officially_enrolled')
             ->latestOfMany();
     }
