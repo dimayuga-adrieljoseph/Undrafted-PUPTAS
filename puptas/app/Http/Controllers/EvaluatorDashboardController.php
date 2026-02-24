@@ -6,37 +6,51 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Models\User;
-use App\Models\UserFile;
-use Illuminate\Support\Facades\Storage;
 use App\Models\Application;
+use App\Models\UserFile;
 use App\Models\ApplicationProcess;
 use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
-
+use App\Services\ApplicationService;
+use App\Services\ApplicationProcessService;
+use App\Services\DashboardService;
+use App\Services\UserService;
 
 class EvaluatorDashboardController extends Controller
 {
     use ManagesApplicationFiles;
+
+    protected ApplicationService $applicationService;
+    protected ApplicationProcessService $processService;
+    protected DashboardService $dashboardService;
+    protected UserService $userService;
+
+    public function __construct(
+        ApplicationService $applicationService,
+        ApplicationProcessService $processService,
+        DashboardService $dashboardService,
+        UserService $userService
+    ) {
+        $this->applicationService = $applicationService;
+        $this->processService = $processService;
+        $this->dashboardService = $dashboardService;
+        $this->userService = $userService;
+    }
+
     public function index()
     {
         $user = Auth::user();
 
-        if ($user->role_id !== 3) {
+        if (!$this->dashboardService->verifyRoleAccess($user, 3)) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $summary = [
-            'total' => Application::count(),
-            'accepted' => Application::where('status', 'accepted')->count(),
-            'pending' => Application::where('status', 'submitted')->count(),
-            'returned' => Application::where('status', 'returned')->count(),
-        ];
+        $dashboardData = $this->dashboardService->getCommonDashboardData();
 
         return Inertia::render('Dashboard/Evaluator', [
             'user' => $user,
-            'allUsers' => User::all(),
-            'summary' => $summary,
+            'allUsers' => $dashboardData['allUsers'],
+            'summary' => $dashboardData['summary'],
         ]);
     }
 
@@ -56,26 +70,7 @@ class EvaluatorDashboardController extends Controller
 
     public function getUsers()
     {
-        return response()->json(
-            User::with('application.program')
-                ->where('role_id', 1)
-                ->whereHas('application')
-                ->get()
-                ->map(function ($user) {
-                    return [
-                        'id' => $user->id,
-                        'firstname' => $user->firstname,
-                        'lastname' => $user->lastname,
-                        'course' => $user->course,
-                        'status' => $user->application->status ?? null,
-                        'email' => $user->email,
-                        'username' => $user->username,
-                        'phone' => $user->phone,
-                        'company' => $user->company,
-                        'program' => $user->application->program ?? null,
-                    ];
-                })
-        );
+        return response()->json($this->userService->getApplicantsWithApplications());
     }
 
     public function passApplication(Request $request, $userId)
@@ -86,7 +81,7 @@ class EvaluatorDashboardController extends Controller
 
         $this->ensureRole(3);
 
-        $application = Application::where('user_id', $userId)->firstOrFail();
+        $application = $this->applicationService->getApplicationByUserId($userId);
 
         DB::transaction(function () use ($application, $userId, $request) {
             // Update existing evaluator process (can be in_progress or returned status)

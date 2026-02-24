@@ -39,17 +39,17 @@ Route::get('/applications/user/{user}', function ($user) {
     if (!is_numeric($user)) {
         abort(404);
     }
-    
+
     // Verify user exists and is an applicant
     $applicant = \App\Models\User::where('id', $user)
         ->where('role_id', 1)
         ->whereHas('application')
         ->first();
-    
+
     if (!$applicant) {
         abort(404);
     }
-    
+
     return Inertia::render('Applications/Index', [
         'selectedUserId' => (int) $user
     ]);
@@ -80,10 +80,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/programs', [ProgramController::class, 'store'])->name('programs.store');
 
     // ✅ Update program (PUT)
-    Route::put('/programs/{program}', [ProgramController::class, 'update'])->name('programs.update');
+    Route::put('/programs/{program}', [ProgramController::class, 'update'])->name('programs.web-update');
 
     // ✅ Delete a program (DELETE)
-    Route::delete('/programs/{program}', [ProgramController::class, 'destroy'])->name('programs.delete');
+    Route::delete('/programs/{program}', [ProgramController::class, 'destroy'])->name('programs.web-delete');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -204,7 +204,7 @@ Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
     Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
-    
+
     // Admin SAR Management Routes - Restricted to Admin (2) and Registrar (6)
     Route::middleware(['role:2,6'])->group(function () {
         Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');

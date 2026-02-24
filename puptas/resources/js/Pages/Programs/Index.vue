@@ -153,7 +153,13 @@ const startEdit = (program) => {
 
 const saveEdit = async () => {
   try {
-    await axios.put(`/programs/${editingProgram.value.id}`, editingProgram.value);
+    const response = await axios.put(
+      `/programs/${editingProgram.value.id}`,
+      editingProgram.value
+    );
+    const index = programs.value.findIndex(p => p.id === editingProgram.value.id);
+    if (index !== -1) programs.value[index] = { ...editingProgram.value };
+    isEditing.value = false;
     editingProgram.value = null;
     await fetchPrograms();
   } catch (error) {

@@ -5,43 +5,52 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
-use App\Models\UserFile;
-use Illuminate\Support\Facades\Storage;
 use App\Models\Application;
 use App\Models\ApplicationProcess;
-use App\Models\Program;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
-
-
+use App\Services\ApplicationService;
+use App\Services\ApplicationProcessService;
+use App\Services\DashboardService;
+use App\Services\UserService;
 
 class RecordStaffDashboardController extends Controller
 {
     use ManagesApplicationFiles;
+
+    protected ApplicationService $applicationService;
+    protected ApplicationProcessService $processService;
+    protected DashboardService $dashboardService;
+    protected UserService $userService;
+
+    public function __construct(
+        ApplicationService $applicationService,
+        ApplicationProcessService $processService,
+        DashboardService $dashboardService,
+        UserService $userService
+    ) {
+        $this->applicationService = $applicationService;
+        $this->processService = $processService;
+        $this->dashboardService = $dashboardService;
+        $this->userService = $userService;
+    }
+
     public function index()
     {
         $user = Auth::user();
 
-        if ($user->role_id !== 6) {
+        if (!$this->dashboardService->verifyRoleAccess($user, 6)) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $summary = [
-            'total' => Application::count(),
-            'accepted' => Application::where('status', 'accepted')->count(),
-            'pending' => Application::where('status', 'submitted')->count(),
-            'returned' => Application::where('status', 'returned')->count(),
-        ];
-
-        $programs = Program::withCount('applications')->get();
+        $dashboardData = $this->dashboardService->getDashboardDataWithPrograms();
 
         return Inertia::render('Dashboard/Records', [
             'user' => $user,
-            'allUsers' => User::all(),
-            'programs' => $programs,
-            'summary' => $summary,
+            'allUsers' => $dashboardData['allUsers'],
+            'programs' => $dashboardData['programs'],
+            'summary' => $dashboardData['summary'],
         ]);
     }
 
@@ -58,14 +67,11 @@ class RecordStaffDashboardController extends Controller
     protected function checkPrerequisiteStage($application)
     {
         // Check if medical stage is completed
-        $medicalCompleted = $application->processes()
-            ->where('stage', 'medical')
-            ->where('status', 'completed')
-            ->exists();
-
-        if (!$medicalCompleted) {
-            abort(409, "Cannot proceed - prerequisite verification not completed.");
-        }
+        $this->applicationService->ensureStageCompleted(
+            $application, 
+            'medical', 
+            "Cannot proceed - prerequisite verification not completed."
+        );
     }
 
     // getUserFiles() method provided by ManagesApplicationFiles trait
@@ -78,17 +84,14 @@ class RecordStaffDashboardController extends Controller
     {
         $this->ensureRole(6);
 
-        $application = Application::where('user_id', $userId)->firstOrFail();
+        $application = $this->applicationService->getApplicationByUserId($userId);
 
         // Check if medical stage is completed
-        $medicalCompleted = $application->processes()
-            ->where('stage', 'medical')
-            ->where('status', 'completed')
-            ->exists();
-
-        if (!$medicalCompleted) {
-            abort(409, "Cannot tag as enrolled - medical stage not completed.");
-        }
+        $this->applicationService->ensureStageCompleted(
+            $application, 
+            'medical', 
+            "Cannot tag as enrolled - medical stage not completed."
+        );
 
         try {
             // Update the application enrollment status
@@ -134,7 +137,7 @@ class RecordStaffDashboardController extends Controller
     {
         $this->ensureRole(6);
 
-        $application = Application::where('user_id', $userId)->firstOrFail();
+        $application = $this->applicationService->getApplicationByUserId($userId);
 
         // Check if application is accepted
         if ($application->status !== 'accepted') {

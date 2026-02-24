@@ -5,40 +5,52 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
-use App\Models\UserFile;
-use Illuminate\Support\Facades\Storage;
-use App\Models\Application;
 use App\Models\ApplicationProcess;
 use App\Models\Program;
 use App\Models\Grade;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
+use App\Services\ApplicationService;
+use App\Services\ApplicationProcessService;
+use App\Services\DashboardService;
+use App\Services\UserService;
 
 class InterviewerDashboardController extends Controller
 {
     use ManagesApplicationFiles;
+
+    protected ApplicationService $applicationService;
+    protected ApplicationProcessService $processService;
+    protected DashboardService $dashboardService;
+    protected UserService $userService;
+
+    public function __construct(
+        ApplicationService $applicationService,
+        ApplicationProcessService $processService,
+        DashboardService $dashboardService,
+        UserService $userService
+    ) {
+        $this->applicationService = $applicationService;
+        $this->processService = $processService;
+        $this->dashboardService = $dashboardService;
+        $this->userService = $userService;
+    }
+
     public function index()
     {
         $user = Auth::user();
 
-        if ($user->role_id !== 4) {
+        if (!$this->dashboardService->verifyRoleAccess($user, 4)) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $summary = [
-            'total' => Application::count(),
-            'accepted' => Application::where('status', 'accepted')->count(),
-            'pending' => Application::where('status', 'submitted')->count(),
-            'returned' => Application::where('status', 'returned')->count(),
-        ];
-
+        $dashboardData = $this->dashboardService->getCommonDashboardData();
 
         return Inertia::render('Dashboard/Interviewer', [
             'user' => $user,
-            'allUsers' => User::all(),
-            'summary' => $summary,
+            'allUsers' => $dashboardData['allUsers'],
+            'summary' => $dashboardData['summary'],
         ]);
     }
 
@@ -55,57 +67,32 @@ class InterviewerDashboardController extends Controller
     protected function checkPrerequisiteStage($application)
     {
         // Check if evaluator stage is completed
-        $evaluatorCompleted = $application->processes()
-            ->where('stage', 'evaluator')
-            ->where('status', 'completed')
-            ->exists();
-
-        if (!$evaluatorCompleted) {
-            abort(409, "Cannot proceed - prerequisite verification not completed.");
-        }
+        $this->applicationService->ensureStageCompleted(
+            $application, 
+            'evaluator', 
+            "Cannot proceed - prerequisite verification not completed."
+        );
     }
 
     // getUserFiles() method provided by ManagesApplicationFiles trait
 
     public function getUsers()
     {
-        return response()->json(
-            User::with('application.program')
-                ->where('role_id', 1)
-                ->whereHas('application')
-                ->get()
-                ->map(function ($user) {
-                    return [
-                        'id' => $user->id,
-                        'firstname' => $user->firstname,
-                        'lastname' => $user->lastname,
-                        'course' => $user->course,
-                        'status' => $user->application->status ?? null,
-                        'email' => $user->email,
-                        'username' => $user->username,
-                        'phone' => $user->phone,
-                        'company' => $user->company,
-                        'program' => $user->application->program ?? null,
-                    ];
-                })
-        );
+        return response()->json($this->userService->getApplicantsWithApplications());
     }
 
     public function accept($userId)
     {
         $this->ensureRole(4);
 
-        $application = Application::where('user_id', $userId)->firstOrFail();
+        $application = $this->applicationService->getApplicationByUserId($userId);
 
         // Check if evaluator stage is completed
-        $evaluatorCompleted = $application->processes()
-            ->where('stage', 'evaluator')
-            ->where('status', 'completed')
-            ->exists();
-
-        if (!$evaluatorCompleted) {
-            abort(409, "Cannot accept - evaluator stage not completed.");
-        }
+        $this->applicationService->ensureStageCompleted(
+            $application, 
+            'evaluator', 
+            "Cannot accept - evaluator stage not completed."
+        );
 
         // Block repeat accepts or already-finalized applications
         if (!in_array($application->status, ['submitted', 'returned', 'transferred'], true)) {
@@ -202,17 +189,14 @@ class InterviewerDashboardController extends Controller
 
         \Log::info("🚀 Transfer requested for user {$userId} to program {$validated['program_id']}");
 
-        $application = Application::where('user_id', $userId)->firstOrFail();
+        $application = $this->applicationService->getApplicationByUserId($userId);
 
         // Check if evaluator stage is completed
-        $evaluatorCompleted = $application->processes()
-            ->where('stage', 'evaluator')
-            ->where('status', 'completed')
-            ->exists();
-
-        if (!$evaluatorCompleted) {
-            abort(409, "Cannot transfer - evaluator stage not completed.");
-        }
+        $this->applicationService->ensureStageCompleted(
+            $application, 
+            'evaluator', 
+            "Cannot transfer - evaluator stage not completed."
+        );
 
         $grades = Grade::where('user_id', $userId)->first();
 
