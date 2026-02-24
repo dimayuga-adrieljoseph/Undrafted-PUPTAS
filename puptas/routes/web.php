@@ -316,6 +316,9 @@ Route::middleware(['auth'])->group(function () {
         ->name('record.dashboard');
 });
 
+Route::get('/record-dashboard/applicants', [RecordStaffDashboardController::class, 'getUsers']);
+Route::get('/record-dashboard/application/{id}', [RecordStaffDashboardController::class, 'getUserFiles']);
+
 Route::get('/recordstaff-applications', function () {
     if (Auth::user()?->role_id !== 6) {
         return redirect()->back()->with('error', 'Unauthorized access.');
