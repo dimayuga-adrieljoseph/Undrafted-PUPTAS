@@ -36,7 +36,7 @@ class CreateNewUser implements CreatesNewUsers
             'schoolyear' => ['required', 'string', 'max:50'],
             'dateGrad' => ['required', 'date'],
             'strand' => ['required', 'string', 'max:50'],
-            'track' => ['required', 'string', 'max:50'],
+            'track' => ['nullable', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:255', 'unique:users'],
             'password' => $this->passwordRules(),
             'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature() ? ['accepted', 'required'] : '',
