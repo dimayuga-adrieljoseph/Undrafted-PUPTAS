@@ -71,7 +71,8 @@ class ValidationRules
         return [
             'code' => 'required|string|unique:programs,code',
             'name' => 'required|string|max:255',
-            'strand' => 'nullable|string|max:100',
+            'strand_ids' => 'nullable|array',
+            'strand_ids.*' => 'exists:strands,id',
             'math' => 'nullable|numeric|min:0|max:100',
             'science' => 'nullable|numeric|min:0|max:100',
             'english' => 'nullable|numeric|min:0|max:100',
@@ -86,7 +87,8 @@ class ValidationRules
         return [
             'code' => "required|string|unique:programs,code,{$programId}",
             'name' => 'required|string|max:255',
-            'strand' => 'nullable|string|max:100',
+            'strand_ids' => 'nullable|array',
+            'strand_ids.*' => 'exists:strands,id',
             'math' => 'nullable|numeric|min:0|max:100',
             'science' => 'nullable|numeric|min:0|max:100',
             'english' => 'nullable|numeric|min:0|max:100',
