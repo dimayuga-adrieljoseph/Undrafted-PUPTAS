@@ -66,10 +66,10 @@ Route::post('/extract-grades', function (Request $request) {
 // Route::post('/programs/store', [ProgramController::class, 'store'])->name('programs.store');
 
 // Update program slots (PUT)
-// Route::put('/programs/update/{id}', [ProgramController::class, 'update'])->name('programs.update');
+Route::put('/programs/update/{id}', [ProgramController::class, 'update'])->name('programs.update');
 
 // Delete a program (DELETE)
-// Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->name('programs.delete');
+Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->name('programs.delete');
 
 
 
