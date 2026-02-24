@@ -11,7 +11,6 @@ class Program extends Model
     protected $fillable = [
         'code',
         'name',
-        'strand',
         'math',
         'science',
         'english',
@@ -27,6 +26,16 @@ class Program extends Model
         'gwa' => 'decimal:2',
         'pupcet' => 'decimal:2',
     ];
+
+    protected $appends = ['strand_names'];
+
+    /**
+     * Accessor for strand names (for backward compatibility in frontend)
+     */
+    public function getStrandNamesAttribute()
+    {
+        return $this->strands->pluck('code')->join(', ');
+    }
 
     public function applications()
     {

@@ -73,6 +73,9 @@ Route::middleware(['auth'])->group(function () {
     // ✅ Fetch programs
     Route::get('/programs/list', [ProgramController::class, 'index'])->name('programs.list');
 
+    // ✅ Fetch available strands for dropdown
+    Route::get('/programs/strands', [ProgramController::class, 'getStrands'])->name('programs.strands');
+
     // ✅ Create a new program (POST)
     Route::post('/programs', [ProgramController::class, 'store'])->name('programs.store');
 
