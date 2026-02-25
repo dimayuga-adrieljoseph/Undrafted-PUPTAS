@@ -13,7 +13,6 @@ const props = defineProps({
 });
 
 const form = useForm({
-    _method: 'PUT',
     firstname: props.user.firstname || '',
     lastname: props.user.lastname || '',
     middlename: props.user.middlename || '',
@@ -25,7 +24,8 @@ const form = useForm({
     role_id: props.user.role_id || '',
     // Use program CODE, not ID
     program: props.user.programs && props.user.programs.length > 0 ? props.user.programs[0].code : '',
-    applicant_program: props.user.applicant_programs && props.user.applicant_programs.length > 0 ? props.user.applicant_programs[0].code : ''
+    // For applicants: use programs relationship (same as program field)
+    applicant_program: props.user.programs && props.user.programs.length > 0 ? props.user.programs[0].code : ''
 });
 
 const showPassword = ref(false);
@@ -49,12 +49,8 @@ const onRoleChange = () => {
 };
 
 const submitForm = () => {
-    form.post(route('users.update', props.user.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            // Optional: Show success message
-            console.log('User updated successfully');
-        }
+    form.put(route('users.update', props.user.id), {
+        preserveScroll: true
     });
 };
 </script>
@@ -442,7 +438,7 @@ const submitForm = () => {
                                         :required="showApplicantProgram"
                                     >
                                         <option value="" disabled>Select program to apply for</option>
-                                        <option v-for="program in programs" :key="program.id" :value="program.id">
+                                        <option v-for="program in programs" :key="program.id" :value="program.code">
                                             {{ program.name }}
                                         </option>
                                     </select>

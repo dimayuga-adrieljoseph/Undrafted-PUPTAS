@@ -55,16 +55,16 @@ class UserService
             ->with([
                 'role:id,name',
                 'programs:id,name,code',
-                'applicantProfile' => function($query) {
-                    $query->select('user_id', 'first_choice_program');
+                'applicantProfile' => function ($query) {
+                    $query->select('id', 'user_id', 'first_choice_program');
                 },
                 'applicantProfile.firstChoiceProgram:id,name,code',
                 // Use deterministic relationships instead of plain application()
-                'currentApplication' => function($query) {
+                'currentApplication' => function ($query) {
                     $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
                 },
                 'currentApplication.program:id,name,code',
-                'officiallyEnrolledApplication' => function($query) {
+                'officiallyEnrolledApplication' => function ($query) {
                     $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
                 },
                 'officiallyEnrolledApplication.program:id,name,code'
@@ -115,6 +115,22 @@ class UserService
                 'role_id' => $data['role_id'],
             ]);
 
+            // Create ApplicantProfile for applicant users
+            if ($data['role_id'] == 1) {
+                $programId = null;
+                // Look up program by code to get the ID if applicant_program is provided
+                if (!empty($data['applicant_program'])) {
+                    $program = Program::where('code', $data['applicant_program'])->first();
+                    if ($program) {
+                        $programId = $program->id;
+                    }
+                }
+
+                $user->applicantProfile()->create([
+                    'first_choice_program' => $programId,
+                ]);
+            }
+
             // Attach program if role is Applicant and program is provided
             if ($data['role_id'] == 1 && !empty($data['applicant_program'])) {
                 // Look up program by code to get the ID
@@ -123,7 +139,7 @@ class UserService
                     $user->programs()->attach($program->id, ['role_id' => $data['role_id']]);
                 }
             }
-            
+
             // Attach program for Evaluators (3) and Interviewers (4)
             if (in_array($data['role_id'], [3, 4]) && !empty($data['program'])) {
                 // Look up program by code to get the ID
@@ -174,7 +190,7 @@ class UserService
     {
         return DB::transaction(function () use ($userId, $data) {
             $user = User::findOrFail($userId);
-            
+
             // Capture old values for audit trail
             $oldValues = [
                 'email' => $user->email,
@@ -184,7 +200,7 @@ class UserService
                 'contactnumber' => $user->contactnumber,
                 'role_id' => $user->role_id,
             ];
-            
+
             $updateData = [
                 'firstname' => $data['firstname'],
                 'lastname' => $data['lastname'],
@@ -198,7 +214,7 @@ class UserService
             }
 
             $user->update($updateData);
-            
+
             // Capture new values for audit trail
             $newValues = [
                 'email' => $user->email,
@@ -243,7 +259,7 @@ class UserService
     {
         return DB::transaction(function () use ($userId) {
             $user = User::findOrFail($userId);
-            
+
             // Capture user data before deletion for audit trail
             $deletedUserData = [
                 'email' => $user->email,
@@ -254,9 +270,9 @@ class UserService
                 'contactnumber' => $user->contactnumber,
                 'deleted_by' => auth()->user()->email ?? 'system',
             ];
-            
+
             $deleted = $user->delete();
-            
+
             // Audit log for user deletion
             if ($deleted) {
                 try {
@@ -276,7 +292,7 @@ class UserService
                     ]);
                 }
             }
-            
+
             return $deleted;
         });
     }
