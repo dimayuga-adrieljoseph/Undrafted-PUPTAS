@@ -24,11 +24,11 @@ COPY --from=composer /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www
 
 # Copy composer files first (for layer caching)
-COPY composer.json composer.lock ./
+COPY puptas/composer.json puptas/composer.lock ./
 RUN composer install --no-dev --optimize-autoloader
 
-# Copy application files
-COPY . .
+# Copy application files from puptas directory
+COPY puptas/ .
 
 # Install Node dependencies and build assets
 RUN npm ci && npm run build
