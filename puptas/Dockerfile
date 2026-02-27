@@ -1,5 +1,5 @@
 # Use PHP 8.2 with FPM
-FROM php:8.2-fpm-alpine
+FROM php:8.4-cli
 
 # Install system dependencies
 RUN apk add --no-cache \
