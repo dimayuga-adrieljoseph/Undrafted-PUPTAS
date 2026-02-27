@@ -1,5 +1,5 @@
-# Use PHP 8.4 with FPM
-FROM php:8.4-fpm-alpine
+# Use PHP 8.2 with FPM
+FROM php:8.2-fpm-alpine
 
 # Install system dependencies
 RUN apk add --no-cache \
@@ -13,8 +13,10 @@ RUN apk add --no-cache \
     tesseract-ocr-data-eng \
     ghostscript \
     curl \
-    gd \
-    libgd-dev
+    freetype \
+    libpng \
+    libjpeg-turbo \
+    zlib
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql zip intl bcmath gd
@@ -26,11 +28,11 @@ COPY --from=composer /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www
 
 # Copy composer files first (for layer caching)
-COPY puptas/composer.json puptas/composer.lock ./
+COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader
 
-# Copy application files from puptas directory
-COPY puptas/ .
+# Copy application files
+COPY . .
 
 # Install Node dependencies and build assets
 RUN npm ci && npm run build
