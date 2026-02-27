@@ -1,0 +1,47 @@
+# Dependencies
+puptas/node_modules
+puptas/vendor
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+puptas/tests
+puptas/phpunit.xml
+puptas/.phpunit.cache
+
+# Environment
+puptas/.env
+puptas/.env.*
+!puptas/.env.example
+
+# Laravel
+puptas/storage/*.key
+puptas/storage/logs/
+puptas/bootstrap/cache/*
+
+# Documentation
+*.md
+docs/
+
+# Database
+*.sqlite
+*.sqlite3
+
+# Docker
+Dockerfile
+.dockerignore
+puptas/Dockerfile
+
+# Misc
+.DS_Store
+Thumbs.db
+*.log
