@@ -1,5 +1,5 @@
-# Use PHP 8.2 with FPM
-FROM php:8.2-fpm-alpine
+# Use PHP 8.4 with FPM
+FROM php:8.4-fpm-alpine
 
 # Install system dependencies
 RUN apk add --no-cache \
@@ -12,10 +12,12 @@ RUN apk add --no-cache \
     tesseract-ocr \
     tesseract-ocr-data-eng \
     ghostscript \
-    curl
+    curl \
+    gd \
+    libgd-dev
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql zip intl bcmath
+RUN docker-php-ext-install pdo pdo_mysql zip intl bcmath gd
 
 # Install Composer
 COPY --from=composer /usr/bin/composer /usr/bin/composer
