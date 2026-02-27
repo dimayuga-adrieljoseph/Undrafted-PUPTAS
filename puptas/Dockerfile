@@ -9,8 +9,6 @@ RUN apk add --no-cache \
     unzip \
     libzip-dev \
     icu-dev \
-    tesseract-ocr \
-    tesseract-ocr-data-eng \
     ghostscript \
     curl \
     freetype \

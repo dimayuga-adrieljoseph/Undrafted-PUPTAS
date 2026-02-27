@@ -10,7 +10,6 @@ import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
 import "../../../css/step1-form.css";
 import { router } from "@inertiajs/vue3";
-import Tesseract from "tesseract.js";
 
 const emailError = ref("");
 const checkingEmail = ref(false);
