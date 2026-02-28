@@ -14,9 +14,12 @@ mkdir -p storage/framework/{sessions,views,cache} bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
-# Ensure .env exists (if you didn't copy APP_KEY via env vars)
-if [ ! -f .env ]; then
-    cp .env.example .env
+# Generate APP_KEY if not set (for fresh installs)
+if [ -z "$APP_KEY" ]; then
+    if [ ! -f .env ]; then
+        cp .env.example .env
+    fi
+    php artisan key:generate --force
 fi
 
 # Clear and cache Laravel configuration
@@ -25,8 +28,16 @@ php artisan route:clear
 php artisan view:clear
 php artisan cache:clear
 
-# Run migrations (forces without prompt)
-php artisan migrate --force || true
+# Run migrations with proper error handling
+echo "Running database migrations..."
+php artisan migrate --force
 
-# Serve the application on Railway’s port
+if [ $? -eq 0 ]; then
+    echo "Migrations completed successfully."
+else
+    echo "ERROR: Migrations failed!"
+    exit 1
+fi
+
+# Serve the application on Railway's port
 php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
