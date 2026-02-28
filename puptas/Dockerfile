@@ -1,5 +1,5 @@
 # Use PHP 8.2 with FPM
-FROM php:8.4-fpm
+FROM php:8.4-cli
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -33,3 +33,6 @@ RUN composer install --no-dev --optimize-autoloader
 
 # Build frontend
 RUN npm ci && npm run build
+
+EXPOSE 8080
+CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
