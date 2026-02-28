@@ -44,4 +44,5 @@ EXPOSE 8080
 
 # Use start script for runtime tasks (caches, migrations, server)
 COPY start.sh /start.sh
+RUN chmod +x /start.sh
 CMD ["/start.sh"]
