@@ -40,9 +40,6 @@ RUN npm ci && npm run build
 RUN chmod -R 755 storage bootstrap/cache && \
     chown -R www-data:www-data /var/www
 
-# Generate Laravel application key
-RUN php artisan key:generate --force
-
 # Cache Laravel configuration for production
 RUN php artisan config:cache && \
     php artisan route:cache && \
