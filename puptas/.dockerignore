@@ -37,10 +37,13 @@ docs/
 *.sqlite3
 
 # Docker
-Dockerfile
 .dockerignore
 
 # Misc
 .DS_Store
 Thumbs.db
 *.log
+
+# Build outputs
+public/hot
+public/build/

@@ -1,8 +1,9 @@
-# Use PHP 8.4 CLI for Laravel
-FROM php:8.4-cli
+# Use PHP 8.4 with Nginx
+FROM php:8.4-fpm
 
-# Install system dependencies needed for PHP extensions and Node
+# Install system dependencies needed for PHP extensions, Node, and Nginx
 RUN apt-get update && apt-get install -y \
+    nginx \
     nodejs \
     npm \
     git \
@@ -39,10 +40,15 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-di
 # Build frontend assets
 RUN npm ci && npm run build
 
+# Copy Nginx configuration
+RUN rm -f /etc/nginx/sites-available/default
+COPY nginx.conf /etc/nginx/sites-available/default
+
 # Expose port for Railway
 EXPOSE 8080
 
-# Use start script for runtime tasks (caches, migrations, server)
+# Use start script for runtime tasks (migrations, server)
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
+
 CMD ["/start.sh"]

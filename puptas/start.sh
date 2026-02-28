@@ -1,21 +1,35 @@
 #!/bin/sh
-set -e
+# start.sh - entrypoint for Laravel container on Railway
 
+# Set working directory
 cd /var/www
 
-# Ensure storage directories exist and permissions
+# Ensure storage directories exist
 mkdir -p storage/framework/{sessions,views,cache} bootstrap/cache
+
+# Set permissions
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
-# Clear caches
+# Generate APP_KEY if not set (for fresh installs)
+if [ -z "$APP_KEY" ]; then
+    if [ ! -f .env ]; then
+        cp .env.example .env
+    fi
+    php artisan key:generate --force
+fi
+
+# Clear Laravel configuration cache
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
 php artisan cache:clear
 
-# Run migrations (skip if fails)
-php artisan migrate --force || echo "Migrations failed, check logs"
+# Run migrations
+php artisan migrate --force
 
-# Serve Laravel on Railway port
-php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+# Start PHP-FPM in the background
+php-fpm &
+
+# Start Nginx in the foreground
+nginx -g 'daemon off;'
