@@ -28,9 +28,34 @@ php artisan route:clear
 php artisan view:clear
 php artisan cache:clear
 
-# Run migrations with proper error handling
+# Debug: Show database connection info
+echo "=== Database Configuration ==="
+php artisan tinker --execute="echo 'DB_HOST: ' . env('DB_HOST') . PHP_EOL; echo 'DB_PORT: ' . env('DB_PORT') . PHP_EOL; echo 'DB_DATABASE: ' . env('DB_DATABASE') . PHP_EOL;"
+
+# Test database connection and verify database exists
+echo "Testing database connection..."
+php artisan tinker --execute="
+try {
+    \$pdo = DB::connection()->getPdo();
+    echo 'Database connection: SUCCESS' . PHP_EOL;
+    
+    // Try to select from the database
+    DB::connection()->select('SELECT 1');
+    echo 'Database query: SUCCESS' . PHP_EOL;
+} catch (\Exception \$e) {
+    echo 'Database connection: FAILED' . PHP_EOL;
+    echo 'Error: ' . \$e->getMessage() . PHP_EOL;
+    exit(1);
+}
+"
+
+# Show migration status before running
+echo "=== Current Migration Status ==="
+php artisan migrate:status
+
+# Run migrations with verbose output
 echo "Running database migrations..."
-php artisan migrate --force
+php artisan migrate --force --verbose
 
 if [ $? -eq 0 ]; then
     echo "Migrations completed successfully."

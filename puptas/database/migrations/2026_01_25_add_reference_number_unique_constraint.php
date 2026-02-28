@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,11 +12,17 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('test_passers', function (Blueprint $table) {
-            // Add unique constraint to reference_number to prevent duplicates
-            // Important for SAR form download security verification
-            $table->unique('reference_number');
-        });
+        // Check if table and column exist before adding unique constraint
+        if (Schema::hasTable('test_passers') && Schema::hasColumn('test_passers', 'reference_number')) {
+            // Check if unique index already exists
+            $hasIndex = DB::select("SHOW INDEX FROM test_passers WHERE Key_name = 'test_passers_reference_number_unique'");
+            
+            if (empty($hasIndex)) {
+                Schema::table('test_passers', function (Blueprint $table) {
+                    $table->unique('reference_number');
+                });
+            }
+        }
     }
 
     /**
@@ -23,8 +30,10 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('test_passers', function (Blueprint $table) {
-            $table->dropUnique(['reference_number']);
-        });
+        if (Schema::hasTable('test_passers') && Schema::hasColumn('test_passers', 'reference_number')) {
+            Schema::table('test_passers', function (Blueprint $table) {
+                $table->dropUnique(['reference_number']);
+            });
+        }
     }
 };

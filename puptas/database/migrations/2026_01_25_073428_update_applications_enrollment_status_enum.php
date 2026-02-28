@@ -12,7 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE applications MODIFY COLUMN enrollment_status ENUM('pending', 'temporary', 'officially_enrolled') DEFAULT 'pending'");
+        // Check if the table and column exist before modifying
+        if (Schema::hasTable('applications') && Schema::hasColumn('applications', 'enrollment_status')) {
+            DB::statement("ALTER TABLE applications MODIFY COLUMN enrollment_status ENUM('pending', 'temporary', 'officially_enrolled') DEFAULT 'pending'");
+        }
     }
 
     /**
@@ -20,6 +23,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE applications MODIFY COLUMN enrollment_status ENUM('pending', 'enrolled', 'rejected', 'waitlist') DEFAULT 'pending'");
+        if (Schema::hasTable('applications') && Schema::hasColumn('applications', 'enrollment_status')) {
+            DB::statement("ALTER TABLE applications MODIFY COLUMN enrollment_status ENUM('pending', 'enrolled', 'rejected', 'waitlist') DEFAULT 'pending'");
+        }
     }
 };

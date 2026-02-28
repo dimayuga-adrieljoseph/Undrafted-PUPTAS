@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('user_files', function (Blueprint $table) {
-            $table->foreignId('application_id')->nullable()->change();
-        });
+        if (Schema::hasTable('user_files') && Schema::hasColumn('user_files', 'application_id')) {
+            Schema::table('user_files', function (Blueprint $table) {
+                $table->foreignId('application_id')->nullable()->change();
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('user_files', function (Blueprint $table) {
-            $table->foreignId('application_id')->nullable(false)->change();
-        });
+        if (Schema::hasTable('user_files') && Schema::hasColumn('user_files', 'application_id')) {
+            Schema::table('user_files', function (Blueprint $table) {
+                $table->foreignId('application_id')->nullable(false)->change();
+            });
+        }
     }
 };

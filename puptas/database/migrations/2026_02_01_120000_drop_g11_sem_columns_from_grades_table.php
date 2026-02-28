@@ -11,9 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('grades', function (Blueprint $table) {
-            $table->dropColumn(['g11_first_sem', 'g11_second_sem']);
-        });
+        // Only drop columns if they exist
+        $columnsToDrop = [];
+        if (Schema::hasColumn('grades', 'g11_first_sem')) {
+            $columnsToDrop[] = 'g11_first_sem';
+        }
+        if (Schema::hasColumn('grades', 'g11_second_sem')) {
+            $columnsToDrop[] = 'g11_second_sem';
+        }
+
+        if (!empty($columnsToDrop)) {
+            Schema::table('grades', function (Blueprint $table) use ($columnsToDrop) {
+                $table->dropColumn($columnsToDrop);
+            });
+        }
     }
 
     /**
