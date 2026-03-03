@@ -36,7 +36,7 @@ WORKDIR /app
 COPY puptas/composer.json puptas/composer.lock* ./
 
 # Run composer update to get compatible packages for PHP 8.2
-RUN composer update --no-dev --no-interaction --prefer-dist
+# RUN composer update --no-dev --no-interaction --prefer-dist
 
 # Copy full application
 COPY puptas/ .
