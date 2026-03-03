@@ -32,12 +32,6 @@ WORKDIR /app
 
 # Copy full project
 COPY . .
-
-RUN mkdir -p storage/framework/sessions \
-    storage/framework/views \
-    storage/framework/cache && \
-    chown -R www-data:www-data storage bootstrap/cache && \
-    chmod -R 775 storage bootstrap/cache
     
 # Copy vendor from php stage (needed for Ziggy)
 COPY --from=php-dependencies /app/vendor ./vendor
