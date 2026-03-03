@@ -334,12 +334,12 @@ Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::cla
 // User Management Routes (Protected - Admin Only)
 Route::middleware(['auth', 'role:2'])->group(function () {
     // Legacy routes (keep for backward compatibility if needed)
-    Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.legacy');
     Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
     Route::post('/legacy/add-user/store', [UserController::class, 'store'])->name('add_user.store');
 
     // RESTful User Routes with proper HTTP methods
-    Route::get('/users', [UserController::class, 'index'])->name('users.index'); // Alternative
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
