@@ -1,65 +1,109 @@
-# ---------- Stage 1: Build Frontend ----------
+# =============================================================================
+# Stage 1: Build Frontend Assets
+# =============================================================================
 FROM node:20-alpine AS frontend
 
 WORKDIR /app
 
-# Copy only puptas folder
-COPY puptas/package*.json ./
-RUN npm install
+# Copy package files
+COPY puptas/package.json puptas/package-lock.json* ./
 
+# Install dependencies (use cache)
+RUN npm ci --only=production=false
+
+# Copy source files
 COPY puptas/ .
+
+# Build frontend assets
 RUN npm run build
 
 
-# ---------- Stage 2: PHP + Apache ----------
-FROM php:8.2-apache
+# =============================================================================
+# Stage 2: PHP + Apache Production Setup
+# =============================================================================
+FROM php:8.2-apache AS backend
 
-# Install system dependencies + MySQL driver
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
-    zip \
-    unzip \
     libzip-dev \
     libonig-dev \
     libxml2-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
-    pdo \
-    pdo_mysql \
-    zip \
-    mbstring \
-    exif \
-    pcntl \
-    bcmath
+        pdo \
+        pdo_mysql \
+        zip \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd
 
-RUN a2enmod rewrite
+# Enable Apache modules
+RUN a2enmod rewrite \
+    && a2enmod headers \
+    && a2enmod ssl
 
-# Set document root to Laravel public folder
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+# Configure Apache for production
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
-    /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' \
-    /etc/apache2/apache2.conf \
-    /etc/apache2/conf-available/*.conf
+    /etc/apache2/sites-available/*.conf \
+    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' \
+        /etc/apache2/apache2.conf \
+        /etc/apache2/conf-available/*.conf
 
-# Install Composer
+# Copy Composer from official image
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Create non-root user for security
+RUN useradd -m -s /bin/bash www-data && \
+    chown -R www-data:www-data /var/www
 
 WORKDIR /var/www/html
 
-# Copy Laravel app
+# Copy Laravel application files
 COPY puptas/ .
 
-# Copy built frontend assets
+# Copy built frontend assets from frontend stage
 COPY --from=frontend /app/public/build ./public/build
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
+# -----------------------------------------------------------------------------
+# Laravel Production Setup
+# -----------------------------------------------------------------------------
 
-# Set permissions
-RUN chown -R www-data:www-data storage bootstrap/cache
+# Set proper permissions
+RUN chown -R www-data:www-data storage bootstrap/cache public/uploads
 RUN chmod -R 775 storage bootstrap/cache
+RUN chmod -R 755 public/uploads 2>/dev/null || true
+RUN chmod 644 .env 2>/dev/null || true
 
+# Install PHP dependencies (production)
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Laravel optimization commands for production
+RUN php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache \
+    && php artisan event:cache
+
+# Create opcache directory and set permissions
+RUN mkdir -p /var/www/html/storage/framework/cache/data \
+    && chown -R www-data:www-data /var/www/html/storage/framework/cache/data
+
+# Expose HTTP port
 EXPOSE 80
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
+# Start Apache in foreground
 CMD ["apache2-foreground"]
