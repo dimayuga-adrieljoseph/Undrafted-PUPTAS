@@ -1,5 +1,20 @@
 # =============================================================================
-# Stage 1: Build Frontend Assets
+# Stage 1: Install PHP Dependencies (needed for frontend build)
+# =============================================================================
+FROM composer:2 AS php-dependencies
+
+WORKDIR /app
+
+# Copy only dependency files first for caching
+COPY puptas/composer.json puptas/composer.lock* ./
+RUN composer install --no-dev --no-interaction --prefer-dist
+
+# Copy full application
+COPY puptas/ .
+
+
+# =============================================================================
+# Stage 2: Build Frontend Assets (needs vendor directory for Ziggy)
 # =============================================================================
 FROM node:20-alpine AS frontend
 
@@ -8,8 +23,11 @@ WORKDIR /app
 # Copy package files
 COPY puptas/package.json puptas/package-lock.json* ./
 
-# Install dependencies (use cache)
-RUN npm ci --only=production=false
+# Install npm dependencies
+RUN npm ci
+
+# Copy vendor directory from PHP stage (needed for Ziggy)
+COPY --from=php-dependencies /app/vendor ./vendor
 
 # Copy source files
 COPY puptas/ .
@@ -19,7 +37,7 @@ RUN npm run build
 
 
 # =============================================================================
-# Stage 2: PHP + Apache Production Setup
+# Stage 3: PHP + Apache Production Setup
 # =============================================================================
 FROM php:8.2-apache AS backend
 
@@ -99,7 +117,7 @@ RUN mkdir -p /var/www/html/storage/framework/cache/data \
     && chown -R www-data:www-data /var/www/html/storage/framework/cache/data
 
 # Expose HTTP port
-EXPOSE 80
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
