@@ -28,14 +28,23 @@ FROM node:20-alpine AS frontend
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+# Copy package files
+COPY puptas/package.json puptas/package-lock.json* ./
+
+# Install dependencies
 RUN npm ci
 
-COPY . .
+# Copy full source
+COPY puptas/ .
+
+# Copy vendor
 COPY --from=php-dependencies /app/vendor ./vendor
 
 # Build Vite assets
 RUN npm run build
+
+# FIX: Copy manifest.json to expected location (laravel-vite-plugin expects it here)
+RUN cp public/build/.vite/manifest.json public/build/manifest.json || true
 
 # =============================================================================
 # Stage 3: Production Image (Apache)
@@ -53,9 +62,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
-# =============================================================================
-# FIX: Apache MPM Conflict - Disable ALL MPMs first, then enable ONLY mpm_prefork
-# =============================================================================
+# Fix Apache MPM Conflict
 RUN echo "=== Fixing Apache MPM Conflict ===" \
     && a2dismod mpm_event \
     && a2dismod mpm_worker \
@@ -84,11 +91,15 @@ WORKDIR /var/www/html
 # Copy Laravel app
 COPY --from=php-dependencies /app /var/www/html
 
-# Copy built frontend assets (from frontend stage)
-COPY --from=frontend /app/public/build ./public/build
+# Copy built frontend assets INCLUDING manifest.json
+COPY --from=frontend /app/public/build /var/www/html/public/build
+
+# Verify build exists
+RUN ls -la /var/www/html/public/build/ && \
+    ls -la /var/www/html/public/build/manifest.json
 
 # Copy entrypoint
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY puptas/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Fix permissions
