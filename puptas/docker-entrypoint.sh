@@ -28,29 +28,6 @@ chmod -R 775 storage bootstrap/cache
 chmod -R 755 storage/framework storage/logs
 echo "Storage permissions fixed"
 
-# -----------------------------
-# Wait for MySQL (Railway fix)
-# -----------------------------
-echo "Waiting for MySQL database..."
-for i in {1..30}; do
-    if php artisan db:show --no-interaction 2>/dev/null; then
-        echo "✅ Database ready!"
-        break
-    fi
-    echo "⏳ Waiting for DB... ($i/30)"
-    sleep 2
-done
-
-# Laravel migrations (only if DB works)
-if php artisan db:show --no-interaction >/dev/null 2>&1; then
-    echo "🚀 Running migrations..."
-    php artisan migrate --force --no-interaction
-    php artisan config:cache
-    echo "✅ Migrations complete"
-else
-    echo "⚠️  No working DB connection - skipping migrations (app will still start)"
-fi
-
 # Test config & start Apache
 echo "Testing Apache configuration..."
 apache2ctl -t
