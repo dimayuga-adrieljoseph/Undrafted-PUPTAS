@@ -26,14 +26,32 @@ chmod -R 775 storage bootstrap/cache
 chmod -R 755 storage/framework storage/logs
 echo "Storage permissions fixed"
 
-# Laravel migrations (if DB vars present)
-if [ -n "$DB_CONNECTION" ] || [ -n "$DATABASE_URL" ]; then
-    echo "Running migrations..."
-    php artisan migrate --force --no-interaction || echo "Migrations skipped"
+# -----------------------------
+# Wait for MySQL (Railway fix)
+# -----------------------------
+echo "Waiting for MySQL database..."
+for i in {1..30}; do
+    if php artisan db:show --no-interaction 2>/dev/null; then
+        echo "✅ Database ready!"
+        break
+    fi
+    echo "⏳ Waiting for DB... ($i/30)"
+    sleep 2
+else
+    echo "⚠️  Database not ready after 60s, skipping migrations"
+fi
+
+# Laravel migrations (only if DB works)
+if php artisan db:show --no-interaction >/dev/null 2>&1; then
+    echo "🚀 Running migrations..."
+    php artisan migrate --force --no-interaction
     php artisan config:cache
+    echo "✅ Migrations complete"
+else
+    echo "⚠️  No working DB connection - skipping migrations (app will still start)"
 fi
 
 # Test config & start Apache
 apache2ctl -t
-echo "Starting Apache..."
+echo "🚀 Starting Apache..."
 exec apache2-foreground
