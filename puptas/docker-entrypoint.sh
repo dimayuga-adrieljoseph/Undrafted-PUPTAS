@@ -2,7 +2,9 @@
 set -e
 
 # Force ONLY mpm_prefork at runtime (Railway-safe)
-a2dismod mpm_event mpm_worker mpm_prefork 2>/dev/null || true
+a2dismod mpm_event 2>/dev/null || true
+a2dismod mpm_worker 2>/dev/null || true
+a2dismod mpm_prefork 2>/dev/null || true
 rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf
 a2enmod mpm_prefork
 

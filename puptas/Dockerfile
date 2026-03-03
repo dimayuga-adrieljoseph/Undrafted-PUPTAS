@@ -43,9 +43,10 @@ RUN npm run build
 # =============================================================================
 FROM php:8.4-apache
 
-RUN a2dismod mpm_event mpm_worker || true \
+RUN a2dismod mpm_event || true \
+    && a2dismod mpm_worker || true \
     && a2enmod mpm_prefork
-    
+
 RUN apt-get update && apt-get install -y \
     libzip-dev libonig-dev libxml2-dev \
     libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
@@ -100,8 +101,8 @@ RUN php artisan config:cache && \
 # -----------------------------
 # Custom Entrypoint
 # -----------------------------
-# COPY docker-entrypoint.sh /usr/local/bin/
-# RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 80
-# CMD ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
