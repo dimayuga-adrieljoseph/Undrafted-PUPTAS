@@ -52,13 +52,17 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite headers
 
-# Configure Apache document root
+# Set document root to Laravel public folder
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" \
     /etc/apache2/sites-available/000-default.conf \
     /etc/apache2/apache2.conf \
     && sed -ri -e "s|AllowOverride None|AllowOverride All|g" \
     /etc/apache2/apache2.conf
+
+# Configure Apache to listen on port 8080 (Railway default)
+RUN echo "Listen 8080" > /etc/apache2/ports.conf \
+    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/g' /etc/apache2/sites-available/000-default.conf
 
 WORKDIR /var/www/html
 
@@ -78,7 +82,6 @@ RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs b
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Default port (will be overridden by Railway's PORT env var)
 EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
