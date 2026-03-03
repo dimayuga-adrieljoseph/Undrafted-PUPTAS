@@ -99,7 +99,7 @@ RUN ls -la /var/www/html/public/build/ && \
     ls -la /var/www/html/public/build/manifest.json
 
 # Copy entrypoint
-COPY puptas/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Fix permissions
