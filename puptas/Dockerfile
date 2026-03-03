@@ -54,7 +54,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
-RUN a2enmod rewrite headers ssl
+RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
+    && a2enmod rewrite headers ssl mpm_prefork
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
