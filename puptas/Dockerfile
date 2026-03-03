@@ -38,7 +38,7 @@ RUN npm ci && npm run build
 # =============================================================================
 FROM php:8.4-apache
 
-# Install additional PHP extensions and tools
+# Install additional PHP extensions
 RUN apt-get update && apt-get install -y \
     libzip-dev libonig-dev libxml2-dev \
     libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
@@ -52,7 +52,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite headers
 
-# Configure Apache to use public directory
+# Configure Apache document root
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" \
     /etc/apache2/sites-available/000-default.conf \
@@ -74,10 +74,11 @@ RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs b
     && chmod -R 775 storage bootstrap/cache \
     && chmod -R 755 storage/framework storage/logs
 
-# Copy custom entrypoint if needed
+# Copy entrypoint
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+# Default port (will be overridden by Railway's PORT env var)
 EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
