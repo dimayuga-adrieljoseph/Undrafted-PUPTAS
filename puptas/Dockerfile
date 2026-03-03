@@ -34,19 +34,14 @@ COPY --from=php-dependencies /app/vendor ./vendor
 RUN npm ci && npm run build
 
 # =============================================================================
-# Stage 3: Production Image (PHP-FPM + Nginx)
+# Stage 3: Production Image (Apache)
 # =============================================================================
-FROM php:8.4-fpm
+FROM php:8.4-apache
 
-# Install system dependencies + nginx + debugging tools
+# Install additional PHP extensions and tools
 RUN apt-get update && apt-get install -y \
-    nginx \
-    supervisor \
     libzip-dev libonig-dev libxml2-dev \
     libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
-    net-tools \
-    iputils-ping \
-    vim \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
@@ -54,35 +49,35 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
-# Create required directories
-RUN mkdir -p /var/run /var/lib/php/sessions /var/lib/php/wsdlcache /var/log/php-fpm
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite headers
+
+# Configure Apache to use public directory
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri -e "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" \
+    /etc/apache2/sites-available/000-default.conf \
+    /etc/apache2/apache2.conf \
+    && sed -ri -e "s|AllowOverride None|AllowOverride All|g" \
+    /etc/apache2/apache2.conf
 
 WORKDIR /var/www/html
 
 # Copy Laravel app
 COPY --from=php-dependencies /app /var/www/html
 
-# Copy built frontend
+# Copy built frontend assets
 COPY --from=frontend /app/public/build ./public/build
 
 # Fix permissions
 RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache /var/lib/php/sessions /var/lib/php/wsdlcache /var/log/php-fpm /var/run \
+    && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache \
-    && chmod -R 755 storage/framework storage/logs \
-    && chmod 755 /var/lib/php/sessions /var/lib/php/wsdlcache /var/run
+    && chmod -R 755 storage/framework storage/logs
 
-# Copy Nginx config
-COPY docker/nginx.conf /etc/nginx/nginx.conf
-
-# Copy Supervisor config
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Copy entrypoint
+# Copy custom entrypoint if needed
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8080
 
-# Run entrypoint that starts PHP-FPM and Nginx
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
