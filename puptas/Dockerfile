@@ -110,9 +110,8 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
 # Copy Composer from official image
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Create non-root user for security
-RUN useradd -m -s /bin/bash www-data && \
-    chown -R www-data:www-data /var/www
+# Use existing www-data user (already exists in php:8.2-apache image)
+RUN chown -R www-data:www-data /var/www
 
 WORKDIR /var/www/html
 
