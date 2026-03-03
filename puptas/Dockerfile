@@ -53,12 +53,19 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite headers
-
-# Fix MPM conflict
-RUN a2dismod mpm_event mpm_worker 2>/dev/null || true
-RUN a2enmod mpm_prefork 2>/dev/null || true
+# =============================================================================
+# FIX: Apache MPM Conflict - Disable ALL MPMs first, then enable ONLY mpm_prefork
+# =============================================================================
+RUN echo "=== Fixing Apache MPM Conflict ===" \
+    && a2dismod mpm_event \
+    && a2dismod mpm_worker \
+    && a2dismod mpm_prefork \
+    && rm -f /etc/apache2/mods-enabled/mpm_*.load \
+    && rm -f /etc/apache2/mods-enabled/mpm_*.conf \
+    && a2enmod mpm_prefork \
+    && a2enmod rewrite \
+    && a2enmod headers \
+    && echo "=== MPM Fix Complete ==="
 
 # Set document root to Laravel public folder
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
