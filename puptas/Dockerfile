@@ -84,8 +84,7 @@ RUN chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
 RUN chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
 # Optimize Laravel
-RUN php artisan config:cache \
-    && php artisan route:cache \
+RUN php artisan route:cache \
     && php artisan view:cache
 
 # Verify only one MPM is loaded
