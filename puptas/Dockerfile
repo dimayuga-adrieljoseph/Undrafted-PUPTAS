@@ -54,17 +54,15 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
-# Fix MPM conflict - remove all MPM modules and enable only mpm_prefork
-# This is more reliable than a2dismod which may not work for compiled-in modules
-RUN rm -f /etc/apache2/mods-enabled/mpm_event.load \
-           /etc/apache2/mods-enabled/mpm_worker.load \
-           /etc/apache2/mods-enabled/mpm_prefork.load \
-    && rm -f /etc/apache2/mods-enabled/mpm_event.conf \
-           /etc/apache2/mods-enabled/mpm_worker.conf \
-           /etc/apache2/mods-enabled/mpm_prefork.conf \
+# -----------------------------
+# Fix MPM conflict
+# -----------------------------
+RUN rm -f /etc/apache2/mods-enabled/mpm_*.load \
+           /etc/apache2/mods-enabled/mpm_*.conf \
     && ln -sf /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load \
     && ln -sf /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf
 
+# Enable other needed modules
 RUN a2enmod rewrite headers ssl
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
@@ -86,10 +84,13 @@ COPY --from=frontend /app/public/build ./public/build
 RUN chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
 RUN chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
-# Optimize Laravel (safe now because artisan exists)
+# Optimize Laravel
 RUN php artisan config:cache \
     && php artisan route:cache \
     && php artisan view:cache
+
+# Verify only one MPM is loaded
+RUN apachectl -M | grep mpm_prefork
 
 EXPOSE 80
 CMD ["apache2-foreground"]
