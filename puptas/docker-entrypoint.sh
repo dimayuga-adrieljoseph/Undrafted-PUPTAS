@@ -34,12 +34,12 @@ for i in {1..30}; do
     if php artisan db:show --no-interaction 2>/dev/null; then
         echo "✅ Database ready!"
         break
-    fi
+    if
     echo "⏳ Waiting for DB... ($i/30)"
     sleep 2
 else
     echo "⚠️  Database not ready after 60s, skipping migrations"
-fi
+if
 
 # Laravel migrations (only if DB works)
 if php artisan db:show --no-interaction >/dev/null 2>&1; then
@@ -49,7 +49,7 @@ if php artisan db:show --no-interaction >/dev/null 2>&1; then
     echo "✅ Migrations complete"
 else
     echo "⚠️  No working DB connection - skipping migrations (app will still start)"
-fi
+if
 
 # Test config & start Apache
 apache2ctl -t
