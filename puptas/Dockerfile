@@ -97,7 +97,8 @@ RUN php artisan config:cache && \
 # -----------------------------
 # Custom Entrypoint
 # -----------------------------
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# COPY docker-entrypoint.sh /usr/local/bin/
+# RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 80
+# CMD ["/usr/local/bin/docker-entrypoint.sh"]
