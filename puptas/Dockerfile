@@ -96,6 +96,9 @@ RUN php artisan route:cache \
 # Verify only one MPM is loaded
 RUN apachectl -M | grep mpm_prefork
 
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 RUN mkdir -p \
     storage/framework/sessions \
     storage/framework/views \
@@ -103,9 +106,6 @@ RUN mkdir -p \
     bootstrap/cache && \
     chown -R www-data:www-data storage bootstrap/cache && \
     chmod -R 775 storage bootstrap/cache
-
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 80
 CMD ["/usr/local/bin/docker-entrypoint.sh"]
