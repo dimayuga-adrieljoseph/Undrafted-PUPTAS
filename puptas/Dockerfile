@@ -43,6 +43,7 @@ RUN npm run build
 # =============================================================================
 FROM php:8.4-apache
 
+
 RUN apt-get update && apt-get install -y \
     libzip-dev libonig-dev libxml2-dev \
     libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
