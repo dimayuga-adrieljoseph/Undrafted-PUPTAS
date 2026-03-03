@@ -46,9 +46,9 @@ FROM php:8.4-fpm
 # Install system dependencies + nginx
 RUN apt-get update && apt-get install -y \
     nginx \
+    supervisor \
     libzip-dev libonig-dev libxml2-dev \
     libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
-    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
@@ -57,21 +57,26 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
 # =============================================================================
-# PHP-FPM Configuration - Force TCP binding on 127.0.0.1:9000
+# PHP-FPM Initial Configuration
 # =============================================================================
-# Create a custom www.conf that explicitly uses TCP
+# Create PHP-FPM pool configuration with explicit TCP binding
 RUN echo "[www]" > /usr/local/etc/php-fpm.d/www.conf && \
     echo "user = www-data" >> /usr/local/etc/php-fpm.d/www.conf && \
     echo "group = www-data" >> /usr/local/etc/php-fpm.d/www.conf && \
     echo "listen = 127.0.0.1:9000" >> /usr/local/etc/php-fpm.d/www.conf && \
     echo "listen.owner = www-data" >> /usr/local/etc/php-fpm.d/www.conf && \
     echo "listen.group = www-data" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "listen.mode = 0660" >> /usr/local/etc/php-fpm.d/www.conf && \
     echo "pm = dynamic" >> /usr/local/etc/php-fpm.d/www.conf && \
     echo "pm.max_children = 10" >> /usr/local/etc/php-fpm.d/www.conf && \
     echo "pm.start_servers = 2" >> /usr/local/etc/php-fpm.d/www.conf && \
     echo "pm.min_spare_servers = 1" >> /usr/local/etc/php-fpm.d/www.conf && \
     echo "pm.max_spare_servers = 3" >> /usr/local/etc/php-fpm.d/www.conf && \
-    echo "pm.max_requests = 500" >> /usr/local/etc/php-fpm.d/www.conf
+    echo "pm.max_requests = 500" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "security.limit_extensions = .php" >> /usr/local/etc/php-fpm.d/www.conf
+
+# Create required directories
+RUN mkdir -p /var/lib/php/sessions /var/lib/php/wsdlcache /var/log/php-fpm
 
 WORKDIR /var/www/html
 
@@ -82,9 +87,11 @@ COPY --from=php-dependencies /app /var/www/html
 COPY --from=frontend /app/public/build ./public/build
 
 # Fix permissions
-RUN mkdir -p storage/framework/{sessions,views,cache} \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs \
+    && chown -R www-data:www-data storage bootstrap/cache /var/lib/php/sessions /var/lib/php/wsdlcache /var/log/php-fpm \
+    && chmod -R 775 storage bootstrap/cache \
+    && chmod -R 755 storage/framework storage/logs \
+    && chmod 755 /var/lib/php/sessions /var/lib/php/wsdlcache
 
 # Copy Nginx config
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -92,8 +99,13 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 # Copy Supervisor config
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Copy and set up entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 8080
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
 # # =============================================================================

@@ -1,36 +1,95 @@
 #!/bin/bash
 set -e
 
-# Force ONLY mpm_prefork at runtime (Railway-safe)
-a2dismod mpm_event 2>/dev/null || true
-a2dismod mpm_worker 2>/dev/null || true
-a2dismod mpm_prefork 2>/dev/null || true
-rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf
-a2enmod mpm_prefork
+echo "=== Railway Laravel Entrypoint (Nginx + PHP-FPM) ==="
 
-# Fix Apache PORT binding (clean slate)
-PORTS_CONF="/etc/apache2/ports.conf"
-if [ -n "$PORT" ]; then
-    sed -i '/^Listen /d' "$PORTS_CONF"
-    echo "Listen 0.0.0.0:${PORT}" >> "$PORTS_CONF"
-    echo "Apache listening on PORT ${PORT}"
-else
-    echo "No PORT env var, using default 80"
+# =============================================================================
+# Fix 1: PHP-FPM TCP Configuration (ensure it listens on 127.0.0.1:9000)
+# =============================================================================
+echo "Configuring PHP-FPM to listen on TCP 127.0.0.1:9000..."
+
+# Backup existing www.conf if it exists
+if [ -f /usr/local/etc/php-fpm.d/www.conf ]; then
+    cp /usr/local/etc/php-fpm.d/www.conf /usr/local/etc/php-fpm.d/www.conf.bak
 fi
 
-# -----------------------------
-# Fix 2: Runtime Laravel Storage Permissions
-# -----------------------------
-echo "Fixing Laravel storage permissions..."
+# Create PHP-FPM pool configuration with explicit TCP binding
+cat > /usr/local/etc/php-fpm.d/www.conf << 'EOF'
+[www]
+user = www-data
+group = www-data
+
+; Listen on TCP (127.0.0.1:9000) - CRITICAL for Nginx communication
+listen = 127.0.0.1:9000
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+
+; Process management
+pm = dynamic
+pm.max_children = 10
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 3
+pm.max_requests = 500
+
+; Security - prevent executable uploads
+security.limit_extensions = .php .php3 .php4 .php5 .php7 .php8
+
+; Logging
+php_admin_value[error_log] = /var/log/php-fpm/error.log
+php_admin_flag[log_errors] = on
+
+; Request characteristics
+php_value[session.save_handler] = files
+php_value[session.save_path] = /var/lib/php/sessions
+php_value[soap.wsdl_cache_dir] = /var/lib/php/wsdlcache
+EOF
+
+echo "PHP-FPM configuration updated"
+
+# =============================================================================
+# Fix 2: Create required directories
+# =============================================================================
+echo "Creating required directories..."
+mkdir -p /var/lib/php/sessions /var/lib/php/wsdlcache
+mkdir -p /var/log/php-fpm
 mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs
-chown -R www-data:www-data storage bootstrap/cache
+
+# =============================================================================
+# Fix 3: Fix Laravel storage permissions
+# =============================================================================
+echo "Fixing Laravel storage permissions..."
+chown -R www-data:www-data storage bootstrap/cache /var/lib/php/sessions /var/lib/php/wsdlcache /var/log/php-fpm
 chmod -R 775 storage bootstrap/cache
 chmod -R 755 storage/framework storage/logs
-echo "Storage permissions fixed"
+chmod 755 /var/lib/php/sessions /var/lib/php/wsdlcache
+echo "Permissions fixed"
 
-# Test config & start Apache
-echo "Testing Apache configuration..."
-apache2ctl -t
-echo "🚀 Starting Apache..."
-exec apache2-foreground
+# =============================================================================
+# Fix 4: Ensure vendor/autoload.php exists
+# =============================================================================
+if [ ! -f /var/www/html/vendor/autoload.php ]; then
+    echo "ERROR: vendor/autoload.php not found!"
+    ls -la /var/www/html/
+    exit 1
+fi
+echo "Vendor autoload.php found"
 
+# =============================================================================
+# Fix 5: Test PHP-FPM configuration
+# =============================================================================
+echo "Testing PHP-FPM configuration..."
+/usr/local/sbin/php-fpm --test || { echo "PHP-FPM test failed!"; exit 1; }
+
+# =============================================================================
+# Fix 6: Test Nginx configuration
+# =============================================================================
+echo "Testing Nginx configuration..."
+nginx -t || { echo "Nginx test failed!"; exit 1; }
+
+# =============================================================================
+# Start services via Supervisor
+# =============================================================================
+echo "Starting Supervisor..."
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
