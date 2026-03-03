@@ -55,12 +55,11 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
 # -----------------------------
-# Fix MPM conflict
+# Fix MPM conflict (build-time prep)
 # -----------------------------
-RUN rm -f /etc/apache2/mods-enabled/mpm_*.load \
-           /etc/apache2/mods-enabled/mpm_*.conf \
-    && ln -sf /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load \
-    && ln -sf /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf
+RUN a2dismod mpm_event mpm_worker || true \
+    && rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf \
+    && a2enmod mpm_prefork
 
 # Enable other needed modules
 RUN a2enmod rewrite headers ssl
@@ -92,5 +91,8 @@ RUN php artisan config:cache \
 # Verify only one MPM is loaded
 RUN apachectl -M | grep mpm_prefork
 
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 80
-CMD ["apache2-foreground"]
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
