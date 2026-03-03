@@ -16,9 +16,12 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
+
+# Copy entire Laravel project (artisan must exist)
 COPY . .
 
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
 
 # =============================================================================
 # Stage 2: Frontend Build
@@ -26,13 +29,22 @@ RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoload
 FROM node:20-alpine AS frontend
 
 WORKDIR /app
+
+# Copy full project
 COPY . .
 
-# Copy vendor from PHP stage (for tools like Ziggy if needed)
+RUN mkdir -p storage/framework/sessions \
+    storage/framework/views \
+    storage/framework/cache && \
+    chown -R www-data:www-data storage bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache
+    
+# Copy vendor from php stage (needed for Ziggy)
 COPY --from=php-dependencies /app/vendor ./vendor
 
 RUN npm ci
 RUN npm run build
+
 
 # =============================================================================
 # Stage 3: Production Image
@@ -49,14 +61,16 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
 # -----------------------------
-# Basic Apache setup (minimal build-time)
+# Fix MPM conflict (build-time prep)
 # -----------------------------
-RUN a2enmod rewrite headers ssl && \
-    echo "ServerName localhost" >> /etc/apache2/apache2.conf
+RUN a2dismod mpm_event mpm_worker || true \
+    && rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf \
+    && a2enmod mpm_prefork
 
-# Set public folder as document root
+# Enable other needed modules
+RUN a2enmod rewrite headers ssl
+
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
     /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' \
@@ -65,33 +79,26 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
 
 WORKDIR /var/www/html
 
-# Copy Laravel app (with vendor)
+# Copy Laravel app INCLUDING vendor
 COPY --from=php-dependencies /app /var/www/html
 
 # Copy built frontend assets
 COPY --from=frontend /app/public/build ./public/build
 
-# -----------------------------
-# Fix Laravel Storage Permissions & Migrations
-# -----------------------------
-RUN mkdir -p \
-    storage/framework/sessions \
-    storage/framework/views \
-    storage/framework/cache \
-    bootstrap/cache && \
-    chown -R www-data:www-data storage bootstrap/cache && \
-    chmod -R 775 storage bootstrap/cache
+# Permissions
+RUN chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
+RUN chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
-# Cache Laravel (migrations run in entrypoint to handle DB connection)
-RUN php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache
+# Optimize Laravel
+RUN php artisan route:cache \
+    && php artisan view:cache
 
-# -----------------------------
-# Custom Entrypoint for MPM & Runtime Fixes
-# -----------------------------
+# Verify only one MPM is loaded
+RUN apachectl -M | grep mpm_prefork
+
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-EXPOSE 8080
+
+EXPOSE 80
 CMD ["/usr/local/bin/docker-entrypoint.sh"]
