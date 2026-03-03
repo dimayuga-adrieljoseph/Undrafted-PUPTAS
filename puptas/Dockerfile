@@ -52,6 +52,16 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite headers
 
+# Fix MPM conflict - disable event and worker, enable prefork only
+RUN a2dismod mpm_event mpm_worker 2>/dev/null || true
+RUN a2enmod mpm_prefork 2>/dev/null || true
+
+# Clean up any conflicting MPM configs
+RUN rm -f /etc/apache2/mods-enabled/mpm_event.load \
+           /etc/apache2/mods-enabled/mpm_event.conf \
+           /etc/apache2/mods-enabled/mpm_worker.load \
+           /etc/apache2/mods-enabled/mpm_worker.conf 2>/dev/null || true
+
 # Set document root to Laravel public folder
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" \
@@ -60,7 +70,7 @@ RUN sed -ri -e "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" \
     && sed -ri -e "s|AllowOverride None|AllowOverride All|g" \
     /etc/apache2/apache2.conf
 
-# Configure Apache to listen on port 8080 (Railway default)
+# Configure Apache to listen on port 8080
 RUN echo "Listen 8080" > /etc/apache2/ports.conf \
     && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/g' /etc/apache2/sites-available/000-default.conf
 
