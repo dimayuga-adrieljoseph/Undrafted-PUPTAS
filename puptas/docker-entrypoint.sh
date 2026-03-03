@@ -55,3 +55,6 @@ fi
 apache2ctl -t
 echo "🚀 Starting Apache..."
 exec apache2-foreground
+echo "DB_HOST: $DB_HOST"
+echo "DB_PORT: $DB_PORT
+
