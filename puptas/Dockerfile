@@ -29,13 +29,13 @@ FROM node:20-alpine AS frontend
 WORKDIR /app
 
 # Copy package files
-COPY puptas/package.json puptas/package-lock.json* ./
+COPY package.json package-lock.json* ./
 
 # Install dependencies
 RUN npm ci
 
 # Copy full source
-COPY puptas/ .
+COPY . .
 
 # Copy vendor
 COPY --from=php-dependencies /app/vendor ./vendor
