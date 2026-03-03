@@ -56,6 +56,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
+
+RUN sed -i 's|listen = .*|listen = 9000|' /usr/local/etc/php-fpm.d/www.conf
+
 WORKDIR /var/www/html
 
 # Copy Laravel app (with vendor)
