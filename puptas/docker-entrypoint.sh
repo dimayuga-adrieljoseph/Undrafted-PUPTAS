@@ -1,16 +1,17 @@
 #!/bin/bash
 set -e
 
-# Force disable conflicting MPMs at runtime
-a2dismod mpm_event mpm_worker || true
-rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.*
-
-# Ensure only prefork is active
+# Force ONLY mpm_prefork at runtime (Railway-safe)
+a2dismod mpm_event mpm_worker mpm_prefork 2>/dev/null || true
+rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf
 a2enmod mpm_prefork
 
-# Listen on Railway's $PORT
-echo "Listen ${PORT:-80}" >> /etc/apache2/ports.conf
+# Handle Railway PORT (defaults to 80)
+if [ -n "$PORT" ]; then
+    echo "Listen ${PORT}" >> /etc/apache2/ports.conf
+    sed -i "s/Listen 80/Listen ${PORT}/" /etc/apache2/ports.conf || true
+fi
 
-# Test config and start
+# Test config
 apache2ctl -t
 exec apache2-foreground

@@ -20,7 +20,6 @@ COPY . .
 
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-
 # =============================================================================
 # Stage 2: Frontend Build
 # =============================================================================
@@ -29,12 +28,11 @@ FROM node:20-alpine AS frontend
 WORKDIR /app
 COPY . .
 
-# Copy vendor (needed for things like Ziggy)
+# Copy vendor from PHP stage (for tools like Ziggy if needed)
 COPY --from=php-dependencies /app/vendor ./vendor
 
 RUN npm ci
 RUN npm run build
-
 
 # =============================================================================
 # Stage 3: Production Image
@@ -51,18 +49,14 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
 # -----------------------------
-# Fix Apache MPM Conflict
+# Basic Apache setup (minimal build-time)
 # -----------------------------
-RUN a2dismod mpm_event mpm_worker || true \
-    && rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf \
-    && a2enmod mpm_prefork
+RUN a2enmod rewrite headers ssl && \
+    echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-RUN a2enmod rewrite headers ssl
-
-# Optional: suppress ServerName warning
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
-
+# Set public folder as document root
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
     /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' \
@@ -71,14 +65,14 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
 
 WORKDIR /var/www/html
 
-# Copy full Laravel app (with vendor)
+# Copy Laravel app (with vendor)
 COPY --from=php-dependencies /app /var/www/html
 
 # Copy built frontend assets
 COPY --from=frontend /app/public/build ./public/build
 
 # -----------------------------
-# FIX STORAGE PERMISSIONS (critical)
+# Fix Laravel Storage Permissions & Migrations
 # -----------------------------
 RUN mkdir -p \
     storage/framework/sessions \
@@ -88,9 +82,16 @@ RUN mkdir -p \
     chown -R www-data:www-data storage bootstrap/cache && \
     chmod -R 775 storage bootstrap/cache
 
-# Cache routes & views (safe)
-RUN php artisan route:cache \
-    && php artisan view:cache
+# Cache Laravel (migrations run in entrypoint to handle DB connection)
+RUN php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache
+
+# -----------------------------
+# Custom Entrypoint for MPM & Runtime Fixes
+# -----------------------------
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 80
-CMD ["apache2-foreground"]
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
