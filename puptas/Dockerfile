@@ -1,13 +1,42 @@
 # =============================================================================
 # Stage 1: Install PHP Dependencies (needed for frontend build)
 # =============================================================================
-FROM composer:2 AS php-dependencies
+FROM php:8.2-cli AS php-dependencies
+
+# Install system dependencies and GD extension
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libzip-dev \
+    libonig-dev \
+    libxml2-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions including GD
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
+        pdo \
+        pdo_mysql \
+        zip \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# Copy only dependency files first for caching
+# Copy dependency files
 COPY puptas/composer.json puptas/composer.lock* ./
-RUN composer install --no-dev --no-interaction --prefer-dist
+
+# Run composer update to get compatible packages for PHP 8.2
+RUN composer update --no-dev --no-interaction --prefer-dist
 
 # Copy full application
 COPY puptas/ .
@@ -117,7 +146,7 @@ RUN mkdir -p /var/www/html/storage/framework/cache/data \
     && chown -R www-data:www-data /var/www/html/storage/framework/cache/data
 
 # Expose HTTP port
-EXPOSE 8080
+EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
