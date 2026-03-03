@@ -56,8 +56,22 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
-
-RUN sed -i 's|listen = .*|listen = 9000|' /usr/local/etc/php-fpm.d/www.conf
+# =============================================================================
+# PHP-FPM Configuration - Force TCP binding on 127.0.0.1:9000
+# =============================================================================
+# Create a custom www.conf that explicitly uses TCP
+RUN echo "[www]" > /usr/local/etc/php-fpm.d/www.conf && \
+    echo "user = www-data" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "group = www-data" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "listen = 127.0.0.1:9000" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "listen.owner = www-data" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "listen.group = www-data" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "pm = dynamic" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "pm.max_children = 10" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "pm.start_servers = 2" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "pm.min_spare_servers = 1" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "pm.max_spare_servers = 3" >> /usr/local/etc/php-fpm.d/www.conf && \
+    echo "pm.max_requests = 500" >> /usr/local/etc/php-fpm.d/www.conf
 
 WORKDIR /var/www/html
 
@@ -80,7 +94,7 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 8080
 
-CMD ["/usr/bin/supervisord"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
 # # =============================================================================
 # # Stage 3: Production Image
