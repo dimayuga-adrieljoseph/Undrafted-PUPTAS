@@ -33,13 +33,13 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 
 # Copy dependency files
-COPY puptas/composer.json puptas/composer.lock* ./
+COPY composer.json composer.lock* ./
 
 # Run composer install (use lock file versions)
 RUN composer install --no-dev --no-interaction --prefer-dist
 
 # Copy full application
-COPY puptas/ .
+COPY / .
 
 
 # =============================================================================
@@ -50,7 +50,7 @@ FROM node:20-alpine AS frontend
 WORKDIR /app
 
 # Copy package files
-COPY puptas/package.json puptas/package-lock.json* ./
+COPY package.json package-lock.json* ./
 
 # Install npm dependencies
 RUN npm ci
@@ -59,7 +59,7 @@ RUN npm ci
 COPY --from=php-dependencies /app/vendor ./vendor
 
 # Copy source files
-COPY puptas/ .
+COPY / .
 
 # Build frontend assets
 RUN npm run build
@@ -116,7 +116,7 @@ RUN chown -R www-data:www-data /var/www
 WORKDIR /var/www/html
 
 # Copy Laravel application files
-COPY puptas/ .
+COPY / .
 
 # Copy built frontend assets from frontend stage
 COPY --from=frontend /app/public/build ./public/build
