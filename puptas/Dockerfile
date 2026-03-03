@@ -99,13 +99,5 @@ RUN apachectl -M | grep mpm_prefork
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-RUN mkdir -p \
-    storage/framework/sessions \
-    storage/framework/views \
-    storage/framework/cache \
-    bootstrap/cache && \
-    chown -R www-data:www-data storage bootstrap/cache && \
-    chmod -R 775 storage bootstrap/cache
-
 EXPOSE 80
 CMD ["/usr/local/bin/docker-entrypoint.sh"]

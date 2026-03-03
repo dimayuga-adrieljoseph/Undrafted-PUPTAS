@@ -14,3 +14,11 @@ echo "Listen ${PORT:-80}" >> /etc/apache2/ports.conf
 # Test config and start
 apache2ctl -t
 exec apache2-foreground
+
+RUN mkdir -p \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/framework/cache \
+    bootstrap/cache && \
+    chown -R www-data:www-data storage bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache
