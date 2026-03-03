@@ -54,8 +54,18 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
-RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
-    && a2enmod rewrite headers ssl mpm_prefork
+# Fix MPM conflict - remove all MPM modules and enable only mpm_prefork
+# This is more reliable than a2dismod which may not work for compiled-in modules
+RUN rm -f /etc/apache2/mods-enabled/mpm_event.load \
+           /etc/apache2/mods-enabled/mpm_worker.load \
+           /etc/apache2/mods-enabled/mpm_prefork.load \
+    && rm -f /etc/apache2/mods-enabled/mpm_event.conf \
+           /etc/apache2/mods-enabled/mpm_worker.conf \
+           /etc/apache2/mods-enabled/mpm_prefork.conf \
+    && ln -sf /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load \
+    && ln -sf /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf
+
+RUN a2enmod rewrite headers ssl
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
