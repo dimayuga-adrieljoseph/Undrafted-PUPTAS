@@ -22,16 +22,20 @@ COPY . .
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 # =============================================================================
-# Stage 2: Frontend Build
+# Stage 2: Frontend Build (Vite)
 # =============================================================================
 FROM node:20-alpine AS frontend
 
 WORKDIR /app
 
+COPY package.json package-lock.json* ./
+RUN npm ci
+
 COPY . .
 COPY --from=php-dependencies /app/vendor ./vendor
 
-RUN npm ci && npm run build
+# Build Vite assets
+RUN npm run build
 
 # =============================================================================
 # Stage 3: Production Image (Apache)
@@ -52,15 +56,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite headers
 
-# Fix MPM conflict - disable event and worker, enable prefork only
+# Fix MPM conflict
 RUN a2dismod mpm_event mpm_worker 2>/dev/null || true
 RUN a2enmod mpm_prefork 2>/dev/null || true
-
-# Clean up any conflicting MPM configs
-RUN rm -f /etc/apache2/mods-enabled/mpm_event.load \
-           /etc/apache2/mods-enabled/mpm_event.conf \
-           /etc/apache2/mods-enabled/mpm_worker.load \
-           /etc/apache2/mods-enabled/mpm_worker.conf 2>/dev/null || true
 
 # Set document root to Laravel public folder
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
@@ -79,18 +77,18 @@ WORKDIR /var/www/html
 # Copy Laravel app
 COPY --from=php-dependencies /app /var/www/html
 
-# Copy built frontend assets
+# Copy built frontend assets (from frontend stage)
 COPY --from=frontend /app/public/build ./public/build
+
+# Copy entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Fix permissions
 RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache \
     && chmod -R 755 storage/framework storage/logs
-
-# Copy entrypoint
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8080
 
