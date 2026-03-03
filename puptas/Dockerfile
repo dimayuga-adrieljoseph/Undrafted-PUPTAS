@@ -1,7 +1,7 @@
 # =============================================================================
 # Stage 1: Install PHP Dependencies (needed for frontend build)
 # =============================================================================
-FROM php:8.2-cli AS php-dependencies
+FROM php:8.4-cli AS php-dependencies
 
 # Install system dependencies and GD extension
 RUN apt-get update && apt-get install -y \
@@ -68,7 +68,7 @@ RUN npm run build
 # =============================================================================
 # Stage 3: PHP + Apache Production Setup
 # =============================================================================
-FROM php:8.2-apache AS backend
+FROM php:8.4-apache AS backend
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
