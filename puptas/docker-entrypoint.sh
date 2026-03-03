@@ -1,16 +1,39 @@
 #!/bin/bash
 set -e
 
-# Force disable conflicting MPMs at runtime
-a2dismod mpm_event mpm_worker || true
-rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.*
-
-# Ensure only prefork is active
+# Force ONLY mpm_prefork at runtime (Railway-safe)
+a2dismod mpm_event mpm_worker mpm_prefork 2>/dev/null || true
+rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf
 a2enmod mpm_prefork
 
-# Listen on Railway's $PORT
-echo "Listen ${PORT:-8080}" >> /etc/apache2/ports.conf
+# Fix Apache PORT binding (clean slate)
+PORTS_CONF="/etc/apache2/ports.conf"
+if [ -n "$PORT" ]; then
+    sed -i '/^Listen /d' "$PORTS_CONF"
+    echo "Listen 0.0.0.0:${PORT}" >> "$PORTS_CONF"
+    echo "Apache listening on PORT ${PORT}"
+else
+    echo "No PORT env var, using default 80"
+fi
 
-# Test config and start
+# -----------------------------
+# Fix 2: Runtime Laravel Storage Permissions
+# -----------------------------
+echo "Fixing Laravel storage permissions..."
+mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R 775 storage bootstrap/cache
+chmod -R 755 storage/framework storage/logs
+echo "Storage permissions fixed"
+
+# Laravel migrations (if DB vars present)
+if [ -n "$DB_CONNECTION" ] || [ -n "$DATABASE_URL" ]; then
+    echo "Running migrations..."
+    php artisan migrate --force --no-interaction || echo "Migrations skipped"
+    php artisan config:cache
+fi
+
+# Test config & start Apache
 apache2ctl -t
+echo "Starting Apache..."
 exec apache2-foreground

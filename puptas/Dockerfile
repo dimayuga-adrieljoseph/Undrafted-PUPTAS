@@ -22,7 +22,6 @@ COPY . .
 
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-
 # =============================================================================
 # Stage 2: Frontend Build
 # =============================================================================
@@ -39,7 +38,6 @@ COPY --from=php-dependencies /app/vendor ./vendor
 RUN npm ci
 RUN npm run build
 
-
 # =============================================================================
 # Stage 3: Production Image
 # =============================================================================
@@ -55,13 +53,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
 # -----------------------------
-# Fix MPM conflict (build-time prep)
+# Basic Apache setup (minimal)
 # -----------------------------
-RUN a2dismod mpm_event mpm_worker || true \
-    && rm -f /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf \
-    && a2enmod mpm_prefork
-
-# Enable other needed modules
 RUN a2enmod rewrite headers ssl
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
@@ -79,20 +72,33 @@ COPY --from=php-dependencies /app /var/www/html
 # Copy built frontend assets
 COPY --from=frontend /app/public/build ./public/build
 
-# Permissions
-RUN chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
-RUN chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+# -----------------------------
+# COMPLETE Laravel Permissions (Fix 1)
+# -----------------------------
+RUN mkdir -p \
+    storage/framework/{sessions,views,cache,maintenance} \
+    storage/logs \
+    bootstrap/cache && \
+    chown -R www-data:www-data \
+    storage \
+    bootstrap/cache && \
+    chmod -R 775 \
+    storage \
+    bootstrap/cache && \
+    chmod -R 755 \
+    storage/framework \
+    storage/logs
 
 # Optimize Laravel
-RUN php artisan route:cache \
-    && php artisan view:cache
+RUN php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache
 
-# Verify only one MPM is loaded
-RUN apachectl -M | grep mpm_prefork
-
+# -----------------------------
+# Custom Entrypoint
+# -----------------------------
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
 
 EXPOSE 80
 CMD ["/usr/local/bin/docker-entrypoint.sh"]
