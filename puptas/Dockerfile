@@ -40,14 +40,14 @@ COPY . .
 # Copy vendor
 COPY --from=php-dependencies /app/vendor ./vendor
 
-# Cache-bust arg: pass --build-arg CACHEBUST=$(date +%s) or set in Railway env
-ARG CACHEBUST=1
+# Remove any stale committed build assets before building fresh
+RUN rm -rf public/build
 
 # Build Vite assets
 RUN npm run build
 
-# FIX: Copy manifest.json to expected location (laravel-vite-plugin expects it here)
-RUN cp public/build/.vite/manifest.json public/build/manifest.json || true
+# Verify build output
+RUN echo "=== Build manifest check ===" && head -5 public/build/manifest.json && ls public/build/assets/ | head -10
 
 # =============================================================================
 # Stage 3: Production Image (Apache)
