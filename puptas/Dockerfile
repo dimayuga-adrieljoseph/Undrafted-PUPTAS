@@ -40,6 +40,9 @@ COPY . .
 # Copy vendor
 COPY --from=php-dependencies /app/vendor ./vendor
 
+# Cache-bust arg: pass --build-arg CACHEBUST=$(date +%s) or set in Railway env
+ARG CACHEBUST=1
+
 # Build Vite assets
 RUN npm run build
 
