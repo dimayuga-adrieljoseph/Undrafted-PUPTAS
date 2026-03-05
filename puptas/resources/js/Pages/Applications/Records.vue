@@ -482,7 +482,7 @@ const getStatusClass = (status) => {
 
 const fetchUsers = async () => {
     try {
-        const response = await fetch("/medical-dashboard/applicants", {
+        const response = await fetch("/record-dashboard/applicants", {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
@@ -530,7 +530,7 @@ const displayedUsers = computed(() => {
 const selectUser = async (user) => {
     try {
         const response = await axios.get(
-            `/medical-dashboard/application/${user.id}`
+            `/record-dashboard/application/${user.id}`
         );
 
         selectedUser.value = {
@@ -619,7 +619,7 @@ const submitReturn = async () => {
     }
 
     try {
-        await axios.post(`/medical/return-files/${selectedUser.value.id}`, {
+        await axios.post(`/record-dashboard/return-files/${selectedUser.value.id}`, {
             files: selected,
             note: returnNote.value.trim(),
         });

@@ -14,6 +14,7 @@ trait ManagesApplicationFiles
 {
     /**
      * Get user files with formatted URLs
+     * Only allows access if the application is at the appropriate stage
      */
     public function getUserFiles($id)
     {
@@ -26,6 +27,29 @@ trait ManagesApplicationFiles
 
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
+        }
+
+        // Security check: Verify the user's application is at the appropriate stage
+        // Admin (role_id 2) can bypass this check
+        if (auth()->user()->role_id !== 2) {
+            $currentStage = $this->getCurrentStage();
+            $application = $user->currentApplication ?? $user->application;
+
+            if (!$application) {
+                return response()->json(['message' => 'Application not found'], 404);
+            }
+
+            // Check if the application has an in-progress or returned process at this stage
+            $hasAccess = $application->processes()
+                ->where('stage', $currentStage)
+                ->whereIn('status', ['in_progress', 'returned'])
+                ->exists();
+
+            if (!$hasAccess) {
+                return response()->json([
+                    'message' => 'Unauthorized access. Application is not at the ' . $currentStage . ' stage.'
+                ], 403);
+            }
         }
 
         $files = $user->files->keyBy('type');

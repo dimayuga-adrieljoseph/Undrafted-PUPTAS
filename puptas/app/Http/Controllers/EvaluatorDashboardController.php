@@ -71,7 +71,8 @@ class EvaluatorDashboardController extends Controller
 
     public function getUsers()
     {
-        return response()->json($this->userService->getApplicantsWithApplications());
+        // Only return applicants currently at evaluator stage
+        return response()->json($this->userService->getApplicantsByStage('evaluator'));
     }
 
     public function passApplication(Request $request, $userId)
