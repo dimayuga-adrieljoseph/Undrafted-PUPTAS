@@ -1,5 +1,6 @@
 <script setup>
 import Sidebar from '@/Components/Sidebar.vue'
+import Footer from '@/Components/Footer.vue'
 import { useGlobalLoading } from '@/Composables/useGlobalLoading'
 import { usePage } from '@inertiajs/vue3'
 import { computed, ref, onMounted } from 'vue'
@@ -123,6 +124,9 @@ const toggleDarkMode = () => {
                     <slot />
                 </div>
             </main>
+
+            <!-- Footer -->
+            <Footer />
         </div>
 
         <!-- Loading Overlay -->
