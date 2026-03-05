@@ -71,6 +71,9 @@ class EvaluatorDashboardController extends Controller
 
     public function getUsers()
     {
+        // Ensure user has evaluator role
+        $this->ensureRole($this->getRoleId());
+        
         // Only return applicants currently at evaluator stage
         return response()->json($this->userService->getApplicantsByStage('evaluator'));
     }

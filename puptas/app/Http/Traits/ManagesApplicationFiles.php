@@ -18,6 +18,11 @@ trait ManagesApplicationFiles
      */
     public function getUserFiles($id)
     {
+        // Ensure user has the correct role (admin bypass allowed in stage check)
+        if (auth()->user()->role_id !== 2) {
+            $this->ensureRole($this->getRoleId());
+        }
+        
         $user = User::with([
             'application.program',
             'application.processes.performedBy:id,firstname,lastname',

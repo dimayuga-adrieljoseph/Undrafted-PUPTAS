@@ -67,6 +67,9 @@ class RecordStaffDashboardController extends Controller
 
     public function getUsers()
     {
+        // Ensure user has record staff role
+        $this->ensureRole($this->getRoleId());
+        
         // Return applicants who completed medical stage or are officially enrolled
         return response()->json($this->userService->getApplicantsForRecordStaff());
     }
@@ -120,8 +123,31 @@ class RecordStaffDashboardController extends Controller
 
         $files = $user->files->keyBy('type');
 
+        // Transform the response to map currentApplication to application for frontend compatibility
+        $userData = [
+            'id' => $user->id,
+            'firstname' => $user->firstname,
+            'lastname' => $user->lastname,
+            'email' => $user->email,
+            'contactnumber' => $user->contactnumber,
+            'address' => $user->address,
+            'birthday' => $user->birthday,
+            'sex' => $user->sex,
+            'created_at' => $user->created_at,
+            'files' => $user->files,
+            'grades' => $user->grades,
+            // Map currentApplication to application for frontend compatibility
+            'application' => [
+                'id' => $application->id,
+                'status' => $application->status,
+                'created_at' => $application->created_at,
+                'program' => $application->program,
+                'processes' => $application->processes,
+            ],
+        ];
+
         return response()->json([
-            'user' => $user,
+            'user' => $userData,
             'uploadedFiles' => FileMapper::formatFilesUrls($files),
         ]);
     }

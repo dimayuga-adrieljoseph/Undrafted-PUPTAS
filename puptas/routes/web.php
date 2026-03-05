@@ -243,7 +243,7 @@ Route::post('/upload-files', [UserFileController::class, 'uploadFiles']);
 Route::post('/get-files', [UserFileController::class, 'getUserApplication']);
 
 // Evaluator Routes - Protected by auth middleware and role verification
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'role:3'])->group(function () {
     Route::get('/evaluator-dashboard', [EvaluatorDashboardController::class, 'index'])
         ->name('evaluator.dashboard');
 
@@ -272,7 +272,7 @@ Route::get('/test-update-file/{fileId}', function ($fileId) {
 });
 
 // Interviewer Routes - Protected by auth middleware and role verification
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'role:4'])->group(function () {
     Route::get('/interviewer-dashboard', [InterviewerDashboardController::class, 'index'])
         ->name('interviewer.dashboard');
 
@@ -295,7 +295,7 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/user/eligible-programs', [ConfirmationController::class, 'getEligiblePrograms']);
 
 // Medical Routes - Protected by auth middleware and role verification
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'role:5'])->group(function () {
     Route::get('/medical-dashboard', [MedicalDashboardController::class, 'index'])
         ->name('medical.dashboard');
 
@@ -315,7 +315,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/medical/return-files/{user}', [MedicalDashboardController::class, 'returnApplication'])->name('medical-return.files');
 });
 // Record Staff Routes - Protected by auth middleware and role verification
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'role:6'])->group(function () {
     Route::get('/record-dashboard', [RecordStaffDashboardController::class, 'index'])
         ->name('record.dashboard');
 
