@@ -79,7 +79,11 @@ class InterviewerDashboardController extends Controller
 
     public function getUsers()
     {
-        return response()->json($this->userService->getApplicantsWithApplications());
+        // Ensure user has interviewer role
+        $this->ensureRole($this->getRoleId());
+        
+        // Only return applicants currently at interviewer stage
+        return response()->json($this->userService->getApplicantsByStage('interviewer'));
     }
 
     public function accept($userId)
@@ -139,8 +143,8 @@ class InterviewerDashboardController extends Controller
                     abort(400, 'User does not meet the grade requirements for this program.');
                 }
 
-                $application->status = 'accepted';
-                $application->save();
+                // Keep application status as 'submitted' - it will be 'accepted' only after all stages complete
+                // $application->status remains 'submitted' or 'transferred' as it was
 
                 $program->slots -= 1;
                 $program->save();

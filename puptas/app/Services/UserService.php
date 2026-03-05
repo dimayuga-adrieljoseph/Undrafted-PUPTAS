@@ -45,6 +45,79 @@ class UserService
     }
 
     /**
+     * Get applicants filtered by application process stage
+     * Only returns applicants whose applications are currently at the specified stage
+     *
+     * @param string $stage The application stage (evaluator, interviewer, medical, records)
+     * @return Collection
+     */
+    public function getApplicantsByStage(string $stage): Collection
+    {
+        return User::with('currentApplication.program')
+            ->where('role_id', 1)
+            ->whereHas('currentApplication', function ($query) use ($stage) {
+                $query->whereHas('processes', function ($q) use ($stage) {
+                    $q->where('stage', $stage)
+                      ->whereIn('status', ['in_progress', 'returned']);
+                });
+            })
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'course' => $user->course,
+                    'status' => $user->currentApplication->status ?? null,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'phone' => $user->phone,
+                    'company' => $user->company,
+                    'program' => $user->currentApplication->program ?? null,
+                ];
+            });
+    }
+
+    /**
+     * Get applicants for record staff
+     * Returns applicants who have completed medical stage OR are officially enrolled
+     *
+     * @return Collection
+     */
+    public function getApplicantsForRecordStaff(): Collection
+    {
+        return User::with('currentApplication.program')
+            ->where('role_id', 1)
+            ->whereHas('currentApplication', function ($query) {
+                $query->where(function ($q) {
+                    // Get applications that have completed medical stage
+                    $q->whereHas('processes', function ($process) {
+                        $process->where('stage', 'medical')
+                                ->where('status', 'completed');
+                    })
+                    // OR applications that are officially enrolled
+                    ->orWhere('enrollment_status', 'officially_enrolled');
+                });
+            })
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'course' => $user->course,
+                    'status' => $user->currentApplication->status ?? null,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'phone' => $user->phone,
+                    'company' => $user->company,
+                    'program' => $user->currentApplication->program ?? null,
+                    'enrollment_status' => $user->currentApplication->enrollment_status ?? null,
+                ];
+            });
+    }
+
+    /**
      * Get all users with detailed information
      *
      * @return Collection

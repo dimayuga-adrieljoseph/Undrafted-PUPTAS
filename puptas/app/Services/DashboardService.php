@@ -32,7 +32,7 @@ class DashboardService
     public function getCommonDashboardData(): array
     {
         return [
-            'allUsers' => User::with('application.program')->whereHas('application')->get(),
+            'allUsers' => User::with('currentApplication.program')->whereHas('currentApplication')->get(),
             'summary' => $this->applicationService->getApplicationSummary(),
         ];
     }
@@ -135,8 +135,8 @@ class DashboardService
      */
     public function getApplicantsPendingForStage(string $stage)
     {
-        return User::with('application.program')
-            ->whereHas('application', function ($query) use ($stage) {
+        return User::with('currentApplication.program')
+            ->whereHas('currentApplication', function ($query) use ($stage) {
                 $query->whereHas('processes', function ($q) use ($stage) {
                     $q->where('stage', $stage)
                       ->whereIn('status', ['in_progress', 'returned']);
@@ -195,7 +195,7 @@ class DashboardService
     public function getRecordsDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('records'),
+            'allUsers' => $this->userService->getApplicantsForRecordStaff(),
             'programs' => Program::withCount('applications')->get(),
             'summary' => $this->applicationService->getApplicationSummary(),
         ];

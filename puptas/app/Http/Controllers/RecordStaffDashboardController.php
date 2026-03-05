@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Application;
 use App\Models\ApplicationProcess;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
@@ -66,7 +67,11 @@ class RecordStaffDashboardController extends Controller
 
     public function getUsers()
     {
-        return response()->json($this->userService->getApplicantsWithApplications());
+        // Ensure user has record staff role
+        $this->ensureRole($this->getRoleId());
+        
+        // Return applicants who completed medical stage or are officially enrolled
+        return response()->json($this->userService->getApplicantsForRecordStaff());
     }
 
     protected function checkPrerequisiteStage($application)
@@ -79,7 +84,73 @@ class RecordStaffDashboardController extends Controller
         );
     }
 
-    // getUserFiles() method provided by ManagesApplicationFiles trait
+    /**
+     * Override getUserFiles to allow record staff to access applications
+     * that have completed medical stage or are officially enrolled
+     */
+    public function getUserFiles($id)
+    {
+        $user = User::with([
+            'currentApplication.program',
+            'currentApplication.processes.performedBy:id,firstname,lastname',
+            'files',
+            'grades'
+        ])->findOrFail($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $application = $user->currentApplication;
+
+        if (!$application) {
+            return response()->json(['message' => 'Application not found'], 404);
+        }
+
+        // Check if application has completed medical stage or is officially enrolled
+        $hasMedicalCompleted = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'completed')
+            ->exists();
+
+        $isOfficiallyEnrolled = $application->enrollment_status === 'officially_enrolled';
+
+        if (!$hasMedicalCompleted && !$isOfficiallyEnrolled) {
+            return response()->json([
+                'message' => 'Unauthorized access. Application has not completed medical stage.'
+            ], 403);
+        }
+
+        $files = $user->files->keyBy('type');
+
+        // Transform the response to map currentApplication to application for frontend compatibility
+        $userData = [
+            'id' => $user->id,
+            'firstname' => $user->firstname,
+            'lastname' => $user->lastname,
+            'email' => $user->email,
+            'contactnumber' => $user->contactnumber,
+            'address' => $user->address,
+            'birthday' => $user->birthday,
+            'sex' => $user->sex,
+            'created_at' => $user->created_at,
+            'files' => $user->files,
+            'grades' => $user->grades,
+            // Map currentApplication to application for frontend compatibility
+            'application' => [
+                'id' => $application->id,
+                'status' => $application->status,
+                'created_at' => $application->created_at,
+                'program' => $application->program,
+                'processes' => $application->processes,
+            ],
+        ];
+
+        return response()->json([
+            'user' => $userData,
+            'uploadedFiles' => FileMapper::formatFilesUrls($files),
+        ]);
+    }
 
     // returnFiles() method provided by ManagesApplicationFiles trait
 

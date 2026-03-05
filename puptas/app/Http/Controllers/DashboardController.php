@@ -22,7 +22,8 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role_id !== 2) {
+        // Guard against null user and verify admin role
+        if (!$user || $user->role_id !== 2) {
             return redirect()->back()->withInput()->with('error', 'Unauthorized access.');
         }
 
@@ -61,11 +62,28 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard/Admin', [
             'user' => $user,
-            'allUsers' => User::with(['application.program', 'role'])
+            'allUsers' => User::with(['currentApplication.program', 'role'])
                 ->where('role_id', 1)
-                ->whereHas('application')
+                ->whereHas('currentApplication')
                 ->orderBy('created_at', 'desc')
-                ->get(),
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'firstname' => $user->firstname,
+                        'lastname' => $user->lastname,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                        'created_at' => $user->created_at,
+                        // Map currentApplication to application for frontend compatibility
+                        'application' => $user->currentApplication ? [
+                            'id' => $user->currentApplication->id,
+                            'status' => $user->currentApplication->status,
+                            'created_at' => $user->currentApplication->created_at,
+                            'program' => $user->currentApplication->program,
+                        ] : null,
+                    ];
+                }),
             'summary' => $summary,
             'registrationUrl' => url('/register'),
             'chartData' => [
@@ -80,10 +98,16 @@ class DashboardController extends Controller
 
     public function getUsers()
     {
+        // Defense in depth: Verify authentication and admin role
+        $user = Auth::user();
+        if (!$user || $user->role_id !== 2) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+        
         return response()->json(
-            User::with('application.program')
+            User::with('currentApplication.program')
                 ->where('role_id', 1)
-                ->whereHas('application')
+                ->whereHas('currentApplication')
                 ->get()
                 ->map(function ($user) {
                     return [
@@ -91,19 +115,25 @@ class DashboardController extends Controller
                         'firstname' => $user->firstname,
                         'lastname' => $user->lastname,
                         'course' => $user->course,
-                        'status' => $user->application->status ?? null,
+                        'status' => $user->currentApplication->status ?? null,
                         'email' => $user->email,
                         'username' => $user->username,
                         'phone' => $user->phone,
                         'company' => $user->company,
-                        'program' => $user->application->program ?? null,
+                        'program' => $user->currentApplication->program ?? null,
                     ];
                 })
         );
     }
     public function getUserFiles($id)
     {
-        $user = User::with(['application.program', 'application.processes', 'files', 'grades'])->findOrFail($id);
+        // Defense in depth: Verify authentication and admin role
+        $authUser = Auth::user();
+        if (!$authUser || $authUser->role_id !== 2) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+        
+        $user = User::with(['currentApplication.program', 'currentApplication.processes', 'files', 'grades'])->findOrFail($id);
 
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
@@ -111,8 +141,31 @@ class DashboardController extends Controller
 
         $files = $user->files->keyBy('type');
 
+        // Transform the response to use 'application' key for frontend compatibility
+        $userData = [
+            'id' => $user->id,
+            'firstname' => $user->firstname,
+            'lastname' => $user->lastname,
+            'email' => $user->email,
+            'contactnumber' => $user->contactnumber,
+            'address' => $user->address,
+            'birthday' => $user->birthday,
+            'sex' => $user->sex,
+            'created_at' => $user->created_at,
+            'files' => $user->files,
+            'grades' => $user->grades,
+            // Map currentApplication to application for frontend compatibility
+            'application' => $user->currentApplication ? [
+                'id' => $user->currentApplication->id,
+                'status' => $user->currentApplication->status,
+                'created_at' => $user->currentApplication->created_at,
+                'program' => $user->currentApplication->program,
+                'processes' => $user->currentApplication->processes,
+            ] : null,
+        ];
+
         return response()->json([
-            'user' => $user,
+            'user' => $userData,
             'uploadedFiles' => FileMapper::formatFilesUrls($files),
         ]);
     }

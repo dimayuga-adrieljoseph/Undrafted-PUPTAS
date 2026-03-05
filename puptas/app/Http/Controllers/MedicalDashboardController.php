@@ -57,7 +57,11 @@ class MedicalDashboardController extends Controller
 
     public function getUsers()
     {
-        return response()->json($this->userService->getApplicantsWithApplications());
+        // Ensure user has medical role
+        $this->ensureRole($this->getRoleId());
+        
+        // Only return applicants currently at medical stage
+        return response()->json($this->userService->getApplicantsByStage('medical'));
     }
 
     protected function getCurrentStage(): string
