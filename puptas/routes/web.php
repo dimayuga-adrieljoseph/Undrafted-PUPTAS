@@ -30,9 +30,6 @@ Route::get('/', function () {
     ]);
 })->middleware('guest')->name('welcome');
 
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
-
 // View applicant details route - expects user ID, restricted to admin
 Route::get('/applications/user/{user}', function ($user) {
     // Validate ID is numeric
@@ -199,8 +196,6 @@ Route::get('/applications', function () {
     return Inertia::render('Applications/Index');
 })->name('applications');
 
-Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
     Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
@@ -338,6 +333,11 @@ Route::middleware(['auth', 'role:6'])->group(function () {
 
 // User Management Routes (Protected - Admin Only)
 Route::middleware(['auth', 'role:2'])->group(function () {
+    // Admin Dashboard Routes
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
+    Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
+    
     // Legacy routes (keep for backward compatibility if needed)
     Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.legacy');
     Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');

@@ -22,7 +22,8 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role_id !== 2) {
+        // Guard against null user and verify admin role
+        if (!$user || $user->role_id !== 2) {
             return redirect()->back()->withInput()->with('error', 'Unauthorized access.');
         }
 
@@ -97,6 +98,12 @@ class DashboardController extends Controller
 
     public function getUsers()
     {
+        // Defense in depth: Verify authentication and admin role
+        $user = Auth::user();
+        if (!$user || $user->role_id !== 2) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+        
         return response()->json(
             User::with('currentApplication.program')
                 ->where('role_id', 1)
@@ -120,6 +127,12 @@ class DashboardController extends Controller
     }
     public function getUserFiles($id)
     {
+        // Defense in depth: Verify authentication and admin role
+        $authUser = Auth::user();
+        if (!$authUser || $authUser->role_id !== 2) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+        
         $user = User::with(['currentApplication.program', 'currentApplication.processes', 'files', 'grades'])->findOrFail($id);
 
         if (!$user) {
