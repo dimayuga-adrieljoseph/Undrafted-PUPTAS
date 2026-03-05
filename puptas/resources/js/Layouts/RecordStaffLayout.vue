@@ -1,5 +1,6 @@
 <script setup>
 import Sidebar from '@/Components/Sidebar.vue'
+import Footer from '@/Components/Footer.vue'
 import { usePage, router } from '@inertiajs/vue3'
 import { computed, ref, onMounted } from 'vue'
 
@@ -119,6 +120,9 @@ onMounted(() => {
                     <slot />
                 </div>
             </main>
+
+            <!-- Footer -->
+            <Footer />
         </div>
 
         <!-- Global Loading Overlay -->
