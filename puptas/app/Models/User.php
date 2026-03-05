@@ -48,6 +48,8 @@ class User extends Authenticatable
         'sex',
         'contactnumber',
         'address',
+        'privacy_consent',
+        'privacy_consent_at',
     ];
 
     public function role()
@@ -167,6 +169,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'privacy_consent_at' => 'datetime',
         ];
     }
 }

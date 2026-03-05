@@ -20,6 +20,7 @@ use App\Http\Controllers\RecordStaffDashboardController;
 use App\Http\Controllers\Admin\Assign\AssignController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\Notify\Notify;
+use App\Http\Controllers\PrivacyConsentController;
 
 Route::get('/', function () {
     return Inertia::render('Auth/Login', [
@@ -59,6 +60,10 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
 });
 
 Route::middleware(['auth'])->group(function () {
+    // Privacy Consent Routes - available to all authenticated users
+    Route::post('/privacy-consent/accept', [PrivacyConsentController::class, 'accept'])->name('privacy.consent.accept');
+    Route::get('/privacy-consent/check', [PrivacyConsentController::class, 'check'])->name('privacy.consent.check');
+
     Route::get('/programs', function () {
         return Inertia::render('Programs/Index');
     })->name('programs.index');

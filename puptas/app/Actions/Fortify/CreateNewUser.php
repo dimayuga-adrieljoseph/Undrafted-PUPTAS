@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
-use Laravel\Jetstream\Jetstream;
 use Illuminate\Support\Facades\Auth;
 
 class CreateNewUser implements CreatesNewUsers
@@ -39,7 +38,6 @@ class CreateNewUser implements CreatesNewUsers
             'track' => ['nullable', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:255', 'unique:users'],
             'password' => $this->passwordRules(),
-            'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature() ? ['accepted', 'required'] : '',
         ])->validate();
 
         return DB::transaction(function () use ($input) {
@@ -54,6 +52,8 @@ class CreateNewUser implements CreatesNewUsers
                 'email' => $input['email'],
                 'password' => Hash::make($input['password']),
                 'role_id' => 1, // using roles
+                'privacy_consent' => true, // User accepted terms during registration
+                'privacy_consent_at' => now(),
             ]), function (User $user) use ($input) {
                 // Create applicant profile with high school data
                 $user->applicantProfile()->create([
