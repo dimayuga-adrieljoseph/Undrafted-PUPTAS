@@ -62,6 +62,9 @@ return new class extends Migration
         $this->safeStatement("ALTER TABLE `audit_logs` ADD INDEX `audit_logs_action_type_index` (`action_type`)");
         $this->safeStatement("ALTER TABLE `audit_logs` ADD INDEX `audit_logs_user_id_index` (`user_id`)");
         $this->safeStatement("ALTER TABLE `audit_logs` ADD INDEX `audit_logs_created_at_index` (`created_at`)");
+
+        // Re-add FK to restore referential integrity and ON DELETE SET NULL behavior
+        $this->safeStatement("ALTER TABLE `audit_logs` ADD CONSTRAINT `audit_logs_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL");
     }
 
     /**
@@ -70,6 +73,9 @@ return new class extends Migration
     public function down(): void
     {
         $existingColumns = Schema::getColumnListing('audit_logs');
+
+        // Drop FK before indexes (MySQL prevents dropping an index used by a FK)
+        $this->safeStatement("ALTER TABLE `audit_logs` DROP FOREIGN KEY `audit_logs_user_id_foreign`");
 
         // Drop new indexes
         $this->safeStatement("ALTER TABLE `audit_logs` DROP INDEX `audit_logs_action_type_index`");
