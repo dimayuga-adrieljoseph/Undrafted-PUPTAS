@@ -2,7 +2,8 @@
 <script setup>
 import Sidebar from '@/Components/Sidebar.vue'
 import { usePage, router } from '@inertiajs/vue3'
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
+import TermsandConditionsModal from '@/Pages/Modal/TermsandConditionsModal.vue'
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -35,6 +36,40 @@ onMounted(() => {
     router.on('finish', () => (isLoading.value = false))
     router.on('error', () => (isLoading.value = false))
 })
+
+// Privacy consent
+const privacyConsent = computed(() => page.props.privacy_consent ?? { required: false })
+const showPrivacyModal = ref(false)
+
+// Check if privacy consent is required on mount and when user changes
+watch(() => [page.props.auth?.user, privacyConsent.value], ([user, consent]) => {
+    if (user && consent.required) {
+        showPrivacyModal.value = true
+    }
+}, { immediate: true })
+
+// Privacy consent handlers
+const handlePrivacyAccept = () => {
+    window.axios.post('/privacy-consent/accept')
+        .then(() => {
+            showPrivacyModal.value = false
+            window.location.reload()
+        })
+        .catch((error) => {
+            console.error('Failed to accept privacy consent:', error)
+        })
+}
+
+const handlePrivacyCancel = () => {
+    window.axios.post('/logout')
+        .then(() => {
+            window.location.href = '/login'
+        })
+        .catch((error) => {
+            console.error('Failed to log out:', error)
+            window.location.href = '/logout'
+        })
+}
 </script>
 
 <template>
@@ -163,5 +198,13 @@ onMounted(() => {
                 </span>
             </div>
         </div>
+
+        <!-- Terms and Conditions Modal -->
+        <TermsandConditionsModal 
+            :show="showPrivacyModal" 
+            :can-close="false"
+            @accept="handlePrivacyAccept"
+            @cancel="handlePrivacyCancel"
+        />
     </div>
 </template>
