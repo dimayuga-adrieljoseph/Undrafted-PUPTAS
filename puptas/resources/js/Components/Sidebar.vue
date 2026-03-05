@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { router, usePage } from '@inertiajs/vue3'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { library } from '@fortawesome/fontawesome-svg-core'
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { library } from "@fortawesome/fontawesome-svg-core";
 import {
     faTachometerAlt,
     faUsers,
@@ -23,11 +23,11 @@ import {
     faUserShield,
     faHome,
     faUserCircle,
-} from '@fortawesome/free-solid-svg-icons'
+} from "@fortawesome/free-solid-svg-icons";
 
-import NavLink from '@/Components/NavLink.vue'
-import DropdownLink from '@/Components/DropdownLink.vue'
-import ApplicationMark from '@/Components/ApplicationMark.vue'
+import NavLink from "@/Components/NavLink.vue";
+import DropdownLink from "@/Components/DropdownLink.vue";
+import ApplicationMark from "@/Components/ApplicationMark.vue";
 
 library.add(
     faTachometerAlt,
@@ -49,168 +49,167 @@ library.add(
     faUserShield,
     faHome,
     faUserCircle
-)
+);
 
-const page = usePage()
-const user = computed(() => page.props.auth?.user ?? null)
+const page = usePage();
+const user = computed(() => page.props.auth?.user ?? null);
 
 const props = defineProps({
     variant: {
         type: String,
-        default: 'default',
+        default: "default",
     },
-})
+});
 
 /* ---------------- STATE ---------------- */
-const isSidebarOpen = ref(false)
-const isSidebarPinned = ref(false)
-const sidebarRef = ref(null)
+const isSidebarOpen = ref(false);
+const isSidebarPinned = ref(false);
+const sidebarRef = ref(null);
 
-const isUserMenuOpen = ref(false)
-const isPasserDropdownOpen = ref(false)
-const isMaintenanceDropdownOpen = ref(false)
-const isDarkMode = ref(false)
+const isUserMenuOpen = ref(false);
+const isPasserDropdownOpen = ref(false);
+const isMaintenanceDropdownOpen = ref(false);
+const isDarkMode = ref(false);
 
 /* ---------------- HELPERS ---------------- */
-const isActiveRoute = (name) => route().current(name)
+const isActiveRoute = (name) => route().current(name);
 
-const isAnyDropdownOpen = computed(() =>
-    isUserMenuOpen.value ||
-    isPasserDropdownOpen.value ||
-    isMaintenanceDropdownOpen.value
-)
+const isAnyDropdownOpen = computed(
+    () =>
+        isUserMenuOpen.value ||
+        isPasserDropdownOpen.value ||
+        isMaintenanceDropdownOpen.value
+);
 
 const sidebarWidthClass = computed(() =>
-    isSidebarOpen.value ? 'w-72 px-6 py-8' : 'w-20 px-4 py-8'
-)
+    isSidebarOpen.value ? "w-72 px-6 py-8" : "w-20 px-4 py-8"
+);
 
 /* ---------------- ROUTE ACTIVE ---------------- */
 const isActiveRouteFor = (routeNames = []) =>
-    computed(() => routeNames.some(name => isActiveRoute(name)))
+    computed(() => routeNames.some((name) => isActiveRoute(name)));
 
 const isDashboardActive = isActiveRouteFor([
-    'dashboard',
-    'record.dashboard',
-    'medical.dashboard',
-    'interviewer.dashboard',
-    'evaluator.dashboard',
-    'applicant.dashboard',
-])
+    "dashboard",
+    "record.dashboard",
+    "medical.dashboard",
+    "interviewer.dashboard",
+    "evaluator.dashboard",
+    "applicant.dashboard",
+]);
 
 const isApplicationsActive = isActiveRouteFor([
-    'applications',
-    'recordstaff.applications',
-    'medical.applications',
-    'interviewer.applications',
-    'evaluator.applications',
-])
+    "applications",
+    "recordstaff.applications",
+    "medical.applications",
+    "interviewer.applications",
+    "evaluator.applications",
+]);
 
-const isScheduleActive = isActiveRouteFor(['schedules.index'])
-const isUploadFormActive = isActiveRouteFor(['upload.form'])
-const isListPassersActive = isActiveRouteFor(['lists'])
-const isProgramsActive = isActiveRouteFor(['programs.index'])
-const isManageActive = isActiveRouteFor(['users.index'])
-const isAssignActive = isActiveRouteFor(['admin.users.create'])
+const isScheduleActive = isActiveRouteFor(["schedules.index"]);
+const isUploadFormActive = isActiveRouteFor(["upload.form"]);
+const isListPassersActive = isActiveRouteFor(["lists"]);
+const isProgramsActive = isActiveRouteFor(["programs.index"]);
+const isManageActive = isActiveRouteFor(["users.index"]);
+const isAssignActive = isActiveRouteFor(["admin.users.create"]);
 const isUserSettingsActive = isActiveRouteFor([
-    'profile.show',
-    'api-tokens.index'
-])
+    "profile.show",
+    "api-tokens.index",
+]);
 
 /* ---------------- INTERACTION ---------------- */
-const onSidebarEnter = () => (isSidebarOpen.value = true)
+const onSidebarEnter = () => (isSidebarOpen.value = true);
 
 const onSidebarLeave = () => {
     if (!isAnyDropdownOpen.value && !isSidebarPinned.value) {
-        isSidebarOpen.value = false
+        isSidebarOpen.value = false;
     }
-}
+};
 
 const pinSidebar = () => {
-    isSidebarPinned.value = !isSidebarPinned.value
-    if (isSidebarPinned.value) isSidebarOpen.value = true
-}
+    isSidebarPinned.value = !isSidebarPinned.value;
+    if (isSidebarPinned.value) isSidebarOpen.value = true;
+};
 
 const togglePasserMenu = () => {
-    isPasserDropdownOpen.value = !isPasserDropdownOpen.value
-    isSidebarOpen.value = true
-}
+    isPasserDropdownOpen.value = !isPasserDropdownOpen.value;
+    isSidebarOpen.value = true;
+};
 
 const toggleMaintenanceMenu = () => {
-    isMaintenanceDropdownOpen.value = !isMaintenanceDropdownOpen.value
-    isSidebarOpen.value = true
-}
+    isMaintenanceDropdownOpen.value = !isMaintenanceDropdownOpen.value;
+    isSidebarOpen.value = true;
+};
 
 const toggleUserMenu = () => {
-    isUserMenuOpen.value = !isUserMenuOpen.value
-    isSidebarOpen.value = true
-}
+    isUserMenuOpen.value = !isUserMenuOpen.value;
+    isSidebarOpen.value = true;
+};
 
 const toggleDarkMode = () => {
-    isDarkMode.value = !isDarkMode.value
-    document.documentElement.classList.toggle('dark', isDarkMode.value)
-    localStorage.setItem('darkMode', isDarkMode.value)
-}
+    isDarkMode.value = !isDarkMode.value;
+    document.documentElement.classList.toggle("dark", isDarkMode.value);
+    localStorage.setItem("darkMode", isDarkMode.value);
+};
 
 const logout = () => {
-    router.post(route('logout'))
-}
+    router.post(route("logout"));
+};
 
 /* ---------------- CLICK OUTSIDE ---------------- */
 const onClickOutside = (event) => {
-    if (!sidebarRef.value || isSidebarPinned.value) return
+    if (!sidebarRef.value || isSidebarPinned.value) return;
     if (!sidebarRef.value.contains(event.target)) {
-        isSidebarOpen.value = false
-        isUserMenuOpen.value = false
-        isPasserDropdownOpen.value = false
-        isMaintenanceDropdownOpen.value = false
+        isSidebarOpen.value = false;
+        isUserMenuOpen.value = false;
+        isPasserDropdownOpen.value = false;
+        isMaintenanceDropdownOpen.value = false;
     }
-}
+};
 
 /* ---------------- WATCH ---------------- */
 watch(
     () => page.props.url,
     () => {
         isPasserDropdownOpen.value =
-            isUploadFormActive.value || isListPassersActive.value
+            isUploadFormActive.value || isListPassersActive.value;
         isMaintenanceDropdownOpen.value =
-            isManageActive.value || isAssignActive.value
-        isUserMenuOpen.value = isUserSettingsActive.value
+            isManageActive.value || isAssignActive.value;
+        isUserMenuOpen.value = isUserSettingsActive.value;
     },
     { immediate: true }
-)
+);
 
 /* ---------------- LIFECYCLE ---------------- */
 onMounted(() => {
-    document.addEventListener('pointerdown', onClickOutside)
+    document.addEventListener("pointerdown", onClickOutside);
 
-    const savedDark = localStorage.getItem('darkMode') === 'true'
-    isDarkMode.value = savedDark
-    document.documentElement.classList.toggle('dark', savedDark)
+    const savedDark = localStorage.getItem("darkMode") === "true";
+    isDarkMode.value = savedDark;
+    document.documentElement.classList.toggle("dark", savedDark);
 
     document.documentElement.style.setProperty(
-        '--sidebar-width',
-        isSidebarOpen.value ? '18rem' : '5rem'
-    )
-})
+        "--sidebar-width",
+        isSidebarOpen.value ? "18rem" : "5rem"
+    );
+});
 
 onUnmounted(() => {
-    document.removeEventListener('pointerdown', onClickOutside)
-})
+    document.removeEventListener("pointerdown", onClickOutside);
+});
 
 watch(isSidebarOpen, (val) => {
     document.documentElement.style.setProperty(
-        '--sidebar-width',
-        val ? '18rem' : '5rem'
-    )
-})
+        "--sidebar-width",
+        val ? "18rem" : "5rem"
+    );
+});
 </script>
 
 <template>
     <div
         ref="sidebarRef"
-        class="sidebar fixed left-0 top-0 h-screen z-[9999]
-            overflow-hidden text-white shadow-2xl transition-all
-            duration-300 ease-out"
+        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-2xl transition-all duration-300 ease-out"
         :class="sidebarWidthClass"
         @pointerenter="onSidebarEnter"
         @pointerleave="onSidebarLeave"
@@ -221,15 +220,10 @@ watch(isSidebarOpen, (val) => {
             <div class="flex items-center gap-3">
                 <div class="sidebar-logo-container">
                     <NavLink :href="route('dashboard')" class="block">
-                        <ApplicationMark
-                            v-if="isSidebarOpen"
-                            class="h-8"
-                        />
+                        <ApplicationMark v-if="isSidebarOpen" class="h-8" />
                         <div
                             v-else
-                            class="w-8 h-8 rounded-full bg-gradient-to-br
-                                from-[#FFD700] to-[#FBCB77] flex items-center
-                                justify-center"
+                            class="w-8 h-8 rounded-full bg-gradient-to-br from-[#FFD700] to-[#FBCB77] flex items-center justify-center"
                         >
                             <span class="text-[#9E122C] font-bold text-sm">
                                 PUP
@@ -250,8 +244,15 @@ watch(isSidebarOpen, (val) => {
         <div class="sidebar-content">
             <!-- ================= ADMIN VARIANT ================= -->
             <nav
-                v-if="!['record', 'medical', 'interviewer', 'evaluator',
-                    'applicant'].includes(props.variant)"
+                v-if="
+                    ![
+                        'record',
+                        'medical',
+                        'interviewer',
+                        'evaluator',
+                        'applicant',
+                    ].includes(props.variant)
+                "
             >
                 <ul class="space-y-2">
                     <!-- Dashboard -->
@@ -274,7 +275,7 @@ watch(isSidebarOpen, (val) => {
                             <div
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
-                                :class="{ 'active': isDashboardActive }"
+                                :class="{ active: isDashboardActive }"
                             ></div>
                         </NavLink>
                     </li>
@@ -285,8 +286,10 @@ watch(isSidebarOpen, (val) => {
                             @click.stop="togglePasserMenu"
                             class="nav-item group cursor-pointer"
                             :class="{
-                                'nav-item-active': isPasserDropdownOpen ||
-                                    isUploadFormActive || isListPassersActive
+                                'nav-item-active':
+                                    isPasserDropdownOpen ||
+                                    isUploadFormActive ||
+                                    isListPassersActive,
                             }"
                         >
                             <div class="nav-icon">
@@ -300,19 +303,23 @@ watch(isSidebarOpen, (val) => {
                                     v-if="isSidebarOpen"
                                     class="nav-indicator"
                                     :class="{
-                                        'active': isPasserDropdownOpen ||
+                                        active:
+                                            isPasserDropdownOpen ||
                                             isUploadFormActive ||
-                                            isListPassersActive
+                                            isListPassersActive,
                                     }"
                                 ></div>
                                 <FontAwesomeIcon
                                     v-if="isSidebarOpen"
-                                    :icon="isPasserDropdownOpen
-                                        ? 'caret-down'
-                                        : 'caret-right'"
-                                    class="text-xs text-gray-400
-                                        transition-transform duration-200"
-                                    :class="{ 'rotate-90': isPasserDropdownOpen }"
+                                    :icon="
+                                        isPasserDropdownOpen
+                                            ? 'caret-down'
+                                            : 'caret-right'
+                                    "
+                                    class="text-xs text-gray-400 transition-transform duration-200"
+                                    :class="{
+                                        'rotate-90': isPasserDropdownOpen,
+                                    }"
                                 />
                             </div>
                         </div>
@@ -336,7 +343,8 @@ watch(isSidebarOpen, (val) => {
                                     :href="route('upload.form')"
                                     class="dropdown-item"
                                     :class="{
-                                        'dropdown-item-active': isUploadFormActive
+                                        'dropdown-item-active':
+                                            isUploadFormActive,
                                     }"
                                 >
                                     <FontAwesomeIcon
@@ -349,7 +357,8 @@ watch(isSidebarOpen, (val) => {
                                     :href="route('lists')"
                                     class="dropdown-item"
                                     :class="{
-                                        'dropdown-item-active': isListPassersActive
+                                        'dropdown-item-active':
+                                            isListPassersActive,
                                     }"
                                 >
                                     <FontAwesomeIcon
@@ -382,7 +391,7 @@ watch(isSidebarOpen, (val) => {
                             <div
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
-                                :class="{ 'active': isApplicationsActive }"
+                                :class="{ active: isApplicationsActive }"
                             ></div>
                         </NavLink>
                     </li>
@@ -407,7 +416,7 @@ watch(isSidebarOpen, (val) => {
                             <div
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
-                                :class="{ 'active': isScheduleActive }"
+                                :class="{ active: isScheduleActive }"
                             ></div>
                         </NavLink>
                     </li>
@@ -432,7 +441,7 @@ watch(isSidebarOpen, (val) => {
                             <div
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
-                                :class="{ 'active': isProgramsActive }"
+                                :class="{ active: isProgramsActive }"
                             ></div>
                         </NavLink>
                     </li>
@@ -443,12 +452,17 @@ watch(isSidebarOpen, (val) => {
                             @click.stop="toggleMaintenanceMenu"
                             class="nav-item group cursor-pointer"
                             :class="{
-                                'nav-item-active': isMaintenanceDropdownOpen ||
-                                    isManageActive || isAssignActive
+                                'nav-item-active':
+                                    isMaintenanceDropdownOpen ||
+                                    isManageActive ||
+                                    isAssignActive,
                             }"
                         >
                             <div class="nav-icon">
-                                <FontAwesomeIcon icon="wrench" class="text-lg" />
+                                <FontAwesomeIcon
+                                    icon="wrench"
+                                    class="text-lg"
+                                />
                             </div>
                             <span v-if="isSidebarOpen" class="nav-label">
                                 Maintenance
@@ -458,19 +472,22 @@ watch(isSidebarOpen, (val) => {
                                     v-if="isSidebarOpen"
                                     class="nav-indicator"
                                     :class="{
-                                        'active': isMaintenanceDropdownOpen ||
-                                            isManageActive || isAssignActive
+                                        active:
+                                            isMaintenanceDropdownOpen ||
+                                            isManageActive ||
+                                            isAssignActive,
                                     }"
                                 ></div>
                                 <FontAwesomeIcon
                                     v-if="isSidebarOpen"
-                                    :icon="isMaintenanceDropdownOpen
-                                        ? 'caret-down'
-                                        : 'caret-right'"
-                                    class="text-xs text-gray-400
-                                        transition-transform duration-200"
+                                    :icon="
+                                        isMaintenanceDropdownOpen
+                                            ? 'caret-down'
+                                            : 'caret-right'
+                                    "
+                                    class="text-xs text-gray-400 transition-transform duration-200"
                                     :class="{
-                                        'rotate-90': isMaintenanceDropdownOpen
+                                        'rotate-90': isMaintenanceDropdownOpen,
                                     }"
                                 />
                             </div>
@@ -488,15 +505,16 @@ watch(isSidebarOpen, (val) => {
                             leave-to-class="opacity-0 max-h-0"
                         >
                             <div
-                                v-show="isMaintenanceDropdownOpen &&
-                                    isSidebarOpen"
+                                v-show="
+                                    isMaintenanceDropdownOpen && isSidebarOpen
+                                "
                                 class="dropdown-content ml-10 mt-1 space-y-1"
                             >
                                 <NavLink
                                     :href="route('users.index')"
                                     class="dropdown-item"
                                     :class="{
-                                        'dropdown-item-active': isManageActive
+                                        'dropdown-item-active': isManageActive,
                                     }"
                                 >
                                     <FontAwesomeIcon
@@ -509,7 +527,7 @@ watch(isSidebarOpen, (val) => {
                                     :href="route('admin.users.create')"
                                     class="dropdown-item"
                                     :class="{
-                                        'dropdown-item-active': isAssignActive
+                                        'dropdown-item-active': isAssignActive,
                                     }"
                                 >
                                     <FontAwesomeIcon
@@ -526,8 +544,11 @@ watch(isSidebarOpen, (val) => {
 
             <!-- ================= STAFF VARIANTS ================= -->
             <nav
-                v-else-if="['record', 'medical', 'interviewer', 'evaluator']
-                    .includes(props.variant)"
+                v-else-if="
+                    ['record', 'medical', 'interviewer', 'evaluator'].includes(
+                        props.variant
+                    )
+                "
             >
                 <ul class="space-y-2">
                     <!-- Dashboard -->
@@ -550,7 +571,7 @@ watch(isSidebarOpen, (val) => {
                             <div
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
-                                :class="{ 'active': isDashboardActive }"
+                                :class="{ active: isDashboardActive }"
                             ></div>
                         </NavLink>
                     </li>
@@ -575,7 +596,7 @@ watch(isSidebarOpen, (val) => {
                             <div
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
-                                :class="{ 'active': isApplicationsActive }"
+                                :class="{ active: isApplicationsActive }"
                             ></div>
                         </NavLink>
                     </li>
@@ -601,7 +622,7 @@ watch(isSidebarOpen, (val) => {
                             <div
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
-                                :class="{ 'active': isDashboardActive }"
+                                :class="{ active: isDashboardActive }"
                             ></div>
                         </NavLink>
                     </li>
@@ -618,8 +639,8 @@ watch(isSidebarOpen, (val) => {
                         @click.stop="toggleUserMenu"
                         class="nav-item group cursor-pointer"
                         :class="{
-                            'nav-item-active': isUserMenuOpen ||
-                                isUserSettingsActive
+                            'nav-item-active':
+                                isUserMenuOpen || isUserSettingsActive,
                         }"
                     >
                         <div class="nav-icon">
@@ -633,17 +654,18 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
                                 :class="{
-                                    'active': isUserMenuOpen ||
-                                        isUserSettingsActive
+                                    active:
+                                        isUserMenuOpen || isUserSettingsActive,
                                 }"
                             ></div>
                             <FontAwesomeIcon
                                 v-if="isSidebarOpen"
-                                :icon="isUserMenuOpen
-                                    ? 'caret-down'
-                                    : 'caret-right'"
-                                class="text-xs text-gray-400
-                                    transition-transform duration-200"
+                                :icon="
+                                    isUserMenuOpen
+                                        ? 'caret-down'
+                                        : 'caret-right'
+                                "
+                                class="text-xs text-gray-400 transition-transform duration-200"
                                 :class="{ 'rotate-90': isUserMenuOpen }"
                             />
                         </div>
@@ -668,7 +690,7 @@ watch(isSidebarOpen, (val) => {
                                 class="dropdown-item"
                                 :class="{
                                     'dropdown-item-active':
-                                        isActiveRoute('profile.show')
+                                        isActiveRoute('profile.show'),
                                 }"
                             >
                                 <FontAwesomeIcon
@@ -685,7 +707,7 @@ watch(isSidebarOpen, (val) => {
                                     :icon="isDarkMode ? 'sun' : 'moon'"
                                     class="text-xs mr-2"
                                 />
-                                {{ isDarkMode ? 'Light Mode' : 'Dark Mode' }}
+                                {{ isDarkMode ? "Light Mode" : "Dark Mode" }}
                             </button>
                         </div>
                     </transition>
@@ -696,9 +718,7 @@ watch(isSidebarOpen, (val) => {
                     <form @submit.prevent="logout">
                         <button
                             type="submit"
-                            class="nav-item group w-full text-left
-                                cursor-pointer hover:bg-red-600/20
-                                transition-colors duration-200"
+                            class="nav-item group w-full text-left cursor-pointer hover:bg-red-600/20 transition-colors duration-200"
                         >
                             <div class="nav-icon text-red-300">
                                 <FontAwesomeIcon
@@ -722,7 +742,7 @@ watch(isSidebarOpen, (val) => {
 
 <style scoped>
 .sidebar {
-    background: linear-gradient(180deg, #9E122C 0%, #800000 100%);
+    background: linear-gradient(180deg, #9e122c 0%, #800000 100%);
     display: flex;
     flex-direction: column;
     transition-property: width, padding;
@@ -737,13 +757,16 @@ watch(isSidebarOpen, (val) => {
 }
 
 .nav-item:not(.nav-item-active):hover {
-    background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%,
-        rgba(251, 203, 119, 0.1) 100%);
+    background: linear-gradient(
+        90deg,
+        rgba(255, 215, 0, 0.1) 0%,
+        rgba(251, 203, 119, 0.1) 100%
+    );
     transform: translateX(4px);
 }
 
 .nav-item-active {
-    background: linear-gradient(90deg, #FFD700 0%, #FBCB77 100%);
+    background: linear-gradient(90deg, #ffd700 0%, #fbcb77 100%);
     box-shadow: 0 4px 12px rgba(255, 215, 0, 0.25);
 }
 

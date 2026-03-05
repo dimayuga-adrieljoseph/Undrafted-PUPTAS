@@ -13,6 +13,7 @@ use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
 use App\Services\ApplicationService;
 use App\Services\ApplicationProcessService;
+use App\Services\AuditLogService;
 use App\Services\DashboardService;
 use App\Services\UserService;
 
@@ -24,17 +25,20 @@ class RecordStaffDashboardController extends Controller
     protected ApplicationProcessService $processService;
     protected DashboardService $dashboardService;
     protected UserService $userService;
+    protected AuditLogService $auditLogService;
 
     public function __construct(
         ApplicationService $applicationService,
         ApplicationProcessService $processService,
         DashboardService $dashboardService,
-        UserService $userService
+        UserService $userService,
+        AuditLogService $auditLogService
     ) {
         $this->applicationService = $applicationService;
         $this->processService = $processService;
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
+        $this->auditLogService = $auditLogService;
     }
 
     public function index()
@@ -69,7 +73,7 @@ class RecordStaffDashboardController extends Controller
     {
         // Ensure user has record staff role
         $this->ensureRole($this->getRoleId());
-        
+
         // Return applicants who completed medical stage or are officially enrolled
         return response()->json($this->userService->getApplicantsForRecordStaff());
     }
@@ -78,8 +82,8 @@ class RecordStaffDashboardController extends Controller
     {
         // Check if medical stage is completed
         $this->applicationService->ensureStageCompleted(
-            $application, 
-            'medical', 
+            $application,
+            'medical',
             "Cannot proceed - prerequisite verification not completed."
         );
     }
@@ -164,8 +168,8 @@ class RecordStaffDashboardController extends Controller
 
         // Check if medical stage is completed
         $this->applicationService->ensureStageCompleted(
-            $application, 
-            'medical', 
+            $application,
+            'medical',
             "Cannot tag as enrolled - medical stage not completed."
         );
 
@@ -201,6 +205,8 @@ class RecordStaffDashboardController extends Controller
                     'performed_by' => auth()->id(),
                 ]);
             }
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Registrar tagged applicant ID {$userId} as officially enrolled.", null, 'ADMISSION_DATA');
 
             return response()->json(['message' => 'Tagged as officially enrolled.']);
         } catch (\Throwable $e) {
@@ -242,6 +248,8 @@ class RecordStaffDashboardController extends Controller
                     'performed_by' => auth()->id(),
                 ]);
             }
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Registrar reverted enrollment for applicant ID {$userId} to temporary status.", null, 'ADMISSION_DATA');
 
             return response()->json(['message' => 'Reverted to temporary enrollment.']);
         } catch (\Throwable $e) {

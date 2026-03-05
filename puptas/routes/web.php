@@ -342,7 +342,7 @@ Route::middleware(['auth', 'role:2'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
     Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
-    
+
     // Legacy routes (keep for backward compatibility if needed)
     Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.legacy');
     Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');

@@ -141,6 +141,8 @@ class GradesController extends Controller
             ]
         );
 
+        app(\App\Services\AuditLogService::class)->logActivity('CREATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} submitted grades and program choices.", $user, 'ADMISSION_DATA');
+
         return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
     }
 
@@ -182,6 +184,8 @@ class GradesController extends Controller
                 'second_choice_program' => $validated['second_choice_program'],
             ]
         );
+
+        app(\App\Services\AuditLogService::class)->logActivity('CREATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} submitted grades and program choices.", $user, 'ADMISSION_DATA');
 
         return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
     }
@@ -225,6 +229,8 @@ class GradesController extends Controller
             ]
         );
 
+        app(\App\Services\AuditLogService::class)->logActivity('CREATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} submitted grades and program choices.", $user, 'ADMISSION_DATA');
+
         return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
     }
 
@@ -267,6 +273,8 @@ class GradesController extends Controller
             ]
         );
 
+        app(\App\Services\AuditLogService::class)->logActivity('CREATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} submitted grades and program choices.", $user, 'ADMISSION_DATA');
+
         return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
     }
 
@@ -308,6 +316,8 @@ class GradesController extends Controller
                 'second_choice_program' => $validated['second_choice_program'],
             ]
         );
+
+        app(\App\Services\AuditLogService::class)->logActivity('CREATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} submitted grades and program choices.", $user, 'ADMISSION_DATA');
 
         return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
     }

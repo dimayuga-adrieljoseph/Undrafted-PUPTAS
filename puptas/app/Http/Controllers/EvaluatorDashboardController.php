@@ -13,6 +13,7 @@ use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
 use App\Services\ApplicationService;
 use App\Services\ApplicationProcessService;
+use App\Services\AuditLogService;
 use App\Services\DashboardService;
 use App\Services\UserService;
 
@@ -24,17 +25,20 @@ class EvaluatorDashboardController extends Controller
     protected ApplicationProcessService $processService;
     protected DashboardService $dashboardService;
     protected UserService $userService;
+    protected AuditLogService $auditLogService;
 
     public function __construct(
         ApplicationService $applicationService,
         ApplicationProcessService $processService,
         DashboardService $dashboardService,
-        UserService $userService
+        UserService $userService,
+        AuditLogService $auditLogService
     ) {
         $this->applicationService = $applicationService;
         $this->processService = $processService;
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
+        $this->auditLogService = $auditLogService;
     }
 
     public function index()
@@ -73,7 +77,7 @@ class EvaluatorDashboardController extends Controller
     {
         // Ensure user has evaluator role
         $this->ensureRole($this->getRoleId());
-        
+
         // Only return applicants currently at evaluator stage
         return response()->json($this->userService->getApplicantsByStage('evaluator'));
     }
@@ -127,6 +131,8 @@ class EvaluatorDashboardController extends Controller
                 'performed_by' => null,
             ]);
         });
+
+        $this->auditLogService->logActivity('UPDATE', 'Applications', "Evaluator passed application for applicant ID {$userId} to interviewer stage.", null, 'ADMISSION_DATA');
 
         return response()->json([
             'message' => 'Application successfully passed to the next step.',

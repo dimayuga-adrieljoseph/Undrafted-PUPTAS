@@ -58,7 +58,7 @@ class UserService
             ->whereHas('currentApplication', function ($query) use ($stage) {
                 $query->whereHas('processes', function ($q) use ($stage) {
                     $q->where('stage', $stage)
-                      ->whereIn('status', ['in_progress', 'returned']);
+                        ->whereIn('status', ['in_progress', 'returned']);
                 });
             })
             ->get()
@@ -93,10 +93,10 @@ class UserService
                     // Get applications that have completed medical stage
                     $q->whereHas('processes', function ($process) {
                         $process->where('stage', 'medical')
-                                ->where('status', 'completed');
+                            ->where('status', 'completed');
                     })
-                    // OR applications that are officially enrolled
-                    ->orWhere('enrollment_status', 'officially_enrolled');
+                        // OR applications that are officially enrolled
+                        ->orWhere('enrollment_status', 'officially_enrolled');
                 });
             })
             ->get()
@@ -222,32 +222,6 @@ class UserService
                 }
             }
 
-            // Audit log for user creation
-            try {
-                AuditLog::create([
-                    'user_id' => auth()->id(),
-                    'model_type' => 'User',
-                    'model_id' => $user->id,
-                    'action' => 'created',
-                    'old_values' => null,
-                    'new_values' => [
-                        'email' => $user->email,
-                        'firstname' => $user->firstname,
-                        'lastname' => $user->lastname,
-                        'middlename' => $user->middlename,
-                        'role_id' => $user->role_id,
-                        'contactnumber' => $user->contactnumber,
-                        'created_by' => auth()->user()->email ?? 'system',
-                    ],
-                    'ip_address' => request()->ip(),
-                ]);
-            } catch (\Exception $e) {
-                logger()->error('Failed to create audit log for user creation', [
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage()
-                ]);
-            }
-
             return $user;
         });
     }
@@ -300,23 +274,7 @@ class UserService
                 'updated_by' => auth()->user()->email ?? 'system',
             ];
 
-            // Audit log for user update
-            try {
-                AuditLog::create([
-                    'user_id' => auth()->id(),
-                    'model_type' => 'User',
-                    'model_id' => $user->id,
-                    'action' => 'updated',
-                    'old_values' => $oldValues,
-                    'new_values' => $newValues,
-                    'ip_address' => request()->ip(),
-                ]);
-            } catch (\Exception $e) {
-                logger()->error('Failed to create audit log for user update', [
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage()
-                ]);
-            }
+            // Audit log for user update — handled in UserController via AuditLogService
 
             return $user->fresh();
         });
@@ -346,25 +304,7 @@ class UserService
 
             $deleted = $user->delete();
 
-            // Audit log for user deletion
-            if ($deleted) {
-                try {
-                    AuditLog::create([
-                        'user_id' => auth()->id(),
-                        'model_type' => 'User',
-                        'model_id' => $userId,
-                        'action' => 'deleted',
-                        'old_values' => $deletedUserData,
-                        'new_values' => null,
-                        'ip_address' => request()->ip(),
-                    ]);
-                } catch (\Exception $e) {
-                    logger()->error('Failed to create audit log for user deletion', [
-                        'user_id' => $userId,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
+            // Audit log for deletion — handled in UserController via AuditLogService
 
             return $deleted;
         });
@@ -379,26 +319,9 @@ class UserService
      */
     public function logUserListingView(int $actorId, int $totalUsersViewed): void
     {
-        try {
-            AuditLog::create([
-                'user_id' => $actorId,
-                'model_type' => 'User',
-                'model_id' => null,
-                'action' => 'viewed_user_listing',
-                'old_values' => null,
-                'new_values' => [
-                    'total_users_viewed' => $totalUsersViewed,
-                    'includes_applicant_profiles' => true,
-                    'timestamp' => now()->toIso8601String(),
-                ],
-                'ip_address' => request()->ip(),
-            ]);
-        } catch (\Exception $e) {
-            logger()->error('Failed to create audit log for user listing view', [
-                'actor_id' => $actorId,
-                'error' => $e->getMessage()
-            ]);
-        }
+        // Intentionally left as a no-op.
+        // VIEW events are not part of the new audit trail schema.
+        // CRUD events are logged directly via AuditLogService in the controller.
     }
 
     /**

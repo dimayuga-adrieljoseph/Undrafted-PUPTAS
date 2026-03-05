@@ -13,6 +13,7 @@ use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
 use App\Services\ApplicationService;
 use App\Services\ApplicationProcessService;
+use App\Services\AuditLogService;
 use App\Services\DashboardService;
 use App\Services\UserService;
 
@@ -24,17 +25,20 @@ class InterviewerDashboardController extends Controller
     protected ApplicationProcessService $processService;
     protected DashboardService $dashboardService;
     protected UserService $userService;
+    protected AuditLogService $auditLogService;
 
     public function __construct(
         ApplicationService $applicationService,
         ApplicationProcessService $processService,
         DashboardService $dashboardService,
-        UserService $userService
+        UserService $userService,
+        AuditLogService $auditLogService
     ) {
         $this->applicationService = $applicationService;
         $this->processService = $processService;
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
+        $this->auditLogService = $auditLogService;
     }
 
     public function index()
@@ -69,8 +73,8 @@ class InterviewerDashboardController extends Controller
     {
         // Check if evaluator stage is completed
         $this->applicationService->ensureStageCompleted(
-            $application, 
-            'evaluator', 
+            $application,
+            'evaluator',
             "Cannot proceed - prerequisite verification not completed."
         );
     }
@@ -81,7 +85,7 @@ class InterviewerDashboardController extends Controller
     {
         // Ensure user has interviewer role
         $this->ensureRole($this->getRoleId());
-        
+
         // Only return applicants currently at interviewer stage
         return response()->json($this->userService->getApplicantsByStage('interviewer'));
     }
@@ -94,8 +98,8 @@ class InterviewerDashboardController extends Controller
 
         // Check if evaluator stage is completed
         $this->applicationService->ensureStageCompleted(
-            $application, 
-            'evaluator', 
+            $application,
+            'evaluator',
             "Cannot accept - evaluator stage not completed."
         );
 
@@ -166,6 +170,8 @@ class InterviewerDashboardController extends Controller
                 ]);
             });
 
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer accepted application for applicant ID {$userId}.", null, 'ADMISSION_DATA');
+
             return response()->json(['message' => 'Application accepted.']);
         } catch (\Throwable $e) {
             \Log::error("❌ Accept failed: " . $e->getMessage());
@@ -198,8 +204,8 @@ class InterviewerDashboardController extends Controller
 
         // Check if evaluator stage is completed
         $this->applicationService->ensureStageCompleted(
-            $application, 
-            'evaluator', 
+            $application,
+            'evaluator',
             "Cannot transfer - evaluator stage not completed."
         );
 
@@ -270,6 +276,8 @@ class InterviewerDashboardController extends Controller
         });
 
         \Log::info("🎉 Transfer completed for user {$userId}");
+
+        $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer transferred applicant ID {$userId} to program ID {$validated['program_id']}.", null, 'ADMISSION_DATA');
 
         return response()->json(['message' => 'Transferred successfully.']);
     }

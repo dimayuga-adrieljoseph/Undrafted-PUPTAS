@@ -13,6 +13,7 @@ use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
 use App\Services\ApplicationService;
 use App\Services\ApplicationProcessService;
+use App\Services\AuditLogService;
 use App\Services\DashboardService;
 use App\Services\UserService;
 
@@ -24,17 +25,20 @@ class MedicalDashboardController extends Controller
     protected ApplicationProcessService $processService;
     protected DashboardService $dashboardService;
     protected UserService $userService;
+    protected AuditLogService $auditLogService;
 
     public function __construct(
         ApplicationService $applicationService,
         ApplicationProcessService $processService,
         DashboardService $dashboardService,
-        UserService $userService
+        UserService $userService,
+        AuditLogService $auditLogService
     ) {
         $this->applicationService = $applicationService;
         $this->processService = $processService;
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
+        $this->auditLogService = $auditLogService;
     }
 
     public function index()
@@ -59,7 +63,7 @@ class MedicalDashboardController extends Controller
     {
         // Ensure user has medical role
         $this->ensureRole($this->getRoleId());
-        
+
         // Only return applicants currently at medical stage
         return response()->json($this->userService->getApplicantsByStage('medical'));
     }
@@ -78,8 +82,8 @@ class MedicalDashboardController extends Controller
     {
         // Check if interviewer stage is completed
         $this->applicationService->ensureStageCompleted(
-            $application, 
-            'interviewer', 
+            $application,
+            'interviewer',
             "Cannot proceed - prerequisite verification not completed."
         );
     }
@@ -98,8 +102,8 @@ class MedicalDashboardController extends Controller
 
         // Check if interviewer stage is completed
         $this->applicationService->ensureStageCompleted(
-            $application, 
-            'interviewer', 
+            $application,
+            'interviewer',
             "Cannot clear medically - interviewer stage not completed."
         );
 
@@ -145,6 +149,8 @@ class MedicalDashboardController extends Controller
                     'performed_by' => null,
                 ]);
             });
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Medical staff cleared medical for applicant ID {$userId}.", null, 'ADMISSION_DATA');
 
             return response()->json(['message' => 'Medical Cleared.']);
         } catch (\Throwable $e) {

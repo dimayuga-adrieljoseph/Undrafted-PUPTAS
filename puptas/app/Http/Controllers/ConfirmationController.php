@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
 use App\Services\ConfirmationService;
+use App\Services\AuditLogService;
 use App\Http\Requests\SubmitApplicationRequest;
 use App\Http\Requests\ReuploadFileRequest;
 
@@ -15,7 +16,8 @@ class ConfirmationController extends Controller
      * @param ConfirmationService $confirmationService
      */
     public function __construct(
-        private ConfirmationService $confirmationService
+        private ConfirmationService $confirmationService,
+        private AuditLogService $auditLogService
     ) {}
 
     /**
@@ -49,6 +51,8 @@ class ConfirmationController extends Controller
                 $request->validated()
             );
 
+            $this->auditLogService->logActivity('CREATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} submitted application #{$application->id}.", $user, 'ADMISSION_DATA');
+
             return response()->json([
                 'message' => 'Application submitted.',
                 'status' => $application->status,
@@ -60,13 +64,13 @@ class ConfirmationController extends Controller
                 'status_code' => $e->getStatusCode(),
                 'exception_class' => get_class($e),
             ]);
-            
+
             // Return generic message for client, actual message logged for debugging
             $safeMessages = [
                 409 => 'Application has already been submitted.',
                 422 => 'Unable to submit application. Please ensure all requirements are met.',
             ];
-            
+
             return response()->json([
                 'message' => $safeMessages[$e->getStatusCode()] ?? 'An error occurred while submitting your application.'
             ], $e->getStatusCode());
@@ -91,6 +95,8 @@ class ConfirmationController extends Controller
                 $request->file('file')
             );
 
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} uploaded document '{$inputName}'.", $user, 'ADMISSION_DATA');
+
             return response()->json($result);
         } catch (\InvalidArgumentException $e) {
             \Log::warning('File reupload failed', [
@@ -98,7 +104,7 @@ class ConfirmationController extends Controller
                 'field' => $inputName,
                 'exception_class' => get_class($e),
             ]);
-            
+
             return response()->json(['message' => 'Invalid file field specified.'], 400);
         }
     }

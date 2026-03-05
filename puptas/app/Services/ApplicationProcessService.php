@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Application;
 use App\Models\ApplicationProcess;
-use App\Models\AuditLog;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -78,17 +77,16 @@ class ApplicationProcessService
 
             // Audit log for stage progression
             try {
-                AuditLog::create([
-                    'user_id' => auth()->id(),
-                    'model_type' => 'ApplicationProcess',
-                    'model_id' => $currentProcess->id,
-                    'action' => 'stage_passed',
-                    'old_values' => $oldState,
-                    'new_values' => $newState,
-                    'ip_address' => request()->ip(),
-                ]);
+                app(\App\Services\AuditLogService::class)->logActivity(
+                    'UPDATE',
+                    'Applications',
+                    "Application #{$application->id} passed stage '{$currentStage}'" .
+                        ($nextStage ? ", moved to '{$nextStage}'." : ', final stage completed.'),
+                    null,
+                    'ADMISSION_DATA'
+                );
             } catch (\Exception $e) {
-                logger()->error('Failed to create audit log for application stage progression', [
+                logger()->error('Failed to write audit log for application stage progression', [
                     'application_id' => $application->id,
                     'stage' => $currentStage,
                     'error' => $e->getMessage()
@@ -132,7 +130,7 @@ class ApplicationProcessService
             }
 
             $oldState['process_status'] = $process->status;
-            
+
             $process->update([
                 'status' => 'returned',
                 'performed_by' => $processedBy,
@@ -155,17 +153,15 @@ class ApplicationProcessService
 
             // Audit log for application return
             try {
-                AuditLog::create([
-                    'user_id' => auth()->id(),
-                    'model_type' => 'Application',
-                    'model_id' => $application->id,
-                    'action' => 'application_returned',
-                    'old_values' => $oldState,
-                    'new_values' => $newState,
-                    'ip_address' => request()->ip(),
-                ]);
+                app(\App\Services\AuditLogService::class)->logActivity(
+                    'UPDATE',
+                    'Applications',
+                    "Application #{$application->id} returned at stage '{$stage}'. Reason: {$reason}",
+                    null,
+                    'ADMISSION_DATA'
+                );
             } catch (\Exception $e) {
-                logger()->error('Failed to create audit log for application return', [
+                logger()->error('Failed to write audit log for application return', [
                     'application_id' => $application->id,
                     'stage' => $stage,
                     'error' => $e->getMessage()
