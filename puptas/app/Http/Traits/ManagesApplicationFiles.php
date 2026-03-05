@@ -24,8 +24,8 @@ trait ManagesApplicationFiles
         }
         
         $user = User::with([
-            'application.program',
-            'application.processes.performedBy:id,firstname,lastname',
+            'currentApplication.program',
+            'currentApplication.processes.performedBy:id,firstname,lastname',
             'files',
             'grades'
         ])->findOrFail($id);
@@ -38,7 +38,7 @@ trait ManagesApplicationFiles
         // Admin (role_id 2) can bypass this check
         if (auth()->user()->role_id !== 2) {
             $currentStage = $this->getCurrentStage();
-            $application = $user->currentApplication ?? $user->application;
+            $application = $user->currentApplication;
 
             if (!$application) {
                 return response()->json(['message' => 'Application not found'], 404);
@@ -59,8 +59,31 @@ trait ManagesApplicationFiles
 
         $files = $user->files->keyBy('type');
 
+        // Transform the response to map currentApplication to application for frontend compatibility
+        $userData = [
+            'id' => $user->id,
+            'firstname' => $user->firstname,
+            'lastname' => $user->lastname,
+            'email' => $user->email,
+            'contactnumber' => $user->contactnumber,
+            'address' => $user->address,
+            'birthday' => $user->birthday,
+            'sex' => $user->sex,
+            'created_at' => $user->created_at,
+            'files' => $user->files,
+            'grades' => $user->grades,
+            // Map currentApplication to application for frontend compatibility
+            'application' => $user->currentApplication ? [
+                'id' => $user->currentApplication->id,
+                'status' => $user->currentApplication->status,
+                'created_at' => $user->currentApplication->created_at,
+                'program' => $user->currentApplication->program,
+                'processes' => $user->currentApplication->processes,
+            ] : null,
+        ];
+
         return response()->json([
-            'user' => $user,
+            'user' => $userData,
             'uploadedFiles' => FileMapper::formatFilesUrls($files),
         ]);
     }
@@ -78,7 +101,12 @@ trait ManagesApplicationFiles
 
         $this->ensureRole($this->getRoleId());
 
-        $application = Application::where('user_id', $userId)->firstOrFail();
+        $user = User::with('currentApplication')->findOrFail($userId);
+        $application = $user->currentApplication;
+        
+        if (!$application) {
+            return response()->json(['message' => 'Application not found'], 404);
+        }
 
         // Check prerequisite stage if needed
         $this->checkPrerequisiteStage($application);
@@ -142,7 +170,12 @@ trait ManagesApplicationFiles
 
         $this->ensureRole($this->getRoleId());
 
-        $application = Application::where('user_id', $userId)->firstOrFail();
+        $user = User::with('currentApplication')->findOrFail($userId);
+        $application = $user->currentApplication;
+        
+        if (!$application) {
+            return response()->json(['message' => 'Application not found'], 404);
+        }
 
         // Check prerequisite stage if needed
         $this->checkPrerequisiteStage($application);
