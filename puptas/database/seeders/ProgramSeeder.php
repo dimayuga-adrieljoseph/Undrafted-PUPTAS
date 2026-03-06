@@ -18,7 +18,7 @@ class ProgramSeeder extends Seeder
             [
                 'code' => 'BSBA-HRM',
                 'name' => 'Bachelor of Science in Business Administration - Human Resource Management',
-                'strands' => ['ABM'],
+                'strands' => [], // Open to all
                 'math' => 82,
                 'science' => 82,
                 'english' => 82,
@@ -29,7 +29,7 @@ class ProgramSeeder extends Seeder
             [
                 'code' => 'BSBA-MM',
                 'name' => 'Bachelor of Science in Business Administration - Marketing Management',
-                'strands' => ['ABM'],
+                'strands' => [], // Open to all
                 'math' => 82,
                 'science' => 82,
                 'english' => 82,
@@ -40,7 +40,7 @@ class ProgramSeeder extends Seeder
             [
                 'code' => 'BSECE',
                 'name' => 'Bachelor of Science in Electronics and Communications Engineering',
-                'strands' => ['STEM'],
+                'strands' => [], // Open to all
                 'math' => 86,
                 'science' => 86,
                 'english' => 86,
@@ -73,7 +73,7 @@ class ProgramSeeder extends Seeder
             [
                 'code' => 'BSIT',
                 'name' => 'Bachelor of Science in Information Technology',
-                'strands' => ['STEM', 'TVL', 'ICT'],
+                'strands' => ['STEM', 'TVL', 'ICT', 'GAS'],
                 'math' => 85,
                 'science' => 85,
                 'english' => 85,
@@ -84,7 +84,7 @@ class ProgramSeeder extends Seeder
             [
                 'code' => 'BSME',
                 'name' => 'Bachelor of Science in Mechanical Engineering',
-                'strands' => ['STEM'],
+                'strands' => [], // Open to all
                 'math' => 86,
                 'science' => 86,
                 'english' => 86,
@@ -95,7 +95,7 @@ class ProgramSeeder extends Seeder
             [
                 'code' => 'BSOA',
                 'name' => 'Bachelor of Science in Office Administration',
-                'strands' => ['ABM'],
+                'strands' => [], // Open to all
                 'math' => 82,
                 'science' => 82,
                 'english' => 82,
@@ -117,7 +117,7 @@ class ProgramSeeder extends Seeder
             [
                 'code' => 'DOMT',
                 'name' => 'Diploma in Office Management and Technology',
-                'strands' => ['ABM'],
+                'strands' => [], // Open to all
                 'math' => 82,
                 'science' => 82,
                 'english' => 82,
