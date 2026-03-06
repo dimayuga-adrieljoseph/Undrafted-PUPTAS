@@ -3,7 +3,7 @@
 import Sidebar from '@/Components/Sidebar.vue'
 import Footer from '@/Components/Footer.vue'
 import { useGlobalLoading } from '@/Composables/useGlobalLoading'
-import { usePage } from '@inertiajs/vue3'
+import { usePage, router } from '@inertiajs/vue3'
 import { computed, ref, onMounted, watch } from 'vue'
 import TermsandConditionsModal from '@/Pages/Modal/TermsandConditionsModal.vue'
 
@@ -49,7 +49,7 @@ const handlePrivacyAccept = () => {
     window.axios.post('/privacy-consent/accept')
         .then(() => {
             showPrivacyModal.value = false
-            window.location.reload()
+            router.reload({ only: ['privacy_consent'] })
         })
         .catch((error) => {
             console.error('Failed to accept privacy consent:', error)
@@ -57,14 +57,14 @@ const handlePrivacyAccept = () => {
 }
 
 const handlePrivacyCancel = () => {
-    window.axios.post('/logout')
-        .then(() => {
-            window.location.href = '/login'
-        })
-        .catch((error) => {
+    router.post(route('logout'), {}, {
+        onSuccess: () => {
+            showPrivacyModal.value = false
+        },
+        onError: (error) => {
             console.error('Failed to log out:', error)
-            window.location.href = '/logout'
-        })
+        }
+    })
 }
 </script>
 
