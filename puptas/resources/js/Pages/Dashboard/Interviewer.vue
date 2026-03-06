@@ -136,7 +136,7 @@ const chartOptions = {
 
 // Chart data - computed from props
 const chartDataset = computed(() => ({
-    labels: props.chartData.labels || [],
+    labels: props.chartData.labels ?? props.chartData.years ?? [],
     datasets: [
         {
             label: "Submitted",
@@ -427,7 +427,7 @@ const fetchPrograms = async () => {
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                     <div class="mb-6">
                         <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">Monthly interview trends</p>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm">Daily interview trends (Last 30 days)</p>
                     </div>
                     
                     <div class="flex flex-wrap gap-4 mb-6">
