@@ -294,7 +294,7 @@ const submitReturn = async () => {
             note: returnNote.value.trim(),
         });
 
-        alert("Files returned and application status logged.");
+        alert("Files returned successfully.");
         closeUserCard();
     } catch (error) {
         console.error(error);
@@ -303,11 +303,12 @@ const submitReturn = async () => {
 };
 
 const submitPass = async () => {
+    if (!confirm("Pass this application to the interviewer stage? This cannot be undone.")) return;
     try {
         await axios.post(
             `/evaluator/pass-application/${selectedUser.value.id}`,
             {
-                note: returnNote.value || "",
+                note: "",
             }
         );
 
@@ -540,9 +541,16 @@ const submitPass = async () => {
                                         <button
                                             v-if="!isEvaluating"
                                             @click="startEvaluation"
-                                            :class="[getButtonClass('primary'), 'w-full px-4 py-2 rounded-lg transition font-medium']"
+                                            :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium']"
                                         >
-                                            Start Evaluation
+                                            Return Documents
+                                        </button>
+                                        <button
+                                            v-if="!isEvaluating"
+                                            @click="submitPass"
+                                            :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium']"
+                                        >
+                                            Pass Application
                                         </button>
                                         <Link :href="`/applications/user/${selectedUser.id}`"
                                               :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
@@ -553,36 +561,31 @@ const submitPass = async () => {
                             </div>
 
                             <!-- Evaluation Section -->
-                            <div v-if="isEvaluating" class="mb-8 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Evaluation</h4>
+                            <div v-if="isEvaluating" class="mb-8 p-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Return Documents</h4>
+                                <p class="text-sm text-amber-700 dark:text-amber-400 mb-4">Select the documents to return and provide a reason. The applicant will be notified.</p>
                                 
                                 <!-- Return Note -->
                                 <div class="mb-4">
                                     <label for="returnNote" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Return Reason / Notes
+                                        Return Reason <span class="text-red-500">*</span>
                                     </label>
                                     <textarea
                                         id="returnNote"
                                         v-model="returnNote"
                                         rows="3"
                                         class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                        placeholder="Enter reason for returning documents or additional notes..."
+                                        placeholder="Explain what the applicant needs to fix or resubmit..."
                                     ></textarea>
                                 </div>
 
                                 <!-- Action Buttons -->
                                 <div class="flex space-x-3">
                                     <button
-                                        @click="submitPass"
-                                        :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium']"
-                                    >
-                                        Pass Application
-                                    </button>
-                                    <button
                                         @click="submitReturn"
                                         :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg transition font-medium']"
                                     >
-                                        Return Files
+                                        Confirm Return
                                     </button>
                                     <button
                                         @click="cancelEvaluation"
