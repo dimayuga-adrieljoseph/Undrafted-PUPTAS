@@ -293,14 +293,21 @@ onMounted(() => {
                     <div v-if="idx < applicationProcesses.length - 1" class="absolute top-8 left-1/2 w-0.5 h-8 bg-gray-200 dark:bg-gray-700 -translate-x-1/2"></div>
                   </div>
                   <div class="flex-1 pb-4">
-                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2 flex-wrap">
                       {{ formatStage(proc.stage) }}
+                      <span :class="`text-xs px-1.5 py-0.5 rounded-full text-white ${getBadgeClass(proc.status)}`">
+                        {{ capitalize(proc.status.replace(/_/g, ' ')) }}
+                      </span>
                     </h4>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                       {{ formatTimestamp(proc.created_at) }}
                     </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
-                      {{ proc.notes || "No notes" }}
+                    <div v-if="proc.status === 'returned' && proc.reviewer_notes"
+                         class="mt-1 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-400">
+                      <span class="font-semibold">Return reason: </span>{{ proc.reviewer_notes }}
+                    </div>
+                    <p v-else-if="proc.reviewer_notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                      {{ proc.reviewer_notes }}
                     </p>
                   </div>
                 </div>
