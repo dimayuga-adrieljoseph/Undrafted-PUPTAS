@@ -40,8 +40,10 @@ const showPrivacyModal = ref(false)
 
 // Check if privacy consent is required on mount and when user changes
 watch(() => [page.props.auth?.user, privacyConsent.value], ([user, consent]) => {
-    if (user && consent.required) {
+    if (user && consent && consent.required) {
         showPrivacyModal.value = true
+    } else if (!consent || !consent.required) {
+        showPrivacyModal.value = false
     }
 }, { immediate: true })
 
