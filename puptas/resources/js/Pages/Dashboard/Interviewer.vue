@@ -45,7 +45,7 @@ const props = defineProps({
     },
     chartData: {
         type: Object,
-        default: () => ({ submitted: [], accepted: [], returned: [], years: [] }),
+        default: () => ({ submitted: [], accepted: [], returned: [], labels: [] }),
     },
 });
 
@@ -136,7 +136,7 @@ const chartOptions = {
 
 // Chart data - computed from props
 const chartDataset = computed(() => ({
-    labels: props.chartData.years || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    labels: props.chartData.labels || [],
     datasets: [
         {
             label: "Submitted",
