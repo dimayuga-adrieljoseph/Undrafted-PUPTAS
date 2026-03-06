@@ -628,15 +628,20 @@ const submitReturn = async () => {
     const selected = Object.keys(filesToReturn.value).filter(
         (k) => filesToReturn.value[k]
     );
-    if (selected.length === 0 || !returnNote.value.trim()) {
-        alert("Please select files and enter a return note.");
+    const note = returnNote.value.trim();
+    if (selected.length === 0) {
+        alert("Please select at least one file to return.");
+        return;
+    }
+    if (note.length < 3) {
+        alert("Please enter a return reason before submitting.");
         return;
     }
 
     try {
         await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
             files: selected,
-            note: returnNote.value.trim(),
+            note,
         });
 
         alert("Files returned successfully.");
@@ -650,7 +655,8 @@ const submitReturn = async () => {
         await selectUser(selectedUser.value);
     } catch (error) {
         console.error(error);
-        alert("Return failed.");
+        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0];
+        alert(msg || "Return failed. Please try again.");
     }
 };
 
