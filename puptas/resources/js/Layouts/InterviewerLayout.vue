@@ -44,8 +44,10 @@ const showPrivacyModal = ref(false)
 
 // Check if privacy consent is required on mount and when user changes
 watch(() => [page.props.auth?.user, privacyConsent.value], ([user, consent]) => {
-    if (user && consent.required) {
+    if (user && consent && consent.required) {
         showPrivacyModal.value = true
+    } else if (!consent || !consent.required) {
+        showPrivacyModal.value = false
     }
 }, { immediate: true })
 
@@ -54,7 +56,7 @@ const handlePrivacyAccept = () => {
     window.axios.post('/privacy-consent/accept')
         .then(() => {
             showPrivacyModal.value = false
-            window.location.reload()
+            router.reload({ only: ['privacy_consent'] })
         })
         .catch((error) => {
             console.error('Failed to accept privacy consent:', error)
@@ -62,14 +64,14 @@ const handlePrivacyAccept = () => {
 }
 
 const handlePrivacyCancel = () => {
-    window.axios.post('/logout')
-        .then(() => {
-            window.location.href = '/login'
-        })
-        .catch((error) => {
+    router.post(route('logout'), {}, {
+        onSuccess: () => {
+            showPrivacyModal.value = false
+        },
+        onError: (error) => {
             console.error('Failed to log out:', error)
-            window.location.href = '/logout'
-        })
+        }
+    })
 }
 </script>
 

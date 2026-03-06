@@ -1,6 +1,6 @@
 <template>
     <!-- Modal Background -->
-    <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div v-if="show" class="fixed inset-0 z-[9999] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <!-- Background Overlay -->
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
 
