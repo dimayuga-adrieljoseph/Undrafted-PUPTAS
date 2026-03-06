@@ -34,7 +34,7 @@ const props = defineProps({
   },
   chartData: {
     type: Object,
-    default: () => ({ submitted: [], accepted: [], returned: [], years: [] }),
+    default: () => ({ submitted: [], accepted: [], returned: [], labels: [] }),
   },
 });
 
@@ -102,7 +102,7 @@ const chartOptions = {
 };
 
 const chartDataset = computed(() => ({
-  labels: props.chartData.years || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  labels: props.chartData.labels || [],
   datasets: [
     { 
       label: "Submitted", 
@@ -242,7 +242,7 @@ const closeUserCard = () => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
           <div class="mb-6">
             <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
-            <p class="text-gray-600 dark:text-gray-400 text-sm">Monthly application trends</p>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">Daily application trends (Last 30 days)</p>
           </div>
           
           <div class="flex flex-wrap gap-4 mb-6">
