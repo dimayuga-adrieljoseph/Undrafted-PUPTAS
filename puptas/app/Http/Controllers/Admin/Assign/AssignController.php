@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Assign;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Program;
@@ -17,6 +18,8 @@ use Inertia\Inertia;
 
 class AssignController extends Controller
 {
+    public function __construct(private AuditLogService $auditLogService) {}
+
     public function createUserForm()
     {
         $programs = Program::all();
@@ -70,6 +73,14 @@ class AssignController extends Controller
             }
 
             DB::commit();
+
+            $this->auditLogService->logActivity(
+                'CREATE',
+                'Users',
+                "Created user {$user->firstname} {$user->lastname} ({$user->email}) with role ID {$user->role_id}.",
+                null,
+                'USER_MANAGEMENT'
+            );
 
             // Try to send email, but don't fail the entire operation if it fails
             try {
@@ -136,6 +147,14 @@ class AssignController extends Controller
 
         $user->programs()->sync($syncData);
 
+        $this->auditLogService->logActivity(
+            'UPDATE',
+            'Users',
+            "Updated user {$user->firstname} {$user->lastname} ({$user->email}) (ID: {$user->id}).",
+            null,
+            'USER_MANAGEMENT'
+        );
+
         return redirect()->route('admin.users.create')
             ->with('success', 'User updated successfully.');
     }
@@ -146,6 +165,14 @@ class AssignController extends Controller
         $user = User::findOrFail($id);
 
         $user->programs()->detach();
+
+        $this->auditLogService->logActivity(
+            'DELETE',
+            'Users',
+            "Deleted user {$user->firstname} {$user->lastname} ({$user->email}) (ID: {$user->id}).",
+            null,
+            'USER_MANAGEMENT'
+        );
 
         $user->delete();
 

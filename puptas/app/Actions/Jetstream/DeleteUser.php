@@ -4,7 +4,6 @@ namespace App\Actions\Jetstream;
 
 use App\Models\Team;
 use App\Models\User;
-use App\Models\AuditLog;
 use Illuminate\Support\Facades\DB;
 use Laravel\Jetstream\Contracts\DeletesTeams;
 use Laravel\Jetstream\Contracts\DeletesUsers;
@@ -32,30 +31,22 @@ class DeleteUser implements DeletesUsers
     }
 
     /**
-     * Log user deletion to audit logs.
+     * Log user deletion to audit logs (via AuditLogService).
      */
     protected function logDeletion(User $user): void
     {
         try {
-            AuditLog::create([
-                'user_id' => $user->id,
-                'model_type' => 'User',
-                'model_id' => $user->id,
-                'action' => 'deleted',
-                'old_values' => [
-                    'email' => $user->email,
-                    'firstname' => $user->firstname,
-                    'lastname' => $user->lastname,
-                    'role_id' => $user->role_id,
-                ],
-                'new_values' => null,
-                'ip_address' => request()->ip(),
-            ]);
+            app(\App\Services\AuditLogService::class)->logActivity(
+                'DELETE',
+                'Users',
+                "User account {$user->firstname} {$user->lastname} ({$user->email}) deleted via account removal.",
+                null,
+                'USER_MANAGEMENT'
+            );
         } catch (\Exception $e) {
-            // Log the error but don't prevent deletion
-            logger()->error('Failed to create audit log during user deletion', [
+            logger()->error('Failed to write audit log during user deletion', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage(),
             ]);
         }
     }

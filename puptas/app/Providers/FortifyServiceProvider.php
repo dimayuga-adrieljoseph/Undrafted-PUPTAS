@@ -35,9 +35,10 @@ class FortifyServiceProvider extends ServiceProvider
 
         // Register custom authenticated session controller for dynamic redirects
         $this->app->singleton(\Laravel\Fortify\Contracts\LoginResponse::class, \App\Http\Controllers\AuthenticatedSessionController::class);
+        $this->app->singleton(\Laravel\Fortify\Contracts\RegisterResponse::class, \App\Http\Controllers\AuthenticatedSessionController::class);
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())) . '|' . $request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
         });

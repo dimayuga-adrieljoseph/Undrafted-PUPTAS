@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
-use App\Models\AuditLog;
 use App\Models\ApplicantProfile;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Hash;
@@ -16,15 +15,18 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\Program;
 use App\Rules\ValidationRules;
 use Inertia\Inertia;
+use App\Services\AuditLogService;
 use App\Services\UserService;
 
 class UserController extends Controller
 {
     protected UserService $userService;
+    protected AuditLogService $auditLogService;
 
-    public function __construct(UserService $userService)
+    public function __construct(UserService $userService, AuditLogService $auditLogService)
     {
-        $this->userService = $userService;
+        $this->userService     = $userService;
+        $this->auditLogService = $auditLogService;
     }
 
     /**
@@ -57,6 +59,14 @@ class UserController extends Controller
         $user = $this->userService->createUser($request->all());
 
         event(new Registered($user));
+
+        $this->auditLogService->logActivity(
+            'CREATE',
+            'Users',
+            "Created user account for {$user->firstname} {$user->lastname} ({$user->email}) with role ID {$user->role_id}.",
+            null,
+            'USER_MANAGEMENT'
+        );
 
         return redirect()->route('users.index')->with('status', 'User added successfully!');
     }
@@ -205,6 +215,14 @@ class UserController extends Controller
             // Sync the programs
             $user->programs()->sync($programsToSync);
 
+            $this->auditLogService->logActivity(
+                'UPDATE',
+                'Users',
+                "Updated user account for {$user->firstname} {$user->lastname} ({$user->email}).",
+                null,
+                'USER_MANAGEMENT'
+            );
+
             return redirect()->route('users.index')->with('status', 'User updated successfully!');
         });
     }
@@ -221,28 +239,13 @@ class UserController extends Controller
         }
 
         // Log deletion for audit purposes
-        try {
-            AuditLog::create([
-                'user_id' => auth()->id(),
-                'model_type' => 'User',
-                'model_id' => $user->id,
-                'action' => 'deleted',
-                'old_values' => [
-                    'email' => $user->email,
-                    'firstname' => $user->firstname,
-                    'lastname' => $user->lastname,
-                    'role_id' => $user->role_id,
-                    'deleted_by' => auth()->user()->email,
-                ],
-                'new_values' => null,
-                'ip_address' => request()->ip(),
-            ]);
-        } catch (\Exception $e) {
-            logger()->error('Failed to create audit log during user deletion', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage()
-            ]);
-        }
+        $this->auditLogService->logActivity(
+            'DELETE',
+            'Users',
+            "Deleted user account {$user->firstname} {$user->lastname} ({$user->email}).",
+            null,
+            'USER_MANAGEMENT'
+        );
 
         $user->delete();
 

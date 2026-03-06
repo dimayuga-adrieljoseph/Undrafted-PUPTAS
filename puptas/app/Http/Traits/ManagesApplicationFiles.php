@@ -22,7 +22,7 @@ trait ManagesApplicationFiles
         if (auth()->user()->role_id !== 2) {
             $this->ensureRole($this->getRoleId());
         }
-        
+
         $user = User::with([
             'currentApplication.program',
             'currentApplication.processes.performedBy:id,firstname,lastname',
@@ -103,7 +103,7 @@ trait ManagesApplicationFiles
 
         $user = User::with('currentApplication')->findOrFail($userId);
         $application = $user->currentApplication;
-        
+
         if (!$application) {
             return response()->json(['message' => 'Application not found'], 404);
         }
@@ -172,7 +172,7 @@ trait ManagesApplicationFiles
 
         $user = User::with('currentApplication')->findOrFail($userId);
         $application = $user->currentApplication;
-        
+
         if (!$application) {
             return response()->json(['message' => 'Application not found'], 404);
         }
@@ -230,6 +230,8 @@ trait ManagesApplicationFiles
                     $updatedFiles[] = $dbKey;
                 }
             });
+
+            app(\App\Services\AuditLogService::class)->logActivity('UPDATE', 'Applications', "Returned application at '{$this->getCurrentStage()}' stage for applicant ID {$userId}.", null, 'ADMISSION_DATA');
 
             return response()->json([
                 'message' => 'Application returned and tracked.',

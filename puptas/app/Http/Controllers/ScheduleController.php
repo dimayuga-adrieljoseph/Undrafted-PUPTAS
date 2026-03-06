@@ -7,10 +7,12 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Schedule;
 use App\Rules\ValidationRules;
+use App\Services\AuditLogService;
 use Inertia\Inertia;
 
 class ScheduleController extends Controller
 {
+    public function __construct(private AuditLogService $auditLogService) {}
     public function index(Request $request)
     {
         $schedules = Schedule::orderBy('start')->get();
@@ -41,6 +43,8 @@ class ScheduleController extends Controller
             'affected_programs' => $validated['affected_programs'] ?? null,
         ]);
 
+        $this->auditLogService->logActivity('CREATE', 'Schedules', "Created schedule \"{$schedule->name}\" ({$schedule->type}) on {$schedule->start}.", null, 'SYSTEM_OPERATION');
+
         return response()->json($schedule, 201);
     }
 
@@ -66,12 +70,18 @@ class ScheduleController extends Controller
             'affected_programs' => $validated['affected_programs'] ?? null,
         ]);
 
+        $this->auditLogService->logActivity('UPDATE', 'Schedules', "Updated schedule \"{$schedule->name}\" (ID: {$schedule->id}).", null, 'SYSTEM_OPERATION');
+
         return response()->json($schedule);
     }
 
     public function destroy($id)
     {
         $schedule = Schedule::findOrFail($id);
+        $scheduleName = $schedule->name;
+
+        $this->auditLogService->logActivity('DELETE', 'Schedules', "Deleted schedule \"{$scheduleName}\" (ID: {$id}).", null, 'SYSTEM_OPERATION');
+
         $schedule->delete();
 
         return response()->json(null, 204);
