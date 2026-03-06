@@ -35,8 +35,10 @@ class DashboardController extends Controller
         ];
 
         // Group applications by date and status (last 30 days)
-        $startDate = Carbon::now()->subDays(29)->startOfDay();
-        $endDate = Carbon::now()->endOfDay();
+        // Use single Carbon::now() reference to prevent midnight misalignment
+        $now = Carbon::now();
+        $startDate = $now->copy()->subDays(29)->startOfDay();
+        $endDate = $now->copy()->endOfDay();
         
         $applications = DB::table('applications')
             ->select(
@@ -53,9 +55,9 @@ class DashboardController extends Controller
         $dates = [];
         $dateLabels = [];
         for ($i = 29; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i)->format('Y-m-d');
-            $dates[] = $date;
-            $dateLabels[] = Carbon::now()->subDays($i)->format('M j');
+            $date = $now->copy()->subDays($i);
+            $dates[] = $date->format('Y-m-d');
+            $dateLabels[] = $date->format('M j');
         }
 
         // Initialize status arrays
