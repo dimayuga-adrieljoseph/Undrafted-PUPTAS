@@ -237,7 +237,12 @@
                     <h4
                         class="text-sm font-bold text-gray-700 dark:text-white mb-1"
                     >
-                        Temporary enrolled in:
+                        {{
+                            selectedUser?.application?.enrollment_status ===
+                            "officially_enrolled"
+                                ? "Officially enrolled in:"
+                                : "Temporary enrolled in:"
+                        }}
                     </h4>
                     <p class="text-sm text-gray-800 dark:text-gray-300">
                         {{ selectedUser?.application?.program?.code }} -
@@ -249,6 +254,10 @@
                     <!-- Accept and Transfer buttons -->
                     <div class="mt-4 flex justify-end space-x-2">
                         <button
+                            v-if="
+                                selectedUser?.application?.enrollment_status !==
+                                'officially_enrolled'
+                            "
                             @click="acceptApplication"
                             class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                         >
@@ -619,10 +628,13 @@ const submitReturn = async () => {
     }
 
     try {
-        await axios.post(`/record-dashboard/return-files/${selectedUser.value.id}`, {
-            files: selected,
-            note: returnNote.value.trim(),
-        });
+        await axios.post(
+            `/record-dashboard/return-files/${selectedUser.value.id}`,
+            {
+                files: selected,
+                note: returnNote.value.trim(),
+            }
+        );
 
         alert("Files returned and application status logged.");
 
