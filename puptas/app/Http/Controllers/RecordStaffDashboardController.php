@@ -144,6 +144,7 @@ class RecordStaffDashboardController extends Controller
             'application' => [
                 'id' => $application->id,
                 'status' => $application->status,
+                'enrollment_status' => $application->enrollment_status,
                 'created_at' => $application->created_at,
                 'program' => $application->program,
                 'processes' => $application->processes,
