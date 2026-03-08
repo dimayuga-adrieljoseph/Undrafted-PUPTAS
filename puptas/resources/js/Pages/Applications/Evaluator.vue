@@ -225,9 +225,16 @@
                     <button
                         v-if="!isEvaluating"
                         @click="startEvaluation"
+                        class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                    >
+                        Return Documents
+                    </button>
+                    <button
+                        v-if="!isEvaluating"
+                        @click="submitPass"
                         class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
                     >
-                        Evaluate
+                        Pass Application
                     </button>
                     <button
                         v-if="isEvaluating"
@@ -244,14 +251,14 @@
                         for="returnNote"
                         class="block text-xs font-semibold mb-1"
                     >
-                        Return Reason / Note
+                        Return Reason <span class="text-red-500">*</span>
                     </label>
                     <textarea
                         id="returnNote"
                         v-model="returnNote"
                         rows="2"
                         class="w-full border rounded p-1 text-xs"
-                        placeholder="Reason for returning..."
+                        placeholder="Explain what the applicant needs to fix or resubmit..."
                     ></textarea>
                 </div>
 
@@ -261,15 +268,7 @@
                         @click="submitReturn"
                         class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
                     >
-                        Return Selected Files
-                    </button>
-
-                    <button
-                        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                        @click="submitPass"
-                        v-if="isEvaluating && selectedUser"
-                    >
-                        Pass Application
+                        Confirm Return
                     </button>
                 </div>
 
@@ -629,18 +628,23 @@ const submitReturn = async () => {
     const selected = Object.keys(filesToReturn.value).filter(
         (k) => filesToReturn.value[k]
     );
-    if (selected.length === 0 || !returnNote.value.trim()) {
-        alert("Please select files and enter a return note.");
+    const note = returnNote.value.trim();
+    if (selected.length === 0) {
+        alert("Please select at least one file to return.");
+        return;
+    }
+    if (note.length < 3) {
+        alert("Please enter a return reason before submitting.");
         return;
     }
 
     try {
         await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
             files: selected,
-            note: returnNote.value.trim(),
+            note,
         });
 
-        alert("Files returned and application status logged.");
+        alert("Files returned successfully.");
 
         isEvaluating.value = false;
         filesToReturn.value = {};
@@ -651,7 +655,8 @@ const submitReturn = async () => {
         await selectUser(selectedUser.value);
     } catch (error) {
         console.error(error);
-        alert("Return failed.");
+        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0];
+        alert(msg || "Return failed. Please try again.");
     }
 };
 
@@ -664,11 +669,12 @@ const formatDate = (date) => {
 };
 
 const submitPass = async () => {
+    if (!confirm("Pass this application to the interviewer stage? This cannot be undone.")) return;
     try {
         await axios.post(
             `/evaluator/pass-application/${selectedUser.value.id}`,
             {
-                note: returnNote.value || "",
+                note: "",
             }
         );
 
