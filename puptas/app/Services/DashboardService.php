@@ -211,7 +211,7 @@ class DashboardService
     }
 
     /**
-     * Get dashboard data for evaluator with pending and all applications
+     * Get dashboard data for evaluator with pending applications
      *
      * @return array
      */
@@ -219,14 +219,13 @@ class DashboardService
     {
         return [
             'pendingUsers' => $this->userService->getApplicantsByStage('evaluator'),
-            'allUsers' => $this->userService->getApplicantsWithApplications(),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getApplicationChartData(),
         ];
     }
 
     /**
-     * Get dashboard data for interviewer with pending and all applications
+     * Get dashboard data for interviewer with pending applications
      *
      * @return array
      */
@@ -234,14 +233,13 @@ class DashboardService
     {
         return [
             'pendingUsers' => $this->userService->getApplicantsByStage('interviewer'),
-            'allUsers' => $this->userService->getApplicantsWithApplications(),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getDailyApplicationChartData(),
         ];
     }
 
     /**
-     * Get dashboard data for medical with pending and all applications
+     * Get dashboard data for medical with pending applications
      *
      * @return array
      */
@@ -249,7 +247,6 @@ class DashboardService
     {
         return [
             'pendingUsers' => $this->userService->getApplicantsByStage('medical'),
-            'allUsers' => $this->userService->getApplicantsWithApplications(),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getApplicationChartData(),
         ];

@@ -35,7 +35,6 @@ const page = usePage();
 const props = defineProps({
     user: Object,
     pendingUsers: Array,
-    allUsers: Array,
     summary: {
         type: Object,
         default: () => ({

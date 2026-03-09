@@ -54,7 +54,6 @@ class InterviewerDashboardController extends Controller
         return Inertia::render('Dashboard/Interviewer', [
             'user' => $user,
             'pendingUsers' => $dashboardData['pendingUsers'],
-            'allUsers' => $dashboardData['allUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
         ]);

@@ -53,7 +53,11 @@ class UserService
      */
     public function getApplicantsByStage(string $stage): Collection
     {
-        return User::with('currentApplication.program')
+        return User::with(['currentApplication' => function ($query) {
+                $query->select('id', 'user_id', 'status', 'created_at', 'program_id');
+            }, 'currentApplication.program' => function ($query) {
+                $query->select('id', 'code', 'name');
+            }])
             ->where('role_id', 1)
             ->whereHas('currentApplication', function ($query) use ($stage) {
                 $query->whereNotIn('status', ['accepted'])
@@ -64,18 +68,27 @@ class UserService
             })
             ->get()
             ->map(function ($user) {
+                $application = $user->currentApplication;
                 return [
                     'id' => $user->id,
                     'firstname' => $user->firstname,
                     'lastname' => $user->lastname,
                     'course' => $user->course,
-                    'status' => $user->currentApplication->status ?? null,
+                    'status' => $application->status ?? null,
                     'email' => $user->email,
                     'username' => $user->username,
                     'phone' => $user->phone,
                     'company' => $user->company,
-                    'program' => $user->currentApplication->program ?? null,
-                    'application' => $user->currentApplication ?? null,
+                    'application' => $application ? [
+                        'id' => $application->id,
+                        'status' => $application->status,
+                        'created_at' => $application->created_at,
+                        'program' => $application->program ? [
+                            'id' => $application->program->id,
+                            'code' => $application->program->code,
+                            'name' => $application->program->name,
+                        ] : null,
+                    ] : null,
                 ];
             });
     }

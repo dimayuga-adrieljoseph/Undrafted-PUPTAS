@@ -54,7 +54,6 @@ class EvaluatorDashboardController extends Controller
         return Inertia::render('Dashboard/Evaluator', [
             'user' => $user,
             'pendingUsers' => $dashboardData['pendingUsers'],
-            'allUsers' => $dashboardData['allUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
         ]);

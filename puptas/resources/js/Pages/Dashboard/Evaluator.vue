@@ -29,7 +29,6 @@ ChartJS.register(
 const props = defineProps({
     user: Object,
     pendingUsers: Array,
-    allUsers: Array,
     summary: {
         type: Object,
         default: () => ({
@@ -54,15 +53,6 @@ const showImageModal = ref(false);
 const isEvaluating = ref(false);
 const filesToReturn = ref({});
 const returnNote = ref("");
-
-// Filter to get only applicants (users with applications)
-const applicantsOnly = computed(() => {
-    return (props.allUsers || []).filter(user => {
-        return user.application && 
-               user.application.id && 
-               user.application.status !== undefined;
-    });
-});
 
 // Summary items with icons and percentages
 const summaryItems = computed(() => [
