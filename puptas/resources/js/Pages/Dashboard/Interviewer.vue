@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { LineChart } from "vue-chart-3";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
 import {
     Chart as ChartJS,
@@ -29,10 +29,10 @@ ChartJS.register(
 import { usePage } from "@inertiajs/vue3";
 
 const page = usePage();
-const users = ref(page.props.users || []);
 
 const props = defineProps({
     user: Object,
+    pendingUsers: Array,
     allUsers: Array,
     summary: {
         type: Object,
@@ -195,32 +195,15 @@ const getButtonClass = (type) => {
     return classes[type] || classes.secondary;
 };
 
-const fetchUsers = async () => {
-    try {
-        const response = await fetch("/interviewer-dashboard/applicants", {
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json();
-    } catch (error) {
-        errorMessage.value = error.message;
-    } finally {
-        isLoading.value = false;
-    }
-};
-
 onMounted(() => {
-    fetchUsers();
     fetchPrograms();
 });
 
 const filteredUsers = computed(() => {
-    if (!searchQuery.value.trim()) return users.value;
+    const pending = props.pendingUsers || [];
+    if (!searchQuery.value.trim()) return pending;
     const query = searchQuery.value.toLowerCase();
-    return users.value.filter((user) => {
+    return pending.filter((user) => {
         return (
             user.firstname?.toLowerCase().includes(query) ||
             user.lastname?.toLowerCase().includes(query) ||
@@ -231,7 +214,7 @@ const filteredUsers = computed(() => {
 
 const displayedUsers = computed(() => {
     if (searchQuery.value.trim()) return filteredUsers.value;
-    return users.value.slice(0, 5);
+    return (props.pendingUsers || []).slice(0, 5);
 });
 
 const selectUser = async (user) => {
@@ -312,7 +295,7 @@ const acceptApplication = async () => {
         );
         showSnackbar("Application accepted successfully", "success");
         selectedUser.value = null;
-        await fetchUsers();
+        router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
         console.error("Accept failed:", e);
         const msg = e.response?.data?.message || "Failed to accept application";
@@ -336,7 +319,7 @@ const transferApplication = async () => {
         showSnackbar("Applicant transferred successfully", "success");
         selectedUser.value = null;
         selectedProgramId.value = "";
-        fetchUsers();
+        router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
         console.error("Transfer failed", e);
         const msg = e.response?.data?.message || "Transfer failed";

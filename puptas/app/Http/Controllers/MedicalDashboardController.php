@@ -53,6 +53,7 @@ class MedicalDashboardController extends Controller
 
         return Inertia::render('Dashboard/Medical', [
             'user' => $user,
+            'pendingUsers' => $dashboardData['pendingUsers'],
             'allUsers' => $dashboardData['allUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
@@ -64,8 +65,10 @@ class MedicalDashboardController extends Controller
         // Ensure user has medical role
         $this->ensureRole($this->getRoleId());
 
-        // Only return applicants currently at medical stage
-        return response()->json($this->userService->getApplicantsByStage('medical'));
+        // Return all applicants with their applications
+        return response()->json(
+            $this->userService->getApplicantsWithApplications()
+        );
     }
 
     protected function getCurrentStage(): string

@@ -33,7 +33,7 @@ class DashboardService
     public function getCommonDashboardData(): array
     {
         return [
-            'allUsers' => User::with('currentApplication.program')->whereHas('currentApplication')->get(),
+            'allUsers' => $this->userService->getApplicantsWithApplications(),
             'summary' => $this->applicationService->getApplicationSummary(),
         ];
     }
@@ -211,42 +211,45 @@ class DashboardService
     }
 
     /**
-     * Get dashboard data for evaluator with pending applications
+     * Get dashboard data for evaluator with pending and all applications
      *
      * @return array
      */
     public function getEvaluatorDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('evaluator'),
+            'pendingUsers' => $this->userService->getApplicantsByStage('evaluator'),
+            'allUsers' => $this->userService->getApplicantsWithApplications(),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getApplicationChartData(),
         ];
     }
 
     /**
-     * Get dashboard data for interviewer with pending applications
+     * Get dashboard data for interviewer with pending and all applications
      *
      * @return array
      */
     public function getInterviewerDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('interviewer'),
+            'pendingUsers' => $this->userService->getApplicantsByStage('interviewer'),
+            'allUsers' => $this->userService->getApplicantsWithApplications(),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getDailyApplicationChartData(),
         ];
     }
 
     /**
-     * Get dashboard data for medical with pending applications
+     * Get dashboard data for medical with pending and all applications
      *
      * @return array
      */
     public function getMedicalDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('medical'),
+            'pendingUsers' => $this->userService->getApplicantsByStage('medical'),
+            'allUsers' => $this->userService->getApplicantsWithApplications(),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getApplicationChartData(),
         ];

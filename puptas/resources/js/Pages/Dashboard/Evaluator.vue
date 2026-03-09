@@ -28,6 +28,7 @@ ChartJS.register(
 
 const props = defineProps({
     user: Object,
+    pendingUsers: Array,
     allUsers: Array,
     summary: {
         type: Object,
@@ -170,9 +171,9 @@ const chartDataset = computed(() => ({
     ],
 }));
 
-// Display only applicants in the recent applications section
+// Display only pending applicants in the recent applications section
 const displayedApplicants = computed(() => {
-    const applicants = applicantsOnly.value;
+    const applicants = props.pendingUsers || [];
     const query = searchQuery.value.trim().toLowerCase();
     
     if (!query) return applicants.slice(0, 5);

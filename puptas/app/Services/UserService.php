@@ -56,10 +56,11 @@ class UserService
         return User::with('currentApplication.program')
             ->where('role_id', 1)
             ->whereHas('currentApplication', function ($query) use ($stage) {
-                $query->whereHas('processes', function ($q) use ($stage) {
-                    $q->where('stage', $stage)
-                        ->whereIn('status', ['in_progress', 'returned']);
-                });
+                $query->whereNotIn('status', ['accepted'])
+                    ->whereHas('processes', function ($q) use ($stage) {
+                        $q->where('stage', $stage)
+                            ->whereIn('status', ['in_progress', 'returned']);
+                    });
             })
             ->get()
             ->map(function ($user) {
@@ -74,6 +75,7 @@ class UserService
                     'phone' => $user->phone,
                     'company' => $user->company,
                     'program' => $user->currentApplication->program ?? null,
+                    'application' => $user->currentApplication ?? null,
                 ];
             });
     }
