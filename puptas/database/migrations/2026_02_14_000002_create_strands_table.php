@@ -15,7 +15,7 @@ return new class extends Migration
         // Create strands lookup table
         Schema::create('strands', function (Blueprint $table) {
             $table->id();
-            $table->string('code', 20)->unique();  // STEM, HUMSS, ABM, TVL, ICT
+            $table->string('code', 20)->unique();  // STEM, HUMSS, ABM, TVL, ICT, GAS
             $table->string('name', 100);            // Full descriptive name
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
@@ -31,6 +31,7 @@ return new class extends Migration
             ['code' => 'ABM', 'name' => 'Accountancy, Business & Management', 'is_active' => true],
             ['code' => 'TVL', 'name' => 'Technical-Vocational-Livelihood', 'is_active' => true],
             ['code' => 'ICT', 'name' => 'Information and Communications Technology', 'is_active' => true],
+            ['code' => 'GAS', 'name' => 'General Academic Strand', 'is_active' => true],
         ]);
     }
 
