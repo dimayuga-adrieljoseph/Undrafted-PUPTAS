@@ -109,8 +109,8 @@ class DashboardService
         }
 
         return [
-            'years' => $years,
-            'labels' => $years,
+            'labels' => $dateLabels,
+            'years' => $dateLabels,  // For backward compatibility
             'submitted' => $submitted,
             'accepted' => $accepted,
             'returned' => $returned,
