@@ -74,8 +74,10 @@ class DashboardService
     public function getApplicationChartData(): array
     {
         // Group applications by date and status (last 30 days)
-        $startDate = \Carbon\Carbon::now()->subDays(29)->startOfDay();
-        $endDate = \Carbon\Carbon::now()->endOfDay();
+        // Use single Carbon::now() reference to prevent midnight misalignment
+        $now = \Carbon\Carbon::now();
+        $startDate = $now->copy()->subDays(29)->startOfDay();
+        $endDate = $now->copy()->endOfDay();
         
         $applications = DB::table('applications')
             ->select(
@@ -92,9 +94,9 @@ class DashboardService
         $dates = [];
         $dateLabels = [];
         for ($i = 29; $i >= 0; $i--) {
-            $date = \Carbon\Carbon::now()->subDays($i)->format('Y-m-d');
-            $dates[] = $date;
-            $dateLabels[] = \Carbon\Carbon::now()->subDays($i)->format('M j');
+            $date = $now->copy()->subDays($i);
+            $dates[] = $date->format('Y-m-d');
+            $dateLabels[] = $date->format('M j');
         }
 
         // Initialize status arrays
