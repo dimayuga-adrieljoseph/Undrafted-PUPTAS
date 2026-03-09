@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Program;
 use App\Models\Application;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 /**
  * Dashboard Service
@@ -108,7 +109,59 @@ class DashboardService
         }
 
         return [
+            'years' => $years,
+            'labels' => $years,
+            'submitted' => $submitted,
+            'accepted' => $accepted,
+            'returned' => $returned,
+        ];
+    }
+
+    /**
+     * Get application chart data grouped by date (last 30 days)
+     *
+     * @return array
+     */
+    public function getDailyApplicationChartData(): array
+    {
+        $now = \Carbon\Carbon::now();
+        $startDate = $now->copy()->subDays(29)->startOfDay();
+        $endDate = $now->copy()->endOfDay();
+        
+        $applications = DB::table('applications')
+            ->select(
+                DB::raw('DATE(created_at) as date'),
+                'status',
+                DB::raw('COUNT(*) as count')
+            )
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy(DB::raw('DATE(created_at)'), 'status')
+            ->orderBy('date')
+            ->get();
+
+        // Build a list of dates for the last 30 days
+        $dates = [];
+        $dateLabels = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = $now->copy()->subDays($i);
+            $dates[] = $date->format('Y-m-d');
+            $dateLabels[] = $date->format('M j');
+        }
+
+        // Initialize status arrays
+        $submitted = [];
+        $accepted = [];
+        $returned = [];
+
+        foreach ($dates as $date) {
+            $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
+            $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
+            $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
+        }
+
+        return [
             'labels' => $dateLabels,
+            'years' => $dateLabels,  // For backward compatibility
             'submitted' => $submitted,
             'accepted' => $accepted,
             'returned' => $returned,
@@ -179,7 +232,7 @@ class DashboardService
         return [
             'allUsers' => $this->getApplicantsPendingForStage('interviewer'),
             'summary' => $this->applicationService->getApplicationSummary(),
-            'chartData' => $this->getApplicationChartData(),
+            'chartData' => $this->getDailyApplicationChartData(),
         ];
     }
 
