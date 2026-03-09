@@ -53,7 +53,7 @@ class EvaluatorDashboardController extends Controller
 
         return Inertia::render('Dashboard/Evaluator', [
             'user' => $user,
-            'allUsers' => $dashboardData['allUsers'],
+            'pendingUsers' => $dashboardData['pendingUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
         ]);
@@ -78,8 +78,10 @@ class EvaluatorDashboardController extends Controller
         // Ensure user has evaluator role
         $this->ensureRole($this->getRoleId());
 
-        // Only return applicants currently at evaluator stage
-        return response()->json($this->userService->getApplicantsByStage('evaluator'));
+        // Return all applicants with their applications
+        return response()->json(
+            $this->userService->getApplicantsWithApplications()
+        );
     }
 
     public function passApplication(Request $request, $userId)
