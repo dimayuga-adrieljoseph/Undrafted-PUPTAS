@@ -214,7 +214,7 @@ const clearFilters = () => {
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 text-[#9E122C] mr-2"
+                            class="h-5 w-5 text-black dark:text-white mr-2"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -230,13 +230,13 @@ const clearFilters = () => {
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search by name..."
-                            class="bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-sm text-[#9E122C] placeholder-gray-500 w-full"
+                            class="bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-sm text-black dark:text-white placeholder-gray-500 w-full"
                         />
                     </div>
 
                     <button
                         @click="clearFilters"
-                        class="text-sm text-[#9E122C] border border-[#9E122C] rounded px-3 py-1.5 hover:bg-[#FDE8EA] transition"
+                        class="text-sm text-black dark:text-white border border-[#9E122C] rounded px-3 py-1.5 hover:bg-[#FDE8EA] transition"
                     >
                         Clear Filters
                     </button>
@@ -244,7 +244,7 @@ const clearFilters = () => {
                     <div class="relative">
                         <button
                             @click="showStatusDropdown = !showStatusDropdown"
-                            class="text-[#9E122C] p-2 border border-[#9E122C] rounded-full"
+                            class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
                             title="Filter"
                         >
                             <svg
@@ -307,7 +307,7 @@ const clearFilters = () => {
 
                     <button
                         @click="sortAsc = !sortAsc"
-                        class="text-[#9E122C] p-2 border border-[#9E122C] rounded-full"
+                        class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
                         title="Sort"
                     >
                         <svg
@@ -333,13 +333,13 @@ const clearFilters = () => {
             <div class="bg-white/20 rounded-xl shadow p-2 overflow-x-auto">
                 <div v-if="loading" class="text-center text-gray-500 py-4">Loading applicants…</div>
                 <div v-else-if="fetchError" class="text-center text-red-500 py-4">Error: {{ fetchError }}</div>
-                <div v-if="!loading && !fetchError" class="text-sm text-[#4B5563] mb-2">
+                <div v-if="!loading && !fetchError" class="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Showing {{ paginatedUsers.length }} of
                     {{ filteredUsers.length }} users
                 </div>
                 <table class="min-w-full text-base">
                     <thead>
-                        <tr class="text-left text-white font-semibold">
+                        <tr class="text-left font-semibold text-black dark:text-white">
                             <th
                                 class="pb-2 cursor-pointer"
                                 @click="sortBy('lastname')"
@@ -357,10 +357,10 @@ const clearFilters = () => {
                             @click="selectUser(user)"
                             class="cursor-pointer hover:bg-white/10 backdrop-blur-sm transition"
                         >
-                            <td class="py-2 text-[#111827] font-medium">
+                            <td class="py-2 text-black dark:text-white font-medium">
                                 {{ user.firstname }} {{ user.lastname }}
                             </td>
-                            <td class="py-2 text-[#111827]">
+                            <td class="py-2 text-black dark:text-white">
                                 {{ user.program.name || "—" }}
                             </td>
                             <td class="py-2">
@@ -379,7 +379,7 @@ const clearFilters = () => {
                     <button
                         @click="currentPage--"
                         :disabled="currentPage === 1"
-                        class="text-sm text-[#9E122C] disabled:text-gray-900"
+                        class="text-sm text-black dark:text-white disabled:text-gray-900"
                     >
                         Previous
                     </button>
@@ -389,7 +389,7 @@ const clearFilters = () => {
                     <button
                         @click="currentPage++"
                         :disabled="currentPage === totalPages"
-                        class="text-sm text-[#9E122C] disabled:text-gray-900"
+                        class="text-sm text-black dark:text-white disabled:text-gray-900"
                     >
                         Next
                     </button>
@@ -522,7 +522,7 @@ const clearFilters = () => {
                                     class="absolute -left-[10px] top-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"
                                 ></div>
                                 <p
-                                    class="text-sm font-semibold text-gray-900 dark:text-white"
+                                    class="text-sm font-semibold text-gray-900 dark:text-black dark:text-white"
                                 >
                                     {{ capitalize(process.stage) }} -
                                     <span
