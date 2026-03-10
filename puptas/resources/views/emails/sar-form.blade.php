@@ -121,6 +121,7 @@
                 <li>This document is required for your enrollment</li>
                 <li>Please keep it safe and bring it during enrollment</li>
                 <li>Review all information for accuracy</li>
+                <li>Bring the original copies and 2 photocopies of your documents during enrollment.</li>
             </ul>
         </div>
         
@@ -146,7 +147,7 @@
         <div class="message">
             <p>We look forward to welcoming you to the PUP community!</p>
             <p><strong>Best regards,</strong><br>
-            PUP Taguig Admission Office</p>
+            PUP Taguig Admission and Registration Office</p>
         </div>
     </div>
     
