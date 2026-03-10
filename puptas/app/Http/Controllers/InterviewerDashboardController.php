@@ -53,7 +53,7 @@ class InterviewerDashboardController extends Controller
 
         return Inertia::render('Dashboard/Interviewer', [
             'user' => $user,
-            'allUsers' => $dashboardData['allUsers'],
+            'pendingUsers' => $dashboardData['pendingUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
         ]);
@@ -86,8 +86,10 @@ class InterviewerDashboardController extends Controller
         // Ensure user has interviewer role
         $this->ensureRole($this->getRoleId());
 
-        // Only return applicants currently at interviewer stage
-        return response()->json($this->userService->getApplicantsByStage('interviewer'));
+        // Return all applicants with their applications
+        return response()->json(
+            $this->userService->getApplicantsWithApplications()
+        );
     }
 
     public function accept($userId)

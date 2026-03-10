@@ -28,7 +28,7 @@ ChartJS.register(
 
 const props = defineProps({
     user: Object,
-    allUsers: Array,
+    pendingUsers: Array,
     summary: {
         type: Object,
         default: () => ({
@@ -53,15 +53,6 @@ const showImageModal = ref(false);
 const isEvaluating = ref(false);
 const filesToReturn = ref({});
 const returnNote = ref("");
-
-// Filter to get only applicants (users with applications)
-const applicantsOnly = computed(() => {
-    return (props.allUsers || []).filter(user => {
-        return user.application && 
-               user.application.id && 
-               user.application.status !== undefined;
-    });
-});
 
 // Summary items with icons and percentages
 const summaryItems = computed(() => [
@@ -170,9 +161,9 @@ const chartDataset = computed(() => ({
     ],
 }));
 
-// Display only applicants in the recent applications section
+// Display only pending applicants in the recent applications section
 const displayedApplicants = computed(() => {
-    const applicants = applicantsOnly.value;
+    const applicants = props.pendingUsers || [];
     const query = searchQuery.value.trim().toLowerCase();
     
     if (!query) return applicants.slice(0, 5);

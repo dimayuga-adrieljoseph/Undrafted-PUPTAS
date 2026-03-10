@@ -33,7 +33,7 @@ class DashboardService
     public function getCommonDashboardData(): array
     {
         return [
-            'allUsers' => User::with('currentApplication.program')->whereHas('currentApplication')->get(),
+            'allUsers' => $this->userService->getApplicantsWithApplications(),
             'summary' => $this->applicationService->getApplicationSummary(),
         ];
     }
@@ -218,7 +218,7 @@ class DashboardService
     public function getEvaluatorDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('evaluator'),
+            'pendingUsers' => $this->userService->getApplicantsByStage('evaluator'),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getApplicationChartData(),
         ];
@@ -232,7 +232,7 @@ class DashboardService
     public function getInterviewerDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('interviewer'),
+            'pendingUsers' => $this->userService->getApplicantsByStage('interviewer'),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getDailyApplicationChartData(),
         ];
@@ -246,7 +246,7 @@ class DashboardService
     public function getMedicalDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('medical'),
+            'pendingUsers' => $this->userService->getApplicantsByStage('medical'),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getApplicationChartData(),
         ];
