@@ -21,6 +21,10 @@ use App\Http\Controllers\Admin\Assign\AssignController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\Notify\Notify;
 use App\Http\Controllers\PrivacyConsentController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\CallbackController;
+use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\EnsureAdmin;
 
 Route::get('/', function () {
     return Inertia::render('Auth/Login', [
@@ -51,7 +55,7 @@ Route::get('/applications/user/{user}', function ($user) {
     return Inertia::render('Applications/Index', [
         'selectedUserId' => (int) $user
     ]);
-})->middleware(['auth', 'role:2'])->whereNumber('user')->name('applications.show');
+})->middleware(['auth', EnsureAdmin::class])->whereNumber('user')->name('applications.show');
 
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $request->validate(['email' => 'required|email']);
@@ -187,6 +191,10 @@ Route::get('/home', function () {
         return redirect('/record-dashboard');
     }
 
+    if ($roleId == 7) {
+        return redirect('/dashboard');
+    }
+
     return redirect('/');
 })->middleware(['auth'])->name('home');
 
@@ -199,14 +207,14 @@ Route::get('/sar/download/{filename}/{reference}', [TestPasserController::class,
 
 Route::get('/applications', function () {
     return Inertia::render('Applications/Index');
-})->name('applications');
+})->middleware(['auth', EnsureAdmin::class])->name('applications');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
     Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
 
-    // Admin SAR Management Routes - Restricted to Admin (2) and Registrar (6)
-    Route::middleware(['role:2,6'])->group(function () {
+    // Admin SAR Management Routes - Restricted to Admin (2), Superadmin (7), and Registrar (6)
+    Route::middleware(['auth', EnsureAdmin::class])->group(function () {
         Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
         Route::get('/admin/sar/{id}/download', [TestPasserController::class, 'adminDownloadSar'])->name('admin.sar-download');
         Route::get('/admin/sar/{id}/preview', [TestPasserController::class, 'adminPreviewSar'])->name('admin.sar-preview');
@@ -337,7 +345,7 @@ Route::middleware(['auth', 'role:6'])->group(function () {
 });
 
 // User Management Routes (Protected - Admin Only)
-Route::middleware(['auth', 'role:2'])->group(function () {
+Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     // Admin Dashboard Routes
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
@@ -368,3 +376,13 @@ Route::middleware(['auth', 'role:2'])->group(function () {
     Route::post('/admin/users/update/{id}', [AssignController::class, 'updateUser'])->name('admin.users.update');
     Route::delete('/admin/users/delete/{id}', [AssignController::class, 'deleteUser'])->name('admin.users.delete');
 });
+
+// Superadmin Routes - Protected by EnsureSuperAdmin middleware
+Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
+    Route::get('/admin/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit-logs.show');
+});
+
+// Callback Routes - Public access for loading screen with API callback
+Route::get('/callback', [CallbackController::class, 'index']);
+Route::post('/api/callback', [CallbackController::class, 'handle']);

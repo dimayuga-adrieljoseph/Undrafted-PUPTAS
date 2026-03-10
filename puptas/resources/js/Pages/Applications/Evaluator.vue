@@ -1,412 +1,470 @@
 <template>
     <Head title="All Interviewer Applications" />
     <EvaluatorLayout>
-        <div
-            class="max-w-7xl mx-auto py-2 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto"
-        >
-            <div
-                class="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-2"
-            >
-                <h2 class="text-2xl font-bold text-[#9E122C]">
-                    All Applications
-                </h2>
-                <div
-                    class="flex flex-wrap justify-end gap-2 items-center w-full md:w-auto"
-                >
-                    <div
-                        class="flex items-center border-4 border-red-400 rounded-full px-2 py-1.5 bg-white w-full sm:w-auto"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 text-[#9E122C] mr-2"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                        </svg>
-                        <input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Search by name..."
-                            class="bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-sm text-[#9E122C] placeholder-gray-500 w-full"
-                        />
-                    </div>
+        <div class="px-4 md:px-8 mb-8">
+            <!-- Header Section -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Interview Applications</h1>
+                    <p class="text-gray-600 dark:text-gray-400 mt-2">Review and evaluate applicant submissions</p>
+                </div>
+            </div>
 
-                    <button
-                        @click="clearFilters"
-                        class="text-sm text-[#9E122C] border border-[#9E122C] rounded px-3 py-1.5 hover:bg-[#FDE8EA] transition"
-                    >
-                        Clear Filters
-                    </button>
-
-                    <div class="relative">
-                        <button
-                            @click="showStatusDropdown = !showStatusDropdown"
-                            class="text-[#9E122C] p-2 border border-[#9E122C] rounded-full"
-                            title="Filter"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
-                                />
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Total Applicants</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ users.length }}</p>
+                        </div>
+                        <div class="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                             </svg>
-                        </button>
-                        <div
-                            v-if="showStatusDropdown"
-                            class="absolute top-full mt-2 right-0 bg-white shadow-md border border-gray-200 rounded z-50 text-sm"
-                        >
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = '';
-                                    showStatusDropdown = false;
-                                "
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Accepted</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ users.filter(u => u.status?.toLowerCase() === 'accepted').length }}</p>
+                        </div>
+                        <div class="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Pending</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ users.filter(u => u.status?.toLowerCase() === 'pending').length }}</p>
+                        </div>
+                        <div class="p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Rejected</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ users.filter(u => u.status?.toLowerCase() === 'rejected').length }}</p>
+                        </div>
+                        <div class="p-3 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="mb-8">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                    <div class="flex flex-col lg:flex-row gap-4">
+                        <!-- Search -->
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Applicants</label>
+                            <div class="relative">
+                                <input
+                                    v-model="searchQuery"
+                                    type="text"
+                                    placeholder="Search by name..."
+                                    class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                />
+                                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- Status Filter -->
+                        <div class="w-full lg:w-48">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                            <select
+                                v-model="statusFilter"
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                             >
-                                All
+                                <option value="">All Statuses</option>
+                                <option value="accepted">Accepted</option>
+                                <option value="pending">Pending</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+
+                        <!-- Sort By -->
+                        <div class="w-full lg:w-48">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sort By</label>
+                            <select v-model="sortKey" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent">
+                                <option value="lastname">Last Name</option>
+                                <option value="firstname">First Name</option>
+                                <option value="email">Email</option>
+                                <option value="status">Status</option>
+                            </select>
+                        </div>
+
+                        <!-- Sort Order -->
+                        <div class="flex items-end space-x-2">
+                            <button 
+                                @click="sortAsc = !sortAsc" 
+                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
+                            >
+                                <span>{{ sortAsc ? 'Ascending' : 'Descending' }}</span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path v-if="sortAsc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4" />
+                                </svg>
                             </button>
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = 'accepted';
-                                    showStatusDropdown = false;
-                                "
+                            <button 
+                                @click="clearFilters" 
+                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium"
                             >
-                                Accepted
-                            </button>
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = 'pending';
-                                    showStatusDropdown = false;
-                                "
-                            >
-                                Pending
-                            </button>
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = 'rejected';
-                                    showStatusDropdown = false;
-                                "
-                            >
-                                Rejected
+                                Clear
                             </button>
                         </div>
                     </div>
-
-                    <button
-                        @click="sortAsc = !sortAsc"
-                        class="text-[#9E122C] p-2 border border-[#9E122C] rounded-full"
-                        title="Sort"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                :d="
-                                    sortAsc ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'
-                                "
-                            />
-                        </svg>
-                    </button>
                 </div>
             </div>
 
-            <div class="bg-white/20 rounded-xl shadow p-2 overflow-x-auto">
-                <div class="text-sm text-[#4B5563] mb-2">
-                    Showing {{ paginatedUsers.length }} of
-                    {{ filteredUsers.length }} users
+            <!-- Applications Table -->
+            <div>
+                <!-- Loading State -->
+                <div v-if="isLoading" class="text-center py-16">
+                    <svg class="animate-spin h-10 w-10 text-[#9E122C] mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-gray-600 dark:text-gray-400">Loading applicants...</p>
                 </div>
-                <table class="min-w-full text-base">
-                    <thead>
-                        <tr class="text-left text-white font-semibold">
-                            <th
-                                class="pb-2 cursor-pointer"
-                                @click="sortBy('lastname')"
-                            >
-                                Name
-                            </th>
-                            <th class="pb-2">Course</th>
-                            <th class="pb-2">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-600">
-                        <tr
-                            v-for="user in paginatedUsers"
-                            :key="user.id"
-                            @click="selectUser(user)"
-                            class="cursor-pointer hover:bg-white/10 backdrop-blur-sm transition"
-                        >
-                            <td class="py-2 text-[#111827] font-medium">
-                                {{ user.firstname }} {{ user.lastname }}
-                            </td>
-                            <td class="py-2 text-white">
-                                {{ user.program.name || "—" }}
-                            </td>
-                            <td class="py-2">
+
+                <!-- Error State -->
+                <div v-else-if="errorMessage" class="text-center py-16">
+                    <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Error Loading Data</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-4">{{ errorMessage }}</p>
+                    <button @click="fetchUsers" class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium">
+                        Try Again
+                    </button>
+                </div>
+
+                <!-- Table -->
+                <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <!-- Table Header -->
+                    <div class="grid grid-cols-10 gap-4 px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                        <div class="col-span-4">Name</div>
+                        <div class="col-span-3">Course</div>
+                        <div class="col-span-2">Status</div>
+                        <div class="col-span-1 text-right">Actions</div>
+                    </div>
+
+                    <!-- Table Body -->
+                    <div v-for="user in paginatedUsers" :key="user.id" 
+                         class="group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition border-b border-gray-100 dark:border-gray-700 last:border-0">
+                        <div class="px-6 py-4 grid grid-cols-10 gap-4 items-center text-sm">
+                            <div class="col-span-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-[#9E122C]/10 text-[#9E122C] flex items-center justify-center font-semibold">
+                                        {{ user.firstname?.charAt(0) }}{{ user.lastname?.charAt(0) }}
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">{{ user.firstname }} {{ user.lastname }}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ user.email }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-span-3 text-gray-600 dark:text-gray-300">
+                                {{ user.program?.name || "—" }}
+                            </div>
+                            <div class="col-span-2">
                                 <span
                                     :class="getStatusClass(user.status)"
-                                    class="px-2 py-1 rounded text-sm font-semibold"
+                                    class="px-2.5 py-1 rounded-full text-xs font-medium"
                                 >
                                     {{ user.status || "Unknown" }}
                                 </span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                            </div>
+                            <div class="col-span-1 text-right">
+                                <button 
+                                    @click="selectUser(user)" 
+                                    class="p-2 text-gray-400 hover:text-[#9E122C] dark:hover:text-[#9E122C] transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    title="View Details"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="flex justify-end items-center space-x-4 mt-4">
-                    <button
-                        @click="currentPage--"
-                        :disabled="currentPage === 1"
-                        class="text-sm text-[#9E122C] disabled:text-gray-900"
-                    >
-                        Previous
-                    </button>
-                    <span class="text-sm"
-                        >Page {{ currentPage }} of {{ totalPages }}</span
-                    >
-                    <button
-                        @click="currentPage++"
-                        :disabled="currentPage === totalPages"
-                        class="text-sm text-[#9E122C] disabled:text-gray-900"
-                    >
-                        Next
-                    </button>
+                    <!-- Empty State -->
+                    <div v-if="paginatedUsers.length === 0" class="text-center py-16">
+                        <svg class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No applicants found</h3>
+                        <p class="text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria</p>
+                    </div>
                 </div>
 
-                <p
-                    v-if="paginatedUsers.length === 0"
-                    class="text-center text-gray-400 mt-4"
-                >
-                    No results found.
-                </p>
+                <!-- Pagination -->
+                <div class="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        Showing <span class="font-medium">{{ paginatedUsers.length }}</span> of 
+                        <span class="font-medium">{{ filteredUsers.length }}</span> applicants
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <button 
+                            @click="currentPage--" 
+                            :disabled="currentPage === 1"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                            Previous
+                        </button>
+                        
+                        <div class="flex items-center space-x-2">
+                            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium">{{ currentPage }}</span>
+                            <span class="text-gray-500 dark:text-gray-400">of</span>
+                            <span class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">{{ totalPages || 1 }}</span>
+                        </div>
+                        
+                        <button 
+                            @click="currentPage++" 
+                            :disabled="currentPage === totalPages || totalPages === 0"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- User Info Modal -->
-
-        <!-- User Info Modal -->
+        <!-- User Details Modal -->
         <transition name="slide-fade">
             <div
                 v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
+                class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl overflow-y-auto"
             >
-                <button
-                    class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
-                    @click="closeUserCard"
-                >
-                    Close
-                </button>
-                <!-- Evaluate & Cancel buttons -->
-                <div class="mt-3 flex space-x-2 justify-end">
+                <!-- Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Applicant Details</h3>
+                    <button 
+                        @click="closeUserCard"
+                        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mb-6 flex flex-wrap gap-2">
                     <button
                         v-if="!isEvaluating"
                         @click="startEvaluation"
-                        class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
                     >
                         Return Documents
                     </button>
                     <button
                         v-if="!isEvaluating"
                         @click="submitPass"
-                        class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                        class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm"
                     >
                         Pass Application
                     </button>
                     <button
                         v-if="isEvaluating"
                         @click="cancelEvaluation"
-                        class="px-3 py-1 bg-gray-400 text-black text-sm rounded hover:bg-gray-500"
+                        class="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition font-medium text-sm"
                     >
                         Cancel
                     </button>
                 </div>
 
-                <!-- Return note textarea -->
-                <div v-if="isEvaluating" class="mt-2">
-                    <label
-                        for="returnNote"
-                        class="block text-xs font-semibold mb-1"
-                    >
+                <!-- Return Form -->
+                <div v-if="isEvaluating" class="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Return Reason <span class="text-red-500">*</span>
                     </label>
                     <textarea
-                        id="returnNote"
                         v-model="returnNote"
-                        rows="2"
-                        class="w-full border rounded p-1 text-xs"
+                        rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent text-sm"
                         placeholder="Explain what the applicant needs to fix or resubmit..."
                     ></textarea>
+                    
+                    <div class="mt-4 flex justify-end">
+                        <button
+                            @click="submitReturn"
+                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
+                        >
+                            Confirm Return
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Submit button -->
-                <div v-if="isEvaluating" class="mt-2 flex justify-end">
-                    <button
-                        @click="submitReturn"
-                        class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                    >
-                        Confirm Return
-                    </button>
+                <!-- Profile Section -->
+                <div class="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                    <div class="w-16 h-16 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-2xl font-semibold">
+                        {{ selectedUser.firstname?.charAt(0) }}{{ selectedUser.lastname?.charAt(0) }}
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            {{ selectedUser.lastname }}, {{ selectedUser.firstname }}
+                        </h4>
+                        <p class="text-gray-600 dark:text-gray-400">{{ selectedUser.email }}</p>
+                    </div>
                 </div>
 
-                <h3
-                    class="text-xl font-semibold text-gray-900 dark:text-white mb-2"
-                >
-                    User Information
-                </h3>
-                <p class="text-gray-800 dark:text-gray-200 font-medium">
-                    Name: {{ selectedUser.lastname }},
-                    {{ selectedUser.firstname }}
-                </p>
-                <p class="text-gray-700 dark:text-gray-400">
-                    Email: {{ selectedUser.email }}
-                </p>
-                <!-- <p class="text-gray-700 dark:text-gray-400">
-                        Username: {{ selectedUser.username }}
+                <!-- Program Info -->
+                <div class="mb-6 p-4 bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-xl border border-[#9E122C]/20">
+                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Applied Program</h4>
+                    <p class="text-lg font-medium text-gray-900 dark:text-white">
+                        {{ selectedUser?.application?.program?.code }} - {{ selectedUser?.application?.program?.name }}
                     </p>
-                    <p class="text-gray-700 dark:text-gray-400">
-                        Phone: {{ selectedUser.phone }}
-                    </p> -->
+                </div>
 
-                <section class="mt-3 text-sm">
-                    <h4 class="font-semibold mb-1 text-base">
-                        Uploaded Documents
-                    </h4>
-                    <div class="grid grid-cols-3 gap-2">
+                <!-- Documents Section -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
+                    <div class="grid grid-cols-2 gap-3">
                         <div
                             v-for="(src, key) in selectedUserFiles"
                             :key="key"
-                            class="flex flex-col items-start space-y-1"
+                            class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
                         >
-                            <div class="flex items-center space-x-2 w-full">
+                            <div class="flex items-start gap-2 mb-2">
                                 <input
                                     v-if="isEvaluating"
                                     type="checkbox"
                                     :id="key"
                                     v-model="filesToReturn[key]"
-                                    class="h-4 w-4 mt-1"
+                                    class="mt-1 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]"
                                 />
-                                <label
-                                    :for="key"
-                                    class="text-xs font-medium truncate w-full"
-                                >
+                                <label :for="key" class="text-xs font-medium text-gray-700 dark:text-gray-300">
                                     {{ formatFileKey(key) }}
                                 </label>
                             </div>
-                            <div class="w-full">
-                                <img
-                                    v-if="src"
-                                    :src="src"
-                                    alt="Uploaded Document"
-                                    class="h-16 w-full object-contain border rounded cursor-pointer"
-                                    @click="openImageModal(src)"
-                                />
-                                <div
-                                    v-else
-                                    class="h-16 flex items-center justify-center text-[10px] italic text-gray-400 border rounded"
-                                >
-                                    No Image
-                                </div>
+                            <img
+                                v-if="src"
+                                :src="src"
+                                :alt="formatFileKey(key)"
+                                class="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
+                                @click="openImageModal(src)"
+                            />
+                            <div
+                                v-else
+                                class="w-full h-24 flex items-center justify-center text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                            >
+                                No Image
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Application History -->
-                    <section
-                        v-if="selectedUser?.application?.processes?.length"
-                        class="mt-4"
-                    >
-                        <h4
-                            class="font-semibold mb-2 text-base text-gray-800 dark:text-gray-200"
+                <!-- Application History -->
+                <div v-if="selectedUser?.application?.processes?.length">
+                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Application History</h4>
+                    <div class="space-y-3">
+                        <div
+                            v-for="(process, index) in selectedUser.application.processes"
+                            :key="index"
+                            class="relative pl-6 pb-3 border-l-2 border-[#9E122C] last:border-0"
                         >
-                            Application History
-                        </h4>
-                        <ul class="border-l-2 border-red-400 pl-3 space-y-2">
-                            <li
-                                v-for="(process, index) in selectedUser
-                                    .application.processes"
-                                :key="index"
-                                class="relative"
-                            >
-                                <div
-                                    class="absolute -left-[10px] top-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"
-                                ></div>
-                                <p
-                                    class="text-sm font-semibold text-gray-900 dark:text-white"
-                                >
-                                    {{ capitalize(process.stage) }} -
-                                    <span
-                                        :class="{
-                                            'text-green-600':
-                                                process.status === 'completed',
-                                            'text-yellow-600':
-                                                process.status ===
-                                                'in_progress',
-                                            'text-red-600':
-                                                process.status === 'returned',
-                                        }"
-                                    >
-                                        {{ capitalize(process.status) }}
-                                    </span>
-                                </p>
-                                <p
-                                    v-if="process.notes"
-                                    class="text-xs text-gray-500 italic"
-                                >
-                                    Note: {{ process.notes }}
-                                </p>
-                                <p class="text-xs text-gray-400">
-                                    {{ formatDate(process.created_at) }}
-                                </p>
-                            </li>
-                        </ul>
-                    </section>
-                </section>
+                            <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#9E122C] border-2 border-white dark:border-gray-900"></div>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                                {{ capitalize(process.stage) }}
+                                <span :class="{
+                                    'text-green-600 dark:text-green-400': process.status === 'completed',
+                                    'text-yellow-600 dark:text-yellow-400': process.status === 'in_progress',
+                                    'text-red-600 dark:text-red-400': process.status === 'returned',
+                                }">
+                                    • {{ capitalize(process.status) }}
+                                </span>
+                            </p>
+                            <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                                {{ process.notes }}
+                            </p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                {{ formatDate(process.created_at) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transfer Section (if needed) -->
+                <div v-if="selectedProgramId !== undefined" class="mt-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Transfer Application</h4>
+                    <select
+                        v-model="selectedProgramId"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent text-sm mb-3"
+                    >
+                        <option value="">Select Program</option>
+                        <option v-for="program in availablePrograms" :key="program.id" :value="program.id">
+                            {{ program.code }} - {{ program.name }}
+                        </option>
+                    </select>
+                    <button
+                        @click="transferApplication"
+                        class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm"
+                        :disabled="!selectedProgramId"
+                    >
+                        Transfer
+                    </button>
+                </div>
             </div>
         </transition>
 
         <!-- Image Preview Modal -->
         <div
             v-if="showImageModal"
-            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] p-4"
             @click.self="closeImageModal"
         >
-            <img
-                :src="previewImage"
-                alt="Preview"
-                class="max-w-full max-h-full rounded shadow-lg"
-            />
-            <button
-                @click="closeImageModal"
-                class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300"
-                aria-label="Close preview"
-            >
-                &times;
-            </button>
+            <div class="relative max-w-4xl w-full">
+                <img
+                    :src="previewImage"
+                    alt="Preview"
+                    class="w-full h-auto rounded-lg shadow-2xl"
+                />
+                <button
+                    @click="closeImageModal"
+                    class="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
         </div>
+
+        <!-- Snackbar -->
+        <transition name="fade">
+            <div
+                v-if="snackbar.visible"
+                class="fixed bottom-4 right-4 bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg z-50"
+            >
+                {{ snackbar.message }}
+            </div>
+        </transition>
     </EvaluatorLayout>
 </template>
 
@@ -414,6 +472,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
 import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
+import axios from "axios";
 
 import {
     Chart as ChartJS,
@@ -442,14 +501,14 @@ import { usePage } from "@inertiajs/vue3";
 
 const currentPage = ref(1);
 const itemsPerPage = 10;
-const sortKey = ref("lastname"); // default to lastname
+const sortKey = ref("lastname");
 const statusFilter = ref("");
 const sortAsc = ref(true);
+const showStatusDropdown = ref(false);
 
 const page = usePage();
 const users = ref(page.props.users || []);
 
-//const users = ref([]);
 const selectedUser = ref(null);
 const isLoading = ref(true);
 const errorMessage = ref("");
@@ -469,32 +528,12 @@ const showSnackbar = (msg, duration = 3000) => {
     }, duration);
 };
 
-const chartData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-        {
-            label: "Submitted",
-            data: [5, 20, 35, 50, 70, 90],
-            borderColor: "#2563EB",
-            backgroundColor: "rgba(37, 99, 235, 0.2)",
-            tension: 0.4,
-        },
-        {
-            label: "Accepted",
-            data: [2, 10, 15, 25, 40, 60],
-            borderColor: "#10B981",
-            backgroundColor: "rgba(16, 185, 129, 0.2)",
-            tension: 0.4,
-        },
-    ],
-};
-
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
-    if (s === "rejected") return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-600";
+    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "rejected") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400";
 };
 
 const fetchUsers = async () => {
@@ -511,6 +550,15 @@ const fetchUsers = async () => {
         errorMessage.value = error.message;
     } finally {
         isLoading.value = false;
+    }
+};
+
+const fetchPrograms = async () => {
+    try {
+        const response = await axios.get("/interviewer-dashboard/programs");
+        availablePrograms.value = response.data.programs;
+    } catch (e) {
+        console.error("Failed to load programs", e);
     }
 };
 
@@ -544,6 +592,19 @@ const displayedUsers = computed(() => {
     return users.value.slice(0, 4);
 });
 
+const totalPages = computed(() =>
+    Math.ceil(filteredUsers.value.length / itemsPerPage)
+);
+
+const paginatedUsers = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return filteredUsers.value.slice(start, start + itemsPerPage);
+});
+
+watch([searchQuery, statusFilter, sortKey, sortAsc], () => {
+    currentPage.value = 1;
+});
+
 const selectUser = async (user) => {
     try {
         const response = await axios.get(`/dashboard/user-files/${user.id}`);
@@ -559,17 +620,8 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-        console.log("Full user data:", response.data.user);
-        console.log("Grades check:", response.data.user.grades);
-
-        // ✅ Add this line to load programs into the dropdown
+        
         await fetchPrograms();
-
-        console.log(
-            "User & files:",
-            selectedUser.value,
-            selectedUserFiles.value
-        );
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         selectedUserFiles.value = {};
@@ -579,6 +631,9 @@ const selectUser = async (user) => {
 
 const closeUserCard = () => {
     selectedUser.value = null;
+    isEvaluating.value = false;
+    filesToReturn.value = {};
+    returnNote.value = "";
 };
 
 const formatFileKey = (key) => {
@@ -609,18 +664,17 @@ const closeImageModal = () => {
 
 const isEvaluating = ref(false);
 const filesToReturn = ref({});
-
 const returnNote = ref("");
 
 const startEvaluation = () => {
     isEvaluating.value = true;
-    filesToReturn.value = [];
+    filesToReturn.value = {};
     returnNote.value = "";
 };
 
 const cancelEvaluation = () => {
     isEvaluating.value = false;
-    filesToReturn.value = [];
+    filesToReturn.value = {};
     returnNote.value = "";
 };
 
@@ -650,7 +704,6 @@ const submitReturn = async () => {
         filesToReturn.value = {};
         returnNote.value = "";
 
-        // ✅ Refetch updated user list & status counts
         await fetchUsers();
         await selectUser(selectedUser.value);
     } catch (error) {
@@ -665,7 +718,7 @@ const capitalize = (str) =>
 
 const formatDate = (date) => {
     const d = new Date(date);
-    return d.toLocaleString(); // or .toLocaleDateString() if you prefer
+    return d.toLocaleString();
 };
 
 const submitPass = async () => {
@@ -680,12 +733,10 @@ const submitPass = async () => {
 
         alert("Application successfully passed to the next step.");
 
-        // reset states
         isEvaluating.value = false;
         filesToReturn.value = {};
         returnNote.value = "";
 
-        // refresh UI
         await fetchUsers();
         await selectUser(selectedUser.value);
     } catch (error) {
@@ -725,10 +776,8 @@ const transferApplication = async () => {
         fetchUsers();
     } catch (e) {
         console.error("Transfer failed", e);
-
-        // ✅ Fix: use `e` not `error`
         if (e.response?.data?.message) {
-            showSnackbar(e.response.data.message); // ✅ show server message
+            showSnackbar(e.response.data.message);
         } else {
             showSnackbar("Transfer failed due to an unexpected error.");
         }
@@ -736,31 +785,6 @@ const transferApplication = async () => {
 };
 
 const availablePrograms = ref([]);
-
-const fetchPrograms = async () => {
-    try {
-        const response = await axios.get("/interviewer-dashboard/programs");
-        availablePrograms.value = response.data.programs;
-    } catch (e) {
-        console.error("Failed to load programs", e);
-    }
-};
-
-onMounted(fetchUsers);
-
-const totalPages = computed(() =>
-    Math.ceil(filteredUsers.value.length / itemsPerPage)
-);
-
-const paginatedUsers = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage;
-    return filteredUsers.value.slice(start, start + itemsPerPage);
-});
-
-// Reset page when filters/search change
-watch([searchQuery, statusFilter, sortKey, sortAsc], () => {
-    currentPage.value = 1;
-});
 
 const sortBy = (key) => {
     if (sortKey.value === key) {
@@ -790,5 +814,33 @@ const clearFilters = () => {
 .slide-fade-leave-to {
     transform: translateX(100%);
     opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: #FBCB77;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #9E122C;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #EE6A43;
 }
 </style>

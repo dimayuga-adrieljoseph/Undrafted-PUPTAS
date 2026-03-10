@@ -89,6 +89,21 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'salutation' => 'Mr.',
+                'firstname' => 'Super',
+                'middlename' => 'Admin',
+                'lastname' => 'User',
+                'birthday' => '1990-01-01',
+                'sex' => 'Male',
+                'contactnumber' => '09120000000',
+                'address' => 'Admin Street',
+                'email' => 'superadmin@puptas.edu',
+                'password' => Hash::make('Superadmin.1234'),
+                'role_id' => 7,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ];
 
         foreach ($users as $user) {
