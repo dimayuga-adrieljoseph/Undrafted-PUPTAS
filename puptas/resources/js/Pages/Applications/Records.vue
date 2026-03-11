@@ -123,8 +123,8 @@
             </div>
 
             <!-- Users Table -->
-            <div v-if="loading" class="text-center text-gray-500 py-8">Loading applicants…</div>
-            <div v-else-if="fetchError" class="text-center text-red-500 py-8">Error: {{ fetchError }}</div>
+            <div v-if="isLoading" class="text-center text-gray-500 py-8">Loading applicants…</div>
+            <div v-else-if="errorMessage" class="text-center text-red-500 py-8">Error: {{ errorMessage }}</div>
 
             <!-- Users Table -->
             <div v-else class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
@@ -549,8 +549,16 @@ const filteredUsers = computed(() => {
             return matchesSearch && matchesStatus;
         })
         .sort((a, b) => {
-            const aVal = (a[sortKey.value] || "").toString().toLowerCase();
-            const bVal = (b[sortKey.value] || "").toString().toLowerCase();
+            let aVal, bVal;
+            
+            if (sortKey.value === 'program.name') {
+                aVal = (a.program?.name || "").toString().toLowerCase();
+                bVal = (b.program?.name || "").toString().toLowerCase();
+            } else {
+                aVal = (a[sortKey.value] || "").toString().toLowerCase();
+                bVal = (b[sortKey.value] || "").toString().toLowerCase();
+            }
+            
             return sortAsc.value
                 ? aVal.localeCompare(bVal)
                 : bVal.localeCompare(aVal);
