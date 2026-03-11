@@ -1,8 +1,19 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 const axios = window.axios;
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
+import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
+
+const page = usePage();
+const currentUser = computed(() => page.props.auth?.user);
+const currentLayout = computed(() => {
+    const roleId = currentUser.value?.role_id;
+    if (roleId === 3) return EvaluatorLayout;
+    if (roleId === 4) return InterviewerLayout;
+    return AppLayout; // Default to admin layout for role 2 or others
+});
 
 const props = defineProps({
     selectedUserId: {
@@ -180,7 +191,7 @@ const clearFilters = () => {
 
 <template>
     <Head title="All Applications" />
-    <AppLayout>
+    <component :is="currentLayout">
         <div
             class="max-w-7xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto"
         >
@@ -573,7 +584,7 @@ const clearFilters = () => {
                 &times;
             </button>
         </div>
-    </AppLayout>
+    </component>
 </template>
 
 <style scoped>
