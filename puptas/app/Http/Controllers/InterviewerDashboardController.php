@@ -86,9 +86,9 @@ class InterviewerDashboardController extends Controller
         // Ensure user has interviewer role
         $this->ensureRole($this->getRoleId());
 
-        // Return applicants filtered by interviewer stage
+        // Return all applicants filtered by interviewer stage (including completed)
         return response()->json(
-            $this->userService->getApplicantsByStage('interviewer')
+            $this->userService->getAllApplicantsByStage('interviewer')
         );
     }
 
