@@ -353,6 +353,7 @@ class UserService
             4 => 'Interviewer',
             5 => 'Medical',
             6 => 'Registrar',
+            7 => 'Superadmin',
         ];
     }
 }
