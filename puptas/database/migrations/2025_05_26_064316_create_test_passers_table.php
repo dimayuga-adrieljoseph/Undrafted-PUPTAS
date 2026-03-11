@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('strand')->nullable();
             $table->year('year_graduated')->nullable();
             $table->string('email')->unique();
-            $table->string('reference_number')->nullable();
+            $table->string('reference_number')->nullable()->unique();
             $table->string('batch_number')->nullable();
             $table->string('school_year')->nullable();
             $table->enum('status', ['pending', 'registered', 'application_completed'])->default('pending');
