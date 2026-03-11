@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->string('code', 50)->unique();
             $table->string('name');
-            $table->string('strand', 100)->nullable();
             $table->decimal('math', 5, 2)->nullable();
             $table->decimal('science', 5, 2)->nullable();
             $table->decimal('english', 5, 2)->nullable();

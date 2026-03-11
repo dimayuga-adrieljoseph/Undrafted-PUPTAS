@@ -17,8 +17,6 @@ return new class extends Migration
             $table->decimal('english', 5, 2)->nullable();
             $table->decimal('mathematics', 5, 2)->nullable();
             $table->decimal('science', 5, 2)->nullable();
-            $table->decimal('g11_first_sem', 5, 2)->nullable();
-            $table->decimal('g11_second_sem', 5, 2)->nullable();
             $table->decimal('g12_first_sem', 5, 2)->nullable();
             $table->decimal('g12_second_sem', 5, 2)->nullable();
             $table->timestamps();

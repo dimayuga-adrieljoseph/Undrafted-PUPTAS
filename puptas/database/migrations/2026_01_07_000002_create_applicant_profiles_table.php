@@ -17,12 +17,21 @@ return new class extends Migration
             $table->date('date_graduated')->nullable();
             $table->string('strand')->nullable();
             $table->string('track')->nullable();
+            $table->unsignedBigInteger('first_choice_program')->nullable();
+            $table->unsignedBigInteger('second_choice_program')->nullable();
             $table->timestamps();
+
+            $table->foreign('first_choice_program')->references('id')->on('programs')->onDelete('set null');
+            $table->foreign('second_choice_program')->references('id')->on('programs')->onDelete('set null');
         });
     }
 
     public function down(): void
     {
+        Schema::table('applicant_profiles', function (Blueprint $table) {
+            $table->dropForeign(['first_choice_program']);
+            $table->dropForeign(['second_choice_program']);
+        });
         Schema::dropIfExists('applicant_profiles');
     }
 };
