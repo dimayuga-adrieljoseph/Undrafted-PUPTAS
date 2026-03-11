@@ -13,6 +13,7 @@ use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
 use App\Services\ApplicationService;
 use App\Services\ApplicationProcessService;
+use App\Services\AuditLogService;
 use App\Services\DashboardService;
 use App\Services\UserService;
 
@@ -24,17 +25,20 @@ class EvaluatorDashboardController extends Controller
     protected ApplicationProcessService $processService;
     protected DashboardService $dashboardService;
     protected UserService $userService;
+    protected AuditLogService $auditLogService;
 
     public function __construct(
         ApplicationService $applicationService,
         ApplicationProcessService $processService,
         DashboardService $dashboardService,
-        UserService $userService
+        UserService $userService,
+        AuditLogService $auditLogService
     ) {
         $this->applicationService = $applicationService;
         $this->processService = $processService;
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
+        $this->auditLogService = $auditLogService;
     }
 
     public function index()
@@ -49,7 +53,7 @@ class EvaluatorDashboardController extends Controller
 
         return Inertia::render('Dashboard/Evaluator', [
             'user' => $user,
-            'allUsers' => $dashboardData['allUsers'],
+            'pendingUsers' => $dashboardData['pendingUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
         ]);
@@ -71,7 +75,13 @@ class EvaluatorDashboardController extends Controller
 
     public function getUsers()
     {
-        return response()->json($this->userService->getApplicantsWithApplications());
+        // Ensure user has evaluator role
+        $this->ensureRole($this->getRoleId());
+
+        // Return all applicants filtered by evaluator stage (including completed)
+        return response()->json(
+            $this->userService->getAllApplicantsByStage('evaluator')
+        );
     }
 
     public function passApplication(Request $request, $userId)
@@ -123,6 +133,8 @@ class EvaluatorDashboardController extends Controller
                 'performed_by' => null,
             ]);
         });
+
+        $this->auditLogService->logActivity('UPDATE', 'Applications', "Evaluator passed application for applicant ID {$userId} to interviewer stage.", null, 'ADMISSION_DATA');
 
         return response()->json([
             'message' => 'Application successfully passed to the next step.',

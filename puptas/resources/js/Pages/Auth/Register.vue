@@ -1,13 +1,10 @@
 <script setup>
 import { ref } from "vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
-
-import TermsOfServiceModal from '@/Pages/Modal/TermsofServiceModal.vue'
-import PrivacyPolicyModal from '@/Pages/Modal/PrivacyPolicyModal.vue'
+import TermsandConditionsModal from "@/Pages/Modal/TermsandConditionsModal.vue";
 
 // Modal control variables
 const showTermsModal = ref(false);
-const showPrivacyModal = ref(false);
 
 const form = useForm({
     lastname: "",
@@ -26,40 +23,31 @@ const form = useForm({
     email: "",
     password: "",
     password_confirmation: "",
-    terms: false,
 });
 
-// Modal control functions
-const openTermsModal = () => {
+// Handle form submission - show modal first
+const handleSubmit = () => {
     showTermsModal.value = true;
 };
 
-const openPrivacyModal = () => {
-    showPrivacyModal.value = true;
-};
-
-const closeTermsModal = () => {
+// Handle modal acceptance
+const handleTermsAccept = () => {
     showTermsModal.value = false;
-};
-
-const closePrivacyModal = () => {
-    showPrivacyModal.value = false;
-};
-
-// Submit function
-const submit = () => {
+    // Submit the form after accepting terms
     form.post(route('register'), {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
+};
+
+// Handle modal cancellation
+const handleTermsCancel = () => {
+    showTermsModal.value = false;
+    // Don't submit, user cancelled
 };
 </script>
 
 <template>
     <Head title="Register - PUPT Admission Portal" />
-    
-    <!-- Use imported modal components -->
-    <TermsOfServiceModal :show="showTermsModal" @close="closeTermsModal" />
-    <PrivacyPolicyModal :show="showPrivacyModal" @close="closePrivacyModal" />
     
     <div class="min-h-screen bg-white-500 flex flex-col items-center justify-center p-4">
         <!-- Main Container -->
@@ -91,7 +79,7 @@ const submit = () => {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Left Side - Form Sections -->
                     <div class="lg:col-span-2">
-                        <form @submit.prevent="submit" class="space-y-8">
+                        <form @submit.prevent="handleSubmit" class="space-y-8">
                             <!-- Section 1: Personal Information -->
                             <div class="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
                                 <div class="flex items-center mb-6">
@@ -115,6 +103,7 @@ const submit = () => {
                                             v-model="form.lastname"
                                             type="text"
                                             required
+                                            autocomplete="family-name"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your last name"
                                         >
@@ -134,6 +123,7 @@ const submit = () => {
                                             v-model="form.firstname"
                                             type="text"
                                             required
+                                            autocomplete="given-name"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your first name"
                                         >
@@ -150,6 +140,7 @@ const submit = () => {
                                         <input
                                             v-model="form.middlename"
                                             type="text"
+                                            autocomplete="additional-name"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your middle name"
                                         >
@@ -163,6 +154,7 @@ const submit = () => {
                                             v-model="form.birthday"
                                             type="date"
                                             required
+                                            autocomplete="bday"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         >
                                     </div>
@@ -174,6 +166,7 @@ const submit = () => {
                                         <select
                                             v-model="form.sex"
                                             required
+                                            autocomplete="sex"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         >
                                             <option value="" disabled>Select Gender</option>
@@ -196,6 +189,7 @@ const submit = () => {
                                                 v-model="form.contactnumber"
                                                 type="tel"
                                                 required
+                                                autocomplete="tel"
                                                 placeholder="912 345 6789"
                                                 class="flex-1 rounded-r-lg border border-gray-300 dark:border-gray-600 px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             >
@@ -210,6 +204,7 @@ const submit = () => {
                                             v-model="form.address"
                                             type="text"
                                             required
+                                            autocomplete="address-line1"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="House No., Street, Barangay, City, Province"
                                         >
@@ -242,6 +237,7 @@ const submit = () => {
                                             v-model="form.school"
                                             type="text"
                                             required
+                                            autocomplete="organization-title"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Name of your senior high school"
                                         >
@@ -255,6 +251,7 @@ const submit = () => {
                                             v-model="form.schoolAdd"
                                             type="text"
                                             required
+                                            autocomplete="organization"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Complete school address"
                                         >
@@ -268,6 +265,7 @@ const submit = () => {
                                             v-model="form.schoolyear"
                                             type="text"
                                             required
+                                            autocomplete="cc-exp"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="2023-2024"
                                         >
@@ -281,6 +279,7 @@ const submit = () => {
                                             v-model="form.dateGrad"
                                             type="date"
                                             required
+                                            autocomplete="bday"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         >
                                     </div>
@@ -292,6 +291,7 @@ const submit = () => {
                                         <select
                                             v-model="form.strand"
                                             required
+                                            autocomplete="off"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         >
                                             <option value="" disabled>Select Strand</option>
@@ -311,6 +311,7 @@ const submit = () => {
                                         <input
                                             v-model="form.track"
                                             type="text"
+                                            autocomplete="off"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="e.g., ICT Programming, Cookery, Animation"
                                         >
@@ -341,6 +342,7 @@ const submit = () => {
                                             v-model="form.email"
                                             type="email"
                                             required
+                                            autocomplete="email"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="your.email@example.com"
                                         >
@@ -363,6 +365,7 @@ const submit = () => {
                                             v-model="form.password"
                                             type="password"
                                             required
+                                            autocomplete="new-password"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Create a strong password"
                                         >
@@ -385,6 +388,7 @@ const submit = () => {
                                             v-model="form.password_confirmation"
                                             type="password"
                                             required
+                                            autocomplete="new-password"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Re-enter your password"
                                         >
@@ -392,63 +396,8 @@ const submit = () => {
                                 </div>
                             </div>
 
-                            <!-- Terms and Conditions -->
-                            <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                                <div class="flex items-start space-x-3">
-                                    <input
-                                        v-model="form.terms"
-                                        type="checkbox"
-                                        required
-                                        id="terms"
-                                        class="mt-1 w-5 h-5 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 dark:focus:ring-red-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                    >
-                                    <div>
-                                        <label for="terms" class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            I agree to the 
-                                            <button 
-                                                type="button"
-                                                @click="openTermsModal"
-                                                class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-semibold underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded"
-                                            >
-                                                Terms of Service
-                                            </button>, 
-                                            <button 
-                                                type="button"
-                                                @click="openPrivacyModal"
-                                                class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-semibold underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded"
-                                            >
-                                                Privacy Policy
-                                            </button>, and understand that:
-                                        </label>
-                                        <ul class="mt-2 text-sm text-gray-600 dark:text-gray-400 space-y-1 pl-4">
-                                            <li class="flex items-center">
-                                                <svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                                </svg>
-                                                All information provided is accurate and truthful
-                                            </li>
-                                            <li class="flex items-center">
-                                                <svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                                </svg>
-                                                I will provide required documents in the applicant dashboard
-                                            </li>
-                                            <li class="flex items-center">
-                                                <svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                                </svg>
-                                                I understand the admission process and requirements
-                                            </li>
-                                        </ul>
-                                        <div v-if="form.errors.terms" class="text-red-500 text-sm mt-2 flex items-center">
-                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                                            </svg>
-                                            {{ form.errors.terms }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- Hidden Terms Field for Fortify -->
+                            <input type="hidden" name="terms" value="on">
 
                             <!-- Submit Button -->
                             <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
@@ -582,31 +531,15 @@ const submit = () => {
                     </div>
                 </div>
             </div>
-
-            <!-- Footer -->
-            <div class="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-6">
-                <div class="flex flex-col md:flex-row items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                    <div class="mb-4 md:mb-0">
-                        <p>© 2024 Polytechnic University of the Philippines - Taguig. All rights reserved.</p>
-                    </div>
-                    <div class="flex items-center space-x-6">
-                        <button 
-                            @click="openPrivacyModal"
-                            class="hover:text-red-600 dark:hover:text-red-400 transition-colors focus:outline-none"
-                        >
-                            Privacy Policy
-                        </button>
-                        <button 
-                            @click="openTermsModal"
-                            class="hover:text-red-600 dark:hover:text-red-400 transition-colors focus:outline-none"
-                        >
-                            Terms of Service
-                        </button>
-                        <a href="#" class="hover:text-red-600 dark:hover:text-red-400 transition-colors">Help Center</a>
-                    </div>
-                </div>
-            </div>
         </div>
+
+        <!-- Terms and Conditions Modal -->
+        <TermsandConditionsModal 
+            :show="showTermsModal" 
+            :can-close="true"
+            @accept="handleTermsAccept"
+            @cancel="handleTermsCancel"
+        />
 
         <!-- Login Link at Bottom -->
         <div class="mt-8 text-center">

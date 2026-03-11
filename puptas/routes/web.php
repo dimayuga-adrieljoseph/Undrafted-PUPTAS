@@ -20,6 +20,12 @@ use App\Http\Controllers\RecordStaffDashboardController;
 use App\Http\Controllers\Admin\Assign\AssignController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\Notify\Notify;
+use App\Http\Controllers\PrivacyConsentController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\CallbackController;
+use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureAdminOrRegistrar;
 
 Route::get('/', function () {
     return Inertia::render('Auth/Login', [
@@ -30,10 +36,7 @@ Route::get('/', function () {
     ]);
 })->middleware('guest')->name('welcome');
 
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
-
-// View applicant details route - expects user ID, restricted to admin
+// View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
     // Validate ID is numeric
     if (!is_numeric($user)) {
@@ -43,7 +46,7 @@ Route::get('/applications/user/{user}', function ($user) {
     // Verify user exists and is an applicant
     $applicant = \App\Models\User::where('id', $user)
         ->where('role_id', 1)
-        ->whereHas('application')
+        ->whereHas('currentApplication')
         ->first();
 
     if (!$applicant) {
@@ -53,7 +56,7 @@ Route::get('/applications/user/{user}', function ($user) {
     return Inertia::render('Applications/Index', [
         'selectedUserId' => (int) $user
     ]);
-})->middleware(['auth', 'role:2'])->whereNumber('user')->name('applications.show');
+})->middleware(['auth', 'role:2,3,4'])->whereNumber('user')->name('applications.show');
 
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $request->validate(['email' => 'required|email']);
@@ -62,6 +65,10 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
 });
 
 Route::middleware(['auth'])->group(function () {
+    // Privacy Consent Routes - available to all authenticated users
+    Route::post('/privacy-consent/accept', [PrivacyConsentController::class, 'accept'])->name('privacy.consent.accept');
+    Route::get('/privacy-consent/check', [PrivacyConsentController::class, 'check'])->name('privacy.consent.check');
+
     Route::get('/programs', function () {
         return Inertia::render('Programs/Index');
     })->name('programs.index');
@@ -185,6 +192,10 @@ Route::get('/home', function () {
         return redirect('/record-dashboard');
     }
 
+    if ($roleId == 7) {
+        return redirect('/dashboard');
+    }
+
     return redirect('/');
 })->middleware(['auth'])->name('home');
 
@@ -197,16 +208,14 @@ Route::get('/sar/download/{filename}/{reference}', [TestPasserController::class,
 
 Route::get('/applications', function () {
     return Inertia::render('Applications/Index');
-})->name('applications');
-
-Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
+})->middleware(['auth', EnsureAdmin::class])->name('applications');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
     Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
 
-    // Admin SAR Management Routes - Restricted to Admin (2) and Registrar (6)
-    Route::middleware(['role:2,6'])->group(function () {
+    // Admin SAR Management Routes - Restricted to Admin (2), Superadmin (7), and Registrar (6)
+    Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
         Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
         Route::get('/admin/sar/{id}/download', [TestPasserController::class, 'adminDownloadSar'])->name('admin.sar-download');
         Route::get('/admin/sar/{id}/preview', [TestPasserController::class, 'adminPreviewSar'])->name('admin.sar-preview');
@@ -242,7 +251,8 @@ Route::middleware(['auth'])->group(function () {
 Route::post('/upload-files', [UserFileController::class, 'uploadFiles']);
 Route::post('/get-files', [UserFileController::class, 'getUserApplication']);
 
-Route::middleware(['auth'])->group(function () {
+// Evaluator Routes - Protected by auth middleware and role verification
+Route::middleware(['auth', 'role:3'])->group(function () {
     Route::get('/evaluator-dashboard', [EvaluatorDashboardController::class, 'index'])
         ->name('evaluator.dashboard');
 
@@ -254,12 +264,13 @@ Route::middleware(['auth'])->group(function () {
             'user' => Auth::user(),
         ]);
     })->name('evaluator.applications');
-});
 
-Route::get('/evaluator-dashboard/applicants', [EvaluatorDashboardController::class, 'getUsers']);
-Route::post('/evaluator/pass-application/{userId}', [EvaluatorDashboardController::class, 'passApplication']);
-Route::get('/dashboard/user-files/{id}', [EvaluatorDashboardController::class, 'getUserFiles']);
-Route::post('/dashboard/return-files/{user}', [EvaluatorDashboardController::class, 'returnApplication'])->name('return.files');
+    // Evaluator API endpoints - stage-based filtering applied in controller
+    Route::get('/evaluator-dashboard/applicants', [EvaluatorDashboardController::class, 'getUsers']);
+    Route::post('/evaluator/pass-application/{userId}', [EvaluatorDashboardController::class, 'passApplication']);
+    Route::get('/dashboard/user-files/{id}', [EvaluatorDashboardController::class, 'getUserFiles']);
+    Route::post('/dashboard/return-files/{user}', [EvaluatorDashboardController::class, 'returnApplication'])->name('return.files');
+});
 
 Route::get('/test-update-file/{fileId}', function ($fileId) {
     $file = \App\Models\UserFile::findOrFail($fileId);
@@ -269,70 +280,83 @@ Route::get('/test-update-file/{fileId}', function ($fileId) {
     return $file;
 });
 
-Route::middleware(['auth'])->group(function () {
+// Interviewer Routes - Protected by auth middleware and role verification
+Route::middleware(['auth', 'role:4'])->group(function () {
     Route::get('/interviewer-dashboard', [InterviewerDashboardController::class, 'index'])
         ->name('interviewer.dashboard');
+
+    Route::get('/interviewer-applications', function () {
+        if (Auth::user()?->role_id !== 4) {
+            return redirect()->back()->with('error', 'Unauthorized access.');
+        }
+        return Inertia::render('Applications/Interviewer', [
+            'user' => Auth::user(),
+        ]);
+    })->name('interviewer.applications');
+
+    // Interviewer API endpoints - stage-based filtering applied in controller
+    Route::get('/interviewer-dashboard/applicants', [InterviewerDashboardController::class, 'getUsers']);
+    Route::get('/interviewer-dashboard/application/{id}', [InterviewerDashboardController::class, 'getUserFiles']);
+    Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
+    Route::post('/interviewer-dashboard/transfer/{id}', [InterviewerDashboardController::class, 'transfertoProgram']);
+    Route::get('/interviewer-dashboard/programs', [InterviewerDashboardController::class, 'getPrograms']);
 });
-
-Route::get('/interviewer-dashboard/applicants', [InterviewerDashboardController::class, 'getUsers']);
-Route::get('/interviewer-dashboard/application/{id}', [InterviewerDashboardController::class, 'getUserFiles']);
-
-Route::get('/interviewer-applications', function () {
-    if (Auth::user()?->role_id !== 4) {
-        return redirect()->back()->with('error', 'Unauthorized access.');
-    }
-    return Inertia::render('Applications/Interviewer', [
-        'user' => Auth::user(),
-    ]);
-})->name('interviewer.applications');
-
-Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
-Route::post('/interviewer-dashboard/transfer/{id}', [InterviewerDashboardController::class, 'transfertoProgram']);
-Route::get('/interviewer-dashboard/programs', [InterviewerDashboardController::class, 'getPrograms']);
 Route::get('/user/eligible-programs', [ConfirmationController::class, 'getEligiblePrograms']);
 
-Route::middleware(['auth'])->group(function () {
+// Medical Routes - Protected by auth middleware and role verification
+Route::middleware(['auth', 'role:5'])->group(function () {
     Route::get('/medical-dashboard', [MedicalDashboardController::class, 'index'])
         ->name('medical.dashboard');
+
+    Route::get('/medical-applications', function () {
+        if (Auth::user()?->role_id !== 5) {
+            return redirect()->back()->with('error', 'Unauthorized access.');
+        }
+        return Inertia::render('Applications/Medical', [
+            'user' => Auth::user(),
+        ]);
+    })->name('medical.applications');
+
+    // Medical API endpoints - stage-based filtering applied in controller
+    Route::post('/medical-dashboard/accept/{id}', [MedicalDashboardController::class, 'accept']);
+    Route::get('/medical-dashboard/applicants', [MedicalDashboardController::class, 'getUsers']);
+    Route::get('/medical-dashboard/application/{id}', [MedicalDashboardController::class, 'getUserFiles']);
+    Route::post('/medical/return-files/{user}', [MedicalDashboardController::class, 'returnApplication'])->name('medical-return.files');
 });
-
-Route::post('/medical-dashboard/accept/{id}', [MedicalDashboardController::class, 'accept']);
-
-Route::get('/medical-applications', function () {
-    if (Auth::user()?->role_id !== 5) {
-        return redirect()->back()->with('error', 'Unauthorized access.');
-    }
-    return Inertia::render('Applications/Medical', [
-        'user' => Auth::user(),
-    ]);
-})->name('medical.applications');
-
-Route::get('/medical-dashboard/applicants', [MedicalDashboardController::class, 'getUsers']);
-Route::get('/medical-dashboard/application/{id}', [MedicalDashboardController::class, 'getUserFiles']);
-Route::post('/medical/return-files/{user}', [MedicalDashboardController::class, 'returnApplication'])->name('medical-return.files');
-
-Route::middleware(['auth'])->group(function () {
+// Record Staff Routes - Protected by auth middleware and role verification
+Route::middleware(['auth', 'role:6'])->group(function () {
     Route::get('/record-dashboard', [RecordStaffDashboardController::class, 'index'])
         ->name('record.dashboard');
+
+    Route::get('/recordstaff-applications', function () {
+        if (Auth::user()?->role_id !== 6) {
+            return redirect()->back()->with('error', 'Unauthorized access.');
+        }
+        return Inertia::render('Applications/Records', [
+            'user' => Auth::user(),
+        ]);
+    })->name('record.applications');
+
+    // Record Staff API endpoints - stage-based filtering applied in controller
+    Route::get('/record-dashboard/applicants', [RecordStaffDashboardController::class, 'getUsers']);
+    Route::get('/record-dashboard/stats', [RecordStaffDashboardController::class, 'getStats']);
+    Route::get('/record-dashboard/application/{id}', [RecordStaffDashboardController::class, 'getUserFiles']);
+    Route::post('/record-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
+    Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);
+    Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
 });
 
-Route::get('/record-dashboard/applicants', [RecordStaffDashboardController::class, 'getUsers']);
-Route::get('/record-dashboard/application/{id}', [RecordStaffDashboardController::class, 'getUserFiles']);
-
-Route::get('/recordstaff-applications', function () {
-    if (Auth::user()?->role_id !== 6) {
-        return redirect()->back()->with('error', 'Unauthorized access.');
-    }
-    return Inertia::render('Applications/Records', [
-        'user' => Auth::user(),
-    ]);
-})->name('record.applications');
-
-Route::post('/record-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
-Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);
+// Shared endpoint for viewing user list - accessible by admin, evaluator, and interviewer
+Route::middleware(['auth', 'role:2,3,4'])->group(function () {
+    Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
+});
 
 // User Management Routes (Protected - Admin Only)
-Route::middleware(['auth', 'role:2'])->group(function () {
+Route::middleware(['auth', EnsureAdmin::class])->group(function () {
+    // Admin Dashboard Routes
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
+
     // Legacy routes (keep for backward compatibility if needed)
     Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.legacy');
     Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
@@ -358,3 +382,13 @@ Route::middleware(['auth', 'role:2'])->group(function () {
     Route::post('/admin/users/update/{id}', [AssignController::class, 'updateUser'])->name('admin.users.update');
     Route::delete('/admin/users/delete/{id}', [AssignController::class, 'deleteUser'])->name('admin.users.delete');
 });
+
+// Superadmin Routes - Protected by EnsureSuperAdmin middleware
+Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
+    Route::get('/admin/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit-logs.show');
+});
+
+// Callback Routes - Public access for loading screen with API callback
+Route::get('/callback', [CallbackController::class, 'index']);
+Route::post('/api/callback', [CallbackController::class, 'handle']);

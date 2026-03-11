@@ -7,8 +7,9 @@ use App\Models\Grade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Fortify\Contracts\LoginResponse;
+use Laravel\Fortify\Contracts\RegisterResponse;
 
-class AuthenticatedSessionController implements LoginResponse
+class AuthenticatedSessionController implements LoginResponse, RegisterResponse
 {
     /**
      * Where to redirect users after login.

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { LineChart } from "vue-chart-3";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import MedicalLayout from "@/Layouts/MedicalLayout.vue";
 import {
     Chart as ChartJS,
@@ -31,11 +31,10 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faBolt, faFileMedical, faHeartbeat, faSyringe, faStethoscope } from "@fortawesome/free-solid-svg-icons";
 
 const page = usePage();
-const users = ref(page.props.users || []);
 
 const props = defineProps({
     user: Object,
-    allUsers: Array,
+    pendingUsers: Array,
     summary: {
         type: Object,
         default: () => ({
@@ -47,7 +46,7 @@ const props = defineProps({
     },
     chartData: {
         type: Object,
-        default: () => ({ submitted: [], accepted: [], returned: [], years: [] }),
+        default: () => ({ submitted: [], accepted: [], returned: [], labels: [] }),
     },
 });
 
@@ -138,7 +137,7 @@ const chartOptions = {
 
 // Chart data - computed from props
 const chartDataset = computed(() => ({
-    labels: props.chartData.years || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    labels: props.chartData.labels || [],
     datasets: [
         {
             label: "Submitted",
@@ -197,31 +196,11 @@ const getButtonClass = (type) => {
     return classes[type] || classes.secondary;
 };
 
-const fetchUsers = async () => {
-    try {
-        const response = await fetch("/medical-dashboard/applicants", {
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json();
-    } catch (error) {
-        errorMessage.value = error.message;
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-onMounted(() => {
-    fetchUsers();
-});
-
 const filteredUsers = computed(() => {
-    if (!searchQuery.value.trim()) return users.value;
+    const pending = props.pendingUsers || [];
+    if (!searchQuery.value.trim()) return pending;
     const query = searchQuery.value.toLowerCase();
-    return users.value.filter((user) => {
+    return pending.filter((user) => {
         return (
             user.firstname?.toLowerCase().includes(query) ||
             user.lastname?.toLowerCase().includes(query) ||
@@ -232,7 +211,7 @@ const filteredUsers = computed(() => {
 
 const displayedUsers = computed(() => {
     if (searchQuery.value.trim()) return filteredUsers.value;
-    return users.value.slice(0, 5);
+    return (props.pendingUsers || []).slice(0, 5);
 });
 
 const selectUser = async (user) => {
@@ -329,7 +308,7 @@ const submitReturn = async () => {
         isEvaluating.value = false;
         filesToReturn.value = {};
         returnNote.value = "";
-        await fetchUsers();
+        router.reload({ only: ['pendingUsers', 'summary'] });
         await selectUser(selectedUser.value);
     } catch (error) {
         console.error(error);
@@ -358,7 +337,7 @@ const clearMedical = async () => {
         });
         showSnackbar("Medical clearance completed", "success");
         selectedUser.value = null;
-        await fetchUsers();
+        router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
         console.error("Medical clearance failed:", e);
         const msg = e.response?.data?.message || "Failed to clear medical requirements";

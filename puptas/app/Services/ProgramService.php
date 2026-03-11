@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Program;
-use App\Models\AuditLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -47,20 +46,20 @@ class ProgramService
     {
         return DB::transaction(function () use ($data, $strandIds) {
             $program = Program::create($data);
-            
+
             if (!empty($strandIds)) {
                 $program->strands()->attach($strandIds);
             }
-            
+
             $program->load('strands');
-            
+
             $this->logAudit(
                 $program,
                 'created',
                 null,
                 $program->toArray()
             );
-            
+
             return $program;
         });
     }
@@ -77,20 +76,20 @@ class ProgramService
     {
         return DB::transaction(function () use ($program, $data, $strandIds) {
             $oldValues = $program->toArray();
-            
+
             $program->update($data);
-            
+
             $program->strands()->sync($strandIds);
-            
+
             $program->load('strands');
-            
+
             $this->logAudit(
                 $program,
                 'updated',
                 $oldValues,
                 $program->fresh()->toArray()
             );
-            
+
             return $program;
         });
     }
@@ -106,11 +105,11 @@ class ProgramService
     {
         DB::transaction(function () use ($program) {
             $oldValues = $program->toArray();
-            
+
             $program->strands()->detach();
-            
+
             $program->delete();
-            
+
             $this->logAudit(
                 $program,
                 'deleted',
@@ -133,32 +132,20 @@ class ProgramService
     }
 
     /**
-     * Log audit entry for program operations
-     *
-     * @param Program $program
-     * @param string $action
-     * @param array|null $oldValues
-     * @param array|null $newValues
-     * @return void
+     * Log audit entry — delegates to AuditLogService (new schema).
+     * Kept as a private helper so call sites don't need changing.
      */
     private function logAudit(Program $program, string $action, ?array $oldValues, ?array $newValues): void
     {
-        try {
-            AuditLog::create([
-                'user_id' => Auth::id(),
-                'model_type' => Program::class,
-                'model_id' => $program->id,
-                'action' => $action,
-                'old_values' => $oldValues,
-                'new_values' => $newValues,
-                'ip_address' => request()->ip(),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to create audit log for program operation', [
-                'program_id' => $program->id,
-                'action' => $action,
-                'error' => $e->getMessage()
-            ]);
-        }
+        // Map old free-form action strings to new ACTION_TYPE values
+        $actionTypeMap = [
+            'created' => 'CREATE',
+            'updated' => 'UPDATE',
+            'deleted' => 'DELETE',
+        ];
+        $actionType  = $actionTypeMap[strtolower($action)] ?? strtoupper($action);
+        $description = ucfirst($action) . " program \"{$program->name}\" (ID: {$program->id}).";
+
+        app(\App\Services\AuditLogService::class)->logActivity($actionType, 'Programs', $description, null, 'SYSTEM_OPERATION');
     }
 }

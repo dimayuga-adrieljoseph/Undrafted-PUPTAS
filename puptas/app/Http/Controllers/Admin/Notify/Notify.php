@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Notify;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Mail\CongratulationsMail;
@@ -14,21 +15,22 @@ use Inertia\Inertia;
 
 class Notify extends Controller
 {
+    public function __construct(private AuditLogService $auditLogService) {}
 
     public function showUploadForm()
-{
-    // $admin = Auth::user();
+    {
+        // $admin = Auth::user();
 
-    // if (!$admin) {
-    //     return redirect()->route('login')->with('error', 'Your session has expired. Please log in again.');
-    // }
+        // if (!$admin) {
+        //     return redirect()->route('login')->with('error', 'Your session has expired. Please log in again.');
+        // }
 
-    // if (is_null($admin->role_id) || $admin->role_id != 2) {
-    //     return redirect()->back()->with('error', 'Unauthorized access.');
-    // }
+        // if (is_null($admin->role_id) || $admin->role_id != 2) {
+        //     return redirect()->back()->with('error', 'Unauthorized access.');
+        // }
 
-    return Inertia::render('Uploads/Form'); // Vue component name
-}
+        return Inertia::render('Uploads/Form'); // Vue component name
+    }
     public function handleUpload(Request $request)
     {
         // Validation for Vue FormData
@@ -65,6 +67,8 @@ class Notify extends Controller
                 Mail::to($email)->send(new CongratulationsMail());
                 Log::info("Email sent to: $email");
             }
+
+            $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file \"{$fileName}\" (batch: {$request->batch_number}, SY: {$request->school_year}) and sent " . count($emails) . " congratulations email(s).", null, 'ADMISSION_DATA');
 
             return response()->json(['message' => 'Emails sent successfully.'], 200);
         } catch (\Exception $e) {

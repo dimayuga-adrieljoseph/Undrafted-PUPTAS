@@ -1,118 +1,38 @@
 <template>
-    <Head title="All Medical Applications" />
+    <Head title="All Records Applications" />
     <RecordStaffLayout>
-        <div
-            class="max-w-7xl mx-auto py-2 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto"
-        >
-            <div
-                class="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-2"
-            >
-                <h2 class="text-2xl font-bold text-[#9E122C]">
-                    All Applications
-                </h2>
-                <div
-                    class="flex flex-wrap justify-end gap-2 items-center w-full md:w-auto"
-                >
-                    <div
-                        class="flex items-center border-4 border-red-400 rounded-full px-2 py-1.5 bg-white w-full sm:w-auto"
+        <div class="max-w-9xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto">
+            <!-- Filters and Controls -->
+            <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                <!-- Search Input -->
+                <div class="flex-1 relative">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 text-[#9E122C] mr-2"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                        </svg>
-                        <input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Search by name..."
-                            class="bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-sm text-[#9E122C] placeholder-gray-500 w-full"
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                         />
-                    </div>
+                    </svg>
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Search by name..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                    />
+                </div>
 
+                <!-- Status Filter Dropdown -->
+                <div class="relative">
                     <button
-                        @click="clearFilters"
-                        class="text-sm text-[#9E122C] border border-[#9E122C] rounded px-3 py-1.5 hover:bg-[#FDE8EA] transition"
-                    >
-                        Clear Filters
-                    </button>
-
-                    <div class="relative">
-                        <button
-                            @click="showStatusDropdown = !showStatusDropdown"
-                            class="text-[#9E122C] p-2 border border-[#9E122C] rounded-full"
-                            title="Filter"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
-                                />
-                            </svg>
-                        </button>
-                        <div
-                            v-if="showStatusDropdown"
-                            class="absolute top-full mt-2 right-0 bg-white shadow-md border border-gray-200 rounded z-50 text-sm"
-                        >
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = '';
-                                    showStatusDropdown = false;
-                                "
-                            >
-                                All
-                            </button>
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = 'accepted';
-                                    showStatusDropdown = false;
-                                "
-                            >
-                                Accepted
-                            </button>
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = 'pending';
-                                    showStatusDropdown = false;
-                                "
-                            >
-                                Pending
-                            </button>
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = 'rejected';
-                                    showStatusDropdown = false;
-                                "
-                            >
-                                Rejected
-                            </button>
-                        </div>
-                    </div>
-
-                    <button
-                        @click="sortAsc = !sortAsc"
-                        class="text-[#9E122C] p-2 border border-[#9E122C] rounded-full"
-                        title="Sort"
+                        @click="showStatusDropdown = !showStatusDropdown"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -125,84 +45,177 @@
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
                                 stroke-width="2"
-                                :d="
-                                    sortAsc ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'
-                                "
+                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
                             />
                         </svg>
+                        <span>{{ statusFilter ? statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) : 'All Status' }}</span>
                     </button>
+                    <div
+                        v-if="showStatusDropdown"
+                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[150px]"
+                    >
+                        <button
+                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="
+                                statusFilter = '';
+                                showStatusDropdown = false;
+                            "
+                        >
+                            All
+                        </button>
+                        <button
+                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="
+                                statusFilter = 'accepted';
+                                showStatusDropdown = false;
+                            "
+                        >
+                            Accepted
+                        </button>
+                        <button
+                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="
+                                statusFilter = 'submitted';
+                                showStatusDropdown = false;
+                            "
+                        >
+                            Pending
+                        </button>
+                        <button
+                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="
+                                statusFilter = 'rejected';
+                                showStatusDropdown = false;
+                            "
+                        >
+                            Rejected
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Sort By -->
+                <select v-model="sortKey" class="px-7 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent">
+                    <option value="lastname">Last Name</option>
+                    <option value="firstname">First Name</option>
+                    <option value="program.name">Course</option>
+                    <option value="status">Status</option>
+                </select>
+
+                <!-- Sort Order -->
+                <button 
+                    @click="sortAsc = !sortAsc" 
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
+                >
+                    <span>{{ sortAsc ? 'Ascending' : 'Descending' }}</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path v-if="sortAsc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                        <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4" />
+                    </svg>
+                </button>
+
+                <!-- Clear Filters -->
+                <button 
+                    @click="clearFilters" 
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium"
+                >
+                    Clear
+                </button>
             </div>
 
-            <div class="bg-white/20 rounded-xl shadow p-2 overflow-x-auto">
-                <div class="text-sm text-[#4B5563] mb-2">
-                    Showing {{ paginatedUsers.length }} of
-                    {{ filteredUsers.length }} users
+            <!-- Users Table -->
+            <div v-if="loading" class="text-center text-gray-500 py-8">Loading applicants…</div>
+            <div v-else-if="fetchError" class="text-center text-red-500 py-8">Error: {{ fetchError }}</div>
+
+            <!-- Users Table -->
+            <div v-else class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Showing {{ paginatedUsers.length }} of {{ filteredUsers.length }} users
                 </div>
+                
                 <table class="min-w-full text-base">
                     <thead>
-                        <tr class="text-left text-white font-semibold">
-                            <th
-                                class="pb-2 cursor-pointer"
-                                @click="sortBy('lastname')"
-                            >
+                        <tr class="text-left font-semibold text-black dark:text-white">
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C]" @click="sortBy('lastname')">
                                 Name
+                                <span v-if="sortKey === 'lastname'" class="ml-1">
+                                    {{ sortAsc ? '↑' : '↓' }}
+                                </span>
                             </th>
-                            <th class="pb-2">Course</th>
-                            <th class="pb-2">Status</th>
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C]" @click="sortBy('program.name')">
+                                Course
+                                <span v-if="sortKey === 'program.name'" class="ml-1">
+                                    {{ sortAsc ? '↑' : '↓' }}
+                                </span>
+                            </th>
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C]" @click="sortBy('status')">
+                                Status
+                                <span v-if="sortKey === 'status'" class="ml-1">
+                                    {{ sortAsc ? '↑' : '↓' }}
+                                </span>
+                            </th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-600">
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         <tr
                             v-for="user in paginatedUsers"
                             :key="user.id"
                             @click="selectUser(user)"
-                            class="cursor-pointer hover:bg-white/10 backdrop-blur-sm transition"
+                            class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 transition"
                         >
-                            <td class="py-2 text-[#111827] font-medium">
+                            <td class="py-3 text-gray-900 dark:text-white font-medium">
                                 {{ user.firstname }} {{ user.lastname }}
                             </td>
-                            <td class="py-2 text-white">
-                                {{ user.program.name || "—" }}
+                            <td class="py-3 text-gray-700 dark:text-gray-300">
+                                {{ user.program?.name || "—" }}
                             </td>
-                            <td class="py-2">
+                            <td class="py-3">
                                 <span
                                     :class="getStatusClass(user.status)"
-                                    class="px-2 py-1 rounded text-sm font-semibold"
+                                    class="px-2.5 py-1 rounded-full text-xs font-medium"
                                 >
                                     {{ user.status || "Unknown" }}
                                 </span>
                             </td>
                         </tr>
+                        <tr v-if="paginatedUsers.length === 0">
+                            <td colspan="3" class="py-8 text-center text-gray-500 dark:text-gray-400">
+                                No applicants found matching your criteria.
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
 
-                <div class="flex justify-end items-center space-x-4 mt-4">
-                    <button
-                        @click="currentPage--"
-                        :disabled="currentPage === 1"
-                        class="text-sm text-[#9E122C] disabled:text-gray-900"
-                    >
-                        Previous
-                    </button>
-                    <span class="text-sm"
-                        >Page {{ currentPage }} of {{ totalPages }}</span
-                    >
-                    <button
-                        @click="currentPage++"
-                        :disabled="currentPage === totalPages"
-                        class="text-sm text-[#9E122C] disabled:text-gray-900"
-                    >
-                        Next
-                    </button>
+                <!-- Pagination -->
+                <div class="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        Showing <span class="font-medium">{{ paginatedUsers.length }}</span> of 
+                        <span class="font-medium">{{ filteredUsers.length }}</span> applicants
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <button 
+                            @click="currentPage--" 
+                            :disabled="currentPage === 1"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                            Previous
+                        </button>
+                        
+                        <div class="flex items-center space-x-2">
+                            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium">{{ currentPage }}</span>
+                            <span class="text-gray-500 dark:text-gray-400">of</span>
+                            <span class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">{{ totalPages || 1 }}</span>
+                        </div>
+                        
+                        <button 
+                            @click="currentPage++" 
+                            :disabled="currentPage === totalPages || totalPages === 0"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
-
-                <p
-                    v-if="paginatedUsers.length === 0"
-                    class="text-center text-gray-400 mt-4"
-                >
-                    No results found.
-                </p>
             </div>
         </div>
 
@@ -210,7 +223,7 @@
         <transition name="slide-fade">
             <div
                 v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
+                class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-800 dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
             >
                 <button
                     class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
@@ -237,7 +250,12 @@
                     <h4
                         class="text-sm font-bold text-gray-700 dark:text-white mb-1"
                     >
-                        Temporary enrolled in:
+                        {{
+                            selectedUser?.application?.enrollment_status ===
+                            "officially_enrolled"
+                                ? "Officially enrolled in:"
+                                : "Temporary enrolled in:"
+                        }}
                     </h4>
                     <p class="text-sm text-gray-800 dark:text-gray-300">
                         {{ selectedUser?.application?.program?.code }} -
@@ -249,6 +267,10 @@
                     <!-- Accept and Transfer buttons -->
                     <div class="mt-4 flex justify-end space-x-2">
                         <button
+                            v-if="
+                                selectedUser?.application?.enrollment_status !==
+                                'officially_enrolled'
+                            "
                             @click="acceptApplication"
                             class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                         >
@@ -392,7 +414,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
 
 import {
@@ -428,6 +450,8 @@ const itemsPerPage = 10;
 const sortKey = ref("lastname"); // default to lastname
 const statusFilter = ref("");
 const sortAsc = ref(true);
+const showStatusDropdown = ref(false);
+const filterDropdownRef = ref(null);
 
 const page = usePage();
 const users = ref(page.props.users || []);
@@ -475,14 +499,14 @@ const chartData = {
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
+    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700";
     if (s === "rejected") return "bg-red-100 text-red-700";
     return "bg-gray-100 text-gray-600";
 };
 
 const fetchUsers = async () => {
     try {
-        const response = await fetch("/medical-dashboard/applicants", {
+        const response = await fetch("/record-dashboard/applicants", {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
@@ -497,9 +521,20 @@ const fetchUsers = async () => {
     }
 };
 
+const handleOutsideClick = (e) => {
+    if (filterDropdownRef.value && !filterDropdownRef.value.contains(e.target)) {
+        showStatusDropdown.value = false;
+    }
+};
+
 onMounted(() => {
     fetchUsers();
     fetchPrograms();
+    document.addEventListener('click', handleOutsideClick);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', handleOutsideClick);
 });
 
 const filteredUsers = computed(() => {
@@ -530,7 +565,7 @@ const displayedUsers = computed(() => {
 const selectUser = async (user) => {
     try {
         const response = await axios.get(
-            `/medical-dashboard/application/${user.id}`
+            `/record-dashboard/application/${user.id}`
         );
 
         selectedUser.value = {
@@ -544,17 +579,9 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-        console.log("Full user data:", response.data.user);
-        console.log("Grades check:", response.data.user.grades);
 
         // ✅ Add this line to load programs into the dropdown
         await fetchPrograms();
-
-        console.log(
-            "User & files:",
-            selectedUser.value,
-            selectedUserFiles.value
-        );
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         selectedUserFiles.value = {};
@@ -619,10 +646,13 @@ const submitReturn = async () => {
     }
 
     try {
-        await axios.post(`/medical/return-files/${selectedUser.value.id}`, {
-            files: selected,
-            note: returnNote.value.trim(),
-        });
+        await axios.post(
+            `/record-dashboard/return-files/${selectedUser.value.id}`,
+            {
+                files: selected,
+                note: returnNote.value.trim(),
+            }
+        );
 
         alert("Files returned and application status logged.");
 
@@ -711,8 +741,6 @@ const fetchPrograms = async () => {
         console.error("Failed to load programs", e);
     }
 };
-
-onMounted(fetchUsers);
 
 const totalPages = computed(() =>
     Math.ceil(filteredUsers.value.length / itemsPerPage)

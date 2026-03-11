@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Program;
 use App\Models\Application;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 /**
  * Dashboard Service
@@ -32,7 +33,7 @@ class DashboardService
     public function getCommonDashboardData(): array
     {
         return [
-            'allUsers' => User::with('application.program')->whereHas('application')->get(),
+            'allUsers' => $this->userService->getApplicantsWithApplications(),
             'summary' => $this->applicationService->getApplicationSummary(),
         ];
     }
@@ -66,39 +67,103 @@ class DashboardService
     }
 
     /**
-     * Get application chart data grouped by year
+     * Get application chart data grouped by date (last 30 days)
      *
      * @return array
      */
     public function getApplicationChartData(): array
     {
-        // Group applications by year and status
+        // Group applications by date and status (last 30 days)
+        // Use single Carbon::now() reference to prevent midnight misalignment
+        $now = \Carbon\Carbon::now();
+        $startDate = $now->copy()->subDays(29)->startOfDay();
+        $endDate = $now->copy()->endOfDay();
+        
         $applications = DB::table('applications')
             ->select(
-                DB::raw('YEAR(created_at) as year'),
+                DB::raw('DATE(created_at) as date'),
                 'status',
                 DB::raw('COUNT(*) as count')
             )
-            ->groupBy(DB::raw('YEAR(created_at)'), 'status')
-            ->orderBy('year')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy(DB::raw('DATE(created_at)'), 'status')
+            ->orderBy('date')
             ->get();
 
-        // Build a list of years dynamically
-        $years = $applications->pluck('year')->unique()->sort()->values()->all();
+        // Build a list of dates for the last 30 days
+        $dates = [];
+        $dateLabels = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = $now->copy()->subDays($i);
+            $dates[] = $date->format('Y-m-d');
+            $dateLabels[] = $date->format('M j');
+        }
 
         // Initialize status arrays
         $submitted = [];
         $accepted = [];
         $returned = [];
 
-        foreach ($years as $year) {
-            $submitted[] = $applications->where('year', $year)->where('status', 'submitted')->sum('count');
-            $accepted[]  = $applications->where('year', $year)->where('status', 'accepted')->sum('count');
-            $returned[]  = $applications->where('year', $year)->where('status', 'returned')->sum('count');
+        foreach ($dates as $date) {
+            $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
+            $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
+            $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
         }
 
         return [
-            'years' => $years,
+            'labels' => $dateLabels,
+            'years' => $dateLabels,  // For backward compatibility
+            'submitted' => $submitted,
+            'accepted' => $accepted,
+            'returned' => $returned,
+        ];
+    }
+
+    /**
+     * Get application chart data grouped by date (last 30 days)
+     *
+     * @return array
+     */
+    public function getDailyApplicationChartData(): array
+    {
+        $now = \Carbon\Carbon::now();
+        $startDate = $now->copy()->subDays(29)->startOfDay();
+        $endDate = $now->copy()->endOfDay();
+        
+        $applications = DB::table('applications')
+            ->select(
+                DB::raw('DATE(created_at) as date'),
+                'status',
+                DB::raw('COUNT(*) as count')
+            )
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy(DB::raw('DATE(created_at)'), 'status')
+            ->orderBy('date')
+            ->get();
+
+        // Build a list of dates for the last 30 days
+        $dates = [];
+        $dateLabels = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = $now->copy()->subDays($i);
+            $dates[] = $date->format('Y-m-d');
+            $dateLabels[] = $date->format('M j');
+        }
+
+        // Initialize status arrays
+        $submitted = [];
+        $accepted = [];
+        $returned = [];
+
+        foreach ($dates as $date) {
+            $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
+            $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
+            $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
+        }
+
+        return [
+            'labels' => $dateLabels,
+            'years' => $dateLabels,  // For backward compatibility
             'submitted' => $submitted,
             'accepted' => $accepted,
             'returned' => $returned,
@@ -135,8 +200,8 @@ class DashboardService
      */
     public function getApplicantsPendingForStage(string $stage)
     {
-        return User::with('application.program')
-            ->whereHas('application', function ($query) use ($stage) {
+        return User::with('currentApplication.program')
+            ->whereHas('currentApplication', function ($query) use ($stage) {
                 $query->whereHas('processes', function ($q) use ($stage) {
                     $q->where('stage', $stage)
                       ->whereIn('status', ['in_progress', 'returned']);
@@ -153,7 +218,7 @@ class DashboardService
     public function getEvaluatorDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('evaluator'),
+            'pendingUsers' => $this->userService->getApplicantsByStage('evaluator'),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getApplicationChartData(),
         ];
@@ -167,9 +232,9 @@ class DashboardService
     public function getInterviewerDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('interviewer'),
+            'pendingUsers' => $this->userService->getApplicantsByStage('interviewer'),
             'summary' => $this->applicationService->getApplicationSummary(),
-            'chartData' => $this->getApplicationChartData(),
+            'chartData' => $this->getDailyApplicationChartData(),
         ];
     }
 
@@ -181,7 +246,7 @@ class DashboardService
     public function getMedicalDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('medical'),
+            'pendingUsers' => $this->userService->getApplicantsByStage('medical'),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getApplicationChartData(),
         ];
@@ -195,7 +260,7 @@ class DashboardService
     public function getRecordsDashboardData(): array
     {
         return [
-            'allUsers' => $this->getApplicantsPendingForStage('records'),
+            'allUsers' => $this->userService->getApplicantsForRecordStaff(),
             'programs' => Program::withCount('applications')->get(),
             'summary' => $this->applicationService->getApplicationSummary(),
         ];

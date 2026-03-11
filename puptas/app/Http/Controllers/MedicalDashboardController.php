@@ -13,6 +13,7 @@ use App\Helpers\FileMapper;
 use App\Http\Traits\ManagesApplicationFiles;
 use App\Services\ApplicationService;
 use App\Services\ApplicationProcessService;
+use App\Services\AuditLogService;
 use App\Services\DashboardService;
 use App\Services\UserService;
 
@@ -24,17 +25,20 @@ class MedicalDashboardController extends Controller
     protected ApplicationProcessService $processService;
     protected DashboardService $dashboardService;
     protected UserService $userService;
+    protected AuditLogService $auditLogService;
 
     public function __construct(
         ApplicationService $applicationService,
         ApplicationProcessService $processService,
         DashboardService $dashboardService,
-        UserService $userService
+        UserService $userService,
+        AuditLogService $auditLogService
     ) {
         $this->applicationService = $applicationService;
         $this->processService = $processService;
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
+        $this->auditLogService = $auditLogService;
     }
 
     public function index()
@@ -49,7 +53,7 @@ class MedicalDashboardController extends Controller
 
         return Inertia::render('Dashboard/Medical', [
             'user' => $user,
-            'allUsers' => $dashboardData['allUsers'],
+            'pendingUsers' => $dashboardData['pendingUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
         ]);
@@ -57,7 +61,13 @@ class MedicalDashboardController extends Controller
 
     public function getUsers()
     {
-        return response()->json($this->userService->getApplicantsWithApplications());
+        // Ensure user has medical role
+        $this->ensureRole($this->getRoleId());
+
+        // Return all applicants filtered by medical stage (including completed)
+        return response()->json(
+            $this->userService->getAllApplicantsByStage('medical')
+        );
     }
 
     protected function getCurrentStage(): string
@@ -74,8 +84,8 @@ class MedicalDashboardController extends Controller
     {
         // Check if interviewer stage is completed
         $this->applicationService->ensureStageCompleted(
-            $application, 
-            'interviewer', 
+            $application,
+            'interviewer',
             "Cannot proceed - prerequisite verification not completed."
         );
     }
@@ -94,8 +104,8 @@ class MedicalDashboardController extends Controller
 
         // Check if interviewer stage is completed
         $this->applicationService->ensureStageCompleted(
-            $application, 
-            'interviewer', 
+            $application,
+            'interviewer',
             "Cannot clear medically - interviewer stage not completed."
         );
 
@@ -141,6 +151,8 @@ class MedicalDashboardController extends Controller
                     'performed_by' => null,
                 ]);
             });
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Medical staff cleared medical for applicant ID {$userId}.", null, 'ADMISSION_DATA');
 
             return response()->json(['message' => 'Medical Cleared.']);
         } catch (\Throwable $e) {

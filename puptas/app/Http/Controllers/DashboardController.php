@@ -22,7 +22,8 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role_id !== 2) {
+        // Guard against null user and verify admin or superadmin role
+        if (!$user || !in_array($user->role_id, [2, 7])) {
             return redirect()->back()->withInput()->with('error', 'Unauthorized access.');
         }
 
@@ -33,43 +34,71 @@ class DashboardController extends Controller
             'returned' => Application::where('status', 'returned')->count(),
         ];
 
-        // Group applications by year and status
+        // Group applications by date and status (last 30 days)
+        // Use single Carbon::now() reference to prevent midnight misalignment
+        $now = Carbon::now();
+        $startDate = $now->copy()->subDays(29)->startOfDay();
+        $endDate = $now->copy()->endOfDay();
+        
         $applications = DB::table('applications')
             ->select(
-                DB::raw('YEAR(created_at) as year'),
+                DB::raw('DATE(created_at) as date'),
                 'status',
                 DB::raw('COUNT(*) as count')
             )
-            ->groupBy(DB::raw('YEAR(created_at)'), 'status')
-            ->orderBy('year')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy(DB::raw('DATE(created_at)'), 'status')
+            ->orderBy('date')
             ->get();
 
-
-        // Build a list of years dynamically
-        $years = $applications->pluck('year')->unique()->sort()->values()->all();
+        // Build a list of dates for the last 30 days
+        $dates = [];
+        $dateLabels = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = $now->copy()->subDays($i);
+            $dates[] = $date->format('Y-m-d');
+            $dateLabels[] = $date->format('M j');
+        }
 
         // Initialize status arrays
         $submitted = [];
         $accepted = [];
         $returned = [];
 
-        foreach ($years as $year) {
-            $submitted[] = $applications->where('year', $year)->where('status', 'submitted')->sum('count');
-            $accepted[]  = $applications->where('year', $year)->where('status', 'accepted')->sum('count');
-            $returned[]  = $applications->where('year', $year)->where('status', 'returned')->sum('count');
+        foreach ($dates as $date) {
+            $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
+            $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
+            $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
         }
 
         return Inertia::render('Dashboard/Admin', [
             'user' => $user,
-            'allUsers' => User::with(['application.program', 'role'])
+            'allUsers' => User::with(['currentApplication.program', 'role'])
                 ->where('role_id', 1)
-                ->whereHas('application')
+                ->whereHas('currentApplication')
                 ->orderBy('created_at', 'desc')
-                ->get(),
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'firstname' => $user->firstname,
+                        'lastname' => $user->lastname,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                        'created_at' => $user->created_at,
+                        // Map currentApplication to application for frontend compatibility
+                        'application' => $user->currentApplication ? [
+                            'id' => $user->currentApplication->id,
+                            'status' => $user->currentApplication->status,
+                            'created_at' => $user->currentApplication->created_at,
+                            'program' => $user->currentApplication->program,
+                        ] : null,
+                    ];
+                }),
             'summary' => $summary,
             'registrationUrl' => url('/register'),
             'chartData' => [
-                'years' => $years,
+                'labels' => $dateLabels,
                 'submitted' => $submitted,
                 'accepted' => $accepted,
                 'returned' => $returned,
@@ -80,10 +109,16 @@ class DashboardController extends Controller
 
     public function getUsers()
     {
+        // Defense in depth: Verify authentication and authorized role (admin, evaluator, interviewer)
+        $user = Auth::user();
+        if (!$user || !in_array($user->role_id, [2, 3, 4, 7])) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+        
         return response()->json(
-            User::with('application.program')
+            User::with('currentApplication.program')
                 ->where('role_id', 1)
-                ->whereHas('application')
+                ->whereHas('currentApplication')
                 ->get()
                 ->map(function ($user) {
                     return [
@@ -91,19 +126,25 @@ class DashboardController extends Controller
                         'firstname' => $user->firstname,
                         'lastname' => $user->lastname,
                         'course' => $user->course,
-                        'status' => $user->application->status ?? null,
+                        'status' => $user->currentApplication->status ?? null,
                         'email' => $user->email,
                         'username' => $user->username,
                         'phone' => $user->phone,
                         'company' => $user->company,
-                        'program' => $user->application->program ?? null,
+                        'program' => $user->currentApplication->program ?? null,
                     ];
                 })
         );
     }
     public function getUserFiles($id)
     {
-        $user = User::with(['application.program', 'application.processes', 'files', 'grades'])->findOrFail($id);
+        // Defense in depth: Verify authentication and admin role
+        $authUser = Auth::user();
+        if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+        
+        $user = User::with(['currentApplication.program', 'currentApplication.processes', 'files', 'grades'])->findOrFail($id);
 
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
@@ -111,8 +152,31 @@ class DashboardController extends Controller
 
         $files = $user->files->keyBy('type');
 
+        // Transform the response to use 'application' key for frontend compatibility
+        $userData = [
+            'id' => $user->id,
+            'firstname' => $user->firstname,
+            'lastname' => $user->lastname,
+            'email' => $user->email,
+            'contactnumber' => $user->contactnumber,
+            'address' => $user->address,
+            'birthday' => $user->birthday,
+            'sex' => $user->sex,
+            'created_at' => $user->created_at,
+            'files' => $user->files,
+            'grades' => $user->grades,
+            // Map currentApplication to application for frontend compatibility
+            'application' => $user->currentApplication ? [
+                'id' => $user->currentApplication->id,
+                'status' => $user->currentApplication->status,
+                'created_at' => $user->currentApplication->created_at,
+                'program' => $user->currentApplication->program,
+                'processes' => $user->currentApplication->processes,
+            ] : null,
+        ];
+
         return response()->json([
-            'user' => $user,
+            'user' => $userData,
             'uploadedFiles' => FileMapper::formatFilesUrls($files),
         ]);
     }

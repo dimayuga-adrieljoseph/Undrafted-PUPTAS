@@ -48,6 +48,8 @@ class User extends Authenticatable
         'sex',
         'contactnumber',
         'address',
+        'privacy_consent',
+        'privacy_consent_at',
     ];
 
     public function role()
@@ -77,10 +79,10 @@ class User extends Authenticatable
      * Legacy non-deterministic relationship - deprecated
      * Use currentApplication() or officiallyEnrolledApplication() instead
      */
-    public function application()
-    {
-        return $this->hasOne(Application::class);
-    }
+    // public function application()
+    // {
+    //     return $this->hasOne(Application::class);
+    // }
 
     /**
      * Get the latest (current) application for this user
@@ -89,8 +91,9 @@ class User extends Authenticatable
     public function currentApplication()
     {
         return $this->hasOne(Application::class)
-            ->select('applications.*')
-            ->latestOfMany();
+            ->select('applications.id', 'applications.user_id', 'applications.status', 'applications.submitted_at', 'applications.program_id', 'applications.second_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.created_at', 'applications.updated_at', 'applications.deleted_at')
+            ->whereNull('applications.deleted_at')
+            ->ofMany('id', 'max');
     }
 
     /**
@@ -100,9 +103,10 @@ class User extends Authenticatable
     public function officiallyEnrolledApplication()
     {
         return $this->hasOne(Application::class)
-            ->select('applications.*')
-            ->where('enrollment_status', 'officially_enrolled')
-            ->latestOfMany();
+            ->select('applications.id', 'applications.user_id', 'applications.status', 'applications.submitted_at', 'applications.program_id', 'applications.second_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.created_at', 'applications.updated_at', 'applications.deleted_at')
+            ->where('applications.enrollment_status', 'officially_enrolled')
+            ->whereNull('applications.deleted_at')
+            ->ofMany('id', 'max');
     }
 
     public function program()
@@ -167,6 +171,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'privacy_consent_at' => 'datetime',
         ];
     }
 }

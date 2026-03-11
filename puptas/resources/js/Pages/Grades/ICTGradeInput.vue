@@ -1,657 +1,866 @@
 <template>
-  <ApplicantLayout>
-    <div class="max-w-4xl mx-auto p-6">
-      <h1 class="text-xl font-bold mb-4">ICT Strand Grade Input</h1>
-      <p class="mb-6">Enter your academic grades for Grade 11 and Grade 12</p>
+    <ApplicantLayout>
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Header Section -->
+            <div class="mb-8">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">ICT Strand Grade Input</h1>
+                <p class="text-gray-600 dark:text-gray-400 mt-2">
+                    Enter your academic grades for Grade 11 and Grade 12 to determine program eligibility
+                </p>
+            </div>
 
-      <form @submit.prevent="submitForm">
-        <!-- Grade 11 Section -->
-        <div class="mb-8">
-          <h2 class="text-lg font-bold mb-4">Grade 11 Subjects</h2>
+            <!-- Progress Steps -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center w-full">
+                        <div class="flex items-center relative">
+                            <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm">1</div>
+                            <div class="ml-2 text-sm font-medium text-gray-900 dark:text-white">Grade 11</div>
+                        </div>
+                        <div class="flex-1 h-0.5 mx-4 bg-[#9E122C]"></div>
+                        <div class="flex items-center relative">
+                            <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm">2</div>
+                            <div class="ml-2 text-sm font-medium text-gray-900 dark:text-white">Grade 12</div>
+                        </div>
+                        <div class="flex-1 h-0.5 mx-4 bg-gray-300 dark:bg-gray-600"></div>
+                        <div class="flex items-center relative">
+                            <div class="w-8 h-8 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 rounded-full flex items-center justify-center font-semibold text-sm">3</div>
+                            <div class="ml-2 text-sm font-medium text-gray-500 dark:text-gray-400">Program Selection</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-          <!-- Math Subjects -->
-          <div class="mb-6">
-            <h3 class="font-semibold mb-2">Math-Related Subjects</h3>
-            <div class="mb-2">
-              <label class="block text-sm">General Mathematics</label>
-              <input
-                v-model.number="form.g11_general_mathematics"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-2">
-              <label class="block text-sm">Statistics and Probability</label>
-              <input
-                v-model.number="form.g11_statistics_probability"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <p class="text-sm font-semibold mb-4">Math Average: {{ mathAverage || '—' }}</p>
-          </div>
+            <form @submit.prevent="submitForm">
+                <!-- Grade 11 Section -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
+                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Grade 11 Subjects</h2>
+                    </div>
+                    
+                    <div class="p-6">
+                        <!-- Math Subjects -->
+                        <div class="mb-8">
+                            <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                Math-Related Subjects
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Mathematics</label>
+                                    <input
+                                        v-model.number="form.g11_general_mathematics"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statistics and Probability</label>
+                                    <input
+                                        v-model.number="form.g11_statistics_probability"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                </div>
+                            </div>
+                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    Math Average: <span class="font-bold">{{ mathAverage || "—" }}</span>
+                                </p>
+                            </div>
+                        </div>
 
-          <!-- English Subjects -->
-          <div class="mb-6">
-            <h3 class="font-semibold mb-2">English-Related Subjects</h3>
-            <div class="mb-2">
-              <label class="block text-sm">Oral Communication</label>
-              <input
-                v-model.number="form.g11_oral_communication"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-2">
-              <label class="block text-sm">21st Century Literature from Philippines and the World</label>
-              <input
-                v-model.number="form.g11_21st_century_lit"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-2">
-              <label class="block text-sm">English for Academic and Professional Purposes</label>
-              <input
-                v-model.number="form.g11_academic_professional"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-2">
-              <label class="block text-sm">Reading and Writing</label>
-              <input
-                v-model.number="form.g11_reading_writing"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <p class="text-sm font-semibold mb-4">English Average: {{ englishAverage || '—' }}</p>
-          </div>
+                        <!-- English Subjects -->
+                        <div class="mb-8">
+                            <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                English-Related Subjects
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Oral Communication</label>
+                                    <input
+                                        v-model.number="form.g11_oral_communication"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">21st Century Literature</label>
+                                    <input
+                                        v-model.number="form.g11_21st_century_lit"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">English for Academic Purposes</label>
+                                    <input
+                                        v-model.number="form.g11_academic_professional"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading and Writing</label>
+                                    <input
+                                        v-model.number="form.g11_reading_writing"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                </div>
+                            </div>
+                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    English Average: <span class="font-bold">{{ englishAverage || "—" }}</span>
+                                </p>
+                            </div>
+                        </div>
 
-          <!-- Science Subjects -->
-          <div class="mb-6">
-            <h3 class="font-semibold mb-2">Science-Related Subjects</h3>
-            <div class="mb-2">
-              <label class="block text-sm">Earth and Life Science</label>
-              <input
-                v-model.number="form.g11_earth_life_science"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-2">
-              <label class="block text-sm">Physical Science</label>
-              <input
-                v-model.number="form.g11_physical_science"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <p class="text-sm font-semibold mb-4">Science Average: {{ scienceAverage || '—' }}</p>
-          </div>
+                        <!-- Science Subjects -->
+                        <div class="mb-4">
+                            <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                Science-Related Subjects
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Earth and Life Science</label>
+                                    <input
+                                        v-model.number="form.g11_earth_life_science"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Science</label>
+                                    <input
+                                        v-model.number="form.g11_physical_science"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                </div>
+                            </div>
+                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grade 12 Section -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
+                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Grade 12 Subjects</h2>
+                    </div>
+                    
+                    <div class="p-6">
+                        <!-- Math Subjects -->
+                        <div class="mb-8">
+                            <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                Math Subjects (2 subjects)
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 1</label>
+                                    <input
+                                        v-model="form.g12_math_subject_1"
+                                        type="text"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        placeholder="Subject name"
+                                    />
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
+                                    <input
+                                        v-model.number="form.g12_math_grade_1"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="0-100"
+                                    />
+                                </div>
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 2</label>
+                                    <input
+                                        v-model="form.g12_math_subject_2"
+                                        type="text"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        placeholder="Subject name"
+                                    />
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
+                                    <input
+                                        v-model.number="form.g12_math_grade_2"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="0-100"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Science Subjects -->
+                        <div class="mb-8">
+                            <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                Science Subjects (2 subjects)
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 1</label>
+                                    <input
+                                        v-model="form.g12_science_subject_1"
+                                        type="text"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        placeholder="Subject name"
+                                    />
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
+                                    <input
+                                        v-model.number="form.g12_science_grade_1"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="0-100"
+                                    />
+                                </div>
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 2</label>
+                                    <input
+                                        v-model="form.g12_science_subject_2"
+                                        type="text"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        placeholder="Subject name"
+                                    />
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
+                                    <input
+                                        v-model.number="form.g12_science_grade_2"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="0-100"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- English Subjects -->
+                        <div class="mb-8">
+                            <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                English Subjects (4 subjects)
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div v-for="i in 4" :key="i" class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject {{ i }}</label>
+                                    <input
+                                        v-model="form[`g12_english_subject_${i}`]"
+                                        type="text"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        :placeholder="`Subject ${i} name`"
+                                    />
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
+                                    <input
+                                        v-model.number="form[`g12_english_grade_${i}`]"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="0-100"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Semester GWA -->
+                        <div class="mb-4">
+                            <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                Semester GWA
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">1st Semester</label>
+                                    <input
+                                        v-model.number="form.g12_first_sem_gwa"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="0-100"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">2nd Semester</label>
+                                    <input
+                                        v-model.number="form.g12_second_sem_gwa"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="0-100"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grade 12 GWA Display -->
+                        <div class="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                            <p class="text-sm font-medium text-purple-700 dark:text-purple-300">
+                                Grade 12 GWA: <span class="text-2xl font-bold">{{ g12GWA || "—" }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grade Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border border-gray-200 dark:border-gray-700">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Math Average</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ mathAverage || "—" }}</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border border-gray-200 dark:border-gray-700">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">English Average</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ englishAverage || "—" }}</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border border-gray-200 dark:border-gray-700">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Science Average</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ scienceAverage || "—" }}</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border border-gray-200 dark:border-gray-700">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Grade 12 GWA</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ g12GWA || "—" }}</p>
+                    </div>
+                </div>
+
+                <!-- Program Qualification Section -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
+                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Program Qualification</h2>
+                    </div>
+                    
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Qualified Programs -->
+                            <div>
+                                <h3 class="text-md font-semibold text-green-600 dark:text-green-400 mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Qualified Programs
+                                </h3>
+                                <div class="space-y-3">
+                                    <div v-if="qualifiedPrograms.length > 0">
+                                        <div
+                                            v-for="program in qualifiedPrograms"
+                                            :key="program.id"
+                                            class="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
+                                        >
+                                            <p class="font-semibold text-sm text-gray-900 dark:text-white">
+                                                {{ program.code }} - {{ program.name }}
+                                            </p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                Requirements: Math {{ program.math }}, English {{ program.english }}, 
+                                                Science {{ program.science }}, GWA {{ program.gwa }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <p v-else class="text-sm text-gray-500 dark:text-gray-400 italic">
+                                        No qualified programs based on current grades
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Not Qualified Programs -->
+                            <div>
+                                <h3 class="text-md font-semibold text-red-600 dark:text-red-400 mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Not Qualified
+                                </h3>
+                                <div class="space-y-3">
+                                    <div v-if="notQualifiedPrograms.length > 0">
+                                        <div
+                                            v-for="program in notQualifiedPrograms"
+                                            :key="program.id"
+                                            class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+                                        >
+                                            <p class="font-semibold text-sm text-gray-900 dark:text-white">
+                                                {{ program.code }} - {{ program.name }}
+                                            </p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                Requirements: Math {{ program.math }}, English {{ program.english }}, 
+                                                Science {{ program.science }}, GWA {{ program.gwa }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <p v-else class="text-sm text-gray-500 dark:text-gray-400 italic">
+                                        All programs are qualified
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Program Choice Selection -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
+                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Program Choices <span class="text-red-500">*</span></h2>
+                    </div>
+                    
+                    <div class="p-6">
+                        <div v-if="qualifiedPrograms.length > 0">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        First Choice Program <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.first_choice_program"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        required
+                                    >
+                                        <option value="">-- Select First Choice --</option>
+                                        <option
+                                            v-for="program in qualifiedPrograms"
+                                            :key="program.id"
+                                            :value="program.id"
+                                            :disabled="program.id === form.second_choice_program"
+                                        >
+                                            {{ program.code }} - {{ program.name }}
+                                        </option>
+                                    </select>
+                                    <p v-if="errors.first_choice_program" class="text-red-500 text-xs mt-1">
+                                        {{ errors.first_choice_program }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Second Choice Program <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.second_choice_program"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        required
+                                    >
+                                        <option value="">-- Select Second Choice --</option>
+                                        <option
+                                            v-for="program in qualifiedPrograms"
+                                            :key="program.id"
+                                            :value="program.id"
+                                            :disabled="program.id === form.first_choice_program"
+                                        >
+                                            {{ program.code }} - {{ program.name }}
+                                        </option>
+                                    </select>
+                                    <p v-if="errors.second_choice_program" class="text-red-500 text-xs mt-1">
+                                        {{ errors.second_choice_program }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Selected Programs Display -->
+                            <div v-if="form.first_choice_program || form.second_choice_program" 
+                                 class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <p class="font-semibold text-sm text-gray-900 dark:text-white mb-2">Your Selected Programs:</p>
+                                <p v-if="form.first_choice_program" class="text-sm text-gray-700 dark:text-gray-300">
+                                    1st Choice: <strong>{{ getSelectedProgramName(form.first_choice_program) }}</strong>
+                                </p>
+                                <p v-if="form.second_choice_program" class="text-sm text-gray-700 dark:text-gray-300">
+                                    2nd Choice: <strong>{{ getSelectedProgramName(form.second_choice_program) }}</strong>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div v-else class="text-center p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                            <svg class="w-12 h-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p class="font-semibold text-red-600 dark:text-red-400">⚠️ No Qualified Programs</p>
+                            <p class="text-sm text-red-500 dark:text-red-400 mt-1">
+                                You need to enter all your grades to see which programs you qualify for.
+                            </p>
+                        </div>
+
+                        <p v-if="errors.programs" class="text-red-500 text-xs mt-2">
+                            {{ errors.programs }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex gap-4">
+                    <button
+                        type="submit"
+                        :disabled="loading"
+                        class="flex-1 px-6 py-3 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                        <svg v-if="loading" class="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {{ loading ? "Saving..." : "Save Grades" }}
+                    </button>
+                    <button
+                        type="button"
+                        @click="$inertia.visit('/applicant-dashboard')"
+                        class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium"
+                    >
+                        Cancel
+                    </button>
+                </div>
+
+                <!-- Success Message -->
+                <transition name="fade">
+                    <div
+                        v-if="successMessage"
+                        class="mt-4 p-4 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg flex items-center"
+                    >
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ successMessage }}
+                    </div>
+                </transition>
+            </form>
         </div>
-
-        <!-- Grade 12 Section -->
-        <div class="mb-8">
-          <h2 class="text-lg font-bold mb-4">Grade 12 Subjects</h2>
-
-          <!-- Math Subjects (2) -->
-          <div class="mb-6">
-            <h3 class="font-semibold mb-2">Math Subjects (2 subjects)</h3>
-            <div class="mb-3">
-              <label class="block text-sm">Math Subject 1 Name</label>
-              <input
-                v-model="form.g12_math_subject_1"
-                type="text"
-                class="w-full border px-2 py-1 mb-1"
-              />
-              <label class="block text-sm">Grade</label>
-              <input
-                v-model.number="form.g12_math_grade_1"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-3">
-              <label class="block text-sm">Math Subject 2 Name</label>
-              <input
-                v-model="form.g12_math_subject_2"
-                type="text"
-                class="w-full border px-2 py-1 mb-1"
-              />
-              <label class="block text-sm">Grade</label>
-              <input
-                v-model.number="form.g12_math_grade_2"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-          </div>
-
-          <!-- Science Subjects (2) -->
-          <div class="mb-6">
-            <h3 class="font-semibold mb-2">Science Subjects (2 subjects)</h3>
-            <div class="mb-3">
-              <label class="block text-sm">Science Subject 1 Name</label>
-              <input
-                v-model="form.g12_science_subject_1"
-                type="text"
-                class="w-full border px-2 py-1 mb-1"
-              />
-              <label class="block text-sm">Grade</label>
-              <input
-                v-model.number="form.g12_science_grade_1"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-3">
-              <label class="block text-sm">Science Subject 2 Name</label>
-              <input
-                v-model="form.g12_science_subject_2"
-                type="text"
-                class="w-full border px-2 py-1 mb-1"
-              />
-              <label class="block text-sm">Grade</label>
-              <input
-                v-model.number="form.g12_science_grade_2"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-          </div>
-
-          <!-- English Subjects (4) -->
-          <div class="mb-6">
-            <h3 class="font-semibold mb-2">English Subjects (4 subjects)</h3>
-            <div class="mb-3">
-              <label class="block text-sm">English Subject 1 Name</label>
-              <input
-                v-model="form.g12_english_subject_1"
-                type="text"
-                class="w-full border px-2 py-1 mb-1"
-              />
-              <label class="block text-sm">Grade</label>
-              <input
-                v-model.number="form.g12_english_grade_1"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-3">
-              <label class="block text-sm">English Subject 2 Name</label>
-              <input
-                v-model="form.g12_english_subject_2"
-                type="text"
-                class="w-full border px-2 py-1 mb-1"
-              />
-              <label class="block text-sm">Grade</label>
-              <input
-                v-model.number="form.g12_english_grade_2"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-3">
-              <label class="block text-sm">English Subject 3 Name</label>
-              <input
-                v-model="form.g12_english_subject_3"
-                type="text"
-                class="w-full border px-2 py-1 mb-1"
-              />
-              <label class="block text-sm">Grade</label>
-              <input
-                v-model.number="form.g12_english_grade_3"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-3">
-              <label class="block text-sm">English Subject 4 Name</label>
-              <input
-                v-model="form.g12_english_subject_4"
-                type="text"
-                class="w-full border px-2 py-1 mb-1"
-              />
-              <label class="block text-sm">Grade</label>
-              <input
-                v-model.number="form.g12_english_grade_4"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-          </div>
-
-          <!-- Semester GWA Input -->
-          <div class="mb-6">
-            <h3 class="font-semibold mb-2">Semester GWA</h3>
-            <div class="mb-2">
-              <label class="block text-sm">1st Semester</label>
-              <input
-                v-model.number="form.g12_first_sem_gwa"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-            <div class="mb-2">
-              <label class="block text-sm">2nd Semester</label>
-              <input
-                v-model.number="form.g12_second_sem_gwa"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                class="w-full border px-2 py-1"
-              />
-            </div>
-          </div>
-
-          <!-- Grade 12 GWA -->
-          <div class="mb-6">
-            <h3 class="font-semibold">Grade 12 GWA</h3>
-            <p class="text-xl font-bold">{{ g12GWA || '—' }}</p>
-          </div>
-        </div>
-
-        <!-- Summary Section -->
-        <div class="border p-3 mb-6">
-          <h3 class="font-semibold mb-2">Grade Summary</h3>
-          <p class="text-sm">Math Average: <strong>{{ mathAverage || '—' }}</strong></p>
-          <p class="text-sm">English Average: <strong>{{ englishAverage || '—' }}</strong></p>
-          <p class="text-sm">Science Average: <strong>{{ scienceAverage || '—' }}</strong></p>
-          <p class="text-sm">Grade 12 GWA: <strong>{{ g12GWA || '—' }}</strong></p>
-        </div>
-
-        <!-- Program Qualification Section -->
-        <div class="border p-3 mb-6">
-          <h3 class="font-semibold mb-3">Program Qualification</h3>
-          
-          <!-- Qualified Programs -->
-          <div class="mb-4">
-            <h4 class="font-semibold text-green-600 mb-2">Qualified Programs</h4>
-            <div v-if="qualifiedPrograms.length > 0">
-              <div v-for="program in qualifiedPrograms" :key="program.id" class="border p-2 mb-2 bg-green-50">
-                <p class="font-semibold text-sm">{{ program.code }} - {{ program.name }}</p>
-                <p class="text-xs">Requirements: Math {{ program.math }}, English {{ program.english }}, Science {{ program.science }}, GWA {{ program.gwa }}</p>
-              </div>
-            </div>
-            <p v-else class="text-sm">No qualified programs based on current grades</p>
-          </div>
-
-          <!-- Not Qualified Programs -->
-          <div>
-            <h4 class="font-semibold text-red-600 mb-2">Not Qualified Programs</h4>
-            <div v-if="notQualifiedPrograms.length > 0">
-              <div v-for="program in notQualifiedPrograms" :key="program.id" class="border p-2 mb-2 bg-red-50">
-                <p class="font-semibold text-sm">{{ program.code }} - {{ program.name }}</p>
-                <p class="text-xs">Requirements: Math {{ program.math }}, English {{ program.english }}, Science {{ program.science }}, GWA {{ program.gwa }}</p>
-              </div>
-            </div>
-            <p v-else class="text-sm">All programs are qualified</p>
-          </div>
-        </div>
-
-            <!-- Program Choice Selection -->
-        <!-- Program Choices -->
-        <div class="border p-3 mb-6">
-          <h3 class="font-semibold mb-3 text-red-600">* Choose Your Programs (Required)</h3>
-          
-          <div v-if="qualifiedPrograms.length > 0">
-            <div class="mb-3">
-              <label class="block text-sm font-semibold mb-1">First Choice Program *</label>
-              <select 
-                v-model="form.first_choice_program" 
-                class="w-full border px-2 py-1"
-                required
-              >
-                <option value="">-- Select First Choice --</option>
-                <option 
-                  v-for="program in qualifiedPrograms" 
-                  :key="program.id" 
-                  :value="program.id"
-                  :disabled="program.id === form.second_choice_program"
-                >
-                  {{ program.code }} - {{ program.name }}
-                </option>
-              </select>
-              <p v-if="errors.first_choice_program" class="text-red-500 text-xs mt-1">
-                {{ errors.first_choice_program }}
-              </p>
-            </div>
-
-            <div class="mb-3">
-              <label class="block text-sm font-semibold mb-1">Second Choice Program *</label>
-              <select 
-                v-model="form.second_choice_program" 
-                class="w-full border px-2 py-1"
-                required
-              >
-                <option value="">-- Select Second Choice --</option>
-                <option 
-                  v-for="program in qualifiedPrograms" 
-                  :key="program.id" 
-                  :value="program.id"
-                  :disabled="program.id === form.first_choice_program"
-                >
-                  {{ program.code }} - {{ program.name }}
-                </option>
-              </select>
-              <p v-if="errors.second_choice_program" class="text-red-500 text-xs mt-1">
-                {{ errors.second_choice_program }}
-              </p>
-            </div>
-
-            <!-- Selected Programs Display -->
-            <div v-if="form.first_choice_program || form.second_choice_program" class="border p-2 bg-blue-50 mt-2">
-              <p class="font-semibold text-sm mb-1">Your Selected Programs:</p>
-              <p v-if="form.first_choice_program" class="text-sm">1st Choice: <strong>{{ getSelectedProgramName(form.first_choice_program) }}</strong></p>
-              <p v-if="form.second_choice_program" class="text-sm">2nd Choice: <strong>{{ getSelectedProgramName(form.second_choice_program) }}</strong></p>
-            </div>
-          </div>
-
-          <div v-else class="text-red-600 p-2 bg-red-50">
-            <p class="font-semibold text-sm">⚠️ No Qualified Programs</p>
-            <p class="text-xs">You need to enter all your grades to see which programs you qualify for.</p>
-          </div>
-
-          <p v-if="errors.programs" class="text-red-500 text-xs mt-2">
-            {{ errors.programs }}
-          </p>
-        </div>
-
-        <!-- Buttons -->
-        <button
-          type="submit"
-          :disabled="loading"
-          class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 mb-2"
-        >
-          {{ loading ? 'Saving...' : 'Save Grades' }}
-        </button>
-        <button
-          type="button"
-          @click="$inertia.visit('/applicant-dashboard')"
-          class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2"
-        >
-          Cancel
-        </button>
-
-        <!-- Success Message -->
-        <div v-if="successMessage" class="border border-green-500 bg-green-100 text-green-700 px-3 py-2 mt-3">
-          {{ successMessage }}
-        </div>
-      </form>
-    </div>
-  </ApplicantLayout>
+    </ApplicantLayout>
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
-import { usePage, router } from '@inertiajs/vue3'
-import ApplicantLayout from '@/Layouts/ApplicantLayout.vue'
+import { ref, reactive, computed } from "vue";
+import { usePage, router } from "@inertiajs/vue3";
+import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 
-const page = usePage()
+const page = usePage();
 const props = defineProps({
-  grade: Object,
-  user: Object,
-  programs: Array,
-  strand: String,
-})
+    grade: Object,
+    user: Object,
+    programs: Array,
+    strand: String,
+});
 
-const loading = ref(false)
-const successMessage = ref('')
-const errors = ref({})
+const loading = ref(false);
+const successMessage = ref("");
+const errors = ref({});
 
 const form = reactive({
-  g11_general_mathematics: null,
-  g11_statistics_probability: null,
-  g11_oral_communication: null,
-  g11_21st_century_lit: null,
-  g11_academic_professional: null,
-  g11_reading_writing: null,
-  g11_earth_life_science: null,
-  g11_physical_science: null,
-  // Grade 12 Math subjects
-  g12_math_subject_1: '',
-  g12_math_grade_1: null,
-  g12_math_subject_2: '',
-  g12_math_grade_2: null,
-  // Grade 12 Science subjects
-  g12_science_subject_1: '',
-  g12_science_grade_1: null,
-  g12_science_subject_2: '',
-  g12_science_grade_2: null,
-  // Grade 12 English subjects
-  g12_english_subject_1: '',
-  g12_english_grade_1: null,
-  g12_english_subject_2: '',
-  g12_english_grade_2: null,
-  g12_english_subject_3: '',
-  g12_english_grade_3: null,
-  g12_english_subject_4: '',
-  g12_english_grade_4: null,
-  // Grade 12 Semester GWA
-  g12_first_sem_gwa: null,
-  g12_second_sem_gwa: null,
-  // Program choices
-  first_choice_program: '',
-  second_choice_program: '',
-})
+    g11_general_mathematics: null,
+    g11_statistics_probability: null,
+    g11_oral_communication: null,
+    g11_21st_century_lit: null,
+    g11_academic_professional: null,
+    g11_reading_writing: null,
+    g11_earth_life_science: null,
+    g11_physical_science: null,
+    // Grade 12 Math subjects
+    g12_math_subject_1: "",
+    g12_math_grade_1: null,
+    g12_math_subject_2: "",
+    g12_math_grade_2: null,
+    // Grade 12 Science subjects
+    g12_science_subject_1: "",
+    g12_science_grade_1: null,
+    g12_science_subject_2: "",
+    g12_science_grade_2: null,
+    // Grade 12 English subjects
+    g12_english_subject_1: "",
+    g12_english_grade_1: null,
+    g12_english_subject_2: "",
+    g12_english_grade_2: null,
+    g12_english_subject_3: "",
+    g12_english_grade_3: null,
+    g12_english_subject_4: "",
+    g12_english_grade_4: null,
+    // Grade 12 Semester GWA
+    g12_first_sem_gwa: null,
+    g12_second_sem_gwa: null,
+    // Program choices
+    first_choice_program: "",
+    second_choice_program: "",
+});
 
 // Computed properties for averages
 const mathAverage = computed(() => {
-  const grades = [
-    form.g11_general_mathematics, 
-    form.g11_statistics_probability,
-    form.g12_math_grade_1,
-    form.g12_math_grade_2
-  ].filter(g => g !== null && g !== '')
-  return grades.length > 0 ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2) : null
-})
+    const grades = [
+        form.g11_general_mathematics,
+        form.g11_statistics_probability,
+        form.g12_math_grade_1,
+        form.g12_math_grade_2,
+    ].filter((g) => g !== null && g !== "");
+    return grades.length > 0
+        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
+        : null;
+});
 
 const englishAverage = computed(() => {
-  const grades = [
-    form.g11_oral_communication, 
-    form.g11_21st_century_lit,
-    form.g11_academic_professional,
-    form.g11_reading_writing, 
-    form.g12_english_grade_1,
-    form.g12_english_grade_2,
-    form.g12_english_grade_3,
-    form.g12_english_grade_4
-  ].filter(g => g !== null && g !== '')
-  return grades.length > 0 ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2) : null
-})
+    const grades = [
+        form.g11_oral_communication,
+        form.g11_21st_century_lit,
+        form.g11_academic_professional,
+        form.g11_reading_writing,
+        form.g12_english_grade_1,
+        form.g12_english_grade_2,
+        form.g12_english_grade_3,
+        form.g12_english_grade_4,
+    ].filter((g) => g !== null && g !== "");
+    return grades.length > 0
+        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
+        : null;
+});
 
 const scienceAverage = computed(() => {
-  const grades = [
-    form.g11_earth_life_science, 
-    form.g11_physical_science,
-    form.g12_science_grade_1,
-    form.g12_science_grade_2
-  ].filter(g => g !== null && g !== '')
-  return grades.length > 0 ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2) : null
-})
+    const grades = [
+        form.g11_earth_life_science,
+        form.g11_physical_science,
+        form.g12_science_grade_1,
+        form.g12_science_grade_2,
+    ].filter((g) => g !== null && g !== "");
+    return grades.length > 0
+        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
+        : null;
+});
 
 const g12GWA = computed(() => {
-  const semGrades = [
-    form.g12_first_sem_gwa,
-    form.g12_second_sem_gwa
-  ].filter(g => g !== null && g !== '')
+    const semGrades = [form.g12_first_sem_gwa, form.g12_second_sem_gwa].filter(
+        (g) => g !== null && g !== ""
+    );
 
-  return semGrades.length > 0 ? (semGrades.reduce((a, b) => a + b, 0) / semGrades.length).toFixed(2) : null
-})
+    return semGrades.length > 0
+        ? (semGrades.reduce((a, b) => a + b, 0) / semGrades.length).toFixed(2)
+        : null;
+});
 
 // Program qualification logic
 const qualifiedPrograms = computed(() => {
-  if (!props.programs || !mathAverage.value || !englishAverage.value || !scienceAverage.value || !g12GWA.value) {
-    return []
-  }
-
-  return props.programs.filter(program => {
-    if (!isStrandAllowed(program)) {
-      return false
+    if (
+        !props.programs ||
+        !mathAverage.value ||
+        !englishAverage.value ||
+        !scienceAverage.value ||
+        !g12GWA.value
+    ) {
+        return [];
     }
-    const meetsMath = parseFloat(mathAverage.value) >= parseFloat(program.math)
-    const meetsEnglish = parseFloat(englishAverage.value) >= parseFloat(program.english)
-    const meetsScience = parseFloat(scienceAverage.value) >= parseFloat(program.science)
-    const meetsGWA = parseFloat(g12GWA.value) >= parseFloat(program.gwa)
 
-    return meetsMath && meetsEnglish && meetsScience && meetsGWA
-  })
-})
+    return props.programs.filter((program) => {
+        if (!isStrandAllowed(program)) {
+            return false;
+        }
+        const meetsMath =
+            parseFloat(mathAverage.value) >= parseFloat(program.math);
+        const meetsEnglish =
+            parseFloat(englishAverage.value) >= parseFloat(program.english);
+        const meetsScience =
+            parseFloat(scienceAverage.value) >= parseFloat(program.science);
+        const meetsGWA = parseFloat(g12GWA.value) >= parseFloat(program.gwa);
+
+        return meetsMath && meetsEnglish && meetsScience && meetsGWA;
+    });
+});
 
 const notQualifiedPrograms = computed(() => {
-  if (!props.programs || !mathAverage.value || !englishAverage.value || !scienceAverage.value || !g12GWA.value) {
-    return props.programs || []
-  }
-
-  return props.programs.filter(program => {
-    if (!isStrandAllowed(program)) {
-      return true
+    if (
+        !props.programs ||
+        !mathAverage.value ||
+        !englishAverage.value ||
+        !scienceAverage.value ||
+        !g12GWA.value
+    ) {
+        return props.programs || [];
     }
-    const meetsMath = parseFloat(mathAverage.value) >= parseFloat(program.math)
-    const meetsEnglish = parseFloat(englishAverage.value) >= parseFloat(program.english)
-    const meetsScience = parseFloat(scienceAverage.value) >= parseFloat(program.science)
-    const meetsGWA = parseFloat(g12GWA.value) >= parseFloat(program.gwa)
 
-    return !(meetsMath && meetsEnglish && meetsScience && meetsGWA)
-  })
-})
+    return props.programs.filter((program) => {
+        if (!isStrandAllowed(program)) {
+            return true;
+        }
+        const meetsMath =
+            parseFloat(mathAverage.value) >= parseFloat(program.math);
+        const meetsEnglish =
+            parseFloat(englishAverage.value) >= parseFloat(program.english);
+        const meetsScience =
+            parseFloat(scienceAverage.value) >= parseFloat(program.science);
+        const meetsGWA = parseFloat(g12GWA.value) >= parseFloat(program.gwa);
 
-const currentStrand = computed(() => (props.strand || 'ICT').toUpperCase())
+        return !(meetsMath && meetsEnglish && meetsScience && meetsGWA);
+    });
+});
+
+const currentStrand = computed(() => (props.strand || "ICT").toUpperCase());
 
 const isStrandAllowed = (program) => {
-  const strandValue = (program.strand || '').toString().toUpperCase()
-  if (!strandValue || strandValue.includes('OPEN TO ALL')) {
-    return true
-  }
+    const strandValue = (program.strand_names || "").toString().toUpperCase();
+    if (!strandValue || strandValue.includes("OPEN TO ALL")) {
+        return true;
+    }
 
-  if (strandValue.includes('OTHER WITH BRIDGING')) {
-    return true
-  }
+    if (strandValue.includes("OTHER WITH BRIDGING")) {
+        return true;
+    }
 
-  const allowed = strandValue.split(',').map(s => s.trim()).filter(Boolean)
-  return allowed.includes(currentStrand.value)
-}
+    const allowed = strandValue
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    return allowed.includes(currentStrand.value);
+};
 
 // Helper function to get selected program name
 const getSelectedProgramName = (programId) => {
-  const program = props.programs?.find(p => p.id === programId)
-  return program ? `${program.code} - ${program.name}` : ''
-}
+    const program = props.programs?.find((p) => p.id === programId);
+    return program ? `${program.code} - ${program.name}` : "";
+};
 
 const submitForm = async () => {
-  loading.value = true
-  errors.value = {}
+    loading.value = true;
+    errors.value = {};
 
-  // Validate required grades
-  if (!mathAverage.value || !englishAverage.value || !scienceAverage.value || !g12GWA.value) {
-    errors.value = { programs: 'Please complete all subject grades and semester GWAs before submitting' }
-    loading.value = false
-    return
-  }
+    // Validate required grades
+    if (
+        !mathAverage.value ||
+        !englishAverage.value ||
+        !scienceAverage.value ||
+        !g12GWA.value
+    ) {
+        errors.value = {
+            programs:
+                "Please complete all subject grades and semester GWAs before submitting",
+        };
+        loading.value = false;
+        return;
+    }
 
-  // Validate that program choices are selected
-  if (!form.first_choice_program || !form.second_choice_program) {
-    errors.value = { programs: 'Please select both first and second choice programs' }
-    loading.value = false
-    return
-  }
+    // Validate that program choices are selected
+    if (!form.first_choice_program || !form.second_choice_program) {
+        errors.value = {
+            programs: "Please select both first and second choice programs",
+        };
+        loading.value = false;
+        return;
+    }
 
-  // Validate that choices are different
-  if (form.first_choice_program === form.second_choice_program) {
-    errors.value = { programs: 'First and second choice programs must be different' }
-    loading.value = false
-    return
-  }
+    // Validate that choices are different
+    if (form.first_choice_program === form.second_choice_program) {
+        errors.value = {
+            programs: "First and second choice programs must be different",
+        };
+        loading.value = false;
+        return;
+    }
 
-  // Prepare data with only computed averages
-  const payload = {
-    mathematics: parseFloat(mathAverage.value),
-    english: parseFloat(englishAverage.value),
-    science: parseFloat(scienceAverage.value),
-    g12_first_sem: parseFloat(form.g12_first_sem_gwa),
-    g12_second_sem: parseFloat(form.g12_second_sem_gwa),
-    first_choice_program: form.first_choice_program,
-    second_choice_program: form.second_choice_program,
-  }
+    // Prepare data with only computed averages
+    const payload = {
+        mathematics: parseFloat(mathAverage.value),
+        english: parseFloat(englishAverage.value),
+        science: parseFloat(scienceAverage.value),
+        g12_first_sem: parseFloat(form.g12_first_sem_gwa),
+        g12_second_sem: parseFloat(form.g12_second_sem_gwa),
+        first_choice_program: form.first_choice_program,
+        second_choice_program: form.second_choice_program,
+    };
 
-  console.log('Saving grades with payload:', payload)
-  
-  router.post('/grades/ict', payload, {
-    preserveState: true,
-    preserveScroll: true,
-    onSuccess: (response) => {
-      console.log('Success response:', response)
-      successMessage.value = 'Grades and program choices saved successfully!'
-      alert('✅ Grades saved successfully! Redirecting to dashboard...')
-      setTimeout(() => {
-        router.visit('/applicant-dashboard')
-      }, 1000)
-      loading.value = false
-    },
-    onError: (errorResponse) => {
-      console.error('Error response:', errorResponse)
-      errors.value = errorResponse
-      const firstError = Object.values(errorResponse)[0]
-      alert('❌ ' + (firstError || 'Failed to save grades. Please check the form.'))
-      loading.value = false
-    },
-    onFinish: () => {
-      loading.value = false
-    },
-  })
-}
+    router.post("/grades/ict", payload, {
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: (response) => {
+            successMessage.value =
+                "Grades and program choices saved successfully!";
+            alert("✅ Grades saved successfully! Redirecting to dashboard...");
+            setTimeout(() => {
+                router.visit("/applicant-dashboard");
+            }, 1000);
+            loading.value = false;
+        },
+        onError: (errorResponse) => {
+            errors.value = errorResponse;
+            const firstError = Object.values(errorResponse)[0];
+            alert(
+                "❌ " +
+                    (firstError ||
+                        "Failed to save grades. Please check the form.")
+            );
+            loading.value = false;
+        },
+        onFinish: () => {
+            loading.value = false;
+        },
+    });
+};
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: #FBCB77;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #9E122C;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #EE6A43;
+}
+</style>

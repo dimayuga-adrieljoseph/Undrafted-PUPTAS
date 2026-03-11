@@ -45,6 +45,178 @@ class UserService
     }
 
     /**
+     * Get applicants filtered by application process stage
+     * Only returns applicants whose applications are currently at the specified stage
+     *
+     * @param string $stage The application stage (evaluator, interviewer, medical, records)
+     * @return Collection
+     */
+    public function getApplicantsByStage(string $stage): Collection
+    {
+        return User::with(['currentApplication' => function ($query) {
+                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
+            }, 'currentApplication.program' => function ($query) {
+                $query->select('id', 'code', 'name');
+            }, 'currentApplication.processes' => function ($query) use ($stage) {
+                $query->where('stage', $stage)
+                    ->orderBy('created_at', 'desc')
+                    ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
+            }])
+            ->where('role_id', 1)
+            ->whereHas('applications', function ($query) use ($stage) {
+                $query->whereNotIn('status', ['accepted'])
+                    ->whereHas('processes', function ($q) use ($stage) {
+                        $q->where('stage', $stage)
+                            ->whereIn('status', ['in_progress', 'returned']);
+                    })
+                    ->whereDoesntHave('processes', function ($q) use ($stage) {
+                        $q->where('stage', $stage)
+                            ->where('status', 'completed')
+                            ->whereIn('action', ['passed', 'transferred']);
+                    })
+                    ->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)');
+            })
+            ->get()
+            ->map(function ($user) use ($stage) {
+                $application = $user->currentApplication;
+                $stageProcess = $application && $application->processes ? 
+                    $application->processes->first() : null;
+                
+                return [
+                    'id' => $user->id,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'course' => $user->course,
+                    'status' => $application->status ?? null,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'phone' => $user->phone,
+                    'company' => $user->company,
+                    'program' => $application && $application->program ? [
+                        'id' => $application->program->id,
+                        'code' => $application->program->code,
+                        'name' => $application->program->name,
+                    ] : null,
+                    'application' => $application ? [
+                        'id' => $application->id,
+                        'status' => $application->status,
+                        'created_at' => $application->created_at,
+                        'program' => $application->program ? [
+                            'id' => $application->program->id,
+                            'code' => $application->program->code,
+                            'name' => $application->program->name,
+                        ] : null,
+                    ] : null,
+                    'process_status' => $stageProcess ? $stageProcess->status : 'in_progress',
+                    'process_action' => $stageProcess ? $stageProcess->action : null,
+                    'is_evaluation_completed' => $stageProcess && $stageProcess->status === 'completed',
+                ];
+            });
+    }
+
+    /**
+     * Get all applicants by stage including completed
+     * Returns all applicants who have reached the specified stage (in_progress, returned, or completed)
+     *
+     * @param string $stage The application stage (evaluator, interviewer, medical, records)
+     * @return Collection
+     */
+    public function getAllApplicantsByStage(string $stage): Collection
+    {
+        return User::with(['currentApplication' => function ($query) {
+                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
+            }, 'currentApplication.program' => function ($query) {
+                $query->select('id', 'code', 'name');
+            }, 'currentApplication.processes' => function ($query) use ($stage) {
+                $query->where('stage', $stage)
+                    ->orderBy('created_at', 'desc')
+                    ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
+            }])
+            ->where('role_id', 1)
+            ->whereHas('currentApplication', function ($query) use ($stage) {
+                $query->whereHas('processes', function ($q) use ($stage) {
+                    $q->where('stage', $stage)
+                        ->whereIn('status', ['in_progress', 'returned', 'completed']);
+                });
+            })
+            ->get()
+            ->map(function ($user) use ($stage) {
+                $application = $user->currentApplication;
+                $stageProcess = $application && $application->processes ? 
+                    $application->processes->first() : null;
+                
+                return [
+                    'id' => $user->id,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'course' => $user->course,
+                    'status' => $application->status ?? null,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'phone' => $user->phone,
+                    'company' => $user->company,
+                    'program' => $application && $application->program ? [
+                        'id' => $application->program->id,
+                        'code' => $application->program->code,
+                        'name' => $application->program->name,
+                    ] : null,
+                    'application' => $application ? [
+                        'id' => $application->id,
+                        'status' => $application->status,
+                        'created_at' => $application->created_at,
+                        'program' => $application->program ? [
+                            'id' => $application->program->id,
+                            'code' => $application->program->code,
+                            'name' => $application->program->name,
+                        ] : null,
+                    ] : null,
+                    'process_status' => $stageProcess ? $stageProcess->status : 'in_progress',
+                    'process_action' => $stageProcess ? $stageProcess->action : null,
+                    'is_evaluation_completed' => $stageProcess && $stageProcess->status === 'completed',
+                ];
+            });
+    }
+
+    /**
+     * Get applicants for record staff
+     * Returns applicants who have completed medical stage OR are officially enrolled
+     *
+     * @return Collection
+     */
+    public function getApplicantsForRecordStaff(): Collection
+    {
+        return User::with('currentApplication.program')
+            ->where('role_id', 1)
+            ->whereHas('currentApplication', function ($query) {
+                $query->where(function ($q) {
+                    // Get applications that have completed medical stage
+                    $q->whereHas('processes', function ($process) {
+                        $process->where('stage', 'medical')
+                            ->where('status', 'completed');
+                    })
+                        // OR applications that are officially enrolled
+                        ->orWhere('enrollment_status', 'officially_enrolled');
+                });
+            })
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'course' => $user->course,
+                    'status' => $user->currentApplication->status ?? null,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'phone' => $user->phone,
+                    'company' => $user->company,
+                    'program' => $user->currentApplication->program ?? null,
+                    'enrollment_status' => $user->currentApplication->enrollment_status ?? null,
+                ];
+            });
+    }
+
+    /**
      * Get all users with detailed information
      *
      * @return Collection
@@ -149,32 +321,6 @@ class UserService
                 }
             }
 
-            // Audit log for user creation
-            try {
-                AuditLog::create([
-                    'user_id' => auth()->id(),
-                    'model_type' => 'User',
-                    'model_id' => $user->id,
-                    'action' => 'created',
-                    'old_values' => null,
-                    'new_values' => [
-                        'email' => $user->email,
-                        'firstname' => $user->firstname,
-                        'lastname' => $user->lastname,
-                        'middlename' => $user->middlename,
-                        'role_id' => $user->role_id,
-                        'contactnumber' => $user->contactnumber,
-                        'created_by' => auth()->user()->email ?? 'system',
-                    ],
-                    'ip_address' => request()->ip(),
-                ]);
-            } catch (\Exception $e) {
-                logger()->error('Failed to create audit log for user creation', [
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage()
-                ]);
-            }
-
             return $user;
         });
     }
@@ -227,23 +373,7 @@ class UserService
                 'updated_by' => auth()->user()->email ?? 'system',
             ];
 
-            // Audit log for user update
-            try {
-                AuditLog::create([
-                    'user_id' => auth()->id(),
-                    'model_type' => 'User',
-                    'model_id' => $user->id,
-                    'action' => 'updated',
-                    'old_values' => $oldValues,
-                    'new_values' => $newValues,
-                    'ip_address' => request()->ip(),
-                ]);
-            } catch (\Exception $e) {
-                logger()->error('Failed to create audit log for user update', [
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage()
-                ]);
-            }
+            // Audit log for user update — handled in UserController via AuditLogService
 
             return $user->fresh();
         });
@@ -273,25 +403,7 @@ class UserService
 
             $deleted = $user->delete();
 
-            // Audit log for user deletion
-            if ($deleted) {
-                try {
-                    AuditLog::create([
-                        'user_id' => auth()->id(),
-                        'model_type' => 'User',
-                        'model_id' => $userId,
-                        'action' => 'deleted',
-                        'old_values' => $deletedUserData,
-                        'new_values' => null,
-                        'ip_address' => request()->ip(),
-                    ]);
-                } catch (\Exception $e) {
-                    logger()->error('Failed to create audit log for user deletion', [
-                        'user_id' => $userId,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
+            // Audit log for deletion — handled in UserController via AuditLogService
 
             return $deleted;
         });
@@ -306,26 +418,9 @@ class UserService
      */
     public function logUserListingView(int $actorId, int $totalUsersViewed): void
     {
-        try {
-            AuditLog::create([
-                'user_id' => $actorId,
-                'model_type' => 'User',
-                'model_id' => null,
-                'action' => 'viewed_user_listing',
-                'old_values' => null,
-                'new_values' => [
-                    'total_users_viewed' => $totalUsersViewed,
-                    'includes_applicant_profiles' => true,
-                    'timestamp' => now()->toIso8601String(),
-                ],
-                'ip_address' => request()->ip(),
-            ]);
-        } catch (\Exception $e) {
-            logger()->error('Failed to create audit log for user listing view', [
-                'actor_id' => $actorId,
-                'error' => $e->getMessage()
-            ]);
-        }
+        // Intentionally left as a no-op.
+        // VIEW events are not part of the new audit trail schema.
+        // CRUD events are logged directly via AuditLogService in the controller.
     }
 
     /**
@@ -342,6 +437,7 @@ class UserService
             4 => 'Interviewer',
             5 => 'Medical',
             6 => 'Registrar',
+            7 => 'Superadmin',
         ];
     }
 }

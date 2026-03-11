@@ -1,8 +1,10 @@
 <script setup>
 import Sidebar from '@/Components/Sidebar.vue'
+import Footer from '@/Components/Footer.vue'
 import { useGlobalLoading } from '@/Composables/useGlobalLoading'
-import { usePage } from '@inertiajs/vue3'
-import { computed, ref, onMounted } from 'vue'
+import { usePage, router } from '@inertiajs/vue3'
+import { computed, ref, onMounted, watch } from 'vue'
+import TermsandConditionsModal from '@/Pages/Modal/TermsandConditionsModal.vue'
 
 // FontAwesome
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -31,6 +33,42 @@ const toggleDarkMode = () => {
     isDarkMode.value = !isDarkMode.value
     document.documentElement.classList.toggle('dark', isDarkMode.value)
     localStorage.setItem('darkMode', String(isDarkMode.value))
+}
+
+// Privacy consent
+const privacyConsent = computed(() => page.props.privacy_consent ?? { required: false })
+const showPrivacyModal = ref(false)
+
+// Check if privacy consent is required on mount and when user changes
+watch(() => [page.props.auth?.user, privacyConsent.value], ([user, consent]) => {
+    if (user && consent && consent.required) {
+        showPrivacyModal.value = true
+    } else if (!consent || !consent.required) {
+        showPrivacyModal.value = false
+    }
+}, { immediate: true })
+
+// Privacy consent handlers
+const handlePrivacyAccept = () => {
+    window.axios.post('/privacy-consent/accept')
+        .then(() => {
+            showPrivacyModal.value = false
+            router.reload({ only: ['privacy_consent'] })
+        })
+        .catch((error) => {
+            console.error('Failed to accept privacy consent:', error)
+        })
+}
+
+const handlePrivacyCancel = () => {
+    router.post(route('logout'), {}, {
+        onSuccess: () => {
+            showPrivacyModal.value = false
+        },
+        onError: (error) => {
+            console.error('Failed to log out:', error)
+        }
+    })
 }
 </script>
 
@@ -116,13 +154,16 @@ const toggleDarkMode = () => {
             <!-- Content -->
             <main class="flex-1 p-6 overflow-y-auto">
                 <div
-                    class="max-w-[1300px] mx-auto rounded-2xl p-6 bg-white
+                    class="w-full rounded-2xl p-6 bg-white min-h-[calc(100vh-12rem)]
                         shadow-sm border border-gray-200 dark:bg-gray-900
                         dark:border-gray-800"
                 >
                     <slot />
                 </div>
             </main>
+
+            <!-- Footer -->
+            <Footer />
         </div>
 
         <!-- Loading Overlay -->
@@ -160,5 +201,13 @@ const toggleDarkMode = () => {
                 </span>
             </div>
         </div>
+
+        <!-- Terms and Conditions Modal -->
+        <TermsandConditionsModal 
+            :show="showPrivacyModal" 
+            :can-close="false"
+            @accept="handlePrivacyAccept"
+            @cancel="handlePrivacyCancel"
+        />
     </div>
 </template>

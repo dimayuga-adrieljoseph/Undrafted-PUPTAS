@@ -28,7 +28,7 @@ ChartJS.register(
 
 const props = defineProps({
     user: Object,
-    allUsers: Array,
+    pendingUsers: Array,
     summary: {
         type: Object,
         default: () => ({
@@ -40,7 +40,7 @@ const props = defineProps({
     },
     chartData: {
         type: Object,
-        default: () => ({ submitted: [], accepted: [], returned: [], years: [] }),
+        default: () => ({ submitted: [], accepted: [], returned: [], labels: [] }),
     },
 });
 
@@ -53,15 +53,6 @@ const showImageModal = ref(false);
 const isEvaluating = ref(false);
 const filesToReturn = ref({});
 const returnNote = ref("");
-
-// Filter to get only applicants (users with applications)
-const applicantsOnly = computed(() => {
-    return (props.allUsers || []).filter(user => {
-        return user.application && 
-               user.application.id && 
-               user.application.status !== undefined;
-    });
-});
 
 // Summary items with icons and percentages
 const summaryItems = computed(() => [
@@ -129,7 +120,7 @@ const chartOptions = {
 
 // Chart data - computed from props
 const chartDataset = computed(() => ({
-    labels: props.chartData.years || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    labels: props.chartData.labels || [],
     datasets: [
         { 
             label: "Submitted", 
@@ -170,9 +161,9 @@ const chartDataset = computed(() => ({
     ],
 }));
 
-// Display only applicants in the recent applications section
+// Display only pending applicants in the recent applications section
 const displayedApplicants = computed(() => {
-    const applicants = applicantsOnly.value;
+    const applicants = props.pendingUsers || [];
     const query = searchQuery.value.trim().toLowerCase();
     
     if (!query) return applicants.slice(0, 5);
@@ -283,31 +274,38 @@ const submitReturn = async () => {
     const selected = Object.keys(filesToReturn.value).filter(
         (k) => filesToReturn.value[k]
     );
-    if (selected.length === 0 || !returnNote.value.trim()) {
-        alert("Please select files and enter a return note.");
+    const note = returnNote.value.trim();
+    if (selected.length === 0) {
+        alert("Please select at least one file to return.");
+        return;
+    }
+    if (note.length < 3) {
+        alert("Please enter a return reason before submitting.");
         return;
     }
 
     try {
         await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
             files: selected,
-            note: returnNote.value.trim(),
+            note,
         });
 
-        alert("Files returned and application status logged.");
+        alert("Files returned successfully.");
         closeUserCard();
     } catch (error) {
         console.error(error);
-        alert("Return failed.");
+        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0];
+        alert(msg || "Return failed. Please try again.");
     }
 };
 
 const submitPass = async () => {
+    if (!confirm("Pass this application to the interviewer stage? This cannot be undone.")) return;
     try {
         await axios.post(
             `/evaluator/pass-application/${selectedUser.value.id}`,
             {
-                note: returnNote.value || "",
+                note: "",
             }
         );
 
@@ -393,7 +391,7 @@ const submitPass = async () => {
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                     <div class="mb-6">
                         <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">Monthly evaluation trends</p>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm">Daily evaluation trends (Last 30 days)</p>
                     </div>
                     
                     <div class="flex flex-wrap gap-4 mb-6">
@@ -540,9 +538,16 @@ const submitPass = async () => {
                                         <button
                                             v-if="!isEvaluating"
                                             @click="startEvaluation"
-                                            :class="[getButtonClass('primary'), 'w-full px-4 py-2 rounded-lg transition font-medium']"
+                                            :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium']"
                                         >
-                                            Start Evaluation
+                                            Return Documents
+                                        </button>
+                                        <button
+                                            v-if="!isEvaluating"
+                                            @click="submitPass"
+                                            :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium']"
+                                        >
+                                            Pass Application
                                         </button>
                                         <Link :href="`/applications/user/${selectedUser.id}`"
                                               :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
@@ -553,36 +558,31 @@ const submitPass = async () => {
                             </div>
 
                             <!-- Evaluation Section -->
-                            <div v-if="isEvaluating" class="mb-8 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Evaluation</h4>
+                            <div v-if="isEvaluating" class="mb-8 p-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Return Documents</h4>
+                                <p class="text-sm text-amber-700 dark:text-amber-400 mb-4">Select the documents to return and provide a reason. The applicant will be notified.</p>
                                 
                                 <!-- Return Note -->
                                 <div class="mb-4">
                                     <label for="returnNote" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Return Reason / Notes
+                                        Return Reason <span class="text-red-500">*</span>
                                     </label>
                                     <textarea
                                         id="returnNote"
                                         v-model="returnNote"
                                         rows="3"
                                         class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                        placeholder="Enter reason for returning documents or additional notes..."
+                                        placeholder="Explain what the applicant needs to fix or resubmit..."
                                     ></textarea>
                                 </div>
 
                                 <!-- Action Buttons -->
                                 <div class="flex space-x-3">
                                     <button
-                                        @click="submitPass"
-                                        :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium']"
-                                    >
-                                        Pass Application
-                                    </button>
-                                    <button
                                         @click="submitReturn"
                                         :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg transition font-medium']"
                                     >
-                                        Return Files
+                                        Confirm Return
                                     </button>
                                     <button
                                         @click="cancelEvaluation"
