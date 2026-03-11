@@ -45,7 +45,7 @@
                         Clear Filters
                     </button>
 
-                    <div class="relative">
+                    <div class="relative" ref="filterDropdownRef">
                         <button
                             @click="showStatusDropdown = !showStatusDropdown"
                             class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
@@ -458,7 +458,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
 import MedicalLayout from "@/Layouts/MedicalLayout.vue";
 
@@ -495,6 +495,7 @@ const sortKey = ref("lastname"); // default to lastname
 const evaluationStatusFilter = ref(""); // Filter for evaluation completion status
 const sortAsc = ref(true);
 const showStatusDropdown = ref(false);
+const filterDropdownRef = ref(null);
 
 const page = usePage();
 const users = ref(page.props.users || []);
@@ -589,9 +590,20 @@ const fetchUsers = async () => {
     }
 };
 
+const handleOutsideClick = (e) => {
+    if (filterDropdownRef.value && !filterDropdownRef.value.contains(e.target)) {
+        showStatusDropdown.value = false;
+    }
+};
+
 onMounted(() => {
     fetchUsers();
     fetchPrograms();
+    document.addEventListener('click', handleOutsideClick);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', handleOutsideClick);
 });
 
 const filteredUsers = computed(() => {
@@ -808,8 +820,6 @@ const fetchPrograms = async () => {
         console.error("Failed to load programs", e);
     }
 };
-
-onMounted(fetchUsers);
 
 const totalPages = computed(() =>
     Math.ceil(filteredUsers.value.length / itemsPerPage)
