@@ -19,6 +19,10 @@ WORKDIR /app
 
 COPY . .
 
+# Add the libraries
+RUN composer require setasign/fpdi tecnickcom/tcpdf --no-interaction
+
+# Install optimized dependencies
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 # =============================================================================
