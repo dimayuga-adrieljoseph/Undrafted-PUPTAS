@@ -24,6 +24,31 @@ const status = ref("loading"); // loading, success, error
 const message = ref("Processing your request...");
 const progress = ref(0);
 
+// Validate that a URL is an internal path (not an external redirect)
+const isInternalPath = (url) => {
+    if (!url || typeof url !== 'string') {
+        return false;
+    }
+    
+    // Reject absolute URLs with schemes
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(url)) {
+        return false;
+    }
+    
+    // Reject protocol-relative URLs
+    if (url.startsWith('//')) {
+        return false;
+    }
+    
+    // Reject URLs with @ symbol
+    if (url.includes('@')) {
+        return false;
+    }
+    
+    // Must start with / for internal path
+    return url.startsWith('/');
+};
+
 // Simulate loading progress
 const simulateProgress = () => {
     const interval = setInterval(() => {
@@ -36,6 +61,26 @@ const simulateProgress = () => {
 };
 
 onMounted(async () => {
+    // Validate redirect URLs as additional client-side defense
+    if (!isInternalPath(props.redirectTo)) {
+        console.error('Invalid redirect URL detected, using default');
+        window.location.href = '/dashboard';
+        return;
+    }
+    
+    if (!isInternalPath(props.errorRedirect)) {
+        console.error('Invalid error redirect URL detected, using default');
+        window.location.href = '/dashboard';
+        return;
+    }
+    
+    // Validate API endpoint is internal
+    if (!isInternalPath(props.apiEndpoint)) {
+        console.error('Invalid API endpoint detected, redirecting to error page');
+        window.location.href = '/login';
+        return;
+    }
+
     const progressInterval = simulateProgress();
 
     try {
@@ -60,7 +105,7 @@ onMounted(async () => {
             status.value = "success";
             message.value = "Request processed successfully! Redirecting...";
             
-            // Redirect after short delay
+            // Redirect after short delay (already validated above)
             setTimeout(() => {
                 window.location.href = props.redirectTo;
             }, 1500);
@@ -72,7 +117,7 @@ onMounted(async () => {
         status.value = "error";
         message.value = "An error occurred. Please try again.";
         
-        // Auto-redirect to error page after delay
+        // Auto-redirect to error page after delay (already validated above)
         setTimeout(() => {
             window.location.href = props.errorRedirect;
         }, 3000);
