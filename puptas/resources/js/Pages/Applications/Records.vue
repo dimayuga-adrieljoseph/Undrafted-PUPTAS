@@ -14,11 +14,11 @@
                     class="flex flex-wrap justify-end gap-2 items-center w-full md:w-auto"
                 >
                     <div
-                        class="flex items-center border-4 border-red-400 rounded-full px-2 py-1.5 bg-white w-full sm:w-auto"
+                        class="flex items-center border-4 border-red-400 rounded-full px-2 py-1.5 bg-white dark:bg-gray-800 w-full sm:w-auto"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 text-[#9E122C] mr-2"
+                            class="h-5 w-5 text-black dark:text-white mr-2"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -34,13 +34,13 @@
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search by name..."
-                            class="bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-sm text-[#9E122C] placeholder-gray-500 w-full"
+                            class="bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-sm text-black dark:text-white placeholder-gray-500 w-full"
                         />
                     </div>
 
                     <button
                         @click="clearFilters"
-                        class="text-sm text-[#9E122C] border border-[#9E122C] rounded px-3 py-1.5 hover:bg-[#FDE8EA] transition"
+                        class="text-sm text-black dark:text-white border border-[#9E122C] rounded px-3 py-1.5 hover:bg-[#FDE8EA] transition"
                     >
                         Clear Filters
                     </button>
@@ -48,7 +48,7 @@
                     <div class="relative">
                         <button
                             @click="showStatusDropdown = !showStatusDropdown"
-                            class="text-[#9E122C] p-2 border border-[#9E122C] rounded-full"
+                            class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
                             title="Filter"
                         >
                             <svg
@@ -68,7 +68,7 @@
                         </button>
                         <div
                             v-if="showStatusDropdown"
-                            class="absolute top-full mt-2 right-0 bg-white shadow-md border border-gray-200 rounded z-50 text-sm"
+                            class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm"
                         >
                             <button
                                 class="block px-4 py-2 w-full text-left hover:bg-gray-100"
@@ -111,7 +111,7 @@
 
                     <button
                         @click="sortAsc = !sortAsc"
-                        class="text-[#9E122C] p-2 border border-[#9E122C] rounded-full"
+                        class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
                         title="Sort"
                     >
                         <svg
@@ -134,14 +134,14 @@
                 </div>
             </div>
 
-            <div class="bg-white/20 rounded-xl shadow p-2 overflow-x-auto">
-                <div class="text-sm text-[#4B5563] mb-2">
+            <div class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Showing {{ paginatedUsers.length }} of
                     {{ filteredUsers.length }} users
                 </div>
                 <table class="min-w-full text-base">
                     <thead>
-                        <tr class="text-left text-white font-semibold">
+                        <tr class="text-left font-semibold text-black dark:text-white">
                             <th
                                 class="pb-2 cursor-pointer"
                                 @click="sortBy('lastname')"
@@ -157,12 +157,12 @@
                             v-for="user in paginatedUsers"
                             :key="user.id"
                             @click="selectUser(user)"
-                            class="cursor-pointer hover:bg-white/10 backdrop-blur-sm transition"
+                            class="cursor-pointer hover:bg-white dark:bg-gray-800/10 backdrop-blur-sm transition"
                         >
-                            <td class="py-2 text-[#111827] font-medium">
+                            <td class="py-2 text-black dark:text-white font-medium">
                                 {{ user.firstname }} {{ user.lastname }}
                             </td>
-                            <td class="py-2 text-white">
+                            <td class="py-2 text-black dark:text-white">
                                 {{ user.program.name || "—" }}
                             </td>
                             <td class="py-2">
@@ -181,7 +181,7 @@
                     <button
                         @click="currentPage--"
                         :disabled="currentPage === 1"
-                        class="text-sm text-[#9E122C] disabled:text-gray-900"
+                        class="text-sm text-black dark:text-white disabled:text-gray-900"
                     >
                         Previous
                     </button>
@@ -191,7 +191,7 @@
                     <button
                         @click="currentPage++"
                         :disabled="currentPage === totalPages"
-                        class="text-sm text-[#9E122C] disabled:text-gray-900"
+                        class="text-sm text-black dark:text-white disabled:text-gray-900"
                     >
                         Next
                     </button>
@@ -210,7 +210,7 @@
         <transition name="slide-fade">
             <div
                 v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
+                class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-800 dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
             >
                 <button
                     class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
