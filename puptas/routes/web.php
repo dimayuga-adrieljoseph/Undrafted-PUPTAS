@@ -339,6 +339,7 @@ Route::middleware(['auth', 'role:6'])->group(function () {
 
     // Record Staff API endpoints - stage-based filtering applied in controller
     Route::get('/record-dashboard/applicants', [RecordStaffDashboardController::class, 'getUsers']);
+    Route::get('/record-dashboard/stats', [RecordStaffDashboardController::class, 'getStats']);
     Route::get('/record-dashboard/application/{id}', [RecordStaffDashboardController::class, 'getUserFiles']);
     Route::post('/record-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
     Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);

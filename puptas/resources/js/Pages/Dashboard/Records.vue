@@ -724,26 +724,20 @@ import { usePage } from "@inertiajs/vue3";
 const page = usePage();
 const users = ref(page.props.users || []);
 const programs = ref(page.props.programs || []);
+const summary = ref(
+    page.props.summary || { total: 0, accepted: 0, pending: 0, returned: 0 }
+);
 
 const props = defineProps({
     user: Object,
     allUsers: Array,
-    summary: {
-        type: Object,
-        default: () => ({
-            total: 0,
-            accepted: 0,
-            pending: 0,
-            returned: 0,
-        }),
-    },
 });
 
 // Summary items with icons and percentages
 const summaryItems = computed(() => [
     {
         label: "Total Applications",
-        value: props.summary?.total ?? 0,
+        value: summary.value?.total ?? 0,
         icon: {
             template:
                 '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>',
@@ -753,45 +747,45 @@ const summaryItems = computed(() => [
     },
     {
         label: "Officially Enrolled",
-        value: props.summary?.accepted ?? 0,
+        value: summary.value?.accepted ?? 0,
         icon: {
             template:
                 '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
         },
         percentage:
-            props.summary?.total > 0
+            summary.value?.total > 0
                 ? Math.round(
-                      (props.summary.accepted / props.summary.total) * 100
+                      (summary.value.accepted / summary.value.total) * 100
                   )
                 : 0,
         color: "green",
     },
     {
         label: "Temporary Enrolled",
-        value: props.summary?.pending ?? 0,
+        value: summary.value?.pending ?? 0,
         icon: {
             template:
                 '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
         },
         percentage:
-            props.summary?.total > 0
+            summary.value?.total > 0
                 ? Math.round(
-                      (props.summary.pending / props.summary.total) * 100
+                      (summary.value.pending / summary.value.total) * 100
                   )
                 : 0,
         color: "yellow",
     },
     {
         label: "Returned",
-        value: props.summary?.returned ?? 0,
+        value: summary.value?.returned ?? 0,
         icon: {
             template:
                 '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>',
         },
         percentage:
-            props.summary?.total > 0
+            summary.value?.total > 0
                 ? Math.round(
-                      (props.summary.returned / props.summary.total) * 100
+                      (summary.value.returned / summary.value.total) * 100
                   )
                 : 0,
         color: "red",
@@ -841,6 +835,16 @@ const fetchUsers = async () => {
         errorMessage.value = error.message;
     } finally {
         isLoading.value = false;
+    }
+};
+
+const fetchStats = async () => {
+    try {
+        const response = await axios.get("/record-dashboard/stats");
+        summary.value = response.data.summary;
+        programs.value = response.data.programs;
+    } catch (error) {
+        console.error("Failed to fetch stats:", error);
     }
 };
 
@@ -940,7 +944,8 @@ const acceptApplication = async () => {
         await axios.post(`/record-dashboard/tag/${selectedUser.value.id}`);
         showSnackbar("Tagged as officially enrolled");
         selectedUser.value = null;
-        await fetchUsers();
+        fetchUsers();
+        fetchStats();
     } catch (e) {
         console.error("Tag failed:", e);
         const msg = e.response?.data?.message || "Failed to tag application";
@@ -953,7 +958,8 @@ const untagApplication = async () => {
         await axios.post(`/record-dashboard/untag/${selectedUser.value.id}`);
         showSnackbar("Reverted to temporary enrolled");
         selectedUser.value = null;
-        await fetchUsers();
+        fetchUsers();
+        fetchStats();
     } catch (e) {
         console.error("Untag failed:", e);
         const msg = e.response?.data?.message || "Failed to untag application";

@@ -78,6 +78,16 @@ class RecordStaffDashboardController extends Controller
         return response()->json($this->userService->getApplicantsForRecordStaff());
     }
 
+    public function getStats()
+    {
+        $this->ensureRole($this->getRoleId());
+
+        return response()->json([
+            'summary'  => $this->applicationService->getApplicationSummary(),
+            'programs' => \App\Models\Program::withCount('applications')->get(),
+        ]);
+    }
+
     protected function checkPrerequisiteStage($application)
     {
         // Check if medical stage is completed
