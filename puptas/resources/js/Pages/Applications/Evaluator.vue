@@ -817,8 +817,6 @@ const fetchPrograms = async () => {
     }
 };
 
-onMounted(fetchUsers);
-
 const totalPages = computed(() =>
     Math.ceil(filteredUsers.value.length / itemsPerPage)
 );
