@@ -90,6 +90,21 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            [
+                'salutation' => 'Mr.',
+                'firstname' => 'Super',
+                'middlename' => 'Admin',
+                'lastname' => 'User',
+                'birthday' => '1990-01-01',
+                'sex' => 'Male',
+                'contactnumber' => '09120000000',
+                'address' => 'Admin Street',
+                'email' => 'superadmin@puptas.edu',
+                'password' => Hash::make('Superadmin.1234'),
+                'role_id' => 7,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ];
 
         foreach ($users as $user) {
@@ -101,13 +116,15 @@ class UserSeeder extends Seeder
 
         // SECURITY: Only seed superadmin in local/dev environments
         // Never seed privileged accounts with default passwords in staging/production
-        $this->seedSuperAdminInLocalEnv();
+        // Superadmin is now seeded as a regular user in the $users array above
+        // $this->seedSuperAdminInLocalEnv();
     }
 
+    /*
     /**
      * Seed superadmin account only in local/development environments.
      * Password is sourced from SEED_SUPERADMIN_PASSWORD env var or randomly generated.
-     */
+     *
     private function seedSuperAdminInLocalEnv(): void
     {
         $environment = app()->environment();
@@ -159,4 +176,5 @@ class UserSeeder extends Seeder
 
         $this->command->info('✓ Superadmin account seeded successfully.');
     }
+    */
 }
