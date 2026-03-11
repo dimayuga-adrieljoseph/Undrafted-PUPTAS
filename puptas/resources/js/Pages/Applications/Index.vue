@@ -1,8 +1,19 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 const axios = window.axios;
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
+import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
+
+const page = usePage();
+const currentUser = computed(() => page.props.auth?.user);
+const currentLayout = computed(() => {
+    const roleId = currentUser.value?.role_id;
+    if (roleId === 3) return EvaluatorLayout;
+    if (roleId === 4) return InterviewerLayout;
+    return AppLayout; // Default to admin layout for role 2 or others
+});
 
 const props = defineProps({
     selectedUserId: {
@@ -137,10 +148,17 @@ const getStatusClass = (status) => {
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400";
 };
 
+const getUserFilesEndpoint = (userId) => {
+    const roleId = currentUser.value?.role_id;
+    if (roleId === 3) return `/dashboard/user-files/${userId}`; // Evaluator
+    if (roleId === 4) return `/interviewer-dashboard/application/${userId}`; // Interviewer
+    return `/admin-dashboard/user-files/${userId}`; // Admin (default)
+};
+
 const selectUser = async (user) => {
     try {
         const response = await axios.get(
-            `/admin-dashboard/user-files/${user.id}`
+            getUserFilesEndpoint(user.id)
         );
 
         selectedUser.value = {
@@ -222,18 +240,12 @@ const toggleSortOrder = () => {
 
 <template>
     <Head title="All Applications" />
-    <AppLayout>
-        <div class="px-4 md:px-8 mb-8">
-            <!-- Header Section -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">All Applications</h1>
-                    <p class="text-gray-600 dark:text-gray-400 mt-2">Manage and review applicant submissions</p>
-                </div>
-            </div>
-
-            <!-- User Not Found Error -->
-            <div v-if="userNotFoundError" class="mb-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 rounded-lg flex items-start">
+    <component :is="currentLayout">
+        <div
+            class="max-w-7xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto"
+        >
+            <!-- User Not Found Error Message -->
+            <div v-if="userNotFoundError" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-start">
                 <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                 </svg>
@@ -255,50 +267,80 @@ const toggleSortOrder = () => {
                     :key="index"
                     class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
                 >
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">{{ item.label }}</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ item.value.toLocaleString() }}</p>
-                        </div>
-                        <div :class="[
-                            'p-3 rounded-lg',
-                            item.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300' :
-                            item.color === 'green' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300' :
-                            item.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300' :
-                            'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300'
-                        ]">
-                            <component :is="item.icon" class="w-6 h-6" />
-                        </div>
+                    <div
+                        class="flex items-center border-4 border-red-400 rounded-full px-2 py-1.5 bg-white dark:bg-gray-800 w-full sm:w-auto"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5 text-black dark:text-white mr-2"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                        </svg>
+                        <input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search by name..."
+                            class="bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-sm text-black dark:text-white placeholder-gray-500 w-full"
+                        />
                     </div>
                 </div>
             </div>
 
-            <!-- Filters Section -->
-            <div class="mb-8">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                    <div class="flex flex-col lg:flex-row gap-4">
-                        <!-- Search -->
-                        <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Applicants</label>
-                            <div class="relative">
-                                <input
-                                    v-model="searchQuery"
-                                    type="text"
-                                    placeholder="Search by name..."
-                                    class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                />
-                                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                        </div>
+                    <button
+                        @click="clearFilters"
+                        class="text-sm text-black dark:text-white border border-[#9E122C] rounded px-3 py-1.5 hover:bg-[#FDE8EA] transition"
+                    >
+                        Clear Filters
+                    </button>
 
-                        <!-- Status Filter -->
-                        <div class="w-full lg:w-48">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-                            <select
-                                v-model="statusFilter"
-                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                    <div class="relative">
+                        <button
+                            @click="showStatusDropdown = !showStatusDropdown"
+                            class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
+                            title="Filter"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
+                                />
+                            </svg>
+                        </button>
+                        <div
+                            v-if="showStatusDropdown"
+                            class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm"
+                        >
+                            <button
+                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
+                                @click="
+                                    statusFilter = '';
+                                    showStatusDropdown = false;
+                                "
+                            >
+                                All
+                            </button>
+                            <button
+                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
+                                @click="
+                                    statusFilter = 'accepted';
+                                    showStatusDropdown = false;
+                                "
                             >
                                 <option value="">All Statuses</option>
                                 <option value="accepted">Accepted</option>
@@ -338,90 +380,95 @@ const toggleSortOrder = () => {
                             </button>
                         </div>
                     </div>
+
+                    <button
+                        @click="sortAsc = !sortAsc"
+                        class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
+                        title="Sort"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                :d="
+                                    sortAsc ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'
+                                "
+                            />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
-            <!-- Applications Table -->
-            <div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <!-- Loading State -->
-                    <div v-if="loading" class="text-center py-16">
-                        <svg class="animate-spin h-10 w-10 text-[#9E122C] mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <p class="text-gray-600 dark:text-gray-400">Loading applicants...</p>
-                    </div>
-
-                    <!-- Error State -->
-                    <div v-else-if="fetchError" class="text-center py-16">
-                        <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Error Loading Data</h3>
-                        <p class="text-gray-500 dark:text-gray-400 mb-4">{{ fetchError }}</p>
-                        <button @click="fetchUsers" class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium">
-                            Try Again
-                        </button>
-                    </div>
-
-                    <!-- Table Header -->
-                    <div v-else class="grid grid-cols-10 gap-4 px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        <div class="col-span-4">Name</div>
-                        <div class="col-span-3">Course</div>
-                        <div class="col-span-2">Status</div>
-                        <div class="col-span-1 text-right">Actions</div>
-                    </div>
-
-                    <!-- Table Body -->
-                    <div v-for="user in paginatedUsers" :key="user.id" 
-                         class="group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition border-b border-gray-100 dark:border-gray-700 last:border-0">
-                        <div class="px-6 py-4 grid grid-cols-10 gap-4 items-center text-sm">
-                            <div class="col-span-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-[#9E122C]/10 text-[#9E122C] flex items-center justify-center font-semibold">
-                                        {{ user.firstname?.charAt(0) }}{{ user.lastname?.charAt(0) }}
-                                    </div>
-                                    <div>
-                                        <p class="font-semibold text-gray-900 dark:text-white">{{ user.firstname }} {{ user.lastname }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ user.email }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-span-3 text-gray-600 dark:text-gray-300">
-                                {{ user.program?.name || "—" }}
-                            </div>
-                            <div class="col-span-2">
+            <div class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
+                <div v-if="loading" class="text-center text-gray-500 py-4">Loading applicants…</div>
+                <div v-else-if="fetchError" class="text-center text-red-500 py-4">Error: {{ fetchError }}</div>
+                <div v-if="!loading && !fetchError" class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Showing {{ paginatedUsers.length }} of
+                    {{ filteredUsers.length }} users
+                </div>
+                <table class="min-w-full text-base">
+                    <thead>
+                        <tr class="text-left font-semibold text-black dark:text-white">
+                            <th
+                                class="pb-2 cursor-pointer"
+                                @click="sortBy('lastname')"
+                            >
+                                Name
+                            </th>
+                            <th class="pb-2">Course</th>
+                            <th class="pb-2">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-600">
+                        <tr
+                            v-for="user in paginatedUsers"
+                            :key="user.id"
+                            @click="selectUser(user)"
+                            class="cursor-pointer hover:bg-white dark:bg-gray-800/10 backdrop-blur-sm transition"
+                        >
+                            <td class="py-2 text-black dark:text-white font-medium">
+                                {{ user.firstname }} {{ user.lastname }}
+                            </td>
+                            <td class="py-2 text-black dark:text-white">
+                                {{ user.program.name || "—" }}
+                            </td>
+                            <td class="py-2">
                                 <span
                                     :class="getStatusClass(user.status)"
                                     class="px-2.5 py-1 rounded-full text-xs font-medium"
                                 >
                                     {{ user.status || "Unknown" }}
                                 </span>
-                            </div>
-                            <div class="col-span-1 text-right">
-                                <button 
-                                    @click="selectUser(user)" 
-                                    class="p-2 text-gray-400 hover:text-[#9E122C] dark:hover:text-[#9E122C] transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                                    title="View Details"
-                                >
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
 
-                    <!-- Empty State -->
-                    <div v-if="!loading && !fetchError && paginatedUsers.length === 0" class="text-center py-16">
-                        <svg class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No applicants found</h3>
-                        <p class="text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria</p>
-                    </div>
+                <div class="flex justify-end items-center space-x-4 mt-4">
+                    <button
+                        @click="currentPage--"
+                        :disabled="currentPage === 1"
+                        class="text-sm text-black dark:text-white disabled:text-gray-900"
+                    >
+                        Previous
+                    </button>
+                    <span class="text-sm"
+                        >Page {{ currentPage }} of {{ totalPages }}</span
+                    >
+                    <button
+                        @click="currentPage++"
+                        :disabled="currentPage === totalPages"
+                        class="text-sm text-black dark:text-white disabled:text-gray-900"
+                    >
+                        Next
+                    </button>
                 </div>
 
                 <!-- Pagination -->
@@ -462,7 +509,7 @@ const toggleSortOrder = () => {
         <transition name="slide-fade">
             <div
                 v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl overflow-y-auto"
+                class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-800 dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
             >
                 <!-- Header -->
                 <div class="flex justify-between items-center mb-6">
@@ -610,7 +657,7 @@ const toggleSortOrder = () => {
                 </button>
             </div>
         </div>
-    </AppLayout>
+    </component>
 </template>
 
 <style scoped>

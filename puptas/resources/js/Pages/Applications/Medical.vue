@@ -1,100 +1,91 @@
 <template>
     <Head title="All Medical Applications" />
     <MedicalLayout>
-        <div class="px-4 md:px-8 mb-8">
-            <!-- Header Section -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Medical Applications</h1>
-                    <p class="text-gray-600 dark:text-gray-400 mt-2">Review and clear medical requirements</p>
-                </div>
-            </div>
-
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Total Applicants</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ users.length }}</p>
-                        </div>
-                        <div class="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                            </svg>
-                        </div>
+        <div
+            class="max-w-7xl mx-auto py-2 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto"
+        >
+            <div
+                class="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-2"
+            >
+                <h2 class="text-2xl font-bold text-[#9E122C]">
+                    All Applications
+                </h2>
+                <div
+                    class="flex flex-wrap justify-end gap-2 items-center w-full md:w-auto"
+                >
+                    <div
+                        class="flex items-center border-4 border-red-400 rounded-full px-2 py-1.5 bg-white dark:bg-gray-800 w-full sm:w-auto"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5 text-black dark:text-white mr-2"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                        </svg>
+                        <input
+                            v-model="searchQuery"
+                            type="text"
+                            placeholder="Search by name..."
+                            class="bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-sm text-black dark:text-white placeholder-gray-500 w-full"
+                        />
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Cleared</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ users.filter(u => u.status?.toLowerCase() === 'accepted').length }}</p>
-                        </div>
-                        <div class="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
+                    <button
+                        @click="clearFilters"
+                        class="text-sm text-black dark:text-white border border-[#9E122C] rounded px-3 py-1.5 hover:bg-[#FDE8EA] transition"
+                    >
+                        Clear Filters
+                    </button>
 
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Pending</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ users.filter(u => u.status?.toLowerCase() === 'pending').length }}</p>
-                        </div>
-                        <div class="p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Rejected</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ users.filter(u => u.status?.toLowerCase() === 'rejected').length }}</p>
-                        </div>
-                        <div class="p-3 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Filters Section -->
-            <div class="mb-8">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                    <div class="flex flex-col lg:flex-row gap-4">
-                        <!-- Search -->
-                        <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Applicants</label>
-                            <div class="relative">
-                                <input
-                                    v-model="searchQuery"
-                                    type="text"
-                                    placeholder="Search by name..."
-                                    class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                    <div class="relative">
+                        <button
+                            @click="showStatusDropdown = !showStatusDropdown"
+                            class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
+                            title="Filter"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
                                 />
-                                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                        </div>
-
-                        <!-- Status Filter -->
-                        <div class="w-full lg:w-48">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-                            <select
-                                v-model="statusFilter"
-                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                            </svg>
+                        </button>
+                        <div
+                            v-if="showStatusDropdown"
+                            class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm"
+                        >
+                            <button
+                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
+                                @click="
+                                    statusFilter = '';
+                                    showStatusDropdown = false;
+                                "
+                            >
+                                All
+                            </button>
+                            <button
+                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
+                                @click="
+                                    statusFilter = 'accepted';
+                                    showStatusDropdown = false;
+                                "
                             >
                                 <option value="">All Statuses</option>
                                 <option value="accepted">Cleared</option>
@@ -134,61 +125,64 @@
                             </button>
                         </div>
                     </div>
+
+                    <button
+                        @click="sortAsc = !sortAsc"
+                        class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
+                        title="Sort"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                :d="
+                                    sortAsc ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'
+                                "
+                            />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
-            <!-- Applications Table -->
-            <div>
-                <!-- Loading State -->
-                <div v-if="isLoading" class="text-center py-16">
-                    <svg class="animate-spin h-10 w-10 text-[#9E122C] mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p class="text-gray-600 dark:text-gray-400">Loading applicants...</p>
+            <div class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Showing {{ paginatedUsers.length }} of
+                    {{ filteredUsers.length }} users
                 </div>
-
-                <!-- Error State -->
-                <div v-else-if="errorMessage" class="text-center py-16">
-                    <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Error Loading Data</h3>
-                    <p class="text-gray-500 dark:text-gray-400 mb-4">{{ errorMessage }}</p>
-                    <button @click="fetchUsers" class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium">
-                        Try Again
-                    </button>
-                </div>
-
-                <!-- Table -->
-                <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <!-- Table Header -->
-                    <div class="grid grid-cols-10 gap-4 px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        <div class="col-span-4">Name</div>
-                        <div class="col-span-3">Course</div>
-                        <div class="col-span-2">Status</div>
-                        <div class="col-span-1 text-right">Actions</div>
-                    </div>
-
-                    <!-- Table Body -->
-                    <div v-for="user in paginatedUsers" :key="user.id" 
-                         class="group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition border-b border-gray-100 dark:border-gray-700 last:border-0">
-                        <div class="px-6 py-4 grid grid-cols-10 gap-4 items-center text-sm">
-                            <div class="col-span-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-[#9E122C]/10 text-[#9E122C] flex items-center justify-center font-semibold">
-                                        {{ user.firstname?.charAt(0) }}{{ user.lastname?.charAt(0) }}
-                                    </div>
-                                    <div>
-                                        <p class="font-semibold text-gray-900 dark:text-white">{{ user.firstname }} {{ user.lastname }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ user.email }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-span-3 text-gray-600 dark:text-gray-300">
-                                {{ user.program?.name || "—" }}
-                            </div>
-                            <div class="col-span-2">
+                <table class="min-w-full text-base">
+                    <thead>
+                        <tr class="text-left font-semibold text-black dark:text-white">
+                            <th
+                                class="pb-2 cursor-pointer"
+                                @click="sortBy('lastname')"
+                            >
+                                Name
+                            </th>
+                            <th class="pb-2">Course</th>
+                            <th class="pb-2">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-600">
+                        <tr
+                            v-for="user in paginatedUsers"
+                            :key="user.id"
+                            @click="selectUser(user)"
+                            class="cursor-pointer hover:bg-white dark:bg-gray-800/10 backdrop-blur-sm transition"
+                        >
+                            <td class="py-2 text-black dark:text-white font-medium">
+                                {{ user.firstname }} {{ user.lastname }}
+                            </td>
+                            <td class="py-2 text-black dark:text-white">
+                                {{ user.program.name || "—" }}
+                            </td>
+                            <td class="py-2">
                                 <span
                                     :class="getStatusClass(user.status)"
                                     class="px-2.5 py-1 rounded-full text-xs font-medium"
@@ -211,14 +205,24 @@
                         </div>
                     </div>
 
-                    <!-- Empty State -->
-                    <div v-if="paginatedUsers.length === 0" class="text-center py-16">
-                        <svg class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No applicants found</h3>
-                        <p class="text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria</p>
-                    </div>
+                <div class="flex justify-end items-center space-x-4 mt-4">
+                    <button
+                        @click="currentPage--"
+                        :disabled="currentPage === 1"
+                        class="text-sm text-black dark:text-white disabled:text-gray-900"
+                    >
+                        Previous
+                    </button>
+                    <span class="text-sm"
+                        >Page {{ currentPage }} of {{ totalPages }}</span
+                    >
+                    <button
+                        @click="currentPage++"
+                        :disabled="currentPage === totalPages"
+                        class="text-sm text-black dark:text-white disabled:text-gray-900"
+                    >
+                        Next
+                    </button>
                 </div>
 
                 <!-- Pagination -->
@@ -259,7 +263,7 @@
         <transition name="slide-fade">
             <div
                 v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl overflow-y-auto"
+                class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-800 dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
             >
                 <!-- Header -->
                 <div class="flex justify-between items-center mb-6">

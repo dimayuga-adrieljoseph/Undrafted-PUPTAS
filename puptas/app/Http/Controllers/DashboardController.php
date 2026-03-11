@@ -109,7 +109,7 @@ class DashboardController extends Controller
 
     public function getUsers()
     {
-        // Defense in depth: Verify authentication and admin role
+        // Defense in depth: Verify authentication and authorized role (admin, evaluator, interviewer)
         $user = Auth::user();
         if (!$user || !in_array($user->role_id, [2, 7])) {
             return response()->json(['message' => 'Unauthorized access'], 403);
