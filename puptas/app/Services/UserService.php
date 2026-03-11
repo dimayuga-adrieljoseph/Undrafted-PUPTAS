@@ -59,6 +59,7 @@ class UserService
                 $query->select('id', 'code', 'name');
             }, 'currentApplication.processes' => function ($query) use ($stage) {
                 $query->where('stage', $stage)
+                    ->orderBy('created_at', 'desc')
                     ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
             }])
             ->where('role_id', 1)
@@ -73,7 +74,7 @@ class UserService
             ->map(function ($user) use ($stage) {
                 $application = $user->currentApplication;
                 $stageProcess = $application && $application->processes ? 
-                    $application->processes->firstWhere('stage', $stage) : null;
+                    $application->processes->first() : null;
                 
                 return [
                     'id' => $user->id,
@@ -122,6 +123,7 @@ class UserService
                 $query->select('id', 'code', 'name');
             }, 'currentApplication.processes' => function ($query) use ($stage) {
                 $query->where('stage', $stage)
+                    ->orderBy('created_at', 'desc')
                     ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
             }])
             ->where('role_id', 1)
@@ -135,7 +137,7 @@ class UserService
             ->map(function ($user) use ($stage) {
                 $application = $user->currentApplication;
                 $stageProcess = $application && $application->processes ? 
-                    $application->processes->firstWhere('stage', $stage) : null;
+                    $application->processes->first() : null;
                 
                 return [
                     'id' => $user->id,
