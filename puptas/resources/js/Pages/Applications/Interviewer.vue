@@ -163,7 +163,7 @@
                                 {{ user.firstname }} {{ user.lastname }}
                             </td>
                             <td class="py-2 text-white">
-                                {{ user.program.name || "—" }}
+                                {{ user.application?.program?.name || "—" }}
                             </td>
                             <td class="py-2">
                                 <span
