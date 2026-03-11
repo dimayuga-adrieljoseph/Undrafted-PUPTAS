@@ -46,7 +46,7 @@ Route::get('/applications/user/{user}', function ($user) {
     // Verify user exists and is an applicant
     $applicant = \App\Models\User::where('id', $user)
         ->where('role_id', 1)
-        ->whereHas('application')
+        ->whereHas('currentApplication')
         ->first();
 
     if (!$applicant) {
