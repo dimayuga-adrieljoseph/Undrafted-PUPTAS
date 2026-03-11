@@ -54,10 +54,10 @@ class UserService
     public function getApplicantsByStage(string $stage): Collection
     {
         return User::with(['currentApplication' => function ($query) {
-                $query->select('id', 'user_id', 'status', 'created_at', 'program_id');
-            }, 'currentApplication.program' => function ($query) {
-                $query->select('id', 'code', 'name');
-            }])
+            $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
+        }, 'currentApplication.program' => function ($query) {
+            $query->select('id', 'code', 'name');
+        }])
             ->where('role_id', 1)
             ->whereHas('applications', function ($query) use ($stage) {
                 $query->whereNotIn('status', ['accepted'])
@@ -71,7 +71,6 @@ class UserService
                             ->whereIn('action', ['passed', 'transferred']);
                     })
                     ->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)');
-                    });
             })
             ->get()
             ->map(function ($user) {
