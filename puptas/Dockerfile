@@ -111,6 +111,11 @@ RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs b
     && chmod -R 775 storage bootstrap/cache \
     && chmod -R 755 storage/framework storage/logs
 
+RUN composer require setasign/fpdi tecnickcom/tcpdf
+
+RUN mkdir -p storage/app/templates && \
+    cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/
+
 EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
