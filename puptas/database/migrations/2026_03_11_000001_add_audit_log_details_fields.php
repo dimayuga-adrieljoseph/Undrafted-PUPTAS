@@ -45,15 +45,27 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop indexes first (in reverse order)
+        $this->dropIndexSafe('audit_logs', 'module_name');
+        $this->dropIndexSafe('audit_logs', 'action_type');
+        $this->dropIndexSafe('audit_logs', 'ip_address');
+
+        // Only drop columns that exist to prevent errors on rollback
         Schema::table('audit_logs', function (Blueprint $table) {
-            $table->dropColumn([
+            $columnsToCheck = [
                 'ip_address',
                 'user_agent',
                 'request_url',
                 'session_id',
                 'old_values',
                 'new_values',
-            ]);
+            ];
+
+            foreach ($columnsToCheck as $column) {
+                if (Schema::hasColumn('audit_logs', $column)) {
+                    $table->dropColumn($column);
+                }
+            }
         });
     }
 
@@ -68,6 +80,20 @@ return new class extends Migration
             );
         } catch (\Throwable $e) {
             // Index may already exist, ignore
+        }
+    }
+
+    /**
+     * Safely drop an index, ignoring errors if it doesn't exist.
+     */
+    private function dropIndexSafe(string $table, string $column): void
+    {
+        try {
+            \Illuminate\Support\Facades\DB::statement(
+                "ALTER TABLE `{$table}` DROP INDEX `{$table}_{$column}_index`"
+            );
+        } catch (\Throwable $e) {
+            // Index may not exist, ignore
         }
     }
 };
