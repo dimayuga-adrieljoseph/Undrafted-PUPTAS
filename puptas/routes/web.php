@@ -25,6 +25,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CallbackController;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureAdminOrRegistrar;
 
 Route::get('/', function () {
     return Inertia::render('Auth/Login', [
@@ -214,7 +215,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
 
     // Admin SAR Management Routes - Restricted to Admin (2), Superadmin (7), and Registrar (6)
-    Route::middleware(['auth', EnsureAdmin::class])->group(function () {
+    Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
         Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
         Route::get('/admin/sar/{id}/download', [TestPasserController::class, 'adminDownloadSar'])->name('admin.sar-download');
         Route::get('/admin/sar/{id}/preview', [TestPasserController::class, 'adminPreviewSar'])->name('admin.sar-preview');

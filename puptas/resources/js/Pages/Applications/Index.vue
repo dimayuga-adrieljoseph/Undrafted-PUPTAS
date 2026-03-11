@@ -267,124 +267,55 @@ const toggleSortOrder = () => {
                     :key="index"
                     class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
                 >
-                    <div
-                        class="flex items-center border-4 border-red-400 rounded-full px-2 py-1.5 bg-white dark:bg-gray-800 w-full sm:w-auto"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5 text-black dark:text-white mr-2"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                        </svg>
-                        <input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Search by name..."
-                            class="bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-sm text-black dark:text-white placeholder-gray-500 w-full"
-                        />
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">{{ item.label }}</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ item.value.toLocaleString() }}</p>
+                        </div>
+                        <div :class="[
+                            'p-3 rounded-lg',
+                            item.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300' :
+                            item.color === 'green' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300' :
+                            item.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300' :
+                            'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300'
+                        ]">
+                            <component :is="item.icon" class="w-6 h-6" />
+                        </div>
                     </div>
                 </div>
             </div>
 
-                    <button
-                        @click="clearFilters"
-                        class="text-sm text-black dark:text-white border border-[#9E122C] rounded px-3 py-1.5 hover:bg-[#FDE8EA] transition"
+            <!-- Filters and Controls -->
+            <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                <!-- Search Input -->
+                <div class="flex-1 relative">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
                     >
-                        Clear Filters
-                    </button>
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                    </svg>
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Search by name..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                    />
+                </div>
 
-                    <div class="relative">
-                        <button
-                            @click="showStatusDropdown = !showStatusDropdown"
-                            class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
-                            title="Filter"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
-                                />
-                            </svg>
-                        </button>
-                        <div
-                            v-if="showStatusDropdown"
-                            class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm"
-                        >
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = '';
-                                    showStatusDropdown = false;
-                                "
-                            >
-                                All
-                            </button>
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = 'accepted';
-                                    showStatusDropdown = false;
-                                "
-                            >
-                                <option value="">All Statuses</option>
-                                <option value="accepted">Accepted</option>
-                                <option value="pending">Pending</option>
-                                <option value="rejected">Rejected</option>
-                            </select>
-                        </div>
-
-                        <!-- Sort By -->
-                        <div class="w-full lg:w-48">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sort By</label>
-                            <select v-model="sortKey" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent">
-                                <option value="lastname">Last Name</option>
-                                <option value="firstname">First Name</option>
-                                <option value="email">Email</option>
-                                <option value="status">Status</option>
-                            </select>
-                        </div>
-
-                        <!-- Sort Order -->
-                        <div class="flex items-end space-x-2">
-                            <button 
-                                @click="toggleSortOrder" 
-                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
-                            >
-                                <span>{{ sortAsc ? 'Ascending' : 'Descending' }}</span>
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path v-if="sortAsc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4" />
-                                </svg>
-                            </button>
-                            <button 
-                                @click="clearFilters" 
-                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium"
-                            >
-                                Clear
-                            </button>
-                        </div>
-                    </div>
-
+                <!-- Status Filter Dropdown -->
+                <div class="relative">
                     <button
-                        @click="sortAsc = !sortAsc"
-                        class="text-black dark:text-white p-2 border border-[#9E122C] rounded-full"
-                        title="Sort"
+                        @click="showStatusDropdown = !showStatusDropdown"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -397,13 +328,81 @@ const toggleSortOrder = () => {
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
                                 stroke-width="2"
-                                :d="
-                                    sortAsc ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'
-                                "
+                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
                             />
                         </svg>
+                        <span>{{ statusFilter ? statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) : 'All Statuses' }}</span>
                     </button>
+                    <div
+                        v-if="showStatusDropdown"
+                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[150px]"
+                    >
+                        <button
+                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="
+                                statusFilter = '';
+                                showStatusDropdown = false;
+                            "
+                        >
+                            All
+                        </button>
+                        <button
+                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="
+                                statusFilter = 'accepted';
+                                showStatusDropdown = false;
+                            "
+                        >
+                            Accepted
+                        </button>
+                        <button
+                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="
+                                statusFilter = 'pending';
+                                showStatusDropdown = false;
+                            "
+                        >
+                            Pending
+                        </button>
+                        <button
+                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="
+                                statusFilter = 'rejected';
+                                showStatusDropdown = false;
+                            "
+                        >
+                            Rejected
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Sort By -->
+                <select v-model="sortKey" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent">
+                    <option value="lastname">Last Name</option>
+                    <option value="firstname">First Name</option>
+                    <option value="email">Email</option>
+                    <option value="status">Status</option>
+                </select>
+
+                <!-- Sort Order -->
+                <button 
+                    @click="toggleSortOrder" 
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
+                >
+                    <span>{{ sortAsc ? 'Ascending' : 'Descending' }}</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path v-if="sortAsc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                        <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4" />
+                    </svg>
+                </button>
+
+                <!-- Clear Filters -->
+                <button 
+                    @click="clearFilters" 
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium"
+                >
+                    Clear
+                </button>
             </div>
 
             <div class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
