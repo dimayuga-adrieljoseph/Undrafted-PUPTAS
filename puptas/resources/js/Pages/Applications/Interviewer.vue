@@ -162,8 +162,8 @@
                             <td class="py-2 text-black dark:text-white font-medium">
                                 {{ user.firstname }} {{ user.lastname }}
                             </td>
-                            <td class="py-2 text-black dark:text-white">
-                                {{ user.program.name || "—" }}
+                            <td class="py-2 text-white">
+                                {{ user.application?.program?.name || "—" }}
                             </td>
                             <td class="py-2">
                                 <span
