@@ -31,7 +31,7 @@ Route::get('/', function () {
     ]);
 })->middleware('guest')->name('welcome');
 
-// View applicant details route - expects user ID, restricted to admin
+// View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
     // Validate ID is numeric
     if (!is_numeric($user)) {
@@ -51,7 +51,7 @@ Route::get('/applications/user/{user}', function ($user) {
     return Inertia::render('Applications/Index', [
         'selectedUserId' => (int) $user
     ]);
-})->middleware(['auth', 'role:2'])->whereNumber('user')->name('applications.show');
+})->middleware(['auth', 'role:2,3,4'])->whereNumber('user')->name('applications.show');
 
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $request->validate(['email' => 'required|email']);
@@ -336,11 +336,15 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
 });
 
+// Shared endpoint for viewing user list - accessible by admin, evaluator, and interviewer
+Route::middleware(['auth', 'role:2,3,4'])->group(function () {
+    Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
+});
+
 // User Management Routes (Protected - Admin Only)
 Route::middleware(['auth', 'role:2'])->group(function () {
     // Admin Dashboard Routes
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
     Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
 
     // Legacy routes (keep for backward compatibility if needed)
