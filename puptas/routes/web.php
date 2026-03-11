@@ -336,16 +336,16 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
 });
 
-// Shared endpoint for viewing user details - accessible by admin, evaluator, and interviewer
+// Shared endpoint for viewing user list - accessible by admin, evaluator, and interviewer
 Route::middleware(['auth', 'role:2,3,4'])->group(function () {
     Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
-    Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
 });
 
 // User Management Routes (Protected - Admin Only)
 Route::middleware(['auth', 'role:2'])->group(function () {
     // Admin Dashboard Routes
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
 
     // Legacy routes (keep for backward compatibility if needed)
     Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.legacy');

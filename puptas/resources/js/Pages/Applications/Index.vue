@@ -112,10 +112,17 @@ const getStatusClass = (status) => {
     return "bg-gray-100 text-gray-600";
 };
 
+const getUserFilesEndpoint = (userId) => {
+    const roleId = currentUser.value?.role_id;
+    if (roleId === 3) return `/dashboard/user-files/${userId}`; // Evaluator
+    if (roleId === 4) return `/interviewer-dashboard/application/${userId}`; // Interviewer
+    return `/admin-dashboard/user-files/${userId}`; // Admin (default)
+};
+
 const selectUser = async (user) => {
     try {
         const response = await axios.get(
-            `/admin-dashboard/user-files/${user.id}`
+            getUserFilesEndpoint(user.id)
         );
 
         selectedUser.value = {

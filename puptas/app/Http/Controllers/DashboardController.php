@@ -138,9 +138,9 @@ class DashboardController extends Controller
     }
     public function getUserFiles($id)
     {
-        // Defense in depth: Verify authentication and authorized role (admin, evaluator, interviewer)
+        // Defense in depth: Verify authentication and admin role
         $authUser = Auth::user();
-        if (!$authUser || !in_array($authUser->role_id, [2, 3, 4])) {
+        if (!$authUser || $authUser->role_id !== 2) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
         
