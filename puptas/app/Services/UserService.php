@@ -54,21 +54,16 @@ class UserService
     public function getApplicantsByStage(string $stage): Collection
     {
         return User::with(['currentApplication' => function ($query) {
-            $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
-        }, 'currentApplication.program' => function ($query) {
-            $query->select('id', 'code', 'name');
-        }])
+                $query->select('id', 'user_id', 'status', 'created_at', 'program_id');
+            }, 'currentApplication.program' => function ($query) {
+                $query->select('id', 'code', 'name');
+            }])
             ->where('role_id', 1)
             ->whereHas('currentApplication', function ($query) use ($stage) {
                 $query->whereNotIn('status', ['accepted'])
                     ->whereHas('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
                             ->whereIn('status', ['in_progress', 'returned']);
-                    })
-                    ->whereDoesntHave('processes', function ($q) use ($stage) {
-                        $q->where('stage', $stage)
-                            ->where('status', 'completed')
-                            ->whereIn('action', ['passed', 'transferred']);
                     });
             })
             ->get()
@@ -358,6 +353,7 @@ class UserService
             4 => 'Interviewer',
             5 => 'Medical',
             6 => 'Registrar',
+            7 => 'Superadmin',
         ];
     }
 }

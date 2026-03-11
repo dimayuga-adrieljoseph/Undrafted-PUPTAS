@@ -37,6 +37,7 @@
                             class="bg-transparent border-none outline-none focus:ring-0 focus:outline-none text-sm text-black dark:text-white placeholder-gray-500 w-full"
                         />
                     </div>
+                </div>
 
                     <button
                         @click="clearFilters"
@@ -86,25 +87,41 @@
                                     showStatusDropdown = false;
                                 "
                             >
-                                Accepted
-                            </button>
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = 'pending';
-                                    showStatusDropdown = false;
-                                "
+                                <option value="">All Statuses</option>
+                                <option value="accepted">Cleared</option>
+                                <option value="pending">Pending</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+
+                        <!-- Sort By -->
+                        <div class="w-full lg:w-48">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sort By</label>
+                            <select v-model="sortKey" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent">
+                                <option value="lastname">Last Name</option>
+                                <option value="firstname">First Name</option>
+                                <option value="email">Email</option>
+                                <option value="status">Status</option>
+                            </select>
+                        </div>
+
+                        <!-- Sort Order -->
+                        <div class="flex items-end space-x-2">
+                            <button 
+                                @click="sortAsc = !sortAsc" 
+                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
                             >
-                                Pending
+                                <span>{{ sortAsc ? 'Ascending' : 'Descending' }}</span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path v-if="sortAsc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4" />
+                                </svg>
                             </button>
-                            <button
-                                class="block px-4 py-2 w-full text-left hover:bg-gray-100"
-                                @click="
-                                    statusFilter = 'rejected';
-                                    showStatusDropdown = false;
-                                "
+                            <button 
+                                @click="clearFilters" 
+                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium"
                             >
-                                Rejected
+                                Clear
                             </button>
                         </div>
                     </div>
@@ -168,14 +185,25 @@
                             <td class="py-2">
                                 <span
                                     :class="getStatusClass(user.status)"
-                                    class="px-2 py-1 rounded text-sm font-semibold"
+                                    class="px-2.5 py-1 rounded-full text-xs font-medium"
                                 >
                                     {{ user.status || "Unknown" }}
                                 </span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                            </div>
+                            <div class="col-span-1 text-right">
+                                <button 
+                                    @click="selectUser(user)" 
+                                    class="p-2 text-gray-400 hover:text-[#9E122C] dark:hover:text-[#9E122C] transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    title="View Details"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
                 <div class="flex justify-end items-center space-x-4 mt-4">
                     <button
@@ -197,247 +225,232 @@
                     </button>
                 </div>
 
-                <p
-                    v-if="paginatedUsers.length === 0"
-                    class="text-center text-gray-400 mt-4"
-                >
-                    No results found.
-                </p>
+                <!-- Pagination -->
+                <div class="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        Showing <span class="font-medium">{{ paginatedUsers.length }}</span> of 
+                        <span class="font-medium">{{ filteredUsers.length }}</span> applicants
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <button 
+                            @click="currentPage--" 
+                            :disabled="currentPage === 1"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                            Previous
+                        </button>
+                        
+                        <div class="flex items-center space-x-2">
+                            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium">{{ currentPage }}</span>
+                            <span class="text-gray-500 dark:text-gray-400">of</span>
+                            <span class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">{{ totalPages || 1 }}</span>
+                        </div>
+                        
+                        <button 
+                            @click="currentPage++" 
+                            :disabled="currentPage === totalPages || totalPages === 0"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- User Info Modal -->
-
-        <!-- User Info Modal -->
+        <!-- User Details Modal -->
         <transition name="slide-fade">
             <div
                 v-if="selectedUser"
                 class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-800 dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
             >
-                <button
-                    class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
-                    @click="closeUserCard"
-                >
-                    Close
-                </button>
-                <h3
-                    class="text-xl font-semibold text-gray-900 dark:text-white mb-2"
-                >
-                    User Information
-                </h3>
-                <p class="text-gray-800 dark:text-gray-200 font-medium">
-                    Name: {{ selectedUser.lastname }},
-                    {{ selectedUser.firstname }}
-                </p>
-                <p class="text-gray-700 dark:text-gray-400">
-                    Email: {{ selectedUser.email }}
-                </p>
-
-                <div
-                    class="mt-3 p-2 border rounded bg-gray-100 dark:bg-gray-800"
-                >
-                    <h4
-                        class="text-sm font-bold text-gray-700 dark:text-white mb-1"
+                <!-- Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Medical Review</h3>
+                    <button 
+                        @click="closeUserCard"
+                        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
                     >
-                        Current Program:
-                    </h4>
-                    <p class="text-sm text-gray-800 dark:text-gray-300">
-                        {{ selectedUser?.application?.program?.code }} -
-                        {{ selectedUser?.application?.program?.name }}
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Profile Section -->
+                <div class="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                    <div class="w-16 h-16 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-2xl font-semibold">
+                        {{ selectedUser.firstname?.charAt(0) }}{{ selectedUser.lastname?.charAt(0) }}
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                            {{ selectedUser.lastname }}, {{ selectedUser.firstname }}
+                        </h4>
+                        <p class="text-gray-600 dark:text-gray-400">{{ selectedUser.email }}</p>
+                    </div>
+                </div>
+
+                <!-- Program Info -->
+                <div class="mb-6 p-4 bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-xl border border-[#9E122C]/20">
+                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Applied Program</h4>
+                    <p class="text-lg font-medium text-gray-900 dark:text-white">
+                        {{ selectedUser?.application?.program?.code }} - {{ selectedUser?.application?.program?.name }}
                     </p>
                 </div>
 
-                <!-- Evaluate & Cancel buttons -->
-                <div class="mt-3 flex space-x-2 justify-end">
+                <!-- Action Buttons -->
+                <div class="mb-6 flex flex-wrap gap-2">
                     <button
                         v-if="!isEvaluating"
                         @click="startEvaluation"
-                        class="px-3 py-1 text-gray-600 text-l rounded hover:text-yellow-700"
+                        class="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition font-medium text-sm flex items-center justify-center gap-2"
                     >
-                        <font-awesome-icon :icon="faBolt" /> Actions
+                        <font-awesome-icon :icon="faBolt" class="w-4 h-4" />
+                        Actions
                     </button>
-
+                    <button
+                        @click="acceptApplication"
+                        class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm"
+                    >
+                        Clear Medical
+                    </button>
                     <button
                         v-if="isEvaluating"
                         @click="cancelEvaluation"
-                        class="px-3 py-1 bg-gray-400 text-black text-sm rounded hover:bg-gray-500"
+                        class="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition font-medium text-sm"
                     >
                         Cancel
                     </button>
                 </div>
 
-                <!-- Return note textarea -->
-                <div v-if="isEvaluating" class="mt-2">
-                    <label
-                        for="returnNote"
-                        class="block text-xs font-semibold mb-1"
-                    >
+                <!-- Return Form -->
+                <div v-if="isEvaluating" class="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Return Reason / Note
                     </label>
                     <textarea
-                        id="returnNote"
                         v-model="returnNote"
-                        rows="2"
-                        class="w-full border rounded p-1 text-xs"
-                        placeholder="Reason for returning..."
+                        rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent text-sm"
+                        placeholder="Reason for returning documents..."
                     ></textarea>
+                    
+                    <div class="mt-4 flex justify-end">
+                        <button
+                            @click="submitReturn"
+                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
+                        >
+                            Return Selected Files
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Submit button -->
-                <div v-if="isEvaluating" class="mt-2 flex justify-end">
-                    <button
-                        @click="submitReturn"
-                        class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                    >
-                        Return Selected Files
-                    </button>
-                    <button
-                        @click="acceptApplication"
-                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                    >
-                        Clear Medical
-                    </button>
-                </div>
-
-                <!-- <div class="mt-4">
-                        Accept and Transfer buttons
-                        <div class="mt-4 flex justify-end space-x-2">
-                            <button
-                                @click="acceptApplication"
-                                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                            >
-                                Clear Medical
-                            </button>
-                        </div>
-                    </div> -->
-
-                <section class="mt-3 text-sm">
-                    <h4 class="font-semibold mb-1 text-base">
-                        Uploaded Documents
-                    </h4>
-                    <div class="grid grid-cols-3 gap-2">
+                <!-- Documents Section -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
+                    <div class="grid grid-cols-2 gap-3">
                         <div
                             v-for="(src, key) in selectedUserFiles"
                             :key="key"
-                            class="flex flex-col items-start space-y-1"
+                            class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
                         >
-                            <div class="flex items-center space-x-2 w-full">
+                            <div class="flex items-start gap-2 mb-2">
                                 <input
                                     v-if="isEvaluating"
                                     type="checkbox"
                                     :id="key"
                                     v-model="filesToReturn[key]"
-                                    class="h-4 w-4 mt-1"
+                                    class="mt-1 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]"
                                 />
-                                <label
-                                    :for="key"
-                                    class="text-xs font-medium truncate w-full"
-                                >
+                                <label :for="key" class="text-xs font-medium text-gray-700 dark:text-gray-300">
                                     {{ formatFileKey(key) }}
                                 </label>
                             </div>
-                            <div class="w-full">
-                                <img
-                                    v-if="src"
-                                    :src="src"
-                                    alt="Uploaded Document"
-                                    class="h-16 w-full object-contain border rounded cursor-pointer"
-                                    @click="openImageModal(src)"
-                                />
-                                <div
-                                    v-else
-                                    class="h-16 flex items-center justify-center text-[10px] italic text-gray-400 border rounded"
-                                >
-                                    No Image
-                                </div>
+                            <img
+                                v-if="src"
+                                :src="src"
+                                :alt="formatFileKey(key)"
+                                class="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
+                                @click="openImageModal(src)"
+                            />
+                            <div
+                                v-else
+                                class="w-full h-24 flex items-center justify-center text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                            >
+                                No Image
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Application History -->
-                    <section
-                        v-if="selectedUser?.application?.processes?.length"
-                        class="mt-4"
-                    >
-                        <h4
-                            class="font-semibold mb-2 text-base text-gray-800 dark:text-gray-200"
+                <!-- Application History -->
+                <div v-if="selectedUser?.application?.processes?.length">
+                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Application History</h4>
+                    <div class="space-y-3">
+                        <div
+                            v-for="(process, index) in selectedUser.application.processes"
+                            :key="index"
+                            class="relative pl-6 pb-3 border-l-2 border-[#9E122C] last:border-0"
                         >
-                            Application History
-                        </h4>
-                        <ul class="border-l-2 border-red-400 pl-3 space-y-2">
-                            <li
-                                v-for="(process, index) in selectedUser
-                                    .application.processes"
-                                :key="index"
-                                class="relative"
-                            >
-                                <div
-                                    class="absolute -left-[10px] top-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"
-                                ></div>
-                                <p
-                                    class="text-sm font-semibold text-gray-900 dark:text-white"
-                                >
-                                    {{ capitalize(process.stage) }} -
-                                    <span
-                                        :class="{
-                                            'text-green-600':
-                                                process.status === 'completed',
-                                            'text-yellow-600':
-                                                process.status ===
-                                                'in_progress',
-                                            'text-red-600':
-                                                process.status === 'returned',
-                                        }"
-                                    >
-                                        {{ capitalize(process.status) }}
-                                    </span>
-                                </p>
-                                <p
-                                    v-if="process.notes"
-                                    class="text-xs text-gray-500 italic"
-                                >
-                                    Note: {{ process.notes }} By:
-                                    {{ process.performed_by.firstname }}
-                                    {{ process.performed_by.lastname }}
-                                </p>
-                                <p class="text-xs text-gray-400">
-                                    {{ formatDate(process.created_at) }}
-                                </p>
-                            </li>
-                        </ul>
-                    </section>
-                </section>
-            </div>
-        </transition>
-        <!-- Snackbar -->
-        <transition name="fade">
-            <div
-                v-if="snackbar.visible"
-                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded shadow-lg z-50"
-            >
-                {{ snackbar.message }}
+                            <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#9E122C] border-2 border-white dark:border-gray-900"></div>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                                {{ capitalize(process.stage) }}
+                                <span :class="{
+                                    'text-green-600 dark:text-green-400': process.status === 'completed',
+                                    'text-yellow-600 dark:text-yellow-400': process.status === 'in_progress',
+                                    'text-red-600 dark:text-red-400': process.status === 'returned',
+                                }">
+                                    • {{ capitalize(process.status) }}
+                                </span>
+                            </p>
+                            <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                                Note: {{ process.notes }}
+                                <span v-if="process.performed_by">
+                                    by {{ process.performed_by.firstname }} {{ process.performed_by.lastname }}
+                                </span>
+                            </p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                {{ formatDate(process.created_at) }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </transition>
 
         <!-- Image Preview Modal -->
         <div
             v-if="showImageModal"
-            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] p-4"
             @click.self="closeImageModal"
         >
-            <img
-                :src="previewImage"
-                alt="Preview"
-                class="max-w-full max-h-full rounded shadow-lg"
-            />
-            <button
-                @click="closeImageModal"
-                class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300"
-                aria-label="Close preview"
-            >
-                &times;
-            </button>
+            <div class="relative max-w-4xl w-full">
+                <img
+                    :src="previewImage"
+                    alt="Preview"
+                    class="w-full h-auto rounded-lg shadow-2xl"
+                />
+                <button
+                    @click="closeImageModal"
+                    class="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
         </div>
+
+        <!-- Snackbar -->
+        <transition name="fade">
+            <div
+                v-if="snackbar.visible"
+                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-lg z-50 text-sm"
+            >
+                {{ snackbar.message }}
+            </div>
+        </transition>
     </MedicalLayout>
 </template>
 
@@ -445,6 +458,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
 import MedicalLayout from "@/Layouts/MedicalLayout.vue";
+import axios from "axios";
 
 import {
     Chart as ChartJS,
@@ -475,14 +489,14 @@ import { faBolt } from "@fortawesome/free-solid-svg-icons";
 
 const currentPage = ref(1);
 const itemsPerPage = 10;
-const sortKey = ref("lastname"); // default to lastname
+const sortKey = ref("lastname");
 const statusFilter = ref("");
 const sortAsc = ref(true);
+const showStatusDropdown = ref(false);
 
 const page = usePage();
 const users = ref(page.props.users || []);
 
-//const users = ref([]);
 const selectedUser = ref(null);
 const isLoading = ref(true);
 const errorMessage = ref("");
@@ -502,32 +516,12 @@ const showSnackbar = (msg, duration = 3000) => {
     }, duration);
 };
 
-const chartData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-        {
-            label: "Submitted",
-            data: [5, 20, 35, 50, 70, 90],
-            borderColor: "#2563EB",
-            backgroundColor: "rgba(37, 99, 235, 0.2)",
-            tension: 0.4,
-        },
-        {
-            label: "Accepted",
-            data: [2, 10, 15, 25, 40, 60],
-            borderColor: "#10B981",
-            backgroundColor: "rgba(16, 185, 129, 0.2)",
-            tension: 0.4,
-        },
-    ],
-};
-
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
-    if (s === "rejected") return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-600";
+    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "rejected") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400";
 };
 
 const fetchUsers = async () => {
@@ -544,6 +538,15 @@ const fetchUsers = async () => {
         errorMessage.value = error.message;
     } finally {
         isLoading.value = false;
+    }
+};
+
+const fetchPrograms = async () => {
+    try {
+        const response = await axios.get("/interviewer-dashboard/programs");
+        availablePrograms.value = response.data.programs;
+    } catch (e) {
+        console.error("Failed to load programs", e);
     }
 };
 
@@ -572,9 +575,17 @@ const filteredUsers = computed(() => {
         });
 });
 
-const displayedUsers = computed(() => {
-    if (searchQuery.value.trim()) return filteredUsers.value;
-    return users.value.slice(0, 4);
+const totalPages = computed(() =>
+    Math.ceil(filteredUsers.value.length / itemsPerPage)
+);
+
+const paginatedUsers = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return filteredUsers.value.slice(start, start + itemsPerPage);
+});
+
+watch([searchQuery, statusFilter, sortKey, sortAsc], () => {
+    currentPage.value = 1;
 });
 
 const selectUser = async (user) => {
@@ -594,17 +605,8 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-        console.log("Full user data:", response.data.user);
-        console.log("Grades check:", response.data.user.grades);
-
-        // ✅ Add this line to load programs into the dropdown
+        
         await fetchPrograms();
-
-        console.log(
-            "User & files:",
-            selectedUser.value,
-            selectedUserFiles.value
-        );
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         selectedUserFiles.value = {};
@@ -614,6 +616,9 @@ const selectUser = async (user) => {
 
 const closeUserCard = () => {
     selectedUser.value = null;
+    isEvaluating.value = false;
+    filesToReturn.value = {};
+    returnNote.value = "";
 };
 
 const formatFileKey = (key) => {
@@ -644,18 +649,17 @@ const closeImageModal = () => {
 
 const isEvaluating = ref(false);
 const filesToReturn = ref({});
-
 const returnNote = ref("");
 
 const startEvaluation = () => {
     isEvaluating.value = true;
-    filesToReturn.value = [];
+    filesToReturn.value = {};
     returnNote.value = "";
 };
 
 const cancelEvaluation = () => {
     isEvaluating.value = false;
-    filesToReturn.value = [];
+    filesToReturn.value = {};
     returnNote.value = "";
 };
 
@@ -663,8 +667,12 @@ const submitReturn = async () => {
     const selected = Object.keys(filesToReturn.value).filter(
         (k) => filesToReturn.value[k]
     );
-    if (selected.length === 0 || !returnNote.value.trim()) {
-        alert("Please select files and enter a return note.");
+    if (selected.length === 0) {
+        alert("Please select at least one file to return.");
+        return;
+    }
+    if (!returnNote.value.trim()) {
+        alert("Please enter a return reason.");
         return;
     }
 
@@ -674,18 +682,17 @@ const submitReturn = async () => {
             note: returnNote.value.trim(),
         });
 
-        alert("Files returned and application status logged.");
+        alert("Files returned successfully.");
 
         isEvaluating.value = false;
         filesToReturn.value = {};
         returnNote.value = "";
 
-        // ✅ Refetch updated user list & status counts
         await fetchUsers();
         await selectUser(selectedUser.value);
     } catch (error) {
         console.error(error);
-        alert("Return failed.");
+        alert("Return failed. Please try again.");
     }
 };
 
@@ -694,83 +701,25 @@ const capitalize = (str) =>
 
 const formatDate = (date) => {
     const d = new Date(date);
-    return d.toLocaleString(); // or .toLocaleDateString() if you prefer
+    return d.toLocaleString();
 };
 
 const acceptApplication = async () => {
     try {
         await axios.post(`/medical-dashboard/accept/${selectedUser.value.id}`);
-        showSnackbar("Application cleared.");
+        showSnackbar("Medical requirements cleared successfully.");
         selectedUser.value = null;
         await fetchUsers();
     } catch (e) {
-        console.error("Accept failed:", e);
+        console.error("Clear failed:", e);
         const msg =
             e.response?.data?.message ||
-            "Failed to accept application due to an unexpected error.";
+            "Failed to clear medical requirements.";
         showSnackbar(msg);
     }
 };
 
-const transferApplication = async () => {
-    try {
-        await axios.post(
-            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
-            {
-                program_id: selectedProgramId.value,
-            }
-        );
-        alert("Applicant transferred successfully!");
-        selectedUser.value = null;
-        selectedProgramId.value = "";
-        fetchUsers();
-    } catch (e) {
-        console.error("Transfer failed", e);
-
-        // ✅ Fix: use `e` not `error`
-        if (e.response?.data?.message) {
-            showSnackbar(e.response.data.message); // ✅ show server message
-        } else {
-            showSnackbar("Transfer failed due to an unexpected error.");
-        }
-    }
-};
-
 const availablePrograms = ref([]);
-
-const fetchPrograms = async () => {
-    try {
-        const response = await axios.get("/interviewer-dashboard/programs");
-        availablePrograms.value = response.data.programs;
-    } catch (e) {
-        console.error("Failed to load programs", e);
-    }
-};
-
-onMounted(fetchUsers);
-
-const totalPages = computed(() =>
-    Math.ceil(filteredUsers.value.length / itemsPerPage)
-);
-
-const paginatedUsers = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage;
-    return filteredUsers.value.slice(start, start + itemsPerPage);
-});
-
-// Reset page when filters/search change
-watch([searchQuery, statusFilter, sortKey, sortAsc], () => {
-    currentPage.value = 1;
-});
-
-const sortBy = (key) => {
-    if (sortKey.value === key) {
-        sortAsc.value = !sortAsc.value;
-    } else {
-        sortKey.value = key;
-        sortAsc.value = true;
-    }
-};
 
 const clearFilters = () => {
     searchQuery.value = "";
@@ -791,5 +740,33 @@ const clearFilters = () => {
 .slide-fade-leave-to {
     transform: translateX(100%);
     opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: #FBCB77;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #9E122C;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #EE6A43;
 }
 </style>

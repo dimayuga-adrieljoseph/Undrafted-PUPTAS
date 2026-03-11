@@ -23,6 +23,7 @@ import {
     faUserShield,
     faHome,
     faUserCircle,
+    faHistory,
 } from "@fortawesome/free-solid-svg-icons";
 
 import NavLink from "@/Components/NavLink.vue";
@@ -48,7 +49,8 @@ library.add(
     faWrench,
     faUserShield,
     faHome,
-    faUserCircle
+    faUserCircle,
+    faHistory
 );
 
 const page = usePage();
@@ -116,6 +118,16 @@ const isUserSettingsActive = isActiveRouteFor([
     "profile.show",
     "api-tokens.index",
 ]);
+
+const isSuperAdmin = computed(() => {
+    return user.value && user.value.role_id === 7;
+});
+
+const isAdmin = computed(() => {
+    return user.value && (user.value.role_id === 2 || user.value.role_id === 7);
+});
+
+const isAuditLogsActive = isActiveRouteFor(["audit-logs.index"]);
 
 /* ---------------- INTERACTION ---------------- */
 const onSidebarEnter = () => (isSidebarOpen.value = true);
@@ -251,7 +263,7 @@ watch(isSidebarOpen, (val) => {
                         'interviewer',
                         'evaluator',
                         'applicant',
-                    ].includes(props.variant)
+                    ].includes(props.variant) || isSuperAdmin
                 "
             >
                 <ul class="space-y-2">
@@ -299,16 +311,7 @@ watch(isSidebarOpen, (val) => {
                                 Passers
                             </span>
                             <div class="flex items-center gap-2">
-                                <div
-                                    v-if="isSidebarOpen"
-                                    class="nav-indicator"
-                                    :class="{
-                                        active:
-                                            isPasserDropdownOpen ||
-                                            isUploadFormActive ||
-                                            isListPassersActive,
-                                    }"
-                                ></div>
+
                                 <FontAwesomeIcon
                                     v-if="isSidebarOpen"
                                     :icon="
@@ -538,6 +541,31 @@ watch(isSidebarOpen, (val) => {
                                 </NavLink>
                             </div>
                         </transition>
+                    </li>
+
+                    <!-- Audit Logs (Superadmin Only) -->
+                    <li v-if="isSuperAdmin">
+                        <NavLink
+                            :href="route('audit-logs.index')"
+                            :active="isAuditLogsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isAuditLogsActive }"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="history"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Audit Logs
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ active: isAuditLogsActive }"
+                            ></div>
+                        </NavLink>
                     </li>
                 </ul>
             </nav>
@@ -789,12 +817,9 @@ watch(isSidebarOpen, (val) => {
 }
 
 .nav-indicator {
-    @apply w-1.5 h-1.5 rounded-full bg-white/50 transition-all duration-200;
+    @apply hidden;
 }
 
-.nav-indicator.active {
-    @apply bg-[#9E122C] scale-125;
-}
 
 /* Dropdown Styles */
 .dropdown-content {
@@ -820,9 +845,6 @@ watch(isSidebarOpen, (val) => {
     @apply opacity-0 w-0;
 }
 
-.sidebar:not(.w-72) .nav-indicator {
-    @apply opacity-0;
-}
 
 .sidebar:not(.w-72) .nav-item {
     @apply px-3 justify-center;
