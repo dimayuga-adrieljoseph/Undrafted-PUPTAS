@@ -64,9 +64,9 @@ class MedicalDashboardController extends Controller
         // Ensure user has medical role
         $this->ensureRole($this->getRoleId());
 
-        // Return applicants filtered by medical stage
+        // Return all applicants filtered by medical stage (including completed)
         return response()->json(
-            $this->userService->getApplicantsByStage('medical')
+            $this->userService->getAllApplicantsByStage('medical')
         );
     }
 
