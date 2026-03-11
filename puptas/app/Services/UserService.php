@@ -63,12 +63,18 @@ class UserService
                     ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
             }])
             ->where('role_id', 1)
-            ->whereHas('currentApplication', function ($query) use ($stage) {
+            ->whereHas('applications', function ($query) use ($stage) {
                 $query->whereNotIn('status', ['accepted'])
                     ->whereHas('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
                             ->whereIn('status', ['in_progress', 'returned']);
-                    });
+                    })
+                    ->whereDoesntHave('processes', function ($q) use ($stage) {
+                        $q->where('stage', $stage)
+                            ->where('status', 'completed')
+                            ->whereIn('action', ['passed', 'transferred']);
+                    })
+                    ->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)');
             })
             ->get()
             ->map(function ($user) use ($stage) {
