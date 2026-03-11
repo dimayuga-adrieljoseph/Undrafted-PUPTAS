@@ -44,10 +44,10 @@ trait ManagesApplicationFiles
                 return response()->json(['message' => 'Application not found'], 404);
             }
 
-            // Check if the application has an in-progress or returned process at this stage
+            // Check if the application has any process at this stage (including completed for read-only access)
             $hasAccess = $application->processes()
                 ->where('stage', $currentStage)
-                ->whereIn('status', ['in_progress', 'returned'])
+                ->whereIn('status', ['in_progress', 'returned', 'completed'])
                 ->exists();
 
             if (!$hasAccess) {

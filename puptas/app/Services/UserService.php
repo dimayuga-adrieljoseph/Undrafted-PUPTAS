@@ -54,9 +54,13 @@ class UserService
     public function getApplicantsByStage(string $stage): Collection
     {
         return User::with(['currentApplication' => function ($query) {
-                $query->select('id', 'user_id', 'status', 'created_at', 'program_id');
+                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
             }, 'currentApplication.program' => function ($query) {
                 $query->select('id', 'code', 'name');
+            }, 'currentApplication.processes' => function ($query) use ($stage) {
+                $query->where('stage', $stage)
+                    ->orderBy('created_at', 'desc')
+                    ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
             }])
             ->where('role_id', 1)
             ->whereHas('currentApplication', function ($query) use ($stage) {
@@ -67,8 +71,11 @@ class UserService
                     });
             })
             ->get()
-            ->map(function ($user) {
+            ->map(function ($user) use ($stage) {
                 $application = $user->currentApplication;
+                $stageProcess = $application && $application->processes ? 
+                    $application->processes->first() : null;
+                
                 return [
                     'id' => $user->id,
                     'firstname' => $user->firstname,
@@ -79,6 +86,11 @@ class UserService
                     'username' => $user->username,
                     'phone' => $user->phone,
                     'company' => $user->company,
+                    'program' => $application && $application->program ? [
+                        'id' => $application->program->id,
+                        'code' => $application->program->code,
+                        'name' => $application->program->name,
+                    ] : null,
                     'application' => $application ? [
                         'id' => $application->id,
                         'status' => $application->status,
@@ -89,6 +101,72 @@ class UserService
                             'name' => $application->program->name,
                         ] : null,
                     ] : null,
+                    'process_status' => $stageProcess ? $stageProcess->status : 'in_progress',
+                    'process_action' => $stageProcess ? $stageProcess->action : null,
+                    'is_evaluation_completed' => $stageProcess && $stageProcess->status === 'completed',
+                ];
+            });
+    }
+
+    /**
+     * Get all applicants by stage including completed
+     * Returns all applicants who have reached the specified stage (in_progress, returned, or completed)
+     *
+     * @param string $stage The application stage (evaluator, interviewer, medical, records)
+     * @return Collection
+     */
+    public function getAllApplicantsByStage(string $stage): Collection
+    {
+        return User::with(['currentApplication' => function ($query) {
+                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
+            }, 'currentApplication.program' => function ($query) {
+                $query->select('id', 'code', 'name');
+            }, 'currentApplication.processes' => function ($query) use ($stage) {
+                $query->where('stage', $stage)
+                    ->orderBy('created_at', 'desc')
+                    ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
+            }])
+            ->where('role_id', 1)
+            ->whereHas('currentApplication', function ($query) use ($stage) {
+                $query->whereHas('processes', function ($q) use ($stage) {
+                    $q->where('stage', $stage)
+                        ->whereIn('status', ['in_progress', 'returned', 'completed']);
+                });
+            })
+            ->get()
+            ->map(function ($user) use ($stage) {
+                $application = $user->currentApplication;
+                $stageProcess = $application && $application->processes ? 
+                    $application->processes->first() : null;
+                
+                return [
+                    'id' => $user->id,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'course' => $user->course,
+                    'status' => $application->status ?? null,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'phone' => $user->phone,
+                    'company' => $user->company,
+                    'program' => $application && $application->program ? [
+                        'id' => $application->program->id,
+                        'code' => $application->program->code,
+                        'name' => $application->program->name,
+                    ] : null,
+                    'application' => $application ? [
+                        'id' => $application->id,
+                        'status' => $application->status,
+                        'created_at' => $application->created_at,
+                        'program' => $application->program ? [
+                            'id' => $application->program->id,
+                            'code' => $application->program->code,
+                            'name' => $application->program->name,
+                        ] : null,
+                    ] : null,
+                    'process_status' => $stageProcess ? $stageProcess->status : 'in_progress',
+                    'process_action' => $stageProcess ? $stageProcess->action : null,
+                    'is_evaluation_completed' => $stageProcess && $stageProcess->status === 'completed',
                 ];
             });
     }
