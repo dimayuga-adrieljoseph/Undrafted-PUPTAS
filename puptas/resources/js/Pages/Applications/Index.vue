@@ -107,7 +107,7 @@ watch([searchQuery, statusFilter, sortKey, sortAsc], () => {
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
+    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700";
     if (s === "rejected") return "bg-red-100 text-red-700";
     return "bg-gray-100 text-gray-600";
 };
@@ -135,14 +135,6 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-        console.log(
-            "User & files:",
-            selectedUser.value,
-            selectedUserFiles.value
-        );
-        console.log("processes:", selectedUser.processes);
-
-        console.log("Processes:", selectedUser.value.application?.processes);
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         selectedUserFiles.value = {};
@@ -305,7 +297,7 @@ const clearFilters = () => {
                             <button
                                 class="block px-4 py-2 w-full text-left hover:bg-gray-100"
                                 @click="
-                                    statusFilter = 'pending';
+                                    statusFilter = 'submitted';
                                     showStatusDropdown = false;
                                 "
                             >

@@ -91,7 +91,7 @@
                             <button
                                 class="block px-4 py-2 w-full text-left hover:bg-gray-100"
                                 @click="
-                                    statusFilter = 'pending';
+                                    statusFilter = 'submitted';
                                     showStatusDropdown = false;
                                 "
                             >
@@ -484,7 +484,7 @@ const chartData = {
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
+    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700";
     if (s === "rejected") return "bg-red-100 text-red-700";
     return "bg-gray-100 text-gray-600";
 };
@@ -553,17 +553,9 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-        console.log("Full user data:", response.data.user);
-        console.log("Grades check:", response.data.user.grades);
 
         // ✅ Add this line to load programs into the dropdown
         await fetchPrograms();
-
-        console.log(
-            "User & files:",
-            selectedUser.value,
-            selectedUserFiles.value
-        );
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         selectedUserFiles.value = {};

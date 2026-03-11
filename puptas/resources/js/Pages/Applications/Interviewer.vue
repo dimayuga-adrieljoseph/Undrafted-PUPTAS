@@ -588,17 +588,9 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-        console.log("Full user data:", response.data.user);
-        console.log("Grades check:", response.data.user.grades);
 
         // ✅ Add this line to load programs into the dropdown
         await fetchPrograms();
-
-        console.log(
-            "User & files:",
-            selectedUser.value,
-            selectedUserFiles.value
-        );
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         selectedUserFiles.value = {};
