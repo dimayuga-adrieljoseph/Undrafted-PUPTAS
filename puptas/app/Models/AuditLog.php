@@ -31,6 +31,12 @@ class AuditLog extends Model
         'description',
         'login_time',
         'logout_time',
+        'ip_address',
+        'user_agent',
+        'request_url',
+        'session_id',
+        'old_values',
+        'new_values',
     ];
 
     protected $casts = [
@@ -38,6 +44,8 @@ class AuditLog extends Model
         'logout_time' => 'datetime',
         'created_at'  => 'datetime',
         'updated_at'  => 'datetime',
+        'old_values'  => 'array',
+        'new_values'  => 'array',
     ];
 
     // ─── Relationships ──────────────────────────────────────────────

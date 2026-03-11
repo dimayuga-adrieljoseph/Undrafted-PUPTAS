@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class UserSeeder extends Seeder
 {
@@ -97,5 +98,65 @@ class UserSeeder extends Seeder
                 $user
             );
         }
+
+        // SECURITY: Only seed superadmin in local/dev environments
+        // Never seed privileged accounts with default passwords in staging/production
+        $this->seedSuperAdminInLocalEnv();
+    }
+
+    /**
+     * Seed superadmin account only in local/development environments.
+     * Password is sourced from SEED_SUPERADMIN_PASSWORD env var or randomly generated.
+     */
+    private function seedSuperAdminInLocalEnv(): void
+    {
+        $environment = app()->environment();
+
+        // Only seed superadmin in local or development environments
+        if (!in_array($environment, ['local', 'development'])) {
+            $this->command->warn(
+                '⚠️  Superadmin seeding skipped (not in local/development environment).'
+            );
+            return;
+        }
+
+        // Get password from environment variable or generate a secure random one
+        $password = env('SEED_SUPERADMIN_PASSWORD');
+
+        if (empty($password)) {
+            // Generate a secure random password
+            $password = Str::random(16) . '!A1a';
+            $this->command->warn(
+                "🔐 Generated random superadmin password: {$password}"
+            );
+            $this->command->warn(
+                '   ⚠️  Save this password now! Set SEED_SUPERADMIN_PASSWORD in .env to use a custom password.'
+            );
+        } else {
+            $this->command->info('✓ Using superadmin password from SEED_SUPERADMIN_PASSWORD env variable.');
+        }
+
+        $superadmin = [
+            'salutation' => 'Mr.',
+            'firstname' => 'Super',
+            'middlename' => 'Admin',
+            'lastname' => 'User',
+            'birthday' => '1990-01-01',
+            'sex' => 'Male',
+            'contactnumber' => '09120000000',
+            'address' => 'Admin Street',
+            'email' => 'superadmin@puptas.edu',
+            'password' => Hash::make($password),
+            'role_id' => 7,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        DB::table('users')->updateOrInsert(
+            ['email' => $superadmin['email']],
+            $superadmin
+        );
+
+        $this->command->info('✓ Superadmin account seeded successfully.');
     }
 }
