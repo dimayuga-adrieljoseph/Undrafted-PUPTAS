@@ -54,7 +54,7 @@ class UserService
     public function getApplicantsByStage(string $stage): Collection
     {
         return User::with(['currentApplication' => function ($query) {
-                $query->select('id', 'user_id', 'status', 'created_at', 'program_id');
+                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
             }, 'currentApplication.program' => function ($query) {
                 $query->select('id', 'code', 'name');
             }])
