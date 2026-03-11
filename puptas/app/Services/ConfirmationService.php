@@ -31,7 +31,7 @@ class ConfirmationService
     public function getConfirmationData(User $user): array
     {
         $files = $user->files()->get()->keyBy('type');
-        $application = $user->application;
+        $application = $user->currentApplication;
         $profile = $user->applicantProfile;
 
         return [

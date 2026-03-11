@@ -1,18 +1,20 @@
+<!-- SuperAdmin Layout -->
 <script setup>
 import Sidebar from '@/Components/Sidebar.vue'
 import Footer from '@/Components/Footer.vue'
+import { useGlobalLoading } from '@/Composables/useGlobalLoading'
 import { usePage, router } from '@inertiajs/vue3'
 import { computed, ref, onMounted, watch } from 'vue'
 import TermsandConditionsModal from '@/Pages/Modal/TermsandConditionsModal.vue'
 
-// FontAwesome
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
+import { faMoon, faSun, faBell } from '@fortawesome/free-solid-svg-icons'
 
-library.add(faMoon, faSun)
+library.add(faMoon, faSun, faBell)
 
-// Auth-safe user access
+const { isLoading } = useGlobalLoading()
+
 const page = usePage()
 const user = computed(() => page.props.auth?.user ?? null)
 
@@ -30,14 +32,6 @@ const toggleDarkMode = () => {
     document.documentElement.classList.toggle('dark', isDarkMode.value)
     localStorage.setItem('darkMode', String(isDarkMode.value))
 }
-
-// Loading (Inertia navigation)
-const isLoading = ref(false)
-onMounted(() => {
-    router.on('start', () => (isLoading.value = true))
-    router.on('finish', () => (isLoading.value = false))
-    router.on('error', () => (isLoading.value = false))
-})
 
 // Privacy consent
 const privacyConsent = computed(() => page.props.privacy_consent ?? { required: false })
@@ -78,37 +72,46 @@ const handlePrivacyCancel = () => {
 
 <template>
     <div
-        class="min-h-screen flex bg-gradient-to-br from-[#faf6f2] to-[#f1ebe6]
-            dark:from-gray-950 dark:to-gray-900"
+        class="min-h-screen flex bg-gradient-to-br from-purple-50
+            to-[#faf6f2] dark:from-gray-950 dark:to-gray-900"
     >
         <!-- Sidebar -->
-        <Sidebar variant="record" />
+        <Sidebar variant="superadmin" />
 
         <!-- Main Area -->
         <div
             class="flex-1 flex flex-col"
             style="margin-left: var(--sidebar-width, 5rem)"
         >
-            <!-- Top Navigation -->
+            <!-- Top Bar -->
             <header
                 class="sticky top-0 z-40 h-16 px-6 flex items-center
                     justify-between bg-white/80 backdrop-blur border-b
                     border-gray-200 dark:bg-gray-900/80 dark:border-gray-800"
             >
                 <!-- Title -->
-                <h1
-                    class="text-lg font-semibold text-gray-800 dark:text-gray-100"
-                >
-                    Record Management
-                </h1>
+                <slot name="title">
+                    <h1
+                        class="text-lg font-semibold text-gray-800
+                            dark:text-gray-100"
+                    >
+                        Superadmin Dashboard
+                    </h1>
+                </slot>
 
-                <!-- Right Controls -->
+                <!-- Controls -->
                 <div class="flex items-center gap-4">
-                    <!-- Dark Mode -->
+                    <button
+                        class="text-gray-500 hover:text-[#9E122C]
+                            dark:hover:text-white transition"
+                    >
+                        <FontAwesomeIcon :icon="['fas', 'bell']" class="text-lg" />
+                    </button>
+
                     <button
                         @click="toggleDarkMode"
-                        class="w-9 h-9 flex items-center justify-center
-                            rounded-lg bg-gray-100 hover:bg-gray-200
+                        class="w-9 h-9 rounded-lg flex items-center
+                            justify-center bg-gray-100 hover:bg-gray-200
                             dark:bg-gray-800 dark:hover:bg-gray-700 transition"
                     >
                         <FontAwesomeIcon
@@ -117,7 +120,7 @@ const handlePrivacyCancel = () => {
                         />
                     </button>
 
-                    <!-- User Info -->
+                    <!-- User -->
                     <div
                         class="flex items-center gap-3 px-3 py-1.5 rounded-full
                             bg-white border border-gray-200 shadow-sm
@@ -131,7 +134,6 @@ const handlePrivacyCancel = () => {
                             {{ user?.firstname?.charAt(0)
                             }}{{ user?.lastname?.charAt(0) }}
                         </div>
-
                         <div class="hidden sm:block leading-tight">
                             <p
                                 class="text-sm font-medium text-gray-800
@@ -140,14 +142,14 @@ const handlePrivacyCancel = () => {
                                 {{ user?.firstname }} {{ user?.lastname }}
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
-                                Record Staff
+                                Superadmin
                             </p>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <!-- Page Content -->
+            <!-- Content -->
             <main class="flex-1 p-6 overflow-y-auto">
                 <div
                     class="w-full rounded-2xl p-6 bg-white min-h-[calc(100vh-12rem)]
@@ -162,17 +164,38 @@ const handlePrivacyCancel = () => {
             <Footer />
         </div>
 
-        <!-- Global Loading Overlay -->
+        <!-- Loading Overlay -->
         <div
             v-if="isLoading"
             class="fixed inset-0 z-[999] bg-black/40 backdrop-blur-sm flex
                 items-center justify-center"
         >
             <div
-                class="px-6 py-3 rounded-xl bg-white shadow-lg dark:bg-gray-900"
+                class="px-6 py-4 rounded-xl bg-white shadow-lg dark:bg-gray-900
+                    flex flex-col items-center gap-3"
             >
-                <span class="text-gray-800 dark:text-gray-100 font-semibold">
-                    Loading...
+                <svg
+                    class="animate-spin h-8 w-8 text-[#9E122C]"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                    />
+                    <path
+                        class="opacity-50"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                </svg>
+                <span class="font-medium text-gray-800 dark:text-gray-100">
+                    Loading, please wait...
                 </span>
             </div>
         </div>

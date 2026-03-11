@@ -103,6 +103,7 @@ const handleTermsCancel = () => {
                                             v-model="form.lastname"
                                             type="text"
                                             required
+                                            autocomplete="family-name"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your last name"
                                         >
@@ -122,6 +123,7 @@ const handleTermsCancel = () => {
                                             v-model="form.firstname"
                                             type="text"
                                             required
+                                            autocomplete="given-name"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your first name"
                                         >
@@ -138,6 +140,7 @@ const handleTermsCancel = () => {
                                         <input
                                             v-model="form.middlename"
                                             type="text"
+                                            autocomplete="additional-name"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your middle name"
                                         >
@@ -151,6 +154,7 @@ const handleTermsCancel = () => {
                                             v-model="form.birthday"
                                             type="date"
                                             required
+                                            autocomplete="bday"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         >
                                     </div>
@@ -162,6 +166,7 @@ const handleTermsCancel = () => {
                                         <select
                                             v-model="form.sex"
                                             required
+                                            autocomplete="sex"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         >
                                             <option value="" disabled>Select Gender</option>
@@ -184,6 +189,7 @@ const handleTermsCancel = () => {
                                                 v-model="form.contactnumber"
                                                 type="tel"
                                                 required
+                                                autocomplete="tel"
                                                 placeholder="912 345 6789"
                                                 class="flex-1 rounded-r-lg border border-gray-300 dark:border-gray-600 px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             >
@@ -198,6 +204,7 @@ const handleTermsCancel = () => {
                                             v-model="form.address"
                                             type="text"
                                             required
+                                            autocomplete="address-line1"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="House No., Street, Barangay, City, Province"
                                         >
@@ -230,6 +237,7 @@ const handleTermsCancel = () => {
                                             v-model="form.school"
                                             type="text"
                                             required
+                                            autocomplete="organization-title"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Name of your senior high school"
                                         >
@@ -243,6 +251,7 @@ const handleTermsCancel = () => {
                                             v-model="form.schoolAdd"
                                             type="text"
                                             required
+                                            autocomplete="organization"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Complete school address"
                                         >
@@ -256,6 +265,7 @@ const handleTermsCancel = () => {
                                             v-model="form.schoolyear"
                                             type="text"
                                             required
+                                            autocomplete="cc-exp"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="2023-2024"
                                         >
@@ -269,6 +279,7 @@ const handleTermsCancel = () => {
                                             v-model="form.dateGrad"
                                             type="date"
                                             required
+                                            autocomplete="bday"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         >
                                     </div>
@@ -280,6 +291,7 @@ const handleTermsCancel = () => {
                                         <select
                                             v-model="form.strand"
                                             required
+                                            autocomplete="off"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         >
                                             <option value="" disabled>Select Strand</option>
@@ -299,6 +311,7 @@ const handleTermsCancel = () => {
                                         <input
                                             v-model="form.track"
                                             type="text"
+                                            autocomplete="off"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="e.g., ICT Programming, Cookery, Animation"
                                         >
@@ -329,6 +342,7 @@ const handleTermsCancel = () => {
                                             v-model="form.email"
                                             type="email"
                                             required
+                                            autocomplete="email"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="your.email@example.com"
                                         >
@@ -351,6 +365,7 @@ const handleTermsCancel = () => {
                                             v-model="form.password"
                                             type="password"
                                             required
+                                            autocomplete="new-password"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Create a strong password"
                                         >
@@ -373,6 +388,7 @@ const handleTermsCancel = () => {
                                             v-model="form.password_confirmation"
                                             type="password"
                                             required
+                                            autocomplete="new-password"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Re-enter your password"
                                         >

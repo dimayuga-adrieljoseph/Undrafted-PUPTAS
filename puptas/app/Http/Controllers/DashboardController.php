@@ -22,8 +22,8 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // Guard against null user and verify admin role
-        if (!$user || $user->role_id !== 2) {
+        // Guard against null user and verify admin or superadmin role
+        if (!$user || !in_array($user->role_id, [2, 7])) {
             return redirect()->back()->withInput()->with('error', 'Unauthorized access.');
         }
 
@@ -111,7 +111,7 @@ class DashboardController extends Controller
     {
         // Defense in depth: Verify authentication and authorized role (admin, evaluator, interviewer)
         $user = Auth::user();
-        if (!$user || !in_array($user->role_id, [2, 3, 4])) {
+        if (!$user || !in_array($user->role_id, [2, 7])) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
         
@@ -140,7 +140,7 @@ class DashboardController extends Controller
     {
         // Defense in depth: Verify authentication and admin role
         $authUser = Auth::user();
-        if (!$authUser || $authUser->role_id !== 2) {
+        if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
         
