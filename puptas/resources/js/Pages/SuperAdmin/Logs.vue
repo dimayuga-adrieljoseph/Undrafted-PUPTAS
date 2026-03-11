@@ -1,10 +1,11 @@
 <script setup>
-import { ref, computed } from "vue";
-import { usePage } from "@inertiajs/vue3";
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { usePage, router } from "@inertiajs/vue3";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout.vue";
 import AuditLogDetailsModal from "@/Pages/Modal/AuditLogDetailsModal.vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { library } from "@fortawesome/fontawesome-svg-core";
+import axios from "axios";
 import {
     faHistory,
     faEye,
@@ -47,6 +48,86 @@ const showModal = ref(false);
 const searchQuery = ref("");
 const filterAction = ref("");
 const isLoading = ref(false);
+
+// Auto-polling state
+const pollIntervalId = ref(null);
+const lastKnownId = ref(0);
+const newLogIds = ref(new Set());
+const liveTotal = ref(0);
+const POLL_INTERVAL = 5000; // 5 seconds
+
+// Initialize lastKnownId from current logs
+const initLastKnownId = () => {
+    const currentLogs = logs.value;
+    if (currentLogs.length > 0) {
+        lastKnownId.value = Math.max(...currentLogs.map(l => l.id));
+    }
+    liveTotal.value = pagination.value.total || 0;
+};
+
+// Poll for new logs
+const pollForNewLogs = async () => {
+    try {
+        const response = await axios.get('/admin/audit-logs/check-new', {
+            params: { since_id: lastKnownId.value }
+        });
+
+        const { latest_id, total, new_log_ids } = response.data;
+
+        if (latest_id > lastKnownId.value && new_log_ids.length > 0) {
+            // Track new log IDs for highlighting
+            new_log_ids.forEach(id => newLogIds.value.add(id));
+
+            // Update total count
+            liveTotal.value = total;
+
+            // Update last known ID
+            lastKnownId.value = latest_id;
+
+            // Reload the Inertia page data to reflect new logs
+            router.reload({
+                only: ['logs'],
+                preserveState: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Clear highlight after 5 seconds
+                    setTimeout(() => {
+                        newLogIds.value.clear();
+                    }, 5000);
+                },
+            });
+        }
+    } catch (error) {
+        // Silently ignore polling errors to avoid disrupting the UI
+    }
+};
+
+// Start/stop polling
+const startPolling = () => {
+    if (pollIntervalId.value) return;
+    pollIntervalId.value = setInterval(pollForNewLogs, POLL_INTERVAL);
+};
+
+const stopPolling = () => {
+    if (pollIntervalId.value) {
+        clearInterval(pollIntervalId.value);
+        pollIntervalId.value = null;
+    }
+};
+
+const isNewLog = (logId) => {
+    return newLogIds.value.has(logId);
+};
+
+// Lifecycle
+onMounted(() => {
+    initLastKnownId();
+    startPolling();
+});
+
+onUnmounted(() => {
+    stopPolling();
+});
 
 // Computed
 const filteredLogs = computed(() => {
@@ -149,7 +230,7 @@ const getPageUrl = (pageNum) => {
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Total Logs</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ pagination.total || 0 }}</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ liveTotal || pagination.total || 0 }}</p>
                         </div>
                         <div class="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300">
                             <FontAwesomeIcon icon="history" class="w-6 h-6" />
@@ -254,7 +335,12 @@ const getPageUrl = (pageNum) => {
             </div>
 
             <div v-for="log in filteredLogs" :key="log.id" 
-                class="grid grid-cols-12 gap-4 px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition border-b border-gray-100 dark:border-gray-700 last:border-0">
+                :class="[
+                    'grid grid-cols-12 gap-4 px-6 py-3 transition border-b border-gray-100 dark:border-gray-700 last:border-0',
+                    isNewLog(log.id)
+                        ? 'bg-green-50/70 dark:bg-green-900/10 animate-highlight-fade'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                ]">
                 <div class="col-span-2 text-gray-600 dark:text-gray-300 text-sm">
                     {{ formatDate(log.created_at) }}
                 </div>
@@ -355,6 +441,23 @@ const getPageUrl = (pageNum) => {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+/* New log highlight animation */
+@keyframes highlight-fade {
+    0% {
+        background-color: rgba(34, 197, 94, 0.2);
+    }
+    50% {
+        background-color: rgba(34, 197, 94, 0.1);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.animate-highlight-fade {
+    animation: highlight-fade 5s ease-out forwards;
 }
 
 /* Simple white scrollbar */

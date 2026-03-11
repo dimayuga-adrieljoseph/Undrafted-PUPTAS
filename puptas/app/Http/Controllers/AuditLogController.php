@@ -47,4 +47,30 @@ class AuditLogController extends Controller
             'log' => $log,
         ]);
     }
+
+    /**
+     * Lightweight endpoint to check for new audit logs.
+     * Returns the latest log ID and total count for efficient polling.
+     */
+    public function checkNew(Request $request)
+    {
+        $sinceId = (int) $request->query('since_id', 0);
+
+        $latestId = AuditLog::max('id') ?? 0;
+        $total = AuditLog::count();
+
+        $newLogIds = [];
+        if ($sinceId > 0 && $latestId > $sinceId) {
+            $newLogIds = AuditLog::where('id', '>', $sinceId)
+                ->orderBy('id', 'desc')
+                ->limit(50)
+                ->pluck('id');
+        }
+
+        return response()->json([
+            'latest_id' => $latestId,
+            'total' => $total,
+            'new_log_ids' => $newLogIds,
+        ]);
+    }
 }
