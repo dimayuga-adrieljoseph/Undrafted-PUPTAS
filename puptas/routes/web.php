@@ -399,5 +399,5 @@ Route::get('/logout', function () {
     return redirect('/login');
 })->name('logout.get');
 
-Route::post('/logout', \Laravel\Fortify\Http\Controllers\AuthenticatedSessionController::class, 'destroy')
+Route::post('/logout', [\App\Http\Controllers\AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
