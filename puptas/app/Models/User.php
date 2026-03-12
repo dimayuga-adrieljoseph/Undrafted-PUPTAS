@@ -47,7 +47,11 @@ class User extends Authenticatable
         'birthday',
         'sex',
         'contactnumber',
-        'address',
+        'street_address',
+        'barangay',
+        'city',
+        'province',
+        'postal_code',
         'privacy_consent',
         'privacy_consent_at',
     ];
