@@ -392,3 +392,11 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
 // Callback Routes - Public access for loading screen with API callback
 Route::get('/callback', [CallbackController::class, 'index']);
 Route::post('/api/callback', [CallbackController::class, 'handle']);
+
+// Logout Route - GET for direct URL access, POST for form submission
+Route::get('/logout', function () {
+    return redirect('/login');
+})->name('logout.get');
+
+Route::post('/logout', \Laravel\Fortify\Http\Controllers\AuthenticatedSessionController::class, 'destroy')
+    ->name('logout');
