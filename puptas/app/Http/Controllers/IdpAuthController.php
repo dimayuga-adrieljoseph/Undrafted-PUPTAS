@@ -101,13 +101,13 @@ class IdpAuthController extends Controller
         
         \Log::info('Exchanging authorization code for tokens', [
             'token_url' => $tokenUrl,
+            'client_id' => $idpConfig['client_id'],
         ]);
 
         try {
             // Send POST request with only client_id, client_secret, and code
             // Never log client_secret for security
             $tokenResponse = Http::timeout(30)->post($tokenUrl, [
-                'grant_type'    => 'authorization_code',
                 'client_id'     => $idpConfig['client_id'],
                 'client_secret' => $idpConfig['client_secret'],
                 'code'          => $code,
@@ -152,7 +152,31 @@ class IdpAuthController extends Controller
                 'expires_in' => $tokenData['expires_in'] ?? null,
             ]);
 
-            // Return tokens to the user
+            // Step 2: Get user info using access token
+            $userInfoUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/user';
+            
+            \Log::info('Fetching user info from IDP', [
+                'user_info_url' => $userInfoUrl,
+            ]);
+
+            $userResponse = Http::withToken($accessToken)
+                ->timeout(30)
+                ->get($userInfoUrl);
+
+            $userData = [];
+            if ($userResponse->successful()) {
+                $userData = $userResponse->json();
+                \Log::info('Received user info from IDP', [
+                    'idp_user_id' => $userData['id'] ?? null,
+                    'email' => $userData['email'] ?? null,
+                ]);
+            } else {
+                \Log::warning('Failed to fetch user info from IDP', [
+                    'status_code' => $userResponse->status(),
+                ]);
+            }
+
+            // Return tokens and user info to the user
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -161,6 +185,13 @@ class IdpAuthController extends Controller
                     'token_type' => $tokenData['token_type'] ?? 'Bearer',
                     'expires_in' => $tokenData['expires_in'] ?? null,
                     'refresh_token' => $tokenData['refresh_token'] ?? null,
+                    'user' => [
+                        'id' => $userData['id'] ?? null,
+                        'email' => $userData['email'] ?? null,
+                        'firstname' => $userData['firstname'] ?? $userData['name'] ?? null,
+                        'lastname' => $userData['lastname'] ?? null,
+                        'role' => $userData['role'] ?? null,
+                    ],
                 ],
             ]);
 
