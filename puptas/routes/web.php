@@ -56,7 +56,7 @@ Route::get('/applications/user/{user}', function ($user) {
     return Inertia::render('Applications/Index', [
         'selectedUserId' => (int) $user
     ]);
-})->middleware(['auth', 'role:2,3,4'])->whereNumber('user')->name('applications.show');
+})->middleware(['auth', 'role:2,3,4,7'])->whereNumber('user')->name('applications.show');
 
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $request->validate(['email' => 'required|email']);
@@ -346,8 +346,8 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
 });
 
-// Shared endpoint for viewing user list - accessible by admin, evaluator, and interviewer
-Route::middleware(['auth', 'role:2,3,4'])->group(function () {
+// Shared endpoint for viewing user list - accessible by admin, evaluator, interviewer, and superadmin
+Route::middleware(['auth', 'role:2,3,4,7'])->group(function () {
     Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
 });
 
@@ -386,9 +386,18 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
 // Superadmin Routes - Protected by EnsureSuperAdmin middleware
 Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('/admin/audit-logs/check-new', [AuditLogController::class, 'checkNew'])->name('audit-logs.check-new');
     Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit-logs.show');
 });
 
 // Callback Routes - Public access for loading screen with API callback
 Route::get('/callback', [CallbackController::class, 'index']);
 Route::post('/api/callback', [CallbackController::class, 'handle']);
+
+// Logout Route - GET for direct URL access, POST for form submission
+Route::get('/logout', function () {
+    return redirect('/login');
+})->name('logout.get');
+
+Route::post('/logout', [\App\Http\Controllers\AuthenticatedSessionController::class, 'destroy'])
+    ->name('logout');
