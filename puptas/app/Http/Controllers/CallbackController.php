@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 
 class CallbackController extends Controller
@@ -131,5 +132,122 @@ class CallbackController extends Controller
             'message' => 'Callback processed successfully',
             'data' => $request->all(),
         ]);
+    }
+
+    /**
+     * Handle OAuth2 callback from Identity Provider.
+     * 
+     * Receives the authorization code from the IDP redirect and exchanges
+     * it for an access token.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function handleIdpCallback(Request $request)
+    {
+        // Extract the authorization code from the query parameter
+        $code = $request->query('code');
+
+        // Validate that the code parameter exists
+        if (empty($code)) {
+            \Log::warning('OAuth2 callback received without authorization code', [
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'query_params' => $request->query(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'missing_authorization_code',
+                'message' => 'Authorization code is required for OAuth2 callback.',
+            ], 400);
+        }
+
+        // Get IDP configuration from services config
+        $idpConfig = config('services.idp');
+        
+        // Validate IDP configuration exists
+        if (empty($idpConfig) || empty($idpConfig['base_url']) || empty($idpConfig['client_id']) || empty($idpConfig['client_secret'])) {
+            \Log::error('OAuth2 configuration is missing or incomplete', [
+                'idp_config' => $idpConfig ? array_keys($idpConfig) : 'config not found',
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'invalid_configuration',
+                'message' => 'OAuth2 provider configuration is missing or incomplete.',
+            ], 500);
+        }
+
+        // Build the token endpoint URL
+        $tokenUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/auth/token';
+
+        try {
+            // Send POST request to token endpoint
+            $response = Http::timeout(30)->post($tokenUrl, [
+                'client_id' => $idpConfig['client_id'],
+                'client_secret' => $idpConfig['client_secret'],
+                'code' => $code,
+            ]);
+
+            // Check if the request was successful
+            if ($response->successful()) {
+                $tokenData = $response->json();
+
+                \Log::info('OAuth2 token exchange successful', [
+                    'has_access_token' => isset($tokenData['access_token']),
+                    'has_refresh_token' => isset($tokenData['refresh_token']),
+                    'token_type' => $tokenData['token_type'] ?? null,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $tokenData,
+                ]);
+            }
+
+            // Handle error response from IDP
+            $errorData = $response->json();
+            $errorMessage = $errorData['error'] ?? $errorData['message'] ?? 'Token exchange failed';
+
+            \Log::warning('OAuth2 token exchange failed', [
+                'status_code' => $response->status(),
+                'error' => $errorMessage,
+                'response' => $errorData,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'token_exchange_failed',
+                'message' => $errorMessage,
+                'details' => $errorData,
+            ], $response->status());
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            // Handle connection timeout or network errors
+            \Log::error('OAuth2 token exchange connection error', [
+                'error' => $e->getMessage(),
+                'token_url' => $tokenUrl,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'connection_error',
+                'message' => 'Failed to connect to OAuth2 provider. Please try again later.',
+            ], 503);
+
+        } catch (\Exception $e) {
+            // Handle any other unexpected errors
+            \Log::error('OAuth2 token exchange unexpected error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'internal_error',
+                'message' => 'An unexpected error occurred during OAuth2 callback processing.',
+            ], 500);
+        }
     }
 }

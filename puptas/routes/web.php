@@ -394,6 +394,9 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
 Route::get('/callback', [CallbackController::class, 'index']);
 Route::post('/api/callback', [CallbackController::class, 'handle']);
 
+// OAuth2 Identity Provider Callback - Public endpoint for IDP redirect
+Route::get('/auth/idp/callback', [CallbackController::class, 'handleIdpCallback']);
+
 // Logout Route - GET for direct URL access, POST for form submission
 Route::get('/logout', function () {
     return redirect('/login');
