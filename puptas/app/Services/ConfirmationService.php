@@ -50,7 +50,9 @@ class ConfirmationService
             'school' => $profile->school ?? null,
             'schoolAdd' => $profile->school_address ?? null,
             'schoolyear' => $profile->school_year ?? null,
-            'dateGrad' => $profile->date_graduated ? $profile->date_graduated->format('Y-m-d') : null,
+            'dateGrad' => $profile?->date_graduated
+                ? date('Y-m-d', strtotime((string) $profile->date_graduated))
+                : null,
             'strand' => $profile->strand ?? null,
             'track' => $profile->track ?? null,
             'status' => $application?->status ?? null,
@@ -203,6 +205,10 @@ class ConfirmationService
             ]
         );
 
+        $savedFile = UserFile::where('user_id', $user->id)
+            ->where('type', $type)
+            ->first();
+
         Log::info('File reuploaded', [
             'user_id' => $user->id,
             'field' => $field,
@@ -211,8 +217,7 @@ class ConfirmationService
 
         return [
             'message' => 'File reuploaded successfully',
-            'url' => Storage::url($path),
-            'status' => 'pending',
+            'file' => $savedFile ? FileMapper::buildFilePayload($savedFile, true) : null,
         ];
     }
 

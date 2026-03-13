@@ -154,8 +154,10 @@ const selectUser = async (user) => {
 
 const formatFileKey = (key) => {
     const map = {
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
+        file11Front: "Grade 11 Report Front",
+        file11: "Grade 11 Report Back",
+        file12Front: "Grade 12 Report Front",
+        file12: "Grade 12 Report Back",
         schoolId: "School ID",
         nonEnrollCert: "Certificate of Non-Enrollment",
         psa: "PSA Birth Certificate",
@@ -165,6 +167,11 @@ const formatFileKey = (key) => {
     };
     return map[key] || key;
 };
+
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+
+const hasImagePreview = (file) =>
+    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
 
 const capitalize = (str) =>
     typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
@@ -178,7 +185,12 @@ const closeUserCard = () => {
     selectedUser.value = null;
 };
 
-const openImageModal = (src) => {
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) {
+        return;
+    }
+
     previewImage.value = src;
     showImageModal.value = true;
 };
@@ -514,7 +526,7 @@ const clearFilters = () => {
                     <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
                     <div class="grid grid-cols-2 gap-3">
                         <div
-                            v-for="(src, key) in selectedUserFiles"
+                            v-for="(file, key) in selectedUserFiles"
                             :key="key"
                             class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
                         >
@@ -522,11 +534,11 @@ const clearFilters = () => {
                                 {{ formatFileKey(key) }}
                             </p>
                             <img
-                                v-if="src"
-                                :src="src"
+                                v-if="hasImagePreview(file)"
+                                :src="getFileUrl(file)"
                                 :alt="formatFileKey(key)"
                                 class="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
-                                @click="openImageModal(src)"
+                                @click="openImageModal(file)"
                             />
                             <div
                                 v-else

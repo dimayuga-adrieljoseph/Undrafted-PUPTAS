@@ -5,16 +5,23 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\UserFile;
+use App\Helpers\FileMapper;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Illuminate\Support\Facades\Storage;
 use App\Rules\ValidationRules;
 
 class UserFileController extends Controller
 {
+    private const STAFF_ROLE_IDS = [2, 3, 4, 5, 6, 7];
+
     public function uploadFiles(Request $request)
     {
         $request->validate(ValidationRules::userFileUpload());
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        $user = $request->user();
+
+        abort_unless($user, Response::HTTP_UNAUTHORIZED);
 
         $filesToSave = [
             'file11' => 'file11_back',
@@ -49,7 +56,10 @@ class UserFileController extends Controller
             }
         }
 
-        return response()->json(['message' => 'Files uploaded successfully']);
+        return response()->json([
+            'message' => 'Files uploaded successfully',
+            'uploadedFiles' => FileMapper::formatFiles($user->files()->get()->keyBy('type')),
+        ]);
     }
 
     public function getUserApplication()
@@ -65,22 +75,22 @@ class UserFileController extends Controller
             // Example file type mapping, adjust according to your actual type names
             switch ($file->type) {
                 case 'school_id':
-                    $uploadedFiles['schoolId'] = Storage::url($file->file_path);
+                    $uploadedFiles['schoolId'] = FileMapper::buildPreviewUrl($file);
                     break;
                 case 'non_enroll_cert':
-                    $uploadedFiles['nonEnrollCert'] = Storage::url($file->file_path);
+                    $uploadedFiles['nonEnrollCert'] = FileMapper::buildPreviewUrl($file);
                     break;
                 case 'psa':
-                    $uploadedFiles['psa'] = Storage::url($file->file_path);
+                    $uploadedFiles['psa'] = FileMapper::buildPreviewUrl($file);
                     break;
                 case 'good_moral':
-                    $uploadedFiles['goodMoral'] = Storage::url($file->file_path);
+                    $uploadedFiles['goodMoral'] = FileMapper::buildPreviewUrl($file);
                     break;
                 case 'under_oath':
-                    $uploadedFiles['underOath'] = Storage::url($file->file_path);
+                    $uploadedFiles['underOath'] = FileMapper::buildPreviewUrl($file);
                     break;
                 case 'photo_2x2':
-                    $uploadedFiles['photo2x2'] = Storage::url($file->file_path);
+                    $uploadedFiles['photo2x2'] = FileMapper::buildPreviewUrl($file);
                     break;
             }
         }
@@ -107,5 +117,50 @@ class UserFileController extends Controller
             'track' => $user->track,
             'uploadedFiles' => $uploadedFiles,
         ]);
+    }
+
+    public function preview(Request $request, UserFile $file)
+    {
+        if (!$request->hasValidSignature()) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $authUser = $request->user();
+        $isOwner = $authUser && (int) $authUser->id === (int) $file->user_id;
+        $isStaff = $authUser && in_array((int) $authUser->role_id, self::STAFF_ROLE_IDS, true);
+
+        if (!$isOwner && !$isStaff) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $diskName = $this->resolveDiskForPath($file->file_path);
+        $disk = Storage::disk($diskName);
+
+        if (!$disk->exists($file->file_path)) {
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
+        $mimeType = FileMapper::detectMimeType($file);
+        $filename = FileMapper::sanitizeFilename($file->original_name);
+        $contentDisposition = HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_INLINE, $filename);
+        $headers = [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => $contentDisposition,
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Content-Type-Options' => 'nosniff',
+        ];
+
+        if ($diskName === 'public' || $diskName === 'local') {
+            return response()->file($disk->path($file->file_path), $headers);
+        }
+
+        return response($disk->get($file->file_path), Response::HTTP_OK, $headers);
+    }
+
+    private function resolveDiskForPath(string $path): string
+    {
+        return FileMapper::resolveDiskForPath($path);
     }
 }

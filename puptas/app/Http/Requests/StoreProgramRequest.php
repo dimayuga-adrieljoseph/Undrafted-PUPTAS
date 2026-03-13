@@ -14,6 +14,18 @@ use App\Models\Program;
 class StoreProgramRequest extends FormRequest
 {
     /**
+     * Normalize legacy payload keys before validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (!$this->has('slots') && $this->has('capacity')) {
+            $this->merge([
+                'slots' => $this->input('capacity'),
+            ]);
+        }
+    }
+
+    /**
      * Determine if the user is authorized to make this request.
      *
      * @return bool
@@ -47,7 +59,9 @@ class StoreProgramRequest extends FormRequest
             'english' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'math' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'science' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'capacity' => ['nullable', 'integer', 'min:0'],
+            'gwa' => ['nullable', 'numeric', 'min:1', 'max:100'],
+            'pupcet' => ['nullable', 'numeric', 'min:0'],
+            'slots' => ['nullable', 'integer', 'min:0'],
             'strand_ids' => ['nullable', 'array'],
             'strand_ids.*' => ['exists:strands,id'],
         ];

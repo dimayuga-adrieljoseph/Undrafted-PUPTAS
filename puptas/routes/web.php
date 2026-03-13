@@ -246,10 +246,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/user/application', [ConfirmationController::class, 'show']);
     Route::post('/user/application/submit', [ConfirmationController::class, 'submit']);
     Route::post('/user/application/reupload', [ConfirmationController::class, 'reupload']);
+    Route::get('/files/{file}/preview', [UserFileController::class, 'preview'])
+        ->middleware('signed')
+        ->name('files.preview');
+    Route::post('/upload-files', [UserFileController::class, 'uploadFiles']);
+    Route::post('/get-files', [UserFileController::class, 'getUserApplication']);
 });
-
-Route::post('/upload-files', [UserFileController::class, 'uploadFiles']);
-Route::post('/get-files', [UserFileController::class, 'getUserApplication']);
 
 // Evaluator Routes - Protected by auth middleware and role verification
 Route::middleware(['auth', 'role:3'])->group(function () {

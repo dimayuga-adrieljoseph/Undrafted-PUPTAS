@@ -183,18 +183,17 @@ class ValidationRules
     public static function userFileUpload()
     {
         return [
-            'email' => 'required|email|exists:users,email',
             'application_id' => 'nullable|exists:applications,id',
-            'file11' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file12' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file11Front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file12Front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileId' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileNonEnroll' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'filePSA' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileGoodMoral' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileUnderOath' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'filePhoto2x2' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'file11' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'file12' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'file11Front' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'file12Front' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'fileId' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'fileNonEnroll' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'filePSA' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'fileGoodMoral' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'fileUnderOath' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'filePhoto2x2' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ];
     }
 
