@@ -41,7 +41,11 @@ class ConfirmationService
             'birthday' => $user->birthday,
             'sex' => $user->sex,
             'contactnumber' => $user->contactnumber,
-            'address' => $user->address,
+            'street_address' => $user->street_address,
+            'barangay' => $user->barangay,
+            'city' => $user->city,
+            'province' => $user->province,
+            'postal_code' => $user->postal_code,
             'email' => $user->email,
             'school' => $profile->school ?? null,
             'schoolAdd' => $profile->school_address ?? null,
@@ -123,7 +127,7 @@ class ConfirmationService
     {
         return DB::transaction(function () use ($user, $validated) {
             $profile = $user->applicantProfile;
-            
+
             $application = Application::firstOrCreate(
                 ['user_id' => $user->id],
                 [
@@ -255,12 +259,12 @@ class ConfirmationService
             $query->where(function ($q) use ($english) {
                 $q->whereNull('english')->orWhereRaw('? >= english', [$english]);
             })
-            ->where(function ($q) use ($math) {
-                $q->whereNull('math')->orWhereRaw('? >= math', [$math]);
-            })
-            ->where(function ($q) use ($science) {
-                $q->whereNull('science')->orWhereRaw('? >= science', [$science]);
-            });
+                ->where(function ($q) use ($math) {
+                    $q->whereNull('math')->orWhereRaw('? >= math', [$math]);
+                })
+                ->where(function ($q) use ($science) {
+                    $q->whereNull('science')->orWhereRaw('? >= science', [$science]);
+                });
         })->get();
 
         return [

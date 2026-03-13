@@ -173,7 +173,11 @@ const form = useForm({
     birthday: "",
     sex: "",
     contactnumber: "",
-    address: "",
+    street_address: "",
+    barangay: "",
+    city: "",
+    province: "",
+    postal_code: "",
     school: "",
     schoolAdd: "",
     schoolyear: "",
@@ -366,7 +370,7 @@ const extractNameOnly = async (file, outputRef) => {
 const submit = async () => {
     // Add loading feedback
     isProcessing.value = true;
-    
+
     await form.post(route("register"), {
         onSuccess: async () => {
             try {
@@ -472,14 +476,18 @@ const submit = async () => {
         onError: (errors) => {
             console.error("Registration error:", errors);
             isProcessing.value = false;
-            
+
             // Show user-friendly error messages
-            const errorMessages = Object.values(errors).flat().join('\n');
-            alert(`Registration failed:\n\n${errorMessages || 'Please check your inputs and try again.'}`);
+            const errorMessages = Object.values(errors).flat().join("\n");
+            alert(
+                `Registration failed:\n\n${
+                    errorMessages || "Please check your inputs and try again."
+                }`
+            );
         },
         onFinish: () => {
             isProcessing.value = false;
-        }
+        },
     });
 };
 </script>
@@ -507,29 +515,39 @@ const submit = async () => {
             <!-- STEPPER -->
             <aside class="lg:col-span-1">
                 <ol class="space-y-4 text-sm">
-                    <li v-for="n in 10" :key="n"
+                    <li
+                        v-for="n in 10"
+                        :key="n"
                         class="flex items-center space-x-2"
-                        :class="step === n ? 'text-yellow-400 font-semibold' : 'text-gray-400'"
+                        :class="
+                            step === n
+                                ? 'text-yellow-400 font-semibold'
+                                : 'text-gray-400'
+                        "
                     >
                         <span
                             class="w-6 h-6 flex items-center justify-center rounded-full border"
-                            :class="step >= n ? 'border-yellow-400 bg-yellow-400 text-black' : 'border-gray-600'"
+                            :class="
+                                step >= n
+                                    ? 'border-yellow-400 bg-yellow-400 text-black'
+                                    : 'border-gray-600'
+                            "
                         >
                             {{ n }}
                         </span>
                         <span>
                             {{
                                 [
-                                    'Personal Info',
-                                    'School Info',
-                                    'Grade 10 Upload',
-                                    'Grade 10 Review',
-                                    'Grade 11 Upload',
-                                    'Grade 11 Review',
-                                    'Grade 12 Upload',
-                                    'Grade 12 Review',
-                                    'Requirements',
-                                    'Confirmation',
+                                    "Personal Info",
+                                    "School Info",
+                                    "Grade 10 Upload",
+                                    "Grade 10 Review",
+                                    "Grade 11 Upload",
+                                    "Grade 11 Review",
+                                    "Grade 12 Upload",
+                                    "Grade 12 Review",
+                                    "Requirements",
+                                    "Confirmation",
                                 ][n - 1]
                             }}
                         </span>
@@ -539,7 +557,6 @@ const submit = async () => {
 
             <!-- CONTENT -->
             <section class="lg:col-span-3 bg-gray-900 rounded-xl p-8 shadow-lg">
-
                 <!-- STEP 1 -->
                 <form v-if="step === 1" @submit.prevent="step = 2">
                     <h2 class="text-xl font-bold text-white mb-6">
@@ -561,7 +578,11 @@ const submit = async () => {
                         </div>
                         <div>
                             <InputLabel value="Birthday" />
-                            <TextInput type="date" v-model="form.birthday" required />
+                            <TextInput
+                                type="date"
+                                v-model="form.birthday"
+                                required
+                            />
                         </div>
 
                         <div>
@@ -577,7 +598,10 @@ const submit = async () => {
                         <div>
                             <InputLabel value="Contact Number" />
                             <div class="relative">
-                                <span class="absolute left-3 top-2.5 text-gray-500">+63</span>
+                                <span
+                                    class="absolute left-3 top-2.5 text-gray-500"
+                                    >+63</span
+                                >
                                 <TextInput
                                     class="pl-10"
                                     :value="form.contactnumber"
@@ -587,8 +611,48 @@ const submit = async () => {
                         </div>
 
                         <div class="md:col-span-2">
-                            <InputLabel value="Address" />
-                            <TextInput v-model="form.address" />
+                            <InputLabel value="Street Address" />
+                            <TextInput
+                                v-model="form.street_address"
+                                required
+                                placeholder="House/Unit No., Building, Street"
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel value="Barangay" />
+                            <TextInput
+                                v-model="form.barangay"
+                                required
+                                placeholder="Barangay"
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel value="City / Municipality" />
+                            <TextInput
+                                v-model="form.city"
+                                required
+                                placeholder="e.g., Taguig City"
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel value="Province" />
+                            <TextInput
+                                v-model="form.province"
+                                required
+                                placeholder="e.g., Metro Manila"
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel value="Postal Code" />
+                            <TextInput
+                                v-model="form.postal_code"
+                                placeholder="e.g., 1630"
+                                maxlength="10"
+                            />
                         </div>
 
                         <div>
@@ -612,7 +676,11 @@ const submit = async () => {
                         <div>
                             <InputLabel value="Confirm Password" />
                             <TextInput
-                                :type="showPasswordConfirmation ? 'text' : 'password'"
+                                :type="
+                                    showPasswordConfirmation
+                                        ? 'text'
+                                        : 'password'
+                                "
                                 v-model="form.password_confirmation"
                             />
                         </div>
@@ -628,9 +696,18 @@ const submit = async () => {
                     <h2 class="section-title">Senior High School Background</h2>
 
                     <div class="grid md:grid-cols-2 gap-6">
-                        <TextInput v-model="form.school" placeholder="School Name" />
-                        <TextInput v-model="form.schoolAdd" placeholder="School Address" />
-                        <TextInput v-model="form.schoolyear" placeholder="School Year" />
+                        <TextInput
+                            v-model="form.school"
+                            placeholder="School Name"
+                        />
+                        <TextInput
+                            v-model="form.schoolAdd"
+                            placeholder="School Address"
+                        />
+                        <TextInput
+                            v-model="form.schoolyear"
+                            placeholder="School Year"
+                        />
                         <TextInput type="date" v-model="form.dateGrad" />
                         <select v-model="form.strand" class="input-select">
                             <option disabled value="">Strand</option>
@@ -659,22 +736,39 @@ const submit = async () => {
                     <div class="grid md:grid-cols-2 gap-6">
                         <div class="upload-card">
                             <p class="upload-title">Front Page (Name & LRN)</p>
-                            <input type="file" accept="image/*" @change="handleGrade10FrontUpload" />
+                            <input
+                                type="file"
+                                accept="image/*"
+                                @change="handleGrade10FrontUpload"
+                            />
                             <div class="mt-4 space-y-2">
-                                <TextInput placeholder="Extracted Name" v-model="extracted10.name" />
-                                <TextInput placeholder="Extracted LRN" v-model="extracted10.lrn" />
+                                <TextInput
+                                    placeholder="Extracted Name"
+                                    v-model="extracted10.name"
+                                />
+                                <TextInput
+                                    placeholder="Extracted LRN"
+                                    v-model="extracted10.lrn"
+                                />
                             </div>
                         </div>
 
                         <div class="upload-card">
                             <p class="upload-title">Back Page (Grades)</p>
-                            <input type="file" accept="image/*" required @change="handleFileUpload" />
+                            <input
+                                type="file"
+                                accept="image/*"
+                                required
+                                @change="handleFileUpload"
+                            />
                         </div>
                     </div>
 
                     <div class="wizard-actions">
                         <PrimaryButton @click="step = 2">Back</PrimaryButton>
-                        <PrimaryButton :disabled="isProcessing">Extract Grades</PrimaryButton>
+                        <PrimaryButton :disabled="isProcessing"
+                            >Extract Grades</PrimaryButton
+                        >
                     </div>
                 </form>
 
@@ -683,9 +777,18 @@ const submit = async () => {
                     <h2 class="section-title">Review Grade 10 Grades</h2>
 
                     <div class="grid md:grid-cols-3 gap-6">
-                        <TextInput v-model="form.english" placeholder="English" />
-                        <TextInput v-model="form.mathematics" placeholder="Mathematics" />
-                        <TextInput v-model="form.science" placeholder="Science" />
+                        <TextInput
+                            v-model="form.english"
+                            placeholder="English"
+                        />
+                        <TextInput
+                            v-model="form.mathematics"
+                            placeholder="Mathematics"
+                        />
+                        <TextInput
+                            v-model="form.science"
+                            placeholder="Science"
+                        />
                     </div>
 
                     <div class="wizard-actions">
@@ -701,20 +804,38 @@ const submit = async () => {
                     <div class="grid md:grid-cols-2 gap-6">
                         <div class="upload-card">
                             <p class="upload-title">Front Page</p>
-                            <input type="file" accept="image/*" @change="handleGrade11FrontUpload" />
-                            <TextInput class="mt-2" placeholder="Name" v-model="extracted11.name" />
-                            <TextInput placeholder="LRN" v-model="extracted11.lrn" />
+                            <input
+                                type="file"
+                                accept="image/*"
+                                @change="handleGrade11FrontUpload"
+                            />
+                            <TextInput
+                                class="mt-2"
+                                placeholder="Name"
+                                v-model="extracted11.name"
+                            />
+                            <TextInput
+                                placeholder="LRN"
+                                v-model="extracted11.lrn"
+                            />
                         </div>
 
                         <div class="upload-card">
                             <p class="upload-title">Back Page</p>
-                            <input type="file" accept="image/*" required @change="handleGrade11Upload" />
+                            <input
+                                type="file"
+                                accept="image/*"
+                                required
+                                @change="handleGrade11Upload"
+                            />
                         </div>
                     </div>
 
                     <div class="wizard-actions">
                         <PrimaryButton @click="step = 4">Back</PrimaryButton>
-                        <PrimaryButton :disabled="isProcessing">Extract Grades</PrimaryButton>
+                        <PrimaryButton :disabled="isProcessing"
+                            >Extract Grades</PrimaryButton
+                        >
                     </div>
                 </form>
 
@@ -723,8 +844,14 @@ const submit = async () => {
                     <h2 class="section-title">Review Grade 11 Grades</h2>
 
                     <div class="grid md:grid-cols-2 gap-6">
-                        <TextInput v-model="form.firstSem" placeholder="First Semester Average" />
-                        <TextInput v-model="form.secondSem" placeholder="Second Semester Average" />
+                        <TextInput
+                            v-model="form.firstSem"
+                            placeholder="First Semester Average"
+                        />
+                        <TextInput
+                            v-model="form.secondSem"
+                            placeholder="Second Semester Average"
+                        />
                     </div>
 
                     <div class="wizard-actions">
@@ -740,20 +867,38 @@ const submit = async () => {
                     <div class="grid md:grid-cols-2 gap-6">
                         <div class="upload-card">
                             <p class="upload-title">Front Page</p>
-                            <input type="file" accept="image/*" @change="handleGrade12FrontUpload" />
-                            <TextInput class="mt-2" placeholder="Name" v-model="extracted12.name" />
-                            <TextInput placeholder="LRN" v-model="extracted12.lrn" />
+                            <input
+                                type="file"
+                                accept="image/*"
+                                @change="handleGrade12FrontUpload"
+                            />
+                            <TextInput
+                                class="mt-2"
+                                placeholder="Name"
+                                v-model="extracted12.name"
+                            />
+                            <TextInput
+                                placeholder="LRN"
+                                v-model="extracted12.lrn"
+                            />
                         </div>
 
                         <div class="upload-card">
                             <p class="upload-title">Back Page</p>
-                            <input type="file" accept="image/*" required @change="handleGrade12Upload" />
+                            <input
+                                type="file"
+                                accept="image/*"
+                                required
+                                @change="handleGrade12Upload"
+                            />
                         </div>
                     </div>
 
                     <div class="wizard-actions">
                         <PrimaryButton @click="step = 6">Back</PrimaryButton>
-                        <PrimaryButton :disabled="isProcessing">Extract Grades</PrimaryButton>
+                        <PrimaryButton :disabled="isProcessing"
+                            >Extract Grades</PrimaryButton
+                        >
                     </div>
                 </form>
 
@@ -762,8 +907,14 @@ const submit = async () => {
                     <h2 class="section-title">Review Grade 12 Grades</h2>
 
                     <div class="grid md:grid-cols-2 gap-6">
-                        <TextInput v-model="form.g12firstSem" placeholder="First Semester" />
-                        <TextInput v-model="form.g12secondSem" placeholder="Second Semester" />
+                        <TextInput
+                            v-model="form.g12firstSem"
+                            placeholder="First Semester"
+                        />
+                        <TextInput
+                            v-model="form.g12secondSem"
+                            placeholder="Second Semester"
+                        />
                     </div>
 
                     <div class="wizard-actions">
@@ -782,8 +933,13 @@ const submit = async () => {
                             :key="key"
                             class="upload-card"
                         >
-                            <p class="upload-title capitalize">{{ key.replace(/([A-Z])/g, ' $1') }}</p>
-                            <input type="file" @change="(e) => handleRequiredDocUpload(e, key)" />
+                            <p class="upload-title capitalize">
+                                {{ key.replace(/([A-Z])/g, " $1") }}
+                            </p>
+                            <input
+                                type="file"
+                                @change="(e) => handleRequiredDocUpload(e, key)"
+                            />
                         </div>
                     </div>
 
@@ -800,28 +956,46 @@ const submit = async () => {
                     </h2>
 
                     <div class="mt-6 text-gray-300 space-y-2">
-                        <p><strong>Name:</strong> {{ form.firstname }} {{ form.lastname }}</p>
+                        <p>
+                            <strong>Name:</strong> {{ form.firstname }}
+                            {{ form.lastname }}
+                        </p>
                         <p><strong>Email:</strong> {{ form.email }}</p>
                         <p><strong>G10 English:</strong> {{ form.english }}</p>
-                        <p><strong>G11:</strong> {{ form.firstSem }} / {{ form.secondSem }}</p>
-                        <p><strong>G12:</strong> {{ form.g12firstSem }} / {{ form.g12secondSem }}</p>
+                        <p>
+                            <strong>G11:</strong> {{ form.firstSem }} /
+                            {{ form.secondSem }}
+                        </p>
+                        <p>
+                            <strong>G12:</strong> {{ form.g12firstSem }} /
+                            {{ form.g12secondSem }}
+                        </p>
                     </div>
 
                     <div class="flex justify-between mt-8">
-                        <PrimaryButton @click="step = 9" :disabled="isProcessing || form.processing">Back</PrimaryButton>
-                        <PrimaryButton @click="submit" :disabled="isProcessing || form.processing">
-                            {{ isProcessing || form.processing ? 'Submitting...' : 'Submit Application' }}
+                        <PrimaryButton
+                            @click="step = 9"
+                            :disabled="isProcessing || form.processing"
+                            >Back</PrimaryButton
+                        >
+                        <PrimaryButton
+                            @click="submit"
+                            :disabled="isProcessing || form.processing"
+                        >
+                            {{
+                                isProcessing || form.processing
+                                    ? "Submitting..."
+                                    : "Submit Application"
+                            }}
                         </PrimaryButton>
                     </div>
                 </div>
-
             </section>
         </div>
     </AuthenticationCard>
 </template>
 
 <style>
-
 .upload-card {
     background-color: #1f2937; /* gray-800 */
     border: 1px solid #374151; /* gray-700 */
@@ -843,5 +1017,4 @@ const submit = async () => {
     justify-content: space-between;
     margin-top: 2.5rem;
 }
-
 </style>

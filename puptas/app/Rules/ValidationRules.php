@@ -30,7 +30,11 @@ class ValidationRules
             'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
             'contactnumber' => 'required|string|regex:/^\d{10}$/', // Changed to 10-digit validation
-            'address' => 'nullable|string|max:500',
+            'street_address' => 'nullable|string|max:255',
+            'barangay' => 'nullable|string|max:100',
+            'city' => 'nullable|string|max:100',
+            'province' => 'nullable|string|max:100',
+            'postal_code' => 'nullable|string|max:10',
             'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
@@ -58,7 +62,11 @@ class ValidationRules
             'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
             'contactnumber' => 'required|string|regex:/^\d{10}$/', // Changed to 10-digit validation
-            'address' => 'nullable|string|max:500',
+            'street_address' => 'nullable|string|max:255',
+            'barangay' => 'nullable|string|max:100',
+            'city' => 'nullable|string|max:100',
+            'province' => 'nullable|string|max:100',
+            'postal_code' => 'nullable|string|max:10',
             'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
