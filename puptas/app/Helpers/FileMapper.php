@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Collection;
 use App\Models\UserFile;
 
@@ -21,7 +22,9 @@ class FileMapper
      * Format: 'apiKey' => 'databaseType'
      */
     public const MAPPING = [
+        'file11Front' => 'file11_front',
         'file11' => 'file11_back',
+        'file12Front' => 'file12_front',
         'file12' => 'file12_back',
         'schoolId' => 'school_id',
         'nonEnrollCert' => 'non_enroll_cert',
@@ -55,12 +58,7 @@ class FileMapper
         foreach (self::MAPPING as $apiKey => $databaseType) {
             if (isset($files[$databaseType])) {
                 $file = $files[$databaseType];
-                $uploadedFiles[$apiKey] = [
-                    'url' => self::buildPreviewUrl($file),
-                ];
-                if ($includeStatus) {
-                    $uploadedFiles[$apiKey]['status'] = $file->status;
-                }
+                $uploadedFiles[$apiKey] = self::buildFilePayload($file, $includeStatus);
             } else {
                 $uploadedFiles[$apiKey] = null;
             }
@@ -82,11 +80,28 @@ class FileMapper
 
         foreach (self::MAPPING as $apiKey => $databaseType) {
             $uploadedFiles[$apiKey] = isset($files[$databaseType])
-                ? self::buildPreviewUrl($files[$databaseType])
+                ? self::buildFilePayload($files[$databaseType])
                 : null;
         }
 
         return $uploadedFiles;
+    }
+
+    public static function buildFilePayload(UserFile $file, bool $includeStatus = false): array
+    {
+        $mimeType = self::detectMimeType($file);
+        $payload = [
+            'url' => self::buildPreviewUrl($file),
+            'mimeType' => $mimeType,
+            'originalName' => self::sanitizeFilename($file->original_name),
+            'isImage' => str_starts_with($mimeType, 'image/'),
+        ];
+
+        if ($includeStatus) {
+            $payload['status'] = $file->status;
+        }
+
+        return $payload;
     }
 
     /**
@@ -99,5 +114,61 @@ class FileMapper
             now()->addMinutes(60),
             ['file' => $file->id]
         );
+    }
+
+    public static function detectMimeType(UserFile $file): string
+    {
+        $diskName = self::resolveDiskForPath($file->file_path);
+
+        try {
+            if (in_array($diskName, ['public', 'local'], true)) {
+                $absolutePath = Storage::disk($diskName)->path($file->file_path);
+
+                if (is_file($absolutePath)) {
+                    $mimeType = mime_content_type($absolutePath);
+                    if (is_string($mimeType) && $mimeType !== '') {
+                        return $mimeType;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Fall back to a conservative default below.
+        }
+
+        return self::guessMimeTypeFromPath($file->file_path);
+    }
+
+    public static function resolveDiskForPath(string $path): string
+    {
+        $configuredDefault = config('filesystems.default', 'public');
+        $candidateDisks = array_unique([$configuredDefault, 'public', 'local', 's3']);
+
+        foreach ($candidateDisks as $diskName) {
+            try {
+                if (Storage::disk($diskName)->exists($path)) {
+                    return $diskName;
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return 'public';
+    }
+
+    public static function sanitizeFilename(?string $filename): string
+    {
+        $sanitized = trim((string) preg_replace('/[^A-Za-z0-9._ -]/', '', (string) $filename));
+
+        return $sanitized !== '' ? $sanitized : 'document';
+    }
+
+    private static function guessMimeTypeFromPath(string $path): string
+    {
+        return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            default => 'application/octet-stream',
+        };
     }
 }

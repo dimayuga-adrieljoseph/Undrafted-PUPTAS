@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserFile;
 use App\Helpers\FileMapper;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Illuminate\Support\Facades\Storage;
 use App\Rules\ValidationRules;
 
@@ -18,7 +19,9 @@ class UserFileController extends Controller
     {
         $request->validate(ValidationRules::userFileUpload());
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        $user = $request->user();
+
+        abort_unless($user, Response::HTTP_UNAUTHORIZED);
 
         $filesToSave = [
             'file11' => 'file11_back',
@@ -53,7 +56,10 @@ class UserFileController extends Controller
             }
         }
 
-        return response()->json(['message' => 'Files uploaded successfully']);
+        return response()->json([
+            'message' => 'Files uploaded successfully',
+            'uploadedFiles' => FileMapper::formatFiles($user->files()->get()->keyBy('type')),
+        ]);
     }
 
     public function getUserApplication()
@@ -134,56 +140,27 @@ class UserFileController extends Controller
             abort(Response::HTTP_NOT_FOUND);
         }
 
-        $mimeType = $this->guessMimeType($file->original_name, $file->file_path);
-
-        if ($diskName === 'public' || $diskName === 'local') {
-            return response()->file($disk->path($file->file_path), [
-                'Content-Type' => $mimeType,
-                'Content-Disposition' => 'inline; filename="' . ($file->original_name ?? 'document') . '"',
-                'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
-                'Pragma' => 'no-cache',
-                'Expires' => '0',
-            ]);
-        }
-
-        return response($disk->get($file->file_path), Response::HTTP_OK, [
+        $mimeType = FileMapper::detectMimeType($file);
+        $filename = FileMapper::sanitizeFilename($file->original_name);
+        $contentDisposition = HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_INLINE, $filename);
+        $headers = [
             'Content-Type' => $mimeType,
-            'Content-Disposition' => 'inline; filename="' . ($file->original_name ?? 'document') . '"',
+            'Content-Disposition' => $contentDisposition,
             'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
             'Pragma' => 'no-cache',
             'Expires' => '0',
-        ]);
+            'X-Content-Type-Options' => 'nosniff',
+        ];
+
+        if ($diskName === 'public' || $diskName === 'local') {
+            return response()->file($disk->path($file->file_path), $headers);
+        }
+
+        return response($disk->get($file->file_path), Response::HTTP_OK, $headers);
     }
 
     private function resolveDiskForPath(string $path): string
     {
-        $configuredDefault = config('filesystems.default', 'public');
-        $candidateDisks = array_unique([$configuredDefault, 'public', 'local', 's3']);
-
-        foreach ($candidateDisks as $diskName) {
-            try {
-                if (Storage::disk($diskName)->exists($path)) {
-                    return $diskName;
-                }
-            } catch (\Throwable $e) {
-                continue;
-            }
-        }
-
-        return 'public';
-    }
-
-    private function guessMimeType(?string $originalName, string $path): string
-    {
-        $extension = strtolower(pathinfo($originalName ?: $path, PATHINFO_EXTENSION));
-
-        return match ($extension) {
-            'jpg', 'jpeg' => 'image/jpeg',
-            'png' => 'image/png',
-            'gif' => 'image/gif',
-            'webp' => 'image/webp',
-            'pdf' => 'application/pdf',
-            default => 'application/octet-stream',
-        };
+        return FileMapper::resolveDiskForPath($path);
     }
 }

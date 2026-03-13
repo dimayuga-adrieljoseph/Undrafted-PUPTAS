@@ -291,7 +291,7 @@
                     </h4>
                     <div class="grid grid-cols-3 gap-2">
                         <div
-                            v-for="(src, key) in selectedUserFiles"
+                            v-for="(file, key) in selectedUserFiles"
                             :key="key"
                             class="flex flex-col items-start space-y-1"
                         >
@@ -312,11 +312,11 @@
                             </div>
                             <div class="w-full">
                                 <img
-                                    v-if="src"
-                                    :src="src"
+                                    v-if="hasImagePreview(file)"
+                                    :src="getFileUrl(file)"
                                     alt="Uploaded Document"
                                     class="h-16 w-full object-contain border rounded cursor-pointer"
-                                    @click="openImageModal(src)"
+                                    @click="openImageModal(file)"
                                 />
                                 <div
                                     v-else
@@ -623,8 +623,10 @@ const closeUserCard = () => {
 
 const formatFileKey = (key) => {
     const map = {
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
+        file11Front: "Grade 11 Report Front",
+        file11: "Grade 11 Report Back",
+        file12Front: "Grade 12 Report Front",
+        file12: "Grade 12 Report Back",
         schoolId: "School ID",
         nonEnrollCert: "Certificate of Non-Enrollment",
         psa: "PSA Birth Certificate",
@@ -635,10 +637,20 @@ const formatFileKey = (key) => {
     return map[key] || key;
 };
 
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+
+const hasImagePreview = (file) =>
+    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
+
 const previewImage = ref(null);
 const showImageModal = ref(false);
 
-const openImageModal = (src) => {
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) {
+        return;
+    }
+
     previewImage.value = src;
     showImageModal.value = true;
 };
