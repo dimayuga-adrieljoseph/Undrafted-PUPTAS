@@ -29,6 +29,7 @@ class IdpAuthController extends Controller
      * 
      * This initiates the OAuth2 authorization flow by redirecting
      * the user to the Identity Provider's login/authorization page.
+     * Only sends client_id as per IDP requirements.
      */
     public function redirect()
     {
@@ -45,19 +46,12 @@ class IdpAuthController extends Controller
             ]);
         }
 
-        $query = http_build_query([
-            'client_id'     => $idpConfig['client_id'],
-            'redirect_uri'  => $idpConfig['redirect_uri'],
-            'response_type' => 'code',
-            'scope'         => 'openid profile email',
-        ]);
-
-        // Build the authorization URL - append to base_url
-        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/auth/authorize?' . $query;
+        // Build authorization URL with ONLY client_id - no redirect_uri, response_type, or scope
+        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/auth/authorize?client_id=' . urlencode($idpConfig['client_id']);
 
         \Log::info('Redirecting to IDP authorization endpoint', [
             'authorize_url' => $authorizeUrl,
-            'redirect_uri' => $idpConfig['redirect_uri'],
+            'client_id_sent' => true,
         ]);
 
         return redirect($authorizeUrl);
@@ -67,12 +61,11 @@ class IdpAuthController extends Controller
      * Handle the OAuth2 callback from the IDP.
      * 
      * IDP sends user back here with ?code=xxxx
-     * This method exchanges the code for an access token, retrieves
-     * user information from the IDP, and logs the user into PUPTAS.
+     * This method exchanges the code for tokens and returns them to the user.
      */
     public function callback(Request $request)
     {
-        // Validate authorization code exists
+        // Capture the authorization code from the callback
         $code = $request->query('code');
         
         if (empty($code)) {
@@ -81,9 +74,11 @@ class IdpAuthController extends Controller
                 'query_params' => $request->query(),
             ]);
             
-            return redirect('/login')->withErrors([
-                'idp' => 'Authentication failed. No authorization code received.'
-            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'missing_authorization_code',
+                'message' => 'Authorization code is required.',
+            ], 400);
         }
 
         $idpConfig = config('services.idp');
@@ -94,24 +89,26 @@ class IdpAuthController extends Controller
                 'config_keys' => $idpConfig ? array_keys($idpConfig) : 'config not found',
             ]);
             
-            return redirect('/login')->withErrors([
-                'idp' => 'IDP configuration is incomplete. Please contact administrator.'
-            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'invalid_configuration',
+                'message' => 'IDP configuration is incomplete.',
+            ], 500);
         }
 
-        // Step 1: Exchange authorization code for access token
+        // Step 1: Exchange authorization code for tokens
         $tokenUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/auth/token';
         
-        \Log::info('Exchanging authorization code for access token', [
+        \Log::info('Exchanging authorization code for tokens', [
             'token_url' => $tokenUrl,
         ]);
 
         try {
+            // Send POST request with only client_id, client_secret, and code
+            // Never log client_secret for security
             $tokenResponse = Http::timeout(30)->post($tokenUrl, [
-                'grant_type'    => 'authorization_code',
                 'client_id'     => $idpConfig['client_id'],
                 'client_secret' => $idpConfig['client_secret'],
-                'redirect_uri'  => $idpConfig['redirect_uri'],
                 'code'          => $code,
             ]);
 
@@ -121,121 +118,71 @@ class IdpAuthController extends Controller
                     'response' => $tokenResponse->json(),
                 ]);
                 
-                return redirect('/login')->withErrors([
-                    'idp' => 'Authentication failed. Please try again.'
-                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'token_exchange_failed',
+                    'message' => 'Failed to exchange authorization code for tokens.',
+                ], $tokenResponse->status());
             }
 
             $tokenData = $tokenResponse->json();
+            
+            // Verify tokens were returned
             $accessToken = $tokenData['access_token'] ?? null;
+            $idToken = $tokenData['id_token'] ?? null;
 
             if (empty($accessToken)) {
                 \Log::error('IDP token response missing access_token', [
-                    'response' => $tokenData,
+                    'response_keys' => array_keys($tokenData),
                 ]);
                 
-                return redirect('/login')->withErrors([
-                    'idp' => 'Authentication failed. Invalid token response.'
-                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'invalid_token_response',
+                    'message' => 'Invalid token response from IDP.',
+                ], 500);
             }
 
-            \Log::info('Successfully obtained access token from IDP');
-
-            // Step 2: Use access token to get user info from IDP
-            $userInfoUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/user';
-            
-            \Log::info('Fetching user info from IDP', [
-                'user_info_url' => $userInfoUrl,
+            \Log::info('Successfully obtained tokens from IDP', [
+                'has_access_token' => !empty($accessToken),
+                'has_id_token' => !empty($idToken),
+                'token_type' => $tokenData['token_type'] ?? null,
+                'expires_in' => $tokenData['expires_in'] ?? null,
             ]);
 
-            $userResponse = Http::withToken($accessToken)
-                ->timeout(30)
-                ->get($userInfoUrl);
-
-            if ($userResponse->failed()) {
-                \Log::error('IDP user info request failed', [
-                    'status_code' => $userResponse->status(),
-                    'response' => $userResponse->json(),
-                ]);
-                
-                return redirect('/login')->withErrors([
-                    'idp' => 'Could not retrieve user data. Please try again.'
-                ]);
-            }
-
-            $idpUser = $userResponse->json();
-            
-            \Log::info('Received user data from IDP', [
-                'idp_user_id' => $idpUser['id'] ?? null,
-                'idp_email' => $idpUser['email'] ?? null,
-                'idp_role' => $idpUser['role'] ?? null,
+            // Return tokens to the user
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'access_token' => $accessToken,
+                    'id_token' => $idToken,
+                    'token_type' => $tokenData['token_type'] ?? 'Bearer',
+                    'expires_in' => $tokenData['expires_in'] ?? null,
+                    'refresh_token' => $tokenData['refresh_token'] ?? null,
+                ],
             ]);
-
-            // Step 3: Map IDP role name to local role_id
-            // Use 'role' field - adjust if IDP uses different field name
-            $idpRoleName = strtolower($idpUser['role'] ?? 'applicant');
-            $roleId = $this->roleMap[$idpRoleName] ?? 1; // default to applicant if unknown
-
-            \Log::info('Mapped IDP role to local role_id', [
-                'idp_role' => $idpRoleName,
-                'local_role_id' => $roleId,
-            ]);
-
-            // Step 4: Find or create user in PUPTAS database
-            // Match by idp_user_id if available, otherwise fallback to email
-            $userData = [
-                'email'     => $idpUser['email'] ?? null,
-                'firstname' => $idpUser['firstname'] ?? $idpUser['name'] ?? '',
-                'lastname'  => $idpUser['lastname'] ?? '',
-                'role_id'   => $roleId,
-                'password'  => bcrypt(Str::random(32)), // random password - never used directly for IDP login
-            ];
-
-            // Only include idp_user_id if the column exists
-            if (isset($idpUser['id'])) {
-                $userData['idp_user_id'] = $idpUser['id'];
-            }
-
-            $user = User::updateOrCreate(
-                ['email' => $idpUser['email'] ?? ''],
-                $userData
-            );
-
-            \Log::info('User created or updated from IDP', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'role_id' => $user->role_id,
-            ]);
-
-            // Step 5: Log the user in
-            Auth::login($user, true);
-
-            \Log::info('User logged in via IDP', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-            ]);
-
-            // Step 6: Redirect to correct dashboard based on role
-            return redirect('/home');
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             \Log::error('IDP connection error', [
                 'error' => $e->getMessage(),
             ]);
             
-            return redirect('/login')->withErrors([
-                'idp' => 'Unable to connect to IDP. Please try again later.'
-            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'connection_error',
+                'message' => 'Unable to connect to IDP. Please try again later.',
+            ], 503);
             
         } catch (\Exception $e) {
             \Log::error('IDP authentication unexpected error', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
             
-            return redirect('/login')->withErrors([
-                'idp' => 'An unexpected error occurred during authentication.'
-            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'internal_error',
+                'message' => 'An unexpected error occurred.',
+            ], 500);
         }
     }
 }
