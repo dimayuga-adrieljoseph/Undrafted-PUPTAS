@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\Notify\Notify;
 use App\Http\Controllers\PrivacyConsentController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CallbackController;
+use App\Http\Controllers\IdpAuthController;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
@@ -35,6 +36,15 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 })->middleware('guest')->name('welcome');
+
+// IDP Authentication Routes - Public access for OAuth2 login flow
+Route::get('/auth/idp/redirect', [IdpAuthController::class, 'redirect'])
+    ->middleware('guest')
+    ->name('idp.redirect');
+
+Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
+    ->middleware('guest')
+    ->name('idp.callback');
 
 // View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
@@ -389,13 +399,6 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/audit-logs/check-new', [AuditLogController::class, 'checkNew'])->name('audit-logs.check-new');
     Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit-logs.show');
 });
-
-// Callback Routes - Public access for loading screen with API callback
-Route::get('/callback', [CallbackController::class, 'index']);
-Route::post('/api/callback', [CallbackController::class, 'handle']);
-
-// OAuth2 Identity Provider Callback - Public endpoint for IDP redirect
-Route::get('/auth/idp/callback', [CallbackController::class, 'handleIdpCallback']);
 
 // Logout Route - GET for direct URL access, POST for form submission
 Route::get('/logout', function () {
