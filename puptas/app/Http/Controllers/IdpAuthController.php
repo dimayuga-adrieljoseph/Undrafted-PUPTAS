@@ -107,6 +107,7 @@ class IdpAuthController extends Controller
             // Send POST request with only client_id, client_secret, and code
             // Never log client_secret for security
             $tokenResponse = Http::timeout(30)->post($tokenUrl, [
+                'grant_type'    => 'authorization_code',
                 'client_id'     => $idpConfig['client_id'],
                 'client_secret' => $idpConfig['client_secret'],
                 'code'          => $code,
@@ -122,6 +123,7 @@ class IdpAuthController extends Controller
                     'success' => false,
                     'error' => 'token_exchange_failed',
                     'message' => 'Failed to exchange authorization code for tokens.',
+                    'details' => $tokenResponse->json(),
                 ], $tokenResponse->status());
             }
 
