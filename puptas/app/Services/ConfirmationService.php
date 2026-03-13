@@ -203,6 +203,10 @@ class ConfirmationService
             ]
         );
 
+        $savedFile = UserFile::where('user_id', $user->id)
+            ->where('type', $type)
+            ->first();
+
         Log::info('File reuploaded', [
             'user_id' => $user->id,
             'field' => $field,
@@ -211,7 +215,7 @@ class ConfirmationService
 
         return [
             'message' => 'File reuploaded successfully',
-            'url' => Storage::url($path),
+            'url' => $savedFile ? FileMapper::buildPreviewUrl($savedFile) : null,
             'status' => 'pending',
         ];
     }

@@ -246,6 +246,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/user/application', [ConfirmationController::class, 'show']);
     Route::post('/user/application/submit', [ConfirmationController::class, 'submit']);
     Route::post('/user/application/reupload', [ConfirmationController::class, 'reupload']);
+    Route::get('/files/{file}/preview', [UserFileController::class, 'preview'])
+        ->middleware('signed')
+        ->name('files.preview');
 });
 
 Route::post('/upload-files', [UserFileController::class, 'uploadFiles']);

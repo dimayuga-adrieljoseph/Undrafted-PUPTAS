@@ -715,7 +715,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
 
@@ -801,6 +801,8 @@ const snackbar = ref({
     visible: false,
     message: "",
 });
+const autoRefreshTimer = ref(null);
+const POLL_INTERVAL_MS = 10000;
 
 const showSnackbar = (msg, duration = 3000) => {
     snackbar.value.message = msg;
@@ -850,6 +852,27 @@ const fetchStats = async () => {
 
 onMounted(() => {
     fetchUsers();
+    fetchStats();
+    autoRefreshTimer.value = setInterval(async () => {
+        await fetchUsers();
+        await fetchStats();
+
+        if (!selectedUser.value) {
+            return;
+        }
+
+        const existsInQueue = users.value.some((u) => u.id === selectedUser.value.id);
+        if (!existsInQueue) {
+            closeUserCard();
+        }
+    }, POLL_INTERVAL_MS);
+});
+
+onBeforeUnmount(() => {
+    if (autoRefreshTimer.value) {
+        clearInterval(autoRefreshTimer.value);
+        autoRefreshTimer.value = null;
+    }
 });
 
 const filteredUsers = computed(() => {

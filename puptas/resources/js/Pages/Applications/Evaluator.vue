@@ -472,6 +472,8 @@ const evaluationStatusFilter = ref(""); // Filter for evaluation completion stat
 const sortAsc = ref(true);
 const showStatusDropdown = ref(false);
 const filterDropdownRef = ref(null);
+const autoRefreshTimer = ref(null);
+const POLL_INTERVAL_MS = 10000;
 
 const page = usePage();
 const users = ref(page.props.users || []);
@@ -572,14 +574,32 @@ const handleOutsideClick = (e) => {
     }
 };
 
+const refreshApplicants = async () => {
+    await fetchUsers();
+
+    if (!selectedUser.value) {
+        return;
+    }
+
+    const existsInQueue = users.value.some((u) => u.id === selectedUser.value.id);
+    if (!existsInQueue) {
+        closeUserCard();
+    }
+};
+
 onMounted(() => {
     fetchUsers();
     fetchPrograms();
     document.addEventListener('click', handleOutsideClick);
+    autoRefreshTimer.value = setInterval(refreshApplicants, POLL_INTERVAL_MS);
 });
 
 onBeforeUnmount(() => {
     document.removeEventListener('click', handleOutsideClick);
+    if (autoRefreshTimer.value) {
+        clearInterval(autoRefreshTimer.value);
+        autoRefreshTimer.value = null;
+    }
 });
 
 const filteredUsers = computed(() => {

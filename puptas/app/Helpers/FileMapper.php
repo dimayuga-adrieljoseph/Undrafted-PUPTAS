@@ -2,8 +2,9 @@
 
 namespace App\Helpers;
 
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Collection;
+use App\Models\UserFile;
 
 /**
  * FileMapper - Centralized file mapping and formatting
@@ -55,7 +56,7 @@ class FileMapper
             if (isset($files[$databaseType])) {
                 $file = $files[$databaseType];
                 $uploadedFiles[$apiKey] = [
-                    'url' => Storage::url($file->file_path),
+                    'url' => self::buildPreviewUrl($file),
                 ];
                 if ($includeStatus) {
                     $uploadedFiles[$apiKey]['status'] = $file->status;
@@ -81,10 +82,22 @@ class FileMapper
 
         foreach (self::MAPPING as $apiKey => $databaseType) {
             $uploadedFiles[$apiKey] = isset($files[$databaseType])
-                ? Storage::url($files[$databaseType]->file_path)
+                ? self::buildPreviewUrl($files[$databaseType])
                 : null;
         }
 
         return $uploadedFiles;
+    }
+
+    /**
+     * Build a signed preview URL so file access is authenticated and time-bound.
+     */
+    public static function buildPreviewUrl(UserFile $file): string
+    {
+        return URL::temporarySignedRoute(
+            'files.preview',
+            now()->addMinutes(60),
+            ['file' => $file->id]
+        );
     }
 }

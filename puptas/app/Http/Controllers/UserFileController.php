@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\UserFile;
+use App\Helpers\FileMapper;
+use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Storage;
 use App\Rules\ValidationRules;
 
 class UserFileController extends Controller
 {
+    private const STAFF_ROLE_IDS = [2, 3, 4, 5, 6, 7];
+
     public function uploadFiles(Request $request)
     {
         $request->validate(ValidationRules::userFileUpload());
@@ -65,22 +69,22 @@ class UserFileController extends Controller
             // Example file type mapping, adjust according to your actual type names
             switch ($file->type) {
                 case 'school_id':
-                    $uploadedFiles['schoolId'] = Storage::url($file->file_path);
+                    $uploadedFiles['schoolId'] = FileMapper::buildPreviewUrl($file);
                     break;
                 case 'non_enroll_cert':
-                    $uploadedFiles['nonEnrollCert'] = Storage::url($file->file_path);
+                    $uploadedFiles['nonEnrollCert'] = FileMapper::buildPreviewUrl($file);
                     break;
                 case 'psa':
-                    $uploadedFiles['psa'] = Storage::url($file->file_path);
+                    $uploadedFiles['psa'] = FileMapper::buildPreviewUrl($file);
                     break;
                 case 'good_moral':
-                    $uploadedFiles['goodMoral'] = Storage::url($file->file_path);
+                    $uploadedFiles['goodMoral'] = FileMapper::buildPreviewUrl($file);
                     break;
                 case 'under_oath':
-                    $uploadedFiles['underOath'] = Storage::url($file->file_path);
+                    $uploadedFiles['underOath'] = FileMapper::buildPreviewUrl($file);
                     break;
                 case 'photo_2x2':
-                    $uploadedFiles['photo2x2'] = Storage::url($file->file_path);
+                    $uploadedFiles['photo2x2'] = FileMapper::buildPreviewUrl($file);
                     break;
             }
         }
@@ -107,5 +111,79 @@ class UserFileController extends Controller
             'track' => $user->track,
             'uploadedFiles' => $uploadedFiles,
         ]);
+    }
+
+    public function preview(Request $request, UserFile $file)
+    {
+        if (!$request->hasValidSignature()) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $authUser = $request->user();
+        $isOwner = $authUser && (int) $authUser->id === (int) $file->user_id;
+        $isStaff = $authUser && in_array((int) $authUser->role_id, self::STAFF_ROLE_IDS, true);
+
+        if (!$isOwner && !$isStaff) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
+
+        $diskName = $this->resolveDiskForPath($file->file_path);
+        $disk = Storage::disk($diskName);
+
+        if (!$disk->exists($file->file_path)) {
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
+        $mimeType = $this->guessMimeType($file->original_name, $file->file_path);
+
+        if ($diskName === 'public' || $diskName === 'local') {
+            return response()->file($disk->path($file->file_path), [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'inline; filename="' . ($file->original_name ?? 'document') . '"',
+                'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma' => 'no-cache',
+                'Expires' => '0',
+            ]);
+        }
+
+        return response($disk->get($file->file_path), Response::HTTP_OK, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . ($file->original_name ?? 'document') . '"',
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ]);
+    }
+
+    private function resolveDiskForPath(string $path): string
+    {
+        $configuredDefault = config('filesystems.default', 'public');
+        $candidateDisks = array_unique([$configuredDefault, 'public', 'local', 's3']);
+
+        foreach ($candidateDisks as $diskName) {
+            try {
+                if (Storage::disk($diskName)->exists($path)) {
+                    return $diskName;
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return 'public';
+    }
+
+    private function guessMimeType(?string $originalName, string $path): string
+    {
+        $extension = strtolower(pathinfo($originalName ?: $path, PATHINFO_EXTENSION));
+
+        return match ($extension) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'pdf' => 'application/pdf',
+            default => 'application/octet-stream',
+        };
     }
 }

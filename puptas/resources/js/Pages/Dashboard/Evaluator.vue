@@ -1,7 +1,7 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { LineChart } from "vue-chart-3";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
 import { 
     Chart as ChartJS, 
@@ -53,6 +53,27 @@ const showImageModal = ref(false);
 const isEvaluating = ref(false);
 const filesToReturn = ref({});
 const returnNote = ref("");
+const autoRefreshTimer = ref(null);
+const POLL_INTERVAL_MS = 10000;
+
+const refreshDashboard = () => {
+    router.reload({
+        only: ["pendingUsers", "summary", "chartData"],
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+onMounted(() => {
+    autoRefreshTimer.value = setInterval(refreshDashboard, POLL_INTERVAL_MS);
+});
+
+onBeforeUnmount(() => {
+    if (autoRefreshTimer.value) {
+        clearInterval(autoRefreshTimer.value);
+        autoRefreshTimer.value = null;
+    }
+});
 
 // Summary items with icons and percentages
 const summaryItems = computed(() => [

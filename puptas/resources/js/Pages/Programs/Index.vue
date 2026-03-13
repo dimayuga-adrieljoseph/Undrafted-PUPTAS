@@ -153,16 +153,34 @@ const startEdit = (program) => {
 
 const saveEdit = async () => {
   try {
+    const payload = {
+      name: editingProgram.value.name,
+      code: editingProgram.value.code,
+      slots: editingProgram.value.slots === "" ? null : Number(editingProgram.value.slots),
+      math: editingProgram.value.math === "" ? null : Number(editingProgram.value.math),
+      science: editingProgram.value.science === "" ? null : Number(editingProgram.value.science),
+      english: editingProgram.value.english === "" ? null : Number(editingProgram.value.english),
+      gwa: editingProgram.value.gwa === "" ? null : Number(editingProgram.value.gwa),
+      pupcet: editingProgram.value.pupcet === "" ? null : Number(editingProgram.value.pupcet),
+      strand_ids: editingProgram.value.strand_ids,
+    };
+
     const response = await axios.put(
       `/programs/${editingProgram.value.id}`,
-      editingProgram.value
+      payload
     );
     const index = programs.value.findIndex(p => p.id === editingProgram.value.id);
-    if (index !== -1) programs.value[index] = { ...editingProgram.value };
-    isEditing.value = false;
+    if (index !== -1) programs.value[index] = { ...programs.value[index], ...response.data.program };
     editingProgram.value = null;
     await fetchPrograms();
   } catch (error) {
+    const validationErrors = error.response?.data?.errors;
+    if (validationErrors) {
+      const firstError = Object.values(validationErrors)[0]?.[0];
+      alert(firstError || "Update failed");
+      return;
+    }
+
     alert(error.response?.data?.message || "Update failed");
   }
 };
