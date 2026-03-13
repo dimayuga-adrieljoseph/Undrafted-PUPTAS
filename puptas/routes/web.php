@@ -383,7 +383,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::delete('/admin/users/delete/{id}', [AssignController::class, 'deleteUser'])->name('admin.users.delete');
 });
 
-// Superadmin Routes - Protected by EnsureSuperAdmin middleware
+// Audit log routes - Protected by Superadmin middleware
 Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     Route::get('/admin/audit-logs/check-new', [AuditLogController::class, 'checkNew'])->name('audit-logs.check-new');

@@ -49,6 +49,7 @@ class AuditLogService
 
         return $this->write([
             'user'         => $user,
+            'log_type'     => AuditLog::TYPE_SECURITY,
             'action_type'  => AuditLog::ACTION_LOGIN,
             'log_category' => AuditLog::CATEGORY_AUTHENTICATION,
             'module_name'  => 'Authentication',
@@ -90,6 +91,7 @@ class AuditLogService
         // Write a discrete LOGOUT row
         $this->write([
             'user'         => $user,
+            'log_type'     => AuditLog::TYPE_SECURITY,
             'action_type'  => AuditLog::ACTION_LOGOUT,
             'log_category' => AuditLog::CATEGORY_AUTHENTICATION,
             'module_name'  => 'Authentication',
@@ -122,6 +124,7 @@ class AuditLogService
             'user'         => $actor,
             'action_type'  => strtoupper($actionType),
             'log_category' => $logCategory ?? AuditLog::CATEGORY_SYSTEM_OPERATION,
+            'log_type'     => $this->resolveLogType($actionType, $logCategory, $moduleName),
             'module_name'  => $moduleName,
             'description'  => $description,
         ]);
@@ -139,17 +142,33 @@ class AuditLogService
     {
         try {
             $user = $data['user'] ?? null;
+            $request = request();
+            $sessionId = null;
+
+            if ($request && method_exists($request, 'hasSession') && $request->hasSession()) {
+                $sessionId = $request->session()->getId();
+            }
 
             return AuditLog::create([
                 'user_id'      => $user?->id,
                 'username'     => $user?->email ?? 'system',
                 'user_role'    => $this->resolveRole($user),
+                'log_type'     => $data['log_type'] ?? $this->resolveLogType(
+                    (string) ($data['action_type'] ?? ''),
+                    $data['log_category'] ?? null,
+                    (string) ($data['module_name'] ?? '')
+                ),
                 'log_category' => $data['log_category'] ?? null,
                 'action_type'  => $data['action_type'],
                 'module_name'  => $data['module_name'],
                 'description'  => $data['description'],
                 'login_time'   => $data['login_time'] ?? null,
                 'logout_time'  => $data['logout_time'] ?? null,
+                'ip_address'   => $request?->ip(),
+                'user_agent'   => $this->truncate((string) ($request?->userAgent() ?? ''), 512),
+                // Avoid storing sensitive query parameters (tokens/codes) in audit rows.
+                'request_url'  => $this->truncate((string) ($request?->url() ?? ''), 512),
+                'session_id'   => $sessionId,
             ]);
         } catch (\Throwable $e) {
             logger()->error('[AuditLogService] Failed to write log', [
@@ -175,5 +194,33 @@ class AuditLogService
     private function fullName(User $user): string
     {
         return trim("{$user->firstname} {$user->lastname}") ?: $user->email;
+    }
+
+    private function resolveLogType(string $actionType, ?string $logCategory, string $moduleName): string
+    {
+        $action = strtoupper($actionType);
+        $category = strtoupper((string) $logCategory);
+        $module = strtoupper($moduleName);
+
+        if (in_array($action, [AuditLog::ACTION_LOGIN, AuditLog::ACTION_LOGOUT], true)
+            || $category === AuditLog::CATEGORY_AUTHENTICATION
+            || $module === 'AUTHENTICATION') {
+            return AuditLog::TYPE_SECURITY;
+        }
+
+        if ($category === AuditLog::CATEGORY_SYSTEM_OPERATION || $category === 'SYSTEM_OPERATION') {
+            return AuditLog::TYPE_SYSTEM;
+        }
+
+        return AuditLog::TYPE_AUDIT;
+    }
+
+    private function truncate(string $value, int $maxLength): string
+    {
+        if ($value === '' || strlen($value) <= $maxLength) {
+            return $value;
+        }
+
+        return substr($value, 0, $maxLength);
     }
 }

@@ -123,10 +123,6 @@ const isSuperAdmin = computed(() => {
     return user.value && user.value.role_id === 7;
 });
 
-const isAdmin = computed(() => {
-    return user.value && (user.value.role_id === 2 || user.value.role_id === 7);
-});
-
 const isAuditLogsActive = isActiveRouteFor(["audit-logs.index"]);
 
 /* ---------------- INTERACTION ---------------- */

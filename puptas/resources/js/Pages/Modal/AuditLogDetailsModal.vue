@@ -140,8 +140,8 @@ const getActionBadgeClass = (action) => {
                                 </div>
                             </div>
 
-                            <!-- Action & Module -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Action, Module, and Type -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Module</label>
                                     <p class="text-sm text-gray-900 dark:text-white font-medium">{{ log.module_name || "N/A" }}</p>
@@ -158,6 +158,10 @@ const getActionBadgeClass = (action) => {
                                             {{ log.action_type || "N/A" }}
                                         </span>
                                     </p>
+                                </div>
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Log Type</label>
+                                    <p class="text-sm text-gray-900 dark:text-white font-medium">{{ log.log_type || "N/A" }}</p>
                                 </div>
                             </div>
 
