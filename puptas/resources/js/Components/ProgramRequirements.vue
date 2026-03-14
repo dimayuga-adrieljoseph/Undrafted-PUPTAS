@@ -28,14 +28,8 @@
             </div>
         </div>
 
-        <!-- PUPCET and Slots -->
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-orange-50 p-3 rounded">
-                <p class="text-sm font-medium text-gray-600">PUPCET Score</p>
-                <p class="text-lg font-semibold text-orange-600">
-                    {{ formatDecimal(program.pupcet) }}
-                </p>
-            </div>
+        <!-- Slots -->
+        <div class="grid grid-cols-1 gap-4">
             <div class="bg-purple-50 p-3 rounded">
                 <p class="text-sm font-medium text-gray-600">
                     Available Slots

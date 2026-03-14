@@ -15,7 +15,6 @@ class Program extends Model
         'science',
         'english',
         'gwa',
-        'pupcet',
         'slots'
     ];
 
@@ -24,7 +23,6 @@ class Program extends Model
         'science' => 'decimal:2',
         'english' => 'decimal:2',
         'gwa' => 'decimal:2',
-        'pupcet' => 'decimal:2',
     ];
 
     protected $appends = ['strand_names'];
