@@ -33,6 +33,8 @@ const uploadProgressPercentage = computed(() => {
 
 const formatKey = (key) => {
   const labels = {
+    file10Front: "Grade 10 Report Front",
+    file10: "Grade 10 Report Back",
     file11Front: "Grade 11 Report Front",
     file11: "Grade 11 Report Back",
     file12Front: "Grade 12 Report Front",

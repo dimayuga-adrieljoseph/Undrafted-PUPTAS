@@ -184,6 +184,8 @@ class ValidationRules
     {
         return [
             'application_id' => 'nullable|exists:applications,id',
+            'file10' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'file10Front' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'file11' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'file12' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'file11Front' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',

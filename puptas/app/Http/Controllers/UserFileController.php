@@ -24,6 +24,8 @@ class UserFileController extends Controller
         abort_unless($user, Response::HTTP_UNAUTHORIZED);
 
         $filesToSave = [
+            'file10Front' => 'file10_front',
+            'file10' => 'file10_back',
             'file11' => 'file11_back',
             'file12' => 'file12_back',
             'file11Front' => 'file11_front',
