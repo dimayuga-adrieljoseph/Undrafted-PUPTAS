@@ -38,8 +38,8 @@ class ReuploadFileRequest extends FormRequest
             'file' => [
                 'required',
                 'image',
-                'mimes:jpg,jpeg,png',
-                'max:2048',
+                'mimes:jpg,jpeg,png,webp,gif',
+                'max:5120', // 5MB - increased since we'll compress
             ],
         ];
     }
@@ -56,8 +56,8 @@ class ReuploadFileRequest extends FormRequest
             'field.in' => 'The specified field is not a valid file upload field.',
             'file.required' => 'Please select a file to upload.',
             'file.image' => 'Please upload an image file.',
-            'file.mimes' => 'Only JPG, JPEG, and PNG files are allowed.',
-            'file.max' => 'The file size must not exceed 2MB.',
+            'file.mimes' => 'Only JPG, JPEG, PNG, WebP, and GIF files are allowed.',
+            'file.max' => 'The file size must not exceed 5MB.',
         ];
     }
 }
