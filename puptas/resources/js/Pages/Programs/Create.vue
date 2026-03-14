@@ -168,17 +168,7 @@
                     Examination Requirements
                   </h4>
                   
-                  <div>
-                    <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">PUPCET Score (0+)</label>
-                    <input 
-                      v-model.number="newProgram.pupcet" 
-                      type="number" 
-                      step="0.01" 
-                      min="0"
-                      placeholder="e.g., 75"
-                      class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition"
-                    />
-                  </div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Passing PUPCET score is implied for all applicants.</p>
                 </div>
               </div>
             </div>
@@ -239,7 +229,6 @@ const newProgram = ref({
   science: null,
   english: null,
   gwa: null,
-  pupcet: null,
   slots: 1,
 });
 
@@ -301,7 +290,6 @@ const addProgram = async () => {
       science: null, 
       english: null, 
       gwa: null, 
-      pupcet: null, 
       slots: 1 
     };
     

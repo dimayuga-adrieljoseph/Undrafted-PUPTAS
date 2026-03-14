@@ -85,7 +85,6 @@ class ValidationRules
             'science' => 'nullable|numeric|min:0|max:100',
             'english' => 'nullable|numeric|min:0|max:100',
             'gwa' => 'nullable|numeric|min:1|max:100',
-            'pupcet' => 'nullable|numeric|min:0',
             'slots' => 'required|integer|min:1',
         ];
     }
@@ -101,7 +100,6 @@ class ValidationRules
             'science' => 'nullable|numeric|min:0|max:100',
             'english' => 'nullable|numeric|min:0|max:100',
             'gwa' => 'nullable|numeric|min:1|max:100',
-            'pupcet' => 'nullable|numeric|min:0',
             'slots' => 'required|integer|min:1',
         ];
     }

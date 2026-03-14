@@ -592,6 +592,8 @@ const formatContact = (contact) => {
 
 const formatFileName = (key) => {
     if (!key) return "";
+    if (key === "file10") return "Grade 10 Report Back";
+    if (key === "file10Front") return "Grade 10 Report Front";
     if (key === "file11") return "Grade 11 Report Back";
     if (key === "file11Front") return "Grade 11 Report Front";
     if (key === "file12") return "Grade 12 Report Back";

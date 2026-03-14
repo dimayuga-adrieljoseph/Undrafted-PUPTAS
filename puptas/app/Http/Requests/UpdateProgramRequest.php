@@ -53,7 +53,6 @@ class UpdateProgramRequest extends FormRequest
             'math' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'science' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'gwa' => ['nullable', 'numeric', 'min:1', 'max:100'],
-            'pupcet' => ['nullable', 'numeric', 'min:0'],
             'slots' => ['nullable', 'integer', 'min:0'],
             'strand_ids' => ['nullable', 'array'],
             'strand_ids.*' => ['exists:strands,id'],
