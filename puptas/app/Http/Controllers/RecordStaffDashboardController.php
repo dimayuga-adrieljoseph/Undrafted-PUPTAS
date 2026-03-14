@@ -273,6 +273,87 @@ class RecordStaffDashboardController extends Controller
         }
     }
 
+    public function getPrograms()
+    {
+        $this->ensureRole(6);
+
+        return response()->json([
+            'programs' => \App\Models\Program::select('id', 'code', 'name')->orderBy('code')->get(),
+        ]);
+    }
+
+    public function changeCourse(Request $request, $userId)
+    {
+        $this->ensureRole(6);
+
+        // Validate the incoming program_id strictly
+        $validated = $request->validate([
+            'program_id' => ['required', 'integer', 'exists:programs,id'],
+        ]);
+
+        $newProgramId = (int) $validated['program_id'];
+
+        $application = $this->applicationService->getApplicationByUserId((int) $userId);
+
+        // Only allow course change for officially enrolled applicants
+        if ($application->enrollment_status !== 'officially_enrolled') {
+            abort(409, 'Course can only be changed for officially enrolled applicants.');
+        }
+
+        // No change needed if the program is already the same
+        if ((int) $application->program_id === $newProgramId) {
+            abort(422, 'The selected program is the same as the current program.');
+        }
+
+        try {
+            DB::transaction(function () use ($application, $newProgramId, $userId) {
+                $oldProgramId = $application->program_id;
+
+                // Update program_id while preserving enrollment status
+                Application::where('id', $application->id)
+                    ->update([
+                        'program_id' => $newProgramId,
+                    ]);
+
+                // Create an immutable audit process row for this change
+                ApplicationProcess::create([
+                    'application_id'  => $application->id,
+                    'stage'           => 'records',
+                    'status'          => 'completed',
+                    'action'          => 'course_changed',
+                    'decision_reason' => 'program_change',
+                    'reviewer_notes'  => "Program changed from ID {$oldProgramId} to ID {$newProgramId} for applicant ID {$userId}.",
+                    'performed_by'    => auth()->id(),
+                    'ip_address'      => request()->ip(),
+                ]);
+
+                $this->auditLogService->logActivity(
+                    'UPDATE',
+                    'Applications',
+                    "Registrar changed course for applicant ID {$userId} from program ID {$oldProgramId} to program ID {$newProgramId}.",
+                    null,
+                    'ADMISSION_DATA'
+                );
+            });
+
+            // Reload the fresh program name to confirm in response
+            $application->refresh();
+            $program = $application->program;
+
+            return response()->json([
+                'message' => 'Course updated successfully.',
+                'program' => $program ? [
+                    'id'   => $program->id,
+                    'code' => $program->code,
+                    'name' => $program->name,
+                ] : null,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('❌ Course change failed: ' . $e->getMessage());
+            return response()->json(['message' => 'An error occurred while changing the course.'], 500);
+        }
+    }
+
     private function ensureRole(int $roleId): void
     {
         if (!Auth::user() || Auth::user()->role_id !== $roleId) {
