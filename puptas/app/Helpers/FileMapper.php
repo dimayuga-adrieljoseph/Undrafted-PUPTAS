@@ -22,6 +22,8 @@ class FileMapper
      * Format: 'apiKey' => 'databaseType'
      */
     public const MAPPING = [
+        'file10Front' => 'file10_front',
+        'file10' => 'file10_back',
         'file11Front' => 'file11_front',
         'file11' => 'file11_back',
         'file12Front' => 'file12_front',
