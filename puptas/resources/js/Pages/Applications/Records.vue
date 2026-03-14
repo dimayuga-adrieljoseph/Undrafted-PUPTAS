@@ -283,6 +283,43 @@
                             Untag
                         </button>
                     </div>
+
+                    <!-- Change Course — only visible for officially enrolled applicants -->
+                    <div
+                        v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled'"
+                        class="mt-5 p-3 border border-yellow-300 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700"
+                    >
+                        <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                            ⚠️ Change Course
+                        </h5>
+                        <p class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
+                            Changing the course of an officially enrolled applicant will be logged in the audit trail.
+                        </p>
+                        <select
+                            v-model="changeCourseSelectedId"
+                            id="change-course-select"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-3"
+                        >
+                            <option value="" disabled>Select new program…</option>
+                            <option
+                                v-for="prog in availablePrograms"
+                                :key="prog.id"
+                                :value="prog.id"
+                                :disabled="prog.id === selectedUser?.application?.program?.id"
+                            >
+                                {{ prog.code }} - {{ prog.name }}
+                                <template v-if="prog.id === selectedUser?.application?.program?.id"> (current)</template>
+                            </option>
+                        </select>
+                        <button
+                            @click="changeCourse"
+                            :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse"
+                            class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium"
+                        >
+                            <span v-if="isChangingCourse">Applying…</span>
+                            <span v-else>Apply Course Change</span>
+                        </button>
+                    </div>
                 </div>
 
                 <section class="mt-3 text-sm">
@@ -623,6 +660,8 @@ const closeUserCard = () => {
 
 const formatFileKey = (key) => {
     const map = {
+        file10Front: 'Grade 10 Report Front',
+        file10: 'Grade 10 Report Back',
         file11Front: "Grade 11 Report Front",
         file11: "Grade 11 Report Back",
         file12Front: "Grade 12 Report Front",
@@ -747,6 +786,63 @@ const untagApplication = async () => {
     }
 };
 
+// ─── Change Course ───────────────────────────────────────────────────────────
+const changeCourseSelectedId = ref("");
+const isChangingCourse = ref(false);
+
+const changeCourse = async () => {
+    if (!changeCourseSelectedId.value) {
+        showSnackbar("Please select a program first.");
+        return;
+    }
+
+    // Find the selected program name to include in the confirmation message
+    const selectedProg = availablePrograms.value.find(
+        (p) => p.id === changeCourseSelectedId.value
+    );
+    const confirmMsg = selectedProg
+        ? `Change course to "${selectedProg.code} - ${selectedProg.name}"? This action will be logged.`
+        : "Change course? This action will be logged.";
+
+    if (!confirm(confirmMsg)) return;
+
+    isChangingCourse.value = true;
+    try {
+        const res = await axios.post(
+            `/record-dashboard/change-course/${selectedUser.value.id}`,
+            { program_id: changeCourseSelectedId.value }
+        );
+        showSnackbar(res.data?.message ?? "Course updated successfully.");
+        changeCourseSelectedId.value = "";
+
+        // Refresh list and re-open the panel so the new program name appears
+        await fetchUsers();
+        const refreshedUser = users.value.find((u) => u.id === selectedUser.value.id);
+        if (refreshedUser) {
+            await selectUser(refreshedUser);
+        } else {
+            selectedUser.value = null;
+        }
+    } catch (e) {
+        console.error("Course change failed:", e);
+        const msg =
+            e.response?.data?.message ??
+            e.response?.data?.errors?.program_id?.[0] ??
+            "Failed to change course.";
+        showSnackbar(msg);
+    } finally {
+        isChangingCourse.value = false;
+    }
+};
+
+// Reset changeCourseSelectedId whenever a different user is opened
+watch(
+    () => selectedUser.value?.id,
+    () => {
+        changeCourseSelectedId.value = "";
+    }
+);
+
 const transferApplication = async () => {
     try {
         await axios.post(
@@ -775,7 +871,7 @@ const availablePrograms = ref([]);
 
 const fetchPrograms = async () => {
     try {
-        const response = await axios.get("/interviewer-dashboard/programs");
+        const response = await axios.get("/record-dashboard/programs");
         availablePrograms.value = response.data.programs;
     } catch (e) {
         console.error("Failed to load programs", e);
