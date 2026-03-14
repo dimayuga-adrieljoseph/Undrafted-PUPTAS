@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\UserFile;
 use App\Helpers\FileMapper;
+use App\Services\ImageCompressionService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Illuminate\Support\Facades\Storage;
@@ -14,6 +15,19 @@ use App\Rules\ValidationRules;
 class UserFileController extends Controller
 {
     private const STAFF_ROLE_IDS = [2, 3, 4, 5, 6, 7];
+
+    /**
+     * @var ImageCompressionService
+     */
+    protected ImageCompressionService $compressionService;
+
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct(ImageCompressionService $compressionService)
+    {
+        $this->compressionService = $compressionService;
+    }
 
     public function uploadFiles(Request $request)
     {
@@ -40,21 +54,40 @@ class UserFileController extends Controller
 
         foreach ($filesToSave as $inputName => $type) {
             if ($request->hasFile($inputName)) {
-                $uploadedFile = $request->file($inputName);
-                $path = $uploadedFile->store('uploads/files', 'public');
+                try {
+                    $uploadedFile = $request->file($inputName);
+                    
+                    // Compress and convert to WebP using ImageCompressionService
+                    $compressed = $this->compressionService->compress(
+                        $uploadedFile,
+                        'uploads/files'
+                    );
 
-                UserFile::updateOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'type' => $type,
-                    ],
-                    [
-                        'file_path' => $path,
-                        'original_name' => $uploadedFile->getClientOriginalName(),
-                        'application_id' => $request->application_id ?? null,
-                        'status' => 'pending',
-                    ]
-                );
+                    UserFile::updateOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'type' => $type,
+                        ],
+                        [
+                            'file_path' => $compressed['path'],
+                            'original_name' => $compressed['original_name'],
+                            'application_id' => $request->application_id ?? null,
+                            'status' => 'pending',
+                        ]
+                    );
+                } catch (\InvalidArgumentException $e) {
+                    return response()->json([
+                        'message' => 'Image processing failed: ' . $e->getMessage(),
+                    ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                } catch (\Exception $e) {
+                    \Log::error('Image compression failed', [
+                        'error' => $e->getMessage(),
+                        'file' => $inputName,
+                    ]);
+                    return response()->json([
+                        'message' => 'Failed to process uploaded image',
+                    ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                }
             }
         }
 

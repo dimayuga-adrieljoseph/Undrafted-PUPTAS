@@ -23,6 +23,19 @@ use Illuminate\Support\Facades\Storage;
 class ConfirmationService
 {
     /**
+     * @var ImageCompressionService
+     */
+    protected ImageCompressionService $compressionService;
+
+    /**
+     * Create a new service instance.
+     */
+    public function __construct(ImageCompressionService $compressionService)
+    {
+        $this->compressionService = $compressionService;
+    }
+
+    /**
      * Get confirmation data for a user
      *
      * @param User $user
@@ -187,7 +200,8 @@ class ConfirmationService
             throw new \InvalidArgumentException('Invalid field name');
         }
 
-        $path = $uploadedFile->store('uploads/files', 'public');
+        // Use ImageCompressionService to compress and convert to WebP
+        $compressed = $this->compressionService->compress($uploadedFile, 'uploads/files');
 
         // Delete existing file
         $this->deleteExistingFile($user, $type);
@@ -199,8 +213,8 @@ class ConfirmationService
                 'type' => $type,
             ],
             [
-                'file_path' => $path,
-                'original_name' => $uploadedFile->getClientOriginalName(),
+                'file_path' => $compressed['path'],
+                'original_name' => $compressed['original_name'],
                 'status' => 'pending',
             ]
         );

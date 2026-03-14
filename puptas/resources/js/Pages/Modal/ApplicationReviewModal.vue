@@ -62,7 +62,7 @@
                                 >
                                     Full Name
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.firstname }}
                                     {{ applicationData.middlename }}
                                     {{ applicationData.lastname }}
@@ -74,7 +74,7 @@
                                 >
                                     Email
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.email }}
                                 </p>
                             </div>
@@ -84,7 +84,7 @@
                                 >
                                     Birthday
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ formatDate(applicationData.birthday) }}
                                 </p>
                             </div>
@@ -94,7 +94,7 @@
                                 >
                                     Sex/Gender
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.sex }}
                                 </p>
                             </div>
@@ -104,7 +104,7 @@
                                 >
                                     Contact
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{
                                         formatContact(
                                             applicationData.contactnumber
@@ -118,7 +118,7 @@
                                 >
                                     Street Address
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.street_address }}
                                 </p>
                             </div>
@@ -128,7 +128,7 @@
                                 >
                                     Barangay
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.barangay }}
                                 </p>
                             </div>
@@ -138,7 +138,7 @@
                                 >
                                     City / Municipality
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.city }}
                                 </p>
                             </div>
@@ -148,7 +148,7 @@
                                 >
                                     Province
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.province }}
                                 </p>
                             </div>
@@ -158,7 +158,7 @@
                                 >
                                     Postal Code
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.postal_code || "—" }}
                                 </p>
                             </div>
@@ -179,7 +179,7 @@
                                 >
                                     School
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.school }}
                                 </p>
                             </div>
@@ -189,7 +189,7 @@
                                 >
                                     School Address
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.schoolAdd }}
                                 </p>
                             </div>
@@ -199,7 +199,7 @@
                                 >
                                     School Year
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.schoolyear }}
                                 </p>
                             </div>
@@ -209,7 +209,7 @@
                                 >
                                     Date Graduated
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ formatDate(applicationData.dateGrad) }}
                                 </p>
                             </div>
@@ -219,7 +219,7 @@
                                 >
                                     Strand
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.strand }}
                                 </p>
                             </div>
@@ -229,7 +229,7 @@
                                 >
                                     Track
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{ applicationData.track }}
                                 </p>
                             </div>
@@ -300,7 +300,7 @@
                                 >
                                     First Choice
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{
                                         getProgramName(
                                             applicationData.program_id
@@ -314,7 +314,7 @@
                                 >
                                     Second Choice
                                 </p>
-                                <p class="font-medium">
+                                <p class="font-medium dark:text-white">
                                     {{
                                         getProgramName(
                                             applicationData.second_choice_id
