@@ -6,7 +6,7 @@
  * Covers:
  *  1.  Registrar can change course for an officially enrolled applicant.
  *  2.  Correct ApplicationProcess audit row is persisted.
- *  3.  Non-Registrar (admin, role 2) receives 403.
+ *  3.  Non-authorized roles (e.g. Evaluator, role 3) receive 403.
  *  4.  Guest receives a redirect to /login.
  *  5.  Cannot change course when applicant is NOT officially enrolled.
  *  6.  Cannot change course to the same program (no-op, 422).
@@ -170,7 +170,7 @@ test('a course_changed ApplicationProcess row is created on success', function (
 
 // ─── Test: Authorization ──────────────────────────────────────────────────────
 
-test('admin (role 2) cannot change course', function () {
+test('admin (role 2) can change course', function () {
     $admin     = User::create([
         'firstname'         => 'Admin',
         'lastname'          => 'User',
@@ -189,6 +189,56 @@ test('admin (role 2) cannot change course', function () {
     makeEnrolledApplication($applicant, $programA);
 
     $this->actingAs($admin)
+         ->postJson("/record-dashboard/change-course/{$applicant->id}", [
+             'program_id' => $programB->id,
+         ])
+         ->assertOk();
+});
+
+test('superadmin (role 7) can change course', function () {
+    $superadmin = User::create([
+        'firstname'         => 'Superadmin',
+        'lastname'          => 'User',
+        'email'             => 'superadmin_cc@example.com',
+        'contactnumber'     => '0917001235',
+        'password'          => Hash::make('password'),
+        'role_id'           => 7,
+        'privacy_consent'   => true,
+        'privacy_consent_at'=> now(),
+        'email_verified_at' => now(),
+    ]);
+    $applicant = makeApplicant();
+    $programA  = makeProgram('SA1');
+    $programB  = makeProgram('SA2');
+
+    makeEnrolledApplication($applicant, $programA);
+
+    $this->actingAs($superadmin)
+         ->postJson("/record-dashboard/change-course/{$applicant->id}", [
+             'program_id' => $programB->id,
+         ])
+         ->assertOk();
+});
+
+test('evaluator (role 3) cannot change course', function () {
+    $evaluator = User::create([
+        'firstname'         => 'Evaluator',
+        'lastname'          => 'User',
+        'email'             => 'evaluator_cc@example.com',
+        'contactnumber'     => '0917001235',
+        'password'          => Hash::make('password'),
+        'role_id'           => 3,
+        'privacy_consent'   => true,
+        'privacy_consent_at'=> now(),
+        'email_verified_at' => now(),
+    ]);
+    $applicant = makeApplicant();
+    $programA  = makeProgram('EA');
+    $programB  = makeProgram('EB');
+
+    makeEnrolledApplication($applicant, $programA);
+
+    $this->actingAs($evaluator)
          ->postJson("/record-dashboard/change-course/{$applicant->id}", [
              'program_id' => $programB->id,
          ])

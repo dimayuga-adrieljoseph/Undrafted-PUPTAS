@@ -275,7 +275,7 @@ class RecordStaffDashboardController extends Controller
 
     public function getPrograms()
     {
-        $this->ensureRole(6);
+        $this->ensureRole(2, 6, 7);
 
         return response()->json([
             'programs' => \App\Models\Program::select('id', 'code', 'name')->orderBy('code')->get(),
@@ -284,7 +284,7 @@ class RecordStaffDashboardController extends Controller
 
     public function changeCourse(Request $request, $userId)
     {
-        $this->ensureRole(6);
+        $this->ensureRole(2, 6, 7);
 
         // Validate the incoming program_id strictly
         $validated = $request->validate([
@@ -354,9 +354,9 @@ class RecordStaffDashboardController extends Controller
         }
     }
 
-    private function ensureRole(int $roleId): void
+    private function ensureRole(int ...$roleIds): void
     {
-        if (!Auth::user() || Auth::user()->role_id !== $roleId) {
+        if (!Auth::user() || !in_array(Auth::user()->role_id, $roleIds)) {
             abort(403, 'Unauthorized access.');
         }
     }

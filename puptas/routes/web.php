@@ -342,12 +342,16 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     // Record Staff API endpoints - stage-based filtering applied in controller
     Route::get('/record-dashboard/applicants', [RecordStaffDashboardController::class, 'getUsers']);
     Route::get('/record-dashboard/stats', [RecordStaffDashboardController::class, 'getStats']);
-    Route::get('/record-dashboard/programs', [RecordStaffDashboardController::class, 'getPrograms'])->name('record.programs');
     Route::get('/record-dashboard/application/{id}', [RecordStaffDashboardController::class, 'getUserFiles']);
     Route::post('/record-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
     Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);
-    Route::post('/record-dashboard/change-course/{id}', [RecordStaffDashboardController::class, 'changeCourse'])->name('record.change-course');
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
+});
+
+// Shared Record Staff & Admin endpoints
+Route::middleware(['auth', 'role:2,6,7'])->group(function () {
+    Route::get('/record-dashboard/programs', [RecordStaffDashboardController::class, 'getPrograms'])->name('record.programs');
+    Route::post('/record-dashboard/change-course/{id}', [RecordStaffDashboardController::class, 'changeCourse'])->name('record.change-course');
 });
 
 // Shared endpoint for viewing user list - accessible by admin, evaluator, interviewer, and superadmin
