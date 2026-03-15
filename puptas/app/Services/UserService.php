@@ -200,18 +200,35 @@ class UserService
             })
             ->get()
             ->map(function ($user) {
+                $app = $user->currentApplication;
+                $program = $app?->program;
+                
                 return [
-                    'id' => $user->id,
-                    'firstname' => $user->firstname,
-                    'lastname' => $user->lastname,
-                    'course' => $user->course,
-                    'status' => $user->currentApplication->status ?? null,
-                    'email' => $user->email,
-                    'username' => $user->username,
-                    'phone' => $user->phone,
-                    'company' => $user->company,
-                    'program' => $user->currentApplication->program ?? null,
-                    'enrollment_status' => $user->currentApplication->enrollment_status ?? null,
+                    'id'               => $user->id,
+                    'firstname'        => $user->firstname,
+                    'lastname'         => $user->lastname,
+                    'course'           => $user->course,
+                    'email'            => $user->email,
+                    'username'         => $user->username ?? null,
+                    'phone'            => $user->phone,
+                    'company'          => $user->company,
+                    'status'           => $app?->status ?? null,
+                    'enrollment_status'=> $app?->enrollment_status ?? null,
+                    // Top-level program property for Applications/Records.vue
+                    'program'          => $program,
+                    // Nested application object for Dashboard/Records.vue
+                    'application'      => $app ? [
+                        'id'               => $app->id,
+                        'status'           => $app->status,
+                        'enrollment_status'=> $app->enrollment_status,
+                        'program_id'       => $app->program_id,
+                        'created_at'       => $app->created_at,
+                        'program'          => $program ? [
+                            'id'   => $program->id,
+                            'code' => $program->code,
+                            'name' => $program->name,
+                        ] : null,
+                    ] : null,
                 ];
             });
     }
