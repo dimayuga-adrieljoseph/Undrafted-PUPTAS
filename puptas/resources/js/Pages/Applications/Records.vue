@@ -307,7 +307,7 @@
                                 :value="prog.id"
                                 :disabled="prog.id === selectedUser?.application?.program?.id"
                             >
-                                {{ prog.code }} - {{ prog.name }}
+                                {{ prog.code }} - {{ prog.name }} [Slots: {{ prog.slots }}]
                                 <template v-if="prog.id === selectedUser?.application?.program?.id"> (current)</template>
                             </option>
                         </select>
@@ -817,6 +817,7 @@ const changeCourse = async () => {
 
         // Refresh list and re-open the panel so the new program name appears
         await fetchUsers();
+        await fetchPrograms(); // Refresh slot counters
         const refreshedUser = users.value.find((u) => u.id === selectedUser.value.id);
         if (refreshedUser) {
             await selectUser(refreshedUser);

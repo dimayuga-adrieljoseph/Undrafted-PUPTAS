@@ -251,6 +251,7 @@ const changeCourse = async () => {
 
         // Refresh user details
         await fetchUsers();
+        await fetchPrograms(); // Update slot counters
         const refreshedUser = users.value.find((u) => u.id === selectedUser.value.id);
         if (refreshedUser) {
             await selectUser(refreshedUser);
@@ -604,7 +605,7 @@ const clearFilters = () => {
                             :value="prog.id"
                             :disabled="prog.id === selectedUser?.application?.program?.id"
                         >
-                            {{ prog.code }} - {{ prog.name }}
+                            {{ prog.code }} - {{ prog.name }} [Slots: {{ prog.slots }}]
                             <template v-if="prog.id === selectedUser?.application?.program?.id"> (current)</template>
                         </option>
                     </select>

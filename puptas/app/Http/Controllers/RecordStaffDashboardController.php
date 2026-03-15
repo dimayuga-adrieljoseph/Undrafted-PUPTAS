@@ -278,7 +278,7 @@ class RecordStaffDashboardController extends Controller
         $this->ensureRole(2, 6, 7);
 
         return response()->json([
-            'programs' => \App\Models\Program::select('id', 'code', 'name')->orderBy('code')->get(),
+            'programs' => \App\Models\Program::select('id', 'code', 'name', 'slots')->orderBy('code')->get(),
         ]);
     }
 
@@ -308,12 +308,29 @@ class RecordStaffDashboardController extends Controller
         try {
             DB::transaction(function () use ($application, $newProgramId, $userId) {
                 $oldProgramId = $application->program_id;
+                
+                $newProgram = \App\Models\Program::findOrFail($newProgramId);
+                if ($newProgram->slots <= 0) {
+                    abort(409, 'The selected program has no available slots.');
+                }
+
+                $oldProgram = \App\Models\Program::find($oldProgramId);
 
                 // Update program_id while preserving enrollment status
                 Application::where('id', $application->id)
                     ->update([
                         'program_id' => $newProgramId,
                     ]);
+
+                // Decrement the new program slots
+                $newProgram->slots -= 1;
+                $newProgram->save();
+
+                // Increment the old program slots
+                if ($oldProgram) {
+                    $oldProgram->slots += 1;
+                    $oldProgram->save();
+                }
 
                 // Create an immutable audit process row for this change
                 ApplicationProcess::create([

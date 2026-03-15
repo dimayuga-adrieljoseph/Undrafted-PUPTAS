@@ -77,6 +77,7 @@ function makeProgram(string $code = null): Program
         'code'     => $code,
         'name'     => 'Program ' . $pseq,
         'capacity' => 50,
+        'slots'    => 50,
     ]);
 }
 
