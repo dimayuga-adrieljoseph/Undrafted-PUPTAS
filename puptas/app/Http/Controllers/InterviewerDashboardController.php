@@ -237,13 +237,24 @@ class InterviewerDashboardController extends Controller
                 throw new \Exception("User does not meet the grade requirements for this program.");
             }
 
+            $oldProgramId = $application->program_id;
             $application->program_id = $program->id;
             $application->status = 'transferred';
             $application->save();
             \Log::info("✅ Application updated with program_id {$program->id}");
 
+            // Decrement new program slots
             $program->slots -= 1;
             $program->save();
+
+            // Increment old program slots
+            if ($oldProgramId) {
+                $oldProgram = Program::find($oldProgramId);
+                if ($oldProgram) {
+                    $oldProgram->slots += 1;
+                    $oldProgram->save();
+                }
+            }
             \Log::info("📉 Program slots updated. New slots: {$program->slots}");
 
             // Close current interviewer in-progress process

@@ -623,6 +623,8 @@ const closeUserCard = () => {
 
 const formatFileKey = (key) => {
     const map = {
+        file10Front: 'Grade 10 Report Front',
+        file10: 'Grade 10 Report Back',
         file11Front: "Grade 11 Report Front",
         file11: "Grade 11 Report Back",
         file12Front: "Grade 12 Report Front",
@@ -775,7 +777,7 @@ const availablePrograms = ref([]);
 
 const fetchPrograms = async () => {
     try {
-        const response = await axios.get("/interviewer-dashboard/programs");
+        const response = await axios.get("/record-dashboard/programs");
         availablePrograms.value = response.data.programs;
     } catch (e) {
         console.error("Failed to load programs", e);
