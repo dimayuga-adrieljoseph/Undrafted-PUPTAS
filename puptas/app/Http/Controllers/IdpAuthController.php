@@ -178,82 +178,47 @@ HTML, 200)->header('Content-Type', 'text/html');
             ]);
 
             $tokenPayload = [
-                'grant_type'    => 'authorization_code',
                 'client_id'     => $idpConfig['client_id'],
                 'client_secret' => $idpConfig['client_secret'],
                 'code'          => $code,
             ];
 
+            // Some IDPs accept these although swagger says it is not needed.
             if (!empty($idpConfig['redirect_uri'])) {
                 $tokenPayload['redirect_uri'] = $idpConfig['redirect_uri'];
             }
+            $tokenPayload['grant_type'] = 'authorization_code';
 
-            $attempts = [
-                [
-                    'label'   => 'form_payload',
-                    'url'     => $tokenUrl,
-                    'request' => fn($url) => Http::acceptJson()->asForm()->timeout(30)->post($url, $tokenPayload),
-                ],
-                [
-                    'label'   => 'json_payload',
-                    'url'     => $tokenUrl,
-                    'request' => fn($url) => Http::acceptJson()->timeout(30)->post($url, $tokenPayload),
-                ],
-                [
-                    'label'   => 'json_basic_auth',
-                    'url'     => $tokenUrl,
-                    'request' => fn($url) => Http::acceptJson()
-                        ->withBasicAuth($idpConfig['client_id'], $idpConfig['client_secret'])
-                        ->timeout(30)
-                        ->post($url, [
-                            'grant_type'   => 'authorization_code',
-                            'code'         => $code,
-                            'redirect_uri' => $idpConfig['redirect_uri'] ?? '',
-                        ]),
-                ],
-            ];
+            try {
+                // The IDP strictly expects application/json.
+                $tokenResponse = Http::acceptJson()
+                    ->timeout(30)
+                    ->post($tokenUrl, $tokenPayload);
 
-            $tokenResponse = null;
-            $lastFailure   = null;
+                if (!$tokenResponse->successful()) {
+                    $idpError = $tokenResponse->json('error') ?? 'unknown_error';
+                    $idpDesc  = $tokenResponse->json('error_description') ?? '';
 
-            foreach ($attempts as $attempt) {
-                try {
-                    $candidate = $attempt['request']($attempt['url']);
+                    \Log::error('IDP token exchange failed', [
+                        'status_code'  => $tokenResponse->status(),
+                        'error'        => $idpError,
+                        'description'  => $idpDesc,
+                        'raw_body'     => $tokenResponse->body(),
+                        'client_id'    => $idpConfig['client_id'],
+                        'token_url'    => $tokenUrl,
+                    ]);
 
-                    if ($candidate->successful()) {
-                        $tokenResponse = $candidate;
-                        \Log::info('IDP token exchange succeeded', [
-                            'attempt' => $attempt['label'],
-                            'url'     => $attempt['url'],
-                        ]);
-                        break;
-                    }
-
-                    $lastFailure = [
-                        'attempt'     => $attempt['label'],
-                        'url'         => $attempt['url'],
-                        'status_code' => $candidate->status(),
-                        'response'    => $candidate->json(),
-                        'raw_body'    => $candidate->body(),
-                    ];
-                } catch (\Exception $e) {
-                    \Log::warning('IDP token exchange attempt error', [
-                        'attempt' => $attempt['label'],
-                        'error'   => $e->getMessage(),
+                    return redirect('/login')->withErrors([
+                        'idp' => "IDP Error: {$idpError}. Please try signing in again.",
                     ]);
                 }
-            }
-
-            if (!$tokenResponse) {
-                \Log::error('IDP token exchange failed on all attempts', [
-                    'last_failure' => $lastFailure,
-                    'client_id'    => $idpConfig['client_id'],
-                    'redirect_uri' => $idpConfig['redirect_uri'] ?? 'none',
+            } catch (\Exception $e) {
+                \Log::warning('IDP token exchange exception', [
+                    'error'   => $e->getMessage(),
                 ]);
 
-                // Show a generic message to users — don't expose internal attempt details.
                 return redirect('/login')->withErrors([
-                    'idp' => 'IDP login failed. Please try again or contact the administrator.',
+                    'idp' => 'Failed to connect to IDP for token exchange.',
                 ]);
             }
 
