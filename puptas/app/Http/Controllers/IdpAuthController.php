@@ -33,6 +33,7 @@ class IdpAuthController extends Controller
      */
     public function redirect()
     {
+        \Log::info('IDP redirect initiated');
         $idpConfig = config('services.idp');
         
         // Validate IDP configuration
@@ -82,6 +83,7 @@ class IdpAuthController extends Controller
      */
     public function callback(Request $request)
     {
+        \Log::info('IDP callback reached', ['params' => $request->all()]);
         $expectedState = session('idp_oauth_state');
         $returnedState = $request->query('state');
 
@@ -164,57 +166,60 @@ HTML, 200)->header('Content-Type', 'text/html');
                 'idp' => 'IDP configuration is incomplete. Please contact administrator.',
             ]);
         }
-
-        // Step 1: Exchange authorization code for tokens
-        $tokenUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/auth/token';
-        
-        \Log::info('Exchanging authorization code for tokens', [
-            'token_url' => $tokenUrl,
-            'client_id' => $idpConfig['client_id'],
-        ]);
-
         try {
-            // Try common OAuth2 token exchange formats because IDP implementations vary.
-            // Never log client_secret for security.
-            $tokenPayload = [
+            $tokenUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/auth/token';
+            $altTokenUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/api/v1/auth/token';
+            
+            \Log::info('Exchanging authorization code for tokens', [
+                'token_url' => $tokenUrl,
+                'alt_token_url' => $altTokenUrl,
+                'client_id' => $idpConfig['client_id'],
+            ]);
+
+            $tokenPayload = array_filter([
                 'client_id' => $idpConfig['client_id'],
                 'client_secret' => $idpConfig['client_secret'],
                 'code' => $code,
                 'grant_type' => 'authorization_code',
-            ];
-
-            if (!empty($idpConfig['redirect_uri'])) {
-                $tokenPayload['redirect_uri'] = $idpConfig['redirect_uri'];
-            }
+                'redirect_uri' => $idpConfig['redirect_uri'] ?? null,
+            ]);
 
             $attempts = [
                 [
-                    'label' => 'json_client_credentials',
-                    'request' => fn() => Http::acceptJson()->timeout(30)->post($tokenUrl, $tokenPayload),
+                    'label' => 'json_full_payload',
+                    'url' => $tokenUrl,
+                    'request' => fn($url) => Http::acceptJson()->timeout(30)->post($url, $tokenPayload),
                 ],
                 [
-                    'label' => 'form_client_credentials',
-                    'request' => fn() => Http::acceptJson()->asForm()->timeout(30)->post($tokenUrl, $tokenPayload),
+                    'label' => 'json_full_payload_alt_url',
+                    'url' => $altTokenUrl,
+                    'request' => fn($url) => Http::acceptJson()->timeout(30)->post($url, $tokenPayload),
                 ],
                 [
-                    'label' => 'form_basic_auth',
-                    'request' => fn() => Http::acceptJson()
-                        ->asForm()
-                        ->withBasicAuth($idpConfig['client_id'], $idpConfig['client_secret'])
-                        ->timeout(30)
-                        ->post($tokenUrl, array_filter([
-                            'code' => $code,
-                            'grant_type' => 'authorization_code',
-                            'redirect_uri' => $idpConfig['redirect_uri'] ?? null,
-                        ])),
+                    'label' => 'form_full_payload',
+                    'url' => $tokenUrl,
+                    'request' => fn($url) => Http::acceptJson()->asForm()->timeout(30)->post($url, $tokenPayload),
                 ],
                 [
-                    'label' => 'minimal_form_payload',
-                    'request' => fn() => Http::acceptJson()->asForm()->timeout(30)->post($tokenUrl, [
+                    'label' => 'json_minimal_payload',
+                    'url' => $tokenUrl,
+                    'request' => fn($url) => Http::acceptJson()->timeout(30)->post($url, [
                         'client_id' => $idpConfig['client_id'],
                         'client_secret' => $idpConfig['client_secret'],
                         'code' => $code,
                     ]),
+                ],
+                [
+                    'label' => 'json_basic_auth',
+                    'url' => $tokenUrl,
+                    'request' => fn($url) => Http::acceptJson()
+                        ->withBasicAuth($idpConfig['client_id'], $idpConfig['client_secret'])
+                        ->timeout(30)
+                        ->post($url, array_filter([
+                            'code' => $code,
+                            'grant_type' => 'authorization_code',
+                            'redirect_uri' => $idpConfig['redirect_uri'] ?? null,
+                        ])),
                 ],
             ];
 
@@ -222,34 +227,49 @@ HTML, 200)->header('Content-Type', 'text/html');
             $lastFailure = null;
 
             foreach ($attempts as $attempt) {
-                $candidate = $attempt['request']();
+                try {
+                    $candidate = $attempt['request']($attempt['url']);
 
-                if ($candidate->successful()) {
-                    $tokenResponse = $candidate;
-                    \Log::info('IDP token exchange succeeded', [
+                    if ($candidate->successful()) {
+                        $tokenResponse = $candidate;
+                        \Log::info('IDP token exchange succeeded', [
+                            'attempt' => $attempt['label'],
+                            'url' => $attempt['url'],
+                        ]);
+                        break;
+                    }
+
+                    $lastFailure = [
                         'attempt' => $attempt['label'],
+                        'url' => $attempt['url'],
+                        'status_code' => $candidate->status(),
+                        'response' => $candidate->json(),
+                        'raw_body' => $candidate->body(),
+                    ];
+                } catch (\Exception $e) {
+                    \Log::warning('IDP token exchange attempt error', [
+                        'attempt' => $attempt['label'],
+                        'error' => $e->getMessage(),
                     ]);
-                    break;
                 }
-
-                $lastFailure = [
-                    'attempt' => $attempt['label'],
-                    'status_code' => $candidate->status(),
-                    'response' => $candidate->json(),
-                    'raw_body' => $candidate->body(),
-                ];
             }
 
             if (!$tokenResponse) {
                 \Log::error('IDP token exchange failed on all supported formats', [
-                    'token_url' => $tokenUrl,
                     'last_failure' => $lastFailure,
+                    'client_id' => $idpConfig['client_id'],
+                    'redirect_uri' => $idpConfig['redirect_uri'] ?? 'none',
                 ]);
 
-                $idpReason = $lastFailure['response']['error'] ?? null;
-                $friendlyMessage = $idpReason === 'unauthorized'
-                    ? 'IDP rejected client credentials or callback URL. Please verify IDP client settings.'
-                    : 'Failed to authenticate with IDP. Please try again.';
+                $idpReason = $lastFailure['response']['error'] ?? 'unknown_error';
+                $friendlyMessage = 'Failed to authenticate with School IDP. Please verify your credentials or contact support.';
+
+                \Log::error('IDP token exchange failed final attempt', [
+                    'label' => $lastFailure['attempt'],
+                    'status' => $lastFailure['status_code'],
+                    'reason' => $idpReason,
+                    'response' => $lastFailure['response'] ?? $lastFailure['raw_body']
+                ]);
 
                 return redirect('/login')->withErrors([
                     'idp' => $friendlyMessage,
@@ -280,7 +300,8 @@ HTML, 200)->header('Content-Type', 'text/html');
             ]);
 
             // Step 2: Get user info using access token
-            $userInfoUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/user';
+            // The IDP documentation confirms the endpoint is /me
+            $userInfoUrl = rtrim($idpConfig['base_url'], '/') . '/me';
             
             \Log::info('Fetching user info from IDP', [
                 'user_info_url' => $userInfoUrl,
@@ -304,16 +325,31 @@ HTML, 200)->header('Content-Type', 'text/html');
             }
 
             // Determine role from string/array payload variants.
+            // IDP returns an array of roles: { "roles": ["admin", "user"] }
             $rawRole = $userData['role'] ?? $userData['roles'] ?? null;
             if (is_array($rawRole)) {
-                $rawRole = $rawRole[0] ?? null;
+                // Find first role that exists in our roleMap
+                $normalizedRole = null;
+                foreach ($rawRole as $role) {
+                    $candidate = strtolower(trim((string) $role));
+                    if (isset($this->roleMap[$candidate])) {
+                        $normalizedRole = $candidate;
+                        break;
+                    }
+                }
+                if (!$normalizedRole && !empty($rawRole)) {
+                    $normalizedRole = strtolower(trim((string) $rawRole[0]));
+                }
+            } else {
+                $normalizedRole = strtolower(trim((string) $rawRole));
             }
 
-            $normalizedRole = strtolower(trim((string) $rawRole));
             $roleId = $this->roleMap[$normalizedRole] ?? 1;
 
             $email = $userData['email'] ?? null;
             $idpUserId = $userData['id'] ?? null;
+            $firstName = $userData['first_name'] ?? $userData['firstname'] ?? $userData['name'] ?? '';
+            $lastName = $userData['last_name'] ?? $userData['lastname'] ?? '';
 
             if (empty($email)) {
                 \Log::error('Unable to identify IDP user email.', [
@@ -335,8 +371,8 @@ HTML, 200)->header('Content-Type', 'text/html');
                 [
                     'idp_user_id' => $idpUserId ? (string) $idpUserId : null,
                     'email' => $email,
-                    'firstname' => $userData['firstname'] ?? $userData['name'] ?? '',
-                    'lastname' => $userData['lastname'] ?? '',
+                    'firstname' => $firstName,
+                    'lastname' => $lastName,
                     'role_id' => $roleId,
                     'password' => bcrypt(Str::random(32)),
                 ]
