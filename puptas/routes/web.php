@@ -348,8 +348,8 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
 });
 
-// Shared Record Staff & Admin endpoints
-Route::middleware(['auth', 'role:2,6,7'])->group(function () {
+// Shared Admin, Interviewer & Superadmin endpoints (change course)
+Route::middleware(['auth', 'role:2,4,7'])->group(function () {
     Route::get('/record-dashboard/programs', [RecordStaffDashboardController::class, 'getPrograms'])->name('record.programs');
     Route::post('/record-dashboard/change-course/{id}', [RecordStaffDashboardController::class, 'changeCourse'])->name('record.change-course');
 });

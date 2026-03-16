@@ -4,9 +4,9 @@
  * Feature tests for Program Change After Enrollment.
  *
  * Covers:
- *  1.  Registrar can change course for an officially enrolled applicant.
+ *  1.  Interviewer can change course for an officially enrolled applicant.
  *  2.  Correct ApplicationProcess audit row is persisted.
- *  3.  Non-authorized roles (e.g. Evaluator, role 3) receive 403.
+ *  3.  Non-authorized roles (e.g. Registrar role 6, Evaluator role 3) receive 403.
  *  4.  Guest receives a redirect to /login.
  *  5.  Cannot change course when applicant is NOT officially enrolled.
  *  6.  Cannot change course to the same program (no-op, 422).
@@ -44,20 +44,20 @@ function makeApplicant(array $overrides = []): User
 }
 
 /**
- * Create a Registrar (role_id 6).
+ * Create an Interviewer (role_id 4).
  */
-function makeRegistrar(): User
+function makeInterviewer(): User
 {
-    static $rseq = 200;
-    $rseq++;
+    static $iseq = 400;
+    $iseq++;
 
     return User::create([
-        'firstname'           => 'Registrar',
-        'lastname'            => 'Staff' . $rseq,
-        'email'               => 'registrar' . $rseq . '@example.com',
-        'contactnumber'       => '091700' . $rseq,
+        'firstname'           => 'Interviewer',
+        'lastname'            => 'Staff' . $iseq,
+        'email'               => 'interviewer' . $iseq . '@example.com',
+        'contactnumber'       => '091700' . $iseq,
         'password'            => Hash::make('password'),
-        'role_id'             => 6,
+        'role_id'             => 4,
         'privacy_consent'     => true,
         'privacy_consent_at'  => now(),
         'email_verified_at'   => now(),
@@ -119,16 +119,16 @@ function makeEnrolledApplication(User $applicant, Program $program): Application
 
 // ─── Test: Happy path ─────────────────────────────────────────────────────────
 
-test('registrar can change course for an officially enrolled applicant', function () {
-    $registrar  = makeRegistrar();
-    $applicant  = makeApplicant();
-    $programA   = makeProgram('PA');
-    $programB   = makeProgram('PB');
+test('interviewer can change course for an officially enrolled applicant', function () {
+    $interviewer = makeInterviewer();
+    $applicant   = makeApplicant();
+    $programA    = makeProgram('PA');
+    $programB    = makeProgram('PB');
 
     $app = makeEnrolledApplication($applicant, $programA);
 
     $response = $this
-        ->actingAs($registrar)
+        ->actingAs($interviewer)
         ->postJson("/record-dashboard/change-course/{$applicant->id}", [
             'program_id' => $programB->id,
         ]);
@@ -146,14 +146,14 @@ test('registrar can change course for an officially enrolled applicant', functio
 });
 
 test('a course_changed ApplicationProcess row is created on success', function () {
-    $registrar = makeRegistrar();
-    $applicant = makeApplicant();
-    $programA  = makeProgram('QA');
-    $programB  = makeProgram('QB');
+    $interviewer = makeInterviewer();
+    $applicant   = makeApplicant();
+    $programA    = makeProgram('QA');
+    $programB    = makeProgram('QB');
 
     $app = makeEnrolledApplication($applicant, $programA);
 
-    $this->actingAs($registrar)
+    $this->actingAs($interviewer)
          ->postJson("/record-dashboard/change-course/{$applicant->id}", [
              'program_id' => $programB->id,
          ])
@@ -165,7 +165,7 @@ test('a course_changed ApplicationProcess row is created on success', function (
         'status'          => 'completed',
         'action'          => 'course_changed',
         'decision_reason' => 'program_change',
-        'performed_by'    => $registrar->id,
+        'performed_by'    => $interviewer->id,
     ]);
 });
 
@@ -221,6 +221,31 @@ test('superadmin (role 7) can change course', function () {
          ->assertOk();
 });
 
+test('registrar (role 6) cannot change course', function () {
+    $registrar = User::create([
+        'firstname'         => 'Registrar',
+        'lastname'          => 'NoAccess',
+        'email'             => 'registrar_no_cc@example.com',
+        'contactnumber'     => '0917001236',
+        'password'          => Hash::make('password'),
+        'role_id'           => 6,
+        'privacy_consent'   => true,
+        'privacy_consent_at'=> now(),
+        'email_verified_at' => now(),
+    ]);
+    $applicant = makeApplicant();
+    $programA  = makeProgram('REG_A');
+    $programB  = makeProgram('REG_B');
+
+    makeEnrolledApplication($applicant, $programA);
+
+    $this->actingAs($registrar)
+         ->postJson("/record-dashboard/change-course/{$applicant->id}", [
+             'program_id' => $programB->id,
+         ])
+         ->assertForbidden();
+});
+
 test('evaluator (role 3) cannot change course', function () {
     $evaluator = User::create([
         'firstname'         => 'Evaluator',
@@ -262,7 +287,7 @@ test('guest is redirected when attempting a course change', function () {
 // ─── Test: Business rule — enrollment status guard ────────────────────────────
 
 test('cannot change course when applicant is not officially enrolled', function () {
-    $registrar = makeRegistrar();
+    $interviewer = makeInterviewer();
     $applicant = makeApplicant();
     $programA  = makeProgram('SA');
     $programB  = makeProgram('SB');
@@ -276,7 +301,7 @@ test('cannot change course when applicant is not officially enrolled', function 
         'submitted_at'      => now(),
     ]);
 
-    $this->actingAs($registrar)
+    $this->actingAs($interviewer)
          ->postJson("/record-dashboard/change-course/{$applicant->id}", [
              'program_id' => $programB->id,
          ])
@@ -286,13 +311,13 @@ test('cannot change course when applicant is not officially enrolled', function 
 // ─── Test: Business rule — same-program guard ─────────────────────────────────
 
 test('changing to the same program returns 422', function () {
-    $registrar = makeRegistrar();
+    $interviewer = makeInterviewer();
     $applicant = makeApplicant();
     $programA  = makeProgram('TA');
 
     $app = makeEnrolledApplication($applicant, $programA);
 
-    $this->actingAs($registrar)
+    $this->actingAs($interviewer)
          ->postJson("/record-dashboard/change-course/{$applicant->id}", [
              'program_id' => $programA->id,   // same program
          ])
@@ -308,13 +333,13 @@ test('changing to the same program returns 422', function () {
 // ─── Test: Validation — non-existent program ──────────────────────────────────
 
 test('cannot change course to a non-existent program', function () {
-    $registrar = makeRegistrar();
+    $interviewer = makeInterviewer();
     $applicant = makeApplicant();
     $programA  = makeProgram('UA');
 
     makeEnrolledApplication($applicant, $programA);
 
-    $this->actingAs($registrar)
+    $this->actingAs($interviewer)
          ->postJson("/record-dashboard/change-course/{$applicant->id}", [
              'program_id' => 99999,   // non-existent
          ])
@@ -323,13 +348,13 @@ test('cannot change course to a non-existent program', function () {
 });
 
 test('request without program_id fails validation', function () {
-    $registrar = makeRegistrar();
+    $interviewer = makeInterviewer();
     $applicant = makeApplicant();
     $programA  = makeProgram('VA');
 
     makeEnrolledApplication($applicant, $programA);
 
-    $this->actingAs($registrar)
+    $this->actingAs($interviewer)
          ->postJson("/record-dashboard/change-course/{$applicant->id}", [])
          ->assertUnprocessable()
          ->assertJsonValidationErrors(['program_id']);

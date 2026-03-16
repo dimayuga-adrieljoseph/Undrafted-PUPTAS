@@ -86,7 +86,7 @@ const fetchUsers = async () => {
 
 onMounted(() => {
     fetchUsers();
-    if (currentUser.value?.role_id === 2 || currentUser.value?.role_id === 6 || currentUser.value?.role_id === 7) {
+    if (currentUser.value?.role_id === 2 || currentUser.value?.role_id === 4 || currentUser.value?.role_id === 7) {
         fetchPrograms();
     }
 });
@@ -580,9 +580,9 @@ const clearFilters = () => {
                     </p>
                 </div>
 
-                <!-- Change Course — only visible for admins, registrars, superadmins, and officially enrolled applicants -->
+                <!-- Change Course — only visible for admins, interviewers, superadmins, and officially enrolled applicants -->
                 <div
-                    v-if="(currentUser?.role_id === 2 || currentUser?.role_id === 6 || currentUser?.role_id === 7) && selectedUser?.application?.enrollment_status === 'officially_enrolled'"
+                    v-if="(currentUser?.role_id === 2 || currentUser?.role_id === 4 || currentUser?.role_id === 7) && selectedUser?.application?.enrollment_status === 'officially_enrolled'"
                     class="mb-6 p-3 border border-yellow-300 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700"
                 >
                     <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
@@ -615,7 +615,7 @@ const clearFilters = () => {
                         class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium"
                     >
                         <span v-if="isChangingCourse">Applying…</span>
-                        <span v-else>Apply Course Change</span>
+                        <span v-else>Apply Changes</span>
                     </button>
                 </div>
 

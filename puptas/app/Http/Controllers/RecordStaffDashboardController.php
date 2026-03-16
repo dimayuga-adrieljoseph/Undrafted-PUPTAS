@@ -275,7 +275,7 @@ class RecordStaffDashboardController extends Controller
 
     public function getPrograms()
     {
-        $this->ensureRole(2, 6, 7);
+        $this->ensureRole(2, 4, 7);
 
         return response()->json([
             'programs' => \App\Models\Program::select('id', 'code', 'name', 'slots')->orderBy('code')->get(),
@@ -284,7 +284,7 @@ class RecordStaffDashboardController extends Controller
 
     public function changeCourse(Request $request, $userId)
     {
-        $this->ensureRole(2, 6, 7);
+        $this->ensureRole(2, 4, 7);
 
         // Validate the incoming program_id strictly
         $validated = $request->validate([
