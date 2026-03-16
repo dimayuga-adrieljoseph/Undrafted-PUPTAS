@@ -164,6 +164,7 @@ class CallbackController extends Controller
                 'success' => false,
                 'error' => 'missing_authorization_code',
                 'message' => 'Authorization code is required for OAuth2 callback.',
+                'code' => $code,
             ], 400);
         }
 
