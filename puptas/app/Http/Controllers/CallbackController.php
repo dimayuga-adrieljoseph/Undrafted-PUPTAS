@@ -123,9 +123,7 @@ class CallbackController extends Controller
      */
     public function handle(Request $request)
     {
-        // TODO: Connect your API logic here
-        // Example:
-        // $response = Http::post($request->input('api_url'), $request->all());
+        $response = Http::post($request->input('api_url'), $request->all());
         
         return response()->json([
             'success' => true,
@@ -147,6 +145,12 @@ class CallbackController extends Controller
     {
         // Extract the authorization code from the query parameter
         $code = $request->query('code');
+
+        // Log the authorization code for debugging
+        \Log::info('OAuth2 callback received with authorization code', [
+            'code' => $code,
+            'has_code' => !empty($code),
+        ]);
 
         // Validate that the code parameter exists
         if (empty($code)) {
