@@ -109,7 +109,7 @@ class IdpAuthController extends Controller
             // Never log client_secret for security
             $tokenResponse = Http::timeout(30)->post($tokenUrl, [
                 'client_id'     => '1f4e36ae-d0b4-4976-be2c-f2f519809b05',
-                'client_secret' => 'Do6VSmYa4_FwHpX0SXtLDgBwgYf0MdGEtl0daXjSNNQ',
+                'client_secret' => 'bht9ZB9BFgNaUtWtkvK690NWpFO9Dzvs7Tqoidgeaao',
                 'code'          => $code,
             ]);
 
@@ -124,7 +124,8 @@ class IdpAuthController extends Controller
                     'error' => 'token_exchange_failed',
                     'message' => 'Failed to exchange authorization code for tokens.',
                     'details' => $tokenResponse->json(),
-                    'code' => $code
+                    'code' => $code,
+                    'response' => $tokenResponse->json(),
                 ], $tokenResponse->status());
             }
 
