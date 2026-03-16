@@ -46,6 +46,15 @@ Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
     ->middleware('guest')
     ->name('idp.callback');
 
+// Backward-compatible callback aliases in case IDP client is configured with older paths.
+Route::get('/callback', [IdpAuthController::class, 'callback'])
+    ->middleware('guest')
+    ->name('idp.callback.legacy');
+
+Route::get('/api/callback', [IdpAuthController::class, 'callback'])
+    ->middleware('guest')
+    ->name('idp.callback.api-legacy');
+
 // View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
     // Validate ID is numeric
