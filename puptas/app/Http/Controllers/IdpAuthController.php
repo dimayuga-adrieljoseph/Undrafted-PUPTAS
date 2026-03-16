@@ -56,10 +56,6 @@ class IdpAuthController extends Controller
             'state' => $state,
         ];
 
-        if (!empty($idpConfig['redirect_uri'])) {
-            $authorizeQuery['redirect_uri'] = $idpConfig['redirect_uri'];
-        }
-
         // Keep scope optional because some IDPs reject unknown scopes.
         if (!empty($idpConfig['scope'])) {
             $authorizeQuery['scope'] = $idpConfig['scope'];
@@ -183,12 +179,6 @@ HTML, 200)->header('Content-Type', 'text/html');
                 'client_secret' => $idpConfig['client_secret'],
                 'code'          => $code,
             ];
-
-            // Some IDPs accept these although swagger says it is not needed.
-            if (!empty($idpConfig['redirect_uri'])) {
-                $tokenPayload['redirect_uri'] = $idpConfig['redirect_uri'];
-            }
-            $tokenPayload['grant_type'] = 'authorization_code';
 
             try {
                 // The IDP strictly expects application/json.
