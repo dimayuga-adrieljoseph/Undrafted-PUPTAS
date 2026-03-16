@@ -124,6 +124,7 @@ class IdpAuthController extends Controller
                     'error' => 'token_exchange_failed',
                     'message' => 'Failed to exchange authorization code for tokens.',
                     'details' => $tokenResponse->json(),
+                    'code' => $code
                 ], $tokenResponse->status());
             }
 
