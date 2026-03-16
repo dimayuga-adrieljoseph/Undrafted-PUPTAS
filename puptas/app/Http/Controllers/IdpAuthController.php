@@ -65,7 +65,8 @@ class IdpAuthController extends Controller
             $authorizeQuery['scope'] = $idpConfig['scope'];
         }
 
-        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/auth/authorize?' . http_build_query($authorizeQuery);
+        // IDP Swagger: authorize is at /auth/authorize (no /api/v1 prefix).
+        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . '/auth/authorize?' . http_build_query($authorizeQuery);
 
         \Log::info('Redirecting to IDP authorization endpoint', [
             'authorize_url' => $authorizeUrl,
