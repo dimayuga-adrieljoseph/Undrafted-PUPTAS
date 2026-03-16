@@ -176,38 +176,32 @@ HTML, 200)->header('Content-Type', 'text/html');
                 'client_id' => $idpConfig['client_id'],
             ]);
 
-            $tokenPayload = array_filter([
+            $tokenPayload = [
                 'client_id' => $idpConfig['client_id'],
                 'client_secret' => $idpConfig['client_secret'],
                 'code' => $code,
-                'grant_type' => 'authorization_code',
-                'redirect_uri' => $idpConfig['redirect_uri'] ?? null,
-            ]);
+            ];
 
             $attempts = [
                 [
-                    'label' => 'json_full_payload',
+                    'label' => 'json_exact_payload',
                     'url' => $tokenUrl,
                     'request' => fn($url) => Http::acceptJson()->timeout(30)->post($url, $tokenPayload),
                 ],
                 [
-                    'label' => 'json_full_payload_alt_url',
+                    'label' => 'json_exact_payload_alt_url',
                     'url' => $altTokenUrl,
                     'request' => fn($url) => Http::acceptJson()->timeout(30)->post($url, $tokenPayload),
                 ],
                 [
-                    'label' => 'form_full_payload',
+                    'label' => 'json_grant_type_payload',
                     'url' => $tokenUrl,
-                    'request' => fn($url) => Http::acceptJson()->asForm()->timeout(30)->post($url, $tokenPayload),
+                    'request' => fn($url) => Http::acceptJson()->timeout(30)->post($url, array_merge($tokenPayload, ['grant_type' => 'authorization_code'])),
                 ],
                 [
-                    'label' => 'json_minimal_payload',
+                    'label' => 'form_payload',
                     'url' => $tokenUrl,
-                    'request' => fn($url) => Http::acceptJson()->timeout(30)->post($url, [
-                        'client_id' => $idpConfig['client_id'],
-                        'client_secret' => $idpConfig['client_secret'],
-                        'code' => $code,
-                    ]),
+                    'request' => fn($url) => Http::acceptJson()->asForm()->timeout(30)->post($url, $tokenPayload),
                 ],
                 [
                     'label' => 'json_basic_auth',
@@ -215,11 +209,7 @@ HTML, 200)->header('Content-Type', 'text/html');
                     'request' => fn($url) => Http::acceptJson()
                         ->withBasicAuth($idpConfig['client_id'], $idpConfig['client_secret'])
                         ->timeout(30)
-                        ->post($url, array_filter([
-                            'code' => $code,
-                            'grant_type' => 'authorization_code',
-                            'redirect_uri' => $idpConfig['redirect_uri'] ?? null,
-                        ])),
+                        ->post($url, ['code' => $code]),
                 ],
             ];
 
