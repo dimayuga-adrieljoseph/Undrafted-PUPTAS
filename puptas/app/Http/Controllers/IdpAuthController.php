@@ -108,8 +108,8 @@ class IdpAuthController extends Controller
             // Send POST request with only client_id, client_secret, and code
             // Never log client_secret for security
             $tokenResponse = Http::timeout(30)->post($tokenUrl, [
-                'client_id'     => $idpConfig['client_id'],
-                'client_secret' => $idpConfig['client_secret'],
+                'client_id'     => '1f4e36ae-d0b4-4976-be2c-f2f519809b05',
+                'client_secret' => 'Do6VSmYa4_FwHpX0SXtLDgBwgYf0MdGEtl0daXjSNNQ',
                 'code'          => $code,
             ]);
 
