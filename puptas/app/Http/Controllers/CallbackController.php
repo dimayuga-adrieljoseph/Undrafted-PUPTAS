@@ -181,6 +181,7 @@ class CallbackController extends Controller
                 'success' => false,
                 'error' => 'invalid_configuration',
                 'message' => 'OAuth2 provider configuration is missing or incomplete.',
+                'code' => $code,
             ], 500);
         }
 
@@ -226,6 +227,7 @@ class CallbackController extends Controller
                 'error' => 'token_exchange_failed',
                 'message' => $errorMessage,
                 'details' => $errorData,
+                'code' => $code,
             ], $response->status());
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
@@ -239,6 +241,7 @@ class CallbackController extends Controller
                 'success' => false,
                 'error' => 'connection_error',
                 'message' => 'Failed to connect to OAuth2 provider. Please try again later.',
+                'code' => $code,
             ], 503);
 
         } catch (\Exception $e) {
@@ -252,6 +255,7 @@ class CallbackController extends Controller
                 'success' => false,
                 'error' => 'internal_error',
                 'message' => 'An unexpected error occurred during OAuth2 callback processing.',
+                'code' => $code,
             ], 500);
         }
     }
