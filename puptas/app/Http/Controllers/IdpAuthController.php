@@ -262,7 +262,7 @@ HTML, 200)->header('Content-Type', 'text/html');
                 ]);
 
                 $idpReason = $lastFailure['response']['error'] ?? 'unknown_error';
-                $friendlyMessage = 'Failed to authenticate with School IDP. Please verify your credentials or contact support.';
+                $friendlyMessage = "Failed: {$lastFailure['attempt']} | HTTP {$lastFailure['status_code']} | " . substr($idpReason, 0, 150) . " | " . substr($lastFailure['raw_body'] ?? '', 0, 150);
 
                 \Log::error('IDP token exchange failed final attempt', [
                     'label' => $lastFailure['attempt'],
