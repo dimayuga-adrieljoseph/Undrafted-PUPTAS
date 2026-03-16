@@ -229,12 +229,12 @@ const submit = () => {
 
                         <!-- Login via IDP -->
                         <div class="mt-4 pt-4 border-t border-white/30">
-                            <a
-                                href="https://identity-provider.isaxbsit2027.com/api/v1/auth/authorize?client_id=1f4e36ae-d0b4-4976-be2c-f2f519809b05"
+                            <Link
+                                :href="route('idp.redirect')"
                                 class="w-full flex justify-center py-2 px-4 border border-white text-white rounded-md hover:bg-white hover:text-[#800000] transition-colors font-semibold text-sm"
                             >
                                 Login with School IDP
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </form>
