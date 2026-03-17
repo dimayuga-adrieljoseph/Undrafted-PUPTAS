@@ -41,18 +41,12 @@ class IdpAuthController extends Controller
         $state = Str::random(40);
         session(['idp_oauth_state' => $state]);
 
-        // Build authorization query parameters (include response_type and state)
+        // Build authorization query parameters - only client_id as requested
         $authorizeQuery = [
             'client_id' => $idpConfig['client_id'],
-            'redirect_uri' => $idpConfig['redirect_uri'] ?? null,
-            'response_type' => 'code',
-            'state' => $state,
         ];
 
-        // Add scope if configured
-        if (!empty($idpConfig['scope'])) {
-            $authorizeQuery['scope'] = $idpConfig['scope'];
-        }
+        // Note: state is still generated and stored in session for potential verification on callback
 
         // Construct the full authorization URL using configurable path
         $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/authorize';
