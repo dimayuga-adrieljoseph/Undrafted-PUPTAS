@@ -49,8 +49,8 @@ class IdpAuthController extends Controller
         // Note: state is still generated and stored in session for potential verification on callback
 
         // Construct the full authorization URL using configurable path
-        // IDP Swagger: authorize is at /auth/authorize (no /api/v1 prefix).
-        $authorizePath = $idpConfig['authorize_path'] ?? '/auth/authorize';
+        // IDP Swagger docs or frontend requires pointing to /login
+        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
         \Log::info('Redirecting to IDP authorization endpoint', [
