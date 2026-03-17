@@ -45,6 +45,7 @@ return [
         'client_id' => env('IDP_CLIENT_ID'),
         'client_secret' => env('IDP_CLIENT_SECRET'),
         'redirect_uri' => env('IDP_REDIRECT_URI'),
+        'scope' => env('IDP_SCOPE', 'openid profile email'),
     ],
 
     'external_api' => [

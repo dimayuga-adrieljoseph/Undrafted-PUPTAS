@@ -29,11 +29,16 @@ class IdpAuthController extends Controller
      * 
      * This initiates the OAuth2 authorization flow by redirecting
      * the user to the Identity Provider's login/authorization page.
-     * Only sends client_id as per IDP requirements.
+     * 
+     * Required query parameters:
+     * - client_id: From config('services.idp.client_id')
+     * - redirect_uri: Points to the callback route
+     * - response_type: Set to 'code' for Authorization Code flow
      */
-    public function redirect()
+    public function login()
     {
-        \Log::info('IDP redirect initiated');
+        \Log::info('IDP login initiated');
+        
         $idpConfig = config('services.idp');
         
         // Validate IDP configuration
@@ -47,29 +52,42 @@ class IdpAuthController extends Controller
             ]);
         }
 
+        // Generate state for CSRF protection
         $state = Str::random(40);
         session(['idp_oauth_state' => $state]);
 
+        // Build authorization query parameters
         $authorizeQuery = [
             'client_id' => $idpConfig['client_id'],
+            'redirect_uri' => route('idp.callback'),
             'response_type' => 'code',
             'state' => $state,
         ];
 
-        // Keep scope optional because some IDPs reject unknown scopes.
+        // Add scope if configured
         if (!empty($idpConfig['scope'])) {
             $authorizeQuery['scope'] = $idpConfig['scope'];
         }
 
-        // IDP Swagger: authorize is at /auth/authorize (no /api/v1 prefix).
-        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . '/auth/authorize?' . http_build_query($authorizeQuery);
+        // Construct the full authorization URL
+        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/auth/authorize?' . http_build_query($authorizeQuery);
 
         \Log::info('Redirecting to IDP authorization endpoint', [
             'authorize_url' => $authorizeUrl,
             'client_id_sent' => true,
+            'redirect_uri' => $authorizeQuery['redirect_uri'],
         ]);
 
-        return redirect($authorizeUrl);
+        return redirect()->away($authorizeUrl);
+    }
+
+    /**
+     * Legacy redirect method - redirects to the login method.
+     * Kept for backward compatibility.
+     */
+    public function redirect()
+    {
+        return $this->login();
     }
 
     /**
