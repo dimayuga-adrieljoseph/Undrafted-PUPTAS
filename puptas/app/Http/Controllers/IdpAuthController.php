@@ -52,8 +52,9 @@ class IdpAuthController extends Controller
             $authorizeQuery['scope'] = $idpConfig['scope'];
         }
 
-        // Construct the full authorization URL
-        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/auth/authorize?' . http_build_query($authorizeQuery);
+        // Construct the full authorization URL using configurable path
+        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/authorize';
+        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
         \Log::info('Redirecting to IDP authorization endpoint', [
             'authorize_url' => $authorizeUrl,
@@ -112,8 +113,9 @@ class IdpAuthController extends Controller
         }
 
         try {
-            // Build the token endpoint URL
-            $tokenUrl = rtrim($idpConfig['base_url'], '/') . '/api/v1/auth/token';
+            // Build the token endpoint URL using configurable path
+            $tokenPath = $idpConfig['token_path'] ?? '/api/v1/auth/token';
+            $tokenUrl = rtrim($idpConfig['base_url'], '/') . $tokenPath;
             
             \Log::info('Exchanging authorization code for tokens', [
                 'token_url' => $tokenUrl,
