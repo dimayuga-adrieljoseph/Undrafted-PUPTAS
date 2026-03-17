@@ -1,0 +1,65 @@
+<?php
+
+use App\Models\Application;
+use App\Models\Program;
+use App\Models\User;
+
+test('external students endpoint requires valid token', function () {
+    config()->set('services.external_api.token', 'test-shared-token');
+
+    $response = $this->getJson('/api/v1/students');
+
+    $response->assertStatus(401)
+        ->assertJson([
+            'message' => 'Unauthorized',
+        ]);
+});
+
+test('external students endpoint returns officially enrolled students with student number', function () {
+    config()->set('services.external_api.token', 'test-shared-token');
+
+    $program = Program::create([
+        'code' => 'BSCS',
+        'name' => 'BS Computer Science',
+    ]);
+
+    $officiallyEnrolledUser = User::create([
+        'student_number' => '2026-00001',
+        'firstname' => 'Alice',
+        'lastname' => 'Reyes',
+        'contactnumber' => '09170000001',
+        'email' => 'alice@example.com',
+        'password' => bcrypt('password'),
+    ]);
+
+    $pendingUser = User::create([
+        'student_number' => '2026-00002',
+        'firstname' => 'Bob',
+        'lastname' => 'Santos',
+        'contactnumber' => '09170000002',
+        'email' => 'bob@example.com',
+        'password' => bcrypt('password'),
+    ]);
+
+    Application::create([
+        'user_id' => $officiallyEnrolledUser->id,
+        'program_id' => $program->id,
+        'status' => 'accepted',
+        'enrollment_status' => 'officially_enrolled',
+    ]);
+
+    Application::create([
+        'user_id' => $pendingUser->id,
+        'program_id' => $program->id,
+        'status' => 'submitted',
+        'enrollment_status' => 'pending',
+    ]);
+
+    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students');
+
+    $response->assertOk()
+        ->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('data.0.student_number', '2026-00001')
+        ->assertJsonPath('data.0.application.enrollment_status', 'officially_enrolled')
+        ->assertJsonPath('data.0.program.program_code', 'BSCS');
+});

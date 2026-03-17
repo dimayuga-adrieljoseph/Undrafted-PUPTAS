@@ -47,4 +47,10 @@ return [
         'redirect_uri' => env('IDP_REDIRECT_URI'),
     ],
 
+    'external_api' => [
+        'token' => env('EXTERNAL_API_TOKEN'),
+        'daily_limit' => (int) env('EXTERNAL_API_DAILY_LIMIT', 200),
+        'minute_limit' => (int) env('EXTERNAL_API_MINUTE_LIMIT', 20),
+    ],
+
 ];
