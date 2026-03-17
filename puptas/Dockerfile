@@ -111,8 +111,8 @@ RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs b
     && chmod -R 775 storage bootstrap/cache \
     && chmod -R 755 storage/framework storage/logs
 
-# Generate application key if not set (needed for proper encryption/sessions)
-RUN php artisan key:generate --force
+# Note: APP_KEY is provided via Railway environment variables
+# No need to generate at build time
 
 RUN mkdir -p storage/app/templates && \
     cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/

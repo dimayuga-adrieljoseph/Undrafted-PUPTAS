@@ -65,6 +65,10 @@ php artisan view:clear 2>/dev/null || true
 php artisan cache:clear 2>/dev/null || true
 php artisan optimize:clear 2>/dev/null || true
 
+# Generate APP_KEY if not set (runtime - environment variables are available)
+echo "[6b/11] Checking APP_KEY..."
+php artisan key:generate --force 2>/dev/null || echo "APP_KEY already set or generation skipped"
+
 # Verify routes are registered
 echo "[7/11] Verifying routes..."
 php artisan route:list --path=login 2>/dev/null || echo "Route verification skipped"
