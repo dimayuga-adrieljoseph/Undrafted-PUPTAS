@@ -183,8 +183,97 @@ class IdpAuthController extends Controller
 
             \Log::info('Access token stored in session');
 
-            // Redirect user to dashboard
-            return redirect('/dashboard');
+            // Fetch user info from IDP using the access token
+            $userPath = $idpConfig['user_path'] ?? '/api/v1/user';
+            $userUrl = rtrim($idpConfig['base_url'], '/') . $userPath;
+
+            \Log::info('Fetching user info from IDP', [
+                'user_url' => $userUrl,
+            ]);
+
+            $userResponse = Http::withToken($accessToken)
+                ->acceptJson()
+                ->timeout(30)
+                ->get($userUrl);
+
+            if (!$userResponse->successful()) {
+                \Log::error('Failed to fetch user info from IDP', [
+                    'status' => $userResponse->status(),
+                    'body' => $userResponse->body(),
+                ]);
+
+                return redirect('/login')->withErrors([
+                    'idp' => 'Unable to retrieve user information from IDP.',
+                ]);
+            }
+
+            $idpUser = $userResponse->json();
+
+            // Map IDP user to local user record
+            $localUser = \App\Models\User::where('idp_user_id', $idpUser['id'] ?? null)
+                ->orWhere('email', $idpUser['email'] ?? null)
+                ->first();
+
+            if (!$localUser) {
+                // Create a new local user if one doesn't exist
+                $localUser = \App\Models\User::create([
+                    'name' => $idpUser['name'] ?? ($idpUser['email'] ?? 'IDP User'),
+                    'email' => $idpUser['email'] ?? null,
+                    'idp_user_id' => $idpUser['id'] ?? null,
+                    // default applicant role (1) if not mapped
+                    'role_id' => 1,
+                    'password' => bcrypt(Str::random(40)),
+                ]);
+            } else {
+                // Update existing user with latest IDP info
+                $localUser->update([
+                    'name' => $idpUser['name'] ?? $localUser->name,
+                    'email' => $idpUser['email'] ?? $localUser->email,
+                    'idp_user_id' => $idpUser['id'] ?? $localUser->idp_user_id,
+                ]);
+            }
+
+            // Map IDP role/attributes to local role_id
+            $roleMapping = [
+                // Example mappings - update to match your IDP roles
+                'applicant' => 1,
+                'admin' => 2,
+                'evaluator' => 3,
+                'interviewer' => 4,
+                'medical' => 5,
+                'record' => 6,
+                'superadmin' => 7,
+            ];
+
+            $idpRole = strtolower($idpUser['role'] ?? ($idpUser['roles'][0] ?? null));
+            if ($idpRole && isset($roleMapping[$idpRole])) {
+                $localUser->role_id = $roleMapping[$idpRole];
+                $localUser->save();
+            }
+
+            // Authenticate the user in the local app
+            \Auth::login($localUser);
+
+            \Log::info('User logged in via IDP', ['user_id' => $localUser->id, 'idp_user_id' => $localUser->idp_user_id]);
+
+            // Redirect user to appropriate dashboard based on role
+            switch ($localUser->role_id) {
+                case 1:
+                    return redirect('/applicant-dashboard');
+                case 2:
+                case 7:
+                    return redirect('/dashboard');
+                case 3:
+                    return redirect('/evaluator-dashboard');
+                case 4:
+                    return redirect('/interviewer-dashboard');
+                case 5:
+                    return redirect('/medical-dashboard');
+                case 6:
+                    return redirect('/record-dashboard');
+                default:
+                    return redirect('/dashboard');
+            }
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             \Log::error('IDP connection error', [
