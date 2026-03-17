@@ -77,7 +77,9 @@ echo "[7/13] Migrations complete."
 # Create storage symlink so public disk is accessible
 echo "[8/13] Creating storage symlink..."
 mkdir -p storage/app/public/uploads/files
+chown -R www-data:www-data storage/app/public
 php artisan storage:link --force
+chown -h www-data:www-data public/storage 2>/dev/null || true
 echo "[8/13] Storage link created."
 
 # Verify routes are registered
