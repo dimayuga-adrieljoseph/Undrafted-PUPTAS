@@ -1,7 +1,7 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { LineChart } from "vue-chart-3";
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
 import { 
     Chart as ChartJS, 
@@ -53,6 +53,27 @@ const showImageModal = ref(false);
 const isEvaluating = ref(false);
 const filesToReturn = ref({});
 const returnNote = ref("");
+const autoRefreshTimer = ref(null);
+const POLL_INTERVAL_MS = 10000;
+
+const refreshDashboard = () => {
+    router.reload({
+        only: ["pendingUsers", "summary", "chartData"],
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+onMounted(() => {
+    autoRefreshTimer.value = setInterval(refreshDashboard, POLL_INTERVAL_MS);
+});
+
+onBeforeUnmount(() => {
+    if (autoRefreshTimer.value) {
+        clearInterval(autoRefreshTimer.value);
+        autoRefreshTimer.value = null;
+    }
+});
 
 // Summary items with icons and percentages
 const summaryItems = computed(() => [
@@ -204,8 +225,12 @@ const formatDate = (dateString) => {
 
 const formatFileKey = (key) => {
     const map = {
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
+        file10Front: 'Grade 10 Report Front',
+        file10: 'Grade 10 Report Back',
+        file11Front: "Grade 11 Report Front",
+        file11: "Grade 11 Report Back",
+        file12Front: "Grade 12 Report Front",
+        file12: "Grade 12 Report Back",
         schoolId: "School ID",
         nonEnrollCert: "Non-Enrollment Cert",
         psa: "PSA Birth Certificate",
@@ -215,6 +240,11 @@ const formatFileKey = (key) => {
     };
     return map[key] || key;
 };
+
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+
+const hasImagePreview = (file) =>
+    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
 
 const capitalize = (str) =>
     typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ') : "";
@@ -248,7 +278,12 @@ const closeUserCard = () => {
 };
 
 // Image modal
-const openImageModal = (src) => {
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) {
+        return;
+    }
+
     previewImage.value = src;
     showImageModal.value = true;
 };
@@ -598,7 +633,7 @@ const submitPass = async () => {
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
                                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                                     <div
-                                        v-for="(src, key) in selectedUserFiles"
+                                        v-for="(file, key) in selectedUserFiles"
                                         :key="key"
                                         class="group relative"
                                     >
@@ -606,11 +641,11 @@ const submitPass = async () => {
                                         <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
                                             <div class="relative">
                                                 <img
-                                                    v-if="src"
-                                                    :src="src"
+                                                    v-if="hasImagePreview(file)"
+                                                    :src="getFileUrl(file)"
                                                     :alt="formatFileKey(key)"
                                                     class="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition"
-                                                    @click="openImageModal(src)"
+                                                    @click="openImageModal(file)"
                                                 />
                                                 <div
                                                     v-else
@@ -622,7 +657,7 @@ const submitPass = async () => {
                                                 </div>
                                                 
                                                 <!-- Checkbox overlay for evaluation mode -->
-                                                <div v-if="isEvaluating && src" class="absolute top-2 left-2">
+                                                <div v-if="isEvaluating && hasImagePreview(file)" class="absolute top-2 left-2">
                                                     <input
                                                         type="checkbox"
                                                         :id="key"

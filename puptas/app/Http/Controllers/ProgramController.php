@@ -3,17 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Strand;
-use App\Services\AuditLogService;
 use App\Services\ProgramService;
 use App\Http\Requests\StoreProgramRequest;
 use App\Http\Requests\UpdateProgramRequest;
 
 class ProgramController extends Controller
 {
-    public function __construct(
-        private ProgramService $programService,
-        private AuditLogService $auditLogService
-    ) {}
+    public function __construct(private ProgramService $programService) {}
 
     public function index()
     {
@@ -27,7 +23,6 @@ class ProgramController extends Controller
         $strandIds = $validated['strand_ids'] ?? [];
         unset($validated['strand_ids']);
         $program = $this->programService->createProgram($validated, $strandIds);
-        $this->auditLogService->logActivity('CREATE', 'Programs', "Created program \"{$program->name}\" (code: {$program->code}).", null, 'SYSTEM_OPERATION');
         return response()->json($program, 201);
     }
 
@@ -38,7 +33,6 @@ class ProgramController extends Controller
         $strandIds = $validatedData['strand_ids'] ?? [];
         unset($validatedData['strand_ids']);
         $program = $this->programService->updateProgram($program, $validatedData, $strandIds);
-        $this->auditLogService->logActivity('UPDATE', 'Programs', "Updated program \"{$program->name}\" (ID: {$program->id}).", null, 'SYSTEM_OPERATION');
         return response()->json(['message' => 'Program updated successfully', 'program' => $program]);
     }
 
@@ -46,9 +40,7 @@ class ProgramController extends Controller
     {
         try {
             $program = $this->programService->findProgramOrFail($id);
-            $programName = $program->name;
             $this->programService->deleteProgram($program);
-            $this->auditLogService->logActivity('DELETE', 'Programs', "Deleted program \"{$programName}\" (ID: {$id}).", null, 'SYSTEM_OPERATION');
             return response()->json(['message' => 'Program deleted successfully'], 200);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json(['message' => 'Program not found'], 404);

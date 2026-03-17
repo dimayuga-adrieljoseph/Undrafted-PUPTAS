@@ -30,7 +30,11 @@ class ValidationRules
             'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
             'contactnumber' => 'required|string|regex:/^\d{10}$/', // Changed to 10-digit validation
-            'address' => 'nullable|string|max:500',
+            'street_address' => 'nullable|string|max:255',
+            'barangay' => 'nullable|string|max:100',
+            'city' => 'nullable|string|max:100',
+            'province' => 'nullable|string|max:100',
+            'postal_code' => 'nullable|string|max:10',
             'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
@@ -58,7 +62,11 @@ class ValidationRules
             'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
             'contactnumber' => 'required|string|regex:/^\d{10}$/', // Changed to 10-digit validation
-            'address' => 'nullable|string|max:500',
+            'street_address' => 'nullable|string|max:255',
+            'barangay' => 'nullable|string|max:100',
+            'city' => 'nullable|string|max:100',
+            'province' => 'nullable|string|max:100',
+            'postal_code' => 'nullable|string|max:10',
             'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
@@ -77,7 +85,6 @@ class ValidationRules
             'science' => 'nullable|numeric|min:0|max:100',
             'english' => 'nullable|numeric|min:0|max:100',
             'gwa' => 'nullable|numeric|min:1|max:100',
-            'pupcet' => 'nullable|numeric|min:0',
             'slots' => 'required|integer|min:1',
         ];
     }
@@ -93,7 +100,6 @@ class ValidationRules
             'science' => 'nullable|numeric|min:0|max:100',
             'english' => 'nullable|numeric|min:0|max:100',
             'gwa' => 'nullable|numeric|min:1|max:100',
-            'pupcet' => 'nullable|numeric|min:0',
             'slots' => 'required|integer|min:1',
         ];
     }
@@ -171,22 +177,27 @@ class ValidationRules
 
     /**
      * UserFile validation rules
+     * Note: Max size increased to 5MB (5120KB) since images will be compressed
+     * Supported formats: jpg, jpeg, png, webp, gif
      */
     public static function userFileUpload()
     {
         return [
-            'email' => 'required|email|exists:users,email',
             'application_id' => 'nullable|exists:applications,id',
-            'file11' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file12' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file11Front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'file12Front' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileId' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileNonEnroll' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'filePSA' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileGoodMoral' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'fileUnderOath' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'filePhoto2x2' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            // Increased max size to 5120KB (5MB) since we'll compress images
+            // Added webp and gif to accepted mimes
+            'file10' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'file10Front' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'file11' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'file12' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'file11Front' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'file12Front' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'fileId' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'fileNonEnroll' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'filePSA' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'fileGoodMoral' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'fileUnderOath' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'filePhoto2x2' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
         ];
     }
 

@@ -667,6 +667,19 @@ const g12GWA = computed(() => {
         : null;
 });
 
+const meetsRequirement = (studentValue, requiredValue) => {
+    if (requiredValue === null || requiredValue === undefined || requiredValue === "") {
+        return true;
+    }
+
+    const required = parseFloat(requiredValue);
+    if (Number.isNaN(required)) {
+        return true;
+    }
+
+    return parseFloat(studentValue) >= required;
+};
+
 const qualifiedPrograms = computed(() => {
     if (
         !props.programs ||
@@ -678,13 +691,10 @@ const qualifiedPrograms = computed(() => {
         return [];
     return props.programs.filter((program) => {
         if (!isStrandAllowed(program)) return false;
-        const meetsMath =
-            parseFloat(mathAverage.value) >= parseFloat(program.math);
-        const meetsScience =
-            parseFloat(scienceAverage.value) >= parseFloat(program.science);
-        const meetsEnglish =
-            parseFloat(englishAverage.value) >= parseFloat(program.english);
-        const meetsGWA = parseFloat(g12GWA.value) >= parseFloat(program.gwa);
+        const meetsMath = meetsRequirement(mathAverage.value, program.math);
+        const meetsScience = meetsRequirement(scienceAverage.value, program.science);
+        const meetsEnglish = meetsRequirement(englishAverage.value, program.english);
+        const meetsGWA = meetsRequirement(g12GWA.value, program.gwa);
         return meetsMath && meetsScience && meetsEnglish && meetsGWA;
     });
 });
@@ -700,13 +710,10 @@ const notQualifiedPrograms = computed(() => {
         return props.programs || [];
     return props.programs.filter((program) => {
         if (!isStrandAllowed(program)) return true;
-        const meetsMath =
-            parseFloat(mathAverage.value) >= parseFloat(program.math);
-        const meetsScience =
-            parseFloat(scienceAverage.value) >= parseFloat(program.science);
-        const meetsEnglish =
-            parseFloat(englishAverage.value) >= parseFloat(program.english);
-        const meetsGWA = parseFloat(g12GWA.value) >= parseFloat(program.gwa);
+        const meetsMath = meetsRequirement(mathAverage.value, program.math);
+        const meetsScience = meetsRequirement(scienceAverage.value, program.science);
+        const meetsEnglish = meetsRequirement(englishAverage.value, program.english);
+        const meetsGWA = meetsRequirement(g12GWA.value, program.gwa);
         return !(meetsMath && meetsScience && meetsEnglish && meetsGWA);
     });
 });

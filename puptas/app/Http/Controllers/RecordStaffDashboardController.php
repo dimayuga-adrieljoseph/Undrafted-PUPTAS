@@ -144,7 +144,11 @@ class RecordStaffDashboardController extends Controller
             'lastname' => $user->lastname,
             'email' => $user->email,
             'contactnumber' => $user->contactnumber,
-            'address' => $user->address,
+            'street_address' => $user->street_address,
+            'barangay' => $user->barangay,
+            'city' => $user->city,
+            'province' => $user->province,
+            'postal_code' => $user->postal_code,
             'birthday' => $user->birthday,
             'sex' => $user->sex,
             'created_at' => $user->created_at,
@@ -269,9 +273,107 @@ class RecordStaffDashboardController extends Controller
         }
     }
 
-    private function ensureRole(int $roleId): void
+    public function getPrograms()
     {
-        if (!Auth::user() || Auth::user()->role_id !== $roleId) {
+        $this->ensureRole(2, 4, 7);
+
+        return response()->json([
+            'programs' => \App\Models\Program::select('id', 'code', 'name', 'slots')->orderBy('code')->get(),
+        ]);
+    }
+
+    public function changeCourse(Request $request, $userId)
+    {
+        $this->ensureRole(2, 4, 7);
+
+        // Validate the incoming program_id strictly
+        $validated = $request->validate([
+            'program_id' => ['required', 'integer', 'exists:programs,id'],
+        ]);
+
+        $newProgramId = (int) $validated['program_id'];
+
+        $application = $this->applicationService->getApplicationByUserId((int) $userId);
+
+        // Only allow course change for officially enrolled applicants
+        if ($application->enrollment_status !== 'officially_enrolled') {
+            abort(409, 'Course can only be changed for officially enrolled applicants.');
+        }
+
+        // No change needed if the program is already the same
+        if ((int) $application->program_id === $newProgramId) {
+            abort(422, 'The selected program is the same as the current program.');
+        }
+
+        try {
+            DB::transaction(function () use ($application, $newProgramId, $userId) {
+                $oldProgramId = $application->program_id;
+                
+                $newProgram = \App\Models\Program::findOrFail($newProgramId);
+                if ($newProgram->slots <= 0) {
+                    abort(409, 'The selected program has no available slots.');
+                }
+
+                $oldProgram = \App\Models\Program::find($oldProgramId);
+
+                // Update program_id while preserving enrollment status
+                Application::where('id', $application->id)
+                    ->update([
+                        'program_id' => $newProgramId,
+                    ]);
+
+                // Decrement the new program slots
+                $newProgram->slots -= 1;
+                $newProgram->save();
+
+                // Increment the old program slots
+                if ($oldProgram) {
+                    $oldProgram->slots += 1;
+                    $oldProgram->save();
+                }
+
+                // Create an immutable audit process row for this change
+                ApplicationProcess::create([
+                    'application_id'  => $application->id,
+                    'stage'           => 'records',
+                    'status'          => 'completed',
+                    'action'          => 'course_changed',
+                    'decision_reason' => 'program_change',
+                    'reviewer_notes'  => "Program changed from ID {$oldProgramId} to ID {$newProgramId} for applicant ID {$userId}.",
+                    'performed_by'    => auth()->id(),
+                    'ip_address'      => request()->ip(),
+                ]);
+
+                $this->auditLogService->logActivity(
+                    'UPDATE',
+                    'Applications',
+                    "Registrar changed course for applicant ID {$userId} from program ID {$oldProgramId} to program ID {$newProgramId}.",
+                    null,
+                    'ADMISSION_DATA'
+                );
+            });
+
+            // Reload the fresh program name to confirm in response
+            $application->refresh();
+            $program = $application->program;
+
+            return response()->json([
+                'message' => 'Course updated successfully.',
+                'program' => $program ? [
+                    'id'   => $program->id,
+                    'code' => $program->code,
+                    'name' => $program->name,
+                ] : null,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('❌ Course change failed: ' . $e->getMessage());
+            return response()->json(['message' => 'An error occurred while changing the course.'], 500);
+        }
+    }
+
+    private function ensureRole(int ...$roleIds): void
+    {
+        if (!Auth::user() || !in_array(Auth::user()->role_id, $roleIds)) {
             abort(403, 'Unauthorized access.');
         }
     }

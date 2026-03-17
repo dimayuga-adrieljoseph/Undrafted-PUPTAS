@@ -17,6 +17,7 @@ const { isLoading } = useGlobalLoading()
 
 const page = usePage()
 const user = computed(() => page.props.auth?.user ?? null)
+const roleLabel = computed(() => (user.value?.role_id === 7 ? 'Superadmin' : 'Admin'))
 
 // Dark mode
 const isDarkMode = ref(false)
@@ -142,7 +143,7 @@ const handlePrivacyCancel = () => {
                                 {{ user?.firstname }} {{ user?.lastname }}
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
-                                Superadmin
+                                {{ roleLabel }}
                             </p>
                         </div>
                     </div>

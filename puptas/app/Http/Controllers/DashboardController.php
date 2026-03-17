@@ -39,7 +39,7 @@ class DashboardController extends Controller
         $now = Carbon::now();
         $startDate = $now->copy()->subDays(29)->startOfDay();
         $endDate = $now->copy()->endOfDay();
-        
+
         $applications = DB::table('applications')
             ->select(
                 DB::raw('DATE(created_at) as date'),
@@ -114,7 +114,7 @@ class DashboardController extends Controller
         if (!$user || !in_array($user->role_id, [2, 3, 4, 7])) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
-        
+
         return response()->json(
             User::with('currentApplication.program')
                 ->where('role_id', 1)
@@ -143,7 +143,7 @@ class DashboardController extends Controller
         if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
-        
+
         $user = User::with(['currentApplication.program', 'currentApplication.processes', 'files', 'grades'])->findOrFail($id);
 
         if (!$user) {
@@ -159,7 +159,11 @@ class DashboardController extends Controller
             'lastname' => $user->lastname,
             'email' => $user->email,
             'contactnumber' => $user->contactnumber,
-            'address' => $user->address,
+            'street_address' => $user->street_address,
+            'barangay' => $user->barangay,
+            'city' => $user->city,
+            'province' => $user->province,
+            'postal_code' => $user->postal_code,
             'birthday' => $user->birthday,
             'sex' => $user->sex,
             'created_at' => $user->created_at,

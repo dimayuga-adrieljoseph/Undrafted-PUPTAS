@@ -23,7 +23,6 @@ class ProgramSeeder extends Seeder
                 'science' => 82,
                 'english' => 82,
                 'gwa' => 82,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
             [
@@ -34,7 +33,6 @@ class ProgramSeeder extends Seeder
                 'science' => 82,
                 'english' => 82,
                 'gwa' => 82,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
             [
@@ -45,7 +43,6 @@ class ProgramSeeder extends Seeder
                 'science' => 86,
                 'english' => 86,
                 'gwa' => 88,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
             [
@@ -56,7 +53,6 @@ class ProgramSeeder extends Seeder
                 'science' => 85,
                 'english' => 87,
                 'gwa' => 85,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
             [
@@ -67,7 +63,6 @@ class ProgramSeeder extends Seeder
                 'science' => 85,
                 'english' => 85,
                 'gwa' => 85,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
             [
@@ -78,7 +73,6 @@ class ProgramSeeder extends Seeder
                 'science' => 85,
                 'english' => 85,
                 'gwa' => 90,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
             [
@@ -89,7 +83,6 @@ class ProgramSeeder extends Seeder
                 'science' => 86,
                 'english' => 86,
                 'gwa' => 88,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
             [
@@ -100,7 +93,6 @@ class ProgramSeeder extends Seeder
                 'science' => 82,
                 'english' => 82,
                 'gwa' => 82,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
             [
@@ -111,7 +103,6 @@ class ProgramSeeder extends Seeder
                 'science' => 82,
                 'english' => 82,
                 'gwa' => 82,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
             [
@@ -122,7 +113,6 @@ class ProgramSeeder extends Seeder
                 'science' => 82,
                 'english' => 82,
                 'gwa' => 82,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
             [
@@ -133,7 +123,6 @@ class ProgramSeeder extends Seeder
                 'science' => 85,
                 'english' => 85,
                 'gwa' => 85,
-                'pupcet' => 100,
                 'slots' => 50,
             ],
         ];

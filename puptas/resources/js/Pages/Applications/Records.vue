@@ -291,7 +291,7 @@
                     </h4>
                     <div class="grid grid-cols-3 gap-2">
                         <div
-                            v-for="(src, key) in selectedUserFiles"
+                            v-for="(file, key) in selectedUserFiles"
                             :key="key"
                             class="flex flex-col items-start space-y-1"
                         >
@@ -312,11 +312,11 @@
                             </div>
                             <div class="w-full">
                                 <img
-                                    v-if="src"
-                                    :src="src"
+                                    v-if="hasImagePreview(file)"
+                                    :src="getFileUrl(file)"
                                     alt="Uploaded Document"
                                     class="h-16 w-full object-contain border rounded cursor-pointer"
-                                    @click="openImageModal(src)"
+                                    @click="openImageModal(file)"
                                 />
                                 <div
                                     v-else
@@ -452,6 +452,8 @@ const statusFilter = ref("");
 const sortAsc = ref(true);
 const showStatusDropdown = ref(false);
 const filterDropdownRef = ref(null);
+const autoRefreshTimer = ref(null);
+const POLL_INTERVAL_MS = 10000;
 
 const page = usePage();
 const users = ref(page.props.users || []);
@@ -527,14 +529,32 @@ const handleOutsideClick = (e) => {
     }
 };
 
+const refreshApplicants = async () => {
+    await fetchUsers();
+
+    if (!selectedUser.value) {
+        return;
+    }
+
+    const existsInQueue = users.value.some((u) => u.id === selectedUser.value.id);
+    if (!existsInQueue) {
+        closeUserCard();
+    }
+};
+
 onMounted(() => {
     fetchUsers();
     fetchPrograms();
     document.addEventListener('click', handleOutsideClick);
+    autoRefreshTimer.value = setInterval(refreshApplicants, POLL_INTERVAL_MS);
 });
 
 onBeforeUnmount(() => {
     document.removeEventListener('click', handleOutsideClick);
+    if (autoRefreshTimer.value) {
+        clearInterval(autoRefreshTimer.value);
+        autoRefreshTimer.value = null;
+    }
 });
 
 const filteredUsers = computed(() => {
@@ -603,8 +623,12 @@ const closeUserCard = () => {
 
 const formatFileKey = (key) => {
     const map = {
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
+        file10Front: 'Grade 10 Report Front',
+        file10: 'Grade 10 Report Back',
+        file11Front: "Grade 11 Report Front",
+        file11: "Grade 11 Report Back",
+        file12Front: "Grade 12 Report Front",
+        file12: "Grade 12 Report Back",
         schoolId: "School ID",
         nonEnrollCert: "Certificate of Non-Enrollment",
         psa: "PSA Birth Certificate",
@@ -615,10 +639,20 @@ const formatFileKey = (key) => {
     return map[key] || key;
 };
 
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+
+const hasImagePreview = (file) =>
+    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
+
 const previewImage = ref(null);
 const showImageModal = ref(false);
 
-const openImageModal = (src) => {
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) {
+        return;
+    }
+
     previewImage.value = src;
     showImageModal.value = true;
 };
@@ -743,7 +777,7 @@ const availablePrograms = ref([]);
 
 const fetchPrograms = async () => {
     try {
-        const response = await axios.get("/interviewer-dashboard/programs");
+        const response = await axios.get("/record-dashboard/programs");
         availablePrograms.value = response.data.programs;
     } catch (e) {
         console.error("Failed to load programs", e);

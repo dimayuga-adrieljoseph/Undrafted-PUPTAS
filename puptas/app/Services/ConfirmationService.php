@@ -23,6 +23,19 @@ use Illuminate\Support\Facades\Storage;
 class ConfirmationService
 {
     /**
+     * @var ImageCompressionService
+     */
+    protected ImageCompressionService $compressionService;
+
+    /**
+     * Create a new service instance.
+     */
+    public function __construct(ImageCompressionService $compressionService)
+    {
+        $this->compressionService = $compressionService;
+    }
+
+    /**
      * Get confirmation data for a user
      *
      * @param User $user
@@ -41,12 +54,18 @@ class ConfirmationService
             'birthday' => $user->birthday,
             'sex' => $user->sex,
             'contactnumber' => $user->contactnumber,
-            'address' => $user->address,
+            'street_address' => $user->street_address,
+            'barangay' => $user->barangay,
+            'city' => $user->city,
+            'province' => $user->province,
+            'postal_code' => $user->postal_code,
             'email' => $user->email,
             'school' => $profile->school ?? null,
             'schoolAdd' => $profile->school_address ?? null,
             'schoolyear' => $profile->school_year ?? null,
-            'dateGrad' => $profile->date_graduated ? $profile->date_graduated->format('Y-m-d') : null,
+            'dateGrad' => $profile?->date_graduated
+                ? date('Y-m-d', strtotime((string) $profile->date_graduated))
+                : null,
             'strand' => $profile->strand ?? null,
             'track' => $profile->track ?? null,
             'status' => $application?->status ?? null,
@@ -123,7 +142,7 @@ class ConfirmationService
     {
         return DB::transaction(function () use ($user, $validated) {
             $profile = $user->applicantProfile;
-            
+
             $application = Application::firstOrCreate(
                 ['user_id' => $user->id],
                 [
@@ -181,7 +200,8 @@ class ConfirmationService
             throw new \InvalidArgumentException('Invalid field name');
         }
 
-        $path = $uploadedFile->store('uploads/files', 'public');
+        // Use ImageCompressionService to compress and convert to WebP
+        $compressed = $this->compressionService->compress($uploadedFile, 'uploads/files');
 
         // Delete existing file
         $this->deleteExistingFile($user, $type);
@@ -193,11 +213,15 @@ class ConfirmationService
                 'type' => $type,
             ],
             [
-                'file_path' => $path,
-                'original_name' => $uploadedFile->getClientOriginalName(),
+                'file_path' => $compressed['path'],
+                'original_name' => $compressed['original_name'],
                 'status' => 'pending',
             ]
         );
+
+        $savedFile = UserFile::where('user_id', $user->id)
+            ->where('type', $type)
+            ->first();
 
         Log::info('File reuploaded', [
             'user_id' => $user->id,
@@ -207,8 +231,7 @@ class ConfirmationService
 
         return [
             'message' => 'File reuploaded successfully',
-            'url' => Storage::url($path),
-            'status' => 'pending',
+            'file' => $savedFile ? FileMapper::buildFilePayload($savedFile, true) : null,
         ];
     }
 
@@ -255,12 +278,12 @@ class ConfirmationService
             $query->where(function ($q) use ($english) {
                 $q->whereNull('english')->orWhereRaw('? >= english', [$english]);
             })
-            ->where(function ($q) use ($math) {
-                $q->whereNull('math')->orWhereRaw('? >= math', [$math]);
-            })
-            ->where(function ($q) use ($science) {
-                $q->whereNull('science')->orWhereRaw('? >= science', [$science]);
-            });
+                ->where(function ($q) use ($math) {
+                    $q->whereNull('math')->orWhereRaw('? >= math', [$math]);
+                })
+                ->where(function ($q) use ($science) {
+                    $q->whereNull('science')->orWhereRaw('? >= science', [$science]);
+                });
         })->get();
 
         return [

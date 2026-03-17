@@ -14,6 +14,11 @@ class AuditLog extends Model
     const ACTION_UPDATE = 'UPDATE';
     const ACTION_DELETE = 'DELETE';
 
+    // High-level log type constants (Mock 1 categories)
+    const TYPE_SYSTEM = 'SYSTEM';
+    const TYPE_AUDIT = 'AUDIT';
+    const TYPE_SECURITY = 'SECURITY';
+
     // Log category constants
     const CATEGORY_AUTHENTICATION   = 'AUTHENTICATION';
     const CATEGORY_USER_MANAGEMENT  = 'USER_MANAGEMENT';
@@ -25,6 +30,7 @@ class AuditLog extends Model
         'user_id',
         'username',
         'user_role',
+        'log_type',
         'log_category',
         'action_type',
         'module_name',
@@ -79,5 +85,13 @@ class AuditLog extends Model
     public function scopeLatestFirst(Builder $query): Builder
     {
         return $query->orderByDesc('created_at');
+    }
+
+    /**
+     * Filter logs by high-level type.
+     */
+    public function scopeForType(Builder $query, string $type): Builder
+    {
+        return $query->where('log_type', strtoupper($type));
     }
 }

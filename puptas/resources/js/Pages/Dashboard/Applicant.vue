@@ -31,10 +31,29 @@ const uploadProgressPercentage = computed(() => {
   return (uploadedCount.value / stepKeys.value.length) * 100;
 });
 
-const formatKey = (key) => key.replace(/([A-Z])/g, " $1").toUpperCase();
+const formatKey = (key) => {
+  const labels = {
+    file10Front: "Grade 10 Report Front",
+    file10: "Grade 10 Report Back",
+    file11Front: "Grade 11 Report Front",
+    file11: "Grade 11 Report Back",
+    file12Front: "Grade 12 Report Front",
+    file12: "Grade 12 Report Back",
+    schoolId: "School ID",
+    nonEnrollCert: "Certificate of Non-Enrollment",
+    psa: "PSA Birth Certificate",
+    goodMoral: "Good Moral Certificate",
+    underOath: "Under Oath Document",
+    photo2x2: "2x2 Photo",
+  };
+
+  return labels[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
+};
 const formatStage = (stage) => stage.charAt(0).toUpperCase() + stage.slice(1).replace("_", " ");
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const formatTimestamp = (ts) => ts ? new Date(ts).toLocaleString(undefined, { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" }) : "";
+const getFileUrl = (file) => file?.url || "";
+const hasImagePreview = (file) => Boolean(getFileUrl(file)) && file?.isImage !== false;
 
 const getStatusShort = (status) => {
   switch ((status || "").toLowerCase()) {
@@ -115,18 +134,18 @@ const reuploadFile = async (e, key) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const maxSize = 5 * 1024 * 1024;
+  const maxSize = 2 * 1024 * 1024;
   if (file.size > maxSize) {
-    uploadErrors.value[key] = "File size must be less than 5MB";
+    uploadErrors.value[key] = "File size must be less than 2MB";
     setTimeout(() => {
       delete uploadErrors.value[key];
     }, 5000);
     return;
   }
 
-  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+  const validTypes = ['image/jpeg', 'image/png'];
   if (!validTypes.includes(file.type)) {
-    uploadErrors.value[key] = "Please upload an image or PDF file";
+    uploadErrors.value[key] = "Please upload a JPG, JPEG, or PNG image only";
     setTimeout(() => {
       delete uploadErrors.value[key];
     }, 5000);
@@ -151,7 +170,7 @@ const reuploadFile = async (e, key) => {
       }
     });
     
-    fileStatuses.value[key] = { url: data.url, status: data.status };
+    fileStatuses.value[key] = data.file;
     await fetchData();
   } catch (error) {
     uploadErrors.value[key] = error.response?.data?.message || "Failed to upload file.";
@@ -164,8 +183,9 @@ const reuploadFile = async (e, key) => {
   }
 };
 
-const openImageModal = (src) => { 
-  if(!src) return; 
+const openImageModal = (file) => { 
+  const src = getFileUrl(file);
+  if(!src || !hasImagePreview(file)) return; 
   previewSrc.value = src; 
   showImageModal.value = true; 
   document.body.style.overflow = 'hidden';
@@ -324,6 +344,9 @@ onMounted(() => {
                 </svg>
                 Required Documents
               </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                Upload images only. Accepted formats: JPG, JPEG, PNG. Maximum file size: 2MB.
+              </p>
               
               <div v-if="loading && !stepKeys.length" class="text-center py-8">
                 <div class="flex justify-center items-center space-x-2">
@@ -340,12 +363,12 @@ onMounted(() => {
                   <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600 hover:border-maroon-500 transition-all">
                     <!-- Document Icon/Preview -->
                     <div class="relative mb-2">
-                      <div v-if="fileStatuses[key]?.url" class="relative">
+                      <div v-if="hasImagePreview(fileStatuses[key])" class="relative">
                         <img
-                          :src="fileStatuses[key].url"
+                          :src="getFileUrl(fileStatuses[key])"
                           :alt="formatKey(key)"
                           class="w-full h-20 object-cover rounded-md cursor-pointer"
-                          @click="openImageModal(fileStatuses[key].url)"
+                          @click="openImageModal(fileStatuses[key])"
                         />
                         <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md transition-all"></div>
                       </div>
@@ -391,7 +414,7 @@ onMounted(() => {
                       type="file"
                       :id="'file-input-' + key"
                       class="hidden"
-                      accept="image/*,.pdf"
+                      accept=".jpg,.jpeg,.png,image/jpeg,image/png"
                       @change="reuploadFile($event, key)"
                     />
 

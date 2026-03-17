@@ -30,7 +30,8 @@ class UpdateProgramRequest extends FormRequest
      */
     public function rules(): array
     {
-        $programId = $this->route('id') ?? $this->route('program');
+        $programParam = $this->route('id') ?? $this->route('program');
+        $programId = is_object($programParam) ? ($programParam->id ?? null) : $programParam;
 
         return [
             'name' => [
@@ -51,7 +52,8 @@ class UpdateProgramRequest extends FormRequest
             'english' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'math' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'science' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'capacity' => ['nullable', 'integer', 'min:0'],
+            'gwa' => ['nullable', 'numeric', 'min:1', 'max:100'],
+            'slots' => ['nullable', 'integer', 'min:0'],
             'strand_ids' => ['nullable', 'array'],
             'strand_ids.*' => ['exists:strands,id'],
         ];

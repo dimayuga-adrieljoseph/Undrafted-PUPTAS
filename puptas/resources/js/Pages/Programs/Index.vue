@@ -104,7 +104,7 @@ const filteredPrograms = computed(() => {
     let aVal = a[sortKey.value];
     let bVal = b[sortKey.value];
     
-    if (['math', 'science', 'english', 'gwa', 'pupcet', 'slots'].includes(sortKey.value)) {
+    if (['math', 'science', 'english', 'gwa', 'slots'].includes(sortKey.value)) {
       return sortAsc.value ? (aVal || 0) - (bVal || 0) : (bVal || 0) - (aVal || 0);
     }
     
@@ -153,16 +153,33 @@ const startEdit = (program) => {
 
 const saveEdit = async () => {
   try {
+    const payload = {
+      name: editingProgram.value.name,
+      code: editingProgram.value.code,
+      slots: editingProgram.value.slots === "" ? null : Number(editingProgram.value.slots),
+      math: editingProgram.value.math === "" ? null : Number(editingProgram.value.math),
+      science: editingProgram.value.science === "" ? null : Number(editingProgram.value.science),
+      english: editingProgram.value.english === "" ? null : Number(editingProgram.value.english),
+      gwa: editingProgram.value.gwa === "" ? null : Number(editingProgram.value.gwa),
+      strand_ids: editingProgram.value.strand_ids,
+    };
+
     const response = await axios.put(
       `/programs/${editingProgram.value.id}`,
-      editingProgram.value
+      payload
     );
     const index = programs.value.findIndex(p => p.id === editingProgram.value.id);
-    if (index !== -1) programs.value[index] = { ...editingProgram.value };
-    isEditing.value = false;
+    if (index !== -1) programs.value[index] = { ...programs.value[index], ...response.data.program };
     editingProgram.value = null;
     await fetchPrograms();
   } catch (error) {
+    const validationErrors = error.response?.data?.errors;
+    if (validationErrors) {
+      const firstError = Object.values(validationErrors)[0]?.[0];
+      alert(firstError || "Update failed");
+      return;
+    }
+
     alert(error.response?.data?.message || "Update failed");
   }
 };
@@ -223,7 +240,7 @@ const toggleSortOrder = () => {
 
 // Helper to check if program has requirements
 const hasRequirements = (program) => {
-  return program.math || program.science || program.english || program.gwa || program.pupcet;
+  return program.math || program.science || program.english || program.gwa;
 };
 </script>
 
@@ -467,10 +484,7 @@ const hasRequirements = (program) => {
                            placeholder="Enter GWA" />
                   </div>
                   <div class="col-span-2">
-                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">PUPCET</label>
-                    <input v-model="editingProgram.pupcet" type="number" step="0.01" 
-                           class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" 
-                           placeholder="Enter PUPCET score" />
+                    <p class="text-xs text-gray-400">Passing PUPCET score is implied.</p>
                   </div>
                 </div>
               </div>

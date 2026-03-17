@@ -249,8 +249,12 @@ const closeUserCard = () => {
 
 const formatFileKey = (key) => {
     const map = {
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
+        file10Front: 'Grade 10 Report Front',
+        file10: 'Grade 10 Report Back',
+        file11Front: "Grade 11 Report Front",
+        file11: "Grade 11 Report Back",
+        file12Front: "Grade 12 Report Front",
+        file12: "Grade 12 Report Back",
         schoolId: "School ID",
         nonEnrollCert: "Non-Enrollment Cert",
         psa: "PSA Birth Certificate",
@@ -261,10 +265,20 @@ const formatFileKey = (key) => {
     return map[key] || key;
 };
 
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+
+const hasImagePreview = (file) =>
+    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
+
 const previewImage = ref(null);
 const showImageModal = ref(false);
 
-const openImageModal = (src) => {
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) {
+        return;
+    }
+
     previewImage.value = src;
     showImageModal.value = true;
 };
@@ -607,7 +621,7 @@ const fetchPrograms = async () => {
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
                                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                                     <div
-                                        v-for="(src, key) in selectedUserFiles"
+                                        v-for="(file, key) in selectedUserFiles"
                                         :key="key"
                                         class="group relative"
                                     >
@@ -615,11 +629,11 @@ const fetchPrograms = async () => {
                                         <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
                                             <div class="relative">
                                                 <img
-                                                    v-if="src"
-                                                    :src="src"
+                                                    v-if="hasImagePreview(file)"
+                                                    :src="getFileUrl(file)"
                                                     :alt="formatFileKey(key)"
                                                     class="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition"
-                                                    @click="openImageModal(src)"
+                                                    @click="openImageModal(file)"
                                                 />
                                                 <div
                                                     v-else

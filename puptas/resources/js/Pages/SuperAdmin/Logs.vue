@@ -20,6 +20,8 @@ import {
     faClock,
     faGlobe,
     faCode,
+    faServer,
+    faShieldAlt,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -35,19 +37,123 @@ library.add(
     faUser,
     faClock,
     faGlobe,
-    faCode
+    faCode,
+    faServer,
+    faShieldAlt
 );
 
 const page = usePage();
 const logs = computed(() => page.props.logs?.data || []);
 const pagination = computed(() => page.props.logs || {});
+const users = computed(() => page.props.users || []);
+const logTypes = computed(() => page.props.logTypes || ["SYSTEM", "AUDIT", "SECURITY"]);
+const initialFilters = computed(() => page.props.filters || {});
 
 // State
 const selectedLog = ref(null);
 const showModal = ref(false);
 const searchQuery = ref("");
 const filterAction = ref("");
-const isLoading = ref(false);
+const serverFilters = ref({
+    user_id: initialFilters.value.user_id ?? "",
+    date: initialFilters.value.date ?? "",
+    log_type: initialFilters.value.log_type ?? "",
+});
+
+// Auto-polling state
+const pollIntervalId = ref(null);
+const lastKnownId = ref(0);
+const newLogIds = ref(new Set());
+const liveTotal = ref(0);
+const POLL_INTERVAL = 5000; // 5 seconds
+
+// Initialize lastKnownId from current logs
+const initLastKnownId = () => {
+    const currentLogs = logs.value;
+    if (currentLogs.length > 0) {
+        lastKnownId.value = Math.max(...currentLogs.map(l => l.id));
+    } else {
+        lastKnownId.value = 0;
+    }
+    liveTotal.value = pagination.value.total || 0;
+};
+
+const buildServerParams = () => {
+    const params = {};
+
+    if (serverFilters.value.user_id) params.user_id = serverFilters.value.user_id;
+    if (serverFilters.value.date) params.date = serverFilters.value.date;
+    if (serverFilters.value.log_type) params.log_type = serverFilters.value.log_type;
+
+    return params;
+};
+
+// Poll for new logs
+const pollForNewLogs = async () => {
+    try {
+        const response = await axios.get('/admin/audit-logs/check-new', {
+            params: {
+                since_id: lastKnownId.value,
+                ...buildServerParams(),
+            }
+        });
+
+        const { latest_id, total, new_log_ids } = response.data;
+
+        if (latest_id > lastKnownId.value && new_log_ids.length > 0) {
+            // Track new log IDs for highlighting
+            new_log_ids.forEach(id => newLogIds.value.add(id));
+
+            // Update total count
+            liveTotal.value = total;
+
+            // Update last known ID
+            lastKnownId.value = latest_id;
+
+            // Reload the Inertia page data to reflect new logs
+            router.reload({
+                only: ['logs'],
+                preserveState: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Clear highlight after 5 seconds
+                    setTimeout(() => {
+                        newLogIds.value.clear();
+                    }, 5000);
+                },
+            });
+        }
+    } catch (error) {
+        // Silently ignore polling errors to avoid disrupting the UI
+    }
+};
+
+// Start/stop polling
+const startPolling = () => {
+    if (pollIntervalId.value) return;
+    pollIntervalId.value = setInterval(pollForNewLogs, POLL_INTERVAL);
+};
+
+const stopPolling = () => {
+    if (pollIntervalId.value) {
+        clearInterval(pollIntervalId.value);
+        pollIntervalId.value = null;
+    }
+};
+
+const isNewLog = (logId) => {
+    return newLogIds.value.has(logId);
+};
+
+// Lifecycle
+onMounted(() => {
+    initLastKnownId();
+    startPolling();
+});
+
+onUnmounted(() => {
+    stopPolling();
+});
 
 // Auto-polling state
 const pollIntervalId = ref(null);
@@ -159,6 +265,30 @@ const actionTypes = computed(() => {
     return Array.from(types);
 });
 
+const totalByType = (type) => logs.value.filter((log) => log.log_type === type).length;
+
+const applyServerFilters = () => {
+    router.get(route("audit-logs.index"), buildServerParams(), {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        onSuccess: () => {
+            newLogIds.value.clear();
+            initLastKnownId();
+        },
+    });
+};
+
+const clearServerFilters = () => {
+    serverFilters.value = {
+        user_id: "",
+        date: "",
+        log_type: "",
+    };
+
+    applyServerFilters();
+};
+
 // Methods
 const viewDetails = async (log) => {
     selectedLog.value = log;
@@ -193,18 +323,19 @@ const getActionBadgeClass = (action) => {
     return classes[action] || "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300";
 };
 
-const formatJson = (json) => {
-    if (!json) return null;
-    try {
-        const parsed = typeof json === "string" ? JSON.parse(json) : json;
-        return JSON.stringify(parsed, null, 2);
-    } catch {
-        return json;
-    }
+const getLogTypeBadgeClass = (type) => {
+    const classes = {
+        SYSTEM: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+        AUDIT: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+        SECURITY: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+    };
+
+    return classes[type] || "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300";
 };
 
 const getPageUrl = (pageNum) => {
-    return pagination.value.path + "?page=" + pageNum;
+    const params = new URLSearchParams({ page: pageNum.toString(), ...buildServerParams() });
+    return pagination.value.path + "?" + params.toString();
 };
 </script>
 
@@ -218,8 +349,8 @@ const getPageUrl = (pageNum) => {
                         <FontAwesomeIcon icon="history" class="h-6 w-6 text-purple-600 dark:text-purple-300" />
                     </div>
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">System Audit Logs</h1>
-                        <p class="text-gray-600 dark:text-gray-400 mt-1">View all system activity and changes</p>
+                        <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">System Logs</h1>
+                        <p class="text-gray-600 dark:text-gray-400 mt-1">Monitor System, Audit, and Security events</p>
                     </div>
                 </div>
             </div>
@@ -241,11 +372,11 @@ const getPageUrl = (pageNum) => {
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
                     <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Login Events</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ logs.filter(l => l.action_type === 'LOGIN').length }}</p>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">System Logs</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ totalByType('SYSTEM') }}</p>
                         </div>
-                        <div class="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300">
-                            <FontAwesomeIcon icon="user" class="w-6 h-6" />
+                        <div class="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
+                            <FontAwesomeIcon icon="server" class="w-6 h-6" />
                         </div>
                     </div>
                 </div>
@@ -253,10 +384,10 @@ const getPageUrl = (pageNum) => {
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
                     <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Create/Update</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ logs.filter(l => l.action_type === 'CREATE' || l.action_type === 'UPDATE').length }}</p>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Audit Logs</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ totalByType('AUDIT') }}</p>
                         </div>
-                        <div class="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
+                        <div class="p-3 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300">
                             <FontAwesomeIcon icon="code" class="w-6 h-6" />
                         </div>
                     </div>
@@ -265,11 +396,11 @@ const getPageUrl = (pageNum) => {
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300">
                     <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Delete Events</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ logs.filter(l => l.action_type === 'DELETE').length }}</p>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Security Logs</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ totalByType('SECURITY') }}</p>
                         </div>
                         <div class="p-3 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300">
-                            <FontAwesomeIcon icon="times" class="w-6 h-6" />
+                            <FontAwesomeIcon icon="shield-alt" class="w-6 h-6" />
                         </div>
                     </div>
                 </div>
@@ -279,6 +410,45 @@ const getPageUrl = (pageNum) => {
             <div class="mb-8">
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                     <div class="flex flex-col lg:flex-row gap-4">
+                        <!-- Log Type Filter (server) -->
+                        <div class="w-full lg:w-48">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Log Type</label>
+                            <div class="relative">
+                                <select
+                                    v-model="serverFilters.log_type"
+                                    class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-transparent appearance-none"
+                                >
+                                    <option value="">All Types</option>
+                                    <option v-for="type in logTypes" :key="type" :value="type">{{ type }}</option>
+                                </select>
+                                <FontAwesomeIcon icon="filter" class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                            </div>
+                        </div>
+
+                        <!-- User Filter (server) -->
+                        <div class="w-full lg:w-64">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">User</label>
+                            <select
+                                v-model="serverFilters.user_id"
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                            >
+                                <option value="">All Users</option>
+                                <option v-for="u in users" :key="u.id" :value="String(u.id)">
+                                    {{ `${u.firstname} ${u.lastname}`.trim() }} ({{ u.email }})
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Date Filter (server) -->
+                        <div class="w-full lg:w-52">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date</label>
+                            <input
+                                v-model="serverFilters.date"
+                                type="date"
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                            />
+                        </div>
+
                         <!-- Search -->
                         <div class="flex-1">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Logs</label>
@@ -309,6 +479,23 @@ const getPageUrl = (pageNum) => {
                                 <FontAwesomeIcon icon="filter" class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
                             </div>
                         </div>
+
+                        <div class="w-full lg:w-auto flex items-end gap-2">
+                            <button
+                                type="button"
+                                @click="applyServerFilters"
+                                class="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition text-sm font-medium"
+                            >
+                                Apply
+                            </button>
+                            <button
+                                type="button"
+                                @click="clearServerFilters"
+                                class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-sm font-medium"
+                            >
+                                Clear
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -320,10 +507,10 @@ const getPageUrl = (pageNum) => {
         <div class="col-span-2">Timestamp</div>
         <div class="col-span-1">User</div>
         <div class="col-span-1">Role</div>
+        <div class="col-span-1">Type</div>
         <div class="col-span-1">Module</div>
         <div class="col-span-1">Action</div>
-        <div class="col-span-3">Description</div>
-        <div class="col-span-1">Status</div>
+        <div class="col-span-4">Description</div>
         <div class="col-span-1 text-right">Actions</div>
     </div>
 
@@ -354,6 +541,16 @@ const getPageUrl = (pageNum) => {
                 <div class="col-span-1 text-gray-600 dark:text-gray-300 text-sm truncate" :title="log.user_role">
                     {{ log.user_role || "N/A" }}
                 </div>
+                <div class="col-span-1">
+                    <span
+                        :class="[
+                            'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+                            getLogTypeBadgeClass(log.log_type),
+                        ]"
+                    >
+                        {{ log.log_type || "N/A" }}
+                    </span>
+                </div>
                 <div class="col-span-1 text-gray-900 dark:text-white text-sm truncate" :title="log.module_name">
                     {{ log.module_name || "N/A" }}
                 </div>
@@ -367,13 +564,8 @@ const getPageUrl = (pageNum) => {
                         {{ log.action_type || "N/A" }}
                     </span>
                 </div>
-                <div class="col-span-3 text-gray-500 dark:text-gray-400 text-sm truncate" :title="log.description">
+                <div class="col-span-4 text-gray-500 dark:text-gray-400 text-sm truncate" :title="log.description">
                     {{ log.description || "N/A" }}
-                </div>
-                <div class="col-span-1">
-                    <span class="inline-flex rounded-full px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-xs font-medium">
-                        Success
-                    </span>
                 </div>
                 <div class="col-span-1 text-right">
                     <button

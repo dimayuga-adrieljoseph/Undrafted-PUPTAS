@@ -39,6 +39,22 @@ const selectedUserFiles = ref({});
 const showImageModal = ref(false);
 const previewImage = ref("");
 
+// Change Course State
+const availablePrograms = ref([]);
+const changeCourseSelectedId = ref("");
+const isChangingCourse = ref(false);
+const courseChangeMessage = ref("");
+
+// Fetch programs for Admin/Registrar
+const fetchPrograms = async () => {
+    try {
+        const response = await axios.get("/record-dashboard/programs");
+        availablePrograms.value = response.data.programs || [];
+    } catch (err) {
+        console.error("Failed to fetch programs:", err);
+    }
+};
+
 // Fetch users
 const fetchUsers = async () => {
     loading.value = true;
@@ -68,7 +84,12 @@ const fetchUsers = async () => {
     }
 };
 
-onMounted(fetchUsers);
+onMounted(() => {
+    fetchUsers();
+    if (currentUser.value?.role_id === 2 || currentUser.value?.role_id === 4 || currentUser.value?.role_id === 7) {
+        fetchPrograms();
+    }
+});
 
 // Filtered & sorted users
 const filteredUsers = computed(() => {
@@ -154,8 +175,12 @@ const selectUser = async (user) => {
 
 const formatFileKey = (key) => {
     const map = {
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
+        file10Front: 'Grade 10 Report Front',
+        file10: 'Grade 10 Report Back',
+        file11Front: "Grade 11 Report Front",
+        file11: "Grade 11 Report Back",
+        file12Front: "Grade 12 Report Front",
+        file12: "Grade 12 Report Back",
         schoolId: "School ID",
         nonEnrollCert: "Certificate of Non-Enrollment",
         psa: "PSA Birth Certificate",
@@ -165,6 +190,11 @@ const formatFileKey = (key) => {
     };
     return map[key] || key;
 };
+
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+
+const hasImagePreview = (file) =>
+    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
 
 const capitalize = (str) =>
     typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
@@ -178,7 +208,12 @@ const closeUserCard = () => {
     selectedUser.value = null;
 };
 
-const openImageModal = (src) => {
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) {
+        return;
+    }
+
     previewImage.value = src;
     showImageModal.value = true;
 };
@@ -187,6 +222,61 @@ const closeImageModal = () => {
     showImageModal.value = false;
     previewImage.value = "";
 };
+
+const changeCourse = async () => {
+    if (!changeCourseSelectedId.value) {
+        courseChangeMessage.value = "Please select a program first.";
+        return;
+    }
+
+    const selectedProg = availablePrograms.value.find(
+        (p) => p.id === changeCourseSelectedId.value
+    );
+    const confirmMsg = selectedProg
+        ? `Change course to "${selectedProg.code} - ${selectedProg.name}"? This action will be logged.`
+        : "Change course? This action will be logged.";
+
+    if (!confirm(confirmMsg)) return;
+
+    isChangingCourse.value = true;
+    courseChangeMessage.value = "";
+    
+    try {
+        const res = await axios.post(
+            `/record-dashboard/change-course/${selectedUser.value.id}`,
+            { program_id: changeCourseSelectedId.value }
+        );
+        courseChangeMessage.value = res.data?.message ?? "Course updated successfully.";
+        changeCourseSelectedId.value = "";
+
+        // Refresh user details
+        await fetchUsers();
+        await fetchPrograms(); // Update slot counters
+        const refreshedUser = users.value.find((u) => u.id === selectedUser.value.id);
+        if (refreshedUser) {
+            await selectUser(refreshedUser);
+        } else {
+            selectedUser.value = null;
+        }
+    } catch (e) {
+        console.error("Course change failed:", e);
+        courseChangeMessage.value =
+            e.response?.data?.message ??
+            e.response?.data?.errors?.program_id?.[0] ??
+            "Failed to change course.";
+    } finally {
+        isChangingCourse.value = false;
+        setTimeout(() => { courseChangeMessage.value = ""; }, 5000);
+    }
+};
+
+watch(
+    () => selectedUser.value?.id,
+    () => {
+        changeCourseSelectedId.value = "";
+        courseChangeMessage.value = "";
+    }
+);
 
 const sortBy = (key) => {
     if (sortKey.value === key) {
@@ -490,6 +580,45 @@ const clearFilters = () => {
                     </p>
                 </div>
 
+                <!-- Change Course — only visible for admins, interviewers, superadmins, and officially enrolled applicants -->
+                <div
+                    v-if="(currentUser?.role_id === 2 || currentUser?.role_id === 4 || currentUser?.role_id === 7) && selectedUser?.application?.enrollment_status === 'officially_enrolled'"
+                    class="mb-6 p-3 border border-yellow-300 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700"
+                >
+                    <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                        ⚠️ Change Course
+                    </h5>
+                    <p class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
+                        Changing the course of an officially enrolled applicant will be logged in the audit trail.
+                    </p>
+                    <div v-if="courseChangeMessage" class="mb-3 px-3 py-2 text-sm rounded bg-white text-gray-800 border">
+                        {{ courseChangeMessage }}
+                    </div>
+                    <select
+                        v-model="changeCourseSelectedId"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-3"
+                    >
+                        <option value="" disabled>Select new program…</option>
+                        <option
+                            v-for="prog in availablePrograms"
+                            :key="prog.id"
+                            :value="prog.id"
+                            :disabled="prog.id === selectedUser?.application?.program?.id"
+                        >
+                            {{ prog.code }} - {{ prog.name }} [Slots: {{ prog.slots }}]
+                            <template v-if="prog.id === selectedUser?.application?.program?.id"> (current)</template>
+                        </option>
+                    </select>
+                    <button
+                        @click="changeCourse"
+                        :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse"
+                        class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium"
+                    >
+                        <span v-if="isChangingCourse">Applying…</span>
+                        <span v-else>Apply Changes</span>
+                    </button>
+                </div>
+
                 <!-- Grades Section -->
                 <div class="mb-6">
                     <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Academic Grades</h4>
@@ -514,7 +643,7 @@ const clearFilters = () => {
                     <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
                     <div class="grid grid-cols-2 gap-3">
                         <div
-                            v-for="(src, key) in selectedUserFiles"
+                            v-for="(file, key) in selectedUserFiles"
                             :key="key"
                             class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
                         >
@@ -522,11 +651,11 @@ const clearFilters = () => {
                                 {{ formatFileKey(key) }}
                             </p>
                             <img
-                                v-if="src"
-                                :src="src"
+                                v-if="hasImagePreview(file)"
+                                :src="getFileUrl(file)"
                                 :alt="formatFileKey(key)"
                                 class="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
-                                @click="openImageModal(src)"
+                                @click="openImageModal(file)"
                             />
                             <div
                                 v-else

@@ -241,7 +241,8 @@
                         ✓ Evaluation Completed
                     </p>
                     <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                        You have already evaluated this application. Actions are no longer available.
+                        Evaluation for this stage has been processed. 
+                        Course management is still available below.
                     </p>
                 </div>
                 
@@ -288,39 +289,51 @@
                     </p>
                 </div>
 
-                <div class="mt-4">
-                    <label class="block mb-1 text-sm font-semibold"
-                        >Transfer to Program</label
+                <!-- Accept section — only if not yet completed and not enrolled -->
+                <div v-if="!isEvaluationCompleted && selectedUser?.application?.enrollment_status !== 'officially_enrolled'" class="mt-4 flex justify-end">
+                    <button
+                        @click="acceptApplication"
+                        class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium transition"
                     >
+                        Accept Application
+                    </button>
+                </div>
+
+                <!-- Change Course Section -->
+                <div
+                    v-if="selectedUser?.application"
+                    class="mt-5 p-3 border border-yellow-300 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700"
+                >
+                    <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                        ⚠️ Change Course
+                    </h5>
+                    <p class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
+                        Changing the course of an officially enrolled applicant will be logged in the audit trail.
+                    </p>
                     <select
-                        v-model="selectedProgramId"
-                        class="w-full border rounded p-2"
+                        v-model="changeCourseSelectedId"
+                        id="change-course-select"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-3"
                     >
-                        <option disabled value="">-- Select Program --</option>
+                        <option value="" disabled>Select new program…</option>
                         <option
-                            v-for="p in availablePrograms"
-                            :key="p.id"
-                            :value="p.id"
+                            v-for="prog in availablePrograms"
+                            :key="prog.id"
+                            :value="prog.id"
+                            :disabled="prog.id === selectedUser?.application?.program?.id"
                         >
-                            {{ p.code }} - {{ p.name }} ({{ p.slots }}
-                            slots left)
+                            {{ prog.code }} - {{ prog.name }} [Slots: {{ prog.slots }}]
+                            <template v-if="prog.id === selectedUser?.application?.program?.id"> (current)</template>
                         </option>
                     </select>
-                    <!-- Accept and Transfer buttons - Only show if not completed -->
-                    <div v-if="!isEvaluationCompleted" class="mt-4 flex justify-end space-x-2">
-                        <button
-                            @click="acceptApplication"
-                            class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                        >
-                            Accept
-                        </button>
-                        <button
-                            @click="transferApplication"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        >
-                            Transfer
-                        </button>
-                    </div>
+                    <button
+                        @click="changeCourse"
+                        :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse"
+                        class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium"
+                    >
+                        <span v-if="isChangingCourse">Applying…</span>
+                        <span v-else>Apply Changes</span>
+                    </button>
                 </div>
 
                 <section class="mt-3 text-sm">
@@ -329,7 +342,7 @@
                     </h4>
                     <div class="grid grid-cols-3 gap-2">
                         <div
-                            v-for="(src, key) in selectedUserFiles"
+                            v-for="(file, key) in selectedUserFiles"
                             :key="key"
                             class="flex flex-col items-start space-y-1"
                         >
@@ -350,11 +363,11 @@
                             </div>
                             <div class="w-full">
                                 <img
-                                    v-if="src"
-                                    :src="src"
+                                    v-if="hasImagePreview(file)"
+                                    :src="getFileUrl(file)"
                                     alt="Uploaded Document"
                                     class="h-16 w-full object-contain border rounded cursor-pointer"
-                                    @click="openImageModal(src)"
+                                    @click="openImageModal(file)"
                                 />
                                 <div
                                     v-else
@@ -469,7 +482,6 @@ const isLoading = ref(true);
 const errorMessage = ref("");
 const searchQuery = ref("");
 const selectedUserFiles = ref({});
-const selectedProgramId = ref("");
 const snackbar = ref({
     visible: false,
     message: "",
@@ -644,8 +656,12 @@ const isEvaluationCompleted = computed(() => {
 
 const formatFileKey = (key) => {
     const map = {
-        file11: "Grade 11 Report",
-        file12: "Grade 12 Report",
+        file10Front: 'Grade 10 Report Front',
+        file10: 'Grade 10 Report Back',
+        file11Front: "Grade 11 Report Front",
+        file11: "Grade 11 Report Back",
+        file12Front: "Grade 12 Report Front",
+        file12: "Grade 12 Report Back",
         schoolId: "School ID",
         nonEnrollCert: "Certificate of Non-Enrollment",
         psa: "PSA Birth Certificate",
@@ -656,10 +672,20 @@ const formatFileKey = (key) => {
     return map[key] || key;
 };
 
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+
+const hasImagePreview = (file) =>
+    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
+
 const previewImage = ref(null);
 const showImageModal = ref(false);
 
-const openImageModal = (src) => {
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) {
+        return;
+    }
+
     previewImage.value = src;
     showImageModal.value = true;
 };
@@ -757,50 +783,80 @@ const acceptApplication = async () => {
     }
 };
 
-const transferApplication = async () => {
-    try {
-        const currentUserId = selectedUser.value.id;
-        
-        await axios.post(
-            `/interviewer-dashboard/transfer/${currentUserId}`,
-            {
-                program_id: selectedProgramId.value,
-            }
-        );
-        alert("Applicant transferred successfully!");
-        selectedProgramId.value = "";
-        
-        await fetchUsers();
-        
-        // Find and select the updated user from the fresh list
-        const updatedUser = users.value.find(u => u.id === currentUserId);
-        if (updatedUser) {
-            await selectUser(updatedUser);
-        } else {
-            selectedUser.value = null;
-        }
-    } catch (e) {
-        console.error("Transfer failed", e);
 
-        // ✅ Fix: use `e` not `error`
-        if (e.response?.data?.message) {
-            showSnackbar(e.response.data.message); // ✅ show server message
-        } else {
-            showSnackbar("Transfer failed due to an unexpected error.");
-        }
-    }
-};
 
 const availablePrograms = ref([]);
 
 const fetchPrograms = async () => {
     try {
-        const response = await axios.get("/interviewer-dashboard/programs");
+        const response = await axios.get("/record-dashboard/programs");
         availablePrograms.value = response.data.programs;
     } catch (e) {
         console.error("Failed to load programs", e);
     }
 };
+
+// ─── Change Course ───────────────────────────────────────────────────────────
+const changeCourseSelectedId = ref("");
+const isChangingCourse = ref(false);
+
+const changeCourse = async () => {
+    if (!changeCourseSelectedId.value) {
+        showSnackbar("Please select a program first.");
+        return;
+    }
+
+    const selectedProg = availablePrograms.value.find(
+        (p) => p.id === changeCourseSelectedId.value
+    );
+    const confirmMsg = selectedProg
+        ? `Change course to "${selectedProg.code} - ${selectedProg.name}"? This action will be logged.`
+        : "Change course? This action will be logged.";
+
+    if (!confirm(confirmMsg)) return;
+
+    isChangingCourse.value = true;
+    try {
+        const isEnrolled = selectedUser.value?.application?.enrollment_status === 'officially_enrolled';
+        const endpoint = isEnrolled 
+            ? `/record-dashboard/change-course/${selectedUser.value.id}`
+            : `/interviewer-dashboard/transfer/${selectedUser.value.id}`;
+
+        const res = await axios.post(
+            endpoint,
+            { program_id: changeCourseSelectedId.value }
+        );
+        
+        showSnackbar(res.data?.message ?? (isEnrolled ? "Course updated successfully." : "Applicant transferred successfully!"));
+        changeCourseSelectedId.value = "";
+
+        await fetchUsers();
+        await fetchPrograms(); // Refresh slot counters
+        const refreshedUser = users.value.find((u) => u.id === selectedUser.value.id);
+        if (refreshedUser) {
+            await selectUser(refreshedUser);
+        } else {
+            selectedUser.value = null;
+        }
+    } catch (e) {
+        console.error("Course change failed:", e);
+        const msg =
+            e.response?.data?.message ??
+            e.response?.data?.errors?.program_id?.[0] ??
+            "Failed to change course.";
+        showSnackbar(msg);
+    } finally {
+        isChangingCourse.value = false;
+    }
+};
+
+// Reset when switching applicants
+watch(
+    () => selectedUser.value?.id,
+    () => {
+        changeCourseSelectedId.value = "";
+    }
+);
 
 const totalPages = computed(() =>
     Math.ceil(filteredUsers.value.length / itemsPerPage)
