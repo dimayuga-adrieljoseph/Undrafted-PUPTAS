@@ -238,7 +238,7 @@ const submit = () => {
                         <!-- Login via IDP -->
                         <div class="mt-4 pt-4 border-t border-white/30">
                                  <a
-                                 href="/login"
+                                 :href="route('idp.redirect')"
                                  class="w-full flex justify-center py-2 px-4 border border-white text-white rounded-md hover:bg-white hover:text-[#800000] transition-colors font-semibold text-sm"
                                  >
                                  Login with School IDP

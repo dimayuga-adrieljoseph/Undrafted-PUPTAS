@@ -42,11 +42,6 @@ Route::get('/test-login', function () {
 });
 
 // IDP Authentication Routes - Public access for OAuth2 login flow
-// Main login route - redirects user to IDP authorization endpoint
-Route::get('/login', [IdpAuthController::class, 'login'])
-    ->middleware('guest')
-    ->name('login');
-
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->middleware('guest')
     ->name('idp.redirect');
