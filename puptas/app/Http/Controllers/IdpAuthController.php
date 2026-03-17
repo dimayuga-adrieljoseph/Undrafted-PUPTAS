@@ -44,9 +44,6 @@ class IdpAuthController extends Controller
         // Build authorization query parameters
         $authorizeQuery = [
             'client_id' => $idpConfig['client_id'],
-            'redirect_uri' => route('idp.callback'),
-            'response_type' => 'code',
-            'state' => $state,
         ];
 
         // Add scope if configured
