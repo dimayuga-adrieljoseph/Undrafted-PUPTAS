@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Application;
+use App\Models\AuditLog;
 use App\Models\Program;
 use App\Models\User;
 
@@ -13,6 +14,9 @@ test('external students endpoint requires valid token', function () {
         ->assertJson([
             'message' => 'Unauthorized',
         ]);
+
+    expect(AuditLog::query()->where('action_type', 'AUTH_FAILED')->where('module_name', 'External API')->exists())
+        ->toBeTrue();
 });
 
 test('external students endpoint returns officially enrolled students with student number', function () {
@@ -62,4 +66,7 @@ test('external students endpoint returns officially enrolled students with stude
         ->assertJsonPath('data.0.student_number', '2026-00001')
         ->assertJsonPath('data.0.application.enrollment_status', 'officially_enrolled')
         ->assertJsonPath('data.0.program.program_code', 'BSCS');
+
+    expect(AuditLog::query()->where('action_type', 'READ')->where('module_name', 'External API')->exists())
+        ->toBeTrue();
 });

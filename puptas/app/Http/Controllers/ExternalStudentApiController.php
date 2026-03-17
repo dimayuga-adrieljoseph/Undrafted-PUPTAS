@@ -3,11 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Application;
+use App\Models\AuditLog;
+use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ExternalStudentApiController extends Controller
 {
+    public function __construct(private AuditLogService $auditLogService)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -65,6 +71,20 @@ class ExternalStudentApiController extends Controller
                 'updated_at' => $user?->updated_at,
             ];
         });
+
+        $this->auditLogService->logActivity(
+            'READ',
+            'External API',
+            sprintf(
+                'External student export accessed from IP %s. Returned %d record(s) on page %d (per_page: %d).',
+                $request->ip() ?? 'unknown',
+                $data->count(),
+                $paginated->currentPage(),
+                $paginated->perPage()
+            ),
+            null,
+            AuditLog::CATEGORY_ADMISSION_DATA
+        );
 
         return response()->json([
             'data' => $data,
