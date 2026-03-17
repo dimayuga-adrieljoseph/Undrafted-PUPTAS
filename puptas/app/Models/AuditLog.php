@@ -84,7 +84,7 @@ class AuditLog extends Model
      */
     public function scopeLatestFirst(Builder $query): Builder
     {
-        return $query->orderByDesc('created_at');
+        return $query->orderByDesc('id')->orderByDesc('created_at');
     }
 
     /**

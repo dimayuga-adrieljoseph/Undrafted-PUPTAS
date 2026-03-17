@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout.vue";
 import AuditLogDetailsModal from "@/Pages/Modal/AuditLogDetailsModal.vue";
@@ -65,6 +65,7 @@ const pollIntervalId = ref(null);
 const lastKnownId = ref(0);
 const newLogIds = ref(new Set());
 const liveTotal = ref(0);
+const isReloadingLogs = ref(false);
 const POLL_INTERVAL = 5000; // 5 seconds
 
 // Initialize lastKnownId from current logs
@@ -102,7 +103,7 @@ const pollForNewLogs = async () => {
         const latestId = Number(latest_id) || 0;
         const hasNewLogs = latestId > lastKnownId.value;
 
-        if (hasNewLogs) {
+        if (hasNewLogs && !isReloadingLogs.value) {
             // Track new log IDs for highlighting when the API provides them.
             if (Array.isArray(new_log_ids) && new_log_ids.length > 0) {
                 new_log_ids.forEach((id) => newLogIds.value.add(id));
@@ -113,22 +114,29 @@ const pollForNewLogs = async () => {
 
             // Update last known ID
             lastKnownId.value = latestId;
+            isReloadingLogs.value = true;
 
             // Reload the Inertia page data to reflect new logs
             router.reload({
                 only: ['logs'],
-                preserveState: true,
+                data: buildServerParams(),
+                preserveState: false,
                 preserveScroll: true,
+                replace: true,
                 onSuccess: () => {
                     // Clear highlight after 5 seconds
                     setTimeout(() => {
                         newLogIds.value.clear();
                     }, 5000);
                 },
+                onFinish: () => {
+                    isReloadingLogs.value = false;
+                },
             });
         }
     } catch (error) {
         // Silently ignore polling errors to avoid disrupting the UI
+        isReloadingLogs.value = false;
     }
 };
 
@@ -158,6 +166,14 @@ onMounted(() => {
 onUnmounted(() => {
     stopPolling();
 });
+
+watch(
+    logs,
+    () => {
+        initLastKnownId();
+    },
+    { deep: false }
+);
 
 // Computed
 const filteredLogs = computed(() => {
