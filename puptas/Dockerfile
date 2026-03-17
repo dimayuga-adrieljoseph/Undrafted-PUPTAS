@@ -111,6 +111,16 @@ RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs b
     && chmod -R 775 storage bootstrap/cache \
     && chmod -R 755 storage/framework storage/logs
 
+# Clear Laravel caches to ensure routes are properly registered
+RUN php artisan route:clear \
+    && php artisan config:clear \
+    && php artisan view:clear \
+    && php artisan cache:clear \
+    && php artisan optimize:clear
+
+# Generate application key if not set (needed for proper encryption/sessions)
+RUN php artisan key:generate --force
+
 RUN mkdir -p storage/app/templates && \
     cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/
 
