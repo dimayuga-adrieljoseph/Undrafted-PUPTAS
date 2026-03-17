@@ -99,16 +99,20 @@ const pollForNewLogs = async () => {
         });
 
         const { latest_id, total, new_log_ids } = response.data;
+        const latestId = Number(latest_id) || 0;
+        const hasNewLogs = latestId > lastKnownId.value;
 
-        if (latest_id > lastKnownId.value && new_log_ids.length > 0) {
-            // Track new log IDs for highlighting
-            new_log_ids.forEach(id => newLogIds.value.add(id));
+        if (hasNewLogs) {
+            // Track new log IDs for highlighting when the API provides them.
+            if (Array.isArray(new_log_ids) && new_log_ids.length > 0) {
+                new_log_ids.forEach((id) => newLogIds.value.add(id));
+            }
 
             // Update total count
             liveTotal.value = total;
 
             // Update last known ID
-            lastKnownId.value = latest_id;
+            lastKnownId.value = latestId;
 
             // Reload the Inertia page data to reflect new logs
             router.reload({
