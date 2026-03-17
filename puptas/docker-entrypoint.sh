@@ -70,16 +70,22 @@ echo "[6b/12] Checking APP_KEY..."
 php artisan key:generate --force 2>/dev/null || echo "APP_KEY already set or generation skipped"
 
 # Run database migrations
-echo "[7/12] Running database migrations..."
+echo "[7/13] Running database migrations..."
 php artisan migrate --force
-echo "[7/12] Migrations complete."
+echo "[7/13] Migrations complete."
+
+# Create storage symlink so public disk is accessible
+echo "[8/13] Creating storage symlink..."
+mkdir -p storage/app/public/uploads/files
+php artisan storage:link --force
+echo "[8/13] Storage link created."
 
 # Verify routes are registered
-echo "[8/12] Verifying routes..."
+echo "[9/13] Verifying routes..."
 php artisan route:list --path=login 2>/dev/null || echo "Route verification skipped"
 
 # Test Apache configuration
-echo "[9/12] Testing Apache configuration..."
+echo "[10/13] Testing Apache configuration..."
 apache2ctl configtest
 if [ $? -ne 0 ]; then
     echo "ERROR: Apache configuration test failed!"
@@ -87,15 +93,15 @@ if [ $? -ne 0 ]; then
 fi
 
 # List enabled MPM modules
-echo "[10/12] Enabled MPM modules:"
+echo "[11/13] Enabled MPM modules:"
 apache2ctl -M 2>/dev/null | grep mpm || echo "No MPM modules listed"
 
 # Set proper permissions after cache clear
-echo "[11/12] Final permission fix..."
+echo "[12/13] Final permission fix..."
 chown -R www-data:www-data storage bootstrap/cache
 
 # Start Apache
-echo "[12/12] Starting Apache..."
+echo "[13/13] Starting Apache..."
 echo "=========================================="
 echo "APACHE STARTED SUCCESSFULLY"
 echo "=========================================="
