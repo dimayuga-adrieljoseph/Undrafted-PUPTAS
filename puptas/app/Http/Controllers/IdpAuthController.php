@@ -44,6 +44,7 @@ class IdpAuthController extends Controller
         // Build authorization query parameters
         $authorizeQuery = [
             'client_id' => $idpConfig['client_id'],
+            'redirect_uri' => $idpConfig['redirect_uri'] ?? null,
         ];
 
         // Add scope if configured
@@ -57,7 +58,7 @@ class IdpAuthController extends Controller
         \Log::info('Redirecting to IDP authorization endpoint', [
             'authorize_url' => $authorizeUrl,
             'client_id_sent' => true,
-            'redirect_uri' => $authorizeQuery['redirect_uri'],
+            'redirect_uri' => $idpConfig['redirect_uri'] ?? null,
         ]);
 
         return redirect()->away($authorizeUrl);
