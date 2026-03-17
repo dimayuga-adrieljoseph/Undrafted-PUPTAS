@@ -789,7 +789,7 @@ const availablePrograms = ref([]);
 
 const fetchPrograms = async () => {
     try {
-        const response = await axios.get("/record-dashboard/programs");
+        const response = await axios.get("/interviewer-dashboard/programs");
         availablePrograms.value = response.data.programs;
     } catch (e) {
         console.error("Failed to load programs", e);
