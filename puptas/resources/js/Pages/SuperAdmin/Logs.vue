@@ -5,7 +5,6 @@ import SuperAdminLayout from "@/Layouts/SuperAdminLayout.vue";
 import AuditLogDetailsModal from "@/Pages/Modal/AuditLogDetailsModal.vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { library } from "@fortawesome/fontawesome-svg-core";
-import axios from "axios";
 import {
     faHistory,
     faEye,
@@ -90,54 +89,36 @@ const buildServerParams = () => {
 };
 
 // Poll for new logs
-const pollForNewLogs = async () => {
-    try {
-        const response = await axios.get('/admin/audit-logs/check-new', {
-            params: {
-                since_id: lastKnownId.value,
-                ...buildServerParams(),
+const pollForNewLogs = () => {
+    if (isReloadingLogs.value) return;
+
+    const previousLastKnownId = lastKnownId.value;
+    isReloadingLogs.value = true;
+
+    router.reload({
+        only: ['logs'],
+        data: buildServerParams(),
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        onSuccess: () => {
+            const incomingIds = logs.value
+                .filter((log) => log.id > previousLastKnownId)
+                .map((log) => log.id);
+
+            incomingIds.forEach((id) => newLogIds.value.add(id));
+            initLastKnownId();
+
+            if (incomingIds.length > 0) {
+                setTimeout(() => {
+                    newLogIds.value.clear();
+                }, 5000);
             }
-        });
-
-        const { latest_id, total, new_log_ids } = response.data;
-        const latestId = Number(latest_id) || 0;
-        const hasNewLogs = latestId > lastKnownId.value;
-
-        if (hasNewLogs && !isReloadingLogs.value) {
-            // Track new log IDs for highlighting when the API provides them.
-            if (Array.isArray(new_log_ids) && new_log_ids.length > 0) {
-                new_log_ids.forEach((id) => newLogIds.value.add(id));
-            }
-
-            // Update total count
-            liveTotal.value = total;
-
-            // Update last known ID
-            lastKnownId.value = latestId;
-            isReloadingLogs.value = true;
-
-            // Reload the Inertia page data to reflect new logs
-            router.reload({
-                only: ['logs'],
-                data: buildServerParams(),
-                preserveState: false,
-                preserveScroll: true,
-                replace: true,
-                onSuccess: () => {
-                    // Clear highlight after 5 seconds
-                    setTimeout(() => {
-                        newLogIds.value.clear();
-                    }, 5000);
-                },
-                onFinish: () => {
-                    isReloadingLogs.value = false;
-                },
-            });
-        }
-    } catch (error) {
-        // Silently ignore polling errors to avoid disrupting the UI
-        isReloadingLogs.value = false;
-    }
+        },
+        onFinish: () => {
+            isReloadingLogs.value = false;
+        },
+    });
 };
 
 // Start/stop polling
