@@ -192,13 +192,16 @@ class IdpAuthController extends Controller
                 ->get($userUrl);
 
             if (!$userResponse->successful()) {
+                $errorBody = $userResponse->body();
+                $errorStatus = $userResponse->status();
+                
                 \Log::error('Failed to fetch user info from IDP', [
-                    'status' => $userResponse->status(),
-                    'body' => $userResponse->body(),
+                    'status' => $errorStatus,
+                    'body' => $errorBody,
                 ]);
 
                 return redirect('/login')->withErrors([
-                    'idp' => 'Unable to retrieve user information from IDP.',
+                    'idp' => "IDP User Info Failed (Status: $errorStatus) - $errorBody",
                 ]);
             }
 
