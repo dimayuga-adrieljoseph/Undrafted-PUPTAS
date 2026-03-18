@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use App\Listeners\LogUserLogin;
 use App\Listeners\LogUserLogout;
+use Illuminate\Support\Facades\Auth;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,8 +22,6 @@ class AppServiceProvider extends ServiceProvider
     {
         //
     }
-
-use Illuminate\Support\Facades\Auth;
 
     /**
      * Bootstrap any application services.
