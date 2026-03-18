@@ -57,4 +57,13 @@ class IdpUserProvider implements UserProvider
     {
         return false;
     }
+
+    /**
+     * Rehash the user's password if required.
+     * (Required by Laravel 11+ UserProvider interface)
+     */
+    public function rehashPasswordIfRequired(Authenticatable $user, array $credentials, bool $force = false)
+    {
+        // Not used in IDP auth
+    }
 }
