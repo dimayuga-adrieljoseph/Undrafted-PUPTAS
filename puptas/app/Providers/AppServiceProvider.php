@@ -22,11 +22,16 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
+use Illuminate\Support\Facades\Auth;
+
     /**
      * Bootstrap any application services.
      */
     public function boot(UrlGenerator $url): void
     {
+        Auth::provider('idp', function ($app, array $config) {
+            return new \App\Auth\IdpUserProvider();
+        });
         // Force HTTPS in production
         if ($this->app->environment('production')) {
             $url->forceScheme('https');

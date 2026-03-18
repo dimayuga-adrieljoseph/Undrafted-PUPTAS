@@ -171,12 +171,17 @@ class IdpAuthController extends Controller
                 'expires_in'       => $tokenData['expires_in'] ?? null,
             ]);
 
-            // Store access token in session
+            $refreshToken = $tokenData['refresh_token'] ?? null;
+            $expiresIn = (int) ($tokenData['expires_in'] ?? 3600);
+
+            // Store tokens and expiration timestamp in session
             session([
-                'access_token' => $accessToken,
+                'access_token'     => $accessToken,
+                'refresh_token'    => $refreshToken,
+                'token_expires_at' => now()->addSeconds($expiresIn - 60)->timestamp, // Refresh 60 seconds before actual expiration
             ]);
 
-            \Log::info('Access token stored in session');
+            \Log::info('Access and refresh tokens stored in session');
 
             // Fetch user info from IDP using the access token
             $userPath = $idpConfig['user_path'] ?? '/api/v1/user';
@@ -207,52 +212,39 @@ class IdpAuthController extends Controller
 
             $idpUser = $userResponse->json();
 
-            // Map IDP user to local user record
-            $localUser = \App\Models\User::where('idp_user_id', $idpUser['id'] ?? null)
-                ->orWhere('email', $idpUser['email'] ?? null)
-                ->first();
-
-            if (!$localUser) {
-                // Create a new local user if one doesn't exist
-                $localUser = \App\Models\User::create([
-                    'name' => $idpUser['name'] ?? ($idpUser['email'] ?? 'IDP User'),
-                    'email' => $idpUser['email'] ?? null,
-                    'idp_user_id' => $idpUser['id'] ?? null,
-                    // default applicant role (1) if not mapped
-                    'role_id' => 1,
-                    'password' => bcrypt(Str::random(40)),
-                ]);
-            } else {
-                // Update existing user with latest IDP info
-                $localUser->update([
-                    'name' => $idpUser['name'] ?? $localUser->name,
-                    'email' => $idpUser['email'] ?? $localUser->email,
-                    'idp_user_id' => $idpUser['id'] ?? $localUser->idp_user_id,
-                ]);
-            }
-
-            // Map IDP role/attributes to local role_id
+            // Map IDP role/attributes to local integer role_id
             $roleMapping = [
-                // Example mappings - update to match your IDP roles
-                'applicant' => 1,
-                'admin' => 2,
-                'evaluator' => 3,
+                'applicant'   => 1,
+                'admin'       => 2,
+                'evaluator'   => 3,
                 'interviewer' => 4,
-                'medical' => 5,
-                'record' => 6,
-                'superadmin' => 7,
+                'medical'     => 5,
+                'record'      => 6,
+                'superadmin'  => 7,
             ];
 
-            $idpRole = strtolower($idpUser['role'] ?? ($idpUser['roles'][0] ?? null));
-            if ($idpRole && isset($roleMapping[$idpRole])) {
-                $localUser->role_id = $roleMapping[$idpRole];
-                $localUser->save();
-            }
+            $idpRole = strtolower($idpUser['role'] ?? ($idpUser['roles'][0] ?? 'applicant'));
+            $roleId = $roleMapping[$idpRole] ?? 1;
 
-            // Authenticate the user in the local app
+            // Build the virtual user profile array
+            $idpUserProfile = [
+                'idp_user_id' => $idpUser['id'] ?? null,
+                'name'        => $idpUser['name'] ?? ($idpUser['email'] ?? 'IDP User'),
+                'email'       => $idpUser['email'] ?? null,
+                'role_id'     => $roleId,
+                'role_name'   => $idpRole,
+            ];
+
+            // Store the entire profile solidly in session for the IdpUserProvider to retrieve
+            session(['idp_user_profile' => $idpUserProfile]);
+
+            // Instantiate our virtual Authenticatable user
+            $localUser = new \App\Auth\IdpUser($idpUserProfile);
+
+            // Authenticate the user in the local app securely with the idp driver
             \Auth::login($localUser);
 
-            \Log::info('User logged in via IDP', ['user_id' => $localUser->id, 'idp_user_id' => $localUser->idp_user_id]);
+            \Log::info('User logged in seamlessly via Database-less IDP', ['idp_user_id' => $localUser->idp_user_id, 'role_id' => $localUser->role_id]);
 
             // Redirect user to appropriate dashboard based on role
             switch ($localUser->role_id) {
