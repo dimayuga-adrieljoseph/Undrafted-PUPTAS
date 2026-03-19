@@ -36,12 +36,20 @@ class AuditLogService
      */
     public function logLogin(Authenticatable $user): AuditLog
     {
-        // Deduplicate: if a LOGIN was already recorded for this user in the last 10 seconds, skip
-        $existing = AuditLog::where('user_id', $user->id ?? $user->idp_user_id)
-            ->where('action_type', AuditLog::ACTION_LOGIN)
+        $id = $user->id ?? $user->idp_user_id;
+        $isNumericId = is_numeric($id);
+
+        $query = AuditLog::where('action_type', AuditLog::ACTION_LOGIN)
             ->where('created_at', '>=', now()->subSeconds(10))
-            ->latest()
-            ->first();
+            ->latest();
+
+        if ($isNumericId) {
+            $query->where('user_id', $id);
+        } else {
+            $query->where('username', $user->email ?? 'system');
+        }
+
+        $existing = $query->first();
 
         if ($existing) {
             return $existing;
@@ -65,27 +73,36 @@ class AuditLogService
      */
     public function logLogout(Authenticatable $user): void
     {
-        // Deduplicate: skip if a LOGOUT was already written for this user in the last 10 seconds
-        $userId = $user->id ?? $user->idp_user_id;
-        $recentLogout = AuditLog::where('user_id', $userId)
-            ->where('action_type', AuditLog::ACTION_LOGOUT)
-            ->where('created_at', '>=', now()->subSeconds(10))
-            ->latest()
-            ->first();
+        $id = $user->id ?? $user->idp_user_id;
+        $isNumericId = is_numeric($id);
 
-        if ($recentLogout) {
+        $logoutQuery = AuditLog::where('action_type', AuditLog::ACTION_LOGOUT)
+            ->where('created_at', '>=', now()->subSeconds(10))
+            ->latest();
+
+        if ($isNumericId) {
+            $logoutQuery->where('user_id', $id);
+        } else {
+            $logoutQuery->where('username', $user->email ?? 'system');
+        }
+
+        if ($logoutQuery->first()) {
             return;
         }
 
-        // Stamp the open login session
-        $openLogin = AuditLog::where('user_id', $userId)
-            ->where('action_type', AuditLog::ACTION_LOGIN)
+        $openLoginQuery = AuditLog::where('action_type', AuditLog::ACTION_LOGIN)
             ->whereNull('logout_time')
-            ->latest()
-            ->first();
+            ->latest();
+
+        if ($isNumericId) {
+            $openLoginQuery->where('user_id', $id);
+        } else {
+            $openLoginQuery->where('username', $user->email ?? 'system');
+        }
+
+        $openLogin = $openLoginQuery->first();
 
         if ($openLogin) {
-            // Only stamp logout_time — do NOT change action_type so the LOGIN row stays as LOGIN
             $openLogin->update(['logout_time' => now()]);
         }
 
@@ -151,8 +168,11 @@ class AuditLogService
                 $sessionId = $request->session()->getId();
             }
 
+            $id = $user ? ($user->id ?? $user->idp_user_id) : null;
+            $isNumericId = $id !== null && is_numeric($id);
+
             return AuditLog::create([
-                'user_id'      => $user?->id,
+                'user_id'      => $isNumericId ? $id : null,
                 'username'     => $user?->email ?? 'system',
                 'user_role'    => $this->resolveRole($user),
                 'log_type'     => $data['log_type'] ?? $this->resolveLogType(
