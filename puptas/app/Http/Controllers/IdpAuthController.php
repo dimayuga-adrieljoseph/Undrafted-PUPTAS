@@ -223,8 +223,27 @@ class IdpAuthController extends Controller
                 'superadmin'  => 7,
             ];
 
-            $idpRole = strtolower($idpUser['role'] ?? ($idpUser['roles'][0] ?? 'applicant'));
+            // Robust multi-format role extraction
+            $idpRole = 'applicant';
+            
+            if (!empty($idpUser['role'])) {
+                $idpRole = is_array($idpUser['role']) ? ($idpUser['role']['name'] ?? $idpUser['role']['title'] ?? 'applicant') : $idpUser['role'];
+            } elseif (!empty($idpUser['roles']) && is_array($idpUser['roles'])) {
+                $firstRole = $idpUser['roles'][0];
+                $idpRole = is_array($firstRole) ? ($firstRole['name'] ?? $firstRole['role_name'] ?? 'applicant') : $firstRole;
+            } elseif (!empty($idpUser['role_name'])) {
+                $idpRole = $idpUser['role_name'];
+            } elseif (!empty($idpUser['user_type'])) {
+                $idpRole = $idpUser['user_type'];
+            }
+
+            $idpRole = strtolower(is_string($idpRole) ? $idpRole : 'applicant');
             $roleId = $roleMapping[$idpRole] ?? 1;
+
+            // Failsafe: Log the raw payload if it defaulted to applicant to help debug
+            if ($roleId === 1) {
+                \Log::warning('IDP Role matched Applicant or defaulted. Raw IDP User payload:', ['idpUser' => $idpUser]);
+            }
 
             // Build the virtual user profile array
             $idpUserProfile = [
