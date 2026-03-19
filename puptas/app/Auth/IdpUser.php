@@ -3,8 +3,9 @@
 namespace App\Auth;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Support\Arrayable;
 
-class IdpUser implements Authenticatable
+class IdpUser implements Authenticatable, Arrayable
 {
     /**
      * The unique identifier for the user from the IDP.
@@ -50,6 +51,24 @@ class IdpUser implements Authenticatable
     public function getAuthIdentifier()
     {
         return $this->id;
+    }
+
+    /**
+     * Get the name of the password attribute for the user.
+     */
+    public function getAuthPasswordName()
+    {
+        return 'password';
+    }
+
+    /**
+     * Convert the model instance to an array.
+     *
+     * @return array
+     */
+    public function toArray()
+    {
+        return $this->attributes;
     }
 
     /**
