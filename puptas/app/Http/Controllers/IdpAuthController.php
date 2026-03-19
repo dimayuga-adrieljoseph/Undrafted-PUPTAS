@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -302,5 +303,28 @@ class IdpAuthController extends Controller
                 'idp' => 'An unexpected error occurred during IDP login.',
             ]);
         }
+    }
+
+    public function logout(Request $request)
+    {
+        Auth::logout();
+
+        $request->session()->forget([
+            'idp_user_profile',
+            'access_token',
+            'refresh_token',
+            'token_expires_at',
+        ]);
+
+        $request->session()->regenerate();
+
+        $idpLogoutUrl = config('services.idp.logout_url');
+
+        if ($idpLogoutUrl) {
+            $redirectBack = urlencode(url('/login'));
+            return redirect()->away("{$idpLogoutUrl}?post_logout_redirect_uri={$redirectBack}");
+        }
+
+        return redirect('/login');
     }
 }

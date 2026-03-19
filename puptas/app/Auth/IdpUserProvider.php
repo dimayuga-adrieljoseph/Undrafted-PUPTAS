@@ -16,7 +16,7 @@ class IdpUserProvider implements UserProvider
     {
         $idpProfile = session('idp_user_profile');
 
-        if ($idpProfile && isset($idpProfile['idp_user_id']) && $idpProfile['idp_user_id'] == $identifier) {
+        if ($idpProfile && isset($idpProfile['idp_user_id']) && $idpProfile['idp_user_id'] === $identifier) {
             return new IdpUser($idpProfile);
         }
 

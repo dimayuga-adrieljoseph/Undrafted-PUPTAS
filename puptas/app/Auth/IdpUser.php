@@ -33,7 +33,20 @@ class IdpUser implements Authenticatable, Arrayable
      */
     public function __get($key)
     {
-        return $this->attributes[$key] ?? null;
+        $value = $this->attributes[$key] ?? null;
+        if ($key === 'role_id' && $value !== null) {
+            return (int) $value;
+        }
+        return $value;
+    }
+
+    /**
+     * Check if an attribute is set on the user.
+     * Required so isset($user->name) works correctly with magic __get.
+     */
+    public function __isset($key)
+    {
+        return isset($this->attributes[$key]);
     }
 
     /**

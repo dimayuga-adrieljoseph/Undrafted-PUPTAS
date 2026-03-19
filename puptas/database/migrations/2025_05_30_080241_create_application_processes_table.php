@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('application_id')->constrained()->onDelete('cascade');
             $table->enum('stage', ['evaluator', 'interviewer', 'medical', 'records']);
             $table->enum('status', ['in_progress', 'completed', 'returned'])->default('in_progress');
-            $table->enum('action', ['passed', 'returned', 'transferred', 'accepted', 'rejected'])->nullable();
+            $table->enum('action', ['passed', 'returned', 'transferred', 'accepted', 'rejected', 'course_changed'])->nullable();
             $table->text('decision_reason')->nullable();
             $table->text('reviewer_notes')->nullable();
             $table->json('files_affected')->nullable();

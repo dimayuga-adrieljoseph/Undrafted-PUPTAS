@@ -64,7 +64,7 @@ const handlePrivacyAccept = () => {
 }
 
 const handlePrivacyCancel = () => {
-    router.post(route('logout'), {}, {
+    router.post(route('idp.logout'), {}, {
         onSuccess: () => {
             showPrivacyModal.value = false
         },
@@ -151,6 +151,14 @@ const handlePrivacyCancel = () => {
                             </p>
                         </div>
                     </div>
+
+                    <!-- Sign Out -->
+                    <button
+                        @click="router.post(route('idp.logout'))"
+                        class="text-sm text-red-600 hover:text-red-800 transition"
+                    >
+                        Sign out
+                    </button>
                 </div>
             </header>
 

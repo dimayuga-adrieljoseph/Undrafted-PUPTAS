@@ -50,6 +50,10 @@ Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
     ->middleware('guest')
     ->name('idp.callback');
 
+Route::post('/auth/idp/logout', [IdpAuthController::class, 'logout'])
+    ->middleware('auth')
+    ->name('idp.logout');
+
 // Backward-compatible callback aliases in case IDP client is configured with older paths.
 Route::get('/callback', [IdpAuthController::class, 'callback'])
     ->middleware('guest')
