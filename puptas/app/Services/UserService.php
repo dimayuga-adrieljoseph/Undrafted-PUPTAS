@@ -42,6 +42,16 @@ class UserService
                     'program' => $profile->currentApplication->program ?? null,
                 ];
             });
+    }
+
+    /**
+     * Get applicants pending for a specified stage
+     *
+     * @param string $stage The application stage (evaluator, interviewer, medical)
+     * @return Collection
+     */
+    public function getApplicantsByStage(string $stage): Collection
+    {
         return ApplicantProfile::with(['currentApplication' => function ($query) {
             $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
         }, 'currentApplication.program' => function ($query) {
