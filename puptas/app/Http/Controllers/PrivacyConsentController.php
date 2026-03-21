@@ -19,9 +19,9 @@ class PrivacyConsentController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $user->update([
-            'privacy_consent' => true,
-            'privacy_consent_at' => now(),
+        session([
+            'privacy_consent_accepted' => true,
+            'privacy_consent_at' => now()->toDateTimeString(),
         ]);
 
         return response()->json(['success' => true]);
@@ -39,8 +39,8 @@ class PrivacyConsentController extends Controller
         }
 
         return response()->json([
-            'has_consent' => (bool) $user->privacy_consent,
-            'consent_at' => $user->privacy_consent_at,
+            'has_consent' => session('privacy_consent_accepted', false),
+            'consent_at' => session('privacy_consent_at', null),
         ]);
     }
 }
