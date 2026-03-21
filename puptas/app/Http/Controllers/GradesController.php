@@ -325,11 +325,11 @@ class GradesController extends Controller
     public function store(Request $request)
     {
         $request->validate(ValidationRules::gradeImport());
-        $user = User::where('email', $request->email)->first();
+        $user = ApplicantProfile::where('email', $request->email)->first();
 
         if (!$user) {
             sleep(2); // Wait 1 second and try again
-            $user = User::where('email', $request->email)->first();
+            $user = ApplicantProfile::where('email', $request->email)->first();
 
             if (!$user) {
                 return response()->json(['message' => 'User not found. Please try again.'], 404);

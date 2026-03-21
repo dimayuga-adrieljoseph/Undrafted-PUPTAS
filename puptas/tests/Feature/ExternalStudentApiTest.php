@@ -27,33 +27,33 @@ test('external students endpoint returns officially enrolled students with stude
         'name' => 'BS Computer Science',
     ]);
 
-    $officiallyEnrolledUser = User::create([
+    $officiallyEnrolledUser = \App\Models\ApplicantProfile::create([
+        'user_id' => 'u1',
         'student_number' => '2026-00001',
         'firstname' => 'Alice',
         'lastname' => 'Reyes',
         'contactnumber' => '09170000001',
         'email' => 'alice@example.com',
-        'password' => bcrypt('password'),
     ]);
 
-    $pendingUser = User::create([
+    $pendingUser = \App\Models\ApplicantProfile::create([
+        'user_id' => 'u2',
         'student_number' => '2026-00002',
         'firstname' => 'Bob',
         'lastname' => 'Santos',
         'contactnumber' => '09170000002',
         'email' => 'bob@example.com',
-        'password' => bcrypt('password'),
     ]);
 
     Application::create([
-        'user_id' => $officiallyEnrolledUser->id,
+        'user_id' => $officiallyEnrolledUser->user_id,
         'program_id' => $program->id,
         'status' => 'accepted',
         'enrollment_status' => 'officially_enrolled',
     ]);
 
     Application::create([
-        'user_id' => $pendingUser->id,
+        'user_id' => $pendingUser->user_id,
         'program_id' => $program->id,
         'status' => 'submitted',
         'enrollment_status' => 'pending',

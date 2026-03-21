@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\ApplicantProfile;
 use App\Models\Program;
 use App\Models\AuditLog;
 use Illuminate\Support\Collection;
@@ -24,45 +25,32 @@ class UserService
      */
     public function getApplicantsWithApplications(): Collection
     {
-        return User::with('currentApplication.program')
-            ->where('role_id', 1)
+        return ApplicantProfile::with('currentApplication.program')
             ->whereHas('currentApplication')
             ->get()
-            ->map(function ($user) {
+            ->map(function ($profile) {
                 return [
-                    'id' => $user->id,
-                    'firstname' => $user->firstname,
-                    'lastname' => $user->lastname,
-                    'course' => $user->course,
-                    'status' => $user->currentApplication->status ?? null,
-                    'email' => $user->email,
-                    'username' => $user->username,
-                    'phone' => $user->phone,
-                    'company' => $user->company,
-                    'program' => $user->currentApplication->program ?? null,
+                    'id' => $profile->user_id,
+                    'firstname' => $profile->firstname,
+                    'lastname' => $profile->lastname,
+                    'course' => $profile->course ?? null,
+                    'status' => $profile->currentApplication->status ?? null,
+                    'email' => $profile->email,
+                    'username' => $profile->email,
+                    'phone' => $profile->contactnumber,
+                    'company' => $profile->company ?? null,
+                    'program' => $profile->currentApplication->program ?? null,
                 ];
             });
-    }
-
-    /**
-     * Get applicants filtered by application process stage
-     * Only returns applicants whose applications are currently at the specified stage
-     *
-     * @param string $stage The application stage (evaluator, interviewer, medical, records)
-     * @return Collection
-     */
-    public function getApplicantsByStage(string $stage): Collection
-    {
-        return User::with(['currentApplication' => function ($query) {
-                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
-            }, 'currentApplication.program' => function ($query) {
-                $query->select('id', 'code', 'name');
-            }, 'currentApplication.processes' => function ($query) use ($stage) {
-                $query->where('stage', $stage)
-                    ->orderBy('created_at', 'desc')
-                    ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
-            }])
-            ->where('role_id', 1)
+        return ApplicantProfile::with(['currentApplication' => function ($query) {
+            $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
+        }, 'currentApplication.program' => function ($query) {
+            $query->select('id', 'code', 'name');
+        }, 'currentApplication.processes' => function ($query) use ($stage) {
+            $query->where('stage', $stage)
+                ->orderBy('created_at', 'desc')
+                ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
+        }])
             ->whereHas('applications', function ($query) use ($stage) {
                 $query->whereNotIn('status', ['accepted'])
                     ->whereHas('processes', function ($q) use ($stage) {
@@ -77,21 +65,21 @@ class UserService
                     ->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)');
             })
             ->get()
-            ->map(function ($user) use ($stage) {
-                $application = $user->currentApplication;
-                $stageProcess = $application && $application->processes ? 
+            ->map(function ($profile) use ($stage) {
+                $application = $profile->currentApplication;
+                $stageProcess = $application && $application->processes ?
                     $application->processes->first() : null;
-                
+
                 return [
-                    'id' => $user->id,
-                    'firstname' => $user->firstname,
-                    'lastname' => $user->lastname,
-                    'course' => $user->course,
+                    'id' => $profile->user_id,
+                    'firstname' => $profile->firstname,
+                    'lastname' => $profile->lastname,
+                    'course' => $profile->course ?? null,
                     'status' => $application->status ?? null,
-                    'email' => $user->email,
-                    'username' => $user->username,
-                    'phone' => $user->phone,
-                    'company' => $user->company,
+                    'email' => $profile->email,
+                    'username' => $profile->email,
+                    'phone' => $profile->contactnumber,
+                    'company' => $profile->company ?? null,
                     'program' => $application && $application->program ? [
                         'id' => $application->program->id,
                         'code' => $application->program->code,
@@ -123,16 +111,15 @@ class UserService
      */
     public function getAllApplicantsByStage(string $stage): Collection
     {
-        return User::with(['currentApplication' => function ($query) {
-                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
-            }, 'currentApplication.program' => function ($query) {
-                $query->select('id', 'code', 'name');
-            }, 'currentApplication.processes' => function ($query) use ($stage) {
-                $query->where('stage', $stage)
-                    ->orderBy('created_at', 'desc')
-                    ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
-            }])
-            ->where('role_id', 1)
+        return ApplicantProfile::with(['currentApplication' => function ($query) {
+            $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
+        }, 'currentApplication.program' => function ($query) {
+            $query->select('id', 'code', 'name');
+        }, 'currentApplication.processes' => function ($query) use ($stage) {
+            $query->where('stage', $stage)
+                ->orderBy('created_at', 'desc')
+                ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
+        }])
             ->whereHas('currentApplication', function ($query) use ($stage) {
                 $query->whereHas('processes', function ($q) use ($stage) {
                     $q->where('stage', $stage)
@@ -140,21 +127,21 @@ class UserService
                 });
             })
             ->get()
-            ->map(function ($user) use ($stage) {
-                $application = $user->currentApplication;
-                $stageProcess = $application && $application->processes ? 
+            ->map(function ($profile) use ($stage) {
+                $application = $profile->currentApplication;
+                $stageProcess = $application && $application->processes ?
                     $application->processes->first() : null;
-                
+
                 return [
-                    'id' => $user->id,
-                    'firstname' => $user->firstname,
-                    'lastname' => $user->lastname,
-                    'course' => $user->course,
+                    'id' => $profile->user_id,
+                    'firstname' => $profile->firstname,
+                    'lastname' => $profile->lastname,
+                    'course' => $profile->course ?? null,
                     'status' => $application->status ?? null,
-                    'email' => $user->email,
-                    'username' => $user->username,
-                    'phone' => $user->phone,
-                    'company' => $user->company,
+                    'email' => $profile->email,
+                    'username' => $profile->email,
+                    'phone' => $profile->contactnumber,
+                    'company' => $profile->company ?? null,
                     'program' => $application && $application->program ? [
                         'id' => $application->program->id,
                         'code' => $application->program->code,
@@ -185,8 +172,7 @@ class UserService
      */
     public function getApplicantsForRecordStaff(): Collection
     {
-        return User::with('currentApplication.program')
-            ->where('role_id', 1)
+        return ApplicantProfile::with('currentApplication.program')
             ->whereHas('currentApplication', function ($query) {
                 $query->where(function ($q) {
                     // Get applications that have completed medical stage
@@ -199,28 +185,28 @@ class UserService
                 });
             })
             ->get()
-            ->map(function ($user) {
-                $app = $user->currentApplication;
+            ->map(function ($profile) {
+                $app = $profile->currentApplication;
                 $program = $app?->program;
-                
+
                 return [
-                    'id'               => $user->id,
-                    'firstname'        => $user->firstname,
-                    'lastname'         => $user->lastname,
-                    'course'           => $user->course,
-                    'email'            => $user->email,
-                    'username'         => $user->username ?? null,
-                    'phone'            => $user->phone,
-                    'company'          => $user->company,
+                    'id'               => $profile->user_id,
+                    'firstname'        => $profile->firstname,
+                    'lastname'         => $profile->lastname,
+                    'course'           => $profile->course ?? null,
+                    'email'            => $profile->email,
+                    'username'         => $profile->email,
+                    'phone'            => $profile->contactnumber,
+                    'company'          => $profile->company ?? null,
                     'status'           => $app?->status ?? null,
-                    'enrollment_status'=> $app?->enrollment_status ?? null,
+                    'enrollment_status' => $app?->enrollment_status ?? null,
                     // Top-level program property for Applications/Records.vue
                     'program'          => $program,
                     // Nested application object for Dashboard/Records.vue
                     'application'      => $app ? [
                         'id'               => $app->id,
                         'status'           => $app->status,
-                        'enrollment_status'=> $app->enrollment_status,
+                        'enrollment_status' => $app->enrollment_status,
                         'program_id'       => $app->program_id,
                         'created_at'       => $app->created_at,
                         'program'          => $program ? [
@@ -240,26 +226,69 @@ class UserService
      */
     public function getAllUsersWithDetails(): Collection
     {
-        return User::select('id', 'firstname', 'middlename', 'lastname', 'email', 'contactnumber', 'role_id', 'created_at')
-            ->with([
-                'role:id,name',
-                'programs:id,name,code',
-                'applicantProfile' => function ($query) {
-                    $query->select('id', 'user_id', 'first_choice_program');
-                },
-                'applicantProfile.firstChoiceProgram:id,name,code',
-                // Use deterministic relationships instead of plain application()
-                'currentApplication' => function ($query) {
-                    $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
-                },
-                'currentApplication.program:id,name,code',
-                'officiallyEnrolledApplication' => function ($query) {
-                    $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
-                },
-                'officiallyEnrolledApplication.program:id,name,code'
-            ])
+        // Get all staff profiles
+        $staff = \App\Models\StaffProfile::with(['programs:id,name,code'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($staff) {
+                // Approximate first/last name from full name
+                $parts = explode(' ', $staff->name);
+                $firstname = array_shift($parts);
+                $lastname = count($parts) > 0 ? implode(' ', $parts) : '';
+
+                return (object) [
+                    'id' => $staff->user_id,
+                    'firstname' => $firstname,
+                    'middlename' => null,
+                    'lastname' => $lastname,
+                    'extension_name' => null,
+                    'email' => $staff->email,
+                    'contactnumber' => null,
+                    'role_id' => $staff->role_id,
+                    'created_at' => $staff->created_at,
+                    'role' => (object) ['name' => $staff->role_name],
+                    'programs' => $staff->programs,
+                    'applicantProfile' => null,
+                    'currentApplication' => null,
+                    'officiallyEnrolledApplication' => null,
+                ];
+            });
+
+        // Get all applicant profiles
+        $applicants = ApplicantProfile::with([
+            'firstChoiceProgram:id,name,code',
+            'currentApplication' => function ($query) {
+                $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
+            },
+            'currentApplication.program:id,name,code',
+            'officiallyEnrolledApplication' => function ($query) {
+                $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
+            },
+            'officiallyEnrolledApplication.program:id,name,code'
+        ])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($applicant) {
+                return (object) [
+                    'id' => $applicant->user_id,
+                    'firstname' => $applicant->firstname,
+                    'middlename' => $applicant->middlename,
+                    'lastname' => $applicant->lastname,
+                    'extension_name' => $applicant->extension_name,
+                    'email' => $applicant->email,
+                    'contactnumber' => $applicant->contactnumber,
+                    'role_id' => 1,
+                    'created_at' => $applicant->created_at,
+                    'role' => (object) ['name' => 'Applicant'],
+                    'programs' => collect(), // Applicants don't manage programs this way
+                    'applicantProfile' => $applicant,
+                    'currentApplication' => $applicant->currentApplication,
+                    'officiallyEnrolledApplication' => $applicant->officiallyEnrolledApplication,
+                ];
+            });
+
+        // Merge them and return as a collection
+        return $staff->concat($applicants)->sortByDesc('created_at')->values();
     }
 
     /**
@@ -269,10 +298,16 @@ class UserService
      */
     public function getUserCountsByRole(): array
     {
-        return User::select('role_id', DB::raw('count(*) as total'))
+        $staffCounts = \App\Models\StaffProfile::select('role_id', DB::raw('count(*) as total'))
             ->groupBy('role_id')
             ->pluck('total', 'role_id')
             ->toArray();
+
+        $applicantCount = ApplicantProfile::count();
+
+        $staffCounts[1] = $applicantCount; // Role 1 is Applicant
+
+        return $staffCounts;
     }
 
     /**
@@ -282,7 +317,7 @@ class UserService
      */
     public function getTotalUserCount(): int
     {
-        return User::count();
+        return \App\Models\StaffProfile::count() + ApplicantProfile::count();
     }
 
     /**
@@ -291,55 +326,9 @@ class UserService
      * @param array $data
      * @return User
      */
-    public function createUser(array $data): User
+    public function createUser(array $data)
     {
-        return DB::transaction(function () use ($data) {
-            $user = User::create([
-                'firstname' => $data['firstname'],
-                'lastname' => $data['lastname'],
-                'middlename' => $data['middlename'] ?? null,
-                'email' => $data['email'],
-                'contactnumber' => $data['contactnumber'],
-                'password' => Hash::make($data['password']),
-                'role_id' => $data['role_id'],
-            ]);
-
-            // Create ApplicantProfile for applicant users
-            if ($data['role_id'] == 1) {
-                $programId = null;
-                // Look up program by code to get the ID if applicant_program is provided
-                if (!empty($data['applicant_program'])) {
-                    $program = Program::where('code', $data['applicant_program'])->first();
-                    if ($program) {
-                        $programId = $program->id;
-                    }
-                }
-
-                $user->applicantProfile()->create([
-                    'first_choice_program' => $programId,
-                ]);
-            }
-
-            // Attach program if role is Applicant and program is provided
-            if ($data['role_id'] == 1 && !empty($data['applicant_program'])) {
-                // Look up program by code to get the ID
-                $program = Program::where('code', $data['applicant_program'])->first();
-                if ($program) {
-                    $user->programs()->attach($program->id, ['role_id' => $data['role_id']]);
-                }
-            }
-
-            // Attach program for Evaluators (3) and Interviewers (4)
-            if (in_array($data['role_id'], [3, 4]) && !empty($data['program'])) {
-                // Look up program by code to get the ID
-                $program = Program::where('code', $data['program'])->first();
-                if ($program) {
-                    $user->programs()->attach($program->id, ['role_id' => $data['role_id']]);
-                }
-            }
-
-            return $user;
-        });
+        throw new \Exception('User creation is now managed fully via the external IDP. Local creation is disabled.');
     }
 
     /**

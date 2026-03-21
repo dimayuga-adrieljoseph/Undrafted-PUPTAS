@@ -19,7 +19,6 @@ class ApplicationProcess extends Model
         'stage',
         'status',
         'action',
-        'notes',
         'performed_by',
         'decision_reason',
         'reviewer_notes',
@@ -38,6 +37,6 @@ class ApplicationProcess extends Model
 
     public function performedBy()
     {
-        return $this->belongsTo(User::class, 'performed_by');
+        return $this->belongsTo(StaffProfile::class, 'performed_by');
     }
 }

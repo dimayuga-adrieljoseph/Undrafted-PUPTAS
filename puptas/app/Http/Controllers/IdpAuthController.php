@@ -24,15 +24,15 @@ class IdpAuthController extends Controller
     public function login()
     {
         \Log::info('IDP login initiated');
-        
+
         $idpConfig = config('services.idp');
-        
+
         // Validate IDP configuration
         if (empty($idpConfig) || empty($idpConfig['client_id']) || empty($idpConfig['base_url'])) {
             \Log::error('IDP configuration is missing or incomplete', [
                 'config_keys' => $idpConfig ? array_keys($idpConfig) : 'config not found',
             ]);
-            
+
             return redirect('/login')->withErrors([
                 'idp' => 'IDP configuration is missing. Please contact administrator.'
             ]);
@@ -81,7 +81,7 @@ class IdpAuthController extends Controller
     public function callback(Request $request)
     {
         \Log::info('IDP callback reached', ['params' => $request->all()]);
-        
+
         // Extract the authorization code from query parameters
         $code = $request->query('code');
 
@@ -98,13 +98,13 @@ class IdpAuthController extends Controller
         }
 
         $idpConfig = config('services.idp');
-        
+
         // Validate IDP configuration
         if (empty($idpConfig) || empty($idpConfig['base_url']) || empty($idpConfig['client_id']) || empty($idpConfig['client_secret'])) {
             \Log::error('IDP configuration is incomplete during callback', [
                 'config_keys' => $idpConfig ? array_keys($idpConfig) : 'config not found',
             ]);
-            
+
             return redirect('/login')->withErrors([
                 'idp' => 'IDP configuration is incomplete. Please contact administrator.',
             ]);
@@ -114,7 +114,7 @@ class IdpAuthController extends Controller
             // Build the token endpoint URL using configurable path
             $tokenPath = $idpConfig['token_path'] ?? '/api/v1/auth/token';
             $tokenUrl = rtrim($idpConfig['base_url'], '/') . $tokenPath;
-            
+
             \Log::info('Exchanging authorization code for tokens', [
                 'token_url' => $tokenUrl,
                 'client_id' => $idpConfig['client_id'],
@@ -152,7 +152,7 @@ class IdpAuthController extends Controller
             }
 
             $tokenData = $tokenResponse->json();
-            
+
             // Extract access token from response
             $accessToken = $tokenData['access_token'] ?? null;
 
@@ -160,7 +160,7 @@ class IdpAuthController extends Controller
                 \Log::error('IDP token response missing access_token', [
                     'response_keys' => array_keys($tokenData),
                 ]);
-                
+
                 return redirect('/login')->withErrors([
                     'idp' => 'Invalid token response from IDP.',
                 ]);
@@ -200,7 +200,7 @@ class IdpAuthController extends Controller
             if (!$userResponse->successful()) {
                 $errorBody = $userResponse->body();
                 $errorStatus = $userResponse->status();
-                
+
                 \Log::error('Failed to fetch user info from IDP', [
                     'status' => $errorStatus,
                     'body' => $errorBody,
@@ -226,7 +226,7 @@ class IdpAuthController extends Controller
 
             // Robust multi-format role extraction
             $idpRole = 'applicant';
-            
+
             if (!empty($idpUser['role'])) {
                 $idpRole = is_array($idpUser['role']) ? ($idpUser['role']['name'] ?? $idpUser['role']['title'] ?? 'applicant') : $idpUser['role'];
             } elseif (!empty($idpUser['roles']) && is_array($idpUser['roles'])) {
@@ -244,6 +244,23 @@ class IdpAuthController extends Controller
             // Failsafe: Log the raw payload if it defaulted to applicant to help debug
             if ($roleId === 1) {
                 \Log::warning('IDP Role matched Applicant or defaulted. Raw IDP User payload:', ['idpUser' => $idpUser]);
+
+                // Check for new applicants requiring onboarding
+                $hasProfile = \App\Models\ApplicantProfile::where('user_id', $idpUser['id'])->exists();
+
+                if (!$hasProfile) {
+                    \Log::info('Intercepting first-time IDP applicant for registration flow', ['id' => $idpUser['id']]);
+
+                    // Temporarily store just enough session data to bind the profile
+                    session(['pending_registration' => [
+                        'user_id' => $idpUser['id'] ?? null,
+                        'email'   => $idpUser['email'] ?? null,
+                        'username' => $idpUser['username'] ?? null,
+                    ]]);
+
+                    // Do not log them in yet. Send them to complete the profile.
+                    return redirect('/register');
+                }
             }
 
             // Build the virtual user profile array
@@ -254,6 +271,19 @@ class IdpAuthController extends Controller
                 'role_id'     => $roleId,
                 'role_name'   => $idpRole,
             ];
+
+            // If not an applicant, upsert the staff profile for the User Management Dashboard
+            if ($roleId !== 1) {
+                \App\Models\StaffProfile::updateOrCreate(
+                    ['user_id' => $idpUserProfile['idp_user_id']],
+                    [
+                        'name'      => $idpUserProfile['name'],
+                        'email'     => $idpUserProfile['email'],
+                        'role_id'   => $idpUserProfile['role_id'],
+                        'role_name' => $idpUserProfile['role_name'],
+                    ]
+                );
+            }
 
             // Store the entire profile solidly in session for the IdpUserProvider to retrieve
             session(['idp_user_profile' => $idpUserProfile]);
@@ -284,21 +314,19 @@ class IdpAuthController extends Controller
                 default:
                     return redirect('/dashboard');
             }
-
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             \Log::error('IDP connection error', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return redirect('/login')->withErrors([
                 'idp' => 'Unable to connect to IDP. Please try again later.',
             ]);
-            
         } catch (\Exception $e) {
             \Log::error('IDP authentication unexpected error', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return redirect('/login')->withErrors([
                 'idp' => 'An unexpected error occurred during IDP login.',
             ]);

@@ -218,7 +218,7 @@ class AuditLogService
         if (isset($user->name) && current(explode(' ', $user->name))) {
             return $user->name;
         }
-        return trim(($user->firstname ?? '') . " " . ($user->lastname ?? '')) ?: $user->email;
+        return trim(($user->firstname ?? '') . " " . ($user->lastname ?? '')) ?: ($user->email ?? 'Unknown User');
     }
 
     private function resolveLogType(string $actionType, ?string $logCategory, string $moduleName): string
@@ -249,3 +249,4 @@ class AuditLogService
         return substr($value, 0, $maxLength);
     }
 }
+
