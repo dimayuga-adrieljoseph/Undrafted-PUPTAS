@@ -173,12 +173,15 @@ class DashboardService
     /**
      * Verify user role access
      *
-     * @param User $user
-     * @param int $requiredRoleId
+     * @param \Illuminate\Contracts\Auth\Authenticatable|mixed $user
+     * @param int|array $requiredRoleId
      * @return bool
      */
-    public function verifyRoleAccess(User $user, int $requiredRoleId): bool
+    public function verifyRoleAccess($user, $requiredRoleId): bool
     {
+        if (is_array($requiredRoleId)) {
+            return in_array($user->role_id, $requiredRoleId);
+        }
         return $user->role_id === $requiredRoleId;
     }
 
