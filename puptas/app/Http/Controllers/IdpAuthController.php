@@ -251,6 +251,13 @@ class IdpAuthController extends Controller
             // Normalise the string if it was extracted as a string
             if (is_string($idpRole)) {
                 $idpRole = strtolower(str_replace(' ', '', $idpRole)); // super admin -> superadmin
+                
+                // Extract just the role part if it comes prefixed with system names (e.g. "puptas:evaluator" -> "evaluator")
+                if (strpos($idpRole, ':') !== false) {
+                    $parts = explode(':', $idpRole);
+                    $idpRole = end($parts);
+                }
+                
                 $roleId = $roleMapping[$idpRole] ?? 1;
             } else if (is_numeric($idpRole)) {
                 $roleId = (int) $idpRole;
@@ -266,10 +273,7 @@ class IdpAuthController extends Controller
                 $hasProfile = \App\Models\ApplicantProfile::where('user_id', $idpUser['id'])->exists();
                 
                 // If you are completely sure the IDP should have provided an admin role, uncomment the dd() below to see what your IDP is ACTUALLY sending!
-                dd('IDP User Payload (No Role Matched): ', $idpUser, 'Calculated Role string:', $idpRole);
-
-                if (!$hasProfile) {
-                    \Log::info('Intercepting first-time IDP applicant for registration flow', ['id' => $idpUser['id']]);
+                // dd('IDP User Payload (No Role Matched): ', $idpUser, 'Calculated Role string:', $idpRole);
 
                     // Temporarily store just enough session data to bind the profile
                     session(['pending_registration' => [
