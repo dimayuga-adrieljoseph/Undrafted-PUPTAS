@@ -290,7 +290,7 @@ const closeUserCard = () => {
               <div class="flex items-start justify-between mb-3">
                 <div class="flex items-center space-x-3">
                   <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold">
-                    {{ user.firstname[0] }}{{ user.lastname[0] }}
+                    {{ user.firstname?.charAt(0) || '' }}{{ user.lastname?.charAt(0) || '' }}
                   </div>
                   <div>
                     <h4 class="font-semibold text-gray-900 dark:text-white">
