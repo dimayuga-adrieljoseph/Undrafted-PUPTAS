@@ -275,6 +275,9 @@ class IdpAuthController extends Controller
                 // If you are completely sure the IDP should have provided an admin role, uncomment the dd() below to see what your IDP is ACTUALLY sending!
                 // dd('IDP User Payload (No Role Matched): ', $idpUser, 'Calculated Role string:', $idpRole);
 
+                if (!$hasProfile) {
+                    \Log::info('Intercepting first-time IDP applicant for registration flow', ['id' => $idpUser['id']]);
+
                     // Temporarily store just enough session data to bind the profile
                     session(['pending_registration' => [
                         'user_id' => $idpUser['id'] ?? null,
