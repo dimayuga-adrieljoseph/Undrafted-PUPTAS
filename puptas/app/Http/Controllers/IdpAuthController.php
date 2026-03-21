@@ -215,13 +215,20 @@ class IdpAuthController extends Controller
 
             // Map IDP role/attributes to local integer role_id
             $roleMapping = [
-                'applicant'   => 1,
-                'admin'       => 2,
-                'evaluator'   => 3,
-                'interviewer' => 4,
-                'medical'     => 5,
-                'record'      => 6,
-                'superadmin'  => 7,
+                'applicant'     => 1,
+                'student'       => 1,
+                'admin'         => 2,
+                'administrator' => 2,
+                'evaluator'     => 3,
+                'interviewer'   => 4,
+                'medical'       => 5,
+                'doctor'        => 5,
+                'nurse'         => 5,
+                'record'        => 6,
+                'registrar'     => 6,
+                'records'       => 6,
+                'recordstaff'   => 6,
+                'superadmin'    => 7,
             ];
 
             // Robust multi-format role extraction
@@ -236,10 +243,20 @@ class IdpAuthController extends Controller
                 $idpRole = $idpUser['role_name'];
             } elseif (!empty($idpUser['user_type'])) {
                 $idpRole = $idpUser['user_type'];
+            } elseif (!empty($idpUser['role_id'])) {
+                // Some IDPs just send the integer directly
+                $idpRole = (int) $idpUser['role_id'];
             }
 
-            $idpRole = strtolower(is_string($idpRole) ? $idpRole : 'applicant');
-            $roleId = $roleMapping[$idpRole] ?? 1;
+            // Normalise the string if it was extracted as a string
+            if (is_string($idpRole)) {
+                $idpRole = strtolower(str_replace(' ', '', $idpRole)); // super admin -> superadmin
+                $roleId = $roleMapping[$idpRole] ?? 1;
+            } else if (is_numeric($idpRole)) {
+                $roleId = (int) $idpRole;
+            } else {
+                $roleId = 1;
+            }
 
             // Failsafe: Log the raw payload if it defaulted to applicant to help debug
             if ($roleId === 1) {
@@ -247,6 +264,11 @@ class IdpAuthController extends Controller
 
                 // Check for new applicants requiring onboarding
                 $hasProfile = \App\Models\ApplicantProfile::where('user_id', $idpUser['id'])->exists();
+                
+                // If you are completely sure the IDP should have provided an admin role, uncomment the dd() below to see what your IDP is ACTUALLY sending!
+                // if (!$hasProfile && env('APP_DEBUG')) {
+                //     dd('IDP User Payload (No Role Matched): ', $idpUser, 'Calculated Role string:', $idpRole);
+                // }
 
                 if (!$hasProfile) {
                     \Log::info('Intercepting first-time IDP applicant for registration flow', ['id' => $idpUser['id']]);
