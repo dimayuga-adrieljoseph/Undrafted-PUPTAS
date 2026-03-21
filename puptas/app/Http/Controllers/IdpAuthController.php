@@ -251,13 +251,13 @@ class IdpAuthController extends Controller
             // Normalise the string if it was extracted as a string
             if (is_string($idpRole)) {
                 $idpRole = strtolower(str_replace(' ', '', $idpRole)); // super admin -> superadmin
-                
+
                 // Extract just the role part if it comes prefixed with system names (e.g. "puptas:evaluator" -> "evaluator")
                 if (strpos($idpRole, ':') !== false) {
                     $parts = explode(':', $idpRole);
                     $idpRole = end($parts);
                 }
-                
+
                 $roleId = $roleMapping[$idpRole] ?? 1;
             } else if (is_numeric($idpRole)) {
                 $roleId = (int) $idpRole;
@@ -271,7 +271,7 @@ class IdpAuthController extends Controller
 
                 // Check for new applicants requiring onboarding
                 $hasProfile = \App\Models\ApplicantProfile::where('user_id', $idpUser['id'])->exists();
-                
+
                 // If you are completely sure the IDP should have provided an admin role, uncomment the dd() below to see what your IDP is ACTUALLY sending!
                 // dd('IDP User Payload (No Role Matched): ', $idpUser, 'Calculated Role string:', $idpRole);
 
@@ -290,10 +290,18 @@ class IdpAuthController extends Controller
                 }
             }
 
+            // Extract firstname and lastname for Vue Layout Avatar formatting
+            $fullName = $idpUser['name'] ?? ($idpUser['email'] ?? 'IDP User');
+            $nameParts = explode(' ', $fullName);
+            $firstName = array_shift($nameParts);
+            $lastName = count($nameParts) > 0 ? implode(' ', $nameParts) : '';
+
             // Build the virtual user profile array
             $idpUserProfile = [
                 'idp_user_id' => $idpUser['id'] ?? null,
-                'name'        => $idpUser['name'] ?? ($idpUser['email'] ?? 'IDP User'),
+                'name'        => $fullName,
+                'firstname'   => $firstName,
+                'lastname'    => $lastName,
                 'email'       => $idpUser['email'] ?? null,
                 'role_id'     => $roleId,
                 'role_name'   => $idpRole,
