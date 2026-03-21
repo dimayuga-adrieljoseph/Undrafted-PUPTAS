@@ -266,9 +266,7 @@ class IdpAuthController extends Controller
                 $hasProfile = \App\Models\ApplicantProfile::where('user_id', $idpUser['id'])->exists();
                 
                 // If you are completely sure the IDP should have provided an admin role, uncomment the dd() below to see what your IDP is ACTUALLY sending!
-                // if (!$hasProfile && env('APP_DEBUG')) {
-                //     dd('IDP User Payload (No Role Matched): ', $idpUser, 'Calculated Role string:', $idpRole);
-                // }
+                dd('IDP User Payload (No Role Matched): ', $idpUser, 'Calculated Role string:', $idpRole);
 
                 if (!$hasProfile) {
                     \Log::info('Intercepting first-time IDP applicant for registration flow', ['id' => $idpUser['id']]);
