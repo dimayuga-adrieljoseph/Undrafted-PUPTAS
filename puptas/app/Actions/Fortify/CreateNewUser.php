@@ -40,42 +40,69 @@ class CreateNewUser implements CreatesNewUsers
             'dateGrad' => ['required', 'date'],
             'strand' => ['required', 'string', 'max:50'],
             'track' => ['nullable', 'string', 'max:50'],
-            'email' => ['required', 'email', 'max:255', 'unique:users'],
+            'email' => ['required', 'email', 'max:255'], // Removed unique:users to allow IDP updates
             'password' => $this->passwordRules(),
         ])->validate();
 
         return DB::transaction(function () use ($input) {
-            return tap(User::create([
-                'firstname' => $input['firstname'],
-                'middlename' => $input['middlename'] ?? null,
-                'lastname' => $input['lastname'],
-                'birthday' => $input['birthday'],
-                'sex' => $input['sex'],
-                'contactnumber' => $input['contactnumber'],
-                'street_address' => $input['street_address'],
-                'barangay' => $input['barangay'],
-                'city' => $input['city'],
-                'province' => $input['province'],
-                'postal_code' => $input['postal_code'] ?? null,
-                'email' => $input['email'],
-                'password' => Hash::make($input['password']),
-                'role_id' => 1, // using roles
-                'privacy_consent' => true, // User accepted terms during registration
-                'privacy_consent_at' => now(),
-            ]), function (User $user) use ($input) {
-                // Create applicant profile with high school data
-                $user->applicantProfile()->create([
+            $user = User::where('email', $input['email'])->first();
+
+            if ($user) {
+                // Update existing user created by IDP intercept
+                $user->update([
+                    'firstname' => $input['firstname'],
+                    'middlename' => $input['middlename'] ?? null,
+                    'lastname' => $input['lastname'],
+                    'birthday' => $input['birthday'],
+                    'sex' => $input['sex'],
+                    'contactnumber' => $input['contactnumber'],
+                    'street_address' => $input['street_address'],
+                    'barangay' => $input['barangay'],
+                    'city' => $input['city'],
+                    'province' => $input['province'],
+                    'postal_code' => $input['postal_code'] ?? null,
+                    'password' => Hash::make($input['password']),
+                    'privacy_consent' => true,
+                    'privacy_consent_at' => now(),
+                ]);
+            } else {
+                $user = User::create([
+                    'firstname' => $input['firstname'],
+                    'middlename' => $input['middlename'] ?? null,
+                    'lastname' => $input['lastname'],
+                    'birthday' => $input['birthday'],
+                    'sex' => $input['sex'],
+                    'contactnumber' => $input['contactnumber'],
+                    'street_address' => $input['street_address'],
+                    'barangay' => $input['barangay'],
+                    'city' => $input['city'],
+                    'province' => $input['province'],
+                    'postal_code' => $input['postal_code'] ?? null,
+                    'email' => $input['email'],
+                    'password' => Hash::make($input['password']),
+                    'role_id' => 1, // using roles
+                    'privacy_consent' => true, // User accepted terms during registration
+                    'privacy_consent_at' => now(),
+                ]);
+            }
+
+            // Update or Create applicant profile with high school data
+            ApplicantProfile::updateOrCreate(
+                ['user_id' => $user->id],
+                [
                     'school' => $input['school'] ?? null,
                     'school_address' => $input['schoolAdd'] ?? null,
                     'school_year' => $input['schoolyear'] ?? null,
                     'date_graduated' => $input['dateGrad'] ?? null,
                     'strand' => $input['strand'] ?? null,
                     'track' => $input['track'] ?? null,
-                ]);
+                ]
+            );
 
-                //log in user automatically
-                Auth::login($user);
-            });
+            //log in user automatically
+            Auth::login($user);
+            
+            return $user;
         });
     }
 

@@ -125,10 +125,27 @@ class EvaluatorDashboardController extends Controller
 
             \Log::info("Updated application status to 'submitted' for application {$application->id}, result: {$statusUpdated}");
 
+            // Check and apply special case overrides (forces DOMT course)
+            $specialCaseService = app(\App\Services\SpecialCaseService::class);
+            $specialCaseService->applyWorkflowOverrides($application);
+
+            // Re-fetch fresh profile from DB to determine next stage
+            $profile = \App\Models\ApplicantProfile::where('user_id', $userId)->first();
+            
+            $isSpecialCase = $profile && (
+                $profile->is_special_case == true ||
+                $profile->is_special_case == 1 ||
+                $profile->admission_decision === 'SPECIAL_CASE_APPROVED'
+            );
+
+            $nextStage = $isSpecialCase ? 'medical' : 'interviewer';
+
+            \Log::info("Special case check for user {$userId}: is_special_case={$profile->is_special_case}, decision={$profile->admission_decision}, nextStage={$nextStage}");
+
             // Create next stage process
             ApplicationProcess::create([
                 'application_id' => $application->id,
-                'stage' => 'interviewer',
+                'stage' => $nextStage,
                 'status' => 'in_progress',
                 'performed_by' => null,
             ]);

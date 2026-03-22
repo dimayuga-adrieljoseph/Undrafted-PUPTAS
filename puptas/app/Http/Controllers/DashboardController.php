@@ -193,4 +193,74 @@ class DashboardController extends Controller
             'programs' => $programs
         ]);
     }
+
+    /**
+     * Get all applicants pending special case review (FOR_SPECIAL_REVIEW).
+     */
+    public function getSpecialCaseApplicants()
+    {
+        $authUser = Auth::user();
+        if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+
+        $profiles = \App\Models\ApplicantProfile::with('user')
+            ->where('applicant_status', 'FOR_SPECIAL_REVIEW')
+            ->get()
+            ->map(function ($profile) {
+                return [
+                    'profile_id'   => $profile->id,
+                    'user_id'      => $profile->user_id,
+                    'firstname'    => $profile->user?->firstname,
+                    'lastname'     => $profile->user?->lastname,
+                    'email'        => $profile->user?->email,
+                    'source'       => $profile->source,
+                    'status'       => $profile->applicant_status,
+                    'decision'     => $profile->admission_decision,
+                    'created_at'   => $profile->created_at,
+                ];
+            });
+
+        return response()->json($profiles);
+    }
+
+    /**
+     * Admin approves a special case applicant.
+     */
+    public function approveSpecialCase(Request $request, $profileId)
+    {
+        $authUser = Auth::user();
+        if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate(['reason' => 'nullable|string|max:1000']);
+
+        $service = app(\App\Services\SpecialCaseService::class);
+        $profile = $service->approveSpecialCase((int) $profileId, $authUser->id, $request->reason);
+
+        return response()->json([
+            'message' => 'Applicant approved as special case.',
+            'profile' => $profile,
+        ]);
+    }
+
+    /**
+     * Admin rejects a special case applicant.
+     */
+    public function rejectSpecialCase(Request $request, $profileId)
+    {
+        $authUser = Auth::user();
+        if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $profile = \App\Models\ApplicantProfile::findOrFail($profileId);
+        $profile->update([
+            'admission_decision' => 'REJECTED',
+            'applicant_status'   => 'REJECTED',
+        ]);
+
+        return response()->json(['message' => 'Applicant rejected.']);
+    }
 }
