@@ -162,8 +162,8 @@ onMounted(() => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="user in assignedUsers" :key="user.id">
-                            <td>{{ user.salutation }} {{ user.firstname }} {{ user.lastname }}</td>
+                        <tr v-for="user in assignedUsers" :key="user.user_id">
+                            <td>{{ user.name }}</td>
                             <td>{{ user.email }}</td>
                             <td>{{ user.role_id == 3 ? 'Evaluator' : 'Interviewer' }}</td>
                             <td>

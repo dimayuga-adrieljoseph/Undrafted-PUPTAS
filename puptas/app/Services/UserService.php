@@ -428,11 +428,11 @@ class UserService
     /**
      * Log user listing view to audit log
      *
-     * @param int $actorId
+     * @param int|string $actorId
      * @param int $totalUsersViewed
      * @return void
      */
-    public function logUserListingView(int $actorId, int $totalUsersViewed): void
+    public function logUserListingView(int|string $actorId, int $totalUsersViewed): void
     {
         // Intentionally left as a no-op.
         // VIEW events are not part of the new audit trail schema.
