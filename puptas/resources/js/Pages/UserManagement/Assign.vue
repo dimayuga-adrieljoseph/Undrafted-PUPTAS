@@ -172,11 +172,11 @@ onMounted(() => {
                             </td>
                             <td>
                                 <div class="action-container">
-                                    <Link :href="route('admin.users.edit', user.id)" class="action-button edit-button">
+                                    <Link :href="route('admin.users.edit', user.user_id)" class="action-button edit-button">
                                         <i class="fas fa-edit"></i>
                                         <span class="tooltiptext">Edit</span>
                                     </Link>
-                                    <button @click="confirmDeleteUser(user.id)" class="action-button delete-button">
+                                    <button @click="confirmDeleteUser(user.user_id)" class="action-button delete-button">
                                         <i class="fas fa-trash-alt"></i>
                                         <span class="tooltiptext">Delete</span>
                                     </button>

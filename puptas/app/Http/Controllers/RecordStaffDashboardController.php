@@ -13,31 +13,39 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use League\Csv\Writer;
 use App\Helpers\FileMapper;
+use App\Services\DashboardService;
+use App\Services\UserService;
+use App\Services\ApplicationService;
+use Illuminate\Support\Facades\Auth;
 
 class RecordStaffDashboardController extends Controller
 {
+    protected DashboardService $dashboardService;
+    protected UserService $userService;
+    protected ApplicationService $applicationService;
+
+    public function __construct(
+        DashboardService $dashboardService,
+        UserService $userService,
+        ApplicationService $applicationService
+    ) {
+        $this->dashboardService = $dashboardService;
+        $this->userService = $userService;
+        $this->applicationService = $applicationService;
+    }
+
     /**
      * Display the Record Staff dashboard
      */
     public function index()
     {
-        $summary = [
-            'total' => Application::count(),
-            'medical_completed' => Application::whereHas('processes', function ($q) {
-                $q->where('stage', 'medical')->where('status', 'completed');
-            })->count(),
-            'officially_enrolled' => Application::where('enrollment_status', 'officially_enrolled')->count(),
-            'pending_records' => Application::whereHas('processes', function ($q) {
-                $q->where('stage', 'medical')->where('status', 'completed');
-            })->whereDoesntHave('processes', function ($q) {
-                $q->where('stage', 'records')->where('status', 'completed');
-            })->count(),
-        ];
+        $dashboardData = $this->dashboardService->getRecordsDashboardData();
 
-        return Inertia::render('Dashboard/Admin', [
-            'user' => auth()->user(),
-            'summary' => $summary,
-            'isRecordStaff' => true,
+        return Inertia::render('Dashboard/Records', [
+            'user' => Auth::user(),
+            'users' => $dashboardData['allUsers'],
+            'programs' => $dashboardData['programs'],
+            'summary' => $dashboardData['summary'],
         ]);
     }
 
