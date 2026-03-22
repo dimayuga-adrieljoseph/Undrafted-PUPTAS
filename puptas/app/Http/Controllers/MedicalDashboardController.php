@@ -82,12 +82,20 @@ class MedicalDashboardController extends Controller
 
     protected function checkPrerequisiteStage($application)
     {
-        // Check if interviewer stage is completed
-        $this->applicationService->ensureStageCompleted(
-            $application,
-            'interviewer',
-            "Cannot proceed - prerequisite verification not completed."
+        // Special case applicants skip the interviewer stage - go directly from evaluator to medical
+        $profile = \App\Models\ApplicantProfile::where('user_id', $application->user_id)->first();
+        $isSpecialCase = $profile && (
+            $profile->is_special_case == true ||
+            $profile->admission_decision === 'SPECIAL_CASE_APPROVED'
         );
+
+        if (!$isSpecialCase) {
+            $this->applicationService->ensureStageCompleted(
+                $application,
+                'interviewer',
+                "Cannot proceed - prerequisite verification not completed."
+            );
+        }
     }
 
     // getUserFiles() method provided by ManagesApplicationFiles trait
@@ -102,12 +110,20 @@ class MedicalDashboardController extends Controller
 
         $application = $this->applicationService->getApplicationByUserId($userId);
 
-        // Check if interviewer stage is completed
-        $this->applicationService->ensureStageCompleted(
-            $application,
-            'interviewer',
-            "Cannot clear medically - interviewer stage not completed."
+        // Check if interviewer stage is completed — skip for special case applicants
+        $applicantProfile = \App\Models\ApplicantProfile::where('user_id', $userId)->first();
+        $isSpecialCase = $applicantProfile && (
+            $applicantProfile->is_special_case == true ||
+            $applicantProfile->admission_decision === 'SPECIAL_CASE_APPROVED'
         );
+
+        if (!$isSpecialCase) {
+            $this->applicationService->ensureStageCompleted(
+                $application,
+                'interviewer',
+                "Cannot clear medically - interviewer stage not completed."
+            );
+        }
 
         try {
             DB::transaction(function () use ($application, $userId) {

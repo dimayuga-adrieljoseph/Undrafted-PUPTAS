@@ -518,7 +518,16 @@ const canSubmit = computed(() => {
 const allDocumentsUploaded = computed(() => {
     if (!applicationData.value?.uploadedFiles) return false;
     const files = applicationData.value.uploadedFiles;
-    return Object.values(files).every((file) => file?.url);
+    
+    // The following files accept a Promissory Note, thus they are considered optional 
+    // for the STRICT frontend validation even though they appear required to the user.
+    // 'psa', 'goodMoral', 'photo2x2', 'underOath' (the promissory note itself)
+    const strictlyRequiredKeys = [
+        "file10Front", "file10", "file11Front", "file11", "file12Front", "file12", 
+        "schoolId", "nonEnrollCert"
+    ];
+    
+    return strictlyRequiredKeys.every(key => files[key]?.url !== undefined && files[key]?.url !== null && files[key]?.url !== "");
 });
 
 // Computed: Check if application can be submitted (all conditions)

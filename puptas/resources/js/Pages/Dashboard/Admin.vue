@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import { LineChart } from "vue-chart-3";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import axios from "axios";
 import { 
   Chart as ChartJS, 
   LineController, 
@@ -179,6 +180,55 @@ const selectUser = (user) => {
 const closeUserCard = () => {
   selectedUser.value = null;
 };
+
+// ============================
+// Special Cases Tab
+// ============================
+const activeTab = ref('dashboard');
+const specialCaseApplicants = ref([]);
+const specialCaseLoading = ref(false);
+const approvalReason = ref('');
+const processingId = ref(null);
+
+const fetchSpecialCases = async () => {
+  specialCaseLoading.value = true;
+  try {
+    const res = await axios.get('/admin/special-cases');
+    specialCaseApplicants.value = res.data;
+  } finally {
+    specialCaseLoading.value = false;
+  }
+};
+
+const approveApplicant = async (profileId) => {
+  processingId.value = profileId;
+  try {
+    await axios.post(`/admin/special-cases/${profileId}/approve`, { reason: approvalReason.value || null });
+    approvalReason.value = '';
+    await fetchSpecialCases();
+  } catch (e) {
+    alert(e.response?.data?.message || 'Failed to approve.');
+  } finally {
+    processingId.value = null;
+  }
+};
+
+const rejectApplicant = async (profileId) => {
+  if (!confirm('Are you sure you want to reject this applicant?')) return;
+  processingId.value = profileId;
+  try {
+    await axios.post(`/admin/special-cases/${profileId}/reject`);
+    await fetchSpecialCases();
+  } catch (e) {
+    alert(e.response?.data?.message || 'Failed to reject.');
+  } finally {
+    processingId.value = null;
+  }
+};
+
+onMounted(() => {
+  fetchSpecialCases();
+});
 </script>
 
 <template>
@@ -194,7 +244,31 @@ const closeUserCard = () => {
       </div>
     </div>
 
-    <!-- Stats Grid -->
+    <!-- Tab Navigation -->
+    <div class="px-4 md:px-8 mb-6">
+      <div class="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
+        <button
+          @click="activeTab = 'dashboard'"
+          :class="activeTab === 'dashboard' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
+          class="px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+        >
+          Dashboard
+        </button>
+        <button
+          @click="activeTab = 'special-cases'; fetchSpecialCases()"
+          :class="activeTab === 'special-cases' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
+          class="px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2"
+        >
+          Special Cases
+          <span v-if="specialCaseApplicants.length > 0" class="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+            {{ specialCaseApplicants.length }}
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <template v-if="activeTab === 'dashboard'">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-8 mb-8">
       <div
         v-for="(item, index) in summaryItems"
@@ -321,7 +395,79 @@ const closeUserCard = () => {
       </div>
     </div>
 
-    <!-- User Detail Modal -->
+    </template>
+    <!-- End Dashboard Tab -->
+
+    <!-- Special Cases Tab -->
+    <div v-if="activeTab === 'special-cases'" class="px-4 md:px-8">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Special Case Review</h3>
+          <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Applicants who logged in via IDP but did not pass PUPCET. Review and approve or reject each case manually.</p>
+        </div>
+
+        <div v-if="specialCaseLoading" class="p-12 text-center text-gray-500 dark:text-gray-400">
+          Loading...
+        </div>
+
+        <div v-else-if="specialCaseApplicants.length === 0" class="p-12 text-center">
+          <svg class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-gray-500 dark:text-gray-400 font-medium">No pending special case applicants.</p>
+        </div>
+
+        <div v-else class="divide-y divide-gray-200 dark:divide-gray-700">
+          <div
+            v-for="applicant in specialCaseApplicants"
+            :key="applicant.profile_id"
+            class="p-6 flex flex-col md:flex-row md:items-center gap-4"
+          >
+            <!-- Applicant Info -->
+            <div class="flex items-center gap-4 flex-1">
+              <div class="w-12 h-12 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center text-amber-700 dark:text-amber-300 font-bold text-lg">
+                {{ (applicant.firstname?.[0] || '?') }}{{ (applicant.lastname?.[0] || '') }}
+              </div>
+              <div>
+                <p class="font-semibold text-gray-900 dark:text-white">{{ applicant.firstname }} {{ applicant.lastname }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ applicant.email }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Registered via IDP &bull; {{ new Date(applicant.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}</p>
+              </div>
+            </div>
+
+            <!-- Status Badge -->
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 self-start md:self-center">
+              {{ applicant.status }}
+            </span>
+
+            <!-- Reason input + Actions -->
+            <div class="flex flex-col md:flex-row gap-2 items-start md:items-center">
+              <input
+                v-model="approvalReason"
+                type="text"
+                placeholder="Reason (optional)"
+                class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] w-48"
+              />
+              <button
+                @click="approveApplicant(applicant.profile_id)"
+                :disabled="processingId === applicant.profile_id"
+                class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition"
+              >
+                Approve
+              </button>
+              <button
+                @click="rejectApplicant(applicant.profile_id)"
+                :disabled="processingId === applicant.profile_id"
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End Special Cases Tab -->
     <transition name="fade">
       <div v-if="selectedUser" class="fixed inset-0 z-50">
         <div class="fixed inset-0 bg-black/50" @click="closeUserCard"></div>

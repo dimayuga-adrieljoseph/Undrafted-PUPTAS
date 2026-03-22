@@ -182,13 +182,20 @@ class InterviewerDashboardController extends Controller
     }
 
 
-    public function getPrograms()
+    public function getPrograms(Request $request)
     {
-        $programs = Program::where('slots', '>', 0)->get();
+        // If applicant is a special case, only return DOMT program
+        $userId = $request->query('user_id');
+        if ($userId) {
+            $profile = \App\Models\ApplicantProfile::where('user_id', $userId)->first();
+            if ($profile && $profile->is_special_case) {
+                $programs = Program::where('code', 'DOMT')->where('slots', '>', 0)->get();
+                return response()->json(['programs' => $programs]);
+            }
+        }
 
-        return response()->json([
-            'programs' => $programs
-        ]);
+        $programs = Program::where('slots', '>', 0)->get();
+        return response()->json(['programs' => $programs]);
     }
 
 
@@ -216,6 +223,15 @@ class InterviewerDashboardController extends Controller
         if (!$grades) {
             \Log::warning("⚠️ No grades found for user {$userId}");
             return response()->json(['message' => 'User has no grades recorded.'], 400);
+        }
+
+        // DOMT-only guard: special case applicants cannot be transferred to other programs
+        $applicantProfile = \App\Models\ApplicantProfile::where('user_id', $userId)->first();
+        if ($applicantProfile && $applicantProfile->is_special_case) {
+            $domtProgram = Program::where('code', 'DOMT')->first();
+            if (!$domtProgram || $validated['program_id'] != $domtProgram->id) {
+                return response()->json(['message' => 'Special case applicants can only be assigned to the DOMT program.'], 422);
+            }
         }
 
         DB::transaction(function () use ($application, $validated, $grades, $userId) {

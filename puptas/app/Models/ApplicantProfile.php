@@ -19,6 +19,13 @@ class ApplicantProfile extends Model
         'track',
         'first_choice_program',
         'second_choice_program',
+        'admission_decision',
+        'applicant_status',
+        'source',
+        'is_special_case',
+        'special_case_reason',
+        'special_case_approved_by',
+        'special_case_approved_at',
     ];
 
     /**
@@ -33,6 +40,8 @@ class ApplicantProfile extends Model
 
     protected $casts = [
         'date_graduated' => 'date',
+        'is_special_case' => 'boolean',
+        'special_case_approved_at' => 'datetime',
     ];
 
     public function user()

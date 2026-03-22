@@ -365,6 +365,11 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
 
+    // Special Case Review Routes
+    Route::get('/admin/special-cases', [DashboardController::class, 'getSpecialCaseApplicants'])->name('admin.special-cases');
+    Route::post('/admin/special-cases/{profileId}/approve', [DashboardController::class, 'approveSpecialCase'])->name('admin.special-cases.approve');
+    Route::post('/admin/special-cases/{profileId}/reject', [DashboardController::class, 'rejectSpecialCase'])->name('admin.special-cases.reject');
+
     // Legacy routes (keep for backward compatibility if needed)
     Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.legacy');
     Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
@@ -409,3 +414,76 @@ Route::get('/logout', function () {
 
 Route::post('/logout', [\App\Http\Controllers\AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
+
+// ==========================================
+// TEST ROUTES FOR SPECIAL CASE WORKFLOW
+// ==========================================
+Route::get('/test-special-case-login', function () {
+    // START CLEAN: log out any previous sessions to ensure we are acting as the IDP
+    \Auth::logout();
+
+    $email = 'specialcase@example.com';
+
+    // 1. Create the Local User FIRST to satisfy the foreign key constraint
+    $localUser = \App\Models\User::firstOrCreate(
+        ['email' => $email],
+        [
+            'firstname' => 'John',
+            'lastname' => 'Doe',
+            'password' => \Hash::make('password123'),
+            'role_id' => 1,
+            'contactnumber' => '09123456789',
+            'sex' => 'M',
+            'birthday' => '2000-01-01',
+            'barangay' => 'Test', 'city' => 'Test', 'province'=>'Test', 'street_address'=>'Test',
+        ]
+    );
+
+    // 2. Simulate an IDP payload using the LOCAL User ID
+    $simulatedIdpUser = [
+        'id' => $localUser->id,
+        'email' => $email,
+        'username' => 'special_student',
+    ];
+
+    // 3. Run our new Service logic
+    $service = app(\App\Services\SpecialCaseService::class);
+    $profile = $service->handleIdpIntercept($simulatedIdpUser, 'John', 'Doe');
+
+    if (!$service->canRegister($profile)) {
+        return response("You failed PUPCET and require manual admin approval.<br><br> Your status is: <b>" . $profile->applicant_status . "</b>.<br><br> Please wait for an admin to review your application.");
+    }
+
+    // Set exactly what the IDP proxy would set so Fortify knows they are pending
+    session(['pending_registration' => [
+        'user_id' => $localUser->id,
+        'email'   => $email,
+        'username' => 'special_student',
+    ]]);
+
+    // DO NOT LOG THEM IN! Let them register.
+    return redirect('/register');
+});
+
+Route::get('/test-approve-special-case/{profile_id}', function ($profile_id) {
+    // Simulate an Admin approving the special case by using the first user in the DB (or creating one)
+    $service = app(\App\Services\SpecialCaseService::class);
+    try {
+        $admin = \App\Models\User::first() ?? \App\Models\User::create([
+            'firstname' => 'Admin',
+            'lastname' => 'User',
+            'email' => 'admin' . rand(1,999) . '@admin.com',
+            'password' => \Hash::make('password123'),
+            'role_id' => 2,
+            'contactnumber' => '09123456789',
+            'sex' => 'M',
+            'birthday' => '1990-01-01',
+            'street_address' => 'Test', 'barangay' => 'Test', 'city' => 'Test', 'province' => 'Test'
+        ]);
+
+        $service->approveSpecialCase((int)$profile_id, $admin->id, 'Manual review passed');
+        return response("Profile ID $profile_id has been approved by user ID {$admin->id}! Visit /test-special-case-login again to simulate logging in as them.");
+    } catch (\Exception $e) {
+        return response("Error: " . $e->getMessage());
+    }
+});
