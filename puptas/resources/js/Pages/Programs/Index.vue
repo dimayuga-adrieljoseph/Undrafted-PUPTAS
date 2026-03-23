@@ -257,7 +257,7 @@ const hasRequirements = (program) => {
         </div>
         <Link
           href="/addindex"
-          class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium flex items-center space-x-2"
+          class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium flex items-center space-x-2 dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -305,7 +305,7 @@ const hasRequirements = (program) => {
                 placeholder="Search by name, code, or strand..."
                 class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
               />
-              <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -370,7 +370,7 @@ const hasRequirements = (program) => {
         <span class="text-sm text-gray-700 dark:text-gray-300">
           <span class="font-medium">{{ selectedPrograms.length }}</span> programs selected
         </span>
-        <button class="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition">
+        <button class="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition dark:text-gray-900">
           Bulk Delete
         </button>
       </div>
@@ -383,7 +383,7 @@ const hasRequirements = (program) => {
             <input 
               type="checkbox" 
               v-model="selectAll"
-              class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]"
+              class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:text-white"
             >
             <span>Program</span>
           </div>
@@ -402,13 +402,13 @@ const hasRequirements = (program) => {
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Editing: {{ program.name }}</h3>
               <div class="flex gap-2">
-                <button @click="saveEdit" class="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition flex items-center gap-1">
+                <button @click="saveEdit" class="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition flex items-center gap-1 dark:text-gray-900">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
                   Save Changes
                 </button>
-                <button @click="cancelEdit" class="px-3 py-1.5 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition flex items-center gap-1">
+                <button @click="cancelEdit" class="px-3 py-1.5 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition flex items-center gap-1 dark:text-gray-900">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -446,7 +446,7 @@ const hasRequirements = (program) => {
                       {{ strand.code }}
                     </button>
                   </div>
-                  <p class="text-xs text-gray-400 mt-1">Click to toggle strand selection</p>
+                  <p class="text-xs text-gray-400 mt-1 dark:text-gray-200">Click to toggle strand selection</p>
                 </div>
                 <div>
                   <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Available Slots</label>
@@ -484,7 +484,7 @@ const hasRequirements = (program) => {
                            placeholder="Enter GWA" />
                   </div>
                   <div class="col-span-2">
-                    <p class="text-xs text-gray-400">Passing PUPCET score is implied.</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-200">Passing PUPCET score is implied.</p>
                   </div>
                 </div>
               </div>
@@ -498,7 +498,7 @@ const hasRequirements = (program) => {
                 type="checkbox" 
                 v-model="selectedPrograms" 
                 :value="program.id"
-                class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]"
+                class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:text-white"
               >
               <div>
                 <p class="font-semibold text-gray-900 dark:text-white">{{ program.name }}</p>
@@ -527,12 +527,12 @@ const hasRequirements = (program) => {
             <!-- Actions -->
             <div class="col-span-1 text-right">
               <div class="flex justify-end gap-1">
-                <button @click="startEdit(program)" class="p-2 text-gray-400 hover:text-[#9E122C] dark:hover:text-[#9E122C] transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Edit">
+                <button @click="startEdit(program)" class="p-2 text-gray-400 hover:text-[#9E122C] dark:hover:text-[#9E122C] transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200" title="Edit">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
-                <button @click="openDeleteModal(program.id)" class="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-500 transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Delete">
+                <button @click="openDeleteModal(program.id)" class="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-500 transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200" title="Delete">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
@@ -549,7 +549,7 @@ const hasRequirements = (program) => {
           </svg>
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No programs found</h3>
           <p class="text-gray-500 dark:text-gray-400 mb-4">Try adjusting your search or filter criteria</p>
-          <Link href="/addindex" class="inline-flex items-center px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium">
+          <Link href="/addindex" class="inline-flex items-center px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -576,7 +576,7 @@ const hasRequirements = (program) => {
           </button>
           
           <div class="flex items-center space-x-2">
-            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium">{{ currentPage }}</span>
+            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium dark:bg-gray-900 dark:text-gray-900">{{ currentPage }}</span>
             <span class="text-gray-500 dark:text-gray-400">of</span>
             <span class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">{{ totalPages || 1 }}</span>
           </div>
@@ -595,7 +595,7 @@ const hasRequirements = (program) => {
     <!-- Floating Add Button (Mobile) -->
     <Link
       href="/addindex"
-      class="lg:hidden fixed bottom-6 right-6 bg-[#9E122C] text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-[#b51834] transition hover:scale-110 z-40"
+      class="lg:hidden fixed bottom-6 right-6 bg-[#9E122C] text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-[#b51834] transition hover:scale-110 z-40 dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800"
       title="Add New Program"
     >
       <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">

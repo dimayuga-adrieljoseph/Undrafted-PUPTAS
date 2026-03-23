@@ -377,7 +377,7 @@ const clearMedical = async () => {
                         placeholder="Search applicants..."
                         class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                     />
-                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
@@ -464,7 +464,7 @@ const clearMedical = async () => {
                             <p class="text-gray-600 dark:text-gray-400 text-sm">Awaiting medical clearance</p>
                         </div>
                         <Link href="/medical-applications" 
-                              class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition">
+                              class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition dark:text-white dark:hover:text-white">
                             View All
                         </Link>
                     </div>
@@ -478,7 +478,7 @@ const clearMedical = async () => {
                         >
                             <div class="flex items-start justify-between mb-3">
                                 <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold">
+                                    <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold dark:bg-gray-900 dark:text-gray-900">
                                         {{ applicant.firstname?.[0] || '' }}{{ applicant.lastname?.[0] || '' }}
                                     </div>
                                     <div>
@@ -508,7 +508,7 @@ const clearMedical = async () => {
                         
                         <!-- Empty state -->
                         <div v-if="displayedUsers.length === 0" class="text-center py-8">
-                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-3 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                             </svg>
                             <p class="text-gray-500 dark:text-gray-400">No pending medical clearances</p>
@@ -533,7 +533,7 @@ const clearMedical = async () => {
                                     <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
                                 </div>
                                 <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
-                                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
@@ -661,7 +661,7 @@ const clearMedical = async () => {
                                                     v-else
                                                     class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
                                                 >
-                                                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                                     </svg>
                                                 </div>
@@ -672,7 +672,7 @@ const clearMedical = async () => {
                                                         type="checkbox"
                                                         :id="key"
                                                         v-model="filesToReturn[key]"
-                                                        class="h-4 w-4 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]"
+                                                        class="h-4 w-4 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:text-white"
                                                     />
                                                 </div>
                                             </div>
@@ -750,9 +750,9 @@ const clearMedical = async () => {
                     />
                     <button
                         @click="closeImageModal"
-                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition"
+                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition dark:bg-gray-900/10 dark:hover:bg-gray-900/20"
                     >
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-6 h-6 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>

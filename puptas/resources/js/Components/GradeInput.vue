@@ -4,7 +4,7 @@
         <div class="grid grid-cols-2 gap-4">
             <div>
                 <label
-                    class="block text-sm font-medium text-gray-700 mb-1"
+                    class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400"
                 >
                     Math Grade
                 </label>
@@ -14,14 +14,14 @@
                     step="0.01"
                     min="0"
                     max="100"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
                     placeholder="0.00"
                 />
-                <p class="text-xs text-gray-500 mt-1">0.00 - 100.00</p>
+                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">0.00 - 100.00</p>
             </div>
             <div>
                 <label
-                    class="block text-sm font-medium text-gray-700 mb-1"
+                    class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400"
                 >
                     Science Grade
                 </label>
@@ -31,14 +31,14 @@
                     step="0.01"
                     min="0"
                     max="100"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
                     placeholder="0.00"
                 />
-                <p class="text-xs text-gray-500 mt-1">0.00 - 100.00</p>
+                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">0.00 - 100.00</p>
             </div>
             <div>
                 <label
-                    class="block text-sm font-medium text-gray-700 mb-1"
+                    class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400"
                 >
                     English Grade
                 </label>
@@ -48,22 +48,22 @@
                     step="0.01"
                     min="0"
                     max="100"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
                     placeholder="0.00"
                 />
-                <p class="text-xs text-gray-500 mt-1">0.00 - 100.00</p>
+                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">0.00 - 100.00</p>
             </div>
         </div>
 
         <!-- Semester Grades -->
         <div class="border-t pt-4">
-            <h3 class="text-sm font-semibold text-gray-700 mb-3">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3 dark:text-gray-400">
                 Semester Grades
             </h3>
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label
-                        class="block text-sm font-medium text-gray-700 mb-1"
+                        class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400"
                     >
                         Grade 11 - 1st Sem
                     </label>
@@ -73,14 +73,13 @@
                         step="0.01"
                         min="0"
                         max="100"
-                        class="w-full px-3 py-2 border border-gray-300
-                            rounded-md"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
                         placeholder="0.00"
                     />
                 </div>
                 <div>
                     <label
-                        class="block text-sm font-medium text-gray-700 mb-1"
+                        class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400"
                     >
                         Grade 11 - 2nd Sem
                     </label>
@@ -90,14 +89,13 @@
                         step="0.01"
                         min="0"
                         max="100"
-                        class="w-full px-3 py-2 border border-gray-300
-                            rounded-md"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
                         placeholder="0.00"
                     />
                 </div>
                 <div>
                     <label
-                        class="block text-sm font-medium text-gray-700 mb-1"
+                        class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400"
                     >
                         Grade 12 - 1st Sem
                     </label>
@@ -107,14 +105,13 @@
                         step="0.01"
                         min="0"
                         max="100"
-                        class="w-full px-3 py-2 border border-gray-300
-                            rounded-md"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
                         placeholder="0.00"
                     />
                 </div>
                 <div>
                     <label
-                        class="block text-sm font-medium text-gray-700 mb-1"
+                        class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400"
                     >
                         Grade 12 - 2nd Sem
                     </label>
@@ -124,8 +121,7 @@
                         step="0.01"
                         min="0"
                         max="100"
-                        class="w-full px-3 py-2 border border-gray-300
-                            rounded-md"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
                         placeholder="0.00"
                     />
                 </div>

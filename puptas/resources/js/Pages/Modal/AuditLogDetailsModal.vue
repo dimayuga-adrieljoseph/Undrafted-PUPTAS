@@ -94,7 +94,7 @@ const getActionBadgeClass = (action) => {
                             </div>
                             <button
                                 @click="closeModal"
-                                class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                                class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-200"
                             >
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -237,7 +237,7 @@ const getActionBadgeClass = (action) => {
                             <button
                                 @click="closeModal"
                                 type="button"
-                                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium text-sm"
+                                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium text-sm dark:text-gray-900"
                             >
                                 Close
                             </button>

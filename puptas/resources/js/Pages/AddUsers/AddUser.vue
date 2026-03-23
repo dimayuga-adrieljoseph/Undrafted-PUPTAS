@@ -55,7 +55,7 @@ const submit = () => {
                 <!-- Errors -->
                 <div
                     v-if="Object.keys(errors).length"
-                    class="bg-red-100 text-red-700 p-4 rounded mb-4"
+                    class="bg-red-100 text-red-700 p-4 rounded mb-4 dark:bg-red-800 dark:text-red-400"
                 >
                     <ul class="list-disc ml-5">
                         <li v-for="(error, key) in errors" :key="key">

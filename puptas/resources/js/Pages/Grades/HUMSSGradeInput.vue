@@ -14,12 +14,12 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center w-full">
                         <div class="flex items-center relative">
-                            <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm">1</div>
+                            <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm dark:bg-gray-900 dark:text-gray-900">1</div>
                             <div class="ml-2 text-sm font-medium text-gray-900 dark:text-white">Grade 11</div>
                         </div>
-                        <div class="flex-1 h-0.5 mx-4 bg-[#9E122C]"></div>
+                        <div class="flex-1 h-0.5 mx-4 bg-[#9E122C] dark:bg-gray-900"></div>
                         <div class="flex items-center relative">
-                            <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm">2</div>
+                            <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm dark:bg-gray-900 dark:text-gray-900">2</div>
                             <div class="ml-2 text-sm font-medium text-gray-900 dark:text-white">Grade 12</div>
                         </div>
                         <div class="flex-1 h-0.5 mx-4 bg-gray-300 dark:bg-gray-600"></div>
@@ -42,7 +42,7 @@
                         <!-- Math Subjects -->
                         <div class="mb-8">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 Math-Related Subjects
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -81,7 +81,7 @@
                         <!-- English Subjects -->
                         <div class="mb-8">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 English-Related Subjects
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -144,7 +144,7 @@
                         <!-- Science Subjects -->
                         <div class="mb-4">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 Science-Related Subjects
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -180,7 +180,7 @@
                         <!-- Math Subjects -->
                         <div class="mb-8">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 Math Subjects (2 subjects)
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -228,7 +228,7 @@
                         <!-- Science Subjects -->
                         <div class="mb-8">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 Science Subjects (2 subjects)
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -276,7 +276,7 @@
                         <!-- English Subjects -->
                         <div class="mb-8">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 English Subjects (4 subjects)
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -305,7 +305,7 @@
                         <!-- Semester GWA -->
                         <div class="mb-4">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2"></span>
+                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 Semester GWA
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -439,7 +439,7 @@
                 <!-- Program Choice Selection -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Program Choices <span class="text-red-500">*</span></h2>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Program Choices <span class="text-red-500 dark:text-red-300">*</span></h2>
                     </div>
                     
                     <div class="p-6">
@@ -447,7 +447,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        First Choice Program <span class="text-red-500">*</span>
+                                        First Choice Program <span class="text-red-500 dark:text-red-300">*</span>
                                     </label>
                                     <select
                                         v-model="form.first_choice_program"
@@ -464,14 +464,14 @@
                                             {{ program.code }} - {{ program.name }}
                                         </option>
                                     </select>
-                                    <p v-if="errors.first_choice_program" class="text-red-500 text-xs mt-1">
+                                    <p v-if="errors.first_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300">
                                         {{ errors.first_choice_program }}
                                     </p>
                                 </div>
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Second Choice Program <span class="text-red-500">*</span>
+                                        Second Choice Program <span class="text-red-500 dark:text-red-300">*</span>
                                     </label>
                                     <select
                                         v-model="form.second_choice_program"
@@ -488,7 +488,7 @@
                                             {{ program.code }} - {{ program.name }}
                                         </option>
                                     </select>
-                                    <p v-if="errors.second_choice_program" class="text-red-500 text-xs mt-1">
+                                    <p v-if="errors.second_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300">
                                         {{ errors.second_choice_program }}
                                     </p>
                                 </div>
@@ -508,7 +508,7 @@
                         </div>
 
                         <div v-else class="text-center p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                            <svg class="w-12 h-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-12 h-12 text-red-400 mx-auto mb-3 dark:text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <p class="font-semibold text-red-600 dark:text-red-400">⚠️ No Qualified Programs</p>
@@ -517,7 +517,7 @@
                             </p>
                         </div>
 
-                        <p v-if="errors.programs" class="text-red-500 text-xs mt-2">
+                        <p v-if="errors.programs" class="text-red-500 text-xs mt-2 dark:text-red-300">
                             {{ errors.programs }}
                         </p>
                     </div>
@@ -528,9 +528,9 @@
                     <button
                         type="submit"
                         :disabled="loading"
-                        class="flex-1 px-6 py-3 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        class="flex-1 px-6 py-3 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800"
                     >
-                        <svg v-if="loading" class="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg v-if="loading" class="animate-spin h-5 w-5 mr-2 text-white dark:text-gray-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>

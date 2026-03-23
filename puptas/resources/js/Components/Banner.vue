@@ -35,7 +35,7 @@ watchEffect(async () => {
                         >
                             <svg
                                 v-if="style == 'success'"
-                                class="size-5 text-white"
+                                class="size-5 text-white dark:text-gray-900"
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
                                 viewBox="0 0 24 24"
@@ -51,7 +51,7 @@ watchEffect(async () => {
 
                             <svg
                                 v-if="style == 'danger'"
-                                class="size-5 text-white"
+                                class="size-5 text-white dark:text-gray-900"
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
                                 viewBox="0 0 24 24"
@@ -66,7 +66,7 @@ watchEffect(async () => {
                             </svg>
                         </span>
 
-                        <p class="ms-3 font-medium text-sm text-white truncate">
+                        <p class="ms-3 font-medium text-sm text-white truncate dark:text-gray-900">
                             {{ message }}
                         </p>
                     </div>
@@ -85,7 +85,7 @@ watchEffect(async () => {
                             @click.prevent="show = false"
                         >
                             <svg
-                                class="size-5 text-white"
+                                class="size-5 text-white dark:text-gray-900"
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
                                 viewBox="0 0 24 24"

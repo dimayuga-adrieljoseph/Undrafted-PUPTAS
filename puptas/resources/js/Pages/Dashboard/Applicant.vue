@@ -224,7 +224,7 @@ onMounted(() => {
           <!-- Review Application Button -->
           <button
             @click="showModal = true"
-            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg"
+            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg dark:text-gray-900"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -245,7 +245,7 @@ onMounted(() => {
                 </p>
               </div>
               <div :class="`w-12 h-12 rounded-full flex items-center justify-center ${getStatusIconBg(applicationStatus)}`">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
               </div>
@@ -262,7 +262,7 @@ onMounted(() => {
                 </p>
               </div>
               <div :class="`w-12 h-12 rounded-full flex items-center justify-center ${getEnrollmentIconBg(enrollmentStatus)}`">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                 </svg>
               </div>
@@ -299,7 +299,7 @@ onMounted(() => {
           <div class="lg:col-span-1">
             <div v-if="applicationProcesses.length" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
                 Application Timeline
@@ -339,7 +339,7 @@ onMounted(() => {
           <div class="lg:col-span-2">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
                 Required Documents
@@ -370,10 +370,10 @@ onMounted(() => {
                           class="w-full h-20 object-cover rounded-md cursor-pointer"
                           @click="openImageModal(fileStatuses[key])"
                         />
-                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md transition-all"></div>
+                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md transition-all dark:bg-white"></div>
                       </div>
                       <div v-else class="w-full h-20 bg-gray-200 dark:bg-gray-600 rounded-md flex items-center justify-center">
-                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                       </div>
@@ -395,7 +395,7 @@ onMounted(() => {
                     <button
                       v-if="!fileStatuses[key]?.url"
                       @click="triggerFileInput(key)"
-                      class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors"
+                      class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900"
                       :disabled="uploadingKeys.includes(key)"
                     >
                       {{ uploadingKeys.includes(key) ? 'Uploading...' : 'Upload' }}
@@ -420,13 +420,13 @@ onMounted(() => {
 
                     <!-- Upload Progress -->
                     <div v-if="fileUploadProgress && fileUploadProgress[key] !== undefined" class="mt-2">
-                      <div class="w-full bg-gray-200 rounded-full h-1">
+                      <div class="w-full bg-gray-200 rounded-full h-1 dark:bg-gray-700">
                         <div class="bg-maroon-600 h-1 rounded-full" :style="{ width: fileUploadProgress[key] + '%' }"></div>
                       </div>
                     </div>
 
                     <!-- Error Message -->
-                    <p v-if="uploadErrors && uploadErrors[key]" class="text-xs text-red-500 text-center mt-1">
+                    <p v-if="uploadErrors && uploadErrors[key]" class="text-xs text-red-500 text-center mt-1 dark:text-red-300">
                       {{ uploadErrors[key] }}
                     </p>
                   </div>
@@ -458,7 +458,7 @@ onMounted(() => {
     <!-- Image Preview Modal -->
     <div
       v-if="showImageModal"
-      class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4"
+      class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4 dark:bg-white"
       @click="closeImageModal"
     >
       <div class="relative max-w-[90vw] max-h-[90vh]">
@@ -469,7 +469,7 @@ onMounted(() => {
           @click.stop
         />
         <button
-          class="absolute top-2 right-2 text-white text-4xl hover:text-gray-300 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70"
+          class="absolute top-2 right-2 text-white text-4xl hover:text-gray-300 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 dark:text-gray-900"
           @click.stop="closeImageModal"
         >
           &times;
