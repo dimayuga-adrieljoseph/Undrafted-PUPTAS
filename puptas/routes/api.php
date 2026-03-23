@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 use App\Http\Controllers\ProgramController;
+use App\Http\Controllers\ExternalStudentApiController;
 use Inertia\Inertia;
 use App\Http\Controllers\GradesController;
 
@@ -76,6 +77,12 @@ Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->n
 Route::post('/store-grades', [GradesController::class, 'store']);
 
 use App\Http\Controllers\UserController;
+
+Route::prefix('v1')
+    ->middleware(['external.api.token', 'throttle:external-api-minute', 'throttle:external-api-daily'])
+    ->group(function () {
+        Route::get('/students', [ExternalStudentApiController::class, 'index']);
+    });
 
 // Route::get('/user-stats', [UserController::class, 'getUserStats']);
 // Route::get('/programs', [ProgramController::class, 'index']);

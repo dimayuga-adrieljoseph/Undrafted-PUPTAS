@@ -114,7 +114,13 @@ class ImageCompressionService
             $this->ensureDirectoryExists($directory);
 
             // Store the compressed WebP image
-            Storage::disk('public')->put($fullPath, $webpData);
+            $stored = Storage::disk('public')->put($fullPath, $webpData);
+
+            if ($stored === false) {
+                throw new \RuntimeException(
+                    'Failed to write file to storage. Check that the storage directory is writable.'
+                );
+            }
 
             return [
                 'path' => $fullPath,

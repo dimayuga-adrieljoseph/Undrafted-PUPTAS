@@ -371,7 +371,7 @@ const submitPass = async () => {
                             placeholder="Search applicants..."
                             class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                         />
-                        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
@@ -459,7 +459,7 @@ const submitPass = async () => {
                             <p class="text-gray-600 dark:text-gray-400 text-sm">Applications awaiting evaluation</p>
                         </div>
                         <Link href="/evaluator-applications" 
-                              class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition">
+                              class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition dark:text-white dark:hover:text-white">
                             View All
                         </Link>
                     </div>
@@ -473,7 +473,7 @@ const submitPass = async () => {
                         >
                             <div class="flex items-start justify-between mb-3">
                                 <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold">
+                                    <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold dark:bg-gray-900 dark:text-gray-900">
                                         {{ applicant.firstname?.[0] || '' }}{{ applicant.lastname?.[0] || '' }}
                                     </div>
                                     <div>
@@ -503,7 +503,7 @@ const submitPass = async () => {
                         
                         <!-- Empty state -->
                         <div v-if="displayedApplicants.length === 0" class="text-center py-8">
-                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-3 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                             </svg>
                             <p class="text-gray-500 dark:text-gray-400">No pending applications</p>
@@ -528,7 +528,7 @@ const submitPass = async () => {
                                     <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
                                 </div>
                                 <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
-                                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
@@ -600,7 +600,7 @@ const submitPass = async () => {
                                 <!-- Return Note -->
                                 <div class="mb-4">
                                     <label for="returnNote" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Return Reason <span class="text-red-500">*</span>
+                                        Return Reason <span class="text-red-500 dark:text-red-300">*</span>
                                     </label>
                                     <textarea
                                         id="returnNote"
@@ -651,7 +651,7 @@ const submitPass = async () => {
                                                     v-else
                                                     class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
                                                 >
-                                                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                                     </svg>
                                                 </div>
@@ -662,7 +662,7 @@ const submitPass = async () => {
                                                         type="checkbox"
                                                         :id="key"
                                                         v-model="filesToReturn[key]"
-                                                        class="h-4 w-4 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]"
+                                                        class="h-4 w-4 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:text-white"
                                                     />
                                                 </div>
                                             </div>
@@ -741,9 +741,9 @@ const submitPass = async () => {
                     />
                     <button
                         @click="closeImageModal"
-                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition"
+                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition dark:bg-gray-900/10 dark:hover:bg-gray-900/20"
                     >
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-6 h-6 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>

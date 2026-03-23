@@ -2,7 +2,7 @@
     <!-- Modal -->
     <div
         v-if="showModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 dark:bg-white"
         @click.self="closeModal"
     >
         <div
@@ -250,7 +250,7 @@
                                 <label
                                     class="block text-sm text-gray-600 dark:text-gray-400 mb-1"
                                     >First Choice
-                                    <span class="text-red-500">*</span></label
+                                    <span class="text-red-500 dark:text-red-300">*</span></label
                                 >
                                 <select
                                     v-model="selectedProgramId"
@@ -360,7 +360,7 @@
                                         v-else
                                         class="w-full h-16 bg-gray-100 dark:bg-gray-800 rounded border border-dashed flex items-center justify-center"
                                     >
-                                        <span class="text-xs text-gray-400"
+                                        <span class="text-xs text-gray-400 dark:text-gray-200"
                                             >No file</span
                                         >
                                     </div>
@@ -458,7 +458,7 @@
     <!-- Image Preview Modal -->
     <div
         v-if="showImageModal"
-        class="fixed inset-0 z-[60] bg-black bg-opacity-90 flex items-center justify-center"
+        class="fixed inset-0 z-[60] bg-black bg-opacity-90 flex items-center justify-center dark:bg-white"
         @click="closeImageModal"
     >
         <div class="relative max-w-3xl max-h-[90vh]">
@@ -470,7 +470,7 @@
             />
             <button
                 @click.stop="closeImageModal"
-                class="absolute top-2 right-2 text-white text-3xl hover:text-gray-300"
+                class="absolute top-2 right-2 text-white text-3xl hover:text-gray-300 dark:text-gray-900"
             >
                 &times;
             </button>

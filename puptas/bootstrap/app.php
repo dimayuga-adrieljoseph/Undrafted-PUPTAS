@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+            'external.api.token' => \App\Http\Middleware\ExternalApiTokenMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

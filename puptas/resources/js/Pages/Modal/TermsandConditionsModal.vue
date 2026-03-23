@@ -12,13 +12,13 @@
                 <div class="bg-gradient-to-r from-[#9E122C] to-[#7a0f24] px-6 py-4">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center">
-                            <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mr-3">
-                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mr-3 dark:bg-gray-900/20">
+                                <svg class="w-6 h-6 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-xl font-bold text-white" id="modal-title">
+                                <h3 class="text-xl font-bold text-white dark:text-gray-900" id="modal-title">
                                     Terms and Conditions
                                 </h3>
                                 <p class="text-sm text-white/80">Privacy Policy and Data Consent</p>
@@ -37,7 +37,7 @@
                     <!-- Consent Statement -->
                     <div class="bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-lg p-4 mb-4">
                         <div class="flex items-start">
-                            <svg class="w-5 h-5 text-[#9E122C] mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-5 h-5 text-[#9E122C] mt-0.5 mr-2 flex-shrink-0 dark:text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                             </svg>
                             <p class="text-sm text-gray-700 dark:text-gray-300">
@@ -48,7 +48,7 @@
                     
                     <div class="bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-lg p-4 mb-4">
                         <div class="flex items-start">
-                            <svg class="w-5 h-5 text-[#9E122C] mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <svg class="w-5 h-5 text-[#9E122C] mt-0.5 mr-2 flex-shrink-0 dark:text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
                             </svg>
                             <p class="text-sm text-gray-700 dark:text-gray-300">
@@ -93,7 +93,7 @@
                             <input 
                                 type="checkbox" 
                                 v-model="isChecked"
-                                class="w-5 h-5 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] mt-0.5 mr-3"
+                                class="w-5 h-5 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] mt-0.5 mr-3 dark:border-gray-600 dark:text-white"
                             >
                             <span class="text-sm text-gray-700 dark:text-gray-300">
                                 I Agree and acknowledge the Terms and Conditions

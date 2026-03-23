@@ -74,15 +74,15 @@ const handleTermsCancel = () => {
                             class="flex items-center justify-center md:justify-start space-x-3"
                         >
                             <div
-                                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg"
+                                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg dark:bg-gray-800"
                             >
-                                <span class="text-2xl font-bold text-red-800"
+                                <span class="text-2xl font-bold text-red-800 dark:text-red-300"
                                     >P</span
                                 >
                             </div>
                             <div>
                                 <h1
-                                    class="text-3xl md:text-4xl font-bold text-white tracking-tight"
+                                    class="text-3xl md:text-4xl font-bold text-white tracking-tight dark:text-gray-900"
                                 >
                                     PUP-T Admission
                                 </h1>
@@ -95,7 +95,7 @@ const handleTermsCancel = () => {
                     </div>
                     <div class="mt-4 md:mt-0">
                         <div
-                            class="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 text-center"
+                            class="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 text-center dark:bg-gray-900/10"
                         >
                             <p class="text-yellow-200 font-semibold">
                                 Registration
@@ -155,7 +155,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Last Name
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.lastname"
@@ -167,7 +167,7 @@ const handleTermsCancel = () => {
                                         />
                                         <div
                                             v-if="form.errors.lastname"
-                                            class="text-red-500 text-sm mt-1 flex items-center"
+                                            class="text-red-500 text-sm mt-1 flex items-center dark:text-red-300"
                                         >
                                             <svg
                                                 class="w-4 h-4 mr-1"
@@ -189,7 +189,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             First Name
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.firstname"
@@ -201,7 +201,7 @@ const handleTermsCancel = () => {
                                         />
                                         <div
                                             v-if="form.errors.firstname"
-                                            class="text-red-500 text-sm mt-1 flex items-center"
+                                            class="text-red-500 text-sm mt-1 flex items-center dark:text-red-300"
                                         >
                                             <svg
                                                 class="w-4 h-4 mr-1"
@@ -237,7 +237,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Birthday
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.birthday"
@@ -253,7 +253,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Gender
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <select
                                             v-model="form.sex"
@@ -280,7 +280,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Contact Number
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <div class="flex">
                                             <span
@@ -304,7 +304,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Street Address
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.street_address"
@@ -321,7 +321,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Barangay
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.barangay"
@@ -338,7 +338,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             City / Municipality
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.city"
@@ -355,7 +355,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Province
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.province"
@@ -442,7 +442,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             School Name
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.school"
@@ -459,7 +459,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             School Address
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.schoolAdd"
@@ -476,7 +476,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             School Year
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.schoolyear"
@@ -493,7 +493,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Expected Graduation
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.dateGrad"
@@ -509,7 +509,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Strand
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <select
                                             v-model="form.strand"
@@ -612,7 +612,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Email Address
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.email"
@@ -624,7 +624,7 @@ const handleTermsCancel = () => {
                                         />
                                         <div
                                             v-if="form.errors.email"
-                                            class="text-red-500 text-sm mt-1 flex items-center"
+                                            class="text-red-500 text-sm mt-1 flex items-center dark:text-red-300"
                                         >
                                             <svg
                                                 class="w-4 h-4 mr-1"
@@ -652,7 +652,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Password
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <div class="relative">
                                             <input
@@ -666,7 +666,7 @@ const handleTermsCancel = () => {
                                             <button
                                                 type="button"
                                                 @click="showPassword = !showPassword"
-                                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-200"
                                                 :aria-label="showPassword ? 'Hide password' : 'Show password'"
                                             >
                                                 <svg v-if="showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -680,7 +680,7 @@ const handleTermsCancel = () => {
                                         </div>
                                         <div
                                             v-if="form.errors.password"
-                                            class="text-red-500 text-sm mt-1 flex items-center"
+                                            class="text-red-500 text-sm mt-1 flex items-center dark:text-red-300"
                                         >
                                             <svg
                                                 class="w-4 h-4 mr-1"
@@ -708,7 +708,7 @@ const handleTermsCancel = () => {
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
                                             Confirm Password
-                                            <span class="text-red-500">*</span>
+                                            <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <div class="relative">
                                             <input
@@ -722,7 +722,7 @@ const handleTermsCancel = () => {
                                             <button
                                                 type="button"
                                                 @click="showConfirmPassword = !showConfirmPassword"
-                                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-200"
                                                 :aria-label="showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'"
                                             >
                                                 <svg v-if="showConfirmPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -768,14 +768,14 @@ const handleTermsCancel = () => {
                                 <button
                                     type="submit"
                                     :disabled="form.processing"
-                                    class="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-red-700 via-red-600 to-yellow-600 hover:from-red-800 hover:via-red-700 hover:to-yellow-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                    class="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-red-700 via-red-600 to-yellow-600 hover:from-red-800 hover:via-red-700 hover:to-yellow-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none dark:text-gray-900"
                                 >
                                     <div
                                         class="flex items-center justify-center"
                                     >
                                         <svg
                                             v-if="form.processing"
-                                            class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                                            class="animate-spin -ml-1 mr-3 h-5 w-5 text-white dark:text-gray-900"
                                             xmlns="http://www.w3.org/2000/svg"
                                             fill="none"
                                             viewBox="0 0 24 24"
@@ -845,7 +845,7 @@ const handleTermsCancel = () => {
                                 <ul class="space-y-3">
                                     <li class="flex items-start">
                                         <svg
-                                            class="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0"
+                                            class="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0 dark:text-green-300"
                                             fill="currentColor"
                                             viewBox="0 0 20 20"
                                         >
@@ -863,7 +863,7 @@ const handleTermsCancel = () => {
                                     </li>
                                     <li class="flex items-start">
                                         <svg
-                                            class="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0"
+                                            class="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0 dark:text-green-300"
                                             fill="currentColor"
                                             viewBox="0 0 20 20"
                                         >
@@ -881,7 +881,7 @@ const handleTermsCancel = () => {
                                     </li>
                                     <li class="flex items-start">
                                         <svg
-                                            class="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0"
+                                            class="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0 dark:text-green-300"
                                             fill="currentColor"
                                             viewBox="0 0 20 20"
                                         >
@@ -1028,7 +1028,7 @@ const handleTermsCancel = () => {
                             >
                                 <div class="flex items-center mb-3">
                                     <svg
-                                        class="w-5 h-5 text-green-500 mr-2"
+                                        class="w-5 h-5 text-green-500 mr-2 dark:text-green-300"
                                         fill="currentColor"
                                         viewBox="0 0 20 20"
                                     >

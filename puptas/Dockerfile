@@ -6,10 +6,10 @@ FROM php:8.4-cli AS php-dependencies
 RUN apt-get update && apt-get install -y \
     git curl \
     libzip-dev libonig-dev libxml2-dev \
-    libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
+    libfreetype6-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
@@ -57,11 +57,11 @@ FROM php:8.4-apache
 # Install additional PHP extensions
 RUN apt-get update && apt-get install -y \
     libzip-dev libonig-dev libxml2-dev \
-    libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
+    libfreetype6-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
@@ -110,6 +110,9 @@ RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs b
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache \
     && chmod -R 755 storage/framework storage/logs
+
+# Note: APP_KEY is provided via Railway environment variables
+# No need to generate at build time
 
 RUN mkdir -p storage/app/templates && \
     cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/

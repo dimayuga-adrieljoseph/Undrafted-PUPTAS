@@ -24,7 +24,7 @@
                         class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                     />
                     <svg
-                        class="w-5 h-5 text-gray-400 absolute left-3 top-2.5"
+                        class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -134,7 +134,7 @@
                                 class="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-900/30 rounded-xl p-4 text-center border-2 border-pink-200 dark:border-pink-800 transition-all duration-300"
                             >
                                 <div
-                                    class="w-12 h-12 mx-auto mb-3 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-bold text-lg"
+                                    class="w-12 h-12 mx-auto mb-3 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-bold text-lg dark:bg-gray-900 dark:text-gray-900"
                                 >
                                     {{ program.code.charAt(0) }}
                                 </div>
@@ -143,7 +143,7 @@
                                 >
                                     {{ program.code }}
                                 </p>
-                                <p class="text-2xl font-bold text-[#9E122C]">
+                                <p class="text-2xl font-bold text-[#9E122C] dark:text-white">
                                     {{ program.applications_count || 0 }}
                                 </p>
                                 <p
@@ -207,7 +207,7 @@
                         </div>
                         <Link
                             href="/recordstaff-applications"
-                            class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition"
+                            class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition dark:text-white dark:hover:text-white"
                         >
                             View All
                         </Link>
@@ -223,7 +223,7 @@
                             <div class="flex items-start justify-between mb-3">
                                 <div class="flex items-center space-x-3">
                                     <div
-                                        class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold"
+                                        class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold dark:bg-gray-900 dark:text-gray-900"
                                     >
                                         {{ applicant.firstname?.[0] || ""
                                         }}{{ applicant.lastname?.[0] || "" }}
@@ -288,7 +288,7 @@
                             class="text-center py-8"
                         >
                             <svg
-                                class="w-12 h-12 text-gray-400 mx-auto mb-3"
+                                class="w-12 h-12 text-gray-400 mx-auto mb-3 dark:text-gray-200"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -349,7 +349,7 @@
                                     class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
                                 >
                                     <svg
-                                        class="w-5 h-5 text-gray-500"
+                                        class="w-5 h-5 text-gray-500 dark:text-gray-300"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -471,7 +471,7 @@
                                                 'officially_enrolled'
                                             "
                                             @click="acceptApplication"
-                                            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center justify-center space-x-2"
+                                            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center justify-center space-x-2 dark:text-gray-900"
                                         >
                                             <svg
                                                 class="w-5 h-5"
@@ -492,7 +492,7 @@
                                         </button>
                                         <button
                                             @click="untagApplication"
-                                            class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center space-x-2"
+                                            class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center space-x-2 dark:text-gray-900"
                                         >
                                             <svg
                                                 class="w-5 h-5"
@@ -545,7 +545,7 @@
                                                     class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
                                                 >
                                                     <svg
-                                                        class="w-8 h-8 text-gray-400"
+                                                        class="w-8 h-8 text-gray-400 dark:text-gray-200"
                                                         fill="none"
                                                         stroke="currentColor"
                                                         viewBox="0 0 24 24"
@@ -682,10 +682,10 @@
                     />
                     <button
                         @click="closeImageModal"
-                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition"
+                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition dark:bg-gray-900/10 dark:hover:bg-gray-900/20"
                     >
                         <svg
-                            class="w-6 h-6 text-white"
+                            class="w-6 h-6 text-white dark:text-gray-900"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -706,7 +706,7 @@
         <transition name="fade">
             <div
                 v-if="snackbar.visible"
-                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-lg z-50"
+                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-lg z-50 dark:text-gray-900"
             >
                 {{ snackbar.message }}
             </div>

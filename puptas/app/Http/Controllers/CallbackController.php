@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 
 class CallbackController extends Controller
@@ -122,14 +123,26 @@ class CallbackController extends Controller
      */
     public function handle(Request $request)
     {
-        // TODO: Connect your API logic here
-        // Example:
-        // $response = Http::post($request->input('api_url'), $request->all());
+        $response = Http::post($request->input('api_url'), $request->all());
         
         return response()->json([
             'success' => true,
             'message' => 'Callback processed successfully',
             'data' => $request->all(),
         ]);
+    }
+
+    /**
+     * Handle OAuth2 callback from Identity Provider.
+     * 
+     * Receives the authorization code from the IDP redirect and exchanges
+     * it for an access token.
+     *
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function handleIdpCallback(Request $request)
+    {
+        return app(IdpAuthController::class)->callback($request);
     }
 }

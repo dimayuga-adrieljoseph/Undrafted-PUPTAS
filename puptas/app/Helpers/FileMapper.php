@@ -120,6 +120,14 @@ class FileMapper
 
     public static function detectMimeType(UserFile $file): string
     {
+        // Fast path: check extension first — all uploads are converted to .webp
+        // by ImageCompressionService, so this avoids unnecessary disk I/O in most cases.
+        $extensionMime = self::guessMimeTypeFromPath($file->file_path);
+        if ($extensionMime !== 'application/octet-stream') {
+            return $extensionMime;
+        }
+
+        // Slow path: read the actual file magic bytes for unknown extensions
         $diskName = self::resolveDiskForPath($file->file_path);
 
         try {
@@ -134,10 +142,10 @@ class FileMapper
                 }
             }
         } catch (\Throwable $e) {
-            // Fall back to a conservative default below.
+            // Fall back to extension-based guess.
         }
 
-        return self::guessMimeTypeFromPath($file->file_path);
+        return $extensionMime;
     }
 
     public static function resolveDiskForPath(string $path): string
@@ -169,8 +177,12 @@ class FileMapper
     {
         return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
             'jpg', 'jpeg' => 'image/jpeg',
-            'png' => 'image/png',
-            default => 'application/octet-stream',
+            'png'         => 'image/png',
+            'webp'        => 'image/webp',
+            'gif'         => 'image/gif',
+            'bmp'         => 'image/bmp',
+            'pdf'         => 'application/pdf',
+            default       => 'application/octet-stream',
         };
     }
 }

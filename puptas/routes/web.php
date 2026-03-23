@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\Notify\Notify;
 use App\Http\Controllers\PrivacyConsentController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CallbackController;
+use App\Http\Controllers\IdpAuthController;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
@@ -35,6 +36,28 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 })->middleware('guest')->name('welcome');
+
+Route::get('/test-login', function () {
+    return 'working';
+});
+
+// IDP Authentication Routes - Public access for OAuth2 login flow
+Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
+    ->middleware('guest')
+    ->name('idp.redirect');
+
+Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
+    ->middleware('guest')
+    ->name('idp.callback');
+
+// Backward-compatible callback aliases in case IDP client is configured with older paths.
+Route::get('/callback', [IdpAuthController::class, 'callback'])
+    ->middleware('guest')
+    ->name('idp.callback.legacy');
+
+Route::get('/api/callback', [IdpAuthController::class, 'callback'])
+    ->middleware('guest')
+    ->name('idp.callback.api-legacy');
 
 // View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
@@ -348,15 +371,15 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
 });
 
-// Shared Admin, Interviewer & Superadmin endpoints (change course)
-Route::middleware(['auth', 'role:2,4,7'])->group(function () {
-    Route::get('/record-dashboard/programs', [RecordStaffDashboardController::class, 'getPrograms'])->name('record.programs');
-    Route::post('/record-dashboard/change-course/{id}', [RecordStaffDashboardController::class, 'changeCourse'])->name('record.change-course');
-});
-
 // Shared endpoint for viewing user list - accessible by admin, evaluator, interviewer, and superadmin
 Route::middleware(['auth', 'role:2,3,4,7'])->group(function () {
     Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
+});
+
+// Course management routes - accessible by admin (2), interviewer (4), and superadmin (7)
+Route::middleware(['auth', 'role:2,4,7'])->group(function () {
+    Route::get('/record-dashboard/programs', [RecordStaffDashboardController::class, 'getPrograms']);
+    Route::post('/record-dashboard/change-course/{id}', [RecordStaffDashboardController::class, 'changeCourse']);
 });
 
 // User Management Routes (Protected - Admin Only)
@@ -401,11 +424,3 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
 // Callback Routes - Public access for loading screen with API callback
 Route::get('/callback', [CallbackController::class, 'index']);
 Route::post('/api/callback', [CallbackController::class, 'handle']);
-
-// Logout Route - GET for direct URL access, POST for form submission
-Route::get('/logout', function () {
-    return redirect('/login');
-})->name('logout.get');
-
-Route::post('/logout', [\App\Http\Controllers\AuthenticatedSessionController::class, 'destroy'])
-    ->name('logout');

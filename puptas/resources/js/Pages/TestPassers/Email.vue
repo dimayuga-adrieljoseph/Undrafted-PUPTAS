@@ -11,15 +11,15 @@
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-3">
                         <div class="p-3 bg-[#9E122C]/10 rounded-2xl">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#9E122C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#9E122C] dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
                         </div>
                         <div>
-                            <h1 class="text-3xl font-bold text-gray-900">
+                            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-200">
                                 PUPCET Passers Email System
                             </h1>
-                            <p class="text-gray-600 mt-1">
+                            <p class="text-gray-600 mt-1 dark:text-gray-400">
                                 Send personalized emails to successful PUPCET applicants
                             </p>
                         </div>
@@ -32,24 +32,24 @@
                 <!-- Left Panel: Controls & Filters -->
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Control Cards -->
-                    <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <div class="bg-white rounded-2xl shadow-lg p-6 dark:bg-gray-800">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-gray-900">
+                            <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
                                 Filters & Controls
                             </h2>
-                            <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                            <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full dark:text-gray-300 dark:bg-gray-800">
                                 {{ filteredPassers.length }} passers
                             </span>
                         </div>
 
                         <!-- Search Bar -->
                         <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                 Search Passers
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg class="h-5 w-5 text-gray-400 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                 </div>
@@ -58,7 +58,7 @@
                                     v-model="searchTerm"
                                     @input="onSearchInput"
                                     placeholder="Search by name, surname, or email..."
-                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition"
+                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-900"
                                 />
                             </div>
                         </div>
@@ -67,13 +67,13 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <!-- School Year Filter -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                     School Year
                                 </label>
                                 <div class="relative">
                                     <select
                                         v-model="filterSchoolYear"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition dark:border-gray-600 dark:bg-gray-800"
                                     >
                                         <option value="">All Years</option>
                                         <option v-for="year in schoolYears" :key="year" :value="year">
@@ -81,7 +81,7 @@
                                         </option>
                                     </select>
                                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg class="h-5 w-5 text-gray-400 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
                                     </div>
@@ -90,13 +90,13 @@
 
                             <!-- Batch Filter -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                     Batch
                                 </label>
                                 <div class="relative">
                                     <select
                                         v-model="filterBatchNumber"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition dark:border-gray-600 dark:bg-gray-800"
                                     >
                                         <option value="">All Batches</option>
                                         <option v-for="batch in batchNumbers" :key="batch" :value="batch">
@@ -104,7 +104,7 @@
                                         </option>
                                     </select>
                                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg class="h-5 w-5 text-gray-400 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                         </svg>
                                     </div>
@@ -113,13 +113,13 @@
 
                             <!-- Sort By -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                     Sort By
                                 </label>
                                 <div class="relative">
                                     <select
                                         v-model="sortKey"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition dark:border-gray-600 dark:bg-gray-800"
                                     >
                                         <option value="surname">Surname</option>
                                         <option value="first_name">First Name</option>
@@ -128,7 +128,7 @@
                                         <option value="batchNumber">Batch</option>
                                     </select>
                                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg class="h-5 w-5 text-gray-400 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                                         </svg>
                                     </div>
@@ -137,19 +137,19 @@
 
                             <!-- Sort Order -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                     Order
                                 </label>
                                 <div class="relative">
                                     <select
                                         v-model="sortOrder"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition dark:border-gray-600 dark:bg-gray-800"
                                     >
                                         <option value="asc">Ascending</option>
                                         <option value="desc">Descending</option>
                                     </select>
                                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg class="h-5 w-5 text-gray-400 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
                                         </svg>
                                     </div>
@@ -161,7 +161,7 @@
                         <div class="flex flex-wrap gap-3">
                             <button
                                 @click.prevent="openAddModal"
-                                class="inline-flex items-center px-4 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition"
+                                class="inline-flex items-center px-4 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition dark:bg-gray-900 dark:text-gray-900"
                             >
                                 <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -171,7 +171,7 @@
                             
                             <button
                                 @click.prevent="toggleSelectAll(!areAllSelected)"
-                                class="inline-flex items-center px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition"
+                                class="inline-flex items-center px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
                             >
                                 <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -182,13 +182,13 @@
                     </div>
 
                     <!-- Passers Table Card -->
-                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden dark:bg-gray-800">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                             <div class="flex items-center justify-between">
-                                <h2 class="text-xl font-semibold text-gray-900">
+                                <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
                                     Selected Passers
                                 </h2>
-                                <div class="text-sm text-gray-600">
+                                <div class="text-sm text-gray-600 dark:text-gray-400">
                                     Page {{ currentPage }} of {{ totalPages }}
                                     • Showing {{ paginatedPassers.length }} items
                                 </div>
@@ -197,67 +197,67 @@
 
                         <!-- Table -->
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-900">
                                     <tr>
                                         <th class="px-6 py-4 text-left">
                                             <input
                                                 type="checkbox"
                                                 :checked="areAllSelected"
                                                 @change="toggleSelectAll($event.target.checked)"
-                                                class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C]"
+                                                class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
                                             />
                                         </th>
-                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
                                             Name
                                         </th>
-                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
                                             Contact
                                         </th>
-                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
                                             Details
                                         </th>
-                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
                                             Actions
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
+                                <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                                     <tr 
                                         v-for="passer in paginatedPassers" 
                                         :key="passer.test_passer_id"
-                                        class="hover:bg-gray-50 transition"
+                                        class="hover:bg-gray-50 transition dark:hover:bg-gray-900"
                                     >
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <input
                                                 type="checkbox"
                                                 :value="passer.test_passer_id"
                                                 v-model="selectedPassers"
-                                                class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C]"
+                                                class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
                                             />
                                         </td>
                                         <td class="px-6 py-4">
                                             <div>
-                                                <div class="font-medium text-gray-900">
+                                                <div class="font-medium text-gray-900 dark:text-gray-200">
                                                     {{ passer.surname }}, {{ passer.first_name }}
                                                 </div>
-                                                <div v-if="passer.middle_name" class="text-sm text-gray-500">
+                                                <div v-if="passer.middle_name" class="text-sm text-gray-500 dark:text-gray-300">
                                                     {{ passer.middle_name }}
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <div class="text-gray-900">{{ passer.email }}</div>
-                                            <div v-if="passer.reference_number" class="text-sm text-gray-500">
+                                            <div class="text-gray-900 dark:text-gray-200">{{ passer.email }}</div>
+                                            <div v-if="passer.reference_number" class="text-sm text-gray-500 dark:text-gray-300">
                                                 Ref: {{ passer.reference_number }}
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex flex-wrap gap-2">
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-300">
                                                     SY: {{ passer.schoolYear }}
                                                 </span>
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-300">
                                                     Batch: {{ passer.batchNumber }}
                                                 </span>
                                             </div>
@@ -265,7 +265,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <button
                                                 @click.prevent="openEditModal(passer)"
-                                                class="inline-flex items-center p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition"
+                                                class="inline-flex items-center p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
                                                 title="Edit Passer"
                                             >
                                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -279,9 +279,9 @@
                         </div>
 
                         <!-- Pagination -->
-                        <div class="px-6 py-4 border-t border-gray-200">
+                        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
                             <div class="flex items-center justify-between">
-                                <div class="text-sm text-gray-700">
+                                <div class="text-sm text-gray-700 dark:text-gray-400">
                                     Showing {{ Math.min((currentPage - 1) * itemsPerPage + 1, filteredPassers.length) }} 
                                     to {{ Math.min(currentPage * itemsPerPage, filteredPassers.length) }} 
                                     of {{ filteredPassers.length }} results
@@ -290,7 +290,7 @@
                                     <button
                                         :disabled="currentPage === 1"
                                         @click.prevent="currentPage--"
-                                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
                                     >
                                         <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -311,14 +311,14 @@
                                         >
                                             {{ page }}
                                         </button>
-                                        <span v-if="totalPages > 5 && currentPage < totalPages - 2" class="px-2 text-gray-500">
+                                        <span v-if="totalPages > 5 && currentPage < totalPages - 2" class="px-2 text-gray-500 dark:text-gray-300">
                                             ...
                                         </span>
                                     </div>
                                     <button
                                         :disabled="currentPage === totalPages"
                                         @click.prevent="currentPage++"
-                                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
                                     >
                                         Next
                                         <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -334,14 +334,14 @@
                 <!-- Right Panel: Email Template -->
                 <div class="space-y-6">
                     <!-- Template Selection Card -->
-                    <div class="bg-white rounded-2xl shadow-lg p-6">
-                        <h2 class="text-xl font-semibold text-gray-900 mb-4">
+                    <div class="bg-white rounded-2xl shadow-lg p-6 dark:bg-gray-800">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4 dark:text-gray-200">
                             Email Template
                         </h2>
                         
                         <!-- Template Type Selector -->
                         <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 Select Template Type
                             </label>
                             <div class="grid grid-cols-3 gap-2">
@@ -362,18 +362,18 @@
                         </div>
 
                         <!-- SAR Form Settings -->
-                        <div v-if="templateType === 'sar'" class="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-200">
+                        <div v-if="templateType === 'sar'" class="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-200 dark:bg-blue-900 dark:border-blue-700">
                             <div class="flex items-start gap-3 mb-4">
-                                <div class="p-2 bg-blue-100 rounded-lg">
-                                    <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <div class="p-2 bg-blue-100 rounded-lg dark:bg-blue-800">
+                                    <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                 </div>
                                 <div>
-                                    <h4 class="font-semibold text-blue-900 mb-1">
+                                    <h4 class="font-semibold text-blue-900 mb-1 dark:text-blue-200">
                                         SAR Form Settings
                                     </h4>
-                                    <p class="text-sm text-blue-800">
+                                    <p class="text-sm text-blue-800 dark:text-blue-300">
                                         Personalized PDF will be generated for each selected passer
                                     </p>
                                 </div>
@@ -381,24 +381,24 @@
                             
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                         Enrollment Date
                                     </label>
                                     <input 
                                         type="date" 
                                         v-model="sarEnrollmentDate"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition dark:border-gray-600"
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                         Enrollment Time
                                     </label>
                                     <input 
                                         type="time" 
                                         v-model="sarEnrollmentTime"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition dark:border-gray-600"
                                         required
                                     />
                                 </div>
@@ -409,7 +409,7 @@
                                 <button
                                     @click="previewSarEmailTemplate"
                                     :disabled="selectedPassers.length === 0"
-                                    class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                    class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition dark:text-gray-900"
                                 >
                                     <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -420,7 +420,7 @@
                                 <button
                                     @click="previewSarPdfForm"
                                     :disabled="selectedPassers.length === 0 || !sarEnrollmentDate || !sarEnrollmentTime"
-                                    class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                    class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition dark:text-gray-900"
                                 >
                                     <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -428,7 +428,7 @@
                                     Preview SAR PDF Form
                                 </button>
                                 
-                                <p class="text-xs text-gray-600 text-center">
+                                <p class="text-xs text-gray-600 text-center dark:text-gray-400">
                                     Preview the actual SAR form and email before sending
                                 </p>
                             </div>
@@ -436,10 +436,10 @@
 
                         <!-- Custom Template Editor -->
                         <div v-else-if="templateType === 'custom'" class="mt-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 Custom Email Template
                             </label>
-                            <div class="border border-gray-300 rounded-xl overflow-hidden">
+                            <div class="border border-gray-300 rounded-xl overflow-hidden dark:border-gray-600">
                                 <QuillEditor
                                     v-model="emailTemplate"
                                     style="min-height: 300px"
@@ -451,10 +451,10 @@
 
                         <!-- Default Template Preview -->
                         <div v-else class="mt-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 Default Template Preview
                             </label>
-                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto">
+                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
                                 <div v-html="defaultTemplatePreview"></div>
                             </div>
                         </div>
@@ -481,49 +481,49 @@
                     </div>
 
                     <!-- Statistics Card -->
-                    <div class="bg-white rounded-2xl shadow-lg p-6">
-                        <h2 class="text-xl font-semibold text-gray-900 mb-4">
+                    <div class="bg-white rounded-2xl shadow-lg p-6 dark:bg-gray-800">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4 dark:text-gray-200">
                             Statistics
                         </h2>
                         <div class="space-y-4">
-                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl dark:bg-gray-900">
                                 <div class="flex items-center">
-                                    <div class="p-2 bg-blue-100 rounded-lg mr-3">
-                                        <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <div class="p-2 bg-blue-100 rounded-lg mr-3 dark:bg-blue-800">
+                                        <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                         </svg>
                                     </div>
                                     <div>
-                                        <div class="text-sm text-gray-600">Total Passers</div>
-                                        <div class="text-2xl font-bold text-gray-900">{{ flatPassers.length }}</div>
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">Total Passers</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-gray-200">{{ flatPassers.length }}</div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl dark:bg-gray-900">
                                 <div class="flex items-center">
-                                    <div class="p-2 bg-green-100 rounded-lg mr-3">
-                                        <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <div class="p-2 bg-green-100 rounded-lg mr-3 dark:bg-green-800">
+                                        <svg class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                     </div>
                                     <div>
-                                        <div class="text-sm text-gray-600">Selected</div>
-                                        <div class="text-2xl font-bold text-gray-900">{{ selectedPassers.length }}</div>
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">Selected</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-gray-200">{{ selectedPassers.length }}</div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl dark:bg-gray-900">
                                 <div class="flex items-center">
-                                    <div class="p-2 bg-purple-100 rounded-lg mr-3">
-                                        <svg class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <div class="p-2 bg-purple-100 rounded-lg mr-3 dark:bg-purple-800">
+                                        <svg class="h-6 w-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                                         </svg>
                                     </div>
                                     <div>
-                                        <div class="text-sm text-gray-600">Filtered</div>
-                                        <div class="text-2xl font-bold text-gray-900">{{ filteredPassers.length }}</div>
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">Filtered</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-gray-200">{{ filteredPassers.length }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -531,14 +531,14 @@
                     </div>
 
                     <!-- SAR History Card -->
-                    <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <div class="bg-white rounded-2xl shadow-lg p-6 dark:bg-gray-800">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-gray-900">
+                            <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
                                 SAR History
                             </h2>
                             <button
                                 @click="loadSarHistory"
-                                class="inline-flex items-center px-3 py-1.5 text-sm text-[#9E122C] hover:bg-[#9E122C]/10 rounded-lg transition"
+                                class="inline-flex items-center px-3 py-1.5 text-sm text-[#9E122C] hover:bg-[#9E122C]/10 rounded-lg transition dark:text-white"
                             >
                                 <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -549,11 +549,11 @@
                         
                         <div v-if="loadingSarHistory" class="text-center py-8">
                             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#9E122C]"></div>
-                            <p class="text-gray-600 mt-2">Loading SAR history...</p>
+                            <p class="text-gray-600 mt-2 dark:text-gray-400">Loading SAR history...</p>
                         </div>
                         
-                        <div v-else-if="sarHistory.length === 0" class="text-center py-8 text-gray-500">
-                            <svg class="h-12 w-12 mx-auto text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div v-else-if="sarHistory.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-300">
+                            <svg class="h-12 w-12 mx-auto text-gray-400 mb-2 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             <p>No SAR forms generated yet</p>
@@ -563,24 +563,24 @@
                             <div
                                 v-for="sar in sarHistory"
                                 :key="sar.id"
-                                class="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition"
+                                class="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition dark:border-gray-700 dark:hover:bg-gray-900"
                             >
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1">
-                                        <div class="font-medium text-gray-900 text-sm">
+                                        <div class="font-medium text-gray-900 text-sm dark:text-gray-200">
                                             {{ sar.test_passer?.surname }}, {{ sar.test_passer?.first_name }}
                                         </div>
-                                        <div class="text-xs text-gray-600 mt-1">
+                                        <div class="text-xs text-gray-600 mt-1 dark:text-gray-400">
                                             Ref: {{ sar.test_passer?.reference_number }}
                                         </div>
-                                        <div class="text-xs text-gray-500 mt-1">
+                                        <div class="text-xs text-gray-500 mt-1 dark:text-gray-300">
                                             {{ formatDate(sar.sent_at) }}
                                         </div>
                                     </div>
                                     <div class="flex gap-1 ml-2">
                                         <button
                                             @click="previewSar(sar.id)"
-                                            class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                            class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition dark:text-blue-400 dark:hover:bg-blue-900"
                                             title="Preview"
                                         >
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -590,7 +590,7 @@
                                         </button>
                                         <button
                                             @click="downloadSar(sar.id)"
-                                            class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                            class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition dark:text-green-400 dark:hover:bg-green-900"
                                             title="Download"
                                         >
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -608,19 +608,19 @@
             <!-- SAR Preview Modal -->
             <div
                 v-if="showSarPreview"
-                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50"
+                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50 dark:bg-white"
                 @click.self="closeSarPreview"
             >
-                <div class="bg-white rounded-2xl max-w-6xl w-full h-[90vh] flex flex-col shadow-2xl">
-                    <div class="flex items-center justify-between p-4 border-b border-gray-200">
-                        <h2 class="text-xl font-bold text-gray-900">
+                <div class="bg-white rounded-2xl max-w-6xl w-full h-[90vh] flex flex-col shadow-2xl dark:bg-gray-800">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-200">
                             SAR Form Preview
                         </h2>
                         <button
                             @click="closeSarPreview"
-                            class="p-2 hover:bg-gray-100 rounded-lg transition"
+                            class="p-2 hover:bg-gray-100 rounded-lg transition dark:hover:bg-gray-800"
                         >
-                            <svg class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
@@ -638,19 +638,19 @@
             <!-- SAR PDF Form Preview Modal -->
             <div
                 v-if="showSarPdfPreview"
-                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50"
+                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50 dark:bg-white"
                 @click.self="closeSarPdfPreview"
             >
-                <div class="bg-white rounded-2xl max-w-6xl w-full h-[90vh] flex flex-col shadow-2xl">
-                    <div class="flex items-center justify-between p-4 border-b border-gray-200">
-                        <h2 class="text-xl font-bold text-gray-900">
+                <div class="bg-white rounded-2xl max-w-6xl w-full h-[90vh] flex flex-col shadow-2xl dark:bg-gray-800">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-200">
                             SAR PDF Form Preview
                         </h2>
                         <button
                             @click="closeSarPdfPreview"
-                            class="p-2 hover:bg-gray-100 rounded-lg transition"
+                            class="p-2 hover:bg-gray-100 rounded-lg transition dark:hover:bg-gray-800"
                         >
-                            <svg class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
@@ -659,7 +659,7 @@
                         <div v-if="loadingPdfPreview" class="flex items-center justify-center h-full">
                             <div class="text-center">
                                 <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#9E122C]"></div>
-                                <p class="text-gray-600 mt-4">Generating SAR PDF preview...</p>
+                                <p class="text-gray-600 mt-4 dark:text-gray-400">Generating SAR PDF preview...</p>
                             </div>
                         </div>
                         <iframe
@@ -674,34 +674,34 @@
             <!-- SAR Email Template Preview Modal -->
             <div
                 v-if="showSarEmailPreview"
-                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50"
+                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50 dark:bg-white"
                 @click.self="closeSarEmailPreview"
             >
-                <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl">
-                    <div class="flex items-center justify-between p-4 border-b border-gray-200">
-                        <h2 class="text-xl font-bold text-gray-900">
+                <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl dark:bg-gray-800">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-200">
                             SAR Email Template Preview
                         </h2>
                         <button
                             @click="closeSarEmailPreview"
-                            class="p-2 hover:bg-gray-100 rounded-lg transition"
+                            class="p-2 hover:bg-gray-100 rounded-lg transition dark:hover:bg-gray-800"
                         >
-                            <svg class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     </div>
-                    <div class="flex-1 overflow-auto p-6 bg-gray-50">
+                    <div class="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-900">
                         <div v-if="loadingEmailPreview" class="flex items-center justify-center h-full">
                             <div class="text-center">
                                 <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#9E122C]"></div>
-                                <p class="text-gray-600 mt-4">Loading preview...</p>
+                                <p class="text-gray-600 mt-4 dark:text-gray-400">Loading preview...</p>
                             </div>
                         </div>
                         <iframe
                             v-else-if="sarEmailPreviewHtml"
                             :srcdoc="sarEmailPreviewHtml"
-                            class="w-full h-full border-0 bg-white rounded-lg shadow-sm"
+                            class="w-full h-full border-0 bg-white rounded-lg shadow-sm dark:bg-gray-800"
                             style="min-height: 600px;"
                         ></iframe>
                     </div>
@@ -712,20 +712,20 @@
             <!-- Edit Modal -->
             <div
                 v-if="showEditModal"
-                class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 overflow-auto z-50"
+                class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 overflow-auto z-50 dark:bg-white"
             >
                 <div
-                    class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] p-6 relative shadow-2xl overflow-y-auto"
+                    class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] p-6 relative shadow-2xl overflow-y-auto dark:bg-gray-800"
                 >
                     <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900">
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-200">
                             Edit Passer Details
                         </h2>
                         <button
                             @click="closeEditModal"
-                            class="p-2 hover:bg-gray-100 rounded-lg transition"
+                            class="p-2 hover:bg-gray-100 rounded-lg transition dark:hover:bg-gray-800"
                         >
-                            <svg class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
@@ -738,29 +738,29 @@
                         <!-- Personal Information -->
                         <div class="col-span-2 grid grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Surname *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Surname *</label>
                                 <input
                                     type="text"
                                     v-model="editingPasser.surname"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">First Name *</label>
                                 <input
                                     type="text"
                                     v-model="editingPasser.first_name"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Middle Name</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Middle Name</label>
                                 <input
                                     type="text"
                                     v-model="editingPasser.middle_name"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
@@ -768,77 +768,77 @@
                         <!-- Contact Information -->
                         <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Email *</label>
                                 <input
                                     type="email"
                                     v-model="editingPasser.email"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Date of Birth</label>
                                 <input
                                     type="date"
                                     v-model="editingPasser.date_of_birth"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
 
                         <!-- Address -->
                         <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Address</label>
                             <input
                                 type="text"
                                 v-model="editingPasser.address"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                             />
                         </div>
 
                         <!-- School Information -->
                         <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">SHS School</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">SHS School</label>
                                 <input
                                     type="text"
                                     v-model="editingPasser.shs_school"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">School Address</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">School Address</label>
                                 <input
                                     type="text"
                                     v-model="editingPasser.school_address"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
 
                         <div class="col-span-2 grid grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Strand</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
                                 <input
                                     type="text"
                                     v-model="editingPasser.strand"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Year Graduated</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
                                 <input
                                     type="text"
                                     v-model="editingPasser.year_graduated"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Reference Number</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Reference Number</label>
                                 <input
                                     type="text"
                                     v-model="editingPasser.reference_number"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
@@ -846,40 +846,40 @@
                         <!-- Batch Information -->
                         <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">School Year *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">School Year *</label>
                                 <input
                                     type="text"
                                     v-model="editingPasser.school_year"
                                     required
                                     placeholder="e.g., 2023-2024"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Batch Number *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Batch Number *</label>
                                 <input
                                     type="text"
                                     v-model="editingPasser.batch_number"
                                     required
                                     placeholder="e.g., 1"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
 
                         <!-- Modal Actions -->
-                        <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                        <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                             <button
                                 type="button"
                                 @click="closeEditModal"
-                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition"
+                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 :disabled="saving"
-                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-900 dark:text-gray-900"
                             >
                                 <span v-if="saving">Saving...</span>
                                 <span v-else>Save Changes</span>
@@ -892,20 +892,20 @@
             <!-- Add Modal -->
             <div
                 v-if="showAddModal"
-                class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 overflow-auto z-50"
+                class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 overflow-auto z-50 dark:bg-white"
             >
                 <div
-                    class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] p-6 relative shadow-2xl overflow-y-auto"
+                    class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] p-6 relative shadow-2xl overflow-y-auto dark:bg-gray-800"
                 >
                     <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900">
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-200">
                             Add New Passer
                         </h2>
                         <button
                             @click="closeAddModal"
-                            class="p-2 hover:bg-gray-100 rounded-lg transition"
+                            class="p-2 hover:bg-gray-100 rounded-lg transition dark:hover:bg-gray-800"
                         >
-                            <svg class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
@@ -918,29 +918,29 @@
                         <!-- Personal Information -->
                         <div class="col-span-2 grid grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Surname *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Surname *</label>
                                 <input
                                     type="text"
                                     v-model="newPasserData.surname"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">First Name *</label>
                                 <input
                                     type="text"
                                     v-model="newPasserData.first_name"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Middle Name</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Middle Name</label>
                                 <input
                                     type="text"
                                     v-model="newPasserData.middle_name"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
@@ -948,77 +948,77 @@
                         <!-- Contact Information -->
                         <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Email *</label>
                                 <input
                                     type="email"
                                     v-model="newPasserData.email"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Date of Birth</label>
                                 <input
                                     type="date"
                                     v-model="newPasserData.date_of_birth"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
 
                         <!-- Address -->
                         <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Address</label>
                             <input
                                 type="text"
                                 v-model="newPasserData.address"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                             />
                         </div>
 
                         <!-- School Information -->
                         <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">SHS School</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">SHS School</label>
                                 <input
                                     type="text"
                                     v-model="newPasserData.shs_school"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">School Address</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">School Address</label>
                                 <input
                                     type="text"
                                     v-model="newPasserData.school_address"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
 
                         <div class="col-span-2 grid grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Strand</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
                                 <input
                                     type="text"
                                     v-model="newPasserData.strand"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Year Graduated</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
                                 <input
                                     type="text"
                                     v-model="newPasserData.year_graduated"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Reference Number</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Reference Number</label>
                                 <input
                                     type="text"
                                     v-model="newPasserData.reference_number"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
@@ -1026,40 +1026,40 @@
                         <!-- Batch Information -->
                         <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">School Year *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">School Year *</label>
                                 <input
                                     type="text"
                                     v-model="newPasserData.school_year"
                                     required
                                     placeholder="e.g., 2023-2024"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Batch Number *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Batch Number *</label>
                                 <input
                                     type="text"
                                     v-model="newPasserData.batch_number"
                                     required
                                     placeholder="e.g., 1"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
 
                         <!-- Modal Actions -->
-                        <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                        <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                             <button
                                 type="button"
                                 @click="closeAddModal"
-                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition"
+                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 :disabled="saving"
-                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-900 dark:text-gray-900"
                             >
                                 <span v-if="saving">Saving...</span>
                                 <span v-else>Add Passer</span>
@@ -1093,7 +1093,7 @@
     <!-- Floating Action Button -->
     <button
         @click.prevent="openAddModal"
-        class="fixed bottom-6 right-6 bg-[#9E122C] hover:bg-[#800918] text-white rounded-full w-16 h-16 flex items-center justify-center shadow-2xl hover:shadow-3xl transition-all duration-200 transform hover:scale-105 group z-40"
+        class="fixed bottom-6 right-6 bg-[#9E122C] hover:bg-[#800918] text-white rounded-full w-16 h-16 flex items-center justify-center shadow-2xl hover:shadow-3xl transition-all duration-200 transform hover:scale-105 group z-40 dark:bg-gray-900 dark:text-gray-900"
         aria-label="Add New Passer"
     >
         <svg
@@ -1110,7 +1110,7 @@
             <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
         <span
-            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-800 px-3 py-2 text-sm text-white opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
+            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-800 px-3 py-2 text-sm text-white opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 dark:text-gray-900"
         >
             Add New Passer
         </span>
@@ -1121,7 +1121,7 @@
         <button
             v-show="showScrollUp"
             @click="scrollUp"
-            class="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+            class="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center dark:bg-gray-800 dark:hover:bg-gray-900 dark:text-gray-400"
             aria-label="Scroll Up"
         >
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1131,7 +1131,7 @@
         <button
             v-show="showScrollDown"
             @click="scrollDown"
-            class="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+            class="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center dark:bg-gray-800 dark:hover:bg-gray-900 dark:text-gray-400"
             aria-label="Scroll Down"
         >
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

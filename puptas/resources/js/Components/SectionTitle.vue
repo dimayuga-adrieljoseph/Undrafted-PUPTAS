@@ -1,7 +1,7 @@
 <template>
     <div class="md:col-span-1 flex justify-between">
         <div class="px-4 sm:px-0">
-            <h3 class="text-lg font-medium text-[#9E122C] ">
+            <h3 class="text-lg font-medium text-[#9E122C] dark:text-white">
                 <slot name="title" />
             </h3>
 
