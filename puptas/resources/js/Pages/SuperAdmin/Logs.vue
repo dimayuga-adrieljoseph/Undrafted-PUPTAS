@@ -342,7 +342,7 @@ const getPageUrl = (pageNum) => {
                                     <option value="">All Types</option>
                                     <option v-for="type in logTypes" :key="type" :value="type">{{ type }}</option>
                                 </select>
-                                <FontAwesomeIcon icon="filter" class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                                <FontAwesomeIcon icon="filter" class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" />
                             </div>
                         </div>
 
@@ -380,7 +380,7 @@ const getPageUrl = (pageNum) => {
                                     placeholder="Search by description, module, user..."
                                     class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                                 />
-                                <FontAwesomeIcon icon="search" class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                                <FontAwesomeIcon icon="search" class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" />
                             </div>
                         </div>
 
@@ -397,7 +397,7 @@ const getPageUrl = (pageNum) => {
                                         {{ type }}
                                     </option>
                                 </select>
-                                <FontAwesomeIcon icon="filter" class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                                <FontAwesomeIcon icon="filter" class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" />
                             </div>
                         </div>
 
@@ -405,7 +405,7 @@ const getPageUrl = (pageNum) => {
                             <button
                                 type="button"
                                 @click="applyServerFilters"
-                                class="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition text-sm font-medium"
+                                class="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition text-sm font-medium dark:text-gray-900"
                             >
                                 Apply
                             </button>
@@ -491,7 +491,7 @@ const getPageUrl = (pageNum) => {
                 <div class="col-span-1 text-right">
                     <button
                         @click="viewDetails(log)"
-                        class="text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition"
+                        class="text-gray-400 hover:text-purple-600 dark:hover:text-purple-300 transition dark:text-gray-200"
                         title="View Details"
                     >
                         <FontAwesomeIcon icon="eye" class="w-4 h-4" />
@@ -520,7 +520,7 @@ const getPageUrl = (pageNum) => {
             </a>
             
             <div class="flex items-center gap-1">
-                <span class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium">{{ pagination.current_page }}</span>
+                <span class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium dark:text-gray-900">{{ pagination.current_page }}</span>
                 <span class="text-gray-400 dark:text-gray-500 text-sm">/</span>
                 <span class="px-3 py-1.5 text-gray-600 dark:text-gray-300 text-sm">{{ pagination.last_page }}</span>
             </div>

@@ -58,6 +58,15 @@ class IdpAuthController extends Controller
     }
 
     /**
+     * Legacy redirect method - redirects to the login method.
+     * Kept for backward compatibility.
+     */
+    public function redirect()
+    {
+        return $this->login();
+    }
+
+    /**
      * Handle the OAuth2 callback from the IDP.
      * 
      * IDP sends user back here with ?code=xxxx
@@ -99,6 +108,11 @@ class IdpAuthController extends Controller
             // Build the token endpoint URL using configurable path
             $tokenPath = $idpConfig['token_path'] ?? '/api/v1/auth/token';
             $tokenUrl = rtrim($idpConfig['base_url'], '/') . $tokenPath;
+
+            \Log::info('Exchanging authorization code for tokens', [
+                'token_url' => $tokenUrl,
+                'client_id' => $idpConfig['client_id'],
+            ]);
 
             // Prepare the token request payload
             $tokenPayload = [
@@ -161,6 +175,10 @@ class IdpAuthController extends Controller
             // Fetch user info from IDP using the access token
             $userPath = $idpConfig['user_path'] ?? '/api/v1/user';
             $userUrl = rtrim($idpConfig['base_url'], '/') . $userPath;
+
+            \Log::info('Fetching user info from IDP', [
+                'user_url' => $userUrl,
+            ]);
 
             $userResponse = Http::withToken($accessToken)
                 ->acceptJson()

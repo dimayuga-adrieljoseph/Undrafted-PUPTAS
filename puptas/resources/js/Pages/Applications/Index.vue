@@ -307,7 +307,7 @@ const clearFilters = () => {
     <component :is="currentLayout">
         <div class="max-w-9xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto">
             <!-- User Not Found Error Message -->
-            <div v-if="userNotFoundError" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-start">
+            <div v-if="userNotFoundError" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-start dark:bg-red-800 dark:border-red-500 dark:text-red-400">
                 <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                 </svg>
@@ -315,7 +315,7 @@ const clearFilters = () => {
                     <p class="font-semibold">Applicant Not Found</p>
                     <p class="text-sm">{{ userNotFoundError }}</p>
                 </div>
-                <button @click="userNotFoundError = null" class="ml-4 text-red-700 hover:text-red-900">
+                <button @click="userNotFoundError = null" class="ml-4 text-red-700 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                     </svg>
@@ -328,7 +328,7 @@ const clearFilters = () => {
                 <div class="flex-1 relative">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+                        class="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 dark:text-gray-200"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -372,7 +372,7 @@ const clearFilters = () => {
                     </button>
                     <div
                         v-if="showStatusDropdown"
-                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[150px]"
+                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[150px] dark:border-gray-700"
                     >
                         <button
                             class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -444,8 +444,8 @@ const clearFilters = () => {
             </div>
 
             <!-- Loading and Error States -->
-            <div v-if="loading" class="text-center text-gray-500 py-8">Loading applicants…</div>
-            <div v-else-if="fetchError" class="text-center text-red-500 py-8">Error: {{ fetchError }}</div>
+            <div v-if="loading" class="text-center text-gray-500 py-8 dark:text-gray-300">Loading applicants…</div>
+            <div v-else-if="fetchError" class="text-center text-red-500 py-8 dark:text-red-300">Error: {{ fetchError }}</div>
 
             <!-- Users Table -->
             <div v-else class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
@@ -456,19 +456,19 @@ const clearFilters = () => {
                 <table class="min-w-full text-base">
                     <thead>
                         <tr class="text-left font-semibold text-black dark:text-white">
-                            <th class="pb-2 cursor-pointer hover:text-[#9E122C]" @click="sortBy('lastname')">
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('lastname')">
                                 Name
                                 <span v-if="sortKey === 'lastname'" class="ml-1">
                                     {{ sortAsc ? '↑' : '↓' }}
                                 </span>
                             </th>
-                            <th class="pb-2 cursor-pointer hover:text-[#9E122C]" @click="sortBy('program.name')">
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('program.name')">
                                 Course
                                 <span v-if="sortKey === 'program.name'" class="ml-1">
                                     {{ sortAsc ? '↑' : '↓' }}
                                 </span>
                             </th>
-                            <th class="pb-2 cursor-pointer hover:text-[#9E122C]" @click="sortBy('status')">
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('status')">
                                 Status
                                 <span v-if="sortKey === 'status'" class="ml-1">
                                     {{ sortAsc ? '↑' : '↓' }}
@@ -523,7 +523,7 @@ const clearFilters = () => {
                         </button>
                         
                         <div class="flex items-center space-x-2">
-                            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium">{{ currentPage }}</span>
+                            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium dark:bg-gray-900 dark:text-gray-900">{{ currentPage }}</span>
                             <span class="text-gray-500 dark:text-gray-400">of</span>
                             <span class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">{{ totalPages || 1 }}</span>
                         </div>
@@ -551,7 +551,7 @@ const clearFilters = () => {
                     <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Applicant Details</h3>
                     <button 
                         @click="closeUserCard"
-                        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-200"
                     >
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -561,7 +561,7 @@ const clearFilters = () => {
 
                 <!-- Profile Section -->
                 <div class="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                    <div class="w-16 h-16 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-2xl font-semibold">
+                    <div class="w-16 h-16 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-2xl font-semibold dark:bg-gray-900 dark:text-gray-900">
                         {{ selectedUser.firstname?.charAt(0) }}{{ selectedUser.lastname?.charAt(0) }}
                     </div>
                     <div>
@@ -591,7 +591,7 @@ const clearFilters = () => {
                     <p class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
                         Changing the course of an officially enrolled applicant will be logged in the audit trail.
                     </p>
-                    <div v-if="courseChangeMessage" class="mb-3 px-3 py-2 text-sm rounded bg-white text-gray-800 border">
+                    <div v-if="courseChangeMessage" class="mb-3 px-3 py-2 text-sm rounded bg-white text-gray-800 border dark:bg-gray-800 dark:text-gray-300">
                         {{ courseChangeMessage }}
                     </div>
                     <select
@@ -612,7 +612,7 @@ const clearFilters = () => {
                     <button
                         @click="changeCourse"
                         :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse"
-                        class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium"
+                        class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium dark:text-gray-900"
                     >
                         <span v-if="isChangingCourse">Applying…</span>
                         <span v-else>Apply Changes</span>
@@ -659,7 +659,7 @@ const clearFilters = () => {
                             />
                             <div
                                 v-else
-                                class="w-full h-24 flex items-center justify-center text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                                class="w-full h-24 flex items-center justify-center text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 rounded-lg dark:text-gray-200"
                             >
                                 No Image
                             </div>
@@ -676,7 +676,7 @@ const clearFilters = () => {
                             :key="index"
                             class="relative pl-6 pb-3 border-l-2 border-[#9E122C] last:border-0"
                         >
-                            <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#9E122C] border-2 border-white dark:border-gray-900"></div>
+                            <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#9E122C] border-2 border-white dark:border-gray-900 dark:bg-gray-900"></div>
                             <p class="text-sm font-semibold text-gray-900 dark:text-white">
                                 {{ capitalize(process.stage) }}
                                 <span :class="{
@@ -702,7 +702,7 @@ const clearFilters = () => {
         <!-- Image Preview Modal -->
         <div
             v-if="showImageModal"
-            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] p-4"
+            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] p-4 dark:bg-white"
             @click.self="closeImageModal"
         >
             <div class="relative max-w-4xl w-full">
@@ -713,7 +713,7 @@ const clearFilters = () => {
                 />
                 <button
                     @click="closeImageModal"
-                    class="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition"
+                    class="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition dark:text-gray-900 dark:bg-white"
                 >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

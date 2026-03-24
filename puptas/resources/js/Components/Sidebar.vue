@@ -217,7 +217,7 @@ watch(isSidebarOpen, (val) => {
 <template>
     <div
         ref="sidebarRef"
-        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-2xl transition-all duration-300 ease-out"
+        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-2xl transition-all duration-300 ease-out dark:text-gray-900"
         :class="sidebarWidthClass"
         @pointerenter="onSidebarEnter"
         @pointerleave="onSidebarLeave"
@@ -233,14 +233,14 @@ watch(isSidebarOpen, (val) => {
                             v-else
                             class="w-8 h-8 rounded-full bg-gradient-to-br from-[#FFD700] to-[#FBCB77] flex items-center justify-center"
                         >
-                            <span class="text-[#9E122C] font-bold text-sm">
+                            <span class="text-[#9E122C] font-bold text-sm dark:text-white">
                                 PUP
                             </span>
                         </div>
                     </NavLink>
                 </div>
                 <div v-if="isSidebarOpen" class="flex-1">
-                    <h1 class="text-lg font-bold text-white">PUP Portal</h1>
+                    <h1 class="text-lg font-bold text-white dark:text-gray-900">PUP Portal</h1>
                     <p class="text-xs text-gray-300 mt-0.5">
                         Management System
                     </p>
@@ -315,7 +315,7 @@ watch(isSidebarOpen, (val) => {
                                             ? 'caret-down'
                                             : 'caret-right'
                                     "
-                                    class="text-xs text-gray-400 transition-transform duration-200"
+                                    class="text-xs text-gray-400 transition-transform duration-200 dark:text-gray-200"
                                     :class="{
                                         'rotate-90': isPasserDropdownOpen,
                                     }"
@@ -484,7 +484,7 @@ watch(isSidebarOpen, (val) => {
                                             ? 'caret-down'
                                             : 'caret-right'
                                     "
-                                    class="text-xs text-gray-400 transition-transform duration-200"
+                                    class="text-xs text-gray-400 transition-transform duration-200 dark:text-gray-200"
                                     :class="{
                                         'rotate-90': isMaintenanceDropdownOpen,
                                     }"
@@ -689,7 +689,7 @@ watch(isSidebarOpen, (val) => {
                                         ? 'caret-down'
                                         : 'caret-right'
                                 "
-                                class="text-xs text-gray-400 transition-transform duration-200"
+                                class="text-xs text-gray-400 transition-transform duration-200 dark:text-gray-200"
                                 :class="{ 'rotate-90': isUserMenuOpen }"
                             />
                         </div>

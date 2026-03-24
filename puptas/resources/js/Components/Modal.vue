@@ -70,8 +70,7 @@ const maxWidthClass = computed(() => {
 
 <template>
     <dialog
-        class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent
-            backdrop:bg-transparent"
+        class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
         ref="dialog"
     >
         <div
@@ -92,8 +91,7 @@ const maxWidthClass = computed(() => {
                     @click="close"
                 >
                     <div
-                        class="absolute inset-0 bg-gray-500 dark:bg-gray-900
-                            opacity-75"
+                        class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"
                     />
                 </div>
             </transition>
@@ -110,9 +108,7 @@ const maxWidthClass = computed(() => {
             >
                 <div
                     v-show="show"
-                    class="mb-6 bg-white dark:bg-gray-800 rounded-lg
-                        overflow-hidden shadow-xl transform transition-all
-                        sm:w-full sm:mx-auto"
+                    class="mb-6 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-xl transform transition-all sm:w-full sm:mx-auto"
                     :class="maxWidthClass"
                 >
                     <slot v-if="showSlot"/>

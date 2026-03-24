@@ -74,7 +74,7 @@
         <!-- Submit Button -->
         <button
           @click="submitForm"
-          class="w-full py-3 bg-[#9E122C] text-white font-semibold rounded-xl hover:bg-[#b51834] transition"
+          class="w-full py-3 bg-[#9E122C] text-white font-semibold rounded-xl hover:bg-[#b51834] transition dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800"
         >
           <i class="fa fa-upload mr-2"></i> Upload
         </button>
@@ -84,14 +84,14 @@
       <transition name="fade">
         <div
           v-if="showDialog"
-          class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+          class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 dark:bg-white"
         >
           <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-96 text-center shadow-xl">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Success!</h2>
             <p class="text-gray-600 dark:text-gray-300 mb-4">Your records have been uploaded successfully.</p>
             <button
               @click="redirectToEmails"
-              class="px-6 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition"
+              class="px-6 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800"
             >
               OK
             </button>

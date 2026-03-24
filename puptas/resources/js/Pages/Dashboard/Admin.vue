@@ -275,7 +275,7 @@ const closeUserCard = () => {
               <p class="text-gray-600 dark:text-gray-400 text-sm">Latest applicant submissions</p>
             </div>
             <Link href="/applications" 
-                  class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition">
+                  class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition dark:text-white dark:hover:text-white">
               View All
             </Link>
           </div>
@@ -336,7 +336,7 @@ const closeUserCard = () => {
                   <p class="text-gray-600 dark:text-gray-400">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
                 </div>
                 <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
-                  <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -396,7 +396,7 @@ const closeUserCard = () => {
                   Close
                 </button>
                 <Link :href="`/applications/user/${selectedUser.id}`"
-                      class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium">
+                      class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800">
                   View Full Application
                 </Link>
               </div>

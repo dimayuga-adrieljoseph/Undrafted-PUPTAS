@@ -505,7 +505,7 @@ const submit = async () => {
                 >
                     PUPT Admission Portal
                 </h1>
-                <p class="text-sm text-gray-400">
+                <p class="text-sm text-gray-400 dark:text-gray-200">
                     Secure Applicant Registration System
                 </p>
             </div>
@@ -559,7 +559,7 @@ const submit = async () => {
             <section class="lg:col-span-3 bg-gray-900 rounded-xl p-8 shadow-lg">
                 <!-- STEP 1 -->
                 <form v-if="step === 1" @submit.prevent="step = 2">
-                    <h2 class="text-xl font-bold text-white mb-6">
+                    <h2 class="text-xl font-bold text-white mb-6 dark:text-gray-900">
                         Personal Information
                     </h2>
 
@@ -599,7 +599,7 @@ const submit = async () => {
                             <InputLabel value="Contact Number" />
                             <div class="relative">
                                 <span
-                                    class="absolute left-3 top-2.5 text-gray-500"
+                                    class="absolute left-3 top-2.5 text-gray-500 dark:text-gray-300"
                                     >+63</span
                                 >
                                 <TextInput
@@ -951,7 +951,7 @@ const submit = async () => {
 
                 <!-- STEP 10 -->
                 <div v-if="step === 10">
-                    <h2 class="text-xl font-bold text-white text-center">
+                    <h2 class="text-xl font-bold text-white text-center dark:text-gray-900">
                         Final Confirmation
                     </h2>
 

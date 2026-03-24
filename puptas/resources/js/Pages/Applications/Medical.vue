@@ -8,7 +8,7 @@
                 <div class="flex-1 relative">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+                        class="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 dark:text-gray-200"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -52,7 +52,7 @@
                     </button>
                     <div
                         v-if="showStatusDropdown"
-                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[150px]"
+                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[150px] dark:border-gray-700"
                     >
                         <button
                             class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -113,8 +113,8 @@
             </div>
 
             <!-- Users Table -->
-            <div v-if="isLoading" class="text-center text-gray-500 py-8">Loading applicants…</div>
-            <div v-else-if="errorMessage" class="text-center text-red-500 py-8">Error: {{ errorMessage }}</div>
+            <div v-if="isLoading" class="text-center text-gray-500 py-8 dark:text-gray-300">Loading applicants…</div>
+            <div v-else-if="errorMessage" class="text-center text-red-500 py-8 dark:text-red-300">Error: {{ errorMessage }}</div>
 
             <!-- Users Table -->
             <div v-else class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
@@ -125,13 +125,13 @@
                 <table class="min-w-full text-base">
                     <thead>
                         <tr class="text-left font-semibold text-black dark:text-white">
-                            <th class="pb-2 cursor-pointer hover:text-[#9E122C]" @click="sortBy('lastname')">
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('lastname')">
                                 Name
                                 <span v-if="sortKey === 'lastname'" class="ml-1">
                                     {{ sortAsc ? '↑' : '↓' }}
                                 </span>
                             </th>
-                            <th class="pb-2 cursor-pointer hover:text-[#9E122C]" @click="sortBy('program.name')">
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('program.name')">
                                 Course
                                 <span v-if="sortKey === 'program.name'" class="ml-1">
                                     {{ sortAsc ? '↑' : '↓' }}
@@ -200,7 +200,7 @@
                         </button>
                         
                         <div class="flex items-center space-x-2">
-                            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium">{{ currentPage }}</span>
+                            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium dark:bg-gray-900 dark:text-gray-900">{{ currentPage }}</span>
                             <span class="text-gray-500 dark:text-gray-400">of</span>
                             <span class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">{{ totalPages || 1 }}</span>
                         </div>
@@ -226,7 +226,7 @@
                 class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-800 dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
             >
                 <button
-                    class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition"
+                    class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition dark:bg-gray-900 dark:text-gray-900"
                     @click="closeUserCard"
                 >
                     Close
@@ -277,7 +277,7 @@
                     <button
                         v-if="!isEvaluating"
                         @click="startEvaluation"
-                        class="px-3 py-1 text-gray-600 text-l rounded hover:text-yellow-700"
+                        class="px-3 py-1 text-gray-600 text-l rounded hover:text-yellow-700 dark:text-gray-400 dark:hover:text-yellow-400"
                     >
                         <font-awesome-icon :icon="faBolt" /> Actions
                     </button>
@@ -285,7 +285,7 @@
                     <button
                         v-if="isEvaluating"
                         @click="cancelEvaluation"
-                        class="px-3 py-1 bg-gray-400 text-black text-sm rounded hover:bg-gray-500"
+                        class="px-3 py-1 bg-gray-400 text-black text-sm rounded hover:bg-gray-500 dark:bg-gray-500 dark:text-gray-100"
                     >
                         Cancel
                     </button>
@@ -312,13 +312,13 @@
                 <div v-if="isEvaluating && !isEvaluationCompleted" class="mt-2 flex justify-end">
                     <button
                         @click="submitReturn"
-                        class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                        class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 dark:text-gray-900"
                     >
                         Return Selected Files
                     </button>
                     <button
                         @click="acceptApplication"
-                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:text-gray-900"
                     >
                         Clear Medical
                     </button>
@@ -329,7 +329,7 @@
                         <div class="mt-4 flex justify-end space-x-2">
                             <button
                                 @click="acceptApplication"
-                                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:text-gray-900"
                             >
                                 Clear Medical
                             </button>
@@ -371,7 +371,7 @@
                                 />
                                 <div
                                     v-else
-                                    class="h-16 flex items-center justify-center text-[10px] italic text-gray-400 border rounded"
+                                    class="h-16 flex items-center justify-center text-[10px] italic text-gray-400 border rounded dark:text-gray-200"
                                 >
                                     No Image
                                 </div>
@@ -389,7 +389,7 @@
                         >
                             Application History
                         </h4>
-                        <ul class="border-l-2 border-red-400 pl-3 space-y-2">
+                        <ul class="border-l-2 border-red-400 pl-3 space-y-2 dark:border-red-500">
                             <li
                                 v-for="(process, index) in selectedUser
                                     .application.processes"
@@ -419,13 +419,13 @@
                                 </p>
                                 <p
                                     v-if="process.notes"
-                                    class="text-xs text-gray-500 italic"
+                                    class="text-xs text-gray-500 italic dark:text-gray-300"
                                 >
                                     Note: {{ process.notes }} By:
                                     {{ process.performed_by.firstname }}
                                     {{ process.performed_by.lastname }}
                                 </p>
-                                <p class="text-xs text-gray-400">
+                                <p class="text-xs text-gray-400 dark:text-gray-200">
                                     {{ formatDate(process.created_at) }}
                                 </p>
                             </li>
@@ -438,7 +438,7 @@
         <transition name="fade">
             <div
                 v-if="snackbar.visible"
-                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded shadow-lg z-50"
+                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded shadow-lg z-50 dark:text-gray-900"
             >
                 {{ snackbar.message }}
             </div>
@@ -447,7 +447,7 @@
         <!-- Image Preview Modal -->
         <div
             v-if="showImageModal"
-            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 dark:bg-white"
             @click.self="closeImageModal"
         >
             <img
@@ -457,7 +457,7 @@
             />
             <button
                 @click="closeImageModal"
-                class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300"
+                class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300 dark:text-gray-900"
                 aria-label="Close preview"
             >
                 &times;

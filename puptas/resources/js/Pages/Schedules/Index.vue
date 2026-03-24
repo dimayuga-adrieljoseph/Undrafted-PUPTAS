@@ -318,12 +318,12 @@ function quickCreateToday() {
     <div class="mb-8">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h2 class="text-3xl font-bold text-gray-900">Schedule Manager</h2>
-          <p class="text-gray-600 mt-1">Manage and organize all your events and appointments</p>
+          <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-200">Schedule Manager</h2>
+          <p class="text-gray-600 mt-1 dark:text-gray-400">Manage and organize all your events and appointments</p>
         </div>
         <button
           @click="quickCreateToday"
-          class="inline-flex items-center gap-2 px-4 py-3 bg-[#9E122C] hover:bg-[#EE6A43] text-white rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
+          class="inline-flex items-center gap-2 px-4 py-3 bg-[#9E122C] hover:bg-[#EE6A43] text-white rounded-lg font-medium transition-colors shadow-sm hover:shadow-md dark:bg-gray-900 dark:text-gray-900"
         >
           <Plus class="w-5 h-5" />
           <span>Create Event</span>
@@ -332,38 +332,38 @@ function quickCreateToday() {
 
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-800">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600">Upcoming Events</p>
-              <p class="text-2xl font-bold text-gray-900 mt-1">{{ eventStats.upcoming }}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Upcoming Events</p>
+              <p class="text-2xl font-bold text-gray-900 mt-1 dark:text-gray-200">{{ eventStats.upcoming }}</p>
             </div>
-            <div class="p-3 bg-blue-50 rounded-lg">
-              <CalendarDays class="w-6 h-6 text-blue-600" />
+            <div class="p-3 bg-blue-50 rounded-lg dark:bg-blue-900">
+              <CalendarDays class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
         
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-800">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600">Past Events</p>
-              <p class="text-2xl font-bold text-gray-900 mt-1">{{ eventStats.past }}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Past Events</p>
+              <p class="text-2xl font-bold text-gray-900 mt-1 dark:text-gray-200">{{ eventStats.past }}</p>
             </div>
-            <div class="p-3 bg-gray-50 rounded-lg">
-              <Clock class="w-6 h-6 text-gray-600" />
+            <div class="p-3 bg-gray-50 rounded-lg dark:bg-gray-900">
+              <Clock class="w-6 h-6 text-gray-600 dark:text-gray-400" />
             </div>
           </div>
         </div>
         
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-800">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600">Most Common Type</p>
-              <p class="text-lg font-semibold text-gray-900 mt-1 capitalize">{{ eventStats.mostCommonType?.[0] || 'N/A' }}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Most Common Type</p>
+              <p class="text-lg font-semibold text-gray-900 mt-1 capitalize dark:text-gray-200">{{ eventStats.mostCommonType?.[0] || 'N/A' }}</p>
             </div>
-            <div class="p-3 bg-green-50 rounded-lg">
-              <Tag class="w-6 h-6 text-green-600" />
+            <div class="p-3 bg-green-50 rounded-lg dark:bg-green-900">
+              <Tag class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -375,10 +375,10 @@ function quickCreateToday() {
       <!-- Left Column - Calendar & Controls -->
       <div class="lg:w-2/3">
         <!-- Calendar Controls -->
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-6">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-6 dark:bg-gray-800 dark:border-gray-800">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div class="flex items-center gap-3">
-              <div class="flex bg-gray-100 rounded-lg p-1">
+              <div class="flex bg-gray-100 rounded-lg p-1 dark:bg-gray-800">
                 <button
                   @click="viewMode = 'month'"
                   :class="[
@@ -417,18 +417,18 @@ function quickCreateToday() {
             
             <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <div class="relative flex-1 sm:flex-none">
-                <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-200" />
                 <input
                   v-model="searchQuery"
                   type="text"
                   placeholder="Search events..."
-                  class="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                  class="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent dark:border-gray-600"
                 />
               </div>
               
               <select
                 v-model="filterType"
-                class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent dark:border-gray-600"
               >
                 <option value="all">All Types</option>
                 <option value="application">Application</option>
@@ -441,7 +441,7 @@ function quickCreateToday() {
           </div>
 
           <!-- Calendar -->
-          <div class="rounded-xl overflow-hidden border border-gray-200">
+          <div class="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
             <vue-cal
               :key="viewMode"
               :style="{ height: viewMode === 'month' ? '500px' : '600px' }"
@@ -498,10 +498,10 @@ function quickCreateToday() {
       <!-- Right Column - Upcoming & Past Events -->
       <div class="lg:w-1/3 space-y-6">
         <!-- Upcoming Events -->
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-800">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">Upcoming Events</h3>
-            <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-200">Upcoming Events</h3>
+            <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full font-medium dark:bg-blue-800 dark:text-blue-300">
               {{ upcomingEvents.length }}
             </span>
           </div>
@@ -510,7 +510,7 @@ function quickCreateToday() {
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9E122C] mx-auto"></div>
           </div>
           
-          <div v-else-if="upcomingEvents.length === 0" class="text-center py-8 text-gray-500">
+          <div v-else-if="upcomingEvents.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-300">
             <CalendarDays class="w-12 h-12 mx-auto mb-3 text-gray-300" />
             <p>No upcoming events</p>
           </div>
@@ -520,10 +520,10 @@ function quickCreateToday() {
               v-for="event in upcomingEvents"
               :key="event.id"
               @click="openEventForm(event)"
-              class="group p-4 border border-gray-200 rounded-lg hover:border-[#9E122C] hover:shadow-sm transition-all cursor-pointer"
+              class="group p-4 border border-gray-200 rounded-lg hover:border-[#9E122C] hover:shadow-sm transition-all cursor-pointer dark:border-gray-700"
             >
               <div class="flex justify-between items-start mb-2">
-                <h4 class="font-medium text-gray-900 group-hover:text-[#9E122C] transition-colors">
+                <h4 class="font-medium text-gray-900 group-hover:text-[#9E122C] transition-colors dark:text-gray-200">
                   {{ event.title }}
                 </h4>
                 <div class="flex items-center gap-2">
@@ -534,7 +534,7 @@ function quickCreateToday() {
                 </div>
               </div>
               
-              <div class="space-y-1 text-sm text-gray-600">
+              <div class="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                 <div class="flex items-center gap-2">
                   <CalendarDays class="w-4 h-4" />
                   <span>{{ formatDateTime(event.start) }}</span>
@@ -548,7 +548,7 @@ function quickCreateToday() {
               <div class="flex justify-between items-center mt-3">
                 <button
                   @click.stop="openEventForm(event)"
-                  class="text-sm text-[#9E122C] hover:text-[#EE6A43] font-medium inline-flex items-center gap-1"
+                  class="text-sm text-[#9E122C] hover:text-[#EE6A43] font-medium inline-flex items-center gap-1 dark:text-white"
                 >
                   View Details
                   <ChevronRight class="w-4 h-4" />
@@ -559,15 +559,15 @@ function quickCreateToday() {
         </div>
 
         <!-- Recent Past Events -->
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-800">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">Recent Past Events</h3>
-            <span class="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded-full font-medium">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-200">Recent Past Events</h3>
+            <span class="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded-full font-medium dark:bg-gray-800 dark:text-gray-300">
               {{ pastEvents.length }}
             </span>
           </div>
           
-          <div v-if="pastEvents.length === 0" class="text-center py-4 text-gray-500">
+          <div v-if="pastEvents.length === 0" class="text-center py-4 text-gray-500 dark:text-gray-300">
             <p>No past events</p>
           </div>
           
@@ -576,15 +576,15 @@ function quickCreateToday() {
               v-for="event in pastEvents"
               :key="event.id"
               @click="openEventForm(event)"
-              class="group p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              class="group p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer dark:border-gray-700 dark:hover:bg-gray-900"
             >
               <div class="flex justify-between items-center">
-                <h4 class="font-medium text-gray-700">{{ event.title }}</h4>
+                <h4 class="font-medium text-gray-700 dark:text-gray-400">{{ event.title }}</h4>
                 <span :class="['px-2 py-1 rounded text-xs font-medium opacity-75', getEventColor(event.type)]">
                   {{ event.type }}
                 </span>
               </div>
-              <p class="text-sm text-gray-500 mt-1">{{ formatDateTime(event.start) }}</p>
+              <p class="text-sm text-gray-500 mt-1 dark:text-gray-300">{{ formatDateTime(event.start) }}</p>
             </div>
           </div>
         </div>
@@ -595,18 +595,18 @@ function quickCreateToday() {
     <transition name="fade">
       <div
         v-if="eventListModalOpen"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 dark:bg-white"
         @click.self="closeEventListModal"
       >
-        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden">
-          <div class="p-6 border-b border-gray-200">
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden dark:bg-gray-800">
+          <div class="p-6 border-b border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between">
-              <h3 class="text-xl font-semibold text-gray-900">
+              <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
                 Events on {{ selectedDateEvents[0] ? toLocalDateString(selectedDateEvents[0].start) : '' }}
               </h3>
               <button
                 @click="closeEventListModal"
-                class="text-gray-400 hover:text-gray-600"
+                class="text-gray-400 hover:text-gray-600 dark:text-gray-200 dark:hover:text-gray-400"
               >
                 <X class="w-6 h-6" />
               </button>
@@ -619,35 +619,35 @@ function quickCreateToday() {
                 v-for="event in selectedDateEvents"
                 :key="event.id"
                 @click="openEventForm(event)"
-                class="p-4 border border-gray-200 rounded-lg hover:border-[#9E122C] hover:shadow-sm transition-all cursor-pointer"
+                class="p-4 border border-gray-200 rounded-lg hover:border-[#9E122C] hover:shadow-sm transition-all cursor-pointer dark:border-gray-700"
               >
                 <div class="flex justify-between items-start mb-2">
-                  <h4 class="font-medium text-gray-900">{{ event.title }}</h4>
+                  <h4 class="font-medium text-gray-900 dark:text-gray-200">{{ event.title }}</h4>
                   <span :class="['px-2 py-1 rounded text-xs font-medium', getEventColor(event.type)]">
                     {{ event.type }}
                   </span>
                 </div>
-                <div class="text-sm text-gray-600">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
                   {{ formatTimeOnly(event.start) }} - {{ formatTimeOnly(event.end) }}
                 </div>
-                <div v-if="event.location" class="text-sm text-gray-500 mt-1">
+                <div v-if="event.location" class="text-sm text-gray-500 mt-1 dark:text-gray-300">
                   {{ event.location }}
                 </div>
               </li>
             </ul>
           </div>
           
-          <div class="p-6 border-t border-gray-200 bg-gray-50">
+          <div class="p-6 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
             <div class="flex gap-3">
               <button
                 @click="openEventForm(null, selectedDateEvents[0] ? toLocalDateString(selectedDateEvents[0].start) : '')"
-                class="flex-1 px-4 py-3 rounded-lg bg-[#9E122C] text-white hover:bg-[#EE6A43] transition-colors font-medium"
+                class="flex-1 px-4 py-3 rounded-lg bg-[#9E122C] text-white hover:bg-[#EE6A43] transition-colors font-medium dark:bg-gray-900 dark:text-gray-900"
               >
                 Create New Event
               </button>
               <button
                 @click="closeEventListModal"
-                class="px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors font-medium"
+                class="px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors font-medium dark:border-gray-600 dark:hover:bg-gray-900"
               >
                 Cancel
               </button>
@@ -659,10 +659,10 @@ function quickCreateToday() {
 
     <!-- Create/Edit Modal -->
     <transition name="fade">
-      <div v-if="modalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden" @click.stop>
+      <div v-if="modalOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 dark:bg-white">
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden dark:bg-gray-800" @click.stop>
           <!-- Modal Header -->
-          <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-[#9E122C] to-[#EE6A43] text-white">
+          <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-[#9E122C] to-[#EE6A43] text-white dark:border-gray-700 dark:text-gray-900">
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-xl font-semibold">
@@ -674,7 +674,7 @@ function quickCreateToday() {
               </div>
               <button
                 @click="closeModal"
-                class="text-white hover:text-white/80"
+                class="text-white hover:text-white/80 dark:text-gray-900"
               >
                 <X class="w-6 h-6" />
               </button>
@@ -686,14 +686,14 @@ function quickCreateToday() {
             <form @submit.prevent="saveEvent" class="space-y-5">
               <!-- Event Name -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                   Event Name *
                 </label>
                 <input
                   v-model="form.name"
                   type="text"
                   required
-                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition dark:border-gray-600"
                   placeholder="Enter event name"
                 />
               </div>
@@ -701,37 +701,37 @@ function quickCreateToday() {
               <!-- Date & Time -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                     Date *
                   </label>
                   <input
                     v-model="form.date"
                     type="date"
                     required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition dark:border-gray-600"
                   />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                       Start Time *
                     </label>
                     <input
                       v-model="form.startTime"
                       type="time"
                       required
-                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition"
+                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition dark:border-gray-600"
                     />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                       End Time *
                     </label>
                     <input
                       v-model="form.endTime"
                       type="time"
                       required
-                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition"
+                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition dark:border-gray-600"
                     />
                   </div>
                 </div>
@@ -740,13 +740,13 @@ function quickCreateToday() {
               <!-- Type & Priority -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                     Event Type *
                   </label>
                   <select
                     v-model="form.type"
                     required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition dark:border-gray-600"
                   >
                     <option value="application">Application</option>
                     <option value="interview">Interview</option>
@@ -756,12 +756,12 @@ function quickCreateToday() {
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                     Priority
                   </label>
                   <select
                     v-model="form.priority"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition dark:border-gray-600"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -772,15 +772,15 @@ function quickCreateToday() {
 
               <!-- Location -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                   Location
                 </label>
                 <div class="relative">
-                  <MapPin class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <MapPin class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-200" />
                   <input
                     v-model="form.location"
                     type="text"
-                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition"
+                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition dark:border-gray-600"
                     placeholder="Enter location (optional)"
                   />
                 </div>
@@ -788,15 +788,15 @@ function quickCreateToday() {
 
               <!-- Description -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                   Description
                 </label>
                 <div class="relative">
-                  <FileText class="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                  <FileText class="absolute left-3 top-3 w-5 h-5 text-gray-400 dark:text-gray-200" />
                   <textarea
                     v-model="form.description"
                     rows="4"
-                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition resize-none"
+                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-transparent transition resize-none dark:border-gray-600"
                     placeholder="Add event description (optional)"
                   ></textarea>
                 </div>
@@ -805,13 +805,13 @@ function quickCreateToday() {
           </div>
 
           <!-- Modal Footer -->
-          <div class="p-6 border-t border-gray-200 bg-gray-50">
+          <div class="p-6 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
             <div class="flex flex-col sm:flex-row gap-3">
               <div v-if="editingEvent" class="w-full sm:w-auto">
                 <button
                   type="button"
                   @click="deleteEvent(editingEvent.id)"
-                  class="w-full px-5 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors flex items-center justify-center gap-2"
+                  class="w-full px-5 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors flex items-center justify-center gap-2 dark:text-gray-900"
                 >
                   <Trash2 class="w-4 h-4" />
                   Delete Event
@@ -822,14 +822,14 @@ function quickCreateToday() {
                 <button
                   type="button"
                   @click="closeModal"
-                  class="px-5 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 font-medium transition-colors"
+                  class="px-5 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 font-medium transition-colors dark:border-gray-600 dark:hover:bg-gray-900"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   @click="saveEvent"
-                  class="px-5 py-3 rounded-lg bg-[#9E122C] hover:bg-[#EE6A43] text-white font-medium transition-colors"
+                  class="px-5 py-3 rounded-lg bg-[#9E122C] hover:bg-[#EE6A43] text-white font-medium transition-colors dark:bg-gray-900 dark:text-gray-900"
                 >
                   {{ editingEvent ? 'Update Event' : 'Create Event' }}
                 </button>

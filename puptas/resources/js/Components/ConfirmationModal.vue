@@ -35,8 +35,7 @@ const close = () => {
         >
             <div class="sm:flex sm:items-start">
                 <div
-                    class="mx-auto shrink-0 flex items-center justify-center
-                        size-12 rounded-full bg-red-100 sm:mx-0 sm:size-10"
+                    class="mx-auto shrink-0 flex items-center justify-center size-12 rounded-full bg-red-100 sm:mx-0 sm:size-10 dark:bg-red-800"
                 >
                     <svg
                         class="size-6 text-red-600 dark:text-red-400"
@@ -56,8 +55,7 @@ const close = () => {
 
                 <div class="mt-3 text-center sm:mt-0 sm:ms-4 sm:text-start">
                     <h3
-                        class="text-lg font-medium text-gray-900
-                            dark:text-gray-100"
+                        class="text-lg font-medium text-gray-900 dark:text-gray-100"
                     >
                         <slot name="title" />
                     </h3>
@@ -70,8 +68,7 @@ const close = () => {
         </div>
 
         <div
-            class="flex flex-row justify-end px-6 py-4 bg-gray-100
-                dark:bg-gray-800 text-end"
+            class="flex flex-row justify-end px-6 py-4 bg-gray-100 dark:bg-gray-800 text-end"
         >
             <slot name="footer" />
         </div>

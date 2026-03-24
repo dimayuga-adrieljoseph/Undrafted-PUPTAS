@@ -15,38 +15,33 @@ use Illuminate\Support\Facades\Auth;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        //
-    }
+    public function register(): void {}
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(UrlGenerator $url): void
     {
         Auth::provider('idp', function ($app, array $config) {
             return new \App\Auth\IdpUserProvider();
         });
-        // Force HTTPS in production
+
         if ($this->app->environment('production')) {
             $url->forceScheme('https');
         }
 
-        // Audit trail — automatically log login & logout events
         Event::listen(Login::class,  LogUserLogin::class);
         Event::listen(Logout::class, LogUserLogout::class);
 
+        RateLimiter::for('external-api-second', function ($request) {
+            return Limit::perSecond((int) config('services.external_api.second_limit', 5))
+                ->by((string) $request->ip());
+        });
+
         RateLimiter::for('external-api-minute', function ($request) {
-            return Limit::perMinute((int) config('services.external_api.minute_limit', 20))
+            return Limit::perMinute((int) config('services.external_api.minute_limit', 80))
                 ->by((string) $request->ip());
         });
 
         RateLimiter::for('external-api-daily', function ($request) {
-            return Limit::perDay((int) config('services.external_api.daily_limit', 200))
+            return Limit::perDay((int) config('services.external_api.daily_limit', 1500))
                 ->by((string) $request->ip());
         });
     }

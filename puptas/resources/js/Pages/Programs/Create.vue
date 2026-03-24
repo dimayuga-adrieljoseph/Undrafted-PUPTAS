@@ -12,7 +12,7 @@
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <!-- Form Header -->
         <div class="px-6 py-4 bg-gradient-to-r from-[#9E122C] to-[#b51834]">
-          <h3 class="text-lg font-semibold text-white flex items-center">
+          <h3 class="text-lg font-semibold text-white flex items-center dark:text-gray-900">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
@@ -29,7 +29,7 @@
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Program Code <span class="text-red-500">*</span>
+                    Program Code <span class="text-red-500 dark:text-red-300">*</span>
                   </label>
                   <input 
                     v-model="newProgram.code" 
@@ -42,7 +42,7 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Program Name <span class="text-red-500">*</span>
+                    Program Name <span class="text-red-500 dark:text-red-300">*</span>
                   </label>
                   <input 
                     v-model="newProgram.name" 
@@ -59,10 +59,10 @@
                   </label>
                   <div class="relative">
                     <div class="min-h-[42px] w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 flex flex-wrap gap-2 cursor-pointer" @click="showStrandDropdown = !showStrandDropdown">
-                      <span v-if="newProgram.strand_ids.length === 0" class="text-gray-400">Select strands...</span>
-                      <span v-for="strandId in newProgram.strand_ids" :key="strandId" class="px-2 py-1 bg-[#9E122C]/10 text-[#9E122C] rounded text-sm flex items-center gap-1">
+                      <span v-if="newProgram.strand_ids.length === 0" class="text-gray-400 dark:text-gray-200">Select strands...</span>
+                      <span v-for="strandId in newProgram.strand_ids" :key="strandId" class="px-2 py-1 bg-[#9E122C]/10 text-[#9E122C] rounded text-sm flex items-center gap-1 dark:text-white">
                         {{ getStrandName(strandId) }}
-                        <button type="button" @click.stop="removeStrand(strandId)" class="hover:text-red-600">
+                        <button type="button" @click.stop="removeStrand(strandId)" class="hover:text-red-600 dark:hover:text-red-400">
                           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                           </svg>
@@ -71,10 +71,10 @@
                     </div>
                     <div v-if="showStrandDropdown" class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
                       <div v-for="strand in availableStrands" :key="strand.id" class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2" @click="toggleStrand(strand.id)">
-                        <input type="checkbox" :checked="newProgram.strand_ids.includes(strand.id)" class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" @click.stop>
+                        <input type="checkbox" :checked="newProgram.strand_ids.includes(strand.id)" class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:text-white" @click.stop>
                         <span>{{ strand.code }} - {{ strand.name }}</span>
                       </div>
-                      <div v-if="availableStrands.length === 0" class="px-3 py-2 text-gray-500">
+                      <div v-if="availableStrands.length === 0" class="px-3 py-2 text-gray-500 dark:text-gray-300">
                         No strands available
                       </div>
                     </div>
@@ -84,7 +84,7 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Available Slots <span class="text-red-500">*</span>
+                    Available Slots <span class="text-red-500 dark:text-red-300">*</span>
                   </label>
                   <input 
                     v-model.number="newProgram.slots" 
@@ -184,7 +184,7 @@
               <button 
                 type="submit"
                 :disabled="isSubmitting"
-                class="px-6 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="px-6 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -205,7 +205,7 @@
           <div>
             <h4 class="text-sm font-semibold text-blue-700 dark:text-blue-300">About Program Requirements</h4>
             <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-              Fields marked with <span class="text-red-500">*</span> are required. Grade requirements should be entered as numeric values.
+              Fields marked with <span class="text-red-500 dark:text-red-300">*</span> are required. Grade requirements should be entered as numeric values.
               Leave requirement fields empty if not applicable to the program.
             </p>
           </div>

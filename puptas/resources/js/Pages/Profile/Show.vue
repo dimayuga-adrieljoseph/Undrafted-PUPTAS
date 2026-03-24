@@ -53,7 +53,7 @@ const Layout = computed(() => {
 <template>
     <component :is="Layout" title="Profile">
         <template #header>
-            <h2 class="font-semibold text-xl text-[#9E122C] leading-tight">
+            <h2 class="font-semibold text-xl text-[#9E122C] leading-tight dark:text-white">
                 Profile
             </h2>
         </template>

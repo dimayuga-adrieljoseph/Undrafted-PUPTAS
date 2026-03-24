@@ -58,7 +58,7 @@ const updatePassword = () => {
                     class="mt-1 block w-full"
                     autocomplete="current-password"
                 />
-                <p class="text-xs text-gray-500 mt-1">Enter your existing password to confirm changes.</p>
+                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">Enter your existing password to confirm changes.</p>
                 <InputError :message="form.errors.current_password" class="mt-2" />
             </div>
 
@@ -72,7 +72,7 @@ const updatePassword = () => {
                     class="mt-1 block w-full"
                     autocomplete="new-password"
                 />
-                <p class="text-xs text-gray-500 mt-1">Choose a strong password with at least 8 characters.</p>
+                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">Choose a strong password with at least 8 characters.</p>
                 <InputError :message="form.errors.password" class="mt-2" />
             </div>
 
@@ -85,7 +85,7 @@ const updatePassword = () => {
                     class="mt-1 block w-full"
                     autocomplete="new-password"
                 />
-                <p class="text-xs text-gray-500 mt-1">Re-enter the new password to confirm it matches.</p>
+                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">Re-enter the new password to confirm it matches.</p>
                 <InputError :message="form.errors.password_confirmation" class="mt-2" />
             </div>
         </template>
