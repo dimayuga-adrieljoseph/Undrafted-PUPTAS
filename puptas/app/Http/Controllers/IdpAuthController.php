@@ -54,22 +54,7 @@ class IdpAuthController extends Controller
         $authorizePath = $idpConfig['authorize_path'] ?? '/login';
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
-        \Log::info('Redirecting to IDP authorization endpoint', [
-            'authorize_url' => $authorizeUrl,
-            'client_id_sent' => true,
-            'redirect_uri' => $idpConfig['redirect_uri'] ?? null,
-        ]);
-
         return redirect()->away($authorizeUrl);
-    }
-
-    /**
-     * Legacy redirect method - redirects to the login method.
-     * Kept for backward compatibility.
-     */
-    public function redirect()
-    {
-        return $this->login();
     }
 
     /**
@@ -114,11 +99,6 @@ class IdpAuthController extends Controller
             // Build the token endpoint URL using configurable path
             $tokenPath = $idpConfig['token_path'] ?? '/api/v1/auth/token';
             $tokenUrl = rtrim($idpConfig['base_url'], '/') . $tokenPath;
-
-            \Log::info('Exchanging authorization code for tokens', [
-                'token_url' => $tokenUrl,
-                'client_id' => $idpConfig['client_id'],
-            ]);
 
             // Prepare the token request payload
             $tokenPayload = [
@@ -166,11 +146,7 @@ class IdpAuthController extends Controller
                 ]);
             }
 
-            \Log::info('Successfully obtained access token from IDP', [
-                'has_access_token' => !empty($accessToken),
-                'token_type'       => $tokenData['token_type'] ?? null,
-                'expires_in'       => $tokenData['expires_in'] ?? null,
-            ]);
+            \Log::info('IDP token exchange successful');
 
             $refreshToken = $tokenData['refresh_token'] ?? null;
             $expiresIn = (int) ($tokenData['expires_in'] ?? 3600);
@@ -182,15 +158,9 @@ class IdpAuthController extends Controller
                 'token_expires_at' => now()->addSeconds($expiresIn - 60)->timestamp, // Refresh 60 seconds before actual expiration
             ]);
 
-            \Log::info('Access and refresh tokens stored in session');
-
             // Fetch user info from IDP using the access token
             $userPath = $idpConfig['user_path'] ?? '/api/v1/user';
             $userUrl = rtrim($idpConfig['base_url'], '/') . $userPath;
-
-            \Log::info('Fetching user info from IDP', [
-                'user_url' => $userUrl,
-            ]);
 
             $userResponse = Http::withToken($accessToken)
                 ->acceptJson()
@@ -271,9 +241,6 @@ class IdpAuthController extends Controller
 
                 // Check for new applicants requiring onboarding
                 $hasProfile = \App\Models\ApplicantProfile::where('user_id', $idpUser['id'])->exists();
-
-                // If you are completely sure the IDP should have provided an admin role, uncomment the dd() below to see what your IDP is ACTUALLY sending!
-                // dd('IDP User Payload (No Role Matched): ', $idpUser, 'Calculated Role string:', $idpRole);
 
                 if (!$hasProfile) {
                     \Log::info('Intercepting first-time IDP applicant for registration flow', ['id' => $idpUser['id']]);

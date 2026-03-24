@@ -22,7 +22,6 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\Notify\Notify;
 use App\Http\Controllers\PrivacyConsentController;
 use App\Http\Controllers\AuditLogController;
-use App\Http\Controllers\CallbackController;
 use App\Http\Controllers\IdpAuthController;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureAdmin;
@@ -37,10 +36,6 @@ Route::get('/', function () {
     ]);
 })->middleware('guest')->name('welcome');
 
-Route::get('/test-login', function () {
-    return 'working';
-});
-
 // IDP Authentication Routes - Public access for OAuth2 login flow
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->middleware('guest')
@@ -54,14 +49,10 @@ Route::post('/auth/idp/logout', [IdpAuthController::class, 'logout'])
     ->middleware('auth')
     ->name('idp.logout');
 
-// Backward-compatible callback aliases in case IDP client is configured with older paths.
+// Backward-compatible callback alias in case IDP client is configured with older paths.
 Route::get('/callback', [IdpAuthController::class, 'callback'])
     ->middleware('guest')
     ->name('idp.callback.legacy');
-
-Route::get('/api/callback', [IdpAuthController::class, 'callback'])
-    ->middleware('guest')
-    ->name('idp.callback.api-legacy');
 
 // View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
@@ -89,7 +80,7 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $request->validate(['email' => 'required|email']);
     $exists = \App\Models\User::where('email', $request->email)->exists();
     return response()->json(['taken' => $exists]);
-});
+})->middleware('auth');
 
 Route::middleware(['auth'])->group(function () {
     // Privacy Consent Routes - available to all authenticated users
@@ -255,8 +246,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/test-passers/upload', [TestPasserController::class, 'upload'])->name('upload');
 });
 
-Route::put('/test-passers/{test_passer}', [TestPasserController::class, 'update'])->name('test-passers.update');
-Route::post('/test-passers-store', [TestPasserController::class, 'store']);
+Route::middleware(['auth'])->group(function () {
+    Route::put('/test-passers/{test_passer}', [TestPasserController::class, 'update'])->name('test-passers.update');
+    Route::post('/test-passers-store', [TestPasserController::class, 'store']);
+});
 
 Route::resource('schedules', ScheduleController::class)
     ->names([
@@ -286,9 +279,6 @@ Route::middleware(['auth', 'role:3'])->group(function () {
         ->name('evaluator.dashboard');
 
     Route::get('/evaluator-applications', function () {
-        if (Auth::user()?->role_id !== 3) {
-            return redirect()->back()->with('error', 'Unauthorized access.');
-        }
         return Inertia::render('Applications/Evaluator', [
             'user' => Auth::user(),
         ]);
@@ -301,13 +291,7 @@ Route::middleware(['auth', 'role:3'])->group(function () {
     Route::post('/dashboard/return-files/{user}', [EvaluatorDashboardController::class, 'returnApplication'])->name('return.files');
 });
 
-Route::get('/test-update-file/{fileId}', function ($fileId) {
-    $file = \App\Models\UserFile::findOrFail($fileId);
-    $file->status = 'returned';
-    $file->comment = 'Test note';
-    $file->save();
-    return $file;
-});
+
 
 // Interviewer Routes - Protected by auth middleware and role verification
 Route::middleware(['auth', 'role:4'])->group(function () {
@@ -315,9 +299,6 @@ Route::middleware(['auth', 'role:4'])->group(function () {
         ->name('interviewer.dashboard');
 
     Route::get('/interviewer-applications', function () {
-        if (Auth::user()?->role_id !== 4) {
-            return redirect()->back()->with('error', 'Unauthorized access.');
-        }
         return Inertia::render('Applications/Interviewer', [
             'user' => Auth::user(),
         ]);
@@ -330,7 +311,6 @@ Route::middleware(['auth', 'role:4'])->group(function () {
     Route::post('/interviewer-dashboard/transfer/{id}', [InterviewerDashboardController::class, 'transfertoProgram']);
     Route::get('/interviewer-dashboard/programs', [InterviewerDashboardController::class, 'getPrograms']);
 });
-Route::get('/user/eligible-programs', [ConfirmationController::class, 'getEligiblePrograms']);
 
 // Medical Routes - Protected by auth middleware and role verification
 Route::middleware(['auth', 'role:5'])->group(function () {
@@ -338,9 +318,6 @@ Route::middleware(['auth', 'role:5'])->group(function () {
         ->name('medical.dashboard');
 
     Route::get('/medical-applications', function () {
-        if (Auth::user()?->role_id !== 5) {
-            return redirect()->back()->with('error', 'Unauthorized access.');
-        }
         return Inertia::render('Applications/Medical', [
             'user' => Auth::user(),
         ]);
@@ -352,15 +329,13 @@ Route::middleware(['auth', 'role:5'])->group(function () {
     Route::get('/medical-dashboard/application/{id}', [MedicalDashboardController::class, 'getUserFiles']);
     Route::post('/medical/return-files/{user}', [MedicalDashboardController::class, 'returnApplication'])->name('medical-return.files');
 });
+
 // Record Staff Routes - Protected by auth middleware and role verification
 Route::middleware(['auth', 'role:6'])->group(function () {
     Route::get('/record-dashboard', [RecordStaffDashboardController::class, 'index'])
         ->name('record.dashboard');
 
     Route::get('/recordstaff-applications', function () {
-        if (Auth::user()?->role_id !== 6) {
-            return redirect()->back()->with('error', 'Unauthorized access.');
-        }
         return Inertia::render('Applications/Records', [
             'user' => Auth::user(),
         ]);
@@ -386,16 +361,15 @@ Route::middleware(['auth', 'role:2,4,7'])->group(function () {
     Route::post('/record-dashboard/change-course/{id}', [RecordStaffDashboardController::class, 'changeCourse']);
 });
 
+// Eligible programs - requires authentication
+Route::get('/user/eligible-programs', [ConfirmationController::class, 'getEligiblePrograms'])
+    ->middleware('auth');
+
 // User Management Routes (Protected - Admin Only)
 Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     // Admin Dashboard Routes
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
-
-    // Legacy routes (keep for backward compatibility if needed)
-    Route::get('/legacy/manage-users', [UserController::class, 'index'])->name('users.legacy');
-    Route::get('/legacy/add-user', [UserController::class, 'create'])->name('legacy.add_user');
-    Route::post('/legacy/add-user/store', [UserController::class, 'store'])->name('add_user.store');
 
     // RESTful User Routes with proper HTTP methods
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -405,12 +379,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-    // Legacy edit/update routes for compatibility (optional)
-    Route::get('/legacy/users/{id}/edit', [UserController::class, 'edit'])->name('legacy.users.edit');
-    Route::post('/legacy/users/{id}/update', [UserController::class, 'update'])->name('legacy.users.update');
-    Route::delete('/legacy/users/{id}/delete', [UserController::class, 'destroy'])->name('legacy.users.destroy');
-
-    // Assign interviewer and evaluator routes (keep as POST if they're working)
+    // Assign interviewer and evaluator routes
     Route::get('/admin/users/create', [AssignController::class, 'createUserForm'])->name('admin.users.create');
     Route::post('/admin/users/store', [AssignController::class, 'storeUser'])->name('admin.users.store');
     Route::get('/admin/users/edit/{id}', [AssignController::class, 'editUser'])->name('admin.users.edit');
@@ -425,6 +394,3 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit-logs.show');
 });
 
-// Callback Routes - Public access for loading screen with API callback
-Route::get('/callback', [CallbackController::class, 'index']);
-Route::post('/api/callback', [CallbackController::class, 'handle']);

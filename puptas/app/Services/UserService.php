@@ -2,13 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\ApplicantProfile;
 use App\Models\Program;
-use App\Models\AuditLog;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 /**
  * User Service
@@ -330,114 +327,6 @@ class UserService
         return \App\Models\StaffProfile::count() + ApplicantProfile::count();
     }
 
-    /**
-     * Create a new user
-     *
-     * @param array $data
-     * @return User
-     */
-    public function createUser(array $data)
-    {
-        throw new \Exception('User creation is now managed fully via the external IDP. Local creation is disabled.');
-    }
-
-    /**
-     * Update user information
-     *
-     * @param int $userId
-     * @param array $data
-     * @return User
-     */
-    public function updateUser(int $userId, array $data): User
-    {
-        return DB::transaction(function () use ($userId, $data) {
-            $user = User::findOrFail($userId);
-
-            // Capture old values for audit trail
-            $oldValues = [
-                'email' => $user->email,
-                'firstname' => $user->firstname,
-                'lastname' => $user->lastname,
-                'middlename' => $user->middlename,
-                'contactnumber' => $user->contactnumber,
-                'role_id' => $user->role_id,
-            ];
-
-            $updateData = [
-                'firstname' => $data['firstname'],
-                'lastname' => $data['lastname'],
-                'middlename' => $data['middlename'] ?? null,
-                'email' => $data['email'],
-                'contactnumber' => $data['contactnumber'],
-            ];
-
-            if (!empty($data['password'])) {
-                $updateData['password'] = Hash::make($data['password']);
-            }
-
-            $user->update($updateData);
-
-            // Capture new values for audit trail
-            $newValues = [
-                'email' => $user->email,
-                'firstname' => $user->firstname,
-                'lastname' => $user->lastname,
-                'middlename' => $user->middlename,
-                'contactnumber' => $user->contactnumber,
-                'role_id' => $user->role_id,
-                'password_changed' => !empty($data['password']),
-                'updated_by' => auth()->user()->email ?? 'system',
-            ];
-
-            // Audit log for user update — handled in UserController via AuditLogService
-
-            return $user->fresh();
-        });
-    }
-
-    /**
-     * Delete a user
-     *
-     * @param int $userId
-     * @return bool
-     */
-    public function deleteUser(int $userId): bool
-    {
-        return DB::transaction(function () use ($userId) {
-            $user = User::findOrFail($userId);
-
-            // Capture user data before deletion for audit trail
-            $deletedUserData = [
-                'email' => $user->email,
-                'firstname' => $user->firstname,
-                'lastname' => $user->lastname,
-                'middlename' => $user->middlename,
-                'role_id' => $user->role_id,
-                'contactnumber' => $user->contactnumber,
-                'deleted_by' => auth()->user()->email ?? 'system',
-            ];
-
-            $deleted = $user->delete();
-
-            // Audit log for deletion — handled in UserController via AuditLogService
-
-            return $deleted;
-        });
-    }
-
-    /**
-     * Log user listing view to audit log
-     *
-     * @param int|string $actorId
-     * @param int $totalUsersViewed
-     * @return void
-     */
-    public function logUserListingView(int|string $actorId, int $totalUsersViewed): void
-    {
-        // Intentionally left as a no-op.
-        // VIEW events are not part of the new audit trail schema.
-        // CRUD events are logged directly via AuditLogService in the controller.
-    }
 
     /**
      * Get role definitions

@@ -81,9 +81,6 @@ class UserController extends Controller
         $roles = $this->userService->getRoleDefinitions();
         $totalUsers = $this->userService->getTotalUserCount();
 
-        // Audit log for viewing sensitive user data
-        $this->userService->logUserListingView(auth()->id(), $users->count());
-
         return Inertia::render('UserManagement/ManageUsers', [
             'users' => $users,
             'userCountsByRole' => $userCountsByRole,
