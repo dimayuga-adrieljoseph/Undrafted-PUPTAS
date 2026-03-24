@@ -1090,32 +1090,6 @@
         </AppLayout>
     </div>
 
-    <!-- Floating Action Button -->
-    <button
-        @click.prevent="openAddModal"
-        class="fixed bottom-6 right-6 bg-[#9E122C] hover:bg-[#800918] text-white rounded-full w-16 h-16 flex items-center justify-center shadow-2xl hover:shadow-3xl transition-all duration-200 transform hover:scale-105 group z-40 dark:bg-gray-900 dark:text-gray-900"
-        aria-label="Add New Passer"
-    >
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-8 w-8"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-        >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        <span
-            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-800 px-3 py-2 text-sm text-white opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 dark:text-gray-900"
-        >
-            Add New Passer
-        </span>
-    </button>
-
     <!-- Scroll Navigation -->
     <div class="fixed right-4 top-1/2 -translate-y-1/2 space-y-2 z-30">
         <button
