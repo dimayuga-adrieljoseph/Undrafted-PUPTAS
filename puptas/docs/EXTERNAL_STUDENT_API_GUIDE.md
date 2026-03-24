@@ -4,7 +4,10 @@
 This guide documents the implemented External Student API feature for sharing officially enrolled student records with external systems (for example, Guidance).
 
 ## Implemented Scope
-- Endpoint: `GET /api/v1/students`
+- Endpoints:
+  - `GET /api/v1/students` (disabled/deprecated; returns 410)
+  - `GET /api/v1/students/{studentNumber}` (single student per request)
+  - `GET /api/v1/students/idp/{idpUserId}` (single student per request via IDP ID)
 - Authentication: Shared bearer token from environment variable
 - Data scope: Only students whose application `enrollment_status` is `officially_enrolled`
 - Pagination: Supported (`page`, `per_page`)
@@ -45,8 +48,15 @@ php artisan config:clear
 ## API Request
 
 ### URL
-- Local: `http://127.0.0.1:8000/api/v1/students`
-- Deployed: `https://<your-domain>/api/v1/students`
+- List endpoint:
+  - Local: `http://127.0.0.1:8000/api/v1/students`
+  - Deployed: `https://<your-domain>/api/v1/students`
+- Single-student endpoint:
+  - Local: `http://127.0.0.1:8000/api/v1/students/{studentNumber}`
+  - Deployed: `https://<your-domain>/api/v1/students/{studentNumber}`
+- IDP-student endpoint:
+  - Local: `http://127.0.0.1:8000/api/v1/students/idp/{idpUserId}`
+  - Deployed: `https://<your-domain>/api/v1/students/idp/{idpUserId}`
 
 ### Headers
 - `Authorization: Bearer <EXTERNAL_API_TOKEN>`
@@ -56,6 +66,8 @@ php artisan config:clear
 - `per_page` (optional, integer, min 1, max 200, default 100)
 - `page` (optional, integer, min 1)
 - `updated_since` (optional, date)
+
+Note: Query parameters are for list endpoint only.
 
 Example:
 
@@ -120,6 +132,9 @@ Authorization: Bearer <EXTERNAL_API_TOKEN>
 ```
 
 - `429 Too Many Requests` when rate limit is exceeded.
+- `404 Student not found` for single-student endpoint when missing or not officially enrolled.
+- `404 Student not found` for IDP endpoint when missing or not officially enrolled.
+- `410 Gone` for deprecated list endpoint (`GET /api/v1/students`).
 
 ## Audit Log Behavior
 Audit records are written to the existing `audit_logs` table and shown in SuperAdmin Audit Logs (`/admin/audit-logs`):
