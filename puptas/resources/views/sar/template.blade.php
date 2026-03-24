@@ -348,5 +348,6 @@
             Generated: {{ now()->format('F d, Y h:i A') }} | Reference: {{ $reference_number }}
         </div>
     </div>
+    @include('partials.sienna-widget')
 </body>
 </html>

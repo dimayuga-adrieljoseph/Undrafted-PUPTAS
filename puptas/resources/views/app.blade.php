@@ -22,5 +22,6 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
+        @include('partials.sienna-widget')
     </body>
 </html>
