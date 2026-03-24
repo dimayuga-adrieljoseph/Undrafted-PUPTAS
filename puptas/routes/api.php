@@ -79,9 +79,11 @@ Route::post('/store-grades', [GradesController::class, 'store']);
 use App\Http\Controllers\UserController;
 
 Route::prefix('v1')
-    ->middleware(['external.api.token', 'throttle:external-api-minute', 'throttle:external-api-daily'])
+    ->middleware(['external.api.token', 'throttle:external-api-second', 'throttle:external-api-minute', 'throttle:external-api-daily'])
     ->group(function () {
         Route::get('/students', [ExternalStudentApiController::class, 'index']);
+        Route::get('/students/idp/{idpUserId}', [ExternalStudentApiController::class, 'showByIdpUserId']);
+        Route::get('/students/{studentNumber}', [ExternalStudentApiController::class, 'showByStudentNumber']);
     });
 
 // Route::get('/user-stats', [UserController::class, 'getUserStats']);

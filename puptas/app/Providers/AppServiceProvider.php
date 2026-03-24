@@ -36,13 +36,18 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Login::class,  LogUserLogin::class);
         Event::listen(Logout::class, LogUserLogout::class);
 
+        RateLimiter::for('external-api-second', function ($request) {
+            return Limit::perSecond((int) config('services.external_api.second_limit', 5))
+                ->by((string) $request->ip());
+        });
+
         RateLimiter::for('external-api-minute', function ($request) {
-            return Limit::perMinute((int) config('services.external_api.minute_limit', 20))
+            return Limit::perMinute((int) config('services.external_api.minute_limit', 80))
                 ->by((string) $request->ip());
         });
 
         RateLimiter::for('external-api-daily', function ($request) {
-            return Limit::perDay((int) config('services.external_api.daily_limit', 200))
+            return Limit::perDay((int) config('services.external_api.daily_limit', 1500))
                 ->by((string) $request->ip());
         });
     }

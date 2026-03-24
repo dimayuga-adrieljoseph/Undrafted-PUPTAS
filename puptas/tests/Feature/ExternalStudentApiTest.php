@@ -19,54 +19,105 @@ test('external students endpoint requires valid token', function () {
         ->toBeTrue();
 });
 
-test('external students endpoint returns officially enrolled students with student number', function () {
+test('external students list endpoint is gone and points to single-student endpoint', function () {
+    config()->set('services.external_api.token', 'test-shared-token');
+
+    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students');
+
+    $response->assertStatus(410)
+        ->assertJsonPath('message', 'This endpoint is deprecated. Use /api/v1/students/{studentNumber}.')
+        ->assertHeader('Deprecation', 'true');
+
+    expect(AuditLog::query()->where('action_type', 'DEPRECATED_ENDPOINT')->where('module_name', 'External API')->exists())
+        ->toBeTrue();
+});
+
+test('external student lookup returns one student by student number', function () {
     config()->set('services.external_api.token', 'test-shared-token');
 
     $program = Program::create([
-        'code' => 'BSCS',
-        'name' => 'BS Computer Science',
+        'code' => 'BSIT',
+        'name' => 'BS Information Technology',
     ]);
 
-    $officiallyEnrolledUser = User::create([
-        'student_number' => '2026-00001',
-        'firstname' => 'Alice',
-        'lastname' => 'Reyes',
-        'contactnumber' => '09170000001',
-        'email' => 'alice@example.com',
-        'password' => bcrypt('password'),
-    ]);
-
-    $pendingUser = User::create([
-        'student_number' => '2026-00002',
-        'firstname' => 'Bob',
-        'lastname' => 'Santos',
-        'contactnumber' => '09170000002',
-        'email' => 'bob@example.com',
+    $user = User::create([
+        'student_number' => '2026-55555',
+        'firstname' => 'Carla',
+        'lastname' => 'Lopez',
+        'contactnumber' => '09170000003',
+        'email' => 'carla@example.com',
         'password' => bcrypt('password'),
     ]);
 
     Application::create([
-        'user_id' => $officiallyEnrolledUser->id,
+        'user_id' => $user->id,
         'program_id' => $program->id,
         'status' => 'accepted',
         'enrollment_status' => 'officially_enrolled',
     ]);
 
-    Application::create([
-        'user_id' => $pendingUser->id,
-        'program_id' => $program->id,
-        'status' => 'submitted',
-        'enrollment_status' => 'pending',
-    ]);
-
-    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students');
+    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students/2026-55555');
 
     $response->assertOk()
-        ->assertJsonPath('meta.total', 1)
-        ->assertJsonPath('data.0.student_number', '2026-00001')
-        ->assertJsonPath('data.0.application.enrollment_status', 'officially_enrolled')
-        ->assertJsonPath('data.0.program.program_code', 'BSCS');
+        ->assertJsonPath('data.student_number', '2026-55555')
+        ->assertJsonPath('data.application.enrollment_status', 'officially_enrolled')
+        ->assertJsonPath('data.program.program_code', 'BSIT');
+});
 
-    expect(AuditLog::query()->where('action_type', 'READ')->where('module_name', 'External API')->exists())
+test('external student lookup returns 404 when student is not officially enrolled or missing', function () {
+    config()->set('services.external_api.token', 'test-shared-token');
+
+    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students/NO-SUCH-STUDENT');
+
+    $response->assertStatus(404)
+        ->assertJson([
+            'message' => 'Student not found',
+        ]);
+
+    expect(AuditLog::query()->where('action_type', 'READ_MISS')->where('module_name', 'External API')->exists())
         ->toBeTrue();
+});
+
+test('external student lookup returns one student by idp user id', function () {
+    config()->set('services.external_api.token', 'test-shared-token');
+
+    $program = Program::create([
+        'code' => 'BSBA',
+        'name' => 'BS Business Administration',
+    ]);
+
+    $user = User::create([
+        'idp_user_id' => 'idp-abc-123',
+        'student_number' => '2026-77777',
+        'firstname' => 'Dianne',
+        'lastname' => 'Garcia',
+        'contactnumber' => '09170000004',
+        'email' => 'dianne@example.com',
+        'password' => bcrypt('password'),
+    ]);
+
+    Application::create([
+        'user_id' => $user->id,
+        'program_id' => $program->id,
+        'status' => 'accepted',
+        'enrollment_status' => 'officially_enrolled',
+    ]);
+
+    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students/idp/idp-abc-123');
+
+    $response->assertOk()
+        ->assertJsonPath('data.idp_user_id', 'idp-abc-123')
+        ->assertJsonPath('data.application.enrollment_status', 'officially_enrolled')
+        ->assertJsonPath('data.program.program_code', 'BSBA');
+});
+
+test('external student lookup by idp user id returns 404 when missing', function () {
+    config()->set('services.external_api.token', 'test-shared-token');
+
+    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students/idp/idp-missing-user');
+
+    $response->assertStatus(404)
+        ->assertJson([
+            'message' => 'Student not found',
+        ]);
 });
