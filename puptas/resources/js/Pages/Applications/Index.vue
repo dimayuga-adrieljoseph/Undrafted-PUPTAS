@@ -484,7 +484,7 @@ const clearFilters = () => {
                             class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 transition"
                         >
                             <td class="py-3 text-gray-900 dark:text-white font-medium">
-                                {{ user.firstname }} {{ user.lastname }}
+                                {{ user.firstname || user.email || '—' }} {{ user.lastname || '' }}
                             </td>
                             <td class="py-3 text-gray-700 dark:text-gray-300">
                                 {{ user.program?.name || "—" }}
@@ -562,11 +562,11 @@ const clearFilters = () => {
                 <!-- Profile Section -->
                 <div class="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                     <div class="w-16 h-16 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-2xl font-semibold dark:bg-gray-900 dark:text-gray-900">
-                        {{ selectedUser.firstname?.charAt(0) }}{{ selectedUser.lastname?.charAt(0) }}
+                        {{ (selectedUser.firstname || selectedUser.email || '?').charAt(0).toUpperCase() }}{{ (selectedUser.lastname || '').charAt(0).toUpperCase() }}
                     </div>
                     <div>
                         <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
-                            {{ selectedUser.lastname }}, {{ selectedUser.firstname }}
+                            {{ selectedUser.lastname ? `${selectedUser.lastname}, ${selectedUser.firstname}` : (selectedUser.email || '—') }}
                         </h4>
                         <p class="text-gray-600 dark:text-gray-400">{{ selectedUser.email }}</p>
                     </div>

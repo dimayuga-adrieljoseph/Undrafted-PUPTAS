@@ -294,7 +294,7 @@ const closeUserCard = () => {
                   </div>
                   <div>
                     <h4 class="font-semibold text-gray-900 dark:text-white">
-                      {{ user.firstname }} {{ user.lastname }}
+                      {{ user.firstname || user.email || '—' }} {{ user.lastname || '' }}
                     </h4>
                     <p class="text-gray-600 dark:text-gray-400 text-sm">{{ user.email }}</p>
                   </div>
@@ -352,7 +352,7 @@ const closeUserCard = () => {
                   <div class="space-y-3">
                     <div>
                       <label class="text-sm text-gray-500 dark:text-gray-400">Full Name</label>
-                      <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
+                      <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname || selectedUser.email || '—' }} {{ selectedUser.lastname || '' }}</p>
                     </div>
                     <div>
                       <label class="text-sm text-gray-500 dark:text-gray-400">Email Address</label>
