@@ -1,7 +1,5 @@
 import './bootstrap';
 import '../css/app.css';
-// import '../css/step1-form.css';
-import 'font-awesome/css/font-awesome.min.css';
 
 import { createApp, h } from 'vue';
 import { createInertiaApp, router } from '@inertiajs/vue3';

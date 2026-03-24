@@ -125,7 +125,7 @@ return [
 
     'sienna_widget' => [
         'enabled' => (bool) env('SIENNA_WIDGET_ENABLED', true),
-        'position' => env('SIENNA_WIDGET_POSITION', 'bottom-left'),
+        'position' => env('SIENNA_WIDGET_POSITION', 'bottom-right'),
         'offset' => env('SIENNA_WIDGET_OFFSET', '20,20'),
     ],
 
