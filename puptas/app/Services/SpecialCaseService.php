@@ -6,6 +6,8 @@ use App\Models\ApplicantProfile;
 use App\Models\TestPasser;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\SpecialCaseApproved;
 
 class SpecialCaseService
 {
@@ -86,6 +88,16 @@ class SpecialCaseService
             'special_case_approved_by' => $adminUserId,
             'special_case_approved_at' => now(),
         ]);
+
+        // Send confirmation email
+        try {
+            if ($profile->user && $profile->user->email) {
+                Mail::to($profile->user->email)->send(new SpecialCaseApproved($profile->user));
+                Log::info('Sent special case approval email', ['user_id' => $profile->user_id]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send special case approval email: ' . $e->getMessage());
+        }
 
         return $profile;
     }
