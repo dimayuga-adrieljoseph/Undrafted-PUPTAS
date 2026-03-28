@@ -60,7 +60,7 @@ const handlePrivacyAccept = () => {
 }
 
 const handlePrivacyCancel = () => {
-    router.post(route('logout'), {}, {
+    router.post(route('idp.logout'), {}, {
         onSuccess: () => {
             showPrivacyModal.value = false
         },
@@ -130,6 +130,8 @@ const handlePrivacyCancel = () => {
                             </p>
                         </div>
                     </div>
+
+
                 </div>
             </header>
 

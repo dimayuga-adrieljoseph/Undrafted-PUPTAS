@@ -36,6 +36,6 @@ class SarGeneration extends Model
      */
     public function createdBy()
     {
-        return $this->belongsTo(\App\Models\User::class, 'created_by_user_id');
+        return $this->belongsTo(\App\Models\StaffProfile::class, 'created_by_user_id');
     }
 }

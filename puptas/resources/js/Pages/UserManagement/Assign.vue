@@ -162,8 +162,8 @@ onMounted(() => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="user in assignedUsers" :key="user.id">
-                            <td>{{ user.salutation }} {{ user.firstname }} {{ user.lastname }}</td>
+                        <tr v-for="user in assignedUsers" :key="user.user_id">
+                            <td>{{ user.name }}</td>
                             <td>{{ user.email }}</td>
                             <td>{{ user.role_id == 3 ? 'Evaluator' : 'Interviewer' }}</td>
                             <td>
@@ -172,11 +172,11 @@ onMounted(() => {
                             </td>
                             <td>
                                 <div class="action-container">
-                                    <Link :href="route('admin.users.edit', user.id)" class="action-button edit-button">
+                                    <Link :href="route('admin.users.edit', user.user_id)" class="action-button edit-button">
                                         <i class="fas fa-edit"></i>
                                         <span class="tooltiptext">Edit</span>
                                     </Link>
-                                    <button @click="confirmDeleteUser(user.id)" class="action-button delete-button">
+                                    <button @click="confirmDeleteUser(user.user_id)" class="action-button delete-button">
                                         <i class="fas fa-trash-alt"></i>
                                         <span class="tooltiptext">Delete</span>
                                     </button>

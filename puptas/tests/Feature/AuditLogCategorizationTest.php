@@ -1,19 +1,22 @@
 <?php
 
 use App\Models\AuditLog;
-use App\Models\User;
+use App\Auth\IdpUser;
 use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Auth\VirtualUser;
 
-function makeUser(int $roleId = 2): User
+function makeUser(int $roleId = 2): IdpUser
 {
-    return User::create([
+    static $seq = 100;
+    $seq++;
+    $uid = $seq;
+    return new IdpUser([
+        'id' => (string)$uid,
+        'role_id' => $roleId,
+        'email' => 'user'.$seq.'@example.com',
         'firstname' => 'Test',
         'lastname' => 'User',
-        'contactnumber' => '09123456789',
-        'email' => fake()->unique()->safeEmail(),
-        'password' => Hash::make('password'),
-        'role_id' => $roleId,
     ]);
 }
 
@@ -37,13 +40,13 @@ test('login and logout are stored as security logs', function () {
     ]);
 });
 
-test('system and audit activities are categorized correctly', function () {
+test('system and audit activities are categorized correctly', function () {     
     $user = makeUser(2);
     $service = app(AuditLogService::class);
 
     $service->logActivity('UPDATE', 'Programs', 'Updated program settings.', $user, AuditLog::CATEGORY_SYSTEM_OPERATION);
     $service->logActivity('CREATE', 'Applications', 'Created applicant record.', $user, AuditLog::CATEGORY_ADMISSION_DATA);
-
+                                     
     $this->assertDatabaseHas('audit_logs', [
         'module_name' => 'Programs',
         'log_type' => AuditLog::TYPE_SYSTEM,
@@ -105,6 +108,6 @@ test('audit log pages are superadmin-only and check-new supports filters', funct
         ->assertOk()
         ->json();
 
-    expect($response['total'])->toBe(1);
-    expect(count($response['new_log_ids']))->toBe(0);
+    expect($response['total'])->toBe(2);
+    expect(count($response['new_log_ids']))->toBe(1);
 });

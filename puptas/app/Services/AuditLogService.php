@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
-use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -34,14 +34,22 @@ class AuditLogService
      * Deduplicates within a 10-second window to handle Fortify firing
      * the Login event twice in a single request.
      */
-    public function logLogin(User $user): AuditLog
+    public function logLogin(Authenticatable $user): AuditLog
     {
-        // Deduplicate: if a LOGIN was already recorded for this user in the last 10 seconds, skip
-        $existing = AuditLog::where('user_id', $user->id)
-            ->where('action_type', AuditLog::ACTION_LOGIN)
+        $id = $user->id ?? $user->idp_user_id;
+        $isNumericId = is_numeric($id);
+
+        $query = AuditLog::where('action_type', AuditLog::ACTION_LOGIN)
             ->where('created_at', '>=', now()->subSeconds(10))
-            ->latest()
-            ->first();
+            ->latest();
+
+        if ($isNumericId) {
+            $query->where('user_id', $id);
+        } else {
+            $query->where('username', $user->email ?? 'system');
+        }
+
+        $existing = $query->first();
 
         if ($existing) {
             return $existing;
@@ -63,28 +71,38 @@ class AuditLogService
      * Stamps logout_time on the most-recent open LOGIN session (keeps action_type=LOGIN)
      * and also writes a discrete LOGOUT row for chronological clarity.
      */
-    public function logLogout(User $user): void
+    public function logLogout(Authenticatable $user): void
     {
-        // Deduplicate: skip if a LOGOUT was already written for this user in the last 10 seconds
-        $recentLogout = AuditLog::where('user_id', $user->id)
-            ->where('action_type', AuditLog::ACTION_LOGOUT)
-            ->where('created_at', '>=', now()->subSeconds(10))
-            ->latest()
-            ->first();
+        $id = $user->id ?? $user->idp_user_id;
+        $isNumericId = is_numeric($id);
 
-        if ($recentLogout) {
+        $logoutQuery = AuditLog::where('action_type', AuditLog::ACTION_LOGOUT)
+            ->where('created_at', '>=', now()->subSeconds(10))
+            ->latest();
+
+        if ($isNumericId) {
+            $logoutQuery->where('user_id', $id);
+        } else {
+            $logoutQuery->where('username', $user->email ?? 'system');
+        }
+
+        if ($logoutQuery->first()) {
             return;
         }
 
-        // Stamp the open login session
-        $openLogin = AuditLog::where('user_id', $user->id)
-            ->where('action_type', AuditLog::ACTION_LOGIN)
+        $openLoginQuery = AuditLog::where('action_type', AuditLog::ACTION_LOGIN)
             ->whereNull('logout_time')
-            ->latest()
-            ->first();
+            ->latest();
+
+        if ($isNumericId) {
+            $openLoginQuery->where('user_id', $id);
+        } else {
+            $openLoginQuery->where('username', $user->email ?? 'system');
+        }
+
+        $openLogin = $openLoginQuery->first();
 
         if ($openLogin) {
-            // Only stamp logout_time — do NOT change action_type so the LOGIN row stays as LOGIN
             $openLogin->update(['logout_time' => now()]);
         }
 
@@ -106,19 +124,20 @@ class AuditLogService
      * @param string      $actionType   AuditLog::ACTION_CREATE | UPDATE | DELETE
      * @param string      $moduleName   e.g. 'Users', 'Programs'
      * @param string      $description  Human-readable description
-     * @param User|null   $actor        The acting user (falls back to Auth::user())
+     * @param Authenticatable|null   $actor        The acting user (falls back to Auth::user())
      * @param string|null $logCategory  AuditLog::CATEGORY_* constant
      */
     public function logActivity(
         string $actionType,
         string $moduleName,
         string $description,
-        ?User $actor = null,
+        ?Authenticatable $actor = null,
         ?string $logCategory = null
     ): AuditLog {
         $actor = $actor ?? Auth::user();
+        $actorId = $actor ? ($actor->id ?? $actor->idp_user_id) : 'null';
 
-        logger()->info('[AuditLog] ' . strtoupper($actionType) . ' | ' . $moduleName . ' | user=' . ($actor?->id ?? 'null') . ' | ' . $description);
+        logger()->info('[AuditLog] ' . strtoupper($actionType) . ' | ' . $moduleName . ' | user=' . $actorId . ' | ' . $description);
 
         return $this->write([
             'user'         => $actor,
@@ -136,7 +155,7 @@ class AuditLogService
      * Write a single audit log entry.
      * Swallows exceptions so logging never breaks the main flow.
      *
-     * @param array{user: User|null, action_type: string, module_name: string, description: string, login_time?: \Carbon\Carbon|null, logout_time?: \Carbon\Carbon|null} $data
+     * @param array{user: Authenticatable|null, action_type: string, module_name: string, description: string, login_time?: \Carbon\Carbon|null, logout_time?: \Carbon\Carbon|null} $data
      */
     private function write(array $data): AuditLog
     {
@@ -149,8 +168,11 @@ class AuditLogService
                 $sessionId = $request->session()->getId();
             }
 
+            $id = $user ? ($user->id ?? $user->idp_user_id) : null;
+            $isNumericId = $id !== null && is_numeric($id);
+
             return AuditLog::create([
-                'user_id'      => $user?->id,
+                'user_id'      => $isNumericId ? $id : null,
                 'username'     => $user?->email ?? 'system',
                 'user_role'    => $this->resolveRole($user),
                 'log_type'     => $data['log_type'] ?? $this->resolveLogType(
@@ -182,18 +204,21 @@ class AuditLogService
         }
     }
 
-    private function resolveRole(?User $user): string
+    private function resolveRole(?Authenticatable $user): string
     {
         if (!$user) {
             return 'System';
         }
 
-        return self::ROLE_NAMES[$user->role_id] ?? "Role #{$user->role_id}";
+        return self::ROLE_NAMES[$user->role_id ?? 1] ?? "Role #" . ($user->role_id ?? 1);
     }
 
-    private function fullName(User $user): string
+    private function fullName(Authenticatable $user): string
     {
-        return trim("{$user->firstname} {$user->lastname}") ?: $user->email;
+        if (isset($user->name) && current(explode(' ', $user->name))) {
+            return $user->name;
+        }
+        return trim(($user->firstname ?? '') . " " . ($user->lastname ?? '')) ?: ($user->email ?? 'Unknown User');
     }
 
     private function resolveLogType(string $actionType, ?string $logCategory, string $moduleName): string
@@ -224,3 +249,4 @@ class AuditLogService
         return substr($value, 0, $maxLength);
     }
 }
+

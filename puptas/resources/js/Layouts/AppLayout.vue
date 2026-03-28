@@ -63,7 +63,7 @@ const handlePrivacyAccept = () => {
 
 const handlePrivacyCancel = () => {
     // Log out the user using Inertia router (POST method)
-    router.post(route('logout'), {}, {
+    router.post(route('idp.logout'), {}, {
         onSuccess: () => {
             showPrivacyModal.value = false
         },
@@ -135,6 +135,8 @@ const handlePrivacyCancel = () => {
                             </p>
                         </div>
                     </div>
+
+
                 </div>
             </header>
 

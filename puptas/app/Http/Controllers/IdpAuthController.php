@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -23,15 +24,15 @@ class IdpAuthController extends Controller
     public function login()
     {
         \Log::info('IDP login initiated');
-        
+
         $idpConfig = config('services.idp');
-        
+
         // Validate IDP configuration
         if (empty($idpConfig) || empty($idpConfig['client_id']) || empty($idpConfig['base_url'])) {
             \Log::error('IDP configuration is missing or incomplete', [
                 'config_keys' => $idpConfig ? array_keys($idpConfig) : 'config not found',
             ]);
-            
+
             return redirect('/login')->withErrors([
                 'idp' => 'IDP configuration is missing. Please contact administrator.'
             ]);
@@ -52,12 +53,6 @@ class IdpAuthController extends Controller
         // IDP Swagger docs or frontend requires pointing to /login
         $authorizePath = $idpConfig['authorize_path'] ?? '/login';
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
-
-        \Log::info('Redirecting to IDP authorization endpoint', [
-            'authorize_url' => $authorizeUrl,
-            'client_id_sent' => true,
-            'redirect_uri' => $idpConfig['redirect_uri'] ?? null,
-        ]);
 
         return redirect()->away($authorizeUrl);
     }
@@ -80,7 +75,7 @@ class IdpAuthController extends Controller
     public function callback(Request $request)
     {
         \Log::info('IDP callback reached', ['params' => $request->all()]);
-        
+
         // Extract the authorization code from query parameters
         $code = $request->query('code');
 
@@ -97,13 +92,13 @@ class IdpAuthController extends Controller
         }
 
         $idpConfig = config('services.idp');
-        
+
         // Validate IDP configuration
         if (empty($idpConfig) || empty($idpConfig['base_url']) || empty($idpConfig['client_id']) || empty($idpConfig['client_secret'])) {
             \Log::error('IDP configuration is incomplete during callback', [
                 'config_keys' => $idpConfig ? array_keys($idpConfig) : 'config not found',
             ]);
-            
+
             return redirect('/login')->withErrors([
                 'idp' => 'IDP configuration is incomplete. Please contact administrator.',
             ]);
@@ -113,7 +108,7 @@ class IdpAuthController extends Controller
             // Build the token endpoint URL using configurable path
             $tokenPath = $idpConfig['token_path'] ?? '/api/v1/auth/token';
             $tokenUrl = rtrim($idpConfig['base_url'], '/') . $tokenPath;
-            
+
             \Log::info('Exchanging authorization code for tokens', [
                 'token_url' => $tokenUrl,
                 'client_id' => $idpConfig['client_id'],
@@ -151,7 +146,7 @@ class IdpAuthController extends Controller
             }
 
             $tokenData = $tokenResponse->json();
-            
+
             // Extract access token from response
             $accessToken = $tokenData['access_token'] ?? null;
 
@@ -159,24 +154,23 @@ class IdpAuthController extends Controller
                 \Log::error('IDP token response missing access_token', [
                     'response_keys' => array_keys($tokenData),
                 ]);
-                
+
                 return redirect('/login')->withErrors([
                     'idp' => 'Invalid token response from IDP.',
                 ]);
             }
 
-            \Log::info('Successfully obtained access token from IDP', [
-                'has_access_token' => !empty($accessToken),
-                'token_type'       => $tokenData['token_type'] ?? null,
-                'expires_in'       => $tokenData['expires_in'] ?? null,
-            ]);
+            \Log::info('IDP token exchange successful');
 
-            // Store access token in session
+            $refreshToken = $tokenData['refresh_token'] ?? null;
+            $expiresIn = (int) ($tokenData['expires_in'] ?? 3600);
+
+            // Store tokens and expiration timestamp in session
             session([
-                'access_token' => $accessToken,
+                'access_token'     => $accessToken,
+                'refresh_token'    => $refreshToken,
+                'token_expires_at' => now()->addSeconds($expiresIn - 60)->timestamp, // Refresh 60 seconds before actual expiration
             ]);
-
-            \Log::info('Access token stored in session');
 
             // Fetch user info from IDP using the access token
             $userPath = $idpConfig['user_path'] ?? '/api/v1/user';
@@ -194,7 +188,7 @@ class IdpAuthController extends Controller
             if (!$userResponse->successful()) {
                 $errorBody = $userResponse->body();
                 $errorStatus = $userResponse->status();
-                
+
                 \Log::error('Failed to fetch user info from IDP', [
                     'status' => $errorStatus,
                     'body' => $errorBody,
@@ -207,52 +201,120 @@ class IdpAuthController extends Controller
 
             $idpUser = $userResponse->json();
 
-            // Map IDP user to local user record
-            $localUser = \App\Models\User::where('idp_user_id', $idpUser['id'] ?? null)
-                ->orWhere('email', $idpUser['email'] ?? null)
-                ->first();
-
-            if (!$localUser) {
-                // Create a new local user if one doesn't exist
-                $localUser = \App\Models\User::create([
-                    'name' => $idpUser['name'] ?? ($idpUser['email'] ?? 'IDP User'),
-                    'email' => $idpUser['email'] ?? null,
-                    'idp_user_id' => $idpUser['id'] ?? null,
-                    // default applicant role (1) if not mapped
-                    'role_id' => 1,
-                    'password' => bcrypt(Str::random(40)),
-                ]);
-            } else {
-                // Update existing user with latest IDP info
-                $localUser->update([
-                    'name' => $idpUser['name'] ?? $localUser->name,
-                    'email' => $idpUser['email'] ?? $localUser->email,
-                    'idp_user_id' => $idpUser['id'] ?? $localUser->idp_user_id,
-                ]);
-            }
-
-            // Map IDP role/attributes to local role_id
+            // Map IDP role/attributes to local integer role_id
             $roleMapping = [
-                // Example mappings - update to match your IDP roles
-                'applicant' => 1,
-                'admin' => 2,
-                'evaluator' => 3,
-                'interviewer' => 4,
-                'medical' => 5,
-                'record' => 6,
-                'superadmin' => 7,
+                'applicant'     => 1,
+                'student'       => 1,
+                'admin'         => 2,
+                'administrator' => 2,
+                'evaluator'     => 3,
+                'interviewer'   => 4,
+                'medical'       => 5,
+                'doctor'        => 5,
+                'nurse'         => 5,
+                'record'        => 6,
+                'registrar'     => 6,
+                'records'       => 6,
+                'recordstaff'   => 6,
+                'superadmin'    => 7,
             ];
 
-            $idpRole = strtolower($idpUser['role'] ?? ($idpUser['roles'][0] ?? null));
-            if ($idpRole && isset($roleMapping[$idpRole])) {
-                $localUser->role_id = $roleMapping[$idpRole];
-                $localUser->save();
+            // Robust multi-format role extraction
+            $idpRole = 'applicant';
+
+            if (!empty($idpUser['role'])) {
+                $idpRole = is_array($idpUser['role']) ? ($idpUser['role']['name'] ?? $idpUser['role']['title'] ?? 'applicant') : $idpUser['role'];
+            } elseif (!empty($idpUser['roles']) && is_array($idpUser['roles'])) {
+                $firstRole = $idpUser['roles'][0];
+                $idpRole = is_array($firstRole) ? ($firstRole['name'] ?? $firstRole['role_name'] ?? 'applicant') : $firstRole;
+            } elseif (!empty($idpUser['role_name'])) {
+                $idpRole = $idpUser['role_name'];
+            } elseif (!empty($idpUser['user_type'])) {
+                $idpRole = $idpUser['user_type'];
+            } elseif (!empty($idpUser['role_id'])) {
+                // Some IDPs just send the integer directly
+                $idpRole = (int) $idpUser['role_id'];
             }
 
-            // Authenticate the user in the local app
+            // Normalise the string if it was extracted as a string
+            if (is_string($idpRole)) {
+                $idpRole = strtolower(str_replace(' ', '', $idpRole)); // super admin -> superadmin
+
+                // Extract just the role part if it comes prefixed with system names (e.g. "puptas:evaluator" -> "evaluator")
+                if (strpos($idpRole, ':') !== false) {
+                    $parts = explode(':', $idpRole);
+                    $idpRole = end($parts);
+                }
+
+                $roleId = $roleMapping[$idpRole] ?? 1;
+            } else if (is_numeric($idpRole)) {
+                $roleId = (int) $idpRole;
+            } else {
+                $roleId = 1;
+            }
+
+            // Failsafe: Log the raw payload if it defaulted to applicant to help debug
+            if ($roleId === 1) {
+                \Log::warning('IDP Role matched Applicant or defaulted. Raw IDP User payload:', ['idpUser' => $idpUser]);
+
+                // Check for new applicants requiring onboarding
+                $hasProfile = \App\Models\ApplicantProfile::where('user_id', $idpUser['id'])->exists();
+
+                if (!$hasProfile) {
+                    \Log::info('Intercepting first-time IDP applicant for registration flow', ['id' => $idpUser['id']]);
+
+                    // Temporarily store just enough session data to bind the profile
+                    session(['pending_registration' => [
+                        'user_id' => $idpUser['id'] ?? null,
+                        'email'   => $idpUser['email'] ?? null,
+                        'username' => $idpUser['username'] ?? null,
+                    ]]);
+
+                    // Do not log them in yet. Send them to complete the profile.
+                    return redirect('/register');
+                }
+            }
+
+            // Extract firstname and lastname for Vue Layout Avatar formatting
+            $fullName = $idpUser['name'] ?? ($idpUser['email'] ?? 'IDP User');
+            $nameParts = explode(' ', $fullName);
+            $firstName = array_shift($nameParts);
+            $lastName = count($nameParts) > 0 ? implode(' ', $nameParts) : '';
+
+            // Build the virtual user profile array
+            $idpUserProfile = [
+                'idp_user_id' => $idpUser['id'] ?? null,
+                'name'        => $fullName,
+                'firstname'   => $firstName,
+                'lastname'    => $lastName,
+                'email'       => $idpUser['email'] ?? null,
+                'role_id'     => $roleId,
+                'role_name'   => $idpRole,
+            ];
+
+            // If not an applicant, upsert the staff profile for the User Management Dashboard
+            if ($roleId !== 1) {
+                \App\Models\StaffProfile::updateOrCreate(
+                    ['user_id' => $idpUserProfile['idp_user_id']],
+                    [
+                        'name'      => $idpUserProfile['name'],
+                        'email'     => $idpUserProfile['email'],
+                        'role_id'   => $idpUserProfile['role_id'],
+                        'role_name' => $idpUserProfile['role_name'],
+                    ]
+                );
+            }
+
+            // Store the entire profile solidly in session for the IdpUserProvider to retrieve
+            session(['idp_user_profile' => $idpUserProfile]);
+
+            // Instantiate our virtual Authenticatable user
+            $localUser = new \App\Auth\IdpUser($idpUserProfile);
+
+            // Authenticate the user in the local app securely with the idp driver
             \Auth::login($localUser);
 
-            \Log::info('User logged in via IDP', ['user_id' => $localUser->id, 'idp_user_id' => $localUser->idp_user_id]);
+            \Log::info('User logged in seamlessly via Database-less IDP', ['idp_user_id' => $localUser->idp_user_id, 'role_id' => $localUser->role_id]);
 
             // Redirect user to appropriate dashboard based on role
             switch ($localUser->role_id) {
@@ -272,24 +334,45 @@ class IdpAuthController extends Controller
                 default:
                     return redirect('/dashboard');
             }
-
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             \Log::error('IDP connection error', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return redirect('/login')->withErrors([
                 'idp' => 'Unable to connect to IDP. Please try again later.',
             ]);
-            
         } catch (\Exception $e) {
             \Log::error('IDP authentication unexpected error', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return redirect('/login')->withErrors([
                 'idp' => 'An unexpected error occurred during IDP login.',
             ]);
         }
+    }
+
+    public function logout(Request $request)
+    {
+        Auth::logout();
+
+        $request->session()->forget([
+            'idp_user_profile',
+            'access_token',
+            'refresh_token',
+            'token_expires_at',
+        ]);
+
+        $request->session()->regenerate();
+
+        $idpLogoutUrl = config('services.idp.logout_url');
+
+        if ($idpLogoutUrl) {
+            $redirectBack = urlencode(url('/login'));
+            return redirect()->away("{$idpLogoutUrl}?post_logout_redirect_uri={$redirectBack}");
+        }
+
+        return redirect('/login');
     }
 }

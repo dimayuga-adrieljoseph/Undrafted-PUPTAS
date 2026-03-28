@@ -119,14 +119,17 @@ class ExternalStudentApiController extends Controller
     public function showByIdpUserId(Request $request, string $idpUserId): JsonResponse
     {
         $application = Application::query()
-            ->with(['user', 'program'])
+            ->with(['user.user', 'program'])
             ->where('enrollment_status', 'officially_enrolled')
-            ->whereHas('user', function ($query) use ($idpUserId) {
+            ->whereHas('user.user', function ($query) use ($idpUserId) {
                 $query->where('idp_user_id', $idpUserId);
             })
             ->first();
 
-        if (! $application || ! $application->user) {
+        $profile = $application?->user;
+        $account = $profile?->user;
+
+        if (! $application || ! $profile || ! $account) {
             $this->auditLogService->logActivity(
                 'READ_MISS',
                 'External API',
@@ -144,13 +147,13 @@ class ExternalStudentApiController extends Controller
             ], 404);
         }
 
-        $user = $application->user;
+        $user = $profile;
         $program = $application->program;
 
         $payload = [
-            'id' => $user->id,
-            'idp_user_id' => $user->idp_user_id,
-            'student_number' => $user->student_number,
+            'id' => $account->id,
+            'idp_user_id' => $account->idp_user_id,
+            'student_number' => $user->student_number ?? $account->student_number,
             'firstname' => $user->firstname,
             'middlename' => $user->middlename,
             'extension_name' => $user->extension_name,

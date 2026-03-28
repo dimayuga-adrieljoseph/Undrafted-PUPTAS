@@ -46,7 +46,7 @@ class DashboardService
     public function getDashboardDataWithPrograms(): array
     {
         $commonData = $this->getCommonDashboardData();
-        
+
         return array_merge($commonData, [
             'programs' => Program::withCount('applications')->get(),
         ]);
@@ -60,7 +60,7 @@ class DashboardService
     public function getDashboardDataWithCharts(): array
     {
         $commonData = $this->getCommonDashboardData();
-        
+
         return array_merge($commonData, [
             'chartData' => $this->getApplicationChartData(),
         ]);
@@ -78,7 +78,7 @@ class DashboardService
         $now = \Carbon\Carbon::now();
         $startDate = $now->copy()->subDays(29)->startOfDay();
         $endDate = $now->copy()->endOfDay();
-        
+
         $applications = DB::table('applications')
             ->select(
                 DB::raw('DATE(created_at) as date'),
@@ -129,7 +129,7 @@ class DashboardService
         $now = \Carbon\Carbon::now();
         $startDate = $now->copy()->subDays(29)->startOfDay();
         $endDate = $now->copy()->endOfDay();
-        
+
         $applications = DB::table('applications')
             ->select(
                 DB::raw('DATE(created_at) as date'),
@@ -173,12 +173,15 @@ class DashboardService
     /**
      * Verify user role access
      *
-     * @param User $user
-     * @param int $requiredRoleId
+     * @param \Illuminate\Contracts\Auth\Authenticatable|mixed $user
+     * @param int|array $requiredRoleId
      * @return bool
      */
-    public function verifyRoleAccess(User $user, int $requiredRoleId): bool
+    public function verifyRoleAccess($user, $requiredRoleId): bool
     {
+        if (is_array($requiredRoleId)) {
+            return in_array($user->role_id, $requiredRoleId);
+        }
         return $user->role_id === $requiredRoleId;
     }
 
@@ -204,7 +207,7 @@ class DashboardService
             ->whereHas('currentApplication', function ($query) use ($stage) {
                 $query->whereHas('processes', function ($q) use ($stage) {
                     $q->where('stage', $stage)
-                      ->whereIn('status', ['in_progress', 'returned']);
+                        ->whereIn('status', ['in_progress', 'returned']);
                 });
             })
             ->get();
