@@ -50,5 +50,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perDay((int) config('services.external_api.daily_limit', 1500))
                 ->by((string) $request->ip());
         });
+
+        RateLimiter::for('external-program-api-daily', function ($request) {
+            return Limit::perDay((int) config('services.external_program_api.daily_limit', 50))
+                ->by((string) $request->ip());
+        });
     }
 }
