@@ -341,9 +341,15 @@ class IdpAuthController extends Controller
             }
         }
 
-        // Then our system should redirect the user to our logout page
-        return redirect('/login')
-            ->withoutCookie('access_token')
-            ->withoutCookie('refresh_token');
+        // Queue clearing of application cookies
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('access_token'));
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('refresh_token'));
+
+        // Redirect the user's browser to the IDP frontend to clear the IDP browser session
+        $redirectBack = urlencode(url('/login'));
+        $clientId = $idpConfig['client_id'] ?? '';
+        $idpFrontendLogoutUrl = rtrim($idpConfig['base_url'], '/') . '/logout?client_id=' . $clientId . '&post_logout_redirect_uri=' . $redirectBack;
+
+        return \Inertia\Inertia::location($idpFrontendLogoutUrl);
     }
 }
