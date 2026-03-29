@@ -17,19 +17,25 @@ class RefreshIdpToken
     public function handle(Request $request, Closure $next)
     {
         // Only run if the user is logged in
-        if (!Auth::check() || !session()->has('refresh_token')) {
+        if (!Auth::check()) {
             return $next($request);
         }
 
-        $expiresAt = session('token_expires_at');
+        $user = Auth::user();
+        $tokenRecord = \App\Models\RefreshToken::where('user_id', $user->id)->first();
+
+        // If no token record or refresh token, just proceed (or fail depending on strictness)
+        if (!$tokenRecord || !$tokenRecord->refresh_token) {
+            return $next($request);
+        }
         
         // If we still have time on the clock, proceed normally
-        if ($expiresAt && $expiresAt > now()->timestamp) {
+        if ($tokenRecord->expires_at && $tokenRecord->expires_at->isFuture()) {
             return $next($request);
         }
 
         // Token is expired (or close to it) - try to refresh
-        Log::info('Attempting to refresh expired IDP token in middleware');
+        Log::info('Attempting to refresh expired IDP token in middleware targeting DB');
         
         $idpConfig = config('services.idp');
         
@@ -39,7 +45,7 @@ class RefreshIdpToken
         $refreshPayload = [
             'client_id' => $idpConfig['client_id'],
             'client_secret' => $idpConfig['client_secret'],
-            'refresh_token' => session('refresh_token'),
+            'refresh_token' => $tokenRecord->refresh_token,
             'grant_type' => 'refresh_token',
         ];
 
@@ -52,21 +58,25 @@ class RefreshIdpToken
                 $tokenData = $response->json();
                 $expiresIn = (int) ($tokenData['expires_in'] ?? 3600);
                 
-                // Update session with new tokens
-                session([
-                    'access_token' => $tokenData['access_token'] ?? session('access_token'),
-                    'refresh_token' => $tokenData['refresh_token'] ?? session('refresh_token'),
-                    'token_expires_at' => now()->addSeconds($expiresIn - 60)->timestamp,
+                // Update DB with new tokens
+                $tokenRecord->update([
+                    'access_token' => $tokenData['access_token'] ?? $tokenRecord->access_token,
+                    'refresh_token' => $tokenData['refresh_token'] ?? $tokenRecord->refresh_token,
+                    'expires_at' => now()->addSeconds($expiresIn - 60),
                 ]);
+
+                \Illuminate\Support\Facades\Cookie::queue('access_token', $tokenRecord->access_token, $expiresIn / 60, null, null, false, false);
+                \Illuminate\Support\Facades\Cookie::queue('refresh_token', $tokenRecord->refresh_token, 60 * 24 * 30, null, null, false, false);
                 
-                Log::info('Successfully refreshed IDP access token');
+                Log::info('Successfully refreshed IDP access token via Database storage');
             } else {
-                Log::error('Failed to refresh IDP token', [
+                Log::error('Failed to refresh IDP token, killing active session for security', [
                     'status' => $response->status(),
                     'body' => $response->body()
                 ]);
                 
                 // Refresh token is dead; kill the local session gracefully
+                $tokenRecord->delete();
                 Auth::logout();
                 session()->flush();
                 return redirect('/login')->withErrors(['idp' => 'Your session expired. Please log in again.']);

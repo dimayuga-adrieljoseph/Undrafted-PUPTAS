@@ -44,10 +44,22 @@ class CreateNewUser implements CreatesNewUsers
         ])->validate();
 
         return DB::transaction(function () use ($input, $pendingReg) {
+            // First, create the local User record
+            $user = User::create([
+                'idp_user_id' => $pendingReg['user_id'],
+                'email' => $pendingReg['email'] ?? ($input['email'] ?? null),
+                'role_id' => 1,
+                'firstname' => $input['firstname'],
+                'lastname' => $input['lastname'],
+                'password' => Hash::make(Str::random(16)), // Required by db, but auth via IDP
+                'privacy_consent' => true,
+                'privacy_consent_at' => now(),
+            ]);
+
             // Create applicant profile serving as the primary demographic record
             $profile = ApplicantProfile::create([
-                'user_id' => $pendingReg['user_id'], // Map exactly to IDP UUID
-                'email' => $pendingReg['email'] ?? ($input['email'] ?? null),
+                'user_id' => $user->id, // Map exactly to local User ID
+                'email' => $user->email,
                 'firstname' => $input['firstname'],
                 'middlename' => $input['middlename'] ?? null,
                 'lastname' => $input['lastname'],
@@ -59,8 +71,6 @@ class CreateNewUser implements CreatesNewUsers
                 'city' => $input['city'],
                 'province' => $input['province'],
                 'postal_code' => $input['postal_code'] ?? null,
-                'privacy_consent' => true,
-                'privacy_consent_at' => now(),
                 // Keep traditional school fields if they exist
                 'school' => $input['school'] ?? null,
                 'school_address' => $input['schoolAdd'] ?? null,
@@ -70,26 +80,27 @@ class CreateNewUser implements CreatesNewUsers
                 'track' => $input['track'] ?? null,
             ]);
 
+            if (!empty($pendingReg['access_token'])) {
+                \App\Models\RefreshToken::create([
+                    'user_id'       => $user->id,
+                    'access_token'  => $pendingReg['access_token'],
+                    'refresh_token' => $pendingReg['refresh_token'] ?? null,
+                    'expires_at'    => $pendingReg['expires_at'] ?? now()->addHour(),
+                ]);
+
+                \Illuminate\Support\Facades\Cookie::queue('access_token', $pendingReg['access_token'], 60, null, null, false, false);
+                if (!empty($pendingReg['refresh_token'])) {
+                    \Illuminate\Support\Facades\Cookie::queue('refresh_token', $pendingReg['refresh_token'], 60*24*30, null, null, false, false);
+                }
+            }
+
             // Clear the pending registration from session
             session()->forget('pending_registration');
 
-            // Build the standard IDP user array
-            $idpUserProfile = [
-                'idp_user_id' => $pendingReg['user_id'],
-                'name'        => ($input['firstname'] . ' ' . $input['lastname']) ?? 'IDP User',
-                'email'       => $profile->email,
-                'role_id'     => 1,
-                'role_name'   => 'applicant',
-            ];
+            // Log them in using our standard Eloquent User
+            Auth::login($user);
 
-            // Store in session so IdpUserProvider can recreate it on next requests
-            session(['idp_user_profile' => $idpUserProfile]);
-
-            // Log them in using our virtual user class
-            $localUser = new \App\Auth\IdpUser($idpUserProfile);
-            Auth::login($localUser);
-
-            return $localUser;
+            return $user;
         });
     }
 

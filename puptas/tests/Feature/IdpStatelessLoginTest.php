@@ -46,24 +46,21 @@ test('IDP login authentically succeeds without querying the local users table', 
     // Fire the callback as if the IDP just redirected the user back with an auth code
     $response = $this->get('/auth/idp/callback?code=mock_authorization_code');
 
-    // The admin user should be redirected to the /dashboard based on the role mapping
-    $response->assertRedirect('/dashboard');
+    // The unknown user should be redirected to /register
+    $response->assertRedirect('/register');
 
-    // Verify the Auth guard thinks we are currently logged in
-    $this->assertTrue(Auth::check(), 'User should be authenticated after callback.');
+    // Verify the Auth guard thinks we are NOT logged in yet
+    $this->assertFalse(Auth::check(), 'User should not be authenticated without a local DB record.');
 
-    // Get all SQL queries executed during the request
+    // Verify pending_registration is set in session
+    $this->assertTrue(session()->has('pending_registration'));
+
     $queries = DB::getQueryLog();
-
-    // Check that none of the queries touched the local 'users' table
     $usersTableQueryCount = collect($queries)->filter(function ($queryDetail) {
-        // Look for the table name strictly (e.g., 'users' or "users")
-        // We look for common patterns representing queries against the users table
         return preg_match('/\s+users\s+/i', $queryDetail['query']) ||
             preg_match('/`users`/i', $queryDetail['query']) ||
             preg_match('/"users"/i', $queryDetail['query']);
     })->count();
 
-    // Ensure 0 queries hit the users table
-    expect($usersTableQueryCount)->toBe(0, "The users table was queried {$usersTableQueryCount} times during login. It should be 0.");
+    expect($usersTableQueryCount)->toBeGreaterThan(0, "The users table should be queried to cross-reference the email.");
 });
