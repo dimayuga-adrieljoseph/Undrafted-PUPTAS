@@ -50,10 +50,7 @@ class IdpAuthController extends Controller
         ];
 
         // Construct the full authorization URL using configurable path
-        $authorizePath = $idpConfig['authorize_path'] ?? '/authorize';
-        if ($authorizePath === '/login') {
-            $authorizePath = '/authorize';
-        }
+        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/login';
         
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
