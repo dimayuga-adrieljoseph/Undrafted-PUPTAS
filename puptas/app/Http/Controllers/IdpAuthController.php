@@ -43,10 +43,13 @@ class IdpAuthController extends Controller
         session(['idp_oauth_state' => $state]);
 
         // Build authorization query parameters
+        // prompt=login forces the IDP to always show its login page,
+        // even if the user has an existing IDP session.
         $authorizeQuery = [
-            'client_id' => $idpConfig['client_id'],
+            'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
-            'redirect_uri' => $idpConfig['redirect_uri'] ?? route('idp.callback'),
+            'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
+            'prompt'        => 'login',
         ];
 
         // Construct the full authorization URL using configurable path
