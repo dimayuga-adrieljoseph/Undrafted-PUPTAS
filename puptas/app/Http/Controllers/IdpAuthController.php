@@ -57,7 +57,7 @@ class IdpAuthController extends Controller
         
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
-        return redirect()->away($authorizeUrl);
+        return \Inertia\Inertia::location($authorizeUrl);
     }
 
     /**
