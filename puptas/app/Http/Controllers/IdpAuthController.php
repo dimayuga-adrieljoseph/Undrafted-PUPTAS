@@ -237,7 +237,7 @@ class IdpAuthController extends Controller
                 ]
             );
 
-            $roleId = clone $localDbUser->role_id;
+            $roleId = (int) $localDbUser->role_id;
             
             \Log::info('User logged in seamlessly via Local DB Match', ['local_user_id' => $localDbUser->id, 'role_id' => $roleId]);
 
