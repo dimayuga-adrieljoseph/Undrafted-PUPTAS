@@ -17,7 +17,7 @@ This guide documents the implemented External Student API feature for sharing of
 ## Files Involved
 - Route registration: `routes/api.php`
 - Endpoint controller: `app/Http/Controllers/ExternalStudentApiController.php`
-- Token middleware: `app/Http/Middleware/ExternalApiTokenMiddleware.php`
+- Token middleware: `app/Http/Middleware/ExternalStudentApiTokenMiddleware.php`
 - Rate limiter config: `app/Providers/AppServiceProvider.php`
 - Service config values: `config/services.php`
 - User model `student_number` mass-assignable: `app/Models/User.php`

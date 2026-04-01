@@ -64,6 +64,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/store-grades', [GradesController::class, 'store']);
 });
 
+use App\Http\Controllers\ExternalProgramApiController;
+
 Route::prefix('v1')
     ->middleware(['external.api.token', 'throttle:external-api-second', 'throttle:external-api-minute', 'throttle:external-api-daily'])
     ->group(function () {
@@ -71,3 +73,13 @@ Route::prefix('v1')
         Route::get('/students/idp/{idpUserId}', [ExternalStudentApiController::class, 'showByIdpUserId']);
         Route::get('/students/{studentNumber}', [ExternalStudentApiController::class, 'showByStudentNumber']);
     });
+
+Route::prefix('v1')
+    ->middleware(['external.program.api.token', 'throttle:external-api-second', 'throttle:external-api-minute', 'throttle:external-program-api-daily'])
+    ->group(function () {
+        Route::get('/programs', [ExternalProgramApiController::class, 'index']);
+    });
+
+// Route::get('/user-stats', [UserController::class, 'getUserStats']);
+// Route::get('/programs', [ProgramController::class, 'index']);
+// Route::post('/add-user', [UserController::class, 'store']);
