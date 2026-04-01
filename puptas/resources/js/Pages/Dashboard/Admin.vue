@@ -289,12 +289,12 @@ const closeUserCard = () => {
             >
               <div class="flex items-start justify-between mb-3">
                 <div class="flex items-center space-x-3">
-                  <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold dark:bg-gray-900 dark:text-gray-900">
-                    {{ user.firstname[0] }}{{ user.lastname[0] }}
+                  <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold">
+                    {{ user.firstname?.charAt(0) || '' }}{{ user.lastname?.charAt(0) || '' }}
                   </div>
                   <div>
                     <h4 class="font-semibold text-gray-900 dark:text-white">
-                      {{ user.firstname }} {{ user.lastname }}
+                      {{ user.firstname || user.email || '—' }} {{ user.lastname || '' }}
                     </h4>
                     <p class="text-gray-600 dark:text-gray-400 text-sm">{{ user.email }}</p>
                   </div>
@@ -352,7 +352,7 @@ const closeUserCard = () => {
                   <div class="space-y-3">
                     <div>
                       <label class="text-sm text-gray-500 dark:text-gray-400">Full Name</label>
-                      <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
+                      <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname || selectedUser.email || '—' }} {{ selectedUser.lastname || '' }}</p>
                     </div>
                     <div>
                       <label class="text-sm text-gray-500 dark:text-gray-400">Email Address</label>

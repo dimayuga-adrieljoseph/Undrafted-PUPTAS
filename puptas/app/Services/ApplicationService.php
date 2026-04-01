@@ -33,10 +33,10 @@ class ApplicationService
     /**
      * Get application by user ID
      *
-     * @param int $userId
+     * @param string $userId
      * @return Application
      */
-    public function getApplicationByUserId(int $userId): Application
+    public function getApplicationByUserId(string $userId): Application
     {
         return Application::where('user_id', $userId)->firstOrFail();
     }
@@ -62,10 +62,10 @@ class ApplicationService
     /**
      * Tag application as officially enrolled
      *
-     * @param int $userId
+     * @param string $userId
      * @return Application
      */
-    public function tagAsOfficiallyEnrolled(int $userId): Application
+    public function tagAsOfficiallyEnrolled(string $userId): Application
     {
         $application = $this->getApplicationByUserId($userId);
 

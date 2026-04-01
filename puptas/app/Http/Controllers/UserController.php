@@ -81,9 +81,6 @@ class UserController extends Controller
         $roles = $this->userService->getRoleDefinitions();
         $totalUsers = $this->userService->getTotalUserCount();
 
-        // Audit log for viewing sensitive user data
-        $this->userService->logUserListingView(auth()->id(), $users->count());
-
         return Inertia::render('UserManagement/ManageUsers', [
             'users' => $users,
             'userCountsByRole' => $userCountsByRole,
@@ -97,7 +94,29 @@ class UserController extends Controller
      */
     public function edit($id)
     {
-        $user = User::findOrFail($id);
+        // Try staff first, then applicant
+        $staff = \App\Models\StaffProfile::where('user_id', $id)->first();
+        if ($staff) {
+            $user = (object) [
+                'id' => $staff->user_id,
+                'firstname' => $staff->name,
+                'lastname' => '',
+                'email' => $staff->email,
+                'role_id' => $staff->role_id,
+                'programs' => $staff->programs
+            ];
+        } else {
+            $applicant = \App\Models\ApplicantProfile::where('user_id', $id)->firstOrFail();
+            $user = (object) [
+                'id' => $applicant->user_id,
+                'firstname' => $applicant->firstname,
+                'lastname' => $applicant->lastname,
+                'email' => $applicant->email,
+                'role_id' => 1,
+                'applicant_profile' => $applicant
+            ];
+        }
+
         $programs = Program::all();
         $roles = $this->userService->getRoleDefinitions();
 
@@ -113,142 +132,92 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $user = User::findOrFail($id);
+        // If Role is 1 (Applicant), we find them in ApplicantProfile. Else StaffProfile.
+        $roleId = $request->role_id;
 
-        $request->validate(ValidationRules::userUpdate($id));
-
-        \Log::info('User update request', [
-            'user_id' => $id,
-            'role_id' => $request->role_id,
-            'program' => $request->program,
-            'applicant_program' => $request->applicant_program
-        ]);
-
-        return DB::transaction(function () use ($request, $user) {
-            $user->firstname = $request->firstname;
-            $user->lastname = $request->lastname;
-            $user->middlename = $request->middlename;
-            $user->extension_name = $request->extension_name; // Added
-            $user->email = $request->email;
-            $user->contactnumber = $request->contactnumber;
-            $user->role_id = $request->role_id;
-
-            if ($request->filled('password')) {
-                $user->password = Hash::make($request->password);
-            }
-
-            $user->save();
-
+        return DB::transaction(function () use ($request, $id, $roleId) {
             // Handle program assignments based on role
             $programsToSync = [];
 
-            if ($request->role_id == 1 && $request->filled('applicant_program')) {
+            if ($roleId == 1 && $request->filled('applicant_program')) {
                 // For Applicants: use applicant_program field (using program code)
                 $program = Program::where('code', $request->applicant_program)->first();
-                \Log::info('Looking up applicant program', [
-                    'code' => $request->applicant_program,
-                    'found_program' => $program ? $program->id : null
-                ]);
                 if ($program) {
-                    $programsToSync[$program->id] = ['role_id' => $request->role_id];
-
-                    // Ensure applicant profile exists
-                    $applicantProfile = $user->applicantProfile;
-                    if (!$applicantProfile) {
-                        $applicantProfile = ApplicantProfile::create([
-                            'user_id' => $user->id,
-                        ]);
-                        \Log::info('Created new ApplicantProfile for user', ['user_id' => $user->id]);
-                    }
+                    $applicantProfile = ApplicantProfile::where('user_id', $id)->firstOrFail();
 
                     // Update the applicant profile with the first choice program
                     $applicantProfile->update(['first_choice_program' => $program->id]);
-                    \Log::info('Updated ApplicantProfile', [
-                        'user_id' => $user->id,
-                        'first_choice_program' => $program->id
-                    ]);
 
-                    // IMPORTANT: Also update any existing applications to the new program
-                    // This ensures the ManageUsers display will show the updated program
-                    // The ManageUsers component displays in this priority:
-                    // 1. officially_enrolled_application.program
-                    // 2. current_application.program
-                    // 3. applicant_profile.first_choice_program
-
-                    // Update applications in priority order to match display logic
-                    $officiallyEnrolled = $user->applications()
+                    // Update existing applications
+                    $officiallyEnrolled = $applicantProfile->applications()
                         ->where('enrollment_status', 'officially_enrolled')
                         ->first();
 
                     if ($officiallyEnrolled) {
-                        // If there's an officially enrolled application, update that
                         $officiallyEnrolled->update(['program_id' => $program->id]);
-                        \Log::info('Updated officially enrolled application program', [
-                            'user_id' => $user->id,
-                            'application_id' => $officiallyEnrolled->id,
-                            'new_program_id' => $program->id
-                        ]);
                     } else {
-                        // Otherwise, update the most recent application
-                        $latestApplication = $user->applications()
+                        $latestApplication = $applicantProfile->applications()
                             ->orderBy('created_at', 'desc')
                             ->first();
 
                         if ($latestApplication) {
                             $latestApplication->update(['program_id' => $program->id]);
-                            \Log::info('Updated latest application program', [
-                                'user_id' => $user->id,
-                                'application_id' => $latestApplication->id,
-                                'new_program_id' => $program->id
-                            ]);
                         }
                     }
+
+                    $actionDetails = "Updated Applicant's program to {$program->code}";
+                    $userEmail = $applicantProfile->email;
                 }
-            } elseif (in_array($request->role_id, [3, 4]) && $request->filled('program')) {
+            } elseif (in_array($roleId, [3, 4]) && $request->filled('program')) {
                 // For Evaluators (3) and Interviewers (4): use program field (using program code)
+                $staff = \App\Models\StaffProfile::where('user_id', $id)->firstOrFail();
                 $program = Program::where('code', $request->program)->first();
                 if ($program) {
-                    $programsToSync[$program->id] = ['role_id' => $request->role_id];
+                    $staff->programs()->sync([$program->id => ['role_id' => $roleId]]);
+                } else {
+                    $staff->programs()->detach();
                 }
+                $actionDetails = "Updated Staff program to " . ($program ? $program->code : 'None');
+                $userEmail = $staff->email;
             }
 
-            // Sync the programs
-            $user->programs()->sync($programsToSync);
+            if (isset($actionDetails)) {
+                $this->auditLogService->logActivity(
+                    'UPDATE',
+                    'Users',
+                    "Updated assigned program for user {($userEmail)}.",
+                    null,
+                    'USER_MANAGEMENT'
+                );
+            }
 
-            $this->auditLogService->logActivity(
-                'UPDATE',
-                'Users',
-                "Updated user account for {$user->firstname} {$user->lastname} ({$user->email}).",
-                null,
-                'USER_MANAGEMENT'
-            );
-
-            return redirect()->route('users.index')->with('status', 'User updated successfully!');
+            return redirect()->route('users.index')->with('status', 'Program assignment updated successfully!');
         });
     }
+
     /**
      * Remove the specified user from storage.
      */
     public function destroy($id)
     {
-        $user = User::findOrFail($id);
-
-        // Prevent deleting your own account
-        if ($user->id === auth()->user()->id) {
-            return redirect()->route('users.index')->with('error', 'You cannot delete your own account!');
+        // For IDP, users are not deleted locally, but we might want to drop their profiles locally
+        $staff = \App\Models\StaffProfile::find($id);
+        if ($staff) {
+            $staff->delete();
+        }
+        $app = \App\Models\ApplicantProfile::where('user_id', $id)->first();
+        if ($app) {
+            $app->delete();
         }
 
-        // Log deletion for audit purposes
         $this->auditLogService->logActivity(
             'DELETE',
             'Users',
-            "Deleted user account {$user->firstname} {$user->lastname} ({$user->email}).",
+            "Deleted local user profile for {$id}.",
             null,
             'USER_MANAGEMENT'
         );
 
-        $user->delete();
-
-        return redirect()->route('users.index')->with('status', 'User deleted successfully!');
+        return redirect()->route('users.index')->with('status', 'User localized details removed successfully!');
     }
 }

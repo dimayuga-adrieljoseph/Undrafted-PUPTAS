@@ -42,7 +42,7 @@ class Program extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class, 'program_user', 'program_id', 'user_id')
+        return $this->belongsToMany(StaffProfile::class, 'program_user', 'program_id', 'user_id')
             ->withPivot('role_id')
             ->withTimestamps();
     }

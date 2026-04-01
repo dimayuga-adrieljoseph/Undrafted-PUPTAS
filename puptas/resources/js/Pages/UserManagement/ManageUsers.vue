@@ -18,7 +18,7 @@
           </div>
           <div class="header-right">
             <Link 
-              :href="route('legacy.add_user')" 
+              :href="route('users.create')" 
               class="add-user-btn"
             >
               <span class="btn-icon">
@@ -277,7 +277,7 @@
           <p v-if="searchTerm">No users match your search criteria. Try a different search term.</p>
           <p v-else>Get started by adding your first user to the system.</p>
           <Link 
-            :href="route('legacy.add_user')" 
+            :href="route('users.create')" 
             class="empty-action-btn"
           >
             <svg viewBox="0 0 24 24">

@@ -56,7 +56,7 @@ class UserFileController extends Controller
             if ($request->hasFile($inputName)) {
                 try {
                     $uploadedFile = $request->file($inputName);
-                    
+
                     // Compress and convert to WebP using ImageCompressionService
                     $compressed = $this->compressionService->compress(
                         $uploadedFile,
@@ -93,7 +93,7 @@ class UserFileController extends Controller
 
         return response()->json([
             'message' => 'Files uploaded successfully',
-            'uploadedFiles' => FileMapper::formatFiles($user->files()->get()->keyBy('type')),
+            'uploadedFiles' => FileMapper::formatFiles(UserFile::where('user_id', $user->id)->get()->keyBy('type')),
         ]);
     }
 
@@ -101,7 +101,7 @@ class UserFileController extends Controller
     {
         $user = auth()->user();
 
-        $files = $user->files()->get();
+        $files = UserFile::where('user_id', $user->id)->get();
 
         // Map files by type and generate URL
         $uploadedFiles = [];
@@ -161,7 +161,7 @@ class UserFileController extends Controller
         }
 
         $authUser = $request->user();
-        $isOwner = $authUser && (int) $authUser->id === (int) $file->user_id;
+        $isOwner = $authUser && (string) $authUser->id === (string) $file->user_id;
         $isStaff = $authUser && in_array((int) $authUser->role_id, self::STAFF_ROLE_IDS, true);
 
         if (!$isOwner && !$isStaff) {

@@ -10,7 +10,8 @@ return new class extends Migration
     {
         Schema::create('applicant_profiles', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            // user_id represents the IDP UUID. No foreign key constraints as IDP acts as the source of truth.
+            $table->string('user_id', 36)->nullable();
             $table->string('school')->nullable();
             $table->string('school_address')->nullable();
             $table->string('school_year')->nullable();

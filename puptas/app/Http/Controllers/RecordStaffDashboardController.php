@@ -3,98 +3,88 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\ApplicantProfile;
+use App\Models\UserFile;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
 use App\Models\Application;
 use App\Models\ApplicationProcess;
-use App\Models\User;
+use App\Models\Program;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use League\Csv\Writer;
 use App\Helpers\FileMapper;
-use App\Http\Traits\ManagesApplicationFiles;
-use App\Services\ApplicationService;
-use App\Services\ApplicationProcessService;
-use App\Services\AuditLogService;
 use App\Services\DashboardService;
 use App\Services\UserService;
+use App\Services\ApplicationService;
+use Illuminate\Support\Facades\Auth;
 
 class RecordStaffDashboardController extends Controller
 {
-    use ManagesApplicationFiles;
-
-    protected ApplicationService $applicationService;
-    protected ApplicationProcessService $processService;
     protected DashboardService $dashboardService;
     protected UserService $userService;
-    protected AuditLogService $auditLogService;
+    protected ApplicationService $applicationService;
 
     public function __construct(
-        ApplicationService $applicationService,
-        ApplicationProcessService $processService,
         DashboardService $dashboardService,
         UserService $userService,
-        AuditLogService $auditLogService
+        ApplicationService $applicationService
     ) {
-        $this->applicationService = $applicationService;
-        $this->processService = $processService;
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
-        $this->auditLogService = $auditLogService;
+        $this->applicationService = $applicationService;
     }
 
+    /**
+     * Display the Record Staff dashboard
+     */
     public function index()
     {
-        $user = Auth::user();
-
-        if (!$this->dashboardService->verifyRoleAccess($user, 6)) {
-            return redirect()->back()->with('error', 'Unauthorized access.');
-        }
-
         $dashboardData = $this->dashboardService->getRecordsDashboardData();
 
         return Inertia::render('Dashboard/Records', [
-            'user' => $user,
-            'allUsers' => $dashboardData['allUsers'],
+            'user' => Auth::user(),
+            'users' => $dashboardData['allUsers'],
             'programs' => $dashboardData['programs'],
             'summary' => $dashboardData['summary'],
         ]);
     }
 
-    protected function getCurrentStage(): string
+    /**
+     * Get applicants that are eligible for records processing
+     * Medical completed OR recently enrolled
+     */
+    public function getApplicants()
     {
-        return 'records';
-    }
+        // For performance, let's select just what we need
+        $applicants = ApplicantProfile::with([
+            'currentApplication.program',
+            'currentApplication.processes' => function ($q) {
+                $q->whereIn('stage', ['medical', 'records'])
+                    ->where('status', 'completed');
+            }
+        ])
+            ->whereHas('currentApplication', function ($query) {
+                $query->where(function ($q) {
+                    $q->where('enrollment_status', 'officially_enrolled')
+                        ->orWhereHas('processes', function ($pq) {
+                            $pq->where('stage', 'medical')->where('status', 'completed');
+                        });
+                });
+            })
+            ->get();
 
-    protected function getRoleId(): int
-    {
-        return 6;
-    }
-
-    public function getUsers()
-    {
-        // Ensure user has record staff role
-        $this->ensureRole($this->getRoleId());
-
-        // Return applicants who completed medical stage or are officially enrolled
-        return response()->json($this->userService->getApplicantsForRecordStaff());
-    }
-
-    public function getStats()
-    {
-        $this->ensureRole($this->getRoleId());
-
-        return response()->json([
-            'summary'  => $this->applicationService->getApplicationSummary(),
-            'programs' => \App\Models\Program::withCount('applications')->get(),
-        ]);
-    }
-
-    protected function checkPrerequisiteStage($application)
-    {
-        // Check if medical stage is completed
-        $this->applicationService->ensureStageCompleted(
-            $application,
-            'medical',
-            "Cannot proceed - prerequisite verification not completed."
+        return response()->json(
+            $applicants->map(function ($applicant) {
+                return [
+                    'id' => $applicant->user_id,
+                    'firstname' => $applicant->firstname,
+                    'lastname' => $applicant->lastname,
+                    'email' => $applicant->email,
+                    'phone' => $applicant->contactnumber,
+                    'application' => $applicant->currentApplication,
+                    'program' => $applicant->currentApplication->program ?? null,
+                ];
+            })
         );
     }
 
@@ -104,16 +94,11 @@ class RecordStaffDashboardController extends Controller
      */
     public function getUserFiles($id)
     {
-        $user = User::with([
+        $user = ApplicantProfile::with([
             'currentApplication.program',
-            'currentApplication.processes.performedBy:id,firstname,lastname',
-            'files',
+            'currentApplication.processes',
             'grades'
-        ])->findOrFail($id);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
+        ])->where('user_id', $id)->firstOrFail();
 
         $application = $user->currentApplication;
 
@@ -131,38 +116,20 @@ class RecordStaffDashboardController extends Controller
 
         if (!$hasMedicalCompleted && !$isOfficiallyEnrolled) {
             return response()->json([
-                'message' => 'Unauthorized access. Application has not completed medical stage.'
+                'message' => 'Cannot access files. Medical process not completed.'
             ], 403);
         }
 
-        $files = $user->files->keyBy('type');
+        $files = UserFile::where('user_id', $id)->get()->keyBy('type');
 
-        // Transform the response to map currentApplication to application for frontend compatibility
         $userData = [
-            'id' => $user->id,
+            'id' => $user->user_id,
             'firstname' => $user->firstname,
             'lastname' => $user->lastname,
             'email' => $user->email,
-            'contactnumber' => $user->contactnumber,
-            'street_address' => $user->street_address,
-            'barangay' => $user->barangay,
-            'city' => $user->city,
-            'province' => $user->province,
-            'postal_code' => $user->postal_code,
-            'birthday' => $user->birthday,
-            'sex' => $user->sex,
-            'created_at' => $user->created_at,
-            'files' => $user->files,
+            'files' => $files->values(),
             'grades' => $user->grades,
-            // Map currentApplication to application for frontend compatibility
-            'application' => [
-                'id' => $application->id,
-                'status' => $application->status,
-                'enrollment_status' => $application->enrollment_status,
-                'created_at' => $application->created_at,
-                'program' => $application->program,
-                'processes' => $application->processes,
-            ],
+            'application' => $user->currentApplication,
         ];
 
         return response()->json([
@@ -171,210 +138,164 @@ class RecordStaffDashboardController extends Controller
         ]);
     }
 
-    // returnFiles() method provided by ManagesApplicationFiles trait
-
-    // returnApplication() method provided by ManagesApplicationFiles trait
-
-    public function tag($userId)
+    /**
+     * Submit records process for an applicant
+     */
+    public function submitRecordsProcess(Request $request)
     {
-        $this->ensureRole(6);
+        $request->validate([
+            'application_id' => 'required|exists:applications,id',
+            'status'         => 'required|in:completed',
+            'reviewer_notes' => 'nullable|string'
+        ]);
 
-        $application = $this->applicationService->getApplicationByUserId($userId);
+        $application = Application::findOrFail($request->application_id);
+        $user = auth()->user();
 
-        // Check if medical stage is completed
-        $this->applicationService->ensureStageCompleted(
-            $application,
-            'medical',
-            "Cannot tag as enrolled - medical stage not completed."
-        );
+        // Ensure medical is completed
+        $medicalCompleted = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'completed')
+            ->exists();
 
+        if (!$medicalCompleted) {
+            return response()->json(['message' => 'Medical assessment must be completed first'], 400);
+        }
+
+        DB::beginTransaction();
         try {
-            // Update the application enrollment status
-            Application::where('id', $application->id)
-                ->update([
-                    'status' => 'accepted',
-                    'enrollment_status' => 'officially_enrolled',
-                ]);
-
-            // Update or create the records process entry
-            $recordsProcess = $application->processes()
-                ->where('stage', 'records')
-                ->latest()
-                ->first();
-
-            if ($recordsProcess) {
-                $recordsProcess->update([
-                    'status' => 'completed',
-                    'action' => 'transferred',
-                    'decision_reason' => 'officially_enrolled',
-                    'performed_by' => auth()->id(),
-                ]);
-            } else {
-                // Create new records process if it doesn't exist
-                ApplicationProcess::create([
+            ApplicationProcess::updateOrCreate(
+                [
                     'application_id' => $application->id,
-                    'stage' => 'records',
-                    'status' => 'completed',
-                    'action' => 'transferred',
-                    'decision_reason' => 'officially_enrolled',
-                    'performed_by' => auth()->id(),
+                    'stage'          => 'records'
+                ],
+                [
+                    'status'         => $request->status,
+                    'reviewer_notes' => $request->reviewer_notes,
+                    'performed_by'   => $user ? $user->id : null,
+                    'ip_address'     => request()->ip()
+                ]
+            );
+
+            // Automatically set to officially enrolled if records are completed 
+            // and application was accepted
+            if ($application->status === 'accepted') {
+                $application->update([
+                    'enrollment_status' => 'officially_enrolled'
                 ]);
             }
 
-            $this->auditLogService->logActivity('UPDATE', 'Applications', "Registrar tagged applicant ID {$userId} as officially enrolled.", null, 'ADMISSION_DATA');
-
-            return response()->json(['message' => 'Tagged as officially enrolled.']);
-        } catch (\Throwable $e) {
-            \Log::error("❌ Tag failed: " . $e->getMessage());
-            return response()->json(['message' => 'An error occurred while tagging the enrollment.'], 400);
+            DB::commit();
+            return response()->json(['message' => 'Records process submitted successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to log records process: ' . $e->getMessage()], 500);
         }
     }
 
-    public function untag($userId)
+    /**
+     * Change course/program for an officially enrolled applicant
+     */
+    public function changeCourse(Request $request, $applicantId)
     {
-        $this->ensureRole(6);
-
-        $application = $this->applicationService->getApplicationByUserId($userId);
-
-        // Check if application is accepted
-        if ($application->status !== 'accepted') {
-            abort(409, "Cannot untag - application must be accepted.");
-        }
-
-        try {
-            // Update the application enrollment status
-            Application::where('id', $application->id)
-                ->update([
-                    'status' => 'waitlist',
-                    'enrollment_status' => 'temporary',
-                ]);
-
-            // Update the records process entry
-            $recordsProcess = $application->processes()
-                ->where('stage', 'records')
-                ->latest()
-                ->first();
-
-            if ($recordsProcess) {
-                $recordsProcess->update([
-                    'status' => 'in_progress',
-                    'action' => 'returned',
-                    'decision_reason' => 'temporary',
-                    'performed_by' => auth()->id(),
-                ]);
-            }
-
-            $this->auditLogService->logActivity('UPDATE', 'Applications', "Registrar reverted enrollment for applicant ID {$userId} to temporary status.", null, 'ADMISSION_DATA');
-
-            return response()->json(['message' => 'Reverted to temporary enrollment.']);
-        } catch (\Throwable $e) {
-            \Log::error("❌ Untag failed: " . $e->getMessage());
-            return response()->json(['message' => 'An error occurred while reverting the enrollment.'], 400);
-        }
-    }
-
-    public function getPrograms()
-    {
-        $this->ensureRole(2, 4, 7);
-
-        return response()->json([
-            'programs' => \App\Models\Program::select('id', 'code', 'name', 'slots')->orderBy('code')->get(),
-        ]);
-    }
-
-    public function changeCourse(Request $request, $userId)
-    {
-        $this->ensureRole(2, 4, 7);
-
-        // Validate the incoming program_id strictly
-        $validated = $request->validate([
-            'program_id' => ['required', 'integer', 'exists:programs,id'],
+        $request->validate([
+            'program_id' => 'required|exists:programs,id'
         ]);
 
-        $newProgramId = (int) $validated['program_id'];
+        $newProgramId = $request->program_id;
 
-        $application = $this->applicationService->getApplicationByUserId((int) $userId);
+        // Verify the applicant profile exists
+        $applicant = ApplicantProfile::where('user_id', $applicantId)->firstOrFail();
 
-        // Only allow course change for officially enrolled applicants
+        $application = Application::where('user_id', $applicantId)->firstOrFail();
+
         if ($application->enrollment_status !== 'officially_enrolled') {
-            abort(409, 'Course can only be changed for officially enrolled applicants.');
+            return response()->json(['message' => 'Course can only be changed for officially enrolled applicants.'], 409);
         }
 
-        // No change needed if the program is already the same
-        if ((int) $application->program_id === $newProgramId) {
-            abort(422, 'The selected program is the same as the current program.');
+        if ($application->program_id == $newProgramId) {
+            return response()->json(['message' => 'The selected program is the same as the current program.'], 422);
         }
 
+        $oldProgramId = $application->program_id;
+
+        // Perform the update
+        DB::beginTransaction();
         try {
-            DB::transaction(function () use ($application, $newProgramId, $userId) {
-                $oldProgramId = $application->program_id;
-                
-                $newProgram = \App\Models\Program::findOrFail($newProgramId);
-                if ($newProgram->slots <= 0) {
-                    abort(409, 'The selected program has no available slots.');
-                }
+            $application->update([
+                'program_id' => $newProgramId
+            ]);
 
-                $oldProgram = \App\Models\Program::find($oldProgramId);
+            // Define user ID safely for mock / idp
+            $perfBy = auth()->user() ? auth()->user()->id : null;
 
-                // Update program_id while preserving enrollment status
-                Application::where('id', $application->id)
-                    ->update([
-                        'program_id' => $newProgramId,
-                    ]);
+            // Log the process
+            \App\Models\ApplicationProcess::create([
+                'application_id' => $application->id,
+                'stage'          => 'course_changed',
+                'action'         => 'course_changed',
+                'status'         => 'completed',
+                'reviewer_notes' => 'Changed from program ID ' . $oldProgramId . ' to ' . $newProgramId,
+                'performed_by'   => $perfBy,
+                'ip_address'     => request()->ip()
+            ]);
 
-                // Decrement the new program slots
-                $newProgram->slots -= 1;
-                $newProgram->save();
+            DB::commit();
 
-                // Increment the old program slots
-                if ($oldProgram) {
-                    $oldProgram->slots += 1;
-                    $oldProgram->save();
-                }
-
-                // Create an immutable audit process row for this change
-                ApplicationProcess::create([
-                    'application_id'  => $application->id,
-                    'stage'           => 'records',
-                    'status'          => 'completed',
-                    'action'          => 'course_changed',
-                    'decision_reason' => 'program_change',
-                    'reviewer_notes'  => "Program changed from ID {$oldProgramId} to ID {$newProgramId} for applicant ID {$userId}.",
-                    'performed_by'    => auth()->id(),
-                    'ip_address'      => request()->ip(),
-                ]);
-
-                $this->auditLogService->logActivity(
-                    'UPDATE',
-                    'Applications',
-                    "Registrar changed course for applicant ID {$userId} from program ID {$oldProgramId} to program ID {$newProgramId}.",
-                    null,
-                    'ADMISSION_DATA'
-                );
-            });
-
-            // Reload the fresh program name to confirm in response
-            $application->refresh();
-            $program = $application->program;
+            $newProgram = Program::find($newProgramId);
 
             return response()->json([
                 'message' => 'Course updated successfully.',
-                'program' => $program ? [
-                    'id'   => $program->id,
-                    'code' => $program->code,
-                    'name' => $program->name,
-                ] : null,
+                'program' => $newProgram
             ]);
-        } catch (\Throwable $e) {
-            \Log::error('❌ Course change failed: ' . $e->getMessage());
-            return response()->json(['message' => 'An error occurred while changing the course.'], 500);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to change course: ' . $e->getMessage()], 500);
         }
     }
 
-    private function ensureRole(int ...$roleIds): void
+    /**
+     * Export enrolled applicants to CSV
+     */
+    public function downloadEnrolledCsv()
     {
-        if (!Auth::user() || !in_array(Auth::user()->role_id, $roleIds)) {
-            abort(403, 'Unauthorized access.');
+        $applicants = ApplicantProfile::with(['currentApplication.program'])
+            ->whereHas('currentApplication', function ($q) {
+                $q->where('enrollment_status', 'officially_enrolled');
+            })
+            ->get();
+
+        $csv = Writer::createFromString('');
+        $csv->insertOne([
+            'Applicant ID',
+            'First Name',
+            'Last Name',
+            'Email',
+            'Phone',
+            'Program Code',
+            'Program Name',
+            'Enrollment Date'
+        ]);
+
+        foreach ($applicants as $applicant) {
+            $application = $applicant->currentApplication;
+            $program = $application->program;
+
+            $csv->insertOne([
+                $applicant->user_id,
+                $applicant->firstname,
+                $applicant->lastname,
+                $applicant->email,
+                $applicant->contactnumber,
+                $program ? $program->code : 'N/A',
+                $program ? $program->name : 'N/A',
+                $application->updated_at->format('Y-m-d H:i:s')
+            ]);
         }
+
+        return response((string) $csv, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=\"enrolled_applicants.csv\"',
+        ]);
     }
 }

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\AuditLog;
-use App\Models\User;
 use Inertia\Inertia;
 
 /**
@@ -15,13 +14,13 @@ class AuditLogController extends Controller
 {
     /**
      * Display a listing of the audit logs.
-     * 
+     *
      * @return \Inertia\Response
      */
     public function index(Request $request)
     {
         $filters = $request->validate([
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'user_id' => ['nullable'], // changed from integer to nullable string support
             'date' => ['nullable', 'date'],
             'log_type' => ['nullable', 'in:' . implode(',', [
                 AuditLog::TYPE_SYSTEM,
@@ -38,11 +37,20 @@ class AuditLogController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $users = User::query()
-            ->whereIn('id', AuditLog::query()->select('user_id')->whereNotNull('user_id')->distinct())
-            ->orderBy('firstname')
-            ->orderBy('lastname')
-            ->get(['id', 'firstname', 'lastname', 'email']);
+        // Extract users from the logs themselves since User model is gone
+        $users = AuditLog::query()
+            ->select('user_id as id', 'username as email')
+            ->whereNotNull('user_id')
+            ->groupBy('user_id', 'username')
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'firstname' => $log->email, // fallback
+                    'lastname' => '',
+                    'email' => $log->email,
+                ];
+            });
 
         return Inertia::render('SuperAdmin/Logs', [
             'logs' => $logs,
@@ -56,36 +64,18 @@ class AuditLogController extends Controller
                 'user_id' => $filters['user_id'] ?? null,
                 'date' => $filters['date'] ?? null,
                 'log_type' => $filters['log_type'] ?? null,
-            ],
+            ]
         ]);
     }
 
     /**
-     * Display the details of a specific audit log.
-     * 
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function show($id)
-    {
-        // Authorization is handled by EnsureSuperAdmin middleware at route level
-        
-        $log = AuditLog::findOrFail($id);
-
-        return response()->json([
-            'log' => $log,
-        ]);
-    }
-
-    /**
-     * Lightweight endpoint to check for new audit logs.
-     * Returns the latest log ID and total count for efficient polling.
+     * Polling endpoint to check for new logs
      */
     public function checkNew(Request $request)
     {
         $sinceId = (int) $request->query('since_id', 0);
         $filters = $request->validate([
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'user_id' => ['nullable'], // changed from integer
             'date' => ['nullable', 'date'],
             'log_type' => ['nullable', 'in:' . implode(',', [
                 AuditLog::TYPE_SYSTEM,
@@ -94,32 +84,26 @@ class AuditLogController extends Controller
             ])],
         ]);
 
-        $baseQuery = AuditLog::query();
-        $this->applyFilters($baseQuery, $filters);
+        $query = AuditLog::query()->where('id', '>', $sinceId);
+        $this->applyFilters($query, $filters);
 
-        $latestId = (clone $baseQuery)->max('id') ?? 0;
-        $total = (clone $baseQuery)->count();
-
-        $newLogIds = [];
-        if ($sinceId > 0 && $latestId > $sinceId) {
-            $newLogIds = (clone $baseQuery)
-                ->where('id', '>', $sinceId)
-                ->orderBy('id', 'desc')
-                ->limit(50)
-                ->pluck('id');
-        }
+        $newLogIds = $query->pluck('id')->toArray();
+        $total = AuditLog::count();
 
         return response()->json([
-            'latest_id' => $latestId,
-            'total' => $total,
+            'has_new' => count($newLogIds) > 0,
             'new_log_ids' => $newLogIds,
+            'total' => $total,
         ]);
     }
 
+    /**
+     * Apply filters to the query.
+     */
     private function applyFilters($query, array $filters): void
     {
         if (!empty($filters['user_id'])) {
-            $query->forUser((int) $filters['user_id']);
+            $query->where('user_id', $filters['user_id']); // using where instead of forUser
         }
 
         if (!empty($filters['date'])) {

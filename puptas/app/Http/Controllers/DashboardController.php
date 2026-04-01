@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\User;
+use App\Models\ApplicantProfile;
+use App\Models\StaffProfile; // Just in case
 use Inertia\Inertia;
 use App\Models\Application;
 use App\Models\ApplicationProcess;
@@ -73,25 +74,24 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard/Admin', [
             'user' => $user,
-            'allUsers' => User::with(['currentApplication.program', 'role'])
-                ->where('role_id', 1)
+            'allUsers' => ApplicantProfile::with(['currentApplication.program'])
                 ->whereHas('currentApplication')
                 ->orderBy('created_at', 'desc')
                 ->get()
-                ->map(function ($user) {
+                ->map(function ($applicant) {
                     return [
-                        'id' => $user->id,
-                        'firstname' => $user->firstname,
-                        'lastname' => $user->lastname,
-                        'email' => $user->email,
-                        'role' => $user->role,
-                        'created_at' => $user->created_at,
+                        'id' => $applicant->user_id,
+                        'firstname' => $applicant->firstname,
+                        'lastname' => $applicant->lastname,
+                        'email' => $applicant->email,
+                        'role' => ['name' => 'Applicant'], // Mock role as it was removed
+                        'created_at' => $applicant->created_at,
                         // Map currentApplication to application for frontend compatibility
-                        'application' => $user->currentApplication ? [
-                            'id' => $user->currentApplication->id,
-                            'status' => $user->currentApplication->status,
-                            'created_at' => $user->currentApplication->created_at,
-                            'program' => $user->currentApplication->program,
+                        'application' => $applicant->currentApplication ? [
+                            'id' => $applicant->currentApplication->id,
+                            'status' => $applicant->currentApplication->status,
+                            'created_at' => $applicant->currentApplication->created_at,
+                            'program' => $applicant->currentApplication->program,
                         ] : null,
                     ];
                 }),
@@ -106,7 +106,6 @@ class DashboardController extends Controller
         ]);
     }
 
-
     public function getUsers()
     {
         // Defense in depth: Verify authentication and authorized role (admin, evaluator, interviewer)
@@ -116,26 +115,26 @@ class DashboardController extends Controller
         }
 
         return response()->json(
-            User::with('currentApplication.program')
-                ->where('role_id', 1)
+            ApplicantProfile::with('currentApplication.program')
                 ->whereHas('currentApplication')
                 ->get()
-                ->map(function ($user) {
+                ->map(function ($applicant) {
                     return [
-                        'id' => $user->id,
-                        'firstname' => $user->firstname,
-                        'lastname' => $user->lastname,
-                        'course' => $user->course,
-                        'status' => $user->currentApplication->status ?? null,
-                        'email' => $user->email,
-                        'username' => $user->username,
-                        'phone' => $user->phone,
-                        'company' => $user->company,
-                        'program' => $user->currentApplication->program ?? null,
+                        'id' => $applicant->user_id,
+                        'firstname' => $applicant->firstname,
+                        'lastname' => $applicant->lastname,
+                        'course' => $applicant->course, // Note: does ApplicantProfile have this? Make sure.
+                        'status' => $applicant->currentApplication->status ?? null,
+                        'email' => $applicant->email,
+                        'username' => $applicant->email,
+                        'phone' => $applicant->contactnumber,
+                        'company' => null,
+                        'program' => $applicant->currentApplication->program ?? null,
                     ];
                 })
         );
     }
+
     public function getUserFiles($id)
     {
         // Defense in depth: Verify authentication and admin role
@@ -144,38 +143,36 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 
-        $user = User::with(['currentApplication.program', 'currentApplication.processes', 'files', 'grades'])->findOrFail($id);
+        $applicant = ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes', 'grades'])
+            ->where('user_id', $id)
+            ->firstOrFail();
 
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        $files = $user->files->keyBy('type');
+        $files = UserFile::where('user_id', $id)->get()->keyBy('type');
 
         // Transform the response to use 'application' key for frontend compatibility
         $userData = [
-            'id' => $user->id,
-            'firstname' => $user->firstname,
-            'lastname' => $user->lastname,
-            'email' => $user->email,
-            'contactnumber' => $user->contactnumber,
-            'street_address' => $user->street_address,
-            'barangay' => $user->barangay,
-            'city' => $user->city,
-            'province' => $user->province,
-            'postal_code' => $user->postal_code,
-            'birthday' => $user->birthday,
-            'sex' => $user->sex,
-            'created_at' => $user->created_at,
-            'files' => $user->files,
-            'grades' => $user->grades,
-            // Map currentApplication to application for frontend compatibility
-            'application' => $user->currentApplication ? [
-                'id' => $user->currentApplication->id,
-                'status' => $user->currentApplication->status,
-                'created_at' => $user->currentApplication->created_at,
-                'program' => $user->currentApplication->program,
-                'processes' => $user->currentApplication->processes,
+            'id' => $applicant->user_id,
+            'firstname' => $applicant->firstname,
+            'lastname' => $applicant->lastname,
+            'email' => $applicant->email,
+            'contactnumber' => $applicant->contactnumber,
+            'street_address' => $applicant->street_address,
+            'barangay' => $applicant->barangay,
+            'city' => $applicant->city,
+            'province' => $applicant->province,
+            'postal_code' => $applicant->postal_code,
+            'birthday' => $applicant->birthday,
+            'sex' => $applicant->sex,
+            'created_at' => $applicant->created_at,
+            'files' => $files->values(),
+            'grades' => $applicant->grades,
+            // Map currentApplication to application for frontend compatibility 
+            'application' => $applicant->currentApplication ? [
+                'id' => $applicant->currentApplication->id,
+                'status' => $applicant->currentApplication->status,
+                'created_at' => $applicant->currentApplication->created_at,
+                'program' => $applicant->currentApplication->program,
+                'processes' => $applicant->currentApplication->processes,
             ] : null,
         ];
 

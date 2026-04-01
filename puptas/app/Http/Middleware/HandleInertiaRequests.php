@@ -45,8 +45,13 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'pending_registration' => $request->session()->get('pending_registration'),
             'privacy_consent' => [
-                'required' => $request->user() ? !$request->user()->privacy_consent : false,
+                'required' => $request->user() ? 
+                    ($request->user() instanceof \App\Auth\IdpUser 
+                        ? !session('privacy_consent_accepted', false) 
+                        : !$request->user()->privacy_consent) 
+                    : false,
             ],
         ]);
     }

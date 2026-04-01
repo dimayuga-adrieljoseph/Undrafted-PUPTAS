@@ -34,7 +34,7 @@ class TestPasser extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(ApplicantProfile::class, 'user_id', 'user_id');
     }
 
     /**
