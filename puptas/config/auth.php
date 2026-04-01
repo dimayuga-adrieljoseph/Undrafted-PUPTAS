@@ -61,8 +61,7 @@ return [
 
     'providers' => [
         'users' => [
-            'driver' => 'idp',
-            // model config is ignored by idp driver, but left here for fallback/reference
+            'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
 

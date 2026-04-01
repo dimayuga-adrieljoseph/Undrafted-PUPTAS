@@ -102,6 +102,13 @@ const submit = () => {
         },
     });
 };
+
+/**
+ * Force a full browser navigation to the IDP, bypassing Inertia's XHR interception.
+ */
+const navigateToIdp = () => {
+    window.location.href = route('idp.redirect');
+};
 </script>
 
 <template>
@@ -325,14 +332,15 @@ const submit = () => {
                                 <span v-else>Signing In...</span>
                             </PrimaryButton>
 
-                            <!-- IDP Login Button -->
-                            <a
-                                :href="route('idp.redirect')"
+                            <!-- IDP Login Button - uses window.location for full browser redirect, bypassing Inertia XHR interception -->
+                            <button
+                                type="button"
+                                @click="navigateToIdp"
                                 class="w-full flex items-center justify-center gap-3 py-2.5 px-4 border-2 border-gray-200/80 rounded-lg text-gray-700 font-medium hover:border-[#800000] hover:text-[#800000] hover:bg-white/50 transition-all duration-200 group backdrop-blur-sm"
                             >
                                 <i class="fas fa-university group-hover:scale-110 transition-transform"></i>
                                 Login with School IDP
-                            </a>
+                            </button>
                         </form>
                     </div>
                 </div>

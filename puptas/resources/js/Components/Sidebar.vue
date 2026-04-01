@@ -161,7 +161,7 @@ const toggleDarkMode = () => {
 };
 
 const logout = () => {
-    router.post(route("logout"));
+    router.post(route("idp.logout"));
 };
 
 /* ---------------- CLICK OUTSIDE ---------------- */
