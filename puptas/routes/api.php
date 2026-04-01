@@ -80,6 +80,15 @@ Route::prefix('v1')
         Route::get('/programs', [ExternalProgramApiController::class, 'index']);
     });
 
+use App\Http\Controllers\ExternalMedicalApiController;
+
+Route::prefix('v1')
+    ->middleware(['external.medical.api.token', 'throttle:external-medical-api-second', 'throttle:external-medical-api-minute', 'throttle:external-medical-api-daily'])
+    ->group(function () {
+        Route::get('/medical/applicants', [ExternalMedicalApiController::class, 'index']);
+        Route::get('/medical/applicants/idp/{idpUserId}', [ExternalMedicalApiController::class, 'showByIdpUserId']);
+    });
+
 // Route::get('/user-stats', [UserController::class, 'getUserStats']);
 // Route::get('/programs', [ProgramController::class, 'index']);
 // Route::post('/add-user', [UserController::class, 'store']);

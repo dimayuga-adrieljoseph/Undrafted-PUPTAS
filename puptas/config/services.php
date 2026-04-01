@@ -46,4 +46,11 @@ return [
         'daily_limit' => (int) env('EXTERNAL_PROGRAM_API_DAILY_LIMIT', 50),
     ],
 
+    'external_medical_api' => [
+        'token' => env('EXTERNAL_MEDICAL_API_TOKEN'),
+        'second_limit' => (int) env('EXTERNAL_MEDICAL_API_SECOND_LIMIT', 5),
+        'minute_limit' => (int) env('EXTERNAL_MEDICAL_API_MINUTE_LIMIT', 80),
+        'daily_limit' => (int) env('EXTERNAL_MEDICAL_API_DAILY_LIMIT', 1500),
+    ],
+
 ];
