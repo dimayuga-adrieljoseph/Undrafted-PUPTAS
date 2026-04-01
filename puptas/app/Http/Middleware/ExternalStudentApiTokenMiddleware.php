@@ -8,7 +8,7 @@ use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class ExternalApiTokenMiddleware
+class ExternalStudentApiTokenMiddleware
 {
     public function handle(Request $request, Closure $next): mixed
     {
