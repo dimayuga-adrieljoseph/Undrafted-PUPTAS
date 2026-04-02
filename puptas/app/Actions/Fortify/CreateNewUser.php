@@ -23,9 +23,10 @@ class CreateNewUser implements CreatesNewUsers
     public function create(array $input)
     {
         $pendingReg = session('pending_registration');
-        if (!$pendingReg) {
-            abort(403, 'You must login via the IDP first.');
-        }
+        // IDP Bypass: If no pending registration, proceed as local user.
+        // if (!$pendingReg) {
+        //     abort(403, 'You must login via the IDP first.');
+        // }
 
         Validator::make($input, [
             'lastname' => ['required', 'string', 'max:255'],
@@ -46,12 +47,12 @@ class CreateNewUser implements CreatesNewUsers
         return DB::transaction(function () use ($input, $pendingReg) {
             // First, create the local User record
             $user = User::create([
-                'idp_user_id' => $pendingReg['user_id'],
+                'idp_user_id' => $pendingReg['user_id'] ?? null,
                 'email' => $pendingReg['email'] ?? ($input['email'] ?? null),
                 'role_id' => 1,
                 'firstname' => $input['firstname'],
                 'lastname' => $input['lastname'],
-                'password' => Hash::make(Str::random(16)), // Required by db, but auth via IDP
+                'password' => Hash::make($input['password']), // Use the password provided by the user
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
             ]);
