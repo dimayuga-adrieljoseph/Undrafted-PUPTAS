@@ -34,6 +34,7 @@ const page = usePage();
  */
 defineProps({
     canResetPassword: Boolean,
+    canRegister: Boolean,
     status: String,
 });
 
@@ -341,6 +342,18 @@ const navigateToIdp = () => {
                                 <i class="fas fa-university group-hover:scale-110 transition-transform"></i>
                                 Login with School IDP
                             </button>
+                            <!-- Registration Link - Visible if registration is enabled -->
+                            <div v-if="canRegister" class="text-center mt-6">
+                                <p class="text-sm text-gray-600">
+                                    Don't have an account? 
+                                    <Link
+                                        :href="route('register')"
+                                        class="font-semibold text-[#800000] hover:text-[#600000] transition-colors"
+                                    >
+                                        Register Now
+                                    </Link>
+                                </p>
+                            </div>
                         </form>
                     </div>
                 </div>

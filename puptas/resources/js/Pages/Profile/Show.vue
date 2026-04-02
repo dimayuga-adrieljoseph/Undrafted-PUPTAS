@@ -6,7 +6,7 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
-import MedicalLayout from "@/Layouts/MedicalLayout.vue";
+// MedicalLayout is currently missing, disabled for build
 import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
 
 import DeleteUserForm from "@/Pages/Profile/Partials/DeleteUserForm.vue";
@@ -40,7 +40,7 @@ const Layout = computed(() => {
         case 4:
             return InterviewerLayout;
         case 5:
-            return MedicalLayout;
+            return AppLayout; // Fallback since MedicalLayout is missing
         case 6:
             return RecordStaffLayout;
         default:
@@ -49,7 +49,6 @@ const Layout = computed(() => {
 });
 </script>
 
-<
 <template>
     <component :is="Layout" title="Profile">
         <template #header>
