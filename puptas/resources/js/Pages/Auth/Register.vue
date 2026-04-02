@@ -475,24 +475,26 @@ const handleTermsCancel = () => {
                                         <label
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
-                                            School Year
+                                            Graduate of:
                                             <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
-                                        <input
+                                        <select
                                             v-model="form.schoolyear"
-                                            type="text"
                                             required
-                                            autocomplete="cc-exp"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="2023-2024"
-                                        />
+                                        >
+                                            <option value="" disabled>Select an option</option>
+                                            <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
+                                            <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
+                                            <option value="Alternative Learning System">Alternative Learning System</option>
+                                        </select>
                                     </div>
 
                                     <div class="space-y-2">
                                         <label
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
-                                            Expected Graduation
+                                            Graduation Date
                                             <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
@@ -808,118 +810,6 @@ const handleTermsCancel = () => {
                     <!-- Right Side - Info Panel -->
                     <div class="lg:col-span-1">
                         <div class="sticky top-8 space-y-6">
-                            <!-- Quick Help Card -->
-                            <div
-                                class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800"
-                            >
-                                <div class="flex items-center mb-4">
-                                    <div
-                                        class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mr-3"
-                                    >
-                                        <svg
-                                            class="w-5 h-5 text-blue-600 dark:text-blue-400"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                            ></path>
-                                        </svg>
-                                    </div>
-                                    <h3
-                                        class="text-lg font-bold text-gray-800 dark:text-white"
-                                    >
-                                        Need Help?
-                                    </h3>
-                                </div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400 mb-4"
-                                >
-                                    Having trouble with registration? Here's
-                                    what you need to know:
-                                </p>
-                                <ul class="space-y-3">
-                                    <li class="flex items-start">
-                                        <svg
-                                            class="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0 dark:text-green-300"
-                                            fill="currentColor"
-                                            viewBox="0 0 20 20"
-                                        >
-                                            <path
-                                                fill-rule="evenodd"
-                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                clip-rule="evenodd"
-                                            />
-                                        </svg>
-                                        <span
-                                            class="text-sm text-gray-700 dark:text-gray-300"
-                                            >Ensure all required fields marked
-                                            with * are filled</span
-                                        >
-                                    </li>
-                                    <li class="flex items-start">
-                                        <svg
-                                            class="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0 dark:text-green-300"
-                                            fill="currentColor"
-                                            viewBox="0 0 20 20"
-                                        >
-                                            <path
-                                                fill-rule="evenodd"
-                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                clip-rule="evenodd"
-                                            />
-                                        </svg>
-                                        <span
-                                            class="text-sm text-gray-700 dark:text-gray-300"
-                                            >Use a valid email you have access
-                                            to</span
-                                        >
-                                    </li>
-                                    <li class="flex items-start">
-                                        <svg
-                                            class="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0 dark:text-green-300"
-                                            fill="currentColor"
-                                            viewBox="0 0 20 20"
-                                        >
-                                            <path
-                                                fill-rule="evenodd"
-                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                clip-rule="evenodd"
-                                            />
-                                        </svg>
-                                        <span
-                                            class="text-sm text-gray-700 dark:text-gray-300"
-                                            >Check your email for verification
-                                            after registration</span
-                                        >
-                                    </li>
-                                </ul>
-                                <div class="mt-6">
-                                    <a
-                                        href="mailto:admissions@pupt.edu.ph"
-                                        class="inline-flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                                    >
-                                        <svg
-                                            class="w-4 h-4 mr-2"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                            ></path>
-                                        </svg>
-                                        Contact Admissions Office
-                                    </a>
-                                </div>
-                            </div>
 
                             <!-- Next Steps Card -->
                             <div
@@ -963,13 +853,13 @@ const handleTermsCancel = () => {
                                             <h4
                                                 class="font-semibold text-gray-800 dark:text-white text-sm"
                                             >
-                                                Verify Email
+                                                Complete Profile
                                             </h4>
                                             <p
                                                 class="text-xs text-gray-600 dark:text-gray-400 mt-1"
                                             >
-                                                Check your inbox for
-                                                verification link
+                                                Upload required documents in
+                                                your dashboard
                                             </p>
                                         </div>
                                     </div>
@@ -986,13 +876,12 @@ const handleTermsCancel = () => {
                                             <h4
                                                 class="font-semibold text-gray-800 dark:text-white text-sm"
                                             >
-                                                Complete Profile
+                                                Follow Application Process
                                             </h4>
                                             <p
                                                 class="text-xs text-gray-600 dark:text-gray-400 mt-1"
                                             >
-                                                Upload required documents in
-                                                your dashboard
+                                                The admission system will guide you as to what you need to do
                                             </p>
                                         </div>
                                     </div>

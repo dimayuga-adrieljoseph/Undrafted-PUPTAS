@@ -92,11 +92,18 @@ class CreateNewUser implements CreatesNewUsers
                 // Keep traditional school fields if they exist
                 'school' => $input['school'] ?? null,
                 'school_address' => $input['schoolAdd'] ?? null,
-                'school_year' => $input['schoolyear'] ?? null,
                 'date_graduated' => $input['dateGrad'] ?? null,
                 'strand' => $input['strand'] ?? null,
                 'track' => $input['track'] ?? null,
             ]);
+
+            // Attach graduate type via junction table
+            if (!empty($input['schoolyear'])) {
+                $graduateType = \App\Models\GraduateType::where('label', $input['schoolyear'])->first();
+                if ($graduateType) {
+                    $profile->graduateTypes()->sync([$graduateType->id]);
+                }
+            }
 
             if (!empty($pendingReg['access_token'])) {
                 \App\Models\RefreshToken::create([

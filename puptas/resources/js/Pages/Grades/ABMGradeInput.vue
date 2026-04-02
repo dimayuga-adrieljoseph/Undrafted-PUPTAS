@@ -48,17 +48,15 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Mathematics</label>
-                                    <div class="relative">
-                                        <input
-                                            v-model.number="form.g11_general_mathematics"
-                                            type="number"
-                                            min="0"
-                                            max="100"
-                                            step="0.01"
-                                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                            placeholder="Enter grade (0-100)"
-                                        />
-                                    </div>
+                                    <input
+                                        v-model.number="form.g11_general_mathematics"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="Enter grade (0-100)"
+                                    />
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statistics and Probability</label>
@@ -72,6 +70,11 @@
                                         placeholder="Enter grade (0-100)"
                                     />
                                 </div>
+                            </div>
+                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    Math Average: <span class="font-bold">{{ mathAverage || "—" }}</span>
+                                </p>
                             </div>
                         </div>
 
@@ -131,6 +134,11 @@
                                     />
                                 </div>
                             </div>
+                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    English Average: <span class="font-bold">{{ englishAverage || "—" }}</span>
+                                </p>
+                            </div>
                         </div>
 
                         <!-- Science Subjects -->
@@ -164,6 +172,11 @@
                                         placeholder="Enter grade (0-100)"
                                     />
                                 </div>
+                            </div>
+                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -333,6 +346,13 @@
                                     />
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Grade 12 GWA Display -->
+                        <div class="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                            <p class="text-sm font-medium text-purple-700 dark:text-purple-300">
+                                Grade 12 GWA: <span class="text-2xl font-bold">{{ g12GWA || "—" }}</span>
+                            </p>
                         </div>
                     </div>
                 </div>

@@ -45,7 +45,9 @@ class ConfirmationService
     {
         $files = $user->files()->get()->keyBy('type');
         $application = $user->currentApplication;
-        $profile = $user->applicantProfile;
+        $profile = $user->applicantProfile()->with('graduateTypes')->first();
+
+        $graduateType = $profile?->graduateTypes->first()?->label ?? null;
 
         return [
             'firstname' => $user->firstname,
@@ -62,14 +64,14 @@ class ConfirmationService
             'email' => $user->email,
             'school' => $profile->school ?? null,
             'schoolAdd' => $profile->school_address ?? null,
-            'schoolyear' => $profile->school_year ?? null,
+            'schoolyear' => $graduateType,
             'dateGrad' => $profile?->date_graduated
                 ? date('Y-m-d', strtotime((string) $profile->date_graduated))
                 : null,
             'strand' => $profile->strand ?? null,
             'track' => $profile->track ?? null,
             'status' => $application?->status ?? null,
-            'uploadedFiles' => FileMapper::formatFiles($files),
+            'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType),
             'processes' => $this->getApplicationProcesses($application),
             'enrollment_status' => $application?->enrollment_status ?? null,
             'program_id' => $application?->program_id ?? $profile?->first_choice_program,
