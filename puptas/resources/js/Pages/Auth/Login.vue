@@ -341,6 +341,18 @@ const navigateToIdp = () => {
                                 <i class="fas fa-university group-hover:scale-110 transition-transform"></i>
                                 Login with School IDP
                             </button>
+
+                            <!-- Register Button -->
+                            <div class="text-center text-sm text-gray-600">
+                                Don't have an account?
+                                <Link
+                                    :href="route('register')"
+                                    class="text-[#800000] hover:text-[#600000] font-medium transition-colors ml-1"
+                                >
+                                    <i class="fas fa-user-plus mr-1"></i>
+                                    Register
+                                </Link>
+                            </div>
                         </form>
                     </div>
                 </div>
