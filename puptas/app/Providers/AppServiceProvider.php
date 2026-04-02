@@ -49,5 +49,20 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perDay((int) config('services.external_program_api.daily_limit', 50))
                 ->by((string) $request->ip());
         });
+
+        RateLimiter::for('external-medical-api-second', function ($request) {
+            return Limit::perSecond((int) config('services.external_medical_api.second_limit', 5))
+                ->by((string) $request->ip());
+        });
+
+        RateLimiter::for('external-medical-api-minute', function ($request) {
+            return Limit::perMinute((int) config('services.external_medical_api.minute_limit', 80))
+                ->by((string) $request->ip());
+        });
+
+        RateLimiter::for('external-medical-api-daily', function ($request) {
+            return Limit::perDay((int) config('services.external_medical_api.daily_limit', 100))
+                ->by((string) $request->ip());
+        });
     }
 }

@@ -15,7 +15,6 @@ use App\Http\Controllers\ConfirmationController;
 use App\Http\Controllers\UserFileController;
 use App\Http\Controllers\EvaluatorDashboardController;
 use App\Http\Controllers\InterviewerDashboardController;
-use App\Http\Controllers\MedicalDashboardController;
 use App\Http\Controllers\RecordStaffDashboardController;
 use App\Http\Controllers\Admin\Assign\AssignController;
 use App\Http\Controllers\UserController;
@@ -166,7 +165,6 @@ Route::get('/home', function () {
     if ($roleId == 2) return redirect('/dashboard');
     if ($roleId == 3) return redirect('/evaluator-dashboard');
     if ($roleId == 4) return redirect('/interviewer-dashboard');
-    if ($roleId == 5) return redirect('/medical-dashboard');
     if ($roleId == 6) return redirect('/record-dashboard');
     if ($roleId == 7) return redirect('/dashboard');
 
@@ -254,18 +252,6 @@ Route::middleware(['auth', 'role:4'])->group(function () {
     Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
     Route::post('/interviewer-dashboard/transfer/{id}', [InterviewerDashboardController::class, 'transfertoProgram']);
     Route::get('/interviewer-dashboard/programs', [InterviewerDashboardController::class, 'getPrograms']);
-});
-
-// Medical Routes
-Route::middleware(['auth', 'role:5'])->group(function () {
-    Route::get('/medical-dashboard', [MedicalDashboardController::class, 'index'])->name('medical.dashboard');
-    Route::get('/medical-applications', function () {
-        return Inertia::render('Applications/Medical', ['user' => Auth::user()]);
-    })->name('medical.applications');
-    Route::post('/medical-dashboard/accept/{id}', [MedicalDashboardController::class, 'accept']);
-    Route::get('/medical-dashboard/applicants', [MedicalDashboardController::class, 'getUsers']);
-    Route::get('/medical-dashboard/application/{id}', [MedicalDashboardController::class, 'getUserFiles']);
-    Route::post('/medical/return-files/{user}', [MedicalDashboardController::class, 'returnApplication'])->name('medical-return.files');
 });
 
 // Record Staff Routes

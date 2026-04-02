@@ -94,7 +94,6 @@ const isActiveRouteFor = (routeNames = []) =>
 const isDashboardActive = isActiveRouteFor([
     "dashboard",
     "record.dashboard",
-    "medical.dashboard",
     "interviewer.dashboard",
     "evaluator.dashboard",
     "applicant.dashboard",
@@ -103,7 +102,6 @@ const isDashboardActive = isActiveRouteFor([
 const isApplicationsActive = isActiveRouteFor([
     "applications",
     "recordstaff.applications",
-    "medical.applications",
     "interviewer.applications",
     "evaluator.applications",
 ]);
@@ -255,7 +253,6 @@ watch(isSidebarOpen, (val) => {
                 v-if="
                     ![
                         'record',
-                        'medical',
                         'interviewer',
                         'evaluator',
                         'applicant',
@@ -569,7 +566,7 @@ watch(isSidebarOpen, (val) => {
             <!-- ================= STAFF VARIANTS ================= -->
             <nav
                 v-else-if="
-                    ['record', 'medical', 'interviewer', 'evaluator'].includes(
+                    ['record', 'interviewer', 'evaluator'].includes(
                         props.variant
                     )
                 "

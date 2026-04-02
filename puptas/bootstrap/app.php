@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'external.api.token' => \App\Http\Middleware\ExternalStudentApiTokenMiddleware::class,
             'external.program.api.token' => \App\Http\Middleware\ExternalProgramApiTokenMiddleware::class,
+            'external.medical.api.token' => \App\Http\Middleware\ExternalMedicalApiTokenMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
