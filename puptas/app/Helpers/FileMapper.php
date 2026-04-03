@@ -53,6 +53,12 @@ class FileMapper
             'file12Front', 'file12',
             'f137a',
         ],
+        'Alternative Learning System' => [
+            'psa',
+            'goodMoral',
+            'underOath',
+            'photo2x2',
+        ],
     ];
 
     /**
@@ -68,9 +74,10 @@ class FileMapper
     {
         $requiredKeys = self::REQUIRED_BY_GRADUATE_TYPE[$graduateType] ?? null;
 
-        // Unknown/unsupported graduate type — return empty
+        // Unknown/unsupported graduate type — return conservative null-placeholder set
+        // so the frontend cannot treat an empty array as "all documents uploaded".
         if ($requiredKeys === null) {
-            return [];
+            return array_fill_keys(array_keys(self::MAPPING), null);
         }
 
         $uploadedFiles = [];

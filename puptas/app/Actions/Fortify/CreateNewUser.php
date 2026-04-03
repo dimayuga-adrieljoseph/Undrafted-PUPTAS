@@ -40,6 +40,7 @@ class CreateNewUser implements CreatesNewUsers
             'city' => ['required', 'string', 'max:100'],
             'province' => ['required', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:10'],
+            'schoolyear' => ['required', 'string', 'exists:graduate_types,label'],
         ];
 
         // Conditional validation for local registration (non-IDP)
