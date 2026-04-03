@@ -629,54 +629,65 @@ const form = reactive({
 });
 
 // Computed properties for averages
+const isValidGrade = (val) => val !== null && val !== "" && !isNaN(val) && isFinite(val);
+
 const mathAverage = computed(() => {
-    const grades = [
+    const requiredGrades = [
         form.g11_general_mathematics,
         form.g11_business_mathematics,
         form.g11_statistics_probability,
         form.g12_math_grade_1,
         form.g12_math_grade_2,
         form.g12_math_grade_3,
-    ].filter((g) => g !== null && g !== "");
-    return grades.length > 0
-        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
-        : null;
+    ];
+    
+    if (requiredGrades.some((g) => !isValidGrade(g))) {
+        return null;
+    }
+
+    return (requiredGrades.reduce((a, b) => a + parseFloat(b), 0) / requiredGrades.length).toFixed(2);
 });
 
 const englishAverage = computed(() => {
-    const grades = [
+    const requiredGrades = [
         form.g11_oral_communication,
         form.g11_academic_professional,
         form.g11_reading_writing,
         form.g12_english_grade_1,
         form.g12_english_grade_2,
         form.g12_english_grade_3,
-    ].filter((g) => g !== null && g !== "");
-    return grades.length > 0
-        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
-        : null;
+    ];
+
+    if (requiredGrades.some((g) => !isValidGrade(g))) {
+        return null;
+    }
+    
+    return (requiredGrades.reduce((a, b) => a + parseFloat(b), 0) / requiredGrades.length).toFixed(2);
 });
 
 const scienceAverage = computed(() => {
-    const grades = [
+    const requiredGrades = [
         form.g11_earth_life_science,
         form.g11_physical_science,
         form.g12_science_grade_1,
         form.g12_science_grade_2,
-    ].filter((g) => g !== null && g !== "");
-    return grades.length > 0
-        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
-        : null;
+    ];
+
+    if (requiredGrades.some((g) => !isValidGrade(g))) {
+        return null;
+    }
+    
+    return (requiredGrades.reduce((a, b) => a + parseFloat(b), 0) / requiredGrades.length).toFixed(2);
 });
 
 const g12GWA = computed(() => {
-    const semGrades = [form.g12_first_sem_gwa, form.g12_second_sem_gwa].filter(
-        (g) => g !== null && g !== ""
-    );
+    const requiredGrades = [form.g12_first_sem_gwa, form.g12_second_sem_gwa];
 
-    return semGrades.length > 0
-        ? (semGrades.reduce((a, b) => a + b, 0) / semGrades.length).toFixed(2)
-        : null;
+    if (requiredGrades.some((g) => !isValidGrade(g))) {
+        return null;
+    }
+
+    return (requiredGrades.reduce((a, b) => a + parseFloat(b), 0) / requiredGrades.length).toFixed(2);
 });
 
 const meetsRequirement = (studentValue, requiredValue) => {
@@ -798,6 +809,18 @@ const submitForm = async () => {
     if (form.first_choice_program === form.second_choice_program) {
         errors.value = {
             programs: "First and second choice programs must be different",
+        };
+        loading.value = false;
+        return;
+    }
+
+    // Double check that selected programs are still in qualifiedPrograms list (client-side validation)
+    const isFirstChoiceQualified = qualifiedPrograms.value.some(p => p.id === form.first_choice_program);
+    const isSecondChoiceQualified = qualifiedPrograms.value.some(p => p.id === form.second_choice_program);
+
+    if (!isFirstChoiceQualified || !isSecondChoiceQualified) {
+        errors.value = {
+            programs: "One or more selected programs are no longer qualified based on your updated grades. Please review your choices.",
         };
         loading.value = false;
         return;
