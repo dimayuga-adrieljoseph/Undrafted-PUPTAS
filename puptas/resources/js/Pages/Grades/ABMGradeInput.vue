@@ -45,11 +45,11 @@
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 Math-Related Subjects
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Mathematics</label>
                                     <div class="relative">
-                                        <input
+                                        <input required
                                             v-model.number="form.g11_general_mathematics"
                                             type="number"
                                             min="0"
@@ -61,8 +61,20 @@
                                     </div>
                                 </div>
                                 <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Business Mathematics</label>
+                                    <input required
+                                        v-model.number="form.g11_business_mathematics"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                </div>
+                                <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statistics and Probability</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g11_statistics_probability"
                                         type="number"
                                         min="0"
@@ -81,10 +93,10 @@
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 English-Related Subjects
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Oral Communication</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g11_oral_communication"
                                         type="number"
                                         min="0"
@@ -95,20 +107,8 @@
                                     />
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">21st Century Literature</label>
-                                    <input
-                                        v-model.number="form.g11_21st_century_lit"
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="0.01"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                        placeholder="Enter grade (0-100)"
-                                    />
-                                </div>
-                                <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">English for Academic Purposes</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g11_academic_professional"
                                         type="number"
                                         min="0"
@@ -120,7 +120,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading and Writing</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g11_reading_writing"
                                         type="number"
                                         min="0"
@@ -142,7 +142,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Earth and Life Science</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g11_earth_life_science"
                                         type="number"
                                         min="0"
@@ -154,7 +154,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Science</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g11_physical_science"
                                         type="number"
                                         min="0"
@@ -180,19 +180,19 @@
                         <div class="mb-8">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                Math Subjects (2 subjects)
+                                Math Subjects (3 subjects)
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 1</label>
-                                    <input
+                                    <input required
                                         v-model="form.g12_math_subject_1"
                                         type="text"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
                                         placeholder="Subject name"
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g12_math_grade_1"
                                         type="number"
                                         min="0"
@@ -204,15 +204,34 @@
                                 </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 2</label>
-                                    <input
+                                    <input required
                                         v-model="form.g12_math_subject_2"
                                         type="text"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
                                         placeholder="Subject name"
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g12_math_grade_2"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        placeholder="0-100"
+                                    />
+                                </div>
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 3</label>
+                                    <input required
+                                        v-model="form.g12_math_subject_3"
+                                        type="text"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        placeholder="Subject name"
+                                    />
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
+                                    <input required
+                                        v-model.number="form.g12_math_grade_3"
                                         type="number"
                                         min="0"
                                         max="100"
@@ -233,14 +252,14 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 1</label>
-                                    <input
+                                    <input required
                                         v-model="form.g12_science_subject_1"
                                         type="text"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
                                         placeholder="Subject name"
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g12_science_grade_1"
                                         type="number"
                                         min="0"
@@ -252,14 +271,14 @@
                                 </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 2</label>
-                                    <input
+                                    <input required
                                         v-model="form.g12_science_subject_2"
                                         type="text"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
                                         placeholder="Subject name"
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g12_science_grade_2"
                                         type="number"
                                         min="0"
@@ -276,19 +295,21 @@
                         <div class="mb-8">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                English Subjects (4 subjects)
+                                English Subjects (3 subjects)
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div v-for="i in 4" :key="i" class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div v-for="i in 3" :key="`eng_${i}`" class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject {{ i }}</label>
-                                    <input
+                                    <input required
                                         v-model="form[`g12_english_subject_${i}`]"
                                         type="text"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        :readonly="i === 1"
+                                        :class="{'cursor-not-allowed bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-400': i === 1, 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white': i !== 1}"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
                                         :placeholder="`Subject ${i} name`"
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
+                                    <input required
                                         v-model.number="form[`g12_english_grade_${i}`]"
                                         type="number"
                                         min="0"
@@ -310,7 +331,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">1st Semester</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g12_first_sem_gwa"
                                         type="number"
                                         min="0"
@@ -322,7 +343,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">2nd Semester</label>
-                                    <input
+                                    <input required
                                         v-model.number="form.g12_second_sem_gwa"
                                         type="number"
                                         min="0"
@@ -573,9 +594,9 @@ const errors = ref({});
 
 const form = reactive({
     g11_general_mathematics: null,
+    g11_business_mathematics: null,
     g11_statistics_probability: null,
     g11_oral_communication: null,
-    g11_21st_century_lit: null,
     g11_academic_professional: null,
     g11_reading_writing: null,
     g11_earth_life_science: null,
@@ -585,20 +606,20 @@ const form = reactive({
     g12_math_grade_1: null,
     g12_math_subject_2: "",
     g12_math_grade_2: null,
+    g12_math_subject_3: "",
+    g12_math_grade_3: null,
     // Grade 12 Science subjects
     g12_science_subject_1: "",
     g12_science_grade_1: null,
     g12_science_subject_2: "",
     g12_science_grade_2: null,
     // Grade 12 English subjects
-    g12_english_subject_1: "",
+    g12_english_subject_1: "21st Century Literature from the Philippines and the World",
     g12_english_grade_1: null,
     g12_english_subject_2: "",
     g12_english_grade_2: null,
     g12_english_subject_3: "",
     g12_english_grade_3: null,
-    g12_english_subject_4: "",
-    g12_english_grade_4: null,
     // Grade 12 Semester GWA
     g12_first_sem_gwa: null,
     g12_second_sem_gwa: null,
@@ -611,9 +632,11 @@ const form = reactive({
 const mathAverage = computed(() => {
     const grades = [
         form.g11_general_mathematics,
+        form.g11_business_mathematics,
         form.g11_statistics_probability,
         form.g12_math_grade_1,
         form.g12_math_grade_2,
+        form.g12_math_grade_3,
     ].filter((g) => g !== null && g !== "");
     return grades.length > 0
         ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
@@ -623,13 +646,11 @@ const mathAverage = computed(() => {
 const englishAverage = computed(() => {
     const grades = [
         form.g11_oral_communication,
-        form.g11_21st_century_lit,
         form.g11_academic_professional,
         form.g11_reading_writing,
         form.g12_english_grade_1,
         form.g12_english_grade_2,
         form.g12_english_grade_3,
-        form.g12_english_grade_4,
     ].filter((g) => g !== null && g !== "");
     return grades.length > 0
         ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
