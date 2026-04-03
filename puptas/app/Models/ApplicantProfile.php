@@ -125,7 +125,10 @@ class ApplicantProfile extends Model
         if ($requiredKeys === null) {
             $status = DocumentStatus::where('document_status', 'pending')->first();
             if ($status) {
-                $this->documentStatuses()->syncWithoutDetaching([$status->id]);
+                $exclusiveIds = DocumentStatus::whereIn('document_status', ['pending', 'uploaded'])
+                    ->pluck('id');
+                $this->documentStatuses()->detach($exclusiveIds);
+                $this->documentStatuses()->attach($status->id);
             }
             return;
         }
@@ -147,7 +150,12 @@ class ApplicantProfile extends Model
         $status = DocumentStatus::where('document_status', $statusLabel)->first();
 
         if ($status) {
-            $this->documentStatuses()->syncWithoutDetaching([$status->id]);
+            // Detach only the mutually-exclusive statuses (pending/uploaded) before
+            // attaching the new one, so grade review and completed are preserved.
+            $exclusiveIds = DocumentStatus::whereIn('document_status', ['pending', 'uploaded'])
+                ->pluck('id');
+            $this->documentStatuses()->detach($exclusiveIds);
+            $this->documentStatuses()->attach($status->id);
         }
     }
 }

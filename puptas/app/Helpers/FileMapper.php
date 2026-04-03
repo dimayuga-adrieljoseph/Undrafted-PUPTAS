@@ -28,7 +28,7 @@ class FileMapper
         'file11' => 'file11_back',
         'file12Front' => 'file12_front',
         'file12' => 'file12_back',
-        'f137a' => 'f137a',
+        'nof137a' => 'f137a',
         'schoolId' => 'school_id',
         'nonEnrollCert' => 'non_enroll_cert',
         'psa' => 'psa',
@@ -51,7 +51,7 @@ class FileMapper
             'file10Front', 'file10',
             'file11Front', 'file11',
             'file12Front', 'file12',
-            'f137a',
+            'nof137a',
         ],
         'Alternative Learning System' => [
             'psa',
