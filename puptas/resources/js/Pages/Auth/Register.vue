@@ -62,7 +62,7 @@ const handleTermsCancel = () => {
     >
         <!-- Main Container -->
         <div
-            class="relative w-full max-w-6xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700"
+            class="relative w-full max-w-6xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-clip border border-gray-200 dark:border-gray-700"
         >
             <!-- Header Section with School Colors -->
             <div class="bg-red-800 p-8">

@@ -12,7 +12,7 @@
             <!-- Progress Steps -->
             <div class="mb-8">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center w-full">
+                    <div class="flex flex-wrap items-center w-full">
                         <div class="flex items-center relative">
                             <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm dark:bg-gray-900 dark:text-gray-900">1</div>
                             <div class="ml-2 text-sm font-medium text-gray-900 dark:text-white">Grade 11</div>
@@ -346,7 +346,7 @@
                 </div>
 
                 <!-- Grade Summary Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border border-gray-200 dark:border-gray-700">
                         <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Math Average</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ mathAverage || "—" }}</p>
@@ -468,7 +468,7 @@
                                             {{ program.code }} - {{ program.name }}
                                         </option>
                                     </select>
-                                    <p v-if="errors.first_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300">
+                                    <p v-if="errors.first_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300 break-words">
                                         {{ errors.first_choice_program }}
                                     </p>
                                 </div>
@@ -492,7 +492,7 @@
                                             {{ program.code }} - {{ program.name }}
                                         </option>
                                     </select>
-                                    <p v-if="errors.second_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300">
+                                    <p v-if="errors.second_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300 break-words">
                                         {{ errors.second_choice_program }}
                                     </p>
                                 </div>
@@ -521,7 +521,7 @@
                             </p>
                         </div>
 
-                        <p v-if="errors.programs" class="text-red-500 text-xs mt-2 dark:text-red-300">
+                        <p v-if="errors.programs" class="text-red-500 text-xs mt-2 dark:text-red-300 break-words">
                             {{ errors.programs }}
                         </p>
                     </div>
@@ -532,7 +532,7 @@
                     <button
                         type="submit"
                         :disabled="loading"
-                        class="flex-1 px-6 py-3 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800"
+                        class="flex-1 px-6 py-3 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800 min-h-[44px]"
                     >
                         <svg v-if="loading" class="animate-spin h-5 w-5 mr-2 text-white dark:text-gray-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -543,7 +543,7 @@
                     <button
                         type="button"
                         @click="$inertia.visit('/applicant-dashboard')"
-                        class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium"
+                        class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition font-medium min-h-[44px]"
                     >
                         Cancel
                     </button>

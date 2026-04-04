@@ -260,7 +260,7 @@ const closeUserCard = () => {
             </div>
           </div>
           
-          <div class="h-80">
+          <div class="h-64 md:h-80 w-full">
             <LineChart :chart-data="chartDataset" :options="chartOptions" class="w-full h-full" />
           </div>
         </div>
@@ -287,7 +287,7 @@ const closeUserCard = () => {
               @click="selectUser(user)"
               class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer"
             >
-              <div class="flex items-start justify-between mb-3">
+              <div class="flex items-start justify-between mb-3 flex-wrap gap-2">
                 <div class="flex items-center space-x-3">
                   <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold">
                     {{ user.firstname?.charAt(0) || '' }}{{ user.lastname?.charAt(0) || '' }}
@@ -335,7 +335,7 @@ const closeUserCard = () => {
                   <h3 class="text-xl font-bold text-gray-900 dark:text-white">Applicant Details</h3>
                   <p class="text-gray-600 dark:text-gray-400">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
                 </div>
-                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
                   <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -392,7 +392,7 @@ const closeUserCard = () => {
               <!-- Actions -->
               <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
                 <button @click="closeUserCard" 
-                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition min-h-[44px]">
                   Close
                 </button>
                 <Link :href="`/applications/user/${selectedUser.id}`"

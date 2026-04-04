@@ -1,3 +1,4 @@
+<div style="max-width: 600px; width: 100%; margin: 0 auto;">
 <p>Dear {{ $user->firstname }},</p>
 
 <p>Your account has been created. Here are your login details:</p>
@@ -10,3 +11,4 @@
 
 <p>Best regards,</p>
 <p>PUP Taguig Admission System</p>
+</div>

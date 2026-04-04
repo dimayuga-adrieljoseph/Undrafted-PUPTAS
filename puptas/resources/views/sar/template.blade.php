@@ -152,6 +152,7 @@
     </style>
 </head>
 <body>
+    <div style="overflow-x: auto;">
     <div class="page">
         {{-- HEADER --}}
         <div class="header">
@@ -347,6 +348,7 @@
         <div style="text-align: center; margin-top: 20px; font-size: 9pt; color: #666;">
             Generated: {{ now()->format('F d, Y h:i A') }} | Reference: {{ $reference_number }}
         </div>
+    </div>
     </div>
     @include('partials.sienna-widget')
 </body>

@@ -14,7 +14,7 @@
         </div>
 
         <!-- Date and Time -->
-        <div class="grid grid-cols-3 gap-4">
+        <div class="flex flex-col md:flex-row gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">
                     Start Date *

@@ -217,14 +217,14 @@ onMounted(() => {
         <!-- Welcome Header -->
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {{ props.user?.firstname || 'Applicant' }}!</h1>
+            <h1 class="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white break-words">Welcome back, {{ props.user?.firstname || 'Applicant' }}!</h1>
             <p class="text-gray-600 dark:text-gray-400 mt-1">Manage your application and track your progress</p>
           </div>
           
           <!-- Review Application Button -->
           <button
             @click="showModal = true"
-            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg dark:text-gray-900"
+            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg dark:text-gray-900 min-h-[44px] w-full sm:w-auto"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -395,7 +395,7 @@ onMounted(() => {
                     <button
                       v-if="!fileStatuses[key]?.url"
                       @click="triggerFileInput(key)"
-                      class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900"
+                      class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900 min-h-[44px]"
                       :disabled="uploadingKeys.includes(key)"
                     >
                       {{ uploadingKeys.includes(key) ? 'Uploading...' : 'Upload' }}
@@ -403,7 +403,7 @@ onMounted(() => {
                     <button
                       v-else
                       @click="triggerFileInput(key)"
-                      class="w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded transition-colors"
+                      class="w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded transition-colors min-h-[44px]"
                       :disabled="uploadingKeys.includes(key)"
                     >
                       Replace
@@ -469,7 +469,7 @@ onMounted(() => {
           @click.stop
         />
         <button
-          class="absolute top-2 right-2 text-white text-4xl hover:text-gray-300 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 dark:text-gray-900"
+          class="absolute top-2 right-2 text-white text-4xl hover:text-gray-300 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 dark:text-gray-900 min-h-[44px] min-w-[44px]"
           @click.stop="closeImageModal"
         >
           &times;
