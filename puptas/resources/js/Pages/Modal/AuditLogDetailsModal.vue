@@ -104,7 +104,7 @@ const getActionBadgeClass = (action) => {
                     </div>
 
                     <!-- Modal Content - Scrollable -->
-                    <div class="px-6 py-4 max-h-[70vh] overflow-y-auto simple-scrollbar">
+                    <div class="px-6 py-4 overflow-y-auto max-h-[90vh] simple-scrollbar">
                         <div v-if="log" class="space-y-4">
                             <!-- Basic Info Grid -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
