@@ -46,7 +46,7 @@ Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
     ->middleware('guest')
     ->name('idp.callback');
 
-Route::post('/auth/idp/logout', [IdpAuthController::class, 'logout'])
+Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
     ->middleware('auth')
     ->name('idp.logout');
 
