@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
     {
         // Seed reference data first, then users (custom users table has no `name` column)
         $this->call([
+            DocumentStatusSeeder::class,
             ProgramSeeder::class,
             UserSeeder::class,
         ]);

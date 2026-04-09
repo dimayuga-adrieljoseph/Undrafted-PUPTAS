@@ -28,6 +28,7 @@ class FileMapper
         'file11' => 'file11_back',
         'file12Front' => 'file12_front',
         'file12' => 'file12_back',
+        'nof137a' => 'f137a',
         'schoolId' => 'school_id',
         'nonEnrollCert' => 'non_enroll_cert',
         'psa' => 'psa',
@@ -35,6 +36,60 @@ class FileMapper
         'underOath' => 'under_oath',
         'photo2x2' => 'photo_2x2',
     ];
+
+    /**
+     * Required file keys per graduate type.
+     * Keys must match MAPPING keys above.
+     */
+    public const REQUIRED_BY_GRADUATE_TYPE = [
+        'Senior High School of A.Y. 2025-2026' => [
+            'file10Front', 'file10',
+            'file11Front', 'file11',
+            'file12Front', 'file12',
+        ],
+        'Senior High School of Past School Years' => [
+            'file10Front', 'file10',
+            'file11Front', 'file11',
+            'file12Front', 'file12',
+            'nof137a',
+        ],
+        'Alternative Learning System' => [
+            'psa',
+            'goodMoral',
+            'underOath',
+            'photo2x2',
+        ],
+    ];
+
+    /**
+     * Format only the required files for a given graduate type.
+     * Returns null slots for missing files so the frontend knows what's required.
+     *
+     * @param Collection $files Files collection keyBy('type')
+     * @param string|null $graduateType
+     * @param bool $includeStatus
+     * @return array
+     */
+    public static function formatFilesForGraduateType(Collection $files, ?string $graduateType, bool $includeStatus = true): array
+    {
+        $requiredKeys = self::REQUIRED_BY_GRADUATE_TYPE[$graduateType] ?? null;
+
+        // Unknown/unsupported graduate type — return conservative null-placeholder set
+        // so the frontend cannot treat an empty array as "all documents uploaded".
+        if ($requiredKeys === null) {
+            return array_fill_keys(array_keys(self::MAPPING), null);
+        }
+
+        $uploadedFiles = [];
+        foreach ($requiredKeys as $apiKey) {
+            $databaseType = self::MAPPING[$apiKey];
+            $uploadedFiles[$apiKey] = isset($files[$databaseType])
+                ? self::buildFilePayload($files[$databaseType], $includeStatus)
+                : null;
+        }
+
+        return $uploadedFiles;
+    }
 
     /**
      * Get all valid file field keys for validation

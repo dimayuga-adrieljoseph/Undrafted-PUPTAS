@@ -1,10 +1,11 @@
 <script setup>
 import { defineProps, ref, computed, onMounted } from "vue";
+import { router } from "@inertiajs/vue3";
 const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
 
-const props = defineProps({ user: Object });
+const props = defineProps({ user: Object, gradeUrl: String });
 
 const showModal = ref(false);
 const loading = ref(false);
@@ -33,12 +34,13 @@ const uploadProgressPercentage = computed(() => {
 
 const formatKey = (key) => {
   const labels = {
-    file10Front: "Grade 10 Report Front",
-    file10: "Grade 10 Report Back",
-    file11Front: "Grade 11 Report Front",
-    file11: "Grade 11 Report Back",
-    file12Front: "Grade 12 Report Front",
-    file12: "Grade 12 Report Back",
+    file10Front: "Grade 10 Report Card (Front)",
+    file10: "Grade 10 Report Card (Back)",
+    file11Front: "Grade 11 Report Card (Front)",
+    file11: "Grade 11 Report Card (Back)",
+    file12Front: "Grade 12 Report Card (Front)",
+    file12: "Grade 12 Report Card (Back)",
+    nof137a: "No F137-A Forwarding Certification",
     schoolId: "School ID",
     nonEnrollCert: "Certificate of Non-Enrollment",
     psa: "PSA Birth Certificate",
@@ -215,22 +217,9 @@ onMounted(() => {
     <div class="py-8">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
         <!-- Welcome Header -->
-        <div class="flex justify-between items-center">
-          <div>
-            <h1 class="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white break-words">Welcome back, {{ props.user?.firstname || 'Applicant' }}!</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-1">Manage your application and track your progress</p>
-          </div>
-          
-          <!-- Review Application Button -->
-          <button
-            @click="showModal = true"
-            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg dark:text-gray-900 min-h-[44px] w-full sm:w-auto"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="font-medium">Review Application</span>
-          </button>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {{ props.user?.firstname || 'Applicant' }}!</h1>
+          <p class="text-gray-600 dark:text-gray-400 mt-1">Manage your application and track your progress</p>
         </div>
 
         <!-- Stats Cards -->
@@ -338,12 +327,46 @@ onMounted(() => {
           <!-- Right Column - Documents Grid -->
           <div class="lg:col-span-2">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-                Required Documents
-              </h3>
+              <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  Required Documents
+                </h3>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <!-- Review Grade Button -->
+                  <button
+                    v-if="props.gradeUrl"
+                    @click="router.visit(props.gradeUrl)"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                    </svg>
+                    Review Grade
+                  </button>
+                  <!-- Review Application Button -->
+                  <button
+                    @click="showModal = true"
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-maroon-700 hover:bg-maroon-800 text-white rounded-lg transition-colors dark:text-gray-900"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Review Application
+                  </button>
+                  <!-- Submit Application Button -->
+                  <button
+                    class="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Submit Application
+                  </button>
+                </div>
+              </div>
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
                 Upload images only. Accepted formats: JPG, JPEG, PNG. Maximum file size: 2MB.
               </p>

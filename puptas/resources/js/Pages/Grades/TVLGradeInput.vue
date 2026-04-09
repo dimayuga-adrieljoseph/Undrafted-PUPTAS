@@ -245,9 +245,16 @@
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 Science Subjects (2 subjects)
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Earth and Life Science</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 1</label>
+                                    <input
+                                        v-model="form.g12_science_subject_1"
+                                        type="text"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        placeholder="Subject name"
+                                    />
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
                                     <input
                                         v-model.number="form.g12_science_grade_1"
                                         type="number"
@@ -258,8 +265,15 @@
                                         placeholder="0-100"
                                     />
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Science</label>
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 2</label>
+                                    <input
+                                        v-model="form.g12_science_subject_2"
+                                        type="text"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        placeholder="Subject name"
+                                    />
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
                                     <input
                                         v-model.number="form.g12_science_grade_2"
                                         type="number"
@@ -601,8 +615,10 @@ const form = reactive({
     g12_math_grade_1: null,
     g12_math_subject_2: "",
     g12_math_grade_2: null,
-    // Grade 12 Science (grades only)
+    // Grade 12 Science (2 customizable subjects)
+    g12_science_subject_1: "",
     g12_science_grade_1: null,
+    g12_science_subject_2: "",
     g12_science_grade_2: null,
     // Grade 12 English (3 customizable subjects)
     g12_english_subject_1: "",

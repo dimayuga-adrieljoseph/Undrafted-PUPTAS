@@ -704,10 +704,12 @@ const submit = async () => {
                             v-model="form.schoolAdd"
                             placeholder="School Address"
                         />
-                        <TextInput
-                            v-model="form.schoolyear"
-                            placeholder="School Year"
-                        />
+                        <select v-model="form.schoolyear" class="input-select">
+                            <option disabled value="">School Year / Graduate Type</option>
+                            <option value="Senior High School of A.Y. 2025-2026">Senior High School of A.Y. 2025-2026</option>
+                            <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
+                            <option value="Alternative Learning System">Alternative Learning System</option>
+                        </select>
                         <TextInput type="date" v-model="form.dateGrad" />
                         <select v-model="form.strand" class="input-select">
                             <option disabled value="">Strand</option>
