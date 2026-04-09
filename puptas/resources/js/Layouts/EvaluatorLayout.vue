@@ -3,7 +3,7 @@ import Sidebar from '@/Components/Sidebar.vue'
 import Footer from '@/Components/Footer.vue'
 import { useGlobalLoading } from '@/Composables/useGlobalLoading'
 import { usePage, router } from '@inertiajs/vue3'
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch, watchEffect } from 'vue'
 import TermsandConditionsModal from '@/Pages/Modal/TermsandConditionsModal.vue'
 
 // FontAwesome
@@ -70,6 +70,17 @@ const handlePrivacyCancel = () => {
         }
     })
 }
+
+// Mobile sidebar
+const isMobileSidebarOpen = ref(false)
+
+watchEffect(() => {
+    if (isMobileSidebarOpen.value) {
+        document.body.classList.add('overflow-hidden')
+    } else {
+        document.body.classList.remove('overflow-hidden')
+    }
+})
 </script>
 
 <template>
@@ -77,25 +88,36 @@ const handlePrivacyCancel = () => {
         class="min-h-screen flex bg-gradient-to-br from-orange-100 to-[#faf6f2] dark:from-gray-950 dark:to-gray-900"
     >
         <!-- Sidebar -->
-        <Sidebar variant="evaluator" />
+        <Sidebar variant="evaluator" :isMobileOpen="isMobileSidebarOpen" @close="isMobileSidebarOpen = false" />
 
         <!-- Main Area -->
         <div
-            class="flex-1 flex flex-col"
-            style="margin-left: var(--sidebar-width, 5rem)"
+            class="flex-1 flex flex-col ml-0 md:ml-[var(--sidebar-width,5rem)]"
         >
             <!-- Top Navigation -->
             <header
                 class="sticky top-0 z-40 h-16 px-6 flex items-center justify-between bg-white/80 backdrop-blur border-b border-gray-200 dark:bg-gray-900/80 dark:border-gray-800"
             >
                 <!-- Title -->
-                <slot name="title">
-                    <h1
-                        class="text-lg font-semibold text-gray-800 dark:text-gray-100"
+                <div class="flex items-center gap-4">
+                    <!-- Hamburger button (mobile only) -->
+                    <button
+                        @click="isMobileSidebarOpen = true"
+                        class="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
+                        aria-label="Open navigation menu"
                     >
-                        Evaluator Workspace
-                    </h1>
-                </slot>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <slot name="title">
+                        <h1
+                            class="text-lg md:text-xl font-semibold text-gray-800 dark:text-gray-100"
+                        >
+                            Evaluator Workspace
+                        </h1>
+                    </slot>
+                </div>
 
                 <!-- Controls -->
                 <div class="flex items-center gap-4">

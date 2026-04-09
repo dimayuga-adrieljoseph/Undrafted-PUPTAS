@@ -220,7 +220,7 @@
                             @click="selectUser(applicant)"
                             class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer"
                         >
-                            <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-start justify-between mb-3 flex-wrap gap-2">
                                 <div class="flex items-center space-x-3">
                                     <div
                                         class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold dark:bg-gray-900 dark:text-gray-900"
@@ -346,7 +346,7 @@
                                 </div>
                                 <button
                                     @click="closeUserCard"
-                                    class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+                                    class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]"
                                 >
                                     <svg
                                         class="w-5 h-5 text-gray-500 dark:text-gray-300"
@@ -471,7 +471,7 @@
                                                 'officially_enrolled'
                                             "
                                             @click="acceptApplication"
-                                            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center justify-center space-x-2 dark:text-gray-900"
+                                            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center justify-center space-x-2 dark:text-gray-900 min-h-[44px]"
                                         >
                                             <svg
                                                 class="w-5 h-5"
@@ -492,7 +492,7 @@
                                         </button>
                                         <button
                                             @click="untagApplication"
-                                            class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center space-x-2 dark:text-gray-900"
+                                            class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center space-x-2 dark:text-gray-900 min-h-[44px]"
                                         >
                                             <svg
                                                 class="w-5 h-5"
@@ -682,7 +682,7 @@
                     />
                     <button
                         @click="closeImageModal"
-                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition dark:bg-gray-900/10 dark:hover:bg-gray-900/20"
+                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition dark:bg-gray-900/10 dark:hover:bg-gray-900/20 min-h-[44px] min-w-[44px]"
                     >
                         <svg
                             class="w-6 h-6 text-white dark:text-gray-900"

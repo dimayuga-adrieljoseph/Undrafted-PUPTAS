@@ -418,7 +418,7 @@ onMounted(() => {
                     <button
                       v-if="!fileStatuses[key]?.url"
                       @click="triggerFileInput(key)"
-                      class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900"
+                      class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900 min-h-[44px]"
                       :disabled="uploadingKeys.includes(key)"
                     >
                       {{ uploadingKeys.includes(key) ? 'Uploading...' : 'Upload' }}
@@ -426,7 +426,7 @@ onMounted(() => {
                     <button
                       v-else
                       @click="triggerFileInput(key)"
-                      class="w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded transition-colors"
+                      class="w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded transition-colors min-h-[44px]"
                       :disabled="uploadingKeys.includes(key)"
                     >
                       Replace
@@ -492,7 +492,7 @@ onMounted(() => {
           @click.stop
         />
         <button
-          class="absolute top-2 right-2 text-white text-4xl hover:text-gray-300 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 dark:text-gray-900"
+          class="absolute top-2 right-2 text-white text-4xl hover:text-gray-300 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 dark:text-gray-900 min-h-[44px] min-w-[44px]"
           @click.stop="closeImageModal"
         >
           &times;
