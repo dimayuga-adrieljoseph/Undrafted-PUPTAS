@@ -42,9 +42,13 @@ Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->middleware('guest')
     ->name('idp.redirect');
 
-Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
+Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
     ->middleware('guest')
     ->name('idp.callback');
+
+Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
+    ->middleware('guest')
+    ->name('idp.callback.alias');
 
 Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
     ->middleware('auth')
