@@ -94,7 +94,7 @@ const payload = JSON.stringify({
 });
 
 const secret = "YOUR_WEBHOOK_SECRET";
-const signature = crypto.createHmac('sha256', payload).update(secret).digest('hex');
+const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 
 axios.post('https://puptas.undraftedbsit2027.com/api/v1/webhooks/medical-result', payload, {
     headers: {
@@ -105,6 +105,8 @@ axios.post('https://puptas.undraftedbsit2027.com/api/v1/webhooks/medical-result'
     }
 });
 ```
+
+*Note: The HMAC signature must be computed exactly over the raw request body bytes that are sent to the server. If the payload is modified during transit or serialization (like extra spaces), the signature verification will fail.*
 
 **Response Codes**
 - `200 OK`: `{"message": "Medical result recorded successfully"}`
