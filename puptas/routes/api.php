@@ -91,7 +91,7 @@ Route::prefix('v1')
     });
 
 Route::prefix('v1')
-    ->middleware(['client:medical-write', 'medical.webhook'])
+    ->middleware(['client:medical-write', 'medical.webhook', 'throttle:external-medical-api-second', 'throttle:external-medical-api-minute', 'throttle:external-medical-api-daily'])
     ->group(function () {
         Route::post('/webhooks/medical-result', [ExternalMedicalApiController::class, 'webhookResult']);
     });
