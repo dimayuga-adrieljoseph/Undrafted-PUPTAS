@@ -63,7 +63,13 @@ const props = defineProps({
         type: String,
         default: "default",
     },
+    isMobileOpen: {
+        type: Boolean,
+        default: false,
+    },
 });
+
+const emit = defineEmits(['close']);
 
 /* ---------------- STATE ---------------- */
 const isSidebarOpen = ref(false);
@@ -216,16 +222,41 @@ watch(isSidebarOpen, (val) => {
 </script>
 
 <template>
+    <!-- Backdrop (mobile only) -->
+    <Transition name="fade">
+        <div
+            v-if="props.isMobileOpen"
+            class="fixed inset-0 z-[9998] bg-black/50 md:hidden"
+            @click="emit('close')"
+        />
+    </Transition>
+
     <div
         ref="sidebarRef"
         class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-2xl transition-all duration-300 ease-out dark:text-gray-900"
-        :class="sidebarWidthClass"
+        :class="[
+            sidebarWidthClass,
+            'transition-transform duration-300',
+            props.isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+        ]"
+        :role="props.isMobileOpen ? 'dialog' : undefined"
+        :aria-modal="props.isMobileOpen ? 'true' : undefined"
         @pointerenter="onSidebarEnter"
         @pointerleave="onSidebarLeave"
         @click.self.stop="pinSidebar"
     >
         <!-- Header Section -->
-        <div class="sidebar-header mb-8 flex items-center">
+        <div class="sidebar-header mb-8 flex items-center justify-between">
+            <!-- Close button (mobile only) -->
+            <button
+                @click="emit('close')"
+                class="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
+                aria-label="Close navigation menu"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
             <div class="flex items-center gap-3">
                 <div class="sidebar-logo-container">
                     <NavLink :href="route('dashboard')" class="block">
@@ -270,6 +301,7 @@ watch(isSidebarOpen, (val) => {
                             :active="isDashboardActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isDashboardActive }"
+                            @click="emit('close')"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon
@@ -345,6 +377,7 @@ watch(isSidebarOpen, (val) => {
                                         'dropdown-item-active':
                                             isUploadFormActive,
                                     }"
+                                    @click="emit('close')"
                                 >
                                     <FontAwesomeIcon
                                         icon="upload"
@@ -359,6 +392,7 @@ watch(isSidebarOpen, (val) => {
                                         'dropdown-item-active':
                                             isListPassersActive,
                                     }"
+                                    @click="emit('close')"
                                 >
                                     <FontAwesomeIcon
                                         icon="list"
@@ -377,6 +411,7 @@ watch(isSidebarOpen, (val) => {
                             :active="isApplicationsActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isApplicationsActive }"
+                            @click="emit('close')"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon
@@ -402,6 +437,7 @@ watch(isSidebarOpen, (val) => {
                             :active="isScheduleActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isScheduleActive }"
+                            @click="emit('close')"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon
@@ -427,6 +463,7 @@ watch(isSidebarOpen, (val) => {
                             :active="isProgramsActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isProgramsActive }"
+                            @click="emit('close')"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon
@@ -515,6 +552,7 @@ watch(isSidebarOpen, (val) => {
                                     :class="{
                                         'dropdown-item-active': isManageActive,
                                     }"
+                                    @click="emit('close')"
                                 >
                                     <FontAwesomeIcon
                                         icon="user-shield"
@@ -528,6 +566,7 @@ watch(isSidebarOpen, (val) => {
                                     :class="{
                                         'dropdown-item-active': isAssignActive,
                                     }"
+                                    @click="emit('close')"
                                 >
                                     <FontAwesomeIcon
                                         icon="user-group"
@@ -546,6 +585,7 @@ watch(isSidebarOpen, (val) => {
                             :active="isAuditLogsActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isAuditLogsActive }"
+                            @click="emit('close')"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon
@@ -607,6 +647,7 @@ watch(isSidebarOpen, (val) => {
                             :active="isDashboardActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isDashboardActive }"
+                            @click="emit('close')"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon
@@ -632,6 +673,7 @@ watch(isSidebarOpen, (val) => {
                             :active="isApplicationsActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isApplicationsActive }"
+                            @click="emit('close')"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon
@@ -661,6 +703,7 @@ watch(isSidebarOpen, (val) => {
                             :active="isDashboardActive"
                             class="nav-item group"
                             :class="{ 'nav-item-active': isDashboardActive }"
+                            @click="emit('close')"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon icon="home" class="text-lg" />
@@ -741,6 +784,7 @@ watch(isSidebarOpen, (val) => {
                                     'dropdown-item-active':
                                         isActiveRoute('profile.show'),
                                 }"
+                                @click="emit('close')"
                             >
                                 <FontAwesomeIcon
                                     icon="user-circle"
@@ -802,7 +846,7 @@ watch(isSidebarOpen, (val) => {
 /* Navigation Items */
 .nav-item {
     @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all
-        duration-200 relative overflow-hidden;
+        duration-200 relative overflow-hidden min-h-[44px];
 }
 
 .nav-item:not(.nav-item-active):hover {
@@ -910,5 +954,15 @@ watch(isSidebarOpen, (val) => {
 /* Dark Mode Support */
 .dark .sidebar {
     background: linear-gradient(180deg, #7a0e23 0%, #600000 100%);
+}
+
+/* Fade transition for backdrop */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
 }
 </style>

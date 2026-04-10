@@ -1,4 +1,5 @@
 @component('mail::message')
+<div style="max-width: 600px; width: 100%; margin: 0 auto;">
 {{ __('You have been invited to join the :team team!', ['team' => $invitation->team->name]) }}
 
 @if (Laravel\Fortify\Features::enabled(Laravel\Fortify\Features::registration()))
@@ -20,4 +21,5 @@
 @endcomponent
 
 {{ __('If you did not expect to receive an invitation to this team, you may discard this email.') }}
+</div>
 @endcomponent

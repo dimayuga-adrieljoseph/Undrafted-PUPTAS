@@ -1,4 +1,5 @@
 @if (config('app.sienna_widget.enabled'))
+<div class="overflow-x-auto">
     <script
         src="https://cdn.jsdelivr.net/npm/sienna-accessibility@latest/dist/sienna-accessibility.umd.js"
         defer
@@ -28,6 +29,12 @@
     height: 60px !important;
 }
 
+@media (max-width: 480px) {
+    .asw-menu-btn {
+        bottom: 80px !important;
+    }
+}
+
 /* =========================
    PANEL CONTAINER
 ========================= */
@@ -35,6 +42,8 @@
     border-radius: 20px !important;
     overflow: hidden !important;
     box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
 }
 
 /* =========================
@@ -401,4 +410,5 @@
             window.addEventListener('beforeunload', stopSTT);
         })();
     </script>
+</div>
 @endif

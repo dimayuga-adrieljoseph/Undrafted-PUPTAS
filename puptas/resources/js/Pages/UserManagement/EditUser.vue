@@ -179,7 +179,7 @@ const submitForm = () => {
                         <div class="form-section">
                             <h3 class="section-title">Personal Information</h3>
                             
-                            <div class="form-grid">
+                            <div class="form-grid flex flex-col md:flex-row gap-4">
                                 <div class="form-group">
                                     <label for="firstname" class="form-label">
                                         First Name
@@ -188,7 +188,7 @@ const submitForm = () => {
                                     <input 
                                         id="firstname" 
                                         v-model="form.firstname" 
-                                        :class="['form-input', { 'error': form.errors.firstname }]"
+                                        :class="['form-input w-full', { 'error': form.errors.firstname }]"
                                         type="text" 
                                         required 
                                         placeholder="Enter first name"
@@ -209,7 +209,7 @@ const submitForm = () => {
                                     <input 
                                         id="lastname" 
                                         v-model="form.lastname" 
-                                        :class="['form-input', { 'error': form.errors.lastname }]"
+                                        :class="['form-input w-full', { 'error': form.errors.lastname }]"
                                         type="text" 
                                         required 
                                         placeholder="Enter last name"
@@ -227,7 +227,7 @@ const submitForm = () => {
                                     <input 
                                         id="middlename" 
                                         v-model="form.middlename" 
-                                        class="form-input" 
+                                        class="form-input w-full" 
                                         type="text" 
                                         placeholder="Enter middle name"
                                     />
@@ -238,7 +238,7 @@ const submitForm = () => {
                                     <select 
                                         id="extension_name" 
                                         v-model="form.extension_name" 
-                                        class="form-input"
+                                        class="form-input w-full"
                                     >
                                         <option value="">None</option>
                                         <option value="Jr.">Jr.</option>
@@ -255,7 +255,7 @@ const submitForm = () => {
                         <div class="form-section">
                             <h3 class="section-title">Contact Information</h3>
                             
-                            <div class="form-grid">
+                            <div class="form-grid flex flex-col md:flex-row gap-4">
                                 <div class="form-group">
                                     <label for="email" class="form-label">
                                         Email Address
@@ -265,7 +265,7 @@ const submitForm = () => {
                                         <input 
                                             id="email" 
                                             v-model="form.email" 
-                                            :class="['form-input', { 'error': form.errors.email }]"
+                                            :class="['form-input w-full', { 'error': form.errors.email }]"
                                             type="email" 
                                             required 
                                             placeholder="user@gmail.com"
@@ -290,7 +290,7 @@ const submitForm = () => {
                                         <input 
                                             id="contactnumber" 
                                             v-model="form.contactnumber" 
-                                            :class="['form-input', { 'error': form.errors.contactnumber }]"
+                                            :class="['form-input w-full', { 'error': form.errors.contactnumber }]"
                                             type="text" 
                                             required 
                                             placeholder="912 345 6789"
@@ -312,14 +312,14 @@ const submitForm = () => {
                             <h3 class="section-title">Security (Optional)</h3>
                             <p class="section-description">Leave password fields blank to keep current password</p>
                             
-                            <div class="form-grid">
+                            <div class="form-grid flex flex-col md:flex-row gap-4">
                                 <div class="form-group">
                                     <label for="password" class="form-label">New Password</label>
                                     <div class="password-input">
                                         <input 
                                             id="password" 
                                             v-model="form.password" 
-                                            :class="['form-input', { 'error': form.errors.password }]"
+                                            :class="['form-input w-full', { 'error': form.errors.password }]"
                                             :type="showPassword ? 'text' : 'password'"
                                             placeholder="Enter new password (optional)"
                                         />
@@ -349,7 +349,7 @@ const submitForm = () => {
                                     <input 
                                         id="password_confirmation" 
                                         v-model="form.password_confirmation" 
-                                        :class="['form-input', { 'error': form.errors.password_confirmation }]"
+                                        :class="['form-input w-full', { 'error': form.errors.password_confirmation }]"
                                         :type="showConfirmPassword ? 'text' : 'password'"
                                         placeholder="Confirm new password"
                                     />
@@ -367,7 +367,7 @@ const submitForm = () => {
                         <div class="form-section">
                             <h3 class="section-title">Role & Assignment</h3>
                             
-                            <div class="form-grid">
+                            <div class="form-grid flex flex-col md:flex-row gap-4">
                                 <div class="form-group">
                                     <label for="role_id" class="form-label">
                                         User Role
@@ -378,7 +378,7 @@ const submitForm = () => {
                                             id="role_id" 
                                             v-model="form.role_id" 
                                             @change="onRoleChange"
-                                            :class="['form-input', { 'error': form.errors.role_id }]"
+                                            :class="['form-input w-full', { 'error': form.errors.role_id }]"
                                             required
                                         >
                                             <option v-for="(roleName, roleId) in roles" :key="roleId" :value="roleId">
@@ -405,7 +405,7 @@ const submitForm = () => {
                                         <select 
                                             id="program" 
                                             v-model="form.program" 
-                                            :class="['form-input', { 'error': form.errors.program }]"
+                                            :class="['form-input w-full', { 'error': form.errors.program }]"
                                             :required="showProgramAssignment"
                                         >
                                             <option value="" disabled>Select assigned program</option>
@@ -434,7 +434,7 @@ const submitForm = () => {
                                     <select 
                                         id="applicant_program" 
                                         v-model="form.applicant_program" 
-                                        :class="['form-input', { 'error': form.errors.applicant_program }]"
+                                        :class="['form-input w-full', { 'error': form.errors.applicant_program }]"
                                         :required="showApplicantProgram"
                                     >
                                         <option value="" disabled>Select program to apply for</option>

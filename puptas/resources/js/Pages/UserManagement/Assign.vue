@@ -151,40 +151,42 @@ onMounted(() => {
                 <p v-if="!assignedUsers || assignedUsers.length === 0" style="text-align:center; color:#666;">
                     No evaluators or interviewers assigned yet.
                 </p>
-                <table v-else>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Assigned Programs</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="user in assignedUsers" :key="user.user_id">
-                            <td>{{ user.name }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.role_id == 3 ? 'Evaluator' : 'Interviewer' }}</td>
-                            <td>
-                                <span v-if="!user.programs || user.programs.length === 0">Not assigned</span>
-                                <span v-else>{{ user.programs.map(p => p.name).join(', ') }}</span>
-                            </td>
-                            <td>
-                                <div class="action-container">
-                                    <Link :href="route('admin.users.edit', user.user_id)" class="action-button edit-button">
-                                        <i class="fas fa-edit"></i>
-                                        <span class="tooltiptext">Edit</span>
-                                    </Link>
-                                    <button @click="confirmDeleteUser(user.user_id)" class="action-button delete-button">
-                                        <i class="fas fa-trash-alt"></i>
-                                        <span class="tooltiptext">Delete</span>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div v-else class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Assigned Programs</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="user in assignedUsers" :key="user.user_id">
+                                <td>{{ user.name }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.role_id == 3 ? 'Evaluator' : 'Interviewer' }}</td>
+                                <td>
+                                    <span v-if="!user.programs || user.programs.length === 0">Not assigned</span>
+                                    <span v-else>{{ user.programs.map(p => p.name).join(', ') }}</span>
+                                </td>
+                                <td>
+                                    <div class="action-container">
+                                        <Link :href="route('admin.users.edit', user.user_id)" class="action-button edit-button">
+                                            <i class="fas fa-edit"></i>
+                                            <span class="tooltiptext">Edit</span>
+                                        </Link>
+                                        <button @click="confirmDeleteUser(user.user_id)" class="action-button delete-button">
+                                            <i class="fas fa-trash-alt"></i>
+                                            <span class="tooltiptext">Delete</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Delete Confirmation Modal -->

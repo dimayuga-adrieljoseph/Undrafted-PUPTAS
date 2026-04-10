@@ -84,6 +84,7 @@
     </style>
 </head>
 <body>
+    <div style="max-width: 600px; width: 100%; margin: 0 auto;">
     <div class="header">
         <h1>Polytechnic University of the Philippines</h1>
         <p>Taguig Campus - Admission Office</p>
@@ -157,6 +158,7 @@
         <p style="margin-top: 10px; font-size: 11px; color: #999;">
             This email and any attachments contain confidential information intended solely for the recipient.
         </p>
+    </div>
     </div>
 </body>
 </html>

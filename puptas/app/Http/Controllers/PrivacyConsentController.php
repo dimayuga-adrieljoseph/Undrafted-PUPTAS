@@ -19,10 +19,9 @@ class PrivacyConsentController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        session([
-            'privacy_consent_accepted' => true,
-            'privacy_consent_at' => now()->toDateTimeString(),
-        ]);
+        $user->privacy_consent = true;
+        $user->privacy_consent_at = now();
+        $user->save();
 
         return response()->json(['success' => true]);
     }

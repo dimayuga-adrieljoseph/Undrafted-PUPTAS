@@ -33,7 +33,7 @@
                 </div>
 
                 <!-- Content -->
-                <div class="px-6 py-4 max-h-[50vh] overflow-y-auto">
+                <div class="px-6 py-4 overflow-y-auto max-h-[90vh]">
                     <!-- Consent Statement -->
                     <div class="bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-lg p-4 mb-4">
                         <div class="flex items-start">

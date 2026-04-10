@@ -108,7 +108,7 @@
             <div class="form-section">
               <h3 class="section-title">Personal Information</h3>
               
-              <div class="form-grid">
+              <div class="form-grid flex flex-col md:flex-row gap-4">
                 <div class="form-group">
                   <label for="firstname" class="form-label">
                     First Name
@@ -118,7 +118,7 @@
                     id="firstname" 
                     v-model="form.firstname" 
                     @blur="validateField('firstname')"
-                    :class="['form-input', { 'error': errors.firstname }]"
+                    :class="['form-input w-full', { 'error': errors.firstname }]"
                     type="text" 
                     required 
                     placeholder="Enter first name"
@@ -140,7 +140,7 @@
                     id="lastname" 
                     v-model="form.lastname" 
                     @blur="validateField('lastname')"
-                    :class="['form-input', { 'error': errors.lastname }]"
+                    :class="['form-input w-full', { 'error': errors.lastname }]"
                     type="text" 
                     required 
                     placeholder="Enter last name"
@@ -158,7 +158,7 @@
                   <input 
                     id="middlename" 
                     v-model="form.middlename" 
-                    class="form-input" 
+                    class="form-input w-full" 
                     type="text" 
                     placeholder="Enter middle name"
                   />
@@ -169,7 +169,7 @@
                   <select 
                     id="extension_name" 
                     v-model="form.extension_name" 
-                    class="form-input"
+                    class="form-input w-full"
                   >
                     <option value="">None</option>
                     <option value="Jr.">Jr.</option>
@@ -186,7 +186,7 @@
             <div class="form-section">
               <h3 class="section-title">Contact Information</h3>
               
-              <div class="form-grid">
+              <div class="form-grid flex flex-col md:flex-row gap-4">
                 <div class="form-group">
                   <label for="email" class="form-label">
                     Email Address
@@ -197,7 +197,7 @@
                       id="email" 
                       v-model="form.email" 
                       @blur="validateField('email')"
-                      :class="['form-input', { 'error': errors.email }]"
+                      :class="['form-input w-full', { 'error': errors.email }]"
                       type="email" 
                       required 
                       placeholder="user@gmail.com"
@@ -223,7 +223,7 @@
                       id="contactnumber" 
                       v-model="form.contactnumber" 
                       @blur="validateField('contactnumber')"
-                      :class="['form-input', { 'error': errors.contactnumber }]"
+                      :class="['form-input w-full', { 'error': errors.contactnumber }]"
                       type="text" 
                       required 
                       placeholder="912 345 6789"
@@ -244,7 +244,7 @@
             <div class="form-section">
               <h3 class="section-title">Security</h3>
               
-              <div class="form-grid">
+              <div class="form-grid flex flex-col md:flex-row gap-4">
                 <div class="form-group">
                   <label for="password" class="form-label">
                     Password
@@ -255,7 +255,7 @@
                       id="password" 
                       v-model="form.password" 
                       @blur="validateField('password')"
-                      :class="['form-input', { 'error': errors.password }]"
+                      :class="['form-input w-full', { 'error': errors.password }]"
                       :type="showPassword ? 'text' : 'password'"
                       required 
                       placeholder="Create a strong password"
@@ -327,7 +327,7 @@
                     id="password_confirmation" 
                     v-model="form.password_confirmation" 
                     @blur="validateField('password_confirmation')"
-                    :class="['form-input', { 'error': errors.password_confirmation }]"
+                    :class="['form-input w-full', { 'error': errors.password_confirmation }]"
                     :type="showConfirmPassword ? 'text' : 'password'"
                     required 
                     placeholder="Confirm your password"
@@ -346,7 +346,7 @@
             <div class="form-section">
               <h3 class="section-title">Role & Assignment</h3>
               
-              <div class="form-grid">
+              <div class="form-grid flex flex-col md:flex-row gap-4">
                 <div class="form-group">
                   <label for="role_id" class="form-label">
                     User Role
@@ -357,7 +357,7 @@
                       id="role_id" 
                       v-model="form.role_id" 
                       @change="onRoleChange"
-                      :class="['form-input', { 'error': errors.role_id }]"
+                      :class="['form-input w-full', { 'error': errors.role_id }]"
                       required
                     >
                       <option value="" disabled>Select a role</option>
@@ -388,7 +388,7 @@
                     <select 
                       id="program" 
                       v-model="form.program" 
-                      :class="['form-input', { 'error': errors.program }]"
+                      :class="['form-input w-full', { 'error': errors.program }]"
                       :required="showProgramAssignment"
                     >
                       <option value="" disabled>Select assigned program</option>
@@ -417,7 +417,7 @@
                   <select 
                     id="applicant_program" 
                     v-model="form.applicant_program" 
-                    :class="['form-input', { 'error': errors.applicant_program }]"
+                    :class="['form-input w-full', { 'error': errors.applicant_program }]"
                     :required="showApplicantProgram"
                   >
                     <option value="" disabled>Select program to apply for</option>

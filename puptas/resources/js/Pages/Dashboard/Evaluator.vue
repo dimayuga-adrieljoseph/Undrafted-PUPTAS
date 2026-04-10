@@ -364,12 +364,12 @@ const submitPass = async () => {
                     <p class="text-gray-600 dark:text-gray-400 mt-2">Review and evaluate application submissions.</p>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <div class="relative">
+                    <div class="relative w-full md:w-64">
                         <input
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search applicants..."
-                            class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                         />
                         <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -444,7 +444,7 @@ const submitPass = async () => {
                         </div>
                     </div>
                     
-                    <div class="h-80">
+                    <div class="h-64 md:h-80 w-full">
                         <LineChart :chart-data="chartDataset" :options="chartOptions" class="w-full h-full" />
                     </div>
                 </div>
@@ -471,7 +471,7 @@ const submitPass = async () => {
                             @click="selectUser(applicant)"
                             class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer"
                         >
-                            <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-start justify-between mb-3 flex-wrap gap-2">
                                 <div class="flex items-center space-x-3">
                                     <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold dark:bg-gray-900 dark:text-gray-900">
                                         {{ applicant.firstname?.[0] || '' }}{{ applicant.lastname?.[0] || '' }}
@@ -527,7 +527,7 @@ const submitPass = async () => {
                                     <h3 class="text-xl font-bold text-gray-900 dark:text-white">Application Review</h3>
                                     <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
                                 </div>
-                                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+                                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
                                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
@@ -573,14 +573,14 @@ const submitPass = async () => {
                                         <button
                                             v-if="!isEvaluating"
                                             @click="startEvaluation"
-                                            :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium']"
+                                            :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
                                         >
                                             Return Documents
                                         </button>
                                         <button
                                             v-if="!isEvaluating"
                                             @click="submitPass"
-                                            :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium']"
+                                            :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
                                         >
                                             Pass Application
                                         </button>
@@ -615,13 +615,13 @@ const submitPass = async () => {
                                 <div class="flex space-x-3">
                                     <button
                                         @click="submitReturn"
-                                        :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg transition font-medium']"
+                                        :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
                                     >
                                         Confirm Return
                                     </button>
                                     <button
                                         @click="cancelEvaluation"
-                                        :class="[getButtonClass('secondary'), 'px-4 py-2 rounded-lg transition font-medium']"
+                                        :class="[getButtonClass('secondary'), 'px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
                                     >
                                         Cancel
                                     </button>
@@ -741,7 +741,7 @@ const submitPass = async () => {
                     />
                     <button
                         @click="closeImageModal"
-                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition dark:bg-gray-900/10 dark:hover:bg-gray-900/20"
+                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition dark:bg-gray-900/10 dark:hover:bg-gray-900/20 min-h-[44px] min-w-[44px]"
                     >
                         <svg class="w-6 h-6 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
