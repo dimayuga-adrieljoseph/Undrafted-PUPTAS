@@ -299,6 +299,12 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     Route::get('/admin/audit-logs/check-new', [AuditLogController::class, 'checkNew'])->name('audit-logs.check-new');
     Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit-logs.show');
+
+    // API Client Management (M2M / Passport)
+    Route::get('/admin/api-clients', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'index'])->name('api-clients.index');
+    Route::post('/admin/api-clients', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'store'])->name('api-clients.store');
+    Route::delete('/admin/api-clients/{id}', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'destroy'])->name('api-clients.destroy');
+    Route::post('/admin/api-clients/{id}/regenerate', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'regenerate'])->name('api-clients.regenerate');
 });
 
 // Callback Routes - Public access for loading screen with API callback

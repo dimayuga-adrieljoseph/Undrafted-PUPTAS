@@ -24,6 +24,7 @@ import {
     faHome,
     faUserCircle,
     faHistory,
+    faNetworkWired,
 } from "@fortawesome/free-solid-svg-icons";
 
 import NavLink from "@/Components/NavLink.vue";
@@ -50,7 +51,8 @@ library.add(
     faUserShield,
     faHome,
     faUserCircle,
-    faHistory
+    faHistory,
+    faNetworkWired,
 );
 
 const page = usePage();
@@ -122,6 +124,7 @@ const isSuperAdmin = computed(() => {
 });
 
 const isAuditLogsActive = isActiveRouteFor(["audit-logs.index"]);
+const isApiClientsActive = isActiveRouteFor(["api-clients.index"]);
 
 /* ---------------- INTERACTION ---------------- */
 const onSidebarEnter = () => (isSidebarOpen.value = true);
@@ -557,6 +560,31 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
                                 :class="{ active: isAuditLogsActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- API Clients (Superadmin Only) -->
+                    <li v-if="isSuperAdmin">
+                        <NavLink
+                            :href="route('api-clients.index')"
+                            :active="isApiClientsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isApiClientsActive }"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="network-wired"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                API Clients
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ active: isApiClientsActive }"
                             ></div>
                         </NavLink>
                     </li>

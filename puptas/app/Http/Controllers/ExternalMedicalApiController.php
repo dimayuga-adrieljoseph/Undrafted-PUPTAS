@@ -165,4 +165,79 @@ class ExternalMedicalApiController extends Controller
         
         return $this->formatResponse($profile, "IDP User ID: $idpUserId", $request);
     }
+
+    /**
+     * Look up applicant by Student Number.
+     */
+    public function showByStudentNumber(Request $request, string $studentNumber): JsonResponse
+    {
+        $profile = $this->getEligibleApplicantQuery()
+            ->whereHas('user', function ($q) use ($studentNumber) {
+                $q->where('student_number', $studentNumber);
+            })->first();
+        
+        return $this->formatResponse($profile, "Student Number: $studentNumber", $request);
+    }
+
+    /**
+     * Process medical webhook.
+     */
+    public function webhookResult(Request $request): JsonResponse
+    {
+        $request->validate([
+            'student_number' => 'required|string',
+            'medical_status' => 'required|string|in:cleared,failed',
+        ]);
+
+        $studentNumber = $request->input('student_number');
+        $status = $request->input('medical_status');
+
+        $profile = $this->getEligibleApplicantQuery()
+            ->whereHas('user', function ($q) use ($studentNumber) {
+                $q->where('student_number', $studentNumber);
+            })->first();
+
+        if (!$profile) {
+            $this->auditLogService->logActivity(
+                'WEBHOOK_MISS',
+                'External Medical API',
+                sprintf('Webhook received for ineligible or unknown student: %s from IP %s.', $studentNumber, $request->ip() ?? 'unknown'),
+                null,
+                AuditLog::CATEGORY_ADMISSION_DATA
+            );
+            return response()->json(['message' => 'Applicant not found or not eligible for medical stage'], 404);
+        }
+
+        $application = $profile->currentApplication;
+
+        if ($status === 'cleared') {
+            $application->update(['status' => 'cleared_for_enrollment']);
+            $application->processes()->create([
+                'stage' => 'medical',
+                'status' => 'completed',
+                'action' => 'passed',
+                'performed_by' => null,
+            ]);
+            $actionStr = 'passed';
+        } else {
+            $application->update(['status' => 'rejected']);
+            $application->processes()->create([
+                'stage' => 'medical',
+                'status' => 'completed',
+                'action' => 'failed',
+                'performed_by' => null,
+            ]);
+            $actionStr = 'failed';
+        }
+
+        $this->auditLogService->logActivity(
+            'UPDATE',
+            'External Medical API',
+            sprintf('Medical webhook processed: student %s marked as %s from IP %s.', $studentNumber, $actionStr, $request->ip() ?? 'unknown'),
+            null,
+            AuditLog::CATEGORY_ADMISSION_DATA
+        );
+
+        return response()->json(['message' => 'Medical result recorded successfully']);
+    }
 }

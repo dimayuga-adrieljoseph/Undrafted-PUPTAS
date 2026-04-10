@@ -10,7 +10,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('application_processes', function (Blueprint $table) {
-            if (DB::getDriverName() !== 'sqlite') {
+            $foreignKeys = DB::select(
+                "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'application_processes' AND COLUMN_NAME = 'performed_by' AND REFERENCED_TABLE_NAME IS NOT NULL"
+            );
+
+            if (!empty($foreignKeys)) {
                 $table->dropForeign(['performed_by']);
             }
         });
