@@ -198,6 +198,22 @@ class ExternalMedicalApiController extends Controller
             })->first();
 
         if (!$profile) {
+            // Idempotency check: if medical is already completed, return success
+            $fallbackProfile = ApplicantProfile::with('currentApplication.processes')
+                ->whereHas('user', function ($q) use ($studentNumber) {
+                    $q->where('student_number', $studentNumber);
+                })->first();
+
+            if ($fallbackProfile && $fallbackProfile->currentApplication) {
+                $latestMedical = $fallbackProfile->currentApplication->processes
+                    ->where('stage', 'medical')
+                    ->sortByDesc('created_at')
+                    ->first();
+                if ($latestMedical && $latestMedical->status === 'completed') {
+                    return response()->json(['message' => 'Medical result already recorded successfully']);
+                }
+            }
+
             $this->auditLogService->logActivity(
                 'WEBHOOK_MISS',
                 'External Medical API',
@@ -209,26 +225,33 @@ class ExternalMedicalApiController extends Controller
         }
 
         $application = $profile->currentApplication;
+        
+        $actionStr = $status === 'cleared' ? 'passed' : 'failed';
+        $newAppStatus = $status === 'cleared' ? 'cleared_for_enrollment' : 'rejected';
 
-        if ($status === 'cleared') {
-            $application->update(['status' => 'cleared_for_enrollment']);
-            $application->processes()->create([
-                'stage' => 'medical',
-                'status' => 'completed',
-                'action' => 'passed',
-                'performed_by' => null,
-            ]);
-            $actionStr = 'passed';
-        } else {
-            $application->update(['status' => 'rejected']);
-            $application->processes()->create([
-                'stage' => 'medical',
-                'status' => 'completed',
-                'action' => 'failed',
-                'performed_by' => null,
-            ]);
-            $actionStr = 'failed';
-        }
+        \Illuminate\Support\Facades\DB::transaction(function () use ($application, $newAppStatus, $actionStr) {
+            $application->update(['status' => $newAppStatus]);
+            
+            $medicalProcess = $application->processes()
+                ->where('stage', 'medical')
+                ->whereIn('status', ['in_progress', 'returned'])
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($medicalProcess) {
+                $medicalProcess->update([
+                    'status' => 'completed',
+                    'action' => $actionStr,
+                ]);
+            } else {
+                $application->processes()->create([
+                    'stage' => 'medical',
+                    'status' => 'completed',
+                    'action' => $actionStr,
+                    'performed_by' => null,
+                ]);
+            }
+        });
 
         $this->auditLogService->logActivity(
             'UPDATE',
