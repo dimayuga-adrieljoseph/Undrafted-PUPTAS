@@ -74,10 +74,9 @@ class FileMapper
     {
         $requiredKeys = self::REQUIRED_BY_GRADUATE_TYPE[$graduateType] ?? null;
 
-        // Unknown/unsupported graduate type — return conservative null-placeholder set
-        // so the frontend cannot treat an empty array as "all documents uploaded".
+        // Unknown/unsupported graduate type — no documents are required yet, return empty array.
         if ($requiredKeys === null) {
-            return array_fill_keys(array_keys(self::MAPPING), null);
+            return [];
         }
 
         $uploadedFiles = [];

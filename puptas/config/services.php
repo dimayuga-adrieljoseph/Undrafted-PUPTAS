@@ -53,4 +53,10 @@ return [
         'daily_limit' => (int) env('EXTERNAL_MEDICAL_API_DAILY_LIMIT', 1500),
     ],
 
+    'openrouter' => [
+        'key' => env('OPENROUTER_API_KEY'),
+        'endpoint' => env('OPENROUTER_ENDPOINT', 'https://openrouter.ai/api/v1/chat/completions'),
+        'model' => env('OPENROUTER_MODEL', 'google/gemini-flash-1.5'),
+    ],
+
 ];

@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
@@ -63,6 +64,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('external-medical-api-daily', function ($request) {
             return Limit::perDay((int) config('services.external_medical_api.daily_limit', 100))
                 ->by((string) $request->ip());
+        });
+
+        RateLimiter::for('grade-extraction', function (Request $request) {
+            return Limit::perHour(10)->by($request->user()?->id);
         });
     }
 }

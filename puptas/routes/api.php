@@ -6,6 +6,7 @@ use thiagoalessio\TesseractOCR\TesseractOCR;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ExternalStudentApiController;
 use Inertia\Inertia;
+use App\Http\Controllers\GradeExtractionController;
 use App\Http\Controllers\GradesController;
 
 
@@ -62,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/programs/update/{id}', [ProgramController::class, 'update'])->name('programs.update');
     Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->name('programs.delete');
     Route::post('/store-grades', [GradesController::class, 'store']);
+    Route::post('/grades/extract', [GradeExtractionController::class, 'extract']);
 });
 
 use App\Http\Controllers\ExternalProgramApiController;
