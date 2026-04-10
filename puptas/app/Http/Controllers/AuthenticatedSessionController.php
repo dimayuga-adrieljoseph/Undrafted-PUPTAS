@@ -49,7 +49,6 @@ class AuthenticatedSessionController implements LoginResponse
             2 => '/dashboard',
             3 => '/evaluator-dashboard',
             4 => '/interviewer-dashboard',
-            5 => '/medical-dashboard',
             6 => '/record-dashboard',
             default => '/',
         });
