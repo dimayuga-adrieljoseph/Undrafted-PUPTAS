@@ -165,4 +165,102 @@ class ExternalMedicalApiController extends Controller
         
         return $this->formatResponse($profile, "IDP User ID: $idpUserId", $request);
     }
+
+    /**
+     * Look up applicant by Student Number.
+     */
+    public function showByStudentNumber(Request $request, string $studentNumber): JsonResponse
+    {
+        $profile = $this->getEligibleApplicantQuery()
+            ->whereHas('user', function ($q) use ($studentNumber) {
+                $q->where('student_number', $studentNumber);
+            })->first();
+        
+        return $this->formatResponse($profile, "Student Number: $studentNumber", $request);
+    }
+
+    /**
+     * Process medical webhook.
+     */
+    public function webhookResult(Request $request): JsonResponse
+    {
+        $request->validate([
+            'student_number' => 'required|string',
+            'medical_status' => 'required|string|in:cleared,failed',
+        ]);
+
+        $studentNumber = $request->input('student_number');
+        $status = $request->input('medical_status');
+
+        $profile = $this->getEligibleApplicantQuery()
+            ->whereHas('user', function ($q) use ($studentNumber) {
+                $q->where('student_number', $studentNumber);
+            })->first();
+
+        if (!$profile) {
+            // Idempotency check: if medical is already completed, return success
+            $fallbackProfile = ApplicantProfile::with('currentApplication.processes')
+                ->whereHas('user', function ($q) use ($studentNumber) {
+                    $q->where('student_number', $studentNumber);
+                })->first();
+
+            if ($fallbackProfile && $fallbackProfile->currentApplication) {
+                $latestMedical = $fallbackProfile->currentApplication->processes
+                    ->where('stage', 'medical')
+                    ->sortByDesc('created_at')
+                    ->first();
+                if ($latestMedical && $latestMedical->status === 'completed') {
+                    return response()->json(['message' => 'Medical result already recorded successfully']);
+                }
+            }
+
+            $this->auditLogService->logActivity(
+                'WEBHOOK_MISS',
+                'External Medical API',
+                sprintf('Webhook received for ineligible or unknown student: %s from IP %s.', $studentNumber, $request->ip() ?? 'unknown'),
+                null,
+                AuditLog::CATEGORY_ADMISSION_DATA
+            );
+            return response()->json(['message' => 'Applicant not found or not eligible for medical stage'], 404);
+        }
+
+        $application = $profile->currentApplication;
+        
+        $actionStr = $status === 'cleared' ? 'passed' : 'failed';
+        $newAppStatus = $status === 'cleared' ? 'cleared_for_enrollment' : 'rejected';
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($application, $newAppStatus, $actionStr) {
+            $application->update(['status' => $newAppStatus]);
+            
+            $medicalProcess = $application->processes()
+                ->where('stage', 'medical')
+                ->whereIn('status', ['in_progress', 'returned'])
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($medicalProcess) {
+                $medicalProcess->update([
+                    'status' => 'completed',
+                    'action' => $actionStr,
+                ]);
+            } else {
+                $application->processes()->create([
+                    'stage' => 'medical',
+                    'status' => 'completed',
+                    'action' => $actionStr,
+                    'performed_by' => null,
+                ]);
+            }
+        });
+
+        $this->auditLogService->logActivity(
+            'UPDATE',
+            'External Medical API',
+            sprintf('Medical webhook processed: student %s marked as %s from IP %s.', $studentNumber, $actionStr, $request->ip() ?? 'unknown'),
+            null,
+            AuditLog::CATEGORY_ADMISSION_DATA
+        );
+
+        return response()->json(['message' => 'Medical result recorded successfully']);
+    }
 }

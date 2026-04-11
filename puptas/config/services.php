@@ -53,4 +53,8 @@ return [
         'daily_limit' => (int) env('EXTERNAL_MEDICAL_API_DAILY_LIMIT', 1500),
     ],
 
+    'medical_webhook' => [
+        'secret' => env('MEDICAL_WEBHOOK_SECRET'),
+    ],
+
 ];
