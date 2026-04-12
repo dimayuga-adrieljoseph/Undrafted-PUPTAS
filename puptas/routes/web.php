@@ -54,6 +54,9 @@ Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
     ->middleware('auth')
     ->name('idp.logout');
 
+Route::get('/auth/idp/finalize-logout', [IdpAuthController::class, 'finalizeLogout'])
+    ->name('idp.logout.finalize');
+
 // Backward-compatible callback aliases in case IDP client is configured with older paths.
 Route::get('/callback', [IdpAuthController::class, 'callback'])
     ->middleware('guest')
