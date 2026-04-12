@@ -321,7 +321,7 @@ class IdpAuthController extends Controller
 
         // 2. Send POST request to IDP logout
         if ($accessToken && !empty($idpConfig['base_url'])) {
-            $logoutPath = $idpConfig['logout_path'] ?? '/auth/logout';
+            $logoutPath = $idpConfig['logout_path'] ?? '/api/v1/auth/logout';
             $logoutUrl = rtrim($idpConfig['base_url'], '/') . $logoutPath;
 
             try {
