@@ -319,30 +319,21 @@ class IdpAuthController extends Controller
         \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('access_token'));
         \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('refresh_token'));
 
-        // 2. Send POST request to IDP logout
+        // 2. Redirect user browser to IDP logout endpoint
         if ($accessToken && !empty($idpConfig['base_url'])) {
             $logoutPath = $idpConfig['logout_path'] ?? '/api/v1/auth/logout';
-            $logoutUrl = rtrim($idpConfig['base_url'], '/') . $logoutPath;
+            
+            // The IDP team specified to attach access_token and use base_url for the return redirect
+            $query = http_build_query([
+                'client_id'    => $idpConfig['client_id'],
+                'access_token' => $accessToken,
+                'base_url'     => config('app.url') // our app's URL to return to
+            ]);
 
-            try {
-                \Log::info('Sending POST request to IDP logout API to revoke IDP session', ['url' => $logoutUrl]);
+            $logoutUrl = rtrim($idpConfig['base_url'], '/') . $logoutPath . '?' . $query;
 
-                $response = Http::withToken($accessToken)
-                    ->acceptJson()
-                    ->timeout(15)
-                    ->post($logoutUrl, [
-                        'client_id' => $idpConfig['client_id']
-                    ]);
-
-                if (!$response->successful()) {
-                    \Log::warning('IDP Logout API returned non-success', [
-                        'status' => $response->status(),
-                        'body' => $response->body()
-                    ]);
-                }
-            } catch (\Exception $e) {
-                \Log::error('IDP Logout API failed', ['error' => $e->getMessage()]);
-            }
+            \Log::info('Redirecting user browser to IDP logout', ['url' => $logoutUrl]);
+            return \Inertia\Inertia::location($logoutUrl);
         }
 
 
