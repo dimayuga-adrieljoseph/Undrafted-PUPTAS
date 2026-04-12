@@ -33,6 +33,8 @@ class GradeExtractionService
 
         $raw = $this->openRouterClient->send($images, $prompt);
 
+        \Log::info('OpenRouter raw response', ['raw' => $raw]);
+
         $sanitized = $this->sanitize($raw);
         $parsed    = $this->parse($sanitized);
         $validated = $this->validate($parsed);
@@ -55,6 +57,10 @@ class GradeExtractionService
         $images = [];
 
         foreach ($files as $file) {
+            if (in_array($file->type, ['file10Front', 'file10'], true)) {
+                continue;
+            }
+
             $disk = \App\Helpers\FileMapper::resolveDiskForPath($file->file_path);
             $storage = Storage::disk($disk);
 
@@ -85,24 +91,113 @@ class GradeExtractionService
     protected function buildPrompt(): string
     {
         return <<<'PROMPT'
-Analyze the uploaded report card images and extract all subject grades.
+You are an AI system that extracts and organizes academic grades directly from images.
 
-Return ONLY a JSON object with exactly four top-level keys: "math", "science", "english", and "others".
-Each key maps subject names to objects containing "grade" (integer, 0–100) and "confidence" (float, 0.0–1.0).
+The input may contain one or multiple images. You must carefully examine ALL images and combine the information before producing the final answer.
+
+Your task:
+
+1. Read and interpret all visible text from the images.
+2. Extract subject-grade pairs.
+3. Categorize and map the extracted grades into Math, Science, and English groups.
+4. Include any additional subjects that do not belong to these categories.
+
+Predefined Subject Mapping:
+
+Math:
+
+* General Mathematics
+* Business Mathematics
+* Statistics and Probability
+
+Science:
+
+* Earth and Life Science
+* Physical Science
+
+English:
+
+* Oral Communication
+* 21st Century Literature
+* English for Academic Purposes
+* Reading and Writing
+
+Instructions:
+
+* Identify all subject-grade pairs visible in the images.
+* Consider both Grade 11 and Grade 12 subjects and grades. Include grade level context where visible.
+* Normalize and clean subject names.
+* Use reasoning to match subjects to the closest predefined subject and category:
+
+  * “Math”, “Gen Math” → General Mathematics (Math)
+  * “Stats” → Statistics and Probability (Math)
+  * “EAPP” → English for Academic Purposes (English)
+* If a subject matches a predefined subject, use the exact predefined name.
+* If a subject does NOT match any predefined subject:
+
+  * Place it under an "others" category using its cleaned name.
+* If multiple grades appear for the same subject, select the final or most relevant grade.
+* Ignore unrelated numbers (student IDs, dates, etc.).
+* Merge information across multiple images.
+
+Output format:
+
+* Return ONLY a valid JSON object.
+* Do NOT include explanations, comments, or extra text.
+* Ensure the output is directly parseable by JSON.parse().
+
+The JSON structure must be:
+
+{
+"subjects": {
+"math": {
+"General Mathematics": "Grade",
+"Statistics and Probability": "Grade"
+},
+"science": {
+"Earth and Life Science": "Grade",
+"Physical Science": "Grade"
+},
+"english": {
+"Oral Communication": "Grade",
+"21st Century Literature": "Grade",
+"English for Academic Purposes": "Grade",
+"Reading and Writing": "Grade"
+},
+"others": {
+"Additional Subject Name": "Grade"
+}
+}
+}
 
 Rules:
-- Use lowercase, trimmed subject name keys.
-- "grade" must be an integer between 0 and 100.
-- "confidence" must be a float between 0.0 and 1.0 representing your certainty in the extracted value.
-- Place each subject under the most appropriate group: math, science, english, or others.
-- Do NOT include markdown code fences, backticks, or any prose — return ONLY the raw JSON object.
 
-Example format:
+* Use predefined subject names when a match is clear.
+* Place subjects in the correct category (math, science, english).
+* Subjects that do not fit must go under "others".
+* Only include Grade 11 and Grade 12 subjects and grades.
+* Do not duplicate subjects.
+* Omit subjects with no detected grade.
+* If a category has no subjects, return it as an empty object {}.
+* Do not invent or guess missing data.
+* Values must be strings or numbers.
+* Ensure valid JSON formatting (no trailing commas, no comments).
+
+Example Output:
 {
-  "math": { "algebra": { "grade": 90, "confidence": 0.95 } },
-  "science": { "biology": { "grade": 88, "confidence": 0.92 } },
-  "english": { "english": { "grade": 92, "confidence": 0.97 } },
-  "others": { "araling panlipunan": { "grade": 90, "confidence": 0.55 } }
+"subjects": {
+"math": {
+"General Mathematics": "95"
+},
+"science": {},
+"english": {
+"Oral Communication": "90"
+},
+"others": {
+"Filipino": "92",
+"Physical Education": "93"
+}
+}
 }
 PROMPT;
     }
@@ -140,48 +235,43 @@ PROMPT;
             throw new \RuntimeException('OpenRouter response is not valid JSON.');
         }
 
+        if (! array_key_exists('subjects', $decoded)) {
+             throw new \RuntimeException('OpenRouter response missing required "subjects" root key.');
+        }
+
+        $subjects = $decoded['subjects'];
         $requiredKeys = ['math', 'science', 'english', 'others'];
 
         foreach ($requiredKeys as $key) {
-            if (! array_key_exists($key, $decoded)) {
+            if (! array_key_exists($key, $subjects)) {
                 throw new \RuntimeException('OpenRouter response missing required keys: math, science, english, others.');
             }
         }
 
         foreach ($requiredKeys as $key) {
-            foreach ($decoded[$key] as $entry) {
-                if (
-                    ! is_array($entry) ||
-                    ! array_key_exists('grade', $entry) ||
-                    ! array_key_exists('confidence', $entry) ||
-                    ! is_numeric($entry['grade']) ||
-                    ! is_numeric($entry['confidence'])
-                ) {
-                    throw new \RuntimeException('OpenRouter response has invalid subject entry structure.');
+            foreach ($subjects[$key] as $entry) {
+                if (! is_string($entry) && ! is_numeric($entry)) {
+                    throw new \RuntimeException('OpenRouter response has invalid subject grade structure.');
                 }
             }
         }
 
-        return $decoded;
+        return $subjects;
     }
 
     /**
-     * Validate that all grade values are in [0, 100] and confidence values are in [0.0, 1.0].
+     * Validate that all grade values are in [0, 100].
      *
      * @throws \RuntimeException on out-of-range values
      */
     protected function validate(array $data): array
     {
         foreach (['math', 'science', 'english', 'others'] as $group) {
-            foreach ($data[$group] as $subject => $entry) {
-                if ($entry['grade'] < 0 || $entry['grade'] > 100) {
+            foreach ($data[$group] as $subject => $grade) {
+                $numericGrade = (float) $grade;
+                if ($numericGrade < 0 || $numericGrade > 100) {
                     throw new \RuntimeException(
-                        "Grade value out of range [0,100] for subject '{$subject}': {$entry['grade']}"
-                    );
-                }
-                if ($entry['confidence'] < 0.0 || $entry['confidence'] > 1.0) {
-                    throw new \RuntimeException(
-                        "Confidence value out of range [0.0,1.0] for subject '{$subject}': {$entry['confidence']}"
+                        "Grade value out of range [0,100] for subject '{$subject}': {$grade}"
                     );
                 }
             }
@@ -192,15 +282,18 @@ PROMPT;
 
     /**
      * Lowercase and trim all subject name keys in the extraction result.
+     * Maps back to an array structure with fake confidence.
      */
     protected function normalizeKeys(array $data): array
     {
         $normalized = [];
+        // Envelope it back inside 'subjects' so the frontend root has the same property name
+        $normalized['subjects'] = [];
         foreach (['math', 'science', 'english', 'others'] as $group) {
-            $normalized[$group] = [];
-            foreach ($data[$group] as $subject => $entry) {
+            $normalized['subjects'][$group] = [];
+            foreach ($data[$group] as $subject => $grade) {
                 $normalizedKey = strtolower(trim($subject));
-                $normalized[$group][$normalizedKey] = $entry;
+                $normalized['subjects'][$group][$normalizedKey] = (float) $grade;
             }
         }
         return $normalized;

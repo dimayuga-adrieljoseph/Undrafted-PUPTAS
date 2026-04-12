@@ -49,8 +49,9 @@ class OpenRouterClient
         $content[] = ['type' => 'text', 'text' => $prompt];
 
         $body = [
-            'model'    => $this->model,
-            'messages' => [
+            'model'      => $this->model,
+            'max_tokens' => 1500,
+            'messages'   => [
                 ['role' => 'user', 'content' => $content],
             ],
         ];

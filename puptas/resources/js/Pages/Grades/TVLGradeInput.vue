@@ -42,10 +42,10 @@
                     </div>
                     <button @click="bannerDismissed = true" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-xl leading-none flex-shrink-0">&times;</button>
                 </div>
-                <!-- Grade 11 Section -->
+                <!-- Core Subjects Card -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Grade 11 Subjects</h2>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Core Subjects</h2>
                     </div>
                     
                     <div class="p-6">
@@ -55,7 +55,12 @@
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 Math-Related Subjects
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- G11 Math -->
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#9E122C] text-white mr-2">G11</span>
+                                Grade 11
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Mathematics</label>
                                     <input
@@ -85,142 +90,16 @@
                                     <span v-if="getConfidence('statistics and probability') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('statistics and probability') * 100) }}%</span>
                                 </div>
                             </div>
-                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                            <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
                                     Math Average: <span class="font-bold">{{ mathAverage || "—" }}</span>
                                 </p>
                             </div>
-                        </div>
-
-                        <!-- Science Subjects -->
-                        <div class="mb-8">
-                            <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                Science-Related Subjects
-                            </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 1</label>
-                                    <input
-                                        v-model="form.g11_science_subject_1"
-                                        type="text"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        placeholder="Subject name"
-                                    />
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
-                                        v-model.number="form.g11_science_grade_1"
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="0.01"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g11_science_subject_1?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
-                                    />
-                                    <p v-if="isLowConfidence(form.g11_science_subject_1?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence(form.g11_science_subject_1?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g11_science_subject_1?.toLowerCase()?.trim() || '') * 100) }}%</span>
-                                </div>
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 2</label>
-                                    <input
-                                        v-model="form.g11_science_subject_2"
-                                        type="text"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        placeholder="Subject name"
-                                    />
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
-                                        v-model.number="form.g11_science_grade_2"
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="0.01"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g11_science_subject_2?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
-                                    />
-                                    <p v-if="isLowConfidence(form.g11_science_subject_2?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence(form.g11_science_subject_2?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g11_science_subject_2?.toLowerCase()?.trim() || '') * 100) }}%</span>
-                                </div>
-                            </div>
-                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
-                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
-                                    Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- English Subjects -->
-                        <div class="mb-4">
-                            <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                English-Related Subjects
-                            </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Oral Communication in Context</label>
-                                    <input
-                                        v-model.number="form.g11_oral_communication"
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="0.01"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('oral communication in context') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="Enter grade (0-100)"
-                                    />
-                                    <p v-if="isLowConfidence('oral communication in context')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('oral communication in context') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('oral communication in context') * 100) }}%</span>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading and Writing Skills</label>
-                                    <input
-                                        v-model.number="form.g11_reading_writing"
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="0.01"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('reading and writing skills') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="Enter grade (0-100)"
-                                    />
-                                    <p v-if="isLowConfidence('reading and writing skills')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('reading and writing skills') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('reading and writing skills') * 100) }}%</span>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">21st Century Literature</label>
-                                    <input
-                                        v-model.number="form.g11_21st_century_lit"
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="0.01"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('21st century literature') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="Enter grade (0-100)"
-                                    />
-                                    <p v-if="isLowConfidence('21st century literature')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('21st century literature') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('21st century literature') * 100) }}%</span>
-                                </div>
-                            </div>
-                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
-                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
-                                    English Average: <span class="font-bold">{{ englishAverage || "—" }}</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Grade 12 Section -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
-                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Grade 12 Subjects</h2>
-                    </div>
-                    
-                    <div class="p-6">
-                        <!-- Math Subjects -->
-                        <div class="mb-8">
-                            <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-                                <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                Math Subjects (2 subjects)
-                            </h3>
+                            <!-- G12 Math -->
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-500 text-white mr-2">G12</span>
+                                Grade 12
+                            </h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Math Subject 1</label>
@@ -271,8 +150,67 @@
                         <div class="mb-8">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                Science Subjects (2 subjects)
+                                Science-Related Subjects
                             </h3>
+                            <!-- G11 Science -->
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#9E122C] text-white mr-2">G11</span>
+                                Grade 11
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 1</label>
+                                    <input
+                                        v-model="form.g11_science_subject_1"
+                                        type="text"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        placeholder="Subject name"
+                                    />
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
+                                    <input
+                                        v-model.number="form.g11_science_grade_1"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g11_science_subject_1?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="0-100"
+                                    />
+                                    <p v-if="isLowConfidence(form.g11_science_subject_1?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                    <span v-if="getConfidence(form.g11_science_subject_1?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g11_science_subject_1?.toLowerCase()?.trim() || '') * 100) }}%</span>
+                                </div>
+                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 2</label>
+                                    <input
+                                        v-model="form.g11_science_subject_2"
+                                        type="text"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
+                                        placeholder="Subject name"
+                                    />
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
+                                    <input
+                                        v-model.number="form.g11_science_grade_2"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g11_science_subject_2?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="0-100"
+                                    />
+                                    <p v-if="isLowConfidence(form.g11_science_subject_2?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                    <span v-if="getConfidence(form.g11_science_subject_2?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g11_science_subject_2?.toLowerCase()?.trim() || '') * 100) }}%</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
+                                </p>
+                            </div>
+                            <!-- G12 Science -->
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-500 text-white mr-2">G12</span>
+                                Grade 12
+                            </h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 1</label>
@@ -289,11 +227,11 @@
                                         min="0"
                                         max="100"
                                         step="0.01"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('earth and life science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('earth and life science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('earth and life science') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('earth and life science') * 100) }}%</span>
+                                    <p v-if="isLowConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                    <span v-if="getConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '') * 100) }}%</span>
                                 </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 2</label>
@@ -310,21 +248,80 @@
                                         min="0"
                                         max="100"
                                         step="0.01"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('physical science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('physical science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('physical science') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('physical science') * 100) }}%</span>
+                                    <p v-if="isLowConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                    <span v-if="getConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '') * 100) }}%</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- English Subjects -->
-                        <div class="mb-8">
+                        <div class="mb-4">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                English Subjects (3 subjects)
+                                English-Related Subjects
                             </h3>
+                            <!-- G11 English -->
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#9E122C] text-white mr-2">G11</span>
+                                Grade 11
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Oral Communication in Context</label>
+                                    <input
+                                        v-model.number="form.g11_oral_communication"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('oral communication in context') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('oral communication in context')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                    <span v-if="getConfidence('oral communication in context') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('oral communication in context') * 100) }}%</span>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading and Writing Skills</label>
+                                    <input
+                                        v-model.number="form.g11_reading_writing"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('reading and writing skills') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('reading and writing skills')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                    <span v-if="getConfidence('reading and writing skills') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('reading and writing skills') * 100) }}%</span>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">21st Century Literature</label>
+                                    <input
+                                        v-model.number="form.g11_21st_century_lit"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('21st century literature') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('21st century literature')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                    <span v-if="getConfidence('21st century literature') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('21st century literature') * 100) }}%</span>
+                                </div>
+                            </div>
+                            <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    English Average: <span class="font-bold">{{ englishAverage || "—" }}</span>
+                                </p>
+                            </div>
+                            <!-- G12 English -->
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-500 text-white mr-2">G12</span>
+                                Grade 12
+                            </h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div v-for="i in 3" :key="'english'+i" class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">English Subject {{ i }}</label>
@@ -349,8 +346,8 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Semester GWA -->
+                    </div>
+                </div>
                         <div class="mb-4">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
@@ -390,6 +387,51 @@
                                 Grade 12 GWA: <span class="text-2xl font-bold">{{ g12GWA || "—" }}</span>
                             </p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Other Subjects Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
+                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Other Subjects</h2>
+                    </div>
+                    <div class="p-6">
+                        <div v-for="(subject, index) in otherSubjects" :key="index" class="flex gap-3 mb-3 items-start">
+                            <div class="flex-1">
+                                <input
+                                    v-model="subject.name"
+                                    type="text"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                    placeholder="Subject name"
+                                />
+                            </div>
+                            <div class="w-32">
+                                <input
+                                    v-model.number="subject.grade"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.01"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                    placeholder="0-100"
+                                />
+                            </div>
+                            <button
+                                v-if="otherSubjects.length > 1"
+                                type="button"
+                                @click="otherSubjects.splice(index, 1)"
+                                class="px-3 py-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            @click="otherSubjects.push({ name: '', grade: null })"
+                            class="mt-2 px-4 py-2 text-sm text-[#9E122C] dark:text-gray-300 border border-[#9E122C] dark:border-gray-500 rounded-lg hover:bg-red-50 dark:hover:bg-gray-700 transition"
+                        >
+                            + Add Subject
+                        </button>
                     </div>
                 </div>
 
@@ -633,6 +675,7 @@ const successMessage = ref("");
 const errors = ref({});
 const confidenceMap = ref({});
 const bannerDismissed = ref(false);
+const otherSubjects = ref([{ name: '', grade: null }]);
 
 const form = reactive({
     // Grade 11
@@ -800,17 +843,70 @@ const isLowConfidence = (fieldKey) => {
 };
 
 const applyAutofill = (result) => {
-    if (!result) return;
+    if (!result || !result.subjects) return;
     const newConfidenceMap = {};
+    
+    let mathIdx = 1;
+    let scienceIdx = 1;
+    let englishIdx = 1;
+    
     for (const group of ['math', 'science', 'english', 'others']) {
-        if (!result[group]) continue;
-        for (const [subjectKey, entry] of Object.entries(result[group])) {
+        if (!result.subjects[group]) continue;
+        for (const [subjectKey, gradeVal] of Object.entries(result.subjects[group])) {
             const normalizedKey = subjectKey.toLowerCase().trim();
-            newConfidenceMap[normalizedKey] = entry.confidence;
+            newConfidenceMap[normalizedKey] = 1.0; 
+            const numericGrade = parseFloat(gradeVal);
+            if (isNaN(numericGrade)) continue;
+
+            let matched = false;
+            
             for (const formKey of Object.keys(form)) {
-                const normalizedFormKey = formKey.replace(/_/g, ' ').toLowerCase().trim();
-                if (normalizedFormKey === normalizedKey || formKey.toLowerCase().trim() === normalizedKey) {
-                    form[formKey] = entry.grade;
+                if (!formKey.includes('grade') && !formKey.includes('subject') && formKey.startsWith('g11_')) {
+                    const normalizedFormKey = formKey.replace(/_/g, ' ').toLowerCase().trim();
+                    let strippedForm = normalizedFormKey.replace('g11 ', '').replace('g12 ', '').replace(/\band\b|\bfor\b|\bof\b|\bthe\b|\bin\b|\bfrom\b/g, '').replace(/\s+/g, ' ').trim();
+                    let strippedKey = normalizedKey.replace(/\band\b|\bfor\b|\bof\b|\bthe\b|\bin\b|\bfrom\b/g, '').replace(/\s+/g, ' ').trim();
+                    
+                    if (strippedForm.includes(strippedKey) || strippedKey.includes(strippedForm) || 
+                        normalizedFormKey.replace('academic professional', 'academic purposes').includes(normalizedKey)) {
+                        form[formKey] = numericGrade;
+                        matched = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!matched) {
+                if (group === 'math') {
+                    while(`g12_math_subject_${mathIdx}` in form && form[`g12_math_subject_${mathIdx}`] && form[`g12_math_subject_${mathIdx}`].toLowerCase() !== subjectKey.toLowerCase()) {
+                        mathIdx++;
+                    }
+                    if (`g12_math_subject_${mathIdx}` in form) {
+                        form[`g12_math_subject_${mathIdx}`] = subjectKey;
+                        form[`g12_math_grade_${mathIdx}`] = numericGrade;
+                        mathIdx++;
+                    }
+                } else if (group === 'science') {
+                    while(`g12_science_subject_${scienceIdx}` in form && form[`g12_science_subject_${scienceIdx}`] && form[`g12_science_subject_${scienceIdx}`].toLowerCase() !== subjectKey.toLowerCase()) {
+                        scienceIdx++;
+                    }
+                    if (`g12_science_subject_${scienceIdx}` in form) {
+                        form[`g12_science_subject_${scienceIdx}`] = subjectKey;
+                        form[`g12_science_grade_${scienceIdx}`] = numericGrade;
+                        scienceIdx++;
+                    }
+                } else if (group === 'english') {
+                    if (normalizedKey.includes('21st century') && 'g12_english_grade_1' in form) {
+                         form['g12_english_grade_1'] = numericGrade;
+                    } else {
+                        while(`g12_english_subject_${englishIdx}` in form && (`g12_english_subject_${englishIdx}` === 'g12_english_subject_1' || (form[`g12_english_subject_${englishIdx}`] && form[`g12_english_subject_${englishIdx}`].toLowerCase() !== subjectKey.toLowerCase()))) {
+                            englishIdx++;
+                        }
+                        if (`g12_english_subject_${englishIdx}` in form) {
+                            form[`g12_english_subject_${englishIdx}`] = subjectKey;
+                            form[`g12_english_grade_${englishIdx}`] = numericGrade;
+                            englishIdx++;
+                        }
+                    }
                 }
             }
         }

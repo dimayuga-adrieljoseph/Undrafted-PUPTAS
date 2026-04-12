@@ -67,7 +67,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('grade-extraction', function (Request $request) {
-            return Limit::perHour(10)->by($request->user()?->id);
+            return Limit::perMinute(30)->by($request->user()?->id);
         });
     }
 }
