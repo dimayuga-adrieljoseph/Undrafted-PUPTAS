@@ -315,37 +315,21 @@ class IdpAuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // 2. Send POST request to IDP logout
-        if ($accessToken && !empty($idpConfig['base_url'])) {
-            $logoutPath = $idpConfig['logout_path'] ?? '/api/v1/auth/logout';
-            $logoutUrl = rtrim($idpConfig['base_url'], '/') . $logoutPath;
-
-            try {
-                \Log::info('Sending POST request to IDP logout API to revoke IDP session', ['url' => $logoutUrl]);
-
-                $response = Http::withToken($accessToken)
-                    ->acceptJson()
-                    ->timeout(15)
-                    ->post($logoutUrl, [
-                        'client_id' => $idpConfig['client_id']
-                    ]);
-
-                if (!$response->successful()) {
-                    \Log::warning('IDP Logout API returned non-success', [
-                        'status' => $response->status(),
-                        'body' => $response->body()
-                    ]);
-                }
-            } catch (\Exception $e) {
-                \Log::error('IDP Logout API failed', ['error' => $e->getMessage()]);
-            }
-        }
-
         // Queue clearing of application cookies
         \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('access_token'));
         \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('refresh_token'));
 
-        // Then our system should redirect the user to our landing page
+        // 2. Redirect to IDP global logout
+        if (!empty($idpConfig['base_url'])) {
+            // Note: Using /auth/logout for the global logout redirect as requested
+            $logoutUrl = rtrim($idpConfig['base_url'], '/') . '/auth/logout';
+            
+            \Log::info('Redirecting to IDP global logout endpoint', ['url' => $logoutUrl]);
+            // The Inertia location is used because it behaves well with Inertia applications when doing external redirects
+            return \Inertia\Inertia::location($logoutUrl);
+        }
+
+        // Redirect to local landing page if IDP URL is missing
         return redirect('/');
     }
 }
