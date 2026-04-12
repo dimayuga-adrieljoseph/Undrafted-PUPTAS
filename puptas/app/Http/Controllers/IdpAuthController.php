@@ -352,13 +352,31 @@ class IdpAuthController extends Controller
     <title>Logging out...</title>
     <style>body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f3f4f6; color: #374151; }</style>
 </head>
-<body onload="document.forms[0].submit();">
+<body>
     <p>Securely logging you out in the background, please wait...</p>
-    <form method="POST" action="{$actionUrl}" style="display: none;">
-        <input type="hidden" name="client_id" value="{$clientId}">
-        <input type="hidden" name="access_token" value="{$accessToken}">
-        <input type="hidden" name="base_url" value="{$baseUrl}">
-    </form>
+    <script>
+        fetch('{$actionUrl}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': 'Bearer {$accessToken}'
+            },
+            body: JSON.stringify({
+                "client_id": "{$clientId}",
+                "access_token": "{$accessToken}",
+                "base_url": "{$baseUrl}"
+            }),
+            credentials: 'include' // CRITICAL: forces the browser to send its IDP cookies!
+        }).then(response => {
+            // Once the IDP processes the logout, we manually redirect you back home
+            window.location.href = "{$baseUrl}";
+        }).catch(error => {
+            console.error('Logout error:', error);
+            // Even if it errors (like CORS), bounce back so you aren't stuck
+            window.location.href = "{$baseUrl}";
+        });
+    </script>
 </body>
 </html>
 HTML;
