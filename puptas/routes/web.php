@@ -26,6 +26,7 @@ use App\Http\Controllers\IdpAuthController;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
+use App\Http\Controllers\GradeExtractionController;
 
 Route::get('/', function () {
     return Inertia::render('Auth/Login', [
@@ -109,6 +110,9 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/applicant-dashboard', [ApplicantDashboardController::class, 'index'])
         ->name('applicant.dashboard');
+
+    Route::middleware(['throttle:grade-extraction'])
+        ->post('/api/grades/extract', [GradeExtractionController::class, 'extract']);
 
     Route::get('/grades/abm', [GradesController::class, 'showAbmGradeForm'])->name('grades.abm.form');
     Route::post('/grades/abm', [GradesController::class, 'storeAbmGrades'])->name('grades.abm.store');

@@ -24,6 +24,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -39,6 +40,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -54,6 +56,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -69,6 +72,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -84,6 +88,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -99,6 +104,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 

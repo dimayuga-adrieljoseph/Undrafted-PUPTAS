@@ -204,6 +204,12 @@ const formatDate = (date) => {
     return d.toLocaleString();
 };
 
+const formatGrade = (value) => {
+    if (value === null || value === undefined) return "—";
+    const num = parseFloat(value);
+    return isNaN(num) ? "—" : num.toFixed(2);
+};
+
 const closeUserCard = () => {
     selectedUser.value = null;
 };
@@ -622,18 +628,26 @@ const clearFilters = () => {
                 <!-- Grades Section -->
                 <div class="mb-6">
                     <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Academic Grades</h4>
-                    <div class="grid grid-cols-3 gap-3">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                         <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Math</p>
-                            <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics ?? "—" }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">English</p>
+                            <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ formatGrade(selectedUser?.grades?.english) }}</p>
+                        </div>
+                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
+                            <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ formatGrade(selectedUser?.grades?.mathematics) }}</p>
                         </div>
                         <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center">
                             <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Science</p>
-                            <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ selectedUser?.grades?.science ?? "—" }}</p>
+                            <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ formatGrade(selectedUser?.grades?.science) }}</p>
                         </div>
                         <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">English</p>
-                            <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ selectedUser?.grades?.english ?? "—" }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Grade 12 – 1st Semester</p>
+                            <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ formatGrade(selectedUser?.grades?.g12_first_sem) }}</p>
+                        </div>
+                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Grade 12 – 2nd Semester</p>
+                            <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ formatGrade(selectedUser?.grades?.g12_second_sem) }}</p>
                         </div>
                     </div>
                 </div>

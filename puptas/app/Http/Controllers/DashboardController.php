@@ -143,7 +143,7 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 
-        $applicant = ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes', 'grades'])
+        $applicant = ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes', 'grades', 'graduateTypes'])
             ->where('user_id', $id)
             ->firstOrFail();
 
@@ -176,9 +176,11 @@ class DashboardController extends Controller
             ] : null,
         ];
 
+        $graduateType = $applicant->graduateTypes->first()?->label ?? null;
+
         return response()->json([
             'user' => $userData,
-            'uploadedFiles' => FileMapper::formatFilesUrls($files),
+            'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false),
         ]);
     }
 

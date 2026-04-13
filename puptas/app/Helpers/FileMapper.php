@@ -74,10 +74,9 @@ class FileMapper
     {
         $requiredKeys = self::REQUIRED_BY_GRADUATE_TYPE[$graduateType] ?? null;
 
-        // Unknown/unsupported graduate type — return conservative null-placeholder set
-        // so the frontend cannot treat an empty array as "all documents uploaded".
+        // Unknown/unsupported graduate type — no documents are required yet, return empty array.
         if ($requiredKeys === null) {
-            return array_fill_keys(array_keys(self::MAPPING), null);
+            return [];
         }
 
         $uploadedFiles = [];
@@ -182,17 +181,30 @@ class FileMapper
             return $extensionMime;
         }
 
-        // Slow path: read the actual file magic bytes for unknown extensions
+        // Slow path: read the actual file magic bytes for unknown extensions.
+        // Works for both local and remote disks (e.g. S3) by reading raw bytes.
         $diskName = self::resolveDiskForPath($file->file_path);
 
         try {
-            if (in_array($diskName, ['public', 'local'], true)) {
-                $absolutePath = Storage::disk($diskName)->path($file->file_path);
+            $storage = Storage::disk($diskName);
 
+            if (in_array($diskName, ['public', 'local'], true)) {
+                // Local disk: use the absolute path directly — no download needed.
+                $absolutePath = $storage->path($file->file_path);
                 if (is_file($absolutePath)) {
                     $mimeType = mime_content_type($absolutePath);
                     if (is_string($mimeType) && $mimeType !== '') {
                         return $mimeType;
+                    }
+                }
+            } else {
+                // Remote disk (e.g. S3): stream bytes and detect via finfo.
+                $contents = $storage->get($file->file_path);
+                if (is_string($contents) && $contents !== '') {
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $detected = $finfo->buffer($contents);
+                    if (is_string($detected) && $detected !== '') {
+                        return $detected;
                     }
                 }
             }
