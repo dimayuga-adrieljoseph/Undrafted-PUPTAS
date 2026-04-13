@@ -319,68 +319,35 @@ class IdpAuthController extends Controller
         \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('access_token'));
         \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('refresh_token'));
 
-        // 2. Safely pass token and redirect to finalize auto-submitting form route
+        // 2. Send POST request to IDP logout endpoint
         if ($accessToken && !empty($idpConfig['base_url'])) {
-            session()->put('idp_logout_token', $accessToken);
-            return \Inertia\Inertia::location(route('idp.logout.finalize'));
+            $logoutPath = $idpConfig['logout_path'] ?? '/api/v1/auth/logout';
+            $logoutUrl = rtrim($idpConfig['base_url'], '/') . $logoutPath;
+
+            try {
+                \Log::info('Sending POST request to IDP logout API', ['url' => $logoutUrl]);
+
+                // Include access_token and base_url in the payload as requested by the IDP team
+                $response = Http::withToken($accessToken)
+                    ->acceptJson()
+                    ->timeout(15)
+                    ->post($logoutUrl, [
+                        'client_id'    => $idpConfig['client_id'],
+                        'access_token' => $accessToken,
+                        'base_url'     => config('app.url')
+                    ]);
+
+                if (!$response->successful()) {
+                    \Log::warning('IDP Logout API returned non-success', [
+                        'status' => $response->status(),
+                        'body' => $response->body()
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::error('IDP Logout API failed', ['error' => $e->getMessage()]);
+            }
         }
 
         return redirect('/');
-    }
-
-    /**
-     * Renders a blank auto-submitting POST form to the IDP to clear browser cookies.
-     */
-    public function finalizeLogout(Request $request)
-    {
-        $accessToken = session()->pull('idp_logout_token');
-        $idpConfig = config('services.idp');
-        
-        if (!$accessToken || empty($idpConfig['base_url'])) {
-            return redirect('/');
-        }
-
-        $logoutPath = $idpConfig['logout_path'] ?? '/api/v1/auth/logout';
-        $actionUrl = rtrim($idpConfig['base_url'], '/') . $logoutPath;
-        $clientId = $idpConfig['client_id'];
-        $baseUrl = config('app.url');
-
-        $html = <<<HTML
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Logging out...</title>
-    <style>body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f3f4f6; color: #374151; }</style>
-</head>
-<body>
-    <p>Securely logging you out in the background, please wait...</p>
-    <script>
-        fetch('{$actionUrl}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': 'Bearer {$accessToken}'
-            },
-            body: JSON.stringify({
-                "client_id": "{$clientId}",
-                "access_token": "{$accessToken}",
-                "base_url": "{$baseUrl}"
-            }),
-            credentials: 'include' // CRITICAL: forces the browser to send its IDP cookies!
-        }).then(response => {
-            // Once the IDP processes the logout, we manually redirect you back home
-            window.location.href = "{$baseUrl}";
-        }).catch(error => {
-            console.error('Logout error:', error);
-            // Even if it errors (like CORS), bounce back so you aren't stuck
-            window.location.href = "{$baseUrl}";
-        });
-    </script>
-</body>
-</html>
-HTML;
-
-        return response($html);
     }
 }
