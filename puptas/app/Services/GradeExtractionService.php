@@ -109,11 +109,15 @@ Math:
 * General Mathematics
 * Business Mathematics
 * Statistics and Probability
+* Pre-Calculus
+* Basic Calculus
 
 Science:
 
 * Earth and Life Science
 * Physical Science
+* Earth Science
+* General Chemistry 1
 
 English:
 
@@ -131,7 +135,12 @@ Instructions:
 
   * “Math”, “Gen Math” → General Mathematics (Math)
   * “Stats” → Statistics and Probability (Math)
+  * “Pre-Cal”, “Precalculus” → Pre-Calculus (Math)
+  * “Basic Cal” → Basic Calculus (Math)
+  * “Gen Chem”, “Gen Chem 1” → General Chemistry 1 (Science)
+  * “Earth Sci” → Earth Science (Science)
   * “EAPP” → English for Academic Purposes (English)
+  * “21st Lit”, “21st Century Lit” → 21st Century Literature (English)
 * If a subject matches a predefined subject, use the exact predefined name.
 * If a subject does NOT match any predefined subject:
 

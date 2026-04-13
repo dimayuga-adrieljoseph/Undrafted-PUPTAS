@@ -148,16 +148,28 @@ class TestPasserController extends Controller
                 }
             } catch (\Exception $e) {
                 $failedCount++;
+
+                $errorMessage = $e->getMessage() ?: 'Unknown error occurred while sending SAR email';
+
                 $errors[] = [
                     'passer' => $passer->first_name . ' ' . $passer->surname,
                     'email' => $passer->email,
-                    'error' => 'Failed to send email'
+                    'error' => $errorMessage,
                 ];
+
+                // If the SAR generation record was created but email failed, mark it with the error
+                if ($sarGeneration) {
+                    $sarGeneration->update([
+                        'email_sent_successfully' => false,
+                        'sent_at' => null,
+                    ]);
+                }
 
                 // Log detailed error for debugging
                 \Log::error('SAR email failed for passer: ' . $passer->test_passer_id, [
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'email' => $passer->email,
+                    'error' => $errorMessage,
+                    'trace' => $e->getTraceAsString(),
                 ]);
             }
         }

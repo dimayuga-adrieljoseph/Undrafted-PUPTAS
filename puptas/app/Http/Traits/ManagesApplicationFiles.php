@@ -25,9 +25,10 @@ trait ManagesApplicationFiles
 
         $user = User::with([
             'currentApplication.program',
-            'currentApplication.processes.performedBy:id,firstname,lastname',
+            'currentApplication.processes.performedBy:user_id,name',
             'files',
-            'grades'
+            'grades',
+            'applicantProfile.graduateTypes',
         ])->findOrFail($id);
 
         if (!$user) {
@@ -86,9 +87,11 @@ trait ManagesApplicationFiles
             ] : null,
         ];
 
+        $graduateType = $user->applicantProfile?->graduateTypes->first()?->label ?? null;
+
         return response()->json([
             'user' => $userData,
-            'uploadedFiles' => FileMapper::formatFilesUrls($files),
+            'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false),
         ]);
     }
 

@@ -901,6 +901,21 @@ const isLowConfidence = (fieldKey) => {
     return c !== null && c < 0.80;
 };
 
+const G11_MAP = {
+    'general mathematics': 'g11_general_mathematics',
+    'business mathematics': 'g11_business_mathematics',
+    'statistics and probability': 'g11_statistics_probability',
+    'oral communication': 'g11_oral_communication',
+    'oral communication in context': 'g11_oral_communication',
+    'english for academic and professional purposes': 'g11_academic_professional',
+    'english for academic purposes': 'g11_academic_professional',
+    'eapp': 'g11_academic_professional',
+    'reading and writing': 'g11_reading_writing',
+    'reading and writing skills': 'g11_reading_writing',
+    'earth and life science': 'g11_earth_life_science',
+    'physical science': 'g11_physical_science',
+};
+
 const applyAutofill = (result) => {
     if (!result || !result.subjects) return;
     const newConfidenceMap = {};
@@ -918,20 +933,11 @@ const applyAutofill = (result) => {
             if (isNaN(numericGrade)) continue;
 
             let matched = false;
-            
-            for (const formKey of Object.keys(form)) {
-                if (!formKey.includes('grade') && !formKey.includes('subject') && formKey.startsWith('g11_')) {
-                    const normalizedFormKey = formKey.replace(/_/g, ' ').toLowerCase().trim();
-                    let strippedForm = normalizedFormKey.replace('g11 ', '').replace('g12 ', '').replace(/\band\b|\bfor\b|\bof\b|\bthe\b|\bin\b|\bfrom\b/g, '').replace(/\s+/g, ' ').trim();
-                    let strippedKey = normalizedKey.replace(/\band\b|\bfor\b|\bof\b|\bthe\b|\bin\b|\bfrom\b/g, '').replace(/\s+/g, ' ').trim();
-                    
-                    if (strippedForm.includes(strippedKey) || strippedKey.includes(strippedForm) || 
-                        normalizedFormKey.replace('academic professional', 'academic purposes').includes(normalizedKey)) {
-                        form[formKey] = numericGrade;
-                        matched = true;
-                        break;
-                    }
-                }
+
+            const g11FormKey = G11_MAP[normalizedKey];
+            if (g11FormKey && g11FormKey in form) {
+                form[g11FormKey] = numericGrade;
+                matched = true;
             }
             
             if (!matched) {
@@ -966,9 +972,15 @@ const applyAutofill = (result) => {
                             englishIdx++;
                         }
                     }
+                } else if (group === 'others') {
+                    otherSubjects.value.push({ name: subjectKey, grade: numericGrade });
                 }
             }
         }
+    }
+    // Remove the initial blank placeholder if any real others were autofilled
+    if (otherSubjects.value.length > 1 && otherSubjects.value[0].name === '' && otherSubjects.value[0].grade === null) {
+        otherSubjects.value.shift();
     }
     confidenceMap.value = newConfidenceMap;
 };

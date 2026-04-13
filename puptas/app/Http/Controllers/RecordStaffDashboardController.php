@@ -97,7 +97,8 @@ class RecordStaffDashboardController extends Controller
         $user = ApplicantProfile::with([
             'currentApplication.program',
             'currentApplication.processes',
-            'grades'
+            'grades',
+            'graduateTypes',
         ])->where('user_id', $id)->firstOrFail();
 
         $application = $user->currentApplication;
@@ -132,9 +133,11 @@ class RecordStaffDashboardController extends Controller
             'application' => $user->currentApplication,
         ];
 
+        $graduateType = $user->graduateTypes->first()?->label ?? null;
+
         return response()->json([
             'user' => $userData,
-            'uploadedFiles' => FileMapper::formatFilesUrls($files),
+            'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false),
         ]);
     }
 
