@@ -21,7 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
 use App\Http\Controllers\ExternalProgramApiController;
 
 Route::prefix('v1')
-    ->middleware(['external.api.token', 'throttle:external-api-second', 'throttle:external-api-minute', 'throttle:external-api-daily'])
+    ->middleware(['client:student-read', 'throttle:external-api-second', 'throttle:external-api-minute', 'throttle:external-api-daily'])
     ->group(function () {
         Route::get('/students', [ExternalStudentApiController::class, 'index']);
         Route::get('/students/idp/{idpUserId}', [ExternalStudentApiController::class, 'showByIdpUserId']);
@@ -29,7 +29,7 @@ Route::prefix('v1')
     });
 
 Route::prefix('v1')
-    ->middleware(['external.program.api.token', 'throttle:external-api-second', 'throttle:external-api-minute', 'throttle:external-program-api-daily'])
+    ->middleware(['client:program-read', 'throttle:external-api-second', 'throttle:external-api-minute', 'throttle:external-program-api-daily'])
     ->group(function () {
         Route::get('/programs', [ExternalProgramApiController::class, 'index']);
     });
@@ -37,11 +37,19 @@ Route::prefix('v1')
 use App\Http\Controllers\ExternalMedicalApiController;
 
 Route::prefix('v1')
-    ->middleware(['external.medical.api.token', 'throttle:external-medical-api-second', 'throttle:external-medical-api-minute', 'throttle:external-medical-api-daily'])
+    ->middleware(['client:medical-read', 'throttle:external-medical-api-second', 'throttle:external-medical-api-minute', 'throttle:external-medical-api-daily'])
     ->group(function () {
         Route::get('/medical/applicants', [ExternalMedicalApiController::class, 'index']);
         Route::get('/medical/applicants/idp/{idpUserId}', [ExternalMedicalApiController::class, 'showByIdpUserId']);
+        Route::get('/medical/applicants/{studentNumber}', [ExternalMedicalApiController::class, 'showByStudentNumber']);
     });
+
+Route::prefix('v1')
+    ->middleware(['client:medical-write', 'medical.webhook', 'throttle:external-medical-api-second', 'throttle:external-medical-api-minute', 'throttle:external-medical-api-daily'])
+    ->group(function () {
+        Route::post('/webhooks/medical-result', [ExternalMedicalApiController::class, 'webhookResult']);
+    });
+
 
 // Route::get('/user-stats', [UserController::class, 'getUserStats']);
 // Route::get('/programs', [ProgramController::class, 'index']);
