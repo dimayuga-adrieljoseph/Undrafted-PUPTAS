@@ -68,18 +68,37 @@ class GradeExtractionService
                 continue;
             }
 
-            $absolutePath = $storage->path($file->file_path);
-            $mimeType = mime_content_type($absolutePath);
+            try {
+                $mimeType = \App\Helpers\FileMapper::detectMimeType($file);
 
-            if (! in_array($mimeType, $allowedMimeTypes, true)) {
+                // If extension-based detection is ambiguous, try finfo on the raw bytes
+                if ($mimeType === 'application/octet-stream') {
+                    $contents = $storage->get($file->file_path);
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $detected = $finfo->buffer($contents);
+                    if (is_string($detected) && $detected !== '') {
+                        $mimeType = $detected;
+                    }
+                } else {
+                    $contents = $storage->get($file->file_path);
+                }
+
+                if (! in_array($mimeType, $allowedMimeTypes, true)) {
+                    continue;
+                }
+
+                $images[] = [
+                    'mime_type' => $mimeType,
+                    'data'      => base64_encode($contents),
+                ];
+            } catch (\Throwable $e) {
+                \Log::warning('GradeExtractionService: skipping file due to error', [
+                    'file_id'   => $file->id,
+                    'file_path' => $file->file_path,
+                    'error'     => $e->getMessage(),
+                ]);
                 continue;
             }
-
-            $contents = $storage->get($file->file_path);
-            $images[] = [
-                'mime_type' => $mimeType,
-                'data'      => base64_encode($contents),
-            ];
         }
 
         return $images;
