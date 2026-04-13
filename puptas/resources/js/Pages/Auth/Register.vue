@@ -811,16 +811,102 @@ const handleTermsCancel = () => {
                     <div class="lg:col-span-1">
                         <div class="sticky top-8 space-y-6">
 
-                            <!-- Next Steps Card -->
+                            <!-- Welcome Card -->
                             <div
-                                class="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl p-6 border border-red-200 dark:border-red-800"
+                                class="bg-white rounded-xl p-6 border border-blue-200 shadow-sm"
+                            >
+                                <div class="flex items-start gap-4">
+                                    <div
+                                        class="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0"
+                                    >
+                                        <svg
+                                            class="w-6 h-6 text-blue-600"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"
+                                            ></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3
+                                            class="text-xl font-bold text-slate-800"
+                                        >
+                                            Welcome to PUP Taguig Admissions!
+                                        </h3>
+                                        <p class="mt-2 text-sm text-slate-600">
+                                            Start your journey with the
+                                            Polytechnic University of the
+                                            Philippines - Taguig. Complete your
+                                            registration to apply for your
+                                            desired program.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Important Reminders -->
+                            <div
+                                class="bg-white rounded-xl p-6 border border-red-200 shadow-sm"
                             >
                                 <div class="flex items-center mb-4">
                                     <div
-                                        class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center mr-3"
+                                        class="w-10 h-10 bg-red-50 rounded-lg border border-red-100 flex items-center justify-center mr-3"
                                     >
                                         <svg
-                                            class="w-5 h-5 text-red-600 dark:text-red-400"
+                                            class="w-5 h-5 text-red-600"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M13 16h-1v-4h-1m1-4h.01M12 9a9 9 0 100 18 9 9 0 000-18z"
+                                            ></path>
+                                        </svg>
+                                    </div>
+                                    <h4 class="text-lg font-bold text-slate-800">
+                                        Important Reminders
+                                    </h4>
+                                </div>
+
+                                <ul class="space-y-3 text-sm text-slate-600">
+                                    <li class="flex items-start gap-3">
+                                        <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 text-xs font-bold text-red-600">1</span>
+                                        <span>Ensure all details match your official documents</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 text-xs font-bold text-red-600">2</span>
+                                        <span>Review your information carefully before submitting</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 text-xs font-bold text-red-600">3</span>
+                                        <span>Double-check for typographical errors (name, birthday, email, etc.)</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 text-xs font-bold text-red-600">4</span>
+                                        <span>Incomplete or incorrect information may delay your application</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- After Registration -->
+                            <div
+                                class="bg-white rounded-xl p-6 border border-yellow-200 shadow-sm"
+                            >
+                                <div class="flex items-center mb-4">
+                                    <div
+                                        class="w-10 h-10 bg-yellow-50 rounded-lg border border-yellow-100 flex items-center justify-center mr-3"
+                                    >
+                                        <svg
+                                            class="w-5 h-5 text-yellow-600"
                                             fill="none"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
@@ -833,78 +919,54 @@ const handleTermsCancel = () => {
                                             ></path>
                                         </svg>
                                     </div>
-                                    <h3
-                                        class="text-lg font-bold text-gray-800 dark:text-white"
-                                    >
+                                    <h4 class="text-lg font-bold text-slate-800">
                                         After Registration
-                                    </h3>
+                                    </h4>
                                 </div>
+
                                 <div class="space-y-4">
                                     <div class="flex items-start">
                                         <div
-                                            class="flex-shrink-0 w-8 h-8 bg-white dark:bg-gray-800 rounded-full border-2 border-red-200 dark:border-red-700 flex items-center justify-center mr-3"
+                                            class="flex-shrink-0 w-8 h-8 bg-white rounded-full border-2 border-yellow-200 flex items-center justify-center mr-3"
                                         >
-                                            <span
-                                                class="text-sm font-bold text-red-600 dark:text-red-400"
-                                                >1</span
-                                            >
+                                            <span class="text-sm font-bold text-yellow-600">1</span>
                                         </div>
                                         <div>
-                                            <h4
-                                                class="font-semibold text-gray-800 dark:text-white text-sm"
-                                            >
+                                            <h5 class="font-semibold text-slate-800 text-sm">
                                                 Complete Profile
-                                            </h4>
-                                            <p
-                                                class="text-xs text-gray-600 dark:text-gray-400 mt-1"
-                                            >
-                                                Upload required documents in
-                                                your dashboard
+                                            </h5>
+                                            <p class="text-xs text-slate-600 mt-1">
+                                                Upload required documents in your dashboard
                                             </p>
                                         </div>
                                     </div>
                                     <div class="flex items-start">
                                         <div
-                                            class="flex-shrink-0 w-8 h-8 bg-white dark:bg-gray-800 rounded-full border-2 border-red-200 dark:border-red-700 flex items-center justify-center mr-3"
+                                            class="flex-shrink-0 w-8 h-8 bg-white rounded-full border-2 border-yellow-200 flex items-center justify-center mr-3"
                                         >
-                                            <span
-                                                class="text-sm font-bold text-red-600 dark:text-red-400"
-                                                >2</span
-                                            >
+                                            <span class="text-sm font-bold text-yellow-600">2</span>
                                         </div>
                                         <div>
-                                            <h4
-                                                class="font-semibold text-gray-800 dark:text-white text-sm"
-                                            >
+                                            <h5 class="font-semibold text-slate-800 text-sm">
                                                 Follow Application Process
-                                            </h4>
-                                            <p
-                                                class="text-xs text-gray-600 dark:text-gray-400 mt-1"
-                                            >
+                                            </h5>
+                                            <p class="text-xs text-slate-600 mt-1">
                                                 The admission system will guide you as to what you need to do
                                             </p>
                                         </div>
                                     </div>
                                     <div class="flex items-start">
                                         <div
-                                            class="flex-shrink-0 w-8 h-8 bg-white dark:bg-gray-800 rounded-full border-2 border-red-200 dark:border-red-700 flex items-center justify-center mr-3"
+                                            class="flex-shrink-0 w-8 h-8 bg-white rounded-full border-2 border-yellow-200 flex items-center justify-center mr-3"
                                         >
-                                            <span
-                                                class="text-sm font-bold text-red-600 dark:text-red-400"
-                                                >3</span
-                                            >
+                                            <span class="text-sm font-bold text-yellow-600">3</span>
                                         </div>
                                         <div>
-                                            <h4
-                                                class="font-semibold text-gray-800 dark:text-white text-sm"
-                                            >
+                                            <h5 class="font-semibold text-slate-800 text-sm">
                                                 Track Application
-                                            </h4>
-                                            <p
-                                                class="text-xs text-gray-600 dark:text-gray-400 mt-1"
-                                            >
-                                                Monitor your admission status
-                                                online
+                                            </h5>
+                                            <p class="text-xs text-slate-600 mt-1">
+                                                Monitor your admission status online
                                             </p>
                                         </div>
                                     </div>
