@@ -233,27 +233,23 @@ class UserService
      */
     public function getAllUsersWithDetails(): Collection
     {
-        // Get all staff profiles
-        $staff = \App\Models\StaffProfile::with(['programs:id,name,code'])
+        // Get all staff profiles natively from Users table
+        $staff = \App\Models\User::with(['programs:id,name,code', 'role'])
+            ->where('role_id', '>', 1)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($staff) {
-                // Approximate first/last name from full name
-                $parts = explode(' ', $staff->name);
-                $firstname = array_shift($parts);
-                $lastname = count($parts) > 0 ? implode(' ', $parts) : '';
-
                 return (object) [
-                    'id' => $staff->user_id,
-                    'firstname' => $firstname,
-                    'middlename' => null,
-                    'lastname' => $lastname,
-                    'extension_name' => null,
+                    'id' => $staff->idp_user_id ?: $staff->id,
+                    'firstname' => $staff->firstname,
+                    'middlename' => $staff->middlename,
+                    'lastname' => $staff->lastname,
+                    'extension_name' => $staff->extension_name,
                     'email' => $staff->email,
-                    'contactnumber' => null,
+                    'contactnumber' => $staff->contactnumber,
                     'role_id' => $staff->role_id,
                     'created_at' => $staff->created_at,
-                    'role' => (object) ['name' => $staff->role_name],
+                    'role' => (object) ['name' => $staff->role ? $staff->role->name : 'Staff'],
                     'programs' => $staff->programs,
                     'applicantProfile' => null,
                     'currentApplication' => null,
@@ -305,7 +301,8 @@ class UserService
      */
     public function getUserCountsByRole(): array
     {
-        $staffCounts = \App\Models\StaffProfile::select('role_id', DB::raw('count(*) as total'))
+        $staffCounts = \App\Models\User::where('role_id', '>', 1)
+            ->select('role_id', DB::raw('count(*) as total'))
             ->groupBy('role_id')
             ->pluck('total', 'role_id')
             ->toArray();
@@ -324,7 +321,29 @@ class UserService
      */
     public function getTotalUserCount(): int
     {
-        return \App\Models\StaffProfile::count() + ApplicantProfile::count();
+        return \App\Models\User::where('role_id', '>', 1)->count() + ApplicantProfile::count();
+    }
+
+    /**
+     * Create a new user (Staff or generic account) natively
+     *
+     * @param array $data
+     * @return \App\Models\User
+     */
+    public function createUser(array $data): \App\Models\User
+    {
+        return \App\Models\User::create([
+            'idp_user_id' => (string) \Illuminate\Support\Str::uuid(), // Assign standalone IDP uuid format locally as falback
+            'firstname' => $data['firstname'] ?? '',
+            'middlename' => $data['middlename'] ?? null,
+            'lastname' => $data['lastname'] ?? '',
+            'email' => $data['email'],
+            'role_id' => $data['role_id'] ?? 1,
+            'salutation' => $data['salutation'] ?? null,
+            'contactnumber' => $data['contactnumber'] ?? '00000000000',
+            'sex' => $data['sex'] ?? null,
+            'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)), // IDP handles real passwords
+        ]);
     }
 
 

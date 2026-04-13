@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin\Assign;
 use App\Http\Controllers\Controller;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
-use App\Models\StaffProfile;
+use App\Models\User;
 use App\Models\Program;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -21,7 +21,7 @@ class AssignController extends Controller
     {
         $programs = Program::all();
 
-        $assignedUsers = StaffProfile::whereIn('role_id', [3, 4])
+        $assignedUsers = User::whereIn('role_id', [3, 4])
             ->with('programs')->get();
 
         return Inertia::render('UserManagement/Assign', [
@@ -36,7 +36,7 @@ class AssignController extends Controller
             'salutation' => 'required|string|max:5',
             'lastname' => 'required|string|max:255',
             'firstname' => 'required|string|max:255',
-            'email' => 'required|email|unique:staff_profiles,email',
+            'email' => 'required|email|unique:users,email',
             'role' => 'required|in:3,4',
             'programs' => 'required|array',
         ]);
@@ -46,29 +46,30 @@ class AssignController extends Controller
         try {
             $userId = (string) Str::uuid();
 
-            $user = StaffProfile::create([
-                'user_id' => $userId,
-                'name' => $request->salutation . ' ' . $request->firstname . ' ' . $request->lastname,
+            $user = User::create([
+                'idp_user_id' => $userId,
+                'salutation' => $request->salutation,
+                'firstname' => $request->firstname,
+                'lastname' => $request->lastname,
                 'email' => $request->email,
                 'role_id' => $request->role,
-                'role_name' => $request->role == 3 ? 'Evaluator' : 'Interviewer',
+                'contactnumber' => '00000000000',
+                'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)),
             ]);
 
             // Assign the user to the selected programs
+            $syncData = [];
             foreach ($request->programs as $programId) {
-                DB::table('program_user')->insert([
-                    'user_id' => $user->user_id,
-                    'program_id' => $programId,
-                    'role_id' => $request->role,
-                ]);
+                $syncData[$programId] = ['role_id' => $request->role];
             }
+            $user->programs()->sync($syncData);
 
             DB::commit();
 
             $this->auditLogService->logActivity(
                 'CREATE',
                 'Users',
-                "Created staff $user->name ($user->email) with role ID $user->role_id.",
+                "Created staff {$user->firstname} {$user->lastname} ({$user->email}) with role ID {$user->role_id}.",
                 null,
                 'USER_MANAGEMENT'
             );
@@ -88,7 +89,7 @@ class AssignController extends Controller
 
     public function editUser($id)
     {
-        $user = StaffProfile::findOrFail($id);
+        $user = User::where('idp_user_id', $id)->orWhere('id', $id)->firstOrFail();
         $programs = Program::all();
 
         $assignedPrograms = $user->programs->pluck('id')->toArray();    
@@ -102,22 +103,23 @@ class AssignController extends Controller
 
     public function updateUser(Request $request, $id)
     {
-        $user = StaffProfile::findOrFail($id);
+        $user = User::where('idp_user_id', $id)->orWhere('id', $id)->firstOrFail();
 
         $request->validate([
             'salutation' => 'required|string|max:5',
             'lastname' => 'required|string|max:255',
             'firstname' => 'required|string|max:255',
-            'email' => 'required|email|unique:staff_profiles,email,' . $user->user_id . ',user_id',
+            'email' => 'required|email|unique:users,email,' . $user->id,
             'role' => 'required|in:3,4',
             'programs' => 'required|array',
         ]);
 
         $user->update([
-            'name' => $request->salutation . ' ' . $request->firstname . ' ' . $request->lastname,
+            'salutation' => $request->salutation,
+            'firstname' => $request->firstname,
+            'lastname' => $request->lastname,
             'email' => $request->email,
             'role_id' => $request->role,
-            'role_name' => $request->role == 3 ? 'Evaluator' : 'Interviewer',
         ]);
 
         // Explicitly format syncData matching standard belongsToMany expectations
@@ -131,7 +133,7 @@ class AssignController extends Controller
         $this->auditLogService->logActivity(
             'UPDATE',
             'Users',
-            "Updated staff $user->name ($user->email) (ID: $user->user_id).",
+            "Updated staff {$user->firstname} {$user->lastname} ({$user->email}) (ID: {$user->id}).",
             null,
             'USER_MANAGEMENT'
         );
@@ -142,14 +144,14 @@ class AssignController extends Controller
 
     public function deleteUser($id)
     {
-        $user = StaffProfile::findOrFail($id);
+        $user = User::where('idp_user_id', $id)->orWhere('id', $id)->firstOrFail();
 
         $user->programs()->detach();
 
         $this->auditLogService->logActivity(
             'DELETE',
             'Users',
-            "Deleted staff $user->name ($user->email) (ID: $user->user_id).",
+            "Deleted staff {$user->firstname} {$user->lastname} ({$user->email}) (ID: {$user->id}).",
             null,
             'USER_MANAGEMENT'
         );

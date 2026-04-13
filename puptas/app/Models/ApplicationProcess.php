@@ -37,6 +37,6 @@ class ApplicationProcess extends Model
 
     public function performedBy()
     {
-        return $this->belongsTo(StaffProfile::class, 'performed_by');
+        return $this->belongsTo(User::class, 'performed_by');
     }
 }

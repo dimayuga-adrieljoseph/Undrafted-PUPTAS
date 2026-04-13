@@ -94,19 +94,21 @@ class UserController extends Controller
      */
     public function edit($id)
     {
-        // Try staff first, then applicant
-        $staff = \App\Models\StaffProfile::where('user_id', $id)->first();
-        if ($staff) {
+        // Fetch the user model primarily to check role. Fallback to ID match.
+        $userModel = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->firstOrFail();
+
+        if ($userModel->role_id > 1) {
+            $userModel->load('programs');
             $user = (object) [
-                'id' => $staff->user_id,
-                'firstname' => $staff->name,
-                'lastname' => '',
-                'email' => $staff->email,
-                'role_id' => $staff->role_id,
-                'programs' => $staff->programs
+                'id' => $userModel->idp_user_id ?: $userModel->id,
+                'firstname' => $userModel->firstname,
+                'lastname' => $userModel->lastname,
+                'email' => $userModel->email,
+                'role_id' => $userModel->role_id,
+                'programs' => $userModel->programs,
             ];
         } else {
-            $applicant = \App\Models\ApplicantProfile::where('user_id', $id)->firstOrFail();
+            $applicant = \App\Models\ApplicantProfile::where('user_id', $id)->orWhere('user_id', $userModel->id)->firstOrFail();
             $user = (object) [
                 'id' => $applicant->user_id,
                 'firstname' => $applicant->firstname,
@@ -170,7 +172,7 @@ class UserController extends Controller
                 }
             } elseif (in_array($roleId, [3, 4]) && $request->filled('program')) {
                 // For Evaluators (3) and Interviewers (4): use program field (using program code)
-                $staff = \App\Models\StaffProfile::where('user_id', $id)->firstOrFail();
+                $staff = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->firstOrFail();
                 $program = Program::where('code', $request->program)->first();
                 if ($program) {
                     $staff->programs()->sync([$program->id => ['role_id' => $roleId]]);
@@ -201,8 +203,8 @@ class UserController extends Controller
     public function destroy($id)
     {
         // For IDP, users are not deleted locally, but we might want to drop their profiles locally
-        $staff = \App\Models\StaffProfile::find($id);
-        if ($staff) {
+        $staff = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
+        if ($staff && $staff->role_id > 1) {
             $staff->delete();
         }
         $app = \App\Models\ApplicantProfile::where('user_id', $id)->first();
