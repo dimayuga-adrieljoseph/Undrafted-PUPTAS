@@ -43,15 +43,7 @@ class CreateNewUser implements CreatesNewUsers
             'schoolyear' => ['required', 'string', 'exists:graduate_types,label'],
         ];
 
-        // Conditional validation for local registration (non-IDP)
-        if (!$pendingReg) {
-            $rules['email'] = ['required', 'string', 'email', 'max:255', 'unique:users'];
-            $rules['password'] = $this->passwordRules();
-        }
-
-        Validator::make($input, $rules, [
-            'email.unique' => 'This email is already registered.',
-        ])->validate();
+        Validator::make($input, $rules)->validate();
 
         return DB::transaction(function () use ($input, $pendingReg) {
             // First, create the local User record
