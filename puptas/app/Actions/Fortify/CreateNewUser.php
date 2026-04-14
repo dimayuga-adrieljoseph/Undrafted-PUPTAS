@@ -30,7 +30,7 @@ class CreateNewUser implements CreatesNewUsers
 
         $rules = [
             'email' => ['nullable', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+
             'lastname' => ['required', 'string', 'max:255'],
             'firstname' => ['required', 'string', 'max:255'],
             'middlename' => ['nullable', 'string', 'max:255'],
@@ -64,7 +64,7 @@ class CreateNewUser implements CreatesNewUsers
                 'city' => $input['city'],
                 'province' => $input['province'],
                 'postal_code' => $input['postal_code'] ?? null,
-                'password' => Hash::make($input['password']), // Use the password provided by the user
+                'password' => null,
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
             ]);
