@@ -88,6 +88,14 @@ class Handler extends ExceptionHandler
      */
     private function logStructured(Throwable $e, Request $request): void
     {
+        // Auth facade may not be available if the app container isn't fully booted
+        // (e.g. during a ParseError), so we guard against that here.
+        try {
+            $userId = optional(Auth::user())->id;
+        } catch (Throwable) {
+            $userId = null;
+        }
+
         Log::error('exception', [
             'message'      => $e->getMessage(),
             'exception'    => get_class($e),
@@ -95,7 +103,7 @@ class Handler extends ExceptionHandler
             'timestamp'    => now()->utc()->toIso8601String(),
             'method'       => $request->method(),
             'endpoint'     => $request->path(),
-            'user_id'      => optional(Auth::user())->id,
+            'user_id'      => $userId,
             'request_data' => $this->sanitize($request->all()),
         ]);
     }

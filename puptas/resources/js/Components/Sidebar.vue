@@ -121,7 +121,6 @@ const isProgramsActive = isActiveRouteFor(["programs.index"]);
 const isManageActive = isActiveRouteFor(["users.index"]);
 const isAssignActive = isActiveRouteFor(["admin.users.create"]);
 const isUserSettingsActive = isActiveRouteFor([
-    "profile.show",
     "api-tokens.index",
 ]);
 
@@ -257,7 +256,7 @@ watch(isSidebarOpen, (val) => {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
-            <div class="flex items-center gap-3">
+            <div class="hidden md:flex items-center gap-3">
                 <div class="sidebar-logo-container">
                     <NavLink :href="route('dashboard')" class="block">
                         <ApplicationMark v-if="isSidebarOpen" class="h-8" />
@@ -725,85 +724,22 @@ watch(isSidebarOpen, (val) => {
         <!-- Bottom Section -->
         <div class="sidebar-footer mt-auto pt-8 border-t border-white/10">
             <ul class="space-y-2">
-                <!-- User Settings -->
+                <!-- Dark Mode Toggle -->
                 <li>
-                    <div
-                        @click.stop="toggleUserMenu"
-                        class="nav-item group cursor-pointer"
-                        :class="{
-                            'nav-item-active':
-                                isUserMenuOpen || isUserSettingsActive,
-                        }"
+                    <button
+                        @click="toggleDarkMode"
+                        class="nav-item group w-full text-left cursor-pointer"
                     >
                         <div class="nav-icon">
-                            <FontAwesomeIcon icon="cog" class="text-lg" />
-                        </div>
-                        <span v-if="isSidebarOpen" class="nav-label">
-                            Settings
-                        </span>
-                        <div class="flex items-center gap-2">
-                            <div
-                                v-if="isSidebarOpen"
-                                class="nav-indicator"
-                                :class="{
-                                    active:
-                                        isUserMenuOpen || isUserSettingsActive,
-                                }"
-                            ></div>
                             <FontAwesomeIcon
-                                v-if="isSidebarOpen"
-                                :icon="
-                                    isUserMenuOpen
-                                        ? 'caret-down'
-                                        : 'caret-right'
-                                "
-                                class="text-xs text-gray-400 transition-transform duration-200 dark:text-gray-200"
-                                :class="{ 'rotate-90': isUserMenuOpen }"
+                                :icon="isDarkMode ? 'sun' : 'moon'"
+                                class="text-lg"
                             />
                         </div>
-                    </div>
-
-                    <!-- Dropdown Content -->
-                    <transition
-                        enter-active-class="transition-all duration-200
-                            ease-out"
-                        leave-active-class="transition-all duration-150 ease-in"
-                        enter-from-class="opacity-0 max-h-0"
-                        enter-to-class="opacity-100 max-h-32"
-                        leave-from-class="opacity-100 max-h-32"
-                        leave-to-class="opacity-0 max-h-0"
-                    >
-                        <div
-                            v-show="isUserMenuOpen && isSidebarOpen"
-                            class="dropdown-content ml-10 mt-1 space-y-1"
-                        >
-                            <DropdownLink
-                                :href="route('profile.show')"
-                                class="dropdown-item"
-                                :class="{
-                                    'dropdown-item-active':
-                                        isActiveRoute('profile.show'),
-                                }"
-                                @click="emit('close')"
-                            >
-                                <FontAwesomeIcon
-                                    icon="user-circle"
-                                    class="text-xs mr-2"
-                                />
-                                Profile
-                            </DropdownLink>
-                            <button
-                                @click="toggleDarkMode"
-                                class="dropdown-item w-full text-left"
-                            >
-                                <FontAwesomeIcon
-                                    :icon="isDarkMode ? 'sun' : 'moon'"
-                                    class="text-xs mr-2"
-                                />
-                                {{ isDarkMode ? "Light Mode" : "Dark Mode" }}
-                            </button>
-                        </div>
-                    </transition>
+                        <span v-if="isSidebarOpen" class="nav-label">
+                            {{ isDarkMode ? "Light Mode" : "Dark Mode" }}
+                        </span>
+                    </button>
                 </li>
 
                 <!-- Logout -->
