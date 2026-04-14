@@ -25,7 +25,8 @@ return [
 
     'idp' => [
         'base_url' => env('IDP_BASE_URL', 'https://identity-provider.isaxbsit2027.com'),
-        'authorize_path' => env('IDP_AUTHORIZE_PATH', '/api/v1/auth/authorize'),
+        // Using /login as the authorize_path to bypass broken API endpoints on IDP side
+        'authorize_path' => env('IDP_AUTHORIZE_PATH', '/login'),
         'token_path' => env('IDP_TOKEN_PATH', '/api/v1/auth/token'),
         'user_path' => env('IDP_USER_PATH', '/api/v1/me'),
         'client_id' => env('IDP_CLIENT_ID'),
