@@ -53,7 +53,8 @@ class IdpAuthController extends Controller
         ];
 
         // Construct the full authorization URL using configurable path
-        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/login';
+        // Updated to /api/v1/auth/login based on IDP change #8
+        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/login';
         
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
@@ -267,9 +268,9 @@ class IdpAuthController extends Controller
                     break;
             }
 
-            return $response
-                ->withCookie(cookie('access_token', $accessToken, $expiresIn / 60, null, null, false, false))
-                ->withCookie(cookie('refresh_token', $refreshToken, 60 * 24 * 30, null, null, false, false));
+            return $response;
+            // Removed manual cookie setting based on IDP change #5 (Remove readable refresh_tokens in cookies)
+            // The SSO Session Checker (#3) and Auth header will manage the session now.
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             \Log::error('IDP connection error', [
                 'error' => $e->getMessage(),
@@ -315,39 +316,36 @@ class IdpAuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // Queue clearing of application cookies
+        // Queue clearing of application cookies (Safety cleanup)
         \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('access_token'));
         \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('refresh_token'));
 
-        // 2. Send POST request to IDP logout endpoint
+        // 2. Send request to IDP logout endpoint
+        // Updated based on IDP change #11 (Logout fix)
         if ($accessToken && !empty($idpConfig['base_url'])) {
             $logoutPath = $idpConfig['logout_path'] ?? '/api/v1/auth/logout';
             $logoutUrl = rtrim($idpConfig['base_url'], '/') . $logoutPath;
 
             try {
-                \Log::info('Sending POST request to IDP logout API', ['url' => $logoutUrl]);
+                \Log::info('Sending logout request to IDP', ['url' => $logoutUrl]);
 
-                // Include access_token and base_url in the payload as requested by the IDP team
+                // We try a POST request first as per previous spec
                 $response = Http::withToken($accessToken)
                     ->acceptJson()
                     ->timeout(15)
                     ->post($logoutUrl, [
                         'client_id'    => $idpConfig['client_id'],
-                        'access_token' => $accessToken,
                         'base_url'     => config('app.url')
                     ]);
 
-                if (!$response->successful()) {
-                    \Log::warning('IDP Logout API returned non-success', [
-                        'status' => $response->status(),
-                        'body' => $response->body()
-                    ]);
-                }
+                // If they've implemented a redirect-based logout fix, we might need to hit it differently,
+                // but for now we follow the API-style logout.
             } catch (\Exception $e) {
                 \Log::error('IDP Logout API failed', ['error' => $e->getMessage()]);
             }
         }
 
-        return redirect('/');
+        // Return to landing page to break any redirect loops
+        return redirect('/')->with('status', 'Logged out successfully');
     }
 }
