@@ -104,7 +104,6 @@
                 <th class="px-6 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-<<<<<<< HEAD
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
               <tr
                 v-for="user in filteredUsers"
@@ -114,18 +113,6 @@
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-lg bg-[#9E122C] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
-=======
-            
-            <tbody>
-              <tr v-for="user in filteredUsers" :key="user.id">
-                <td class="col-id">
-                  <span class="user-id" :title="user.id">{{ String(user.id).length > 8 ? String(user.id).substring(0, 8) + '...' : user.id }}</span>
-                </td>
-                
-                <td class="col-user">
-                  <div class="user-info">
-                    <div class="user-avatar">
->>>>>>> da62782f2b208b5b944061e57279cd021a95c170
                       {{ getInitials(user.firstname, user.lastname) }}
                     </div>
                     <div>
