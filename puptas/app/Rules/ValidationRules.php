@@ -24,7 +24,8 @@ class ValidationRules
             'email' => 'required|string|email|max:255|unique:users|regex:/^[a-z0-9._%+\-]+@gmail\.com$/', // Added Gmail validation
             'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/',
             'role_id' => 'required|integer|in:1,2,3,4,5,6', // Changed from exists:roles,id
-            'program' => 'nullable|string|exists:programs,code', // Added for evaluators & interviewers
+            'program' => 'nullable|array', // Allow multiple programs assigned to staff
+            'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
             // These fields might not be in your form anymore, but keeping for compatibility
             'birthday' => 'nullable|date',
@@ -56,7 +57,8 @@ class ValidationRules
             ], // Added Gmail validation with proper Rule syntax
             'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/',
             'role_id' => 'required|integer|in:1,2,3,4,5,6', // Changed from exists:roles,id
-            'program' => 'nullable|string|exists:programs,code', // Added for evaluators & interviewers
+            'program' => 'nullable|array', // Allow multiple programs assigned to staff
+            'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
 
             'birthday' => 'nullable|date',

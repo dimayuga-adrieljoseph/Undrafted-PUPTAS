@@ -16,7 +16,6 @@ use App\Http\Controllers\UserFileController;
 use App\Http\Controllers\EvaluatorDashboardController;
 use App\Http\Controllers\InterviewerDashboardController;
 use App\Http\Controllers\RecordStaffDashboardController;
-use App\Http\Controllers\Admin\Assign\AssignController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\Notify\Notify;
 use App\Http\Controllers\PrivacyConsentController;
@@ -293,11 +292,6 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-    Route::get('/admin/users/create', [AssignController::class, 'createUserForm'])->name('admin.users.create');
-    Route::post('/admin/users/store', [AssignController::class, 'storeUser'])->name('admin.users.store');
-    Route::get('/admin/users/edit/{id}', [AssignController::class, 'editUser'])->name('admin.users.edit');
-    Route::post('/admin/users/update/{id}', [AssignController::class, 'updateUser'])->name('admin.users.update');
-    Route::delete('/admin/users/delete/{id}', [AssignController::class, 'deleteUser'])->name('admin.users.delete');
 });
 
 // Audit log routes - Protected by Superadmin middleware

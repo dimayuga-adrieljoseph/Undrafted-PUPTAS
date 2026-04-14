@@ -22,9 +22,9 @@ const form = useForm({
     password: '',
     password_confirmation: '',
     role_id: props.user.role_id || '',
-    // Use program CODE, not ID
-    program: props.user.programs && props.user.programs.length > 0 ? props.user.programs[0].code : '',
-    // For applicants: use programs relationship (same as program field)
+    // Use an array of program CODEs
+    program: props.user.programs && props.user.programs.length > 0 ? props.user.programs.map(p => p.code) : [],
+    // For applicants: use single selection
     applicant_program: props.user.programs && props.user.programs.length > 0 ? props.user.programs[0].code : ''
 });
 
@@ -41,7 +41,7 @@ const showApplicantProgram = computed(() => {
 
 const onRoleChange = () => {
     if (!showProgramAssignment.value) {
-        form.program = '';
+        form.program = [];
     }
     if (!showApplicantProgram.value) {
         form.applicant_program = '';
@@ -407,14 +407,15 @@ const submitForm = () => {
                                             v-model="form.program" 
                                             :class="['form-input w-full', { 'error': form.errors.program }]"
                                             :required="showProgramAssignment"
+                                            multiple
+                                            size="4"
                                         >
-                                            <option value="" disabled>Select assigned program</option>
                                             <option v-for="program in programs" :key="program.id" :value="program.code">
                                                 {{ program.name }} ({{ program.code }})
                                             </option>
                                         </select>
                                         <div class="program-hint">
-                                            Evaluators and Interviewers must be assigned to a program
+                                            Evaluators and Interviewers must be assigned to at least one program. Hold Ctrl/Cmd to select multiple.
                                         </div>
                                     </div>
                                     <div v-if="form.errors.program" class="form-error">
