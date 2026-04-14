@@ -43,7 +43,7 @@ class IdpAuthController extends Controller
         session(['idp_oauth_state' => $state]);
 
         // Build authorization query parameters
-        // Removed prompt=login as it can clash with IDP SSO Session Checker (#3)
+        // Removed prompt=login to support Update #3 (SSO Session Checker)
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
@@ -51,18 +51,15 @@ class IdpAuthController extends Controller
         ];
 
         // Construct the full authorization URL using configurable path
-        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/authorize';
+        // Updated fallback to /auth/login based on IDP change #8
+        $authorizePath = $idpConfig['authorize_path'] ?? '/auth/login';
         
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
-        // Log the full URL so it's visible in Railway/laravel.log for debugging
-        \Log::info('IDP redirecting to authorize URL', [
-            'url' => $authorizeUrl,
-            'path' => $authorizePath,
-        ]);
+        // Log the full URL so it's visible in Railway for debugging
+        \Log::info('IDP redirecting to authorize URL: ' . $authorizeUrl);
 
         // Use standard external redirect instead of Inertia::location
-        // since this is a clean window.location.href navigation
         return redirect()->away($authorizeUrl);
     }
 
@@ -149,7 +146,7 @@ class IdpAuthController extends Controller
                     'token_url'    => $tokenUrl,
                 ]);
 
-                return redirect('/login')->withErrors([
+                return redirect('/login?idp_error=true')->withErrors([
                     'idp' => "IDP Error: {$idpError}. Please try signing in again.",
                 ]);
             }
