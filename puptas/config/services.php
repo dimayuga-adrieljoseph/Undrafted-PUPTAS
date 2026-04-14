@@ -59,10 +59,7 @@ return [
         'endpoint' => env('OPENROUTER_ENDPOINT', 'https://openrouter.ai/api/v1/chat/completions'),
         'model' => env('OPENROUTER_MODEL', 'google/gemini-flash-1.5'),
     ],
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
     'medical_webhook' => [
         'secret' => env('MEDICAL_WEBHOOK_SECRET'),
     ],
