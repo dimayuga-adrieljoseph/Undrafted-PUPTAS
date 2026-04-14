@@ -553,7 +553,7 @@ const submitForm = async () => {
   isSubmitting.value = true;
 
   try {
-    await router.post(route('add_user.store'), form.value, {
+    await router.post(route('users.store'), form.value, {
       onSuccess: () => {
         // Reset form
         Object.keys(form.value).forEach(key => {
