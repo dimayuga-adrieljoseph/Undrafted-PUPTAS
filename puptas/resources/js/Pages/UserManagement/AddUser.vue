@@ -390,14 +390,15 @@
                       v-model="form.program" 
                       :class="['form-input w-full', { 'error': errors.program }]"
                       :required="showProgramAssignment"
+                      multiple
+                      size="4"
                     >
-                      <option value="" disabled>Select assigned program</option>
                       <option v-for="program in programs" :key="program.code" :value="program.code">
                         {{ program.name }} ({{ program.code }})
                       </option>
                     </select>
                     <div class="program-hint">
-                      Evaluators and Interviewers must be assigned to a program
+                      Evaluators and Interviewers must be assigned to at least one program. Hold Ctrl/Cmd to select multiple.
                     </div>
                   </div>
                   <div v-if="errors.program" class="form-error">
@@ -484,7 +485,7 @@ const form = ref({
   password: '',
   password_confirmation: '',
   role_id: '',
-  program: '',
+  program: [],
   applicant_program: '',
 });
 
@@ -504,7 +505,7 @@ const showApplicantProgram = computed(() => {
 const onRoleChange = () => {
   // Clear program selections when role changes
   if (!showProgramAssignment.value) {
-    form.value.program = '';
+    form.value.program = [];
   }
   if (!showApplicantProgram.value) {
     form.value.applicant_program = '';

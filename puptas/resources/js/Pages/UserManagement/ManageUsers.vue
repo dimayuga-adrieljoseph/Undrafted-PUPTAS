@@ -162,7 +162,7 @@
             <tbody>
               <tr v-for="user in filteredUsers" :key="user.id">
                 <td class="col-id">
-                  <span class="user-id">#{{ user.id }}</span>
+                  <span class="user-id" :title="user.id">{{ String(user.id).length > 8 ? String(user.id).substring(0, 8) + '...' : user.id }}</span>
                 </td>
                 
                 <td class="col-user">

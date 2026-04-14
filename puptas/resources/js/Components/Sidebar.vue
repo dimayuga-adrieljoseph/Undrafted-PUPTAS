@@ -78,7 +78,6 @@ const sidebarRef = ref(null);
 
 const isUserMenuOpen = ref(false);
 const isPasserDropdownOpen = ref(false);
-const isMaintenanceDropdownOpen = ref(false);
 const isDarkMode = ref(false);
 
 /* ---------------- HELPERS ---------------- */
@@ -87,8 +86,7 @@ const isActiveRoute = (name) => route().current(name);
 const isAnyDropdownOpen = computed(
     () =>
         isUserMenuOpen.value ||
-        isPasserDropdownOpen.value ||
-        isMaintenanceDropdownOpen.value
+        isPasserDropdownOpen.value
 );
 
 const sidebarWidthClass = computed(() =>
@@ -119,7 +117,6 @@ const isUploadFormActive = isActiveRouteFor(["upload.form"]);
 const isListPassersActive = isActiveRouteFor(["lists"]);
 const isProgramsActive = isActiveRouteFor(["programs.index"]);
 const isManageActive = isActiveRouteFor(["users.index"]);
-const isAssignActive = isActiveRouteFor(["admin.users.create"]);
 const isUserSettingsActive = isActiveRouteFor([
     "profile.show",
     "api-tokens.index",
@@ -151,11 +148,6 @@ const togglePasserMenu = () => {
     isSidebarOpen.value = true;
 };
 
-const toggleMaintenanceMenu = () => {
-    isMaintenanceDropdownOpen.value = !isMaintenanceDropdownOpen.value;
-    isSidebarOpen.value = true;
-};
-
 const toggleUserMenu = () => {
     isUserMenuOpen.value = !isUserMenuOpen.value;
     isSidebarOpen.value = true;
@@ -178,7 +170,6 @@ const onClickOutside = (event) => {
         isSidebarOpen.value = false;
         isUserMenuOpen.value = false;
         isPasserDropdownOpen.value = false;
-        isMaintenanceDropdownOpen.value = false;
     }
 };
 
@@ -188,8 +179,6 @@ watch(
     () => {
         isPasserDropdownOpen.value =
             isUploadFormActive.value || isListPassersActive.value;
-        isMaintenanceDropdownOpen.value =
-            isManageActive.value || isAssignActive.value;
         isUserMenuOpen.value = isUserSettingsActive.value;
     },
     { immediate: true }
@@ -482,100 +471,30 @@ watch(isSidebarOpen, (val) => {
                         </NavLink>
                     </li>
 
-                    <!-- Maintenance Dropdown -->
+                    <!-- Manage Users -->
                     <li>
-                        <div
-                            @click.stop="toggleMaintenanceMenu"
-                            class="nav-item group cursor-pointer"
-                            :class="{
-                                'nav-item-active':
-                                    isMaintenanceDropdownOpen ||
-                                    isManageActive ||
-                                    isAssignActive,
-                            }"
+                        <NavLink
+                            :href="route('users.index')"
+                            :active="isManageActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isManageActive }"
+                            @click="emit('close')"
                         >
                             <div class="nav-icon">
                                 <FontAwesomeIcon
-                                    icon="wrench"
+                                    icon="user-shield"
                                     class="text-lg"
                                 />
                             </div>
                             <span v-if="isSidebarOpen" class="nav-label">
-                                Maintenance
+                                Manage Users
                             </span>
-                            <div class="flex items-center gap-2">
-                                <div
-                                    v-if="isSidebarOpen"
-                                    class="nav-indicator"
-                                    :class="{
-                                        active:
-                                            isMaintenanceDropdownOpen ||
-                                            isManageActive ||
-                                            isAssignActive,
-                                    }"
-                                ></div>
-                                <FontAwesomeIcon
-                                    v-if="isSidebarOpen"
-                                    :icon="
-                                        isMaintenanceDropdownOpen
-                                            ? 'caret-down'
-                                            : 'caret-right'
-                                    "
-                                    class="text-xs text-gray-400 transition-transform duration-200 dark:text-gray-200"
-                                    :class="{
-                                        'rotate-90': isMaintenanceDropdownOpen,
-                                    }"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Dropdown Content -->
-                        <transition
-                            enter-active-class="transition-all duration-200
-                                ease-out"
-                            leave-active-class="transition-all duration-150
-                                ease-in"
-                            enter-from-class="opacity-0 max-h-0"
-                            enter-to-class="opacity-100 max-h-40"
-                            leave-from-class="opacity-100 max-h-40"
-                            leave-to-class="opacity-0 max-h-0"
-                        >
                             <div
-                                v-show="
-                                    isMaintenanceDropdownOpen && isSidebarOpen
-                                "
-                                class="dropdown-content ml-10 mt-1 space-y-1"
-                            >
-                                <NavLink
-                                    :href="route('users.index')"
-                                    class="dropdown-item"
-                                    :class="{
-                                        'dropdown-item-active': isManageActive,
-                                    }"
-                                    @click="emit('close')"
-                                >
-                                    <FontAwesomeIcon
-                                        icon="user-shield"
-                                        class="text-xs mr-2"
-                                    />
-                                    Manage Users
-                                </NavLink>
-                                <NavLink
-                                    :href="route('admin.users.create')"
-                                    class="dropdown-item"
-                                    :class="{
-                                        'dropdown-item-active': isAssignActive,
-                                    }"
-                                    @click="emit('close')"
-                                >
-                                    <FontAwesomeIcon
-                                        icon="user-group"
-                                        class="text-xs mr-2"
-                                    />
-                                    Assign Program
-                                </NavLink>
-                            </div>
-                        </transition>
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ active: isManageActive }"
+                            ></div>
+                        </NavLink>
                     </li>
 
                     <!-- Audit Logs (Superadmin Only) -->
