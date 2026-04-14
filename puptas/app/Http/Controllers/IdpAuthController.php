@@ -43,18 +43,16 @@ class IdpAuthController extends Controller
         session(['idp_oauth_state' => $state]);
 
         // Build authorization query parameters
-        // prompt=login forces the IDP to always show its login page,
-        // even if the user has an existing IDP session.
+        // Removed prompt=login as it can clash with IDP SSO Session Checker (#3)
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
             'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
-            'prompt'        => 'login',
         ];
 
         // Construct the full authorization URL using configurable path
-        // Updated to /api/v1/auth/login based on IDP change #8
-        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/login';
+        // Updated to /api/v1/auth/authorize (the standard endpoint) instead of login
+        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/authorize';
         
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
