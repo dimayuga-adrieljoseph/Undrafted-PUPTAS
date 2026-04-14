@@ -56,6 +56,12 @@ class IdpAuthController extends Controller
         
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
+        // Log the full URL so it's visible in Railway/laravel.log for debugging
+        \Log::info('IDP redirecting to authorize URL', [
+            'url' => $authorizeUrl,
+            'path' => $authorizePath,
+        ]);
+
         // Use standard external redirect instead of Inertia::location
         // since this is a clean window.location.href navigation
         return redirect()->away($authorizeUrl);

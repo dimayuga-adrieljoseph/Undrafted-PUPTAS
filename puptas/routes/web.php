@@ -37,17 +37,14 @@ Route::get('/', function () {
     ]);
 })->middleware('guest')->name('welcome');
 
-// IDP Authentication Routes - Public access for OAuth2 login flow
+// IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
-    ->middleware('guest')
     ->name('idp.redirect');
 
 Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
-    ->middleware('guest')
     ->name('idp.callback');
 
 Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
-    ->middleware('guest')
     ->name('idp.callback.alias');
 
 Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
