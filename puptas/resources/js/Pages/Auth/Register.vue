@@ -1,7 +1,10 @@
 <script setup>
 import { ref } from "vue";
-import { Head, Link, useForm } from "@inertiajs/vue3";
+import { Head, Link, useForm, usePage } from "@inertiajs/vue3";
+import { computed } from "vue";
 import TermsandConditionsModal from "@/Pages/Modal/TermsandConditionsModal.vue";
+
+const flashError = computed(() => usePage().props.flash?.error);
 
 // Modal control variables
 const showTermsModal = ref(false);
@@ -100,6 +103,13 @@ const handleTermsCancel = () => {
 
             <!-- Registration Form -->
             <div class="p-8 md:p-10">
+                <!-- Server error banner -->
+                <div
+                    v-if="flashError"
+                    class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg text-red-700 dark:text-red-400 text-sm"
+                >
+                    {{ flashError }}
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Left Side - Form Sections -->
                     <div class="lg:col-span-2">

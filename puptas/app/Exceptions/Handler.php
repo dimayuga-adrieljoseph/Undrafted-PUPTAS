@@ -78,7 +78,19 @@ class Handler extends ExceptionHandler
             ], 500, ['Content-Type' => 'application/json']);
         }
 
-        // If it's a standard web or Inertia request, let Laravel handle it normally 
+        // For Inertia requests, return a proper Inertia error response instead of
+        // a raw HTML page (which causes the white popup modal in the browser).
+        if ($request->header('X-Inertia')) {
+            $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
+
+            if ($e instanceof AuthenticationException) {
+                return redirect()->route('login');
+            }
+
+            return back()->with('error', 'Something went wrong. Please try again later.');
+        }
+
+        // If it's a standard web request, let Laravel handle it normally 
         // (so it correctly redirects unauthenticated users back to the login page!).
         return parent::render($request, $e);
     }
