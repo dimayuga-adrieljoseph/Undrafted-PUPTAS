@@ -29,7 +29,7 @@ class CreateNewUser implements CreatesNewUsers
         // }
 
         $rules = [
-            'email' => ['nullable', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => ['nullable', 'string', 'email', 'max:255'],
 
             'lastname' => ['required', 'string', 'max:255'],
             'firstname' => ['required', 'string', 'max:255'],
