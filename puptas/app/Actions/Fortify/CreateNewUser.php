@@ -23,11 +23,12 @@ class CreateNewUser implements CreatesNewUsers
     public function create(array $input)
     {
         $pendingReg = session('pending_registration');
-        if (!$pendingReg) {
-            abort(403, 'You must login via the IDP first.');
-        }
+        // IDP Bypass: If no pending registration, proceed as local user.
+        // if (!$pendingReg) {
+        //     abort(403, 'You must login via the IDP first.');
+        // }
 
-        Validator::make($input, [
+        $rules = [
             'lastname' => ['required', 'string', 'max:255'],
             'firstname' => ['required', 'string', 'max:255'],
             'middlename' => ['nullable', 'string', 'max:255'],
@@ -39,19 +40,37 @@ class CreateNewUser implements CreatesNewUsers
             'city' => ['required', 'string', 'max:100'],
             'province' => ['required', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:10'],
-            // Email uniqueness now checked against applicant_profiles
-            // Note: If you want email editable, ensure it comes from $input. Otherwise use the IDP email.
+            'schoolyear' => ['required', 'string', 'exists:graduate_types,label'],
+        ];
+
+        // Conditional validation for local registration (non-IDP)
+        if (!$pendingReg) {
+            $rules['email'] = ['required', 'string', 'email', 'max:255', 'unique:users'];
+            $rules['password'] = $this->passwordRules();
+        }
+
+        Validator::make($input, $rules, [
+            'email.unique' => 'This email is already registered.',
         ])->validate();
 
         return DB::transaction(function () use ($input, $pendingReg) {
             // First, create the local User record
             $user = User::create([
-                'idp_user_id' => $pendingReg['user_id'],
+                'idp_user_id' => $pendingReg['user_id'] ?? null,
                 'email' => $pendingReg['email'] ?? ($input['email'] ?? null),
                 'role_id' => 1,
                 'firstname' => $input['firstname'],
                 'lastname' => $input['lastname'],
-                'password' => Hash::make(Str::random(16)), // Required by db, but auth via IDP
+                'middlename' => $input['middlename'] ?? null,
+                'birthday' => $input['birthday'],
+                'sex' => $input['sex'],
+                'contactnumber' => $input['contactnumber'],
+                'street_address' => $input['street_address'],
+                'barangay' => $input['barangay'],
+                'city' => $input['city'],
+                'province' => $input['province'],
+                'postal_code' => $input['postal_code'] ?? null,
+                'password' => Hash::make($input['password']), // Use the password provided by the user
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
             ]);
@@ -74,11 +93,18 @@ class CreateNewUser implements CreatesNewUsers
                 // Keep traditional school fields if they exist
                 'school' => $input['school'] ?? null,
                 'school_address' => $input['schoolAdd'] ?? null,
-                'school_year' => $input['schoolyear'] ?? null,
                 'date_graduated' => $input['dateGrad'] ?? null,
                 'strand' => $input['strand'] ?? null,
                 'track' => $input['track'] ?? null,
             ]);
+
+            // Attach graduate type via junction table
+            if (!empty($input['schoolyear'])) {
+                $graduateType = \App\Models\GraduateType::where('label', $input['schoolyear'])->first();
+                if ($graduateType) {
+                    $profile->graduateTypes()->sync([$graduateType->id]);
+                }
+            }
 
             if (!empty($pendingReg['access_token'])) {
                 \App\Models\RefreshToken::create([

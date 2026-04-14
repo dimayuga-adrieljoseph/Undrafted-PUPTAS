@@ -24,6 +24,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -39,6 +40,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -54,6 +56,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -69,6 +72,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -84,6 +88,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -99,6 +104,7 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
+            'extractionResult' => session()->pull('extraction_result'),
         ]);
     }
 
@@ -120,6 +126,26 @@ class GradesController extends Controller
 
         // Calculate GWA from semester grades
         $g12_gwa = ($validated['g12_first_sem'] + $validated['g12_second_sem']) / 2;
+
+        // Perform Qualification Validation
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        $userStrand = strtoupper($profile?->strand ?? 'ABM');
+
+        $firstProgram = Program::with('strands')->find($validated['first_choice_program']);
+        $secondProgram = Program::with('strands')->find($validated['second_choice_program']);
+
+        $errors = [];
+        if (!$this->isUserQualified($firstProgram, $userStrand, $validated['mathematics'], $validated['english'], $validated['science'], $g12_gwa)) {
+            $errors['first_choice_program'] = "You are not qualified for your first choice program ({$firstProgram->code}) based on the submitted grades.";
+        }
+
+        if (!$this->isUserQualified($secondProgram, $userStrand, $validated['mathematics'], $validated['english'], $validated['science'], $g12_gwa)) {
+            $errors['second_choice_program'] = "You are not qualified for your second choice program ({$secondProgram->code}) based on the submitted grades.";
+        }
+
+        if (!empty($errors)) {
+            return back()->withErrors($errors)->withInput();
+        }
 
         $grade = Grade::updateOrCreate(
             ['user_id' => $user->id],
@@ -144,6 +170,28 @@ class GradesController extends Controller
         app(\App\Services\AuditLogService::class)->logActivity('CREATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} submitted grades and program choices.", $user, 'ADMISSION_DATA');
 
         return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
+    }
+
+    private function isUserQualified($program, $userStrand, $math, $english, $science, $gwa)
+    {
+        // Check Strand Eligibility
+        $allowedStrandCodes = $program->strands->pluck('code')->map(fn($c) => strtoupper($c))->toArray();
+        $strandAllowed = empty($allowedStrandCodes) || 
+                         in_array('OPEN TO ALL', $allowedStrandCodes) || 
+                         in_array('OTHER WITH BRIDGING', $allowedStrandCodes) || 
+                         in_array($userStrand, $allowedStrandCodes);
+
+        if (!$strandAllowed) {
+            return false;
+        }
+
+        // Check Grade Requirements
+        if ($program->math && $math < $program->math) return false;
+        if ($program->english && $english < $program->english) return false;
+        if ($program->science && $science < $program->science) return false;
+        if ($program->gwa && $gwa < $program->gwa) return false;
+
+        return true;
     }
 
     public function storeTvlGrades(Request $request)

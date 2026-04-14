@@ -15,7 +15,6 @@ use App\Http\Controllers\ConfirmationController;
 use App\Http\Controllers\UserFileController;
 use App\Http\Controllers\EvaluatorDashboardController;
 use App\Http\Controllers\InterviewerDashboardController;
-use App\Http\Controllers\MedicalDashboardController;
 use App\Http\Controllers\RecordStaffDashboardController;
 use App\Http\Controllers\Admin\Assign\AssignController;
 use App\Http\Controllers\UserController;
@@ -27,6 +26,7 @@ use App\Http\Controllers\IdpAuthController;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
+use App\Http\Controllers\GradeExtractionController;
 
 Route::get('/', function () {
     return Inertia::render('Auth/Login', [
@@ -113,6 +113,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/applicant-dashboard', [ApplicantDashboardController::class, 'index'])
         ->name('applicant.dashboard');
 
+    Route::middleware(['throttle:grade-extraction'])
+        ->post('/api/grades/extract', [GradeExtractionController::class, 'extract']);
+
     Route::get('/grades/abm', [GradesController::class, 'showAbmGradeForm'])->name('grades.abm.form');
     Route::post('/grades/abm', [GradesController::class, 'storeAbmGrades'])->name('grades.abm.store');
     Route::get('/grades/ict', [GradesController::class, 'showIctGradeForm'])->name('grades.ict.form');
@@ -168,7 +171,6 @@ Route::get('/home', function () {
     if ($roleId == 2) return redirect('/dashboard');
     if ($roleId == 3) return redirect('/evaluator-dashboard');
     if ($roleId == 4) return redirect('/interviewer-dashboard');
-    if ($roleId == 5) return redirect('/medical-dashboard');
     if ($roleId == 6) return redirect('/record-dashboard');
     if ($roleId == 7) return redirect('/dashboard');
 
@@ -258,18 +260,6 @@ Route::middleware(['auth', 'role:4'])->group(function () {
     Route::get('/interviewer-dashboard/programs', [InterviewerDashboardController::class, 'getPrograms']);
 });
 
-// Medical Routes
-Route::middleware(['auth', 'role:5'])->group(function () {
-    Route::get('/medical-dashboard', [MedicalDashboardController::class, 'index'])->name('medical.dashboard');
-    Route::get('/medical-applications', function () {
-        return Inertia::render('Applications/Medical', ['user' => Auth::user()]);
-    })->name('medical.applications');
-    Route::post('/medical-dashboard/accept/{id}', [MedicalDashboardController::class, 'accept']);
-    Route::get('/medical-dashboard/applicants', [MedicalDashboardController::class, 'getUsers']);
-    Route::get('/medical-dashboard/application/{id}', [MedicalDashboardController::class, 'getUserFiles']);
-    Route::post('/medical/return-files/{user}', [MedicalDashboardController::class, 'returnApplication'])->name('medical-return.files');
-});
-
 // Record Staff Routes
 Route::middleware(['auth', 'role:6'])->group(function () {
     Route::get('/record-dashboard', [RecordStaffDashboardController::class, 'index'])->name('record.dashboard');
@@ -315,6 +305,12 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     Route::get('/admin/audit-logs/check-new', [AuditLogController::class, 'checkNew'])->name('audit-logs.check-new');
     Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit-logs.show');
+
+    // API Client Management (M2M / Passport)
+    Route::get('/admin/api-clients', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'index'])->name('api-clients.index');
+    Route::post('/admin/api-clients', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'store'])->name('api-clients.store');
+    Route::delete('/admin/api-clients/{id}', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'destroy'])->name('api-clients.destroy');
+    Route::post('/admin/api-clients/{id}/regenerate', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'regenerate'])->name('api-clients.regenerate');
 });
 
 // Callback Routes - Public access for loading screen with API callback

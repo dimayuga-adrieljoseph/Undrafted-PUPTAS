@@ -96,7 +96,7 @@
       </div>
 
       <!-- Alerts -->
-      <div v-if="$page.props.flash.status" class="alert-card success">
+      <div v-if="page.props.flash.status" class="alert-card success">
         <div class="alert-icon">
           <svg viewBox="0 0 24 24">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
@@ -104,11 +104,11 @@
         </div>
         <div class="alert-content">
           <div class="alert-title">Success</div>
-          <p>{{ $page.props.flash.status }}</p>
+          <p>{{ page.props.flash.status }}</p>
         </div>
       </div>
 
-      <div v-if="$page.props.flash.error" class="alert-card error">
+      <div v-if="page.props.flash.error" class="alert-card error">
         <div class="alert-icon">
           <svg viewBox="0 0 24 24">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
@@ -116,7 +116,7 @@
         </div>
         <div class="alert-content">
           <div class="alert-title">Error</div>
-          <p>{{ $page.props.flash.error }}</p>
+          <p>{{ page.props.flash.error }}</p>
         </div>
       </div>
 
@@ -144,7 +144,7 @@
         </div>
 
         <!-- Users Table -->
-        <div class="table-wrapper" v-if="filteredUsers.length">
+        <div class="table-wrapper overflow-x-auto" v-if="filteredUsers.length">
           <table class="users-table">
             <thead>
               <tr>
@@ -195,7 +195,7 @@
                 
                 <td class="col-role">
                   <span :class="['role-badge', getRoleClass(user.role_id)]">
-                    {{ roles[user.role_id] || 'Unknown' }}
+                    {{ roles?.[user.role_id] || 'Unknown' }}
                   </span>
                 </td>
                 
@@ -293,7 +293,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
@@ -302,6 +302,8 @@ const props = defineProps({
   roles: Object,
   totalUsers: Number,
 });
+
+const page = usePage();
 
 const searchTerm = ref('');
 
@@ -312,7 +314,7 @@ const filteredUsers = computed(() => {
   return props.users.filter(user => {
     const fullName = `${user.firstname} ${user.middlename || ''} ${user.lastname} ${user.extension_name || ''}`.toLowerCase();
     const email = user.email.toLowerCase();
-    const role = (props.roles[user.role_id] || '').toLowerCase();
+    const role = (props.roles?.[user.role_id] || '').toLowerCase();
     
     return fullName.includes(term) || email.includes(term) || role.includes(term);
   });

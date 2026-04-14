@@ -6,7 +6,7 @@
         @click.self="closeModal"
     >
         <div
-            class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-auto relative"
+            class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full overflow-y-auto max-h-[90vh] relative"
         >
             <!-- Header -->
             <div
@@ -489,7 +489,7 @@ const props = defineProps({
 const emit = defineEmits(["close", "refreshDashboard"]);
 
 // State
-const showModal = ref(false);
+const showModal = ref(props.show || false);
 const loading = ref(false);
 const error = ref("");
 const applicationData = ref(null);

@@ -1,10 +1,11 @@
 <script setup>
 import { defineProps, ref, computed, onMounted } from "vue";
+import { router } from "@inertiajs/vue3";
 const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
 
-const props = defineProps({ user: Object });
+const props = defineProps({ user: Object, gradeUrl: String });
 
 const showModal = ref(false);
 const loading = ref(false);
@@ -18,6 +19,16 @@ const previewSrc = ref("");
 const uploadingKeys = ref([]);
 const fileUploadProgress = ref({});
 const uploadErrors = ref({});
+
+// Task 4.1: allDocumentsUploaded — true when every fileStatuses slot has a non-null url
+const allDocumentsUploaded = computed(() => {
+  const values = Object.values(fileStatuses.value);
+  return values.length > 0 && values.every(f => f?.url != null);
+});
+
+// Task 4.2: extraction state refs
+const extracting = ref(false);
+const extractionError = ref('');
 
 // File statuses come directly from the backend
 const stepKeys = computed(() => Object.keys(fileStatuses.value));
@@ -33,12 +44,13 @@ const uploadProgressPercentage = computed(() => {
 
 const formatKey = (key) => {
   const labels = {
-    file10Front: "Grade 10 Report Front",
-    file10: "Grade 10 Report Back",
-    file11Front: "Grade 11 Report Front",
-    file11: "Grade 11 Report Back",
-    file12Front: "Grade 12 Report Front",
-    file12: "Grade 12 Report Back",
+    file10Front: "Grade 10 Report Card (Front)",
+    file10: "Grade 10 Report Card (Back)",
+    file11Front: "Grade 11 Report Card (Front)",
+    file11: "Grade 11 Report Card (Back)",
+    file12Front: "Grade 12 Report Card (Front)",
+    file12: "Grade 12 Report Card (Back)",
+    nof137a: "No F137-A Forwarding Certification",
     schoolId: "School ID",
     nonEnrollCert: "Certificate of Non-Enrollment",
     psa: "PSA Birth Certificate",
@@ -199,6 +211,39 @@ const closeImageModal = () => {
 
 const closeModal = () => (showModal.value = false);
 
+// Task 4.3: triggerExtraction — POST to /api/grades/extract, backend stores result in session
+// and returns the redirect URL; we then navigate there so the grade page receives
+// extractionResult as a proper Inertia prop (session → prop via GradesController).
+const strandRoutes = {
+  ABM: '/grades/abm',
+  ICT: '/grades/ict',
+  HUMSS: '/grades/humss',
+  GAS: '/grades/gas',
+  STEM: '/grades/stem',
+  TVL: '/grades/tvl',
+};
+
+const triggerExtraction = async () => {
+  extracting.value = true;
+  extractionError.value = '';
+  try {
+    const response = await axios.post('/api/grades/extract');
+    // Backend stores extraction result in session and returns the grade page URL.
+    // Using router.visit (GET) so the grade controller reads the session and passes
+    // extractionResult as an Inertia prop — fixes the router.visit({ data }) bug.
+    const redirectUrl = response.data?.redirect;
+    const strand = props.user?.strand;
+    const fallback = strandRoutes[strand] || '/grades/abm';
+    router.visit(redirectUrl || fallback);
+  } catch (error) {
+    extractionError.value = error.response?.data?.error
+      || error.response?.data?.message
+      || 'Grade extraction failed. Please try again.';
+  } finally {
+    extracting.value = false;
+  }
+};
+
 onMounted(() => { 
   fetchData(); 
 });
@@ -217,20 +262,37 @@ onMounted(() => {
         <!-- Welcome Header -->
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {{ props.user?.firstname || 'Applicant' }}!</h1>
+            <h1 class="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white break-words">Welcome back, {{ props.user?.firstname || 'Applicant' }}!</h1>
             <p class="text-gray-600 dark:text-gray-400 mt-1">Manage your application and track your progress</p>
           </div>
           
           <!-- Review Application Button -->
+          <div class="flex flex-wrap gap-2 items-center">
           <button
             @click="showModal = true"
-            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg dark:text-gray-900"
+            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg dark:text-gray-900 min-h-[44px] w-full sm:w-auto"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span class="font-medium">Review Application</span>
           </button>
+
+          <!-- Task 4.4: Review Grades Button — only shown when all documents are uploaded -->
+          <button
+            v-if="allDocumentsUploaded"
+            @click="triggerExtraction"
+            :disabled="extracting"
+            style="background-color: #9E122C"
+            class="flex items-center gap-2 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg min-h-[44px] w-full sm:w-auto disabled:opacity-70"
+          >
+            <svg v-if="extracting" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="font-medium">{{ extracting ? 'Extracting...' : 'Review Grades' }}</span>
+          </button>
+          </div>
         </div>
 
         <!-- Stats Cards -->
@@ -338,12 +400,16 @@ onMounted(() => {
           <!-- Right Column - Documents Grid -->
           <div class="lg:col-span-2">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-                Required Documents
-              </h3>
+              <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  Required Documents
+                </h3>
+                <div class="flex items-center gap-2 flex-wrap">
+                </div>
+              </div>
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
                 Upload images only. Accepted formats: JPG, JPEG, PNG. Maximum file size: 2MB.
               </p>
@@ -395,7 +461,7 @@ onMounted(() => {
                     <button
                       v-if="!fileStatuses[key]?.url"
                       @click="triggerFileInput(key)"
-                      class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900"
+                      class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900 min-h-[44px]"
                       :disabled="uploadingKeys.includes(key)"
                     >
                       {{ uploadingKeys.includes(key) ? 'Uploading...' : 'Upload' }}
@@ -403,7 +469,7 @@ onMounted(() => {
                     <button
                       v-else
                       @click="triggerFileInput(key)"
-                      class="w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded transition-colors"
+                      class="w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded transition-colors min-h-[44px]"
                       :disabled="uploadingKeys.includes(key)"
                     >
                       Replace
@@ -445,6 +511,16 @@ onMounted(() => {
           <p class="text-red-600 dark:text-red-400 text-center">{{ error }}</p>
         </div>
 
+        <!-- Task 4.5: Extraction Error Banner — dismissible -->
+        <div v-if="extractionError" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center justify-between gap-4">
+          <p class="text-red-600 dark:text-red-400">{{ extractionError }}</p>
+          <button
+            @click="extractionError = ''"
+            class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 flex-shrink-0 text-xl leading-none"
+            aria-label="Dismiss"
+          >&times;</button>
+        </div>
+
         <!-- Modals -->
         <ApplicationReviewModal
           :show="showModal"
@@ -469,7 +545,7 @@ onMounted(() => {
           @click.stop
         />
         <button
-          class="absolute top-2 right-2 text-white text-4xl hover:text-gray-300 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 dark:text-gray-900"
+          class="absolute top-2 right-2 text-white text-4xl hover:text-gray-300 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 dark:text-gray-900 min-h-[44px] min-w-[44px]"
           @click.stop="closeImageModal"
         >
           &times;

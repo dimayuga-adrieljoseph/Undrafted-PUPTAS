@@ -262,9 +262,6 @@ class IdpAuthController extends Controller
                 case 4:
                     $response = redirect('/interviewer-dashboard');
                     break;
-                case 5:
-                    $response = redirect('/medical-dashboard');
-                    break;
                 case 6:
                     $response = redirect('/record-dashboard');
                     break;
