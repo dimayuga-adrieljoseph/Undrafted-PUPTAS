@@ -32,48 +32,55 @@ class Handler extends ExceptionHandler
     /**
      * Render an exception into an HTTP response.
      */
-    public function render($request, Throwable $e): JsonResponse
+    public function render($request, Throwable $e)
     {
         $this->logStructured($e, $request);
 
-        if ($e instanceof ValidationException) {
+        // If the request expects JSON (APIs, Axios, etc.), return standardized JSON errors.
+        if ($request->wantsJson()) {
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'success'   => false,
+                    'message'   => $e->getMessage(),
+                    'errorCode' => 'VALIDATION_ERROR',
+                    'errors'    => $e->errors(),
+                ], 422, ['Content-Type' => 'application/json']);
+            }
+
+            if ($e instanceof AuthenticationException) {
+                return response()->json([
+                    'success'   => false,
+                    'message'   => 'You are not authenticated. Please log in.',
+                    'errorCode' => 'UNAUTHENTICATED',
+                ], 401, ['Content-Type' => 'application/json']);
+            }
+
+            if ($e instanceof AuthorizationException || $e instanceof AccessDeniedHttpException) {
+                return response()->json([
+                    'success'   => false,
+                    'message'   => 'You do not have permission to perform this action.',
+                    'errorCode' => 'FORBIDDEN',
+                ], 403, ['Content-Type' => 'application/json']);
+            }
+
+            if ($e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException) {
+                return response()->json([
+                    'success'   => false,
+                    'message'   => 'The requested resource was not found.',
+                    'errorCode' => 'NOT_FOUND',
+                ], 404, ['Content-Type' => 'application/json']);
+            }
+
             return response()->json([
                 'success'   => false,
-                'message'   => $e->getMessage(),
-                'errorCode' => 'VALIDATION_ERROR',
-                'errors'    => $e->errors(),
-            ], 422, ['Content-Type' => 'application/json']);
+                'message'   => 'Something went wrong. Please try again later.',
+                'errorCode' => 'INTERNAL_ERROR',
+            ], 500, ['Content-Type' => 'application/json']);
         }
 
-        if ($e instanceof AuthenticationException) {
-            return response()->json([
-                'success'   => false,
-                'message'   => 'You are not authenticated. Please log in.',
-                'errorCode' => 'UNAUTHENTICATED',
-            ], 401, ['Content-Type' => 'application/json']);
-        }
-
-        if ($e instanceof AuthorizationException || $e instanceof AccessDeniedHttpException) {
-            return response()->json([
-                'success'   => false,
-                'message'   => 'You do not have permission to perform this action.',
-                'errorCode' => 'FORBIDDEN',
-            ], 403, ['Content-Type' => 'application/json']);
-        }
-
-        if ($e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException) {
-            return response()->json([
-                'success'   => false,
-                'message'   => 'The requested resource was not found.',
-                'errorCode' => 'NOT_FOUND',
-            ], 404, ['Content-Type' => 'application/json']);
-        }
-
-        return response()->json([
-            'success'   => false,
-            'message'   => 'Something went wrong. Please try again later.',
-            'errorCode' => 'INTERNAL_ERROR',
-        ], 500, ['Content-Type' => 'application/json']);
+        // If it's a standard web or Inertia request, let Laravel handle it normally 
+        // (so it correctly redirects unauthenticated users back to the login page!).
+        return parent::render($request, $e);
     }
 
     /**
