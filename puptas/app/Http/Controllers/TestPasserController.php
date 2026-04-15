@@ -35,7 +35,7 @@ class TestPasserController extends Controller
 
         return Inertia::render('TestPassers/Email', [
             'groupedPassers' => $passers,
-            'registrationUrl' => url('/register'),
+            'registrationUrl' => 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad',
         ]);
     }
 
