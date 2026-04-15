@@ -31,11 +31,6 @@ Route::get('/', function () {
     return redirect()->route('idp.redirect');
 })->middleware('guest')->name('welcome');
 
-// Logout confirmation page - shows after successful logout
-Route::get('/logged-out', function () {
-    return Inertia::render('Auth/LoggedOut');
-})->middleware('guest')->name('logged-out');
-
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->name('idp.redirect');

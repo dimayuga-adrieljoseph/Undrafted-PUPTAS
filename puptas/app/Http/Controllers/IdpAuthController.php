@@ -362,9 +362,11 @@ class IdpAuthController extends Controller
             }
         }
 
-        // Use Inertia::location() to force a full-page client-side redirect
+        // Use Inertia::location() to force a full-page redirect to the IDP
         // This is necessary because the logout is triggered via Inertia POST request
         // Regular redirects don't work properly with Inertia's XHR-based navigation
-        return \Inertia\Inertia::location('/logged-out');
+        // Redirect to IDP's base login page (not OAuth authorize endpoint to avoid auto-login)
+        $idpLoginUrl = rtrim($idpConfig['base_url'], '/') . '/login';
+        return \Inertia\Inertia::location($idpLoginUrl);
     }
 }
