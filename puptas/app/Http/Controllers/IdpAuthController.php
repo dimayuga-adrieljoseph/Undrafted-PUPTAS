@@ -53,7 +53,7 @@ class IdpAuthController extends Controller
         // Construct the full authorization URL using configurable path
         // Updated fallback to /login as a hard-override to bypass the IDP's broken /api/v1/auth/authorize handling
         $authorizePath = $idpConfig['authorize_path'] ?? '/login';
-        
+
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
         // Log the full URL so it's visible in Railway for debugging
@@ -225,9 +225,27 @@ class IdpAuthController extends Controller
                 return redirect('/register');
             }
 
-            // Sync the idp_user_id just in case
+            // Sync user data on login from IDP
+            $updateData = [];
+
+            // Map the exact IDP field names to our database schema
+            // IDP -> DB
+            if (isset($idpUser['first_name'])) {
+                $updateData['firstname'] = $idpUser['first_name'];
+            }
+            if (isset($idpUser['last_name'])) {
+                $updateData['lastname'] = $idpUser['last_name'];
+            }
+            if (isset($idpUser['middle_name'])) {
+                $updateData['middlename'] = $idpUser['middle_name'];
+            }
+
             if ($localDbUser->idp_user_id !== ($idpUser['id'] ?? null)) {
-                $localDbUser->update(['idp_user_id' => $idpUser['id'] ?? null]);
+                $updateData['idp_user_id'] = $idpUser['id'] ?? null;
+            }
+
+            if (!empty($updateData)) {
+                $localDbUser->update($updateData);
             }
 
             // Authenticate the user in the local app securely with the eloquent driver
@@ -244,7 +262,7 @@ class IdpAuthController extends Controller
             );
 
             $roleId = (int) $localDbUser->role_id;
-            
+
             \Log::info('User logged in seamlessly via Local DB Match', ['local_user_id' => $localDbUser->id, 'role_id' => $roleId]);
 
             $response = redirect('/dashboard');
@@ -297,7 +315,7 @@ class IdpAuthController extends Controller
         // 1. Revoke all tokens of the user in our system
         if (Auth::check()) {
             $user = Auth::user();
-            
+
             // Get IDP access token from DB and remove the record
             $tokenRecord = \App\Models\RefreshToken::where('user_id', $user->id)->first();
             if ($tokenRecord) {

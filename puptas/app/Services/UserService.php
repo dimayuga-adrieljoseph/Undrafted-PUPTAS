@@ -334,13 +334,13 @@ class UserService
     {
         return \App\Models\User::create([
             'idp_user_id' => (string) \Illuminate\Support\Str::uuid(), // Assign standalone IDP uuid format locally as falback
-            'firstname' => $data['firstname'] ?? '',
+            'firstname' => $data['firstname'] ?? 'Pending IDP Sync',
             'middlename' => $data['middlename'] ?? null,
-            'lastname' => $data['lastname'] ?? '',
+            'lastname' => $data['lastname'] ?? 'Pending IDP Sync',
             'email' => $data['email'],
             'role_id' => $data['role_id'] ?? 1,
             'salutation' => $data['salutation'] ?? null,
-            'contactnumber' => $data['contactnumber'] ?? '00000000000',
+            'contactnumber' => $data['contactnumber'] ?? '0000000000',
             'sex' => $data['sex'] ?? null,
             'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)), // IDP handles real passwords
         ]);
