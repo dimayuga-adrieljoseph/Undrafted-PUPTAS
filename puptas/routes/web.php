@@ -27,6 +27,120 @@ use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
 
+// TEMPORARY: Assign student number
+Route::post('/debug-medical/assign-student-number/{idpUserId}/{secret}', function ($idpUserId, $secret) {
+    if ($secret !== 'debug2026') {
+        return response()->json(['error' => 'Invalid secret'], 403);
+    }
+    
+    try {
+        $user = \App\Models\User::where('idp_user_id', $idpUserId)->first();
+        
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+        
+        if ($user->student_number) {
+            return response()->json([
+                'status' => 'already_has_number',
+                'student_number' => $user->student_number
+            ]);
+        }
+        
+        // Generate student number (format: YYYY-MED-XXXX)
+        $year = date('Y');
+        $lastNumber = \App\Models\User::where('student_number', 'LIKE', "$year-MED-%")
+            ->orderBy('student_number', 'desc')
+            ->value('student_number');
+        
+        if ($lastNumber) {
+            $lastNum = (int) substr($lastNumber, -4);
+            $newNum = str_pad($lastNum + 1, 4, '0', STR_PAD_LEFT);
+        } else {
+            $newNum = '0001';
+        }
+        
+        $studentNumber = "$year-MED-$newNum";
+        $user->update(['student_number' => $studentNumber]);
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Student number assigned',
+            'student_number' => $studentNumber,
+            'user_id' => $user->id
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// TEMPORARY: Manually complete medical
+Route::post('/debug-medical/complete-medical/{idpUserId}/{secret}', function ($idpUserId, $secret) {
+    if ($secret !== 'debug2026') {
+        return response()->json(['error' => 'Invalid secret'], 403);
+    }
+    
+    try {
+        $user = \App\Models\User::where('idp_user_id', $idpUserId)->first();
+        
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+        
+        $application = $user->applications()->latest()->first();
+        
+        if (!$application) {
+            return response()->json(['error' => 'No application found'], 404);
+        }
+        
+        // Check if medical already completed
+        $medicalProcess = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'completed')
+            ->first();
+        
+        if ($medicalProcess) {
+            return response()->json([
+                'status' => 'already_completed',
+                'message' => 'Medical already completed',
+                'completed_at' => $medicalProcess->created_at
+            ]);
+        }
+        
+        // Update medical process
+        \App\Models\ApplicationProcess::updateOrCreate(
+            [
+                'application_id' => $application->id,
+                'stage' => 'medical'
+            ],
+            [
+                'status' => 'completed',
+                'action' => 'passed',
+                'performed_by' => null,
+                'reviewer_notes' => 'Manually approved - webhook issue resolved'
+            ]
+        );
+        
+        // Update application status
+        $application->update(['status' => 'cleared_for_enrollment']);
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Medical completed successfully',
+            'application_status' => 'cleared_for_enrollment',
+            'visible_to_registrar' => true
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+});
+
 Route::get('/debug-medical/{idpUserId}/{secret}', function ($idpUserId, $secret) {
     // Simple secret check instead of auth
     if ($secret !== 'debug2026') {
