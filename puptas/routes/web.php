@@ -237,54 +237,6 @@ Route::get('/debug-medical/{idpUserId}/{secret}', function ($idpUserId, $secret)
     }
 });
 
-Route::get('/debug-records/{secret}', function ($secret) {
-    if ($secret !== 'debug2026') {
-        return response()->json(['error' => 'Invalid secret'], 403);
-    }
-
-    // Raw query - bypass all relationships
-    $results = \Illuminate\Support\Facades\DB::select("
-        SELECT 
-            ap.user_id,
-            ap.firstname,
-            ap.lastname,
-            ap.student_number,
-            a.id as app_id,
-            a.status as app_status,
-            a.enrollment_status,
-            p.stage,
-            p.status as process_status,
-            p.action
-        FROM applicant_profiles ap
-        JOIN applications a ON a.user_id = ap.user_id
-        JOIN application_processes p ON p.application_id = a.id
-        WHERE p.stage = 'medical' AND p.status = 'completed'
-        AND a.deleted_at IS NULL
-        ORDER BY p.created_at DESC
-        LIMIT 20
-    ");
-
-    // Also check what ofMany returns for each user
-    $ofManyCheck = [];
-    foreach ($results as $r) {
-        $maxAppId = \Illuminate\Support\Facades\DB::selectOne(
-            "SELECT MAX(id) as max_id FROM applications WHERE user_id = ? AND deleted_at IS NULL",
-            [$r->user_id]
-        );
-        $ofManyCheck[$r->user_id] = [
-            'medical_app_id'  => $r->app_id,
-            'max_app_id'      => $maxAppId->max_id,
-            'ofMany_matches'  => $maxAppId->max_id == $r->app_id ? 'YES ✓' : 'NO ✗ - ofMany returns different app!',
-        ];
-    }
-
-    return response()->json([
-        'count'        => count($results),
-        'students'     => $results,
-        'ofMany_check' => $ofManyCheck,
-    ]);
-});
-
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->name('idp.redirect');
