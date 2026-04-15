@@ -151,9 +151,9 @@
                     </div>
 
                     <form @submit.prevent="submitForm" class="form-content">
-                        <!-- Contact Section -->
+                        <!-- Account Details Section -->
                         <div class="form-section">
-                            <h3 class="section-title">Contact Information</h3>
+                            <h3 class="section-title">Account Details</h3>
 
                             <div
                                 class="form-grid flex flex-col md:flex-row gap-4"
@@ -192,16 +192,7 @@
                                         {{ errors.email }}
                                     </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- Role & Program Section -->
-                        <div class="form-section">
-                            <h3 class="section-title">Role & Assignment</h3>
-
-                            <div
-                                class="form-grid flex flex-col md:flex-row gap-4"
-                            >
                                 <div class="form-group">
                                     <label for="role_id" class="form-label">
                                         User Role
