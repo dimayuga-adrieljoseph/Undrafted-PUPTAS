@@ -21,7 +21,7 @@ class ValidationRules
             'lastname' => 'nullable|string|max:255',
             'middlename' => 'nullable|string|max:255',
             'extension_name' => 'nullable|string|in:Jr.,Sr.,II,III,IV', // Added
-            'email' => 'required|string|email|max:255|unique:users|regex:/^[a-z0-9._%+\-]+@gmail\.com$/', // Added Gmail validation
+            'email' => 'required|string|email|max:255|unique:users', // Temp removed Gmail validation
             'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/',
             'role_id' => 'required|integer|in:1,2,3,4,5,6', // Changed from exists:roles,id
             'program' => 'nullable|array', // Allow multiple programs assigned to staff

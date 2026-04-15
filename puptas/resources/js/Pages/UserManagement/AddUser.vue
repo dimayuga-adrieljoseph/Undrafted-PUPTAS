@@ -174,11 +174,8 @@
                                             ]"
                                             type="email"
                                             required
-                                            placeholder="user@gmail.com"
+                                            placeholder="user@example.com"
                                         />
-                                        <div class="input-hint">
-                                            Must be a Gmail address
-                                        </div>
                                     </div>
                                     <div v-if="errors.email" class="form-error">
                                         <svg
@@ -431,11 +428,8 @@ const validateField = (fieldName) => {
     errors.value[fieldName] = "";
 
     if (fieldName === "email" && form.value.email) {
-        const emailPattern = /^[a-z0-9._%+\-]+@gmail\.com$/;
-        if (!emailPattern.test(form.value.email)) {
-            errors.value.email =
-                "Must be a valid Gmail address (e.g., user@gmail.com)";
-        }
+        // Validation temporarily removed for testing purposes.
+        // Will bring back gmail requirement when done testing.
     }
 };
 
