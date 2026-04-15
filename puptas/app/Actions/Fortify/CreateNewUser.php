@@ -131,7 +131,7 @@ class CreateNewUser implements CreatesNewUsers
             // Clear the pending registration from session
             session()->forget('pending_registration');
 
-            // Log them in using our standard Eloquent User
+            // Log the user in — IDP credentials were already validated and saved above
             Auth::login($user);
 
             return $user;
