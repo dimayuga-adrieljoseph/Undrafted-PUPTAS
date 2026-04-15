@@ -28,12 +28,7 @@ use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
 
 Route::get('/', function () {
-    return Inertia::render('Auth/Login', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    return redirect()->route('idp.redirect');
 })->middleware('guest')->name('welcome');
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow

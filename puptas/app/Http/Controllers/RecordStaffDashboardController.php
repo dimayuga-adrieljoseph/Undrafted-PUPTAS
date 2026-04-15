@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Auth;
 
 class RecordStaffDashboardController extends Controller
 {
+    use \App\Http\Traits\ManagesApplicationFiles;
+
     protected DashboardService $dashboardService;
     protected UserService $userService;
     protected ApplicationService $applicationService;
@@ -35,6 +37,37 @@ class RecordStaffDashboardController extends Controller
     }
 
     /**
+     * Get the current stage name for ManagesApplicationFiles trait
+     */
+    protected function getCurrentStage(): string
+    {
+        return 'records';
+    }
+
+    /**
+     * Get the role ID for ManagesApplicationFiles trait
+     */
+    protected function getRoleId(): int
+    {
+        return 6;
+    }
+
+    /**
+     * Check prerequisite stage - records requires medical to be completed
+     */
+    protected function checkPrerequisiteStage($application)
+    {
+        $medicalCompleted = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$medicalCompleted) {
+            abort(403, 'Cannot proceed - medical stage not completed.');
+        }
+    }
+
+    /**
      * Display the Record Staff dashboard
      */
     public function index()
@@ -43,9 +76,50 @@ class RecordStaffDashboardController extends Controller
 
         return Inertia::render('Dashboard/Records', [
             'user' => Auth::user(),
-            'users' => $dashboardData['allUsers'],
-            'programs' => $dashboardData['programs'],
+            'users' => $dashboardData['allUsers']->toArray(),
+            'programs' => $dashboardData['programs']->toArray(),
             'summary' => $dashboardData['summary'],
+        ]);
+    }
+
+    /**
+     * Get users for the applications page
+     * This is the method called by /record-dashboard/applicants
+     */
+    public function getUsers()
+    {
+        // Ensure user has records staff role
+        $this->ensureRole($this->getRoleId());
+
+        // Return all applicants filtered by records stage (including completed)
+        return response()->json(
+            $this->userService->getAllApplicantsByStage('records')
+        );
+    }
+
+    /**
+     * Get statistics for the dashboard
+     */
+    public function getStats()
+    {
+        $this->ensureRole($this->getRoleId());
+
+        $dashboardData = $this->dashboardService->getRecordsDashboardData();
+
+        return response()->json([
+            'summary' => $dashboardData['summary'] ?? [],
+        ]);
+    }
+
+    /**
+     * Get available programs
+     */
+    public function getPrograms()
+    {
+        $programs = Program::where('slots', '>', 0)->get();
+
+        return response()->json([
+            'programs' => $programs
         ]);
     }
 
@@ -300,5 +374,107 @@ class RecordStaffDashboardController extends Controller
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename=\"enrolled_applicants.csv\"',
         ]);
+    }
+
+    /**
+     * Tag an applicant as officially enrolled
+     */
+    public function tag($id)
+    {
+        $this->ensureRole($this->getRoleId());
+
+        $application = Application::where('user_id', $id)->firstOrFail();
+
+        // Check if medical is completed
+        $medicalCompleted = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$medicalCompleted) {
+            return response()->json([
+                'message' => 'Cannot tag as officially enrolled. Medical process not completed.'
+            ], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            $application->update([
+                'enrollment_status' => 'officially_enrolled'
+            ]);
+
+            // Create or update records process
+            ApplicationProcess::updateOrCreate(
+                [
+                    'application_id' => $application->id,
+                    'stage'          => 'records'
+                ],
+                [
+                    'status'         => 'completed',
+                    'reviewer_notes' => 'Tagged as officially enrolled',
+                    'performed_by'   => auth()->id(),
+                    'ip_address'     => request()->ip()
+                ]
+            );
+
+            DB::commit();
+            return response()->json(['message' => 'Tagged as officially enrolled successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to tag: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Untag an applicant from officially enrolled (revert to temporary)
+     */
+    public function untag($id)
+    {
+        $this->ensureRole($this->getRoleId());
+
+        $application = Application::where('user_id', $id)->firstOrFail();
+
+        if ($application->enrollment_status !== 'officially_enrolled') {
+            return response()->json([
+                'message' => 'Application is not officially enrolled.'
+            ], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $application->update([
+                'enrollment_status' => 'temporary'
+            ]);
+
+            // Update records process
+            $recordsProcess = ApplicationProcess::where('application_id', $application->id)
+                ->where('stage', 'records')
+                ->first();
+
+            if ($recordsProcess) {
+                $recordsProcess->update([
+                    'status'         => 'in_progress',
+                    'reviewer_notes' => 'Reverted to temporary enrolled',
+                    'performed_by'   => auth()->id(),
+                    'ip_address'     => request()->ip()
+                ]);
+            }
+
+            DB::commit();
+            return response()->json(['message' => 'Reverted to temporary enrolled successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to untag: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Ensure user has the correct role
+     */
+    private function ensureRole(int $roleId): void
+    {
+        if (!Auth::user() || Auth::user()->role_id !== $roleId) {
+            abort(403, 'Unauthorized access.');
+        }
     }
 }
