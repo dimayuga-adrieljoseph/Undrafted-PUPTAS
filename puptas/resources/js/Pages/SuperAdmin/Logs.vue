@@ -355,7 +355,8 @@ const getPageUrl = (pageNum) => {
                             >
                                 <option value="">All Users</option>
                                 <option v-for="u in users" :key="u.id" :value="String(u.id)">
-                                    {{ `${u.firstname} ${u.lastname}`.trim() }} ({{ u.email }})
+                                    {{ u.id === 'system' ? 'System/API Calls' : `${u.firstname} ${u.lastname}`.trim() }} 
+                                    {{ u.id !== 'system' ? `(${u.email})` : '' }}
                                 </option>
                             </select>
                         </div>
