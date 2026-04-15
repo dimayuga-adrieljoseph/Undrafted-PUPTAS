@@ -362,7 +362,8 @@ class IdpAuthController extends Controller
             }
         }
 
-        // Return to IDP login instead of landing page
-        return redirect()->route('idp.redirect')->with('status', 'Logged out successfully');
+        // Redirect to a logout confirmation page instead of triggering a new OAuth flow
+        // This prevents the IDP from immediately re-authenticating the user
+        return redirect('/logged-out')->with('status', 'Logged out successfully');
     }
 }
