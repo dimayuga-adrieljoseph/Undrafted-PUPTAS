@@ -888,8 +888,20 @@ const filteredUsers = computed(() => {
 });
 
 const displayedUsers = computed(() => {
-    if (searchQuery.value.trim()) return filteredUsers.value;
-    return users.value.slice(0, 5);
+    // Recent applications = only those NOT yet officially enrolled
+    const pending = users.value.filter(
+        u => u.enrollment_status !== 'officially_enrolled' &&
+             u.application?.enrollment_status !== 'officially_enrolled'
+    );
+    if (searchQuery.value.trim()) {
+        const q = searchQuery.value.toLowerCase();
+        return pending.filter(u =>
+            u.firstname?.toLowerCase().includes(q) ||
+            u.lastname?.toLowerCase().includes(q) ||
+            u.email?.toLowerCase().includes(q)
+        );
+    }
+    return pending.slice(0, 5);
 });
 
 const selectUser = async (user) => {
@@ -978,11 +990,16 @@ const formatDate = (date) => {
 
 const acceptApplication = async () => {
     try {
-        await axios.post(`/record-dashboard/tag/${selectedUser.value.id}`);
+        const taggedId = selectedUser.value.id;
+        await axios.post(`/record-dashboard/tag/${taggedId}`);
         showSnackbar("Tagged as officially enrolled");
+
+        // Immediately remove from the list so UI updates without waiting for refetch
+        users.value = users.value.filter(u => u.id !== taggedId);
         selectedUser.value = null;
-        fetchUsers();
-        fetchStats();
+
+        await fetchUsers();
+        await fetchStats();
     } catch (e) {
         console.error("Tag failed:", e);
         const msg = e.response?.data?.message || "Failed to tag application";
@@ -995,8 +1012,8 @@ const untagApplication = async () => {
         await axios.post(`/record-dashboard/untag/${selectedUser.value.id}`);
         showSnackbar("Reverted to temporary enrolled");
         selectedUser.value = null;
-        fetchUsers();
-        fetchStats();
+        await fetchUsers();
+        await fetchStats();
     } catch (e) {
         console.error("Untag failed:", e);
         const msg = e.response?.data?.message || "Failed to untag application";
