@@ -644,6 +644,7 @@ const selectUser = async (user) => {
 
         selectedUser.value = {
             ...user,
+            ...response.data.user,
             application: {
                 ...response.data.user.application,
                 processes: response.data.user.application?.processes || [],
