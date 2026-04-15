@@ -36,7 +36,7 @@ class CreateNewUser implements CreatesNewUsers
             'middlename' => ['nullable', 'string', 'max:255'],
             'birthday' => ['required', 'date'],
             'sex' => ['required', 'string'],
-            'contactnumber' => ['required', 'string', 'max:15'],
+            'contactnumber' => ['required', 'string', 'max:20'],
             'street_address' => ['required', 'string', 'max:255'],
             'barangay' => ['required', 'string', 'max:100'],
             'city' => ['required', 'string', 'max:100'],
