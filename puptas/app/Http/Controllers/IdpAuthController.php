@@ -362,8 +362,10 @@ class IdpAuthController extends Controller
             }
         }
 
-        // Redirect to a logout confirmation page instead of triggering a new OAuth flow
-        // This prevents the IDP from immediately re-authenticating the user
-        return redirect('/logged-out')->with('status', 'Logged out successfully');
+        // Redirect directly to the IDP's login page without OAuth parameters.
+        // This solves the infinite redirect loop (PUPTAS Logout -> PUPTAS '/' -> IDP OAuth -> auto-login back to PUPTAS)
+        // caused by removing the local PUPTAS landing page.
+        $idpLoginUrl = rtrim($idpConfig['base_url'], '/') . ($idpConfig['authorize_path'] ?? '/login');
+        return redirect()->away($idpLoginUrl)->with('status', 'Logged out successfully');
     }
 }
