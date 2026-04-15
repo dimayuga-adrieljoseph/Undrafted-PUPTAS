@@ -237,9 +237,38 @@ Route::get('/debug-medical/{idpUserId}/{secret}', function ($idpUserId, $secret)
     }
 });
 
-Route::get('/', function () {
-    return redirect()->route('idp.redirect');
-})->middleware('guest')->name('welcome');
+Route::get('/debug-records/{secret}', function ($secret) {
+    if ($secret !== 'debug2026') {
+        return response()->json(['error' => 'Invalid secret'], 403);
+    }
+
+    // Raw query - bypass all relationships
+    $results = \Illuminate\Support\Facades\DB::select("
+        SELECT 
+            ap.user_id,
+            ap.firstname,
+            ap.lastname,
+            ap.student_number,
+            a.id as app_id,
+            a.status as app_status,
+            a.enrollment_status,
+            p.stage,
+            p.status as process_status,
+            p.action
+        FROM applicant_profiles ap
+        JOIN applications a ON a.user_id = ap.user_id
+        JOIN application_processes p ON p.application_id = a.id
+        WHERE p.stage = 'medical' AND p.status = 'completed'
+        AND a.deleted_at IS NULL
+        ORDER BY p.created_at DESC
+        LIMIT 20
+    ");
+
+    return response()->json([
+        'count' => count($results),
+        'students' => $results,
+    ]);
+});
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
