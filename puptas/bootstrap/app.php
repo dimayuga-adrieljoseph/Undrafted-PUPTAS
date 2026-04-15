@@ -16,10 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // Trust proxies for HTTPS detection behind Railway's reverse proxy
         $middleware->trustProxies(at: '*');
-        
+
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\RefreshSession::class,
             \App\Http\Middleware\RefreshIdpToken::class,
         ]);
 
