@@ -214,22 +214,44 @@ class ExternalMedicalApiController extends Controller
      */
     public function webhookResult(Request $request): JsonResponse
     {
-        $request->validate([
+        // Map their field names to ours
+        $studentNumber = $request->input('student_number');
+        
+        $idpUserId = $request->input('idp_user_id')
+                  ?? $request->input('student_id');  // Their UUID field
+        
+        // They send is_health_profile_completed: 1 when cleared
+        // If they send this webhook, it means the student is cleared
+        $isHealthProfileCompleted = $request->input('is_health_profile_completed');
+        
+        // Validate
+        $validator = \Illuminate\Support\Facades\Validator::make([
+            'student_number' => $studentNumber,
+            'idp_user_id' => $idpUserId,
+            'is_health_profile_completed' => $isHealthProfileCompleted,
+        ], [
             'student_number' => 'nullable|string',
             'idp_user_id' => 'nullable|string',
-            'medical_status' => 'required|string|in:cleared,failed',
+            'is_health_profile_completed' => 'required|integer|in:0,1',
         ]);
 
-        // Ensure at least one identifier is provided
-        if (!$request->filled('student_number') && !$request->filled('idp_user_id')) {
+        if ($validator->fails()) {
             return response()->json([
-                'message' => 'Either student_number or idp_user_id must be provided'
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
             ], 422);
         }
 
-        $studentNumber = $request->input('student_number');
-        $idpUserId = $request->input('idp_user_id');
-        $status = $request->input('medical_status');
+        // Ensure at least one identifier is provided
+        if (!$studentNumber && !$idpUserId) {
+            return response()->json([
+                'message' => 'Either student_number or student_id (idp_user_id) must be provided'
+            ], 422);
+        }
+
+        // Map their status to ours
+        // 1 = cleared/passed, 0 = failed (though they typically only send when 1)
+        $status = $isHealthProfileCompleted == 1 ? 'cleared' : 'failed';
         
         // Determine lookup identifier for logging
         $lookupIdentifier = $studentNumber ?: $idpUserId;
