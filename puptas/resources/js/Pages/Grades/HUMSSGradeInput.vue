@@ -42,6 +42,13 @@
                     </div>
                     <button @click="bannerDismissed = true" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-xl leading-none flex-shrink-0">&times;</button>
                 </div>
+                <!-- Manual Input Notice (shown when AI extraction was unavailable) -->
+                <div v-if="!extractionResult" class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center gap-2">
+                    <i class="fas fa-pencil-alt text-yellow-600 dark:text-yellow-400"></i>
+                    <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                        AI grade extraction was unavailable. Please enter your grades manually below.
+                    </p>
+                </div>
                 <!-- Core Subjects Card -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">

@@ -32,19 +32,27 @@ class GradeExtractionController extends Controller
 
             return response()->json(['redirect' => $this->getStrandGradeUrl($user)]);
         } catch (\InvalidArgumentException $e) {
-            Log::warning('Grade extraction: no valid image files', [
+            Log::warning('Grade extraction: no valid image files, falling back to manual input', [
                 'user_id'    => $user?->id,
                 'message'    => $e->getMessage(),
                 'file_count' => \App\Models\UserFile::where('user_id', $user?->id)->count(),
             ]);
-            return response()->json(['error' => $e->getMessage()], 422);
+            return response()->json([
+                'redirect'      => $this->getStrandGradeUrl($user),
+                'fallback'      => true,
+                'fallback_reason' => $e->getMessage(),
+            ]);
         } catch (\RuntimeException $e) {
-            Log::error('Grade extraction failed', [
+            Log::error('Grade extraction failed, falling back to manual input', [
                 'user_id' => $user?->id,
                 'message' => $e->getMessage(),
             ]);
 
-            return response()->json(['error' => $e->getMessage()], 422);
+            return response()->json([
+                'redirect'        => $this->getStrandGradeUrl($user),
+                'fallback'        => true,
+                'fallback_reason' => $e->getMessage(),
+            ]);
         }
     }
 
