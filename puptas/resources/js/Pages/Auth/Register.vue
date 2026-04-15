@@ -41,6 +41,20 @@ const form = useForm({
     track: "",
 });
 
+// Allow only letters, spaces, hyphens, and apostrophes (for names)
+const onlyLetters = (e) => {
+    if (!/^[a-zA-ZÀ-ÿ\s'\-.]$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'].includes(e.key)) {
+        e.preventDefault();
+    }
+};
+
+// Allow only digits
+const onlyDigits = (e) => {
+    if (!/^\d$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'].includes(e.key)) {
+        e.preventDefault();
+    }
+};
+
 // Handle form submission - show modal first
 const handleSubmit = () => {
     showTermsModal.value = true;
@@ -191,6 +205,7 @@ const handleTermsCancel = () => {
                                             type="text"
                                             required
                                             autocomplete="family-name"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your last name"
                                         />
@@ -225,6 +240,7 @@ const handleTermsCancel = () => {
                                             type="text"
                                             required
                                             autocomplete="given-name"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your first name"
                                         />
@@ -256,6 +272,7 @@ const handleTermsCancel = () => {
                                             v-model="form.middlename"
                                             type="text"
                                             autocomplete="additional-name"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your middle name"
                                         />
@@ -322,6 +339,9 @@ const handleTermsCancel = () => {
                                                 type="tel"
                                                 required
                                                 autocomplete="tel"
+                                                inputmode="numeric"
+                                                maxlength="10"
+                                                @keydown="onlyDigits"
                                                 placeholder="912 345 6789"
                                                 class="flex-1 rounded-r-lg border border-gray-300 dark:border-gray-600 px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             />
@@ -357,6 +377,7 @@ const handleTermsCancel = () => {
                                             type="text"
                                             required
                                             autocomplete="address-level3"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Barangay"
                                         />
@@ -374,6 +395,7 @@ const handleTermsCancel = () => {
                                             type="text"
                                             required
                                             autocomplete="address-level2"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="e.g., Taguig City"
                                         />
@@ -391,6 +413,7 @@ const handleTermsCancel = () => {
                                             type="text"
                                             required
                                             autocomplete="address-level1"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="e.g., Metro Manila"
                                         />
@@ -405,7 +428,9 @@ const handleTermsCancel = () => {
                                         <input
                                             v-model="form.postal_code"
                                             type="text"
-                                            maxlength="10"
+                                            inputmode="numeric"
+                                            maxlength="4"
+                                            @keydown="onlyDigits"
                                             autocomplete="postal-code"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="e.g., 1630"
@@ -530,7 +555,7 @@ const handleTermsCancel = () => {
                                             v-model="form.dateGrad"
                                             type="date"
                                             required
-                                            autocomplete="bday"
+                                            autocomplete="off"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         />
                                     </div>
