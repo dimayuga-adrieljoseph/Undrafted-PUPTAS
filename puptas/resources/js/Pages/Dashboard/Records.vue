@@ -843,8 +843,8 @@ const fetchUsers = async () => {
 const fetchStats = async () => {
     try {
         const response = await axios.get("/record-dashboard/stats");
-        summary.value = response.data.summary;
-        programs.value = response.data.programs;
+        summary.value = response.data.summary || { total: 0, accepted: 0, pending: 0, returned: 0 };
+        programs.value = response.data.programs || [];
     } catch (error) {
         console.error("Failed to fetch stats:", error);
     }

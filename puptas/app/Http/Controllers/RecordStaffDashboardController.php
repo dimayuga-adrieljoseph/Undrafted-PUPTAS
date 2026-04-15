@@ -108,6 +108,7 @@ class RecordStaffDashboardController extends Controller
 
         return response()->json([
             'summary' => $dashboardData['summary'] ?? [],
+            'programs' => $dashboardData['programs'] ?? [],
         ]);
     }
 
