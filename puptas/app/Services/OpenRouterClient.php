@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\OpenRouterApiException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class OpenRouterClient
 {
@@ -106,6 +107,42 @@ class OpenRouterClient
             );
         }
 
-        return $response->json('choices.0.message.content') ?? '';
+        $responseBody = $response->body();
+        $responseJson = $response->json();
+
+        Log::info('OpenRouterClient: full API response received', [
+            'model'         => $this->model,
+            'response_body' => $responseBody,
+        ]);
+
+        $content = $responseJson['choices'][0]['message']['content'] ?? null;
+
+        Log::info('OpenRouterClient: extracted content from response', [
+            'content'   => $content,
+            'is_null'   => is_null($content),
+            'is_empty'  => ($content === '' || $content === null),
+        ]);
+
+        if ($content === null) {
+            throw new OpenRouterApiException(
+                'OpenRouter API response is missing expected path choices[0].message.content. '
+                    . 'Model: ' . $this->model . '. '
+                    . 'Response body: ' . $responseBody,
+                $response->status(),
+                $responseBody
+            );
+        }
+
+        if (trim($content) === '') {
+            throw new OpenRouterApiException(
+                'OpenRouter API returned an empty content string at choices[0].message.content. '
+                    . 'Model: ' . $this->model . '. '
+                    . 'Response body: ' . $responseBody,
+                $response->status(),
+                $responseBody
+            );
+        }
+
+        return $content;
     }
 }

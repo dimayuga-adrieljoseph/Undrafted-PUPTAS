@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Exceptions\OpenRouterApiException;
 use App\Models\User;
 use App\Models\UserFile;
 use App\Services\OpenRouterClient;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class GradeExtractionService
@@ -31,14 +33,31 @@ class GradeExtractionService
 
         $prompt = $this->buildPrompt();
 
-        $raw = $this->openRouterClient->send($images, $prompt);
+        try {
+            $raw = $this->openRouterClient->send($images, $prompt);
+        } catch (OpenRouterApiException $e) {
+            Log::error('GradeExtractionService: OpenRouter API call failed', [
+                'message'       => $e->getMessage(),
+                'status_code'   => $e->getStatusCode(),
+                'response_body' => $e->getResponseBody(),
+            ]);
+            throw $e;
+        }
 
-        \Log::info('OpenRouter raw response', ['raw' => $raw]);
+        Log::info('GradeExtractionService: raw content received from OpenRouter', ['raw' => $raw]);
 
-        $sanitized = $this->sanitize($raw);
-        $parsed    = $this->parse($sanitized);
-        $validated = $this->validate($parsed);
-        $result    = $this->normalizeKeys($validated);
+        try {
+            $sanitized = $this->sanitize($raw);
+            $parsed    = $this->parse($sanitized);
+            $validated = $this->validate($parsed);
+            $result    = $this->normalizeKeys($validated);
+        } catch (\RuntimeException $e) {
+            Log::error('GradeExtractionService: failed to parse OpenRouter response', [
+                'message' => $e->getMessage(),
+                'raw'     => $raw,
+            ]);
+            throw $e;
+        }
 
         return $result;
     }
