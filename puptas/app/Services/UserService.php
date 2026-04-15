@@ -186,15 +186,14 @@ class UserService
             }])
             ->whereHas('currentApplication', function ($query) {
                 $query->where(function ($q) {
-                    // Get applications that have completed medical stage
                     $q->whereHas('processes', function ($process) {
                         $process->where('stage', 'medical')
                             ->where('status', 'completed');
                     })
-                        // OR applications that are officially enrolled
-                        ->orWhere('enrollment_status', 'officially_enrolled');
+                    ->orWhere('enrollment_status', 'officially_enrolled');
                 });
             })
+            ->select('user_id', 'firstname', 'lastname', 'email', 'contactnumber', 'student_number')
             ->get()
             ->map(function ($profile) {
                 $app = $profile->currentApplication;
@@ -204,20 +203,18 @@ class UserService
                     'id'               => $profile->user_id,
                     'firstname'        => $profile->firstname,
                     'lastname'         => $profile->lastname,
-                    'course'           => $profile->course ?? null,
+                    'course'           => null,
                     'email'            => $profile->email,
                     'username'         => $profile->email,
                     'phone'            => $profile->contactnumber,
-                    'company'          => $profile->company ?? null,
+                    'company'          => null,
                     'status'           => $app?->status ?? null,
                     'enrollment_status' => $app?->enrollment_status ?? null,
-                    // Top-level program property for Applications/Records.vue
                     'program'          => $program ? [
                         'id'   => $program->id,
                         'code' => $program->code,
                         'name' => $program->name,
                     ] : null,
-                    // Nested application object for Dashboard/Records.vue
                     'application'      => $app ? [
                         'id'               => $app->id,
                         'status'           => $app->status,
