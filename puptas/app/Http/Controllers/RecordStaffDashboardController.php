@@ -76,7 +76,7 @@ class RecordStaffDashboardController extends Controller
 
         return Inertia::render('Dashboard/Records', [
             'user' => Auth::user(),
-            'users' => $dashboardData['allUsers']->toArray(),
+            'users' => $dashboardData['allUsers']->values()->all(),
             'programs' => $dashboardData['programs']->toArray(),
             'summary' => $dashboardData['summary'],
         ]);
