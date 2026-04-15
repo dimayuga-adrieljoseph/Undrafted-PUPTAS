@@ -25,7 +25,9 @@ class Program extends Model
         'gwa' => 'decimal:2',
     ];
 
-    protected $appends = ['strand_names'];
+    // Temporarily commented out to prevent memory issues when loading programs
+    // The strand_names accessor causes circular reference issues
+    // protected $appends = ['strand_names'];
 
     /**
      * Accessor for strand names (for backward compatibility in frontend)

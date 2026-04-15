@@ -116,10 +116,18 @@ class RecordStaffDashboardController extends Controller
      */
     public function getPrograms()
     {
+        // Use withoutAppends() to prevent automatic loading of strand_names accessor
         $programs = Program::where('slots', '>', 0)
             ->select('id', 'code', 'name', 'slots')
             ->get()
-            ->makeHidden(['strand_names']); // Prevent loading strands relationship
+            ->map(function ($program) {
+                return [
+                    'id' => $program->id,
+                    'code' => $program->code,
+                    'name' => $program->name,
+                    'slots' => $program->slots,
+                ];
+            });
 
         return response()->json([
             'programs' => $programs
