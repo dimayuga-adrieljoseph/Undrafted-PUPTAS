@@ -46,7 +46,7 @@ class ExternalMedicalApiController extends Controller
     {
         return ApplicantProfile::with([
             'user' => function ($query) {
-                $query->select('id', 'idp_user_id', 'student_number');
+                $query->select('id', 'idp_user_id');
             },
             'currentApplication' => function ($query) {
                 $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
@@ -119,7 +119,7 @@ class ExternalMedicalApiController extends Controller
             // Basic Identity
             'id'                     => $profile->user_id,
             'idp_user_id'            => $profile->user?->idp_user_id,
-            'student_number'         => $profile->student_number ?? $profile->user?->student_number,
+            'student_number'         => $profile->student_number,
             
             // Personal Information
             'salutation'             => $profile->salutation,
@@ -202,6 +202,7 @@ class ExternalMedicalApiController extends Controller
         );
 
         try {
+            // Look up by user's idp_user_id
             $profile = $this->getEligibleApplicantQuery()
                 ->whereHas('user', function ($q) use ($idpUserId) {
                     $q->where('idp_user_id', $idpUserId);
@@ -245,10 +246,10 @@ class ExternalMedicalApiController extends Controller
         );
 
         try {
+            // Look up by applicant_profile's student_number
             $profile = $this->getEligibleApplicantQuery()
-                ->whereHas('user', function ($q) use ($studentNumber) {
-                    $q->where('student_number', $studentNumber);
-                })->first();
+                ->where('student_number', $studentNumber)
+                ->first();
             
             return $this->formatResponse($profile, "Student Number: $studentNumber", $request);
         } catch (\Throwable $e) {
@@ -322,9 +323,8 @@ class ExternalMedicalApiController extends Controller
         // First try: student_number (if provided and not empty)
         if ($studentNumber) {
             $profile = $this->getEligibleApplicantQuery()
-                ->whereHas('user', function ($q) use ($studentNumber) {
-                    $q->where('student_number', $studentNumber);
-                })->first();
+                ->where('student_number', $studentNumber)
+                ->first();
         }
         
         // Second try: idp_user_id (if student_number failed or not provided)
@@ -342,9 +342,8 @@ class ExternalMedicalApiController extends Controller
             // Try fallback with student_number
             if ($studentNumber) {
                 $fallbackProfile = ApplicantProfile::with('currentApplication.processes')
-                    ->whereHas('user', function ($q) use ($studentNumber) {
-                        $q->where('student_number', $studentNumber);
-                    })->first();
+                    ->where('student_number', $studentNumber)
+                    ->first();
             }
             
             // Try fallback with idp_user_id
