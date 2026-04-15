@@ -15,6 +15,12 @@ class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules;
 
+    // No password needed — users authenticate via IDP
+    protected function passwordRules(): array
+    {
+        return [];
+    }
+
     /**
      * Create a newly registered user.
      *
