@@ -362,7 +362,7 @@ class IdpAuthController extends Controller
             }
         }
 
-        // Return to landing page to break any redirect loops
-        return redirect('/')->with('status', 'Logged out successfully');
+        // Return to IDP login instead of landing page
+        return redirect()->route('idp.redirect')->with('status', 'Logged out successfully');
     }
 }
