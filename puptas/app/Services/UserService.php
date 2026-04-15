@@ -179,20 +179,13 @@ class UserService
      */
     public function getApplicantsForRecordStaff(): Collection
     {
-        // Use a direct join instead of ofMany relationship to avoid
-        // issues where ofMany returns a different application than the one
-        // that has the completed medical process.
+        // Get user IDs with completed medical on their latest application
         $userIds = \Illuminate\Support\Facades\DB::table('applications as a')
             ->join('application_processes as p', 'p.application_id', '=', 'a.id')
             ->whereNull('a.deleted_at')
             ->where('p.stage', 'medical')
             ->where('p.status', 'completed')
-            ->whereIn('a.id', function ($sub) {
-                $sub->selectRaw('MAX(a2.id)')
-                    ->from('applications as a2')
-                    ->whereNull('a2.deleted_at')
-                    ->groupBy('a2.user_id');
-            })
+            ->whereRaw('a.id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = a.user_id AND a2.deleted_at IS NULL)')
             ->pluck('a.user_id')
             ->toArray();
 
@@ -200,12 +193,7 @@ class UserService
         $enrolledIds = \Illuminate\Support\Facades\DB::table('applications')
             ->whereNull('deleted_at')
             ->where('enrollment_status', 'officially_enrolled')
-            ->whereIn('id', function ($sub) {
-                $sub->selectRaw('MAX(a2.id)')
-                    ->from('applications as a2')
-                    ->whereNull('a2.deleted_at')
-                    ->groupBy('a2.user_id');
-            })
+            ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
             ->pluck('user_id')
             ->toArray();
 
@@ -215,45 +203,52 @@ class UserService
             return collect();
         }
 
-        return ApplicantProfile::with([
-                'currentApplication.program',
-            ])
-            ->whereIn('user_id', $allUserIds)
-            ->get()
-            ->map(function ($profile) {
-                $app = $profile->currentApplication;
-                $program = $app?->program;
+        // Load only what we need - no deep eager loading
+        $profiles = ApplicantProfile::whereIn('user_id', $allUserIds)
+            ->get(['user_id', 'firstname', 'lastname', 'email', 'contactnumber', 'student_number']);
 
-                return [
-                    'id'                => $profile->user_id,
-                    'firstname'         => $profile->firstname,
-                    'lastname'          => $profile->lastname,
-                    'course'            => null,
-                    'email'             => $profile->email,
-                    'username'          => $profile->email,
-                    'phone'             => $profile->contactnumber,
-                    'company'           => null,
-                    'status'            => $app?->status ?? null,
-                    'enrollment_status' => $app?->enrollment_status ?? null,
+        // Load applications separately
+        $applications = \App\Models\Application::whereIn('user_id', $allUserIds)
+            ->whereNull('deleted_at')
+            ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
+            ->with(['program:id,code,name'])
+            ->get()
+            ->keyBy('user_id');
+
+        return $profiles->map(function ($profile) use ($applications) {
+            $app = $applications->get($profile->user_id);
+            $program = $app?->program;
+
+            return [
+                'id'                => $profile->user_id,
+                'firstname'         => $profile->firstname,
+                'lastname'          => $profile->lastname,
+                'course'            => null,
+                'email'             => $profile->email,
+                'username'          => $profile->email,
+                'phone'             => $profile->contactnumber,
+                'company'           => null,
+                'status'            => $app?->status ?? null,
+                'enrollment_status' => $app?->enrollment_status ?? null,
+                'program'           => $program ? [
+                    'id'   => $program->id,
+                    'code' => $program->code,
+                    'name' => $program->name,
+                ] : null,
+                'application'       => $app ? [
+                    'id'                => $app->id,
+                    'status'            => $app->status,
+                    'enrollment_status' => $app->enrollment_status,
+                    'program_id'        => $app->program_id,
+                    'created_at'        => $app->created_at,
                     'program'           => $program ? [
                         'id'   => $program->id,
                         'code' => $program->code,
                         'name' => $program->name,
                     ] : null,
-                    'application'       => $app ? [
-                        'id'                => $app->id,
-                        'status'            => $app->status,
-                        'enrollment_status' => $app->enrollment_status,
-                        'program_id'        => $app->program_id,
-                        'created_at'        => $app->created_at,
-                        'program'           => $program ? [
-                            'id'   => $program->id,
-                            'code' => $program->code,
-                            'name' => $program->name,
-                        ] : null,
-                    ] : null,
-                ];
-            });
+                ] : null,
+            ];
+        });
     }
 
     /**
