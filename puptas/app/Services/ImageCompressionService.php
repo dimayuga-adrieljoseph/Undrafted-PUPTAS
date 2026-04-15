@@ -140,6 +140,74 @@ class ImageCompressionService
     }
 
     /**
+     * Run the validate → resize → WebP pipeline and return raw data.
+     *
+     * Returns the processed image bytes and metadata without persisting anything
+     * to disk. FileService is responsible for calling this method and then
+     * storing the result on the active disk.
+     *
+     * @param UploadedFile $file The uploaded image file
+     * @return array{webp_data: string, original_name: string, filename: string}
+     * @throws \InvalidArgumentException If the file is invalid or not an image
+     * @throws \RuntimeException If image processing fails
+     */
+    public function processImage(UploadedFile $file): array
+    {
+        // Validate file is valid
+        if (!$file->isValid()) {
+            throw new \InvalidArgumentException('Invalid file upload. The file failed to upload properly.');
+        }
+
+        // Get MIME type
+        $mimeType = $file->getMimeType();
+
+        // Validate MIME type
+        if (empty($mimeType) || !in_array($mimeType, self::ACCEPTED_MIMES)) {
+            throw new \InvalidArgumentException(
+                'Invalid image format. Allowed formats: JPEG, PNG, WebP, GIF'
+            );
+        }
+
+        // Validate file size (5MB max)
+        if ($file->getSize() > self::MAX_FILE_SIZE) {
+            throw new \InvalidArgumentException(
+                'File size exceeds maximum limit of 5MB'
+            );
+        }
+
+        try {
+            // Load the image
+            $image = $this->imageManager->read($file->getRealPath());
+
+            // Resize if wider than MAX_WIDTH (prevent upscaling of smaller images)
+            if ($image->width() > self::MAX_WIDTH) {
+                $image->resize(width: self::MAX_WIDTH, height: null);
+            }
+
+            // Convert to WebP format with compression
+            $webpData = (string) $image->toWebp(quality: self::QUALITY);
+
+            // Generate unique filename
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $filename = $this->generateUniqueFilename($originalName);
+
+            return [
+                'webp_data'     => $webpData,
+                'original_name' => $file->getClientOriginalName(),
+                'filename'      => $filename,
+            ];
+        } catch (\Intervention\Image\Exception\NotReadableException $e) {
+            throw new \InvalidArgumentException(
+                'Unable to read the image file. The file may be corrupted or in an unsupported format.'
+            );
+        } catch (\Exception $e) {
+            throw new \RuntimeException(
+                'Failed to process image: ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
      * Validate image before processing
      *
      * @param UploadedFile $file

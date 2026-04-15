@@ -11,7 +11,6 @@ use App\Helpers\FileMapper;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Confirmation Service
@@ -23,17 +22,12 @@ use Illuminate\Support\Facades\Storage;
 class ConfirmationService
 {
     /**
-     * @var ImageCompressionService
-     */
-    protected ImageCompressionService $compressionService;
-
-    /**
      * Create a new service instance.
      */
-    public function __construct(ImageCompressionService $compressionService)
-    {
-        $this->compressionService = $compressionService;
-    }
+    public function __construct(
+        protected FileService $fileService,
+    ) {}
+
 
     /**
      * Get confirmation data for a user
@@ -202,8 +196,8 @@ class ConfirmationService
             throw new \InvalidArgumentException('Invalid field name');
         }
 
-        // Use ImageCompressionService to compress and convert to WebP
-        $compressed = $this->compressionService->compress($uploadedFile, 'uploads/files');
+        // Use FileService to compress and store the file
+        $compressed = $this->fileService->store($uploadedFile, 'uploads/files');
 
         // Delete existing file
         $this->deleteExistingFile($user, $type);
@@ -250,8 +244,8 @@ class ConfirmationService
             ->where('type', $type)
             ->first();
 
-        if ($existingFile && Storage::disk('public')->exists($existingFile->file_path)) {
-            Storage::disk('public')->delete($existingFile->file_path);
+        if ($existingFile) {
+            $this->fileService->delete($existingFile->file_path);
         }
     }
 
