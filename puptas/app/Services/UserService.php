@@ -187,6 +187,7 @@ class UserService
             ->where('p.status', 'completed')
             ->whereRaw('a.id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = a.user_id AND a2.deleted_at IS NULL)')
             ->pluck('a.user_id')
+            ->map(fn($id) => (string) $id)
             ->toArray();
 
         // Also include officially enrolled
@@ -195,6 +196,7 @@ class UserService
             ->where('enrollment_status', 'officially_enrolled')
             ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
             ->pluck('user_id')
+            ->map(fn($id) => (string) $id)
             ->toArray();
 
         $allUserIds = array_unique(array_merge($userIds, $enrolledIds));
