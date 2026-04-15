@@ -432,6 +432,22 @@
                 </section>
             </div>
         </transition>
+
+        <!-- Snackbar Notification -->
+        <transition name="fade">
+            <div
+                v-if="snackbar.visible"
+                data-testid="snackbar"
+                :class="[
+                    'fixed bottom-8 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg text-white font-medium z-50',
+                    snackbar.type === 'success' ? 'bg-green-600' : '',
+                    snackbar.type === 'error' ? 'bg-red-600' : '',
+                    snackbar.type === 'info' ? 'bg-blue-600' : ''
+                ]"
+            >
+                {{ snackbar.message }}
+            </div>
+        </transition>
     </InterviewerLayout>
 </template>
 
@@ -485,10 +501,12 @@ const selectedUserFiles = ref({});
 const snackbar = ref({
     visible: false,
     message: "",
+    type: "success",
 });
 
-const showSnackbar = (msg, duration = 3000) => {
+const showSnackbar = (msg, type = "success", duration = 3000) => {
     snackbar.value.message = msg;
+    snackbar.value.type = type;
     snackbar.value.visible = true;
     setTimeout(() => {
         snackbar.value.visible = false;
@@ -634,6 +652,14 @@ const selectUser = async (user) => {
         await fetchPrograms();
     } catch (error) {
         console.error("Failed to fetch user data:", error);
+        
+        // Display user-friendly error notification
+        if (error.response && error.response.status === 403) {
+            showSnackbar("Unauthorized access. Application is not at the interviewer stage.", "error");
+        } else {
+            showSnackbar("Failed to load applicant data. Please try again.", "error");
+        }
+        
         selectedUserFiles.value = {};
         selectedUser.value = null;
     }
@@ -900,6 +926,15 @@ const clearFilters = () => {
 .slide-fade-enter-from,
 .slide-fade-leave-to {
     transform: translateX(100%);
+    opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
     opacity: 0;
 }
 </style>
