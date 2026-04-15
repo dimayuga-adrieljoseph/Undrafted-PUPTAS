@@ -211,6 +211,7 @@ class RecordStaffDashboardController extends Controller
 
         $userData = [
             'id' => $user->user_id,
+            'student_number' => $user->student_number,
             'firstname' => $user->firstname,
             'lastname' => $user->lastname,
             'email' => $user->email,

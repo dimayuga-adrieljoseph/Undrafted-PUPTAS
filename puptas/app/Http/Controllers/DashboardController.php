@@ -151,6 +151,7 @@ class DashboardController extends Controller
         // Transform the response to use 'application' key for frontend compatibility
         $userData = [
             'id' => $applicant->user_id,
+            'student_number' => $applicant->student_number,
             'firstname' => $applicant->firstname,
             'lastname' => $applicant->lastname,
             'email' => $applicant->email,
