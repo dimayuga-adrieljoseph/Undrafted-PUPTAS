@@ -179,7 +179,11 @@ class UserService
      */
     public function getApplicantsForRecordStaff(): Collection
     {
-        return ApplicantProfile::with('currentApplication.program')
+        return ApplicantProfile::with(['currentApplication' => function ($query) {
+                $query->select('id', 'user_id', 'status', 'enrollment_status', 'program_id', 'created_at');
+            }, 'currentApplication.program' => function ($query) {
+                $query->select('id', 'code', 'name');
+            }])
             ->whereHas('currentApplication', function ($query) {
                 $query->where(function ($q) {
                     // Get applications that have completed medical stage
@@ -208,7 +212,11 @@ class UserService
                     'status'           => $app?->status ?? null,
                     'enrollment_status' => $app?->enrollment_status ?? null,
                     // Top-level program property for Applications/Records.vue
-                    'program'          => $program,
+                    'program'          => $program ? [
+                        'id'   => $program->id,
+                        'code' => $program->code,
+                        'name' => $program->name,
+                    ] : null,
                     // Nested application object for Dashboard/Records.vue
                     'application'      => $app ? [
                         'id'               => $app->id,
