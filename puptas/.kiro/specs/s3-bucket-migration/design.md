@@ -137,19 +137,19 @@ No database schema changes are required.
 ### Path Format
 
 ```
-uploads/files/{slug}_{timestamp}_{random}.webp
+storage/public/uploads/files/{slug}_{timestamp}_{random}.webp
 ```
 
 Examples:
-- `uploads/files/transcript-of-records_1714000000_a1b2c3d4.webp`  ✅
-- `https://bucket.storage.railway.app/uploads/files/...`  ❌
-- `/uploads/files/...`  ❌
+- `storage/public/uploads/files/transcript-of-records_1714000000_a1b2c3d4.webp`  ✅
+- `https://bucket.storage.railway.app/storage/public/uploads/files/...`  ❌
+- `/storage/public/uploads/files/...`  ❌
 
 ### FileService::store() Return Shape
 
 ```php
 [
-    'path'          => 'uploads/files/photo_1714000000_abc12345.webp',  // relative, no leading slash
+    'path'          => 'storage/public/uploads/files/photo_1714000000_abc12345.webp',  // relative, no leading slash
     'original_name' => 'photo.jpg',
 ]
 ```
