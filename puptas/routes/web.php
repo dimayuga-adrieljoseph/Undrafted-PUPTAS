@@ -27,6 +27,94 @@ use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
 
+Route::get('/debug-medical/{idpUserId}', function ($idpUserId) {
+    // Only allow superadmin
+    if (!auth()->check() || auth()->user()->role_id !== 7) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+    
+    $user = \App\Models\User::where('idp_user_id', $idpUserId)->first();
+    
+    if (!$user) {
+        return response()->json([
+            'status' => 'not_found',
+            'message' => 'User does not exist in production database',
+            'idp_user_id' => $idpUserId
+        ]);
+    }
+    
+    $application = $user->applications()->latest()->first();
+    $processes = $application ? $application->processes()->orderBy('created_at')->get() : collect();
+    
+    $evaluatorCompleted = $processes->where('stage', 'evaluator')
+        ->where('status', 'completed')
+        ->whereIn('action', ['passed', 'transferred'])
+        ->isNotEmpty();
+    
+    $interviewerCompleted = $processes->where('stage', 'interviewer')
+        ->where('status', 'completed')
+        ->whereIn('action', ['passed', 'transferred'])
+        ->isNotEmpty();
+    
+    $medicalInProgress = $processes->where('stage', 'medical')
+        ->whereIn('status', ['in_progress', 'returned'])
+        ->isNotEmpty();
+    
+    $medicalCompleted = $processes->where('stage', 'medical')
+        ->where('status', 'completed')
+        ->isNotEmpty();
+    
+    $auditLogs = \App\Models\AuditLog::where('module_name', 'LIKE', '%Medical%')
+        ->where(function($q) use ($user, $idpUserId) {
+            $q->where('description', 'LIKE', '%' . $user->student_number . '%')
+              ->orWhere('description', 'LIKE', '%' . $idpUserId . '%');
+        })
+        ->orderBy('created_at', 'desc')
+        ->limit(10)
+        ->get();
+    
+    return response()->json([
+        'status' => 'found',
+        'user' => [
+            'id' => $user->id,
+            'student_number' => $user->student_number,
+            'email' => $user->email,
+            'role_id' => $user->role_id,
+        ],
+        'application' => $application ? [
+            'id' => $application->id,
+            'status' => $application->status,
+            'enrollment_status' => $application->enrollment_status,
+            'program_id' => $application->program_id,
+            'created_at' => $application->created_at,
+        ] : null,
+        'processes' => $processes->map(fn($p) => [
+            'stage' => $p->stage,
+            'status' => $p->status,
+            'action' => $p->action,
+            'created_at' => $p->created_at,
+        ])->values(),
+        'eligibility' => [
+            'evaluator_completed' => $evaluatorCompleted,
+            'interviewer_completed' => $interviewerCompleted,
+            'medical_in_progress' => $medicalInProgress,
+            'medical_completed' => $medicalCompleted,
+            'can_receive_webhook' => $evaluatorCompleted && $interviewerCompleted && $medicalInProgress && !$medicalCompleted,
+            'visible_to_registrar' => $medicalCompleted || $application?->enrollment_status === 'officially_enrolled',
+        ],
+        'audit_logs' => $auditLogs->map(fn($log) => [
+            'created_at' => $log->created_at,
+            'action_type' => $log->action_type,
+            'description' => $log->description,
+        ])->values(),
+        'diagnosis' => $medicalCompleted 
+            ? '✅ Medical already completed - should be visible to registrar'
+            : ($evaluatorCompleted && $interviewerCompleted && $medicalInProgress
+                ? '⚠️ Eligible for webhook but not completed - webhook may not have been received'
+                : '❌ Not eligible for medical webhook - prerequisite stages not completed'),
+    ]);
+})->middleware('auth');
+
 Route::get('/', function () {
     return redirect()->route('idp.redirect');
 })->middleware('guest')->name('welcome');
