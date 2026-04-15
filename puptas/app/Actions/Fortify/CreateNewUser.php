@@ -124,7 +124,7 @@ class CreateNewUser implements CreatesNewUsers
 
                 \Illuminate\Support\Facades\Cookie::queue('access_token', $pendingReg['access_token'], 60, null, null, false, false);
                 if (!empty($pendingReg['refresh_token'])) {
-                    \Illuminate\Support\Facades\Cookie::queue('refresh_token', $pendingReg['refresh_token'], 60*24*30, null, null, false, false);
+                    \Illuminate\Support\Facades\Cookie::queue('refresh_token', $pendingReg['refresh_token'], 60 * 24 * 30, null, null, false, false);
                 }
             }
 
