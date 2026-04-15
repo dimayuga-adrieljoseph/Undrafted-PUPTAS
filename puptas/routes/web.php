@@ -272,7 +272,7 @@ Route::middleware(['auth', 'role:2,3,4,7'])->group(function () {
     Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
 });
 
-Route::middleware(['auth', 'role:2,4,7'])->group(function () {
+Route::middleware(['auth', 'role:2,4,6,7'])->group(function () {
     Route::get('/record-dashboard/programs', [RecordStaffDashboardController::class, 'getPrograms']);
     Route::post('/record-dashboard/change-course/{id}', [RecordStaffDashboardController::class, 'changeCourse']);
 });
