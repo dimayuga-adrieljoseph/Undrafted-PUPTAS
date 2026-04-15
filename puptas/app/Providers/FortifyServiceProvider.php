@@ -31,6 +31,21 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
+        // Redirect login view to IDP
+        Fortify::loginView(function () {
+            return redirect()->route('idp.redirect');
+        });
+
+        // Register custom logout response to redirect to IDP
+        $this->app->singleton(\Laravel\Fortify\Contracts\LogoutResponse::class, function () {
+            return new class implements \Laravel\Fortify\Contracts\LogoutResponse {
+                public function toResponse($request)
+                {
+                    return redirect()->route('idp.redirect');
+                }
+            };
+        });
+
         // Register custom authenticated session controller for dynamic redirects
         $this->app->singleton(\Laravel\Fortify\Contracts\LoginResponse::class, \App\Http\Controllers\AuthenticatedSessionController::class);
         $this->app->singleton(\Laravel\Fortify\Contracts\RegisterResponse::class, \App\Http\Responses\RegisterResponse::class);
