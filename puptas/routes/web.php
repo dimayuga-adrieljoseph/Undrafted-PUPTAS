@@ -238,6 +238,10 @@ Route::get('/debug-medical/{idpUserId}/{secret}', function ($idpUserId, $secret)
 });
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
+Route::get('/', function () {
+    return redirect()->route('idp.redirect');
+})->middleware('guest')->name('welcome');
+
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->name('idp.redirect');
 
