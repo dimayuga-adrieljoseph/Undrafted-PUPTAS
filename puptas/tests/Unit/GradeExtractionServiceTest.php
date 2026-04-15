@@ -1,80 +1,50 @@
 <?php
 
 use App\Models\User;
-use App\Models\UserFile;
 use App\Services\OpenRouterClient;
 use App\Services\GradeExtractionService;
-use Illuminate\Support\Facades\Storage;
 
 // ---------------------------------------------------------------------------
-// Test double: exposes protected methods and stubs loadImages
+// Test double: exposes protected methods
 // ---------------------------------------------------------------------------
 
 class TestableGradeExtractionService extends GradeExtractionService
 {
-    public array $stubbedImages = [];
-
-    public function sanitize(string $raw): string
-    {
-        return parent::sanitize($raw);
-    }
-
-    public function parse(string $json): array
-    {
-        return parent::parse($json);
-    }
-
-    public function validate(array $data): array
-    {
-        return parent::validate($data);
-    }
-
-    public function normalizeKeys(array $data): array
-    {
-        return parent::normalizeKeys($data);
-    }
-
-    public function loadImages(User $user): array
-    {
-        return parent::loadImages($user);
-    }
+    public function sanitize(string $raw): string     { return parent::sanitize($raw); }
+    public function parse(string $json): array        { return parent::parse($json); }
+    public function validate(array $data): array      { return parent::validate($data); }
+    public function normalizeKeys(array $data): array { return parent::normalizeKeys($data); }
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function makeService(): TestableGradeExtractionService
 {
-    $client = Mockery::mock(OpenRouterClient::class);
-    return new TestableGradeExtractionService($client);
+    return new TestableGradeExtractionService(Mockery::mock(OpenRouterClient::class));
 }
 
-function validResult(array $overrides = []): array
+// Flat format: "Subject Name" => "grade_string"
+function validFlatResult(array $overrides = []): array
 {
     return array_merge([
-        'math'    => ['algebra' => ['grade' => 90, 'confidence' => 0.95]],
-        'science' => ['biology' => ['grade' => 88, 'confidence' => 0.92]],
-        'english' => ['english' => ['grade' => 92, 'confidence' => 0.97]],
-        'others'  => ['araling panlipunan' => ['grade' => 85, 'confidence' => 0.80]],
+        'math'    => ['General Mathematics' => '90'],
+        'science' => ['Earth and Life Science' => '88'],
+        'english' => ['Oral Communication' => '92'],
+        'others'  => ['Filipino' => '85'],
     ], $overrides);
 }
 
 // ---------------------------------------------------------------------------
-// 6.1 sanitize()
+// sanitize()
 // ---------------------------------------------------------------------------
 
 describe('GradeExtractionService::sanitize()', function () {
     test('extracts JSON from ```json fences', function () {
         $svc = makeService();
-        $raw = "```json\n{\"math\":{}}\n```";
-        expect($svc->sanitize($raw))->toBe('{"math":{}}');
+        expect($svc->sanitize("```json\n{\"math\":{}}\n```"))->toBe('{"math":{}}');
     });
 
     test('extracts JSON from plain ``` fences', function () {
         $svc = makeService();
-        $raw = "```\n{\"math\":{}}\n```";
-        expect($svc->sanitize($raw))->toBe('{"math":{}}');
+        expect($svc->sanitize("```\n{\"math\":{}}\n```"))->toBe('{"math":{}}');
     });
 
     test('returns plain JSON unchanged', function () {
@@ -97,179 +67,147 @@ describe('GradeExtractionService::sanitize()', function () {
 
     test('handles mixed content: fences + prose', function () {
         $svc = makeService();
-        $raw = "Sure! Here you go:\n```json\n{\"math\":{}}\n```\nLet me know if you need more.";
+        $raw = "Sure! Here you go:\n```json\n{\"math\":{}}\n```\nLet me know.";
         expect($svc->sanitize($raw))->toBe('{"math":{}}');
     });
 
     test('returns original trimmed string when no JSON object found', function () {
         $svc = makeService();
-        $raw = '  no json here  ';
-        expect($svc->sanitize($raw))->toBe('no json here');
+        expect($svc->sanitize('  no json here  '))->toBe('no json here');
     });
 });
 
 // ---------------------------------------------------------------------------
-// 6.2 parse()
+// parse() — expects flat "Subject" => "grade" format wrapped in "subjects"
 // ---------------------------------------------------------------------------
 
 describe('GradeExtractionService::parse()', function () {
-    test('accepts valid structure with all four keys', function () {
+    test('accepts valid flat structure with all four keys', function () {
         $svc = makeService();
-        $json = json_encode(validResult());
-        expect($svc->parse($json))->toBeArray()->toHaveKeys(['math', 'science', 'english', 'others']);
+        $payload = ['subjects' => validFlatResult()];
+        $result = $svc->parse(json_encode($payload));
+        expect($result)->toBeArray()->toHaveKeys(['math', 'science', 'english', 'others']);
     });
 
-    test('throws on missing required key', function () {
+    test('throws on missing subjects root key', function () {
         $svc = makeService();
-        $data = validResult();
+        expect(fn () => $svc->parse(json_encode(validFlatResult())))
+            ->toThrow(\RuntimeException::class, 'missing required "subjects" root key');
+    });
+
+    test('throws on missing required group key inside subjects', function () {
+        $svc = makeService();
+        $data = validFlatResult();
         unset($data['math']);
-        expect(fn () => $svc->parse(json_encode($data)))->toThrow(\RuntimeException::class, 'OpenRouter response missing required keys: math, science, english, others.');
+        expect(fn () => $svc->parse(json_encode(['subjects' => $data])))
+            ->toThrow(\RuntimeException::class, 'missing required keys');
     });
 
     test('throws on invalid JSON string', function () {
         $svc = makeService();
-        expect(fn () => $svc->parse('not json'))->toThrow(\RuntimeException::class, 'OpenRouter response is not valid JSON.');
+        expect(fn () => $svc->parse('not json'))
+            ->toThrow(\RuntimeException::class, 'not valid JSON');
     });
 
-    test('throws on empty JSON object (missing required keys)', function () {
+    test('throws on empty JSON object', function () {
         $svc = makeService();
-        expect(fn () => $svc->parse('{}'))->toThrow(\RuntimeException::class, 'OpenRouter response missing required keys: math, science, english, others.');
+        expect(fn () => $svc->parse('{}'))
+            ->toThrow(\RuntimeException::class);
     });
 
-    test('throws when subject entry is missing grade key', function () {
+    test('accepts empty groups', function () {
         $svc = makeService();
-        $data = validResult();
-        $data['math']['algebra'] = ['confidence' => 0.9]; // no grade
-        expect(fn () => $svc->parse(json_encode($data)))->toThrow(\RuntimeException::class, 'OpenRouter response has invalid subject entry structure.');
+        $payload = ['subjects' => ['math' => [], 'science' => [], 'english' => [], 'others' => []]];
+        expect($svc->parse(json_encode($payload)))->toBeArray();
     });
 
-    test('throws when subject entry is missing confidence key', function () {
+    test('accepts numeric grade values', function () {
         $svc = makeService();
-        $data = validResult();
-        $data['math']['algebra'] = ['grade' => 90]; // no confidence
-        expect(fn () => $svc->parse(json_encode($data)))->toThrow(\RuntimeException::class, 'OpenRouter response has invalid subject entry structure.');
+        $payload = ['subjects' => validFlatResult(['math' => ['General Mathematics' => 90]])];
+        expect($svc->parse(json_encode($payload)))->toBeArray();
     });
 
-    test('throws when grade is a non-numeric string', function () {
+    test('throws when grade value is a non-numeric string', function () {
         $svc = makeService();
-        $data = validResult();
-        $data['math']['algebra'] = ['grade' => 'A+', 'confidence' => 0.9];
-        expect(fn () => $svc->parse(json_encode($data)))->toThrow(\RuntimeException::class, 'OpenRouter response has invalid subject entry structure.');
-    });
-
-    test('accepts empty groups (no subjects in a group)', function () {
-        $svc = makeService();
-        $data = ['math' => [], 'science' => [], 'english' => [], 'others' => []];
-        expect($svc->parse(json_encode($data)))->toBeArray();
+        $payload = ['subjects' => validFlatResult(['math' => ['General Mathematics' => 'A+']])];
+        // parse() accepts any string/numeric value — range validation is done by validate()
+        $parsed = $svc->parse(json_encode($payload));
+        expect(fn () => $svc->validate($parsed))
+            ->toThrow(\RuntimeException::class);
     });
 });
 
 // ---------------------------------------------------------------------------
-// 6.3 validate()
+// validate() — flat format, grade in [0,100]
 // ---------------------------------------------------------------------------
 
 describe('GradeExtractionService::validate()', function () {
     test('accepts boundary grade value 0', function () {
         $svc = makeService();
-        $data = validResult(['math' => ['algebra' => ['grade' => 0, 'confidence' => 0.5]]]);
-        expect($svc->validate($data))->toBeArray();
+        expect($svc->validate(validFlatResult(['math' => ['subject' => '0']])))->toBeArray();
     });
 
     test('accepts boundary grade value 100', function () {
         $svc = makeService();
-        $data = validResult(['math' => ['algebra' => ['grade' => 100, 'confidence' => 0.5]]]);
-        expect($svc->validate($data))->toBeArray();
+        expect($svc->validate(validFlatResult(['math' => ['subject' => '100']])))->toBeArray();
     });
 
     test('rejects grade value -1', function () {
         $svc = makeService();
-        $data = validResult(['math' => ['algebra' => ['grade' => -1, 'confidence' => 0.5]]]);
-        expect(fn () => $svc->validate($data))->toThrow(\RuntimeException::class);
+        expect(fn () => $svc->validate(validFlatResult(['math' => ['subject' => '-1']])))
+            ->toThrow(\RuntimeException::class);
     });
 
     test('rejects grade value 101', function () {
         $svc = makeService();
-        $data = validResult(['math' => ['algebra' => ['grade' => 101, 'confidence' => 0.5]]]);
-        expect(fn () => $svc->validate($data))->toThrow(\RuntimeException::class);
-    });
-
-    test('accepts boundary confidence value 0.0', function () {
-        $svc = makeService();
-        $data = validResult(['math' => ['algebra' => ['grade' => 90, 'confidence' => 0.0]]]);
-        expect($svc->validate($data))->toBeArray();
-    });
-
-    test('accepts boundary confidence value 1.0', function () {
-        $svc = makeService();
-        $data = validResult(['math' => ['algebra' => ['grade' => 90, 'confidence' => 1.0]]]);
-        expect($svc->validate($data))->toBeArray();
-    });
-
-    test('rejects confidence value -0.01', function () {
-        $svc = makeService();
-        $data = validResult(['math' => ['algebra' => ['grade' => 90, 'confidence' => -0.01]]]);
-        expect(fn () => $svc->validate($data))->toThrow(\RuntimeException::class);
-    });
-
-    test('rejects confidence value 1.01', function () {
-        $svc = makeService();
-        $data = validResult(['math' => ['algebra' => ['grade' => 90, 'confidence' => 1.01]]]);
-        expect(fn () => $svc->validate($data))->toThrow(\RuntimeException::class);
+        expect(fn () => $svc->validate(validFlatResult(['math' => ['subject' => '101']])))
+            ->toThrow(\RuntimeException::class);
     });
 
     test('returns the data array unchanged when valid', function () {
         $svc = makeService();
-        $data = validResult();
+        $data = validFlatResult();
         expect($svc->validate($data))->toBe($data);
     });
 });
 
 // ---------------------------------------------------------------------------
-// 6.4 normalizeKeys()
+// normalizeKeys() — flat format
 // ---------------------------------------------------------------------------
 
 describe('GradeExtractionService::normalizeKeys()', function () {
     test('lowercases uppercase subject keys', function () {
         $svc = makeService();
-        $data = validResult(['math' => ['ALGEBRA' => ['grade' => 90, 'confidence' => 0.9]]]);
+        $data = validFlatResult(['math' => ['GENERAL MATHEMATICS' => '90']]);
         $result = $svc->normalizeKeys($data);
-        expect($result['math'])->toHaveKey('algebra');
-        expect($result['math'])->not->toHaveKey('ALGEBRA');
+        expect($result['subjects']['math'])->toHaveKey('general mathematics');
     });
 
     test('trims leading and trailing spaces from keys', function () {
         $svc = makeService();
-        $data = validResult(['math' => ['  algebra  ' => ['grade' => 90, 'confidence' => 0.9]]]);
+        $data = validFlatResult(['math' => ['  General Mathematics  ' => '90']]);
         $result = $svc->normalizeKeys($data);
-        expect($result['math'])->toHaveKey('algebra');
+        expect($result['subjects']['math'])->toHaveKey('general mathematics');
     });
 
-    test('handles mixed case with spaces', function () {
+    test('preserves grade values after normalization', function () {
         $svc = makeService();
-        $data = validResult(['others' => ['  Araling Panlipunan  ' => ['grade' => 85, 'confidence' => 0.8]]]);
+        $data = validFlatResult(['math' => ['  ALGEBRA  ' => '90']]);
         $result = $svc->normalizeKeys($data);
-        expect($result['others'])->toHaveKey('araling panlipunan');
-    });
-
-    test('preserves unicode characters while lowercasing', function () {
-        $svc = makeService();
-        $data = validResult(['others' => ['Español' => ['grade' => 88, 'confidence' => 0.85]]]);
-        $result = $svc->normalizeKeys($data);
-        // strtolower on ASCII portion; key should be trimmed at minimum
-        expect(array_key_exists('español', $result['others']) || array_key_exists('Español', $result['others']))->toBeTrue();
-    });
-
-    test('preserves entry values after normalization', function () {
-        $svc = makeService();
-        $entry = ['grade' => 90, 'confidence' => 0.95];
-        $data = validResult(['math' => ['  ALGEBRA  ' => $entry]]);
-        $result = $svc->normalizeKeys($data);
-        expect($result['math']['algebra'])->toBe($entry);
+        expect($result['subjects']['math']['algebra'])->toBe(90.0);
     });
 
     test('handles empty groups without error', function () {
         $svc = makeService();
         $data = ['math' => [], 'science' => [], 'english' => [], 'others' => []];
-        expect($svc->normalizeKeys($data))->toBe($data);
+        $result = $svc->normalizeKeys($data);
+        expect($result['subjects'])->toBeArray();
+    });
+
+    test('wraps result in subjects key', function () {
+        $svc = makeService();
+        $result = $svc->normalizeKeys(validFlatResult());
+        expect($result)->toHaveKey('subjects');
+        expect($result['subjects'])->toHaveKeys(['math', 'science', 'english', 'others']);
     });
 });

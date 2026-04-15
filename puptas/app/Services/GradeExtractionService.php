@@ -4,13 +4,13 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\UserFile;
-use App\Services\OpenRouterClient;
+use App\Services\GeminiClient;
 use Illuminate\Support\Facades\Storage;
 
 class GradeExtractionService
 {
     public function __construct(
-        private OpenRouterClient $openRouterClient
+        private GeminiClient $geminiClient
     ) {}
 
     /**
@@ -31,9 +31,9 @@ class GradeExtractionService
 
         $prompt = $this->buildPrompt();
 
-        $raw = $this->openRouterClient->send($images, $prompt);
+        $raw = $this->geminiClient->send($images, $prompt);
 
-        \Log::info('OpenRouter raw response', ['raw' => $raw]);
+        \Log::info('Gemini raw response', ['raw' => $raw]);
 
         $sanitized = $this->sanitize($raw);
         $parsed    = $this->parse($sanitized);
@@ -260,11 +260,11 @@ PROMPT;
         $decoded = json_decode($json, true);
 
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
-            throw new \RuntimeException('OpenRouter response is not valid JSON.');
+            throw new \RuntimeException('Gemini response is not valid JSON.');
         }
 
         if (! array_key_exists('subjects', $decoded)) {
-             throw new \RuntimeException('OpenRouter response missing required "subjects" root key.');
+             throw new \RuntimeException('Gemini response missing required "subjects" root key.');
         }
 
         $subjects = $decoded['subjects'];
@@ -272,14 +272,14 @@ PROMPT;
 
         foreach ($requiredKeys as $key) {
             if (! array_key_exists($key, $subjects)) {
-                throw new \RuntimeException('OpenRouter response missing required keys: math, science, english, others.');
+                throw new \RuntimeException('Gemini response missing required keys: math, science, english, others.');
             }
         }
 
         foreach ($requiredKeys as $key) {
             foreach ($subjects[$key] as $entry) {
                 if (! is_string($entry) && ! is_numeric($entry)) {
-                    throw new \RuntimeException('OpenRouter response has invalid subject grade structure.');
+                    throw new \RuntimeException('Gemini response has invalid subject grade structure.');
                 }
             }
         }
@@ -296,6 +296,11 @@ PROMPT;
     {
         foreach (['math', 'science', 'english', 'others'] as $group) {
             foreach ($data[$group] as $subject => $grade) {
+                if (! is_numeric($grade)) {
+                    throw new \RuntimeException(
+                        "Non-numeric grade value for subject '{$subject}': {$grade}"
+                    );
+                }
                 $numericGrade = (float) $grade;
                 if ($numericGrade < 0 || $numericGrade > 100) {
                     throw new \RuntimeException(
