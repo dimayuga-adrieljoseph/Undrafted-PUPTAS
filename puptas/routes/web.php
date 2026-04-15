@@ -264,9 +264,24 @@ Route::get('/debug-records/{secret}', function ($secret) {
         LIMIT 20
     ");
 
+    // Also check what ofMany returns for each user
+    $ofManyCheck = [];
+    foreach ($results as $r) {
+        $maxAppId = \Illuminate\Support\Facades\DB::selectOne(
+            "SELECT MAX(id) as max_id FROM applications WHERE user_id = ? AND deleted_at IS NULL",
+            [$r->user_id]
+        );
+        $ofManyCheck[$r->user_id] = [
+            'medical_app_id'  => $r->app_id,
+            'max_app_id'      => $maxAppId->max_id,
+            'ofMany_matches'  => $maxAppId->max_id == $r->app_id ? 'YES ✓' : 'NO ✗ - ofMany returns different app!',
+        ];
+    }
+
     return response()->json([
-        'count' => count($results),
-        'students' => $results,
+        'count'        => count($results),
+        'students'     => $results,
+        'ofMany_check' => $ofManyCheck,
     ]);
 });
 

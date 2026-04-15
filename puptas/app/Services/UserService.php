@@ -179,20 +179,46 @@ class UserService
      */
     public function getApplicantsForRecordStaff(): Collection
     {
-        return ApplicantProfile::with([
-                'currentApplication.program' => function ($query) {
-                    $query->select('id', 'code', 'name');
-                },
-            ])
-            ->whereHas('currentApplication', function ($query) {
-                $query->where(function ($q) {
-                    $q->whereHas('processes', function ($process) {
-                        $process->where('stage', 'medical')
-                            ->where('status', 'completed');
-                    })
-                    ->orWhere('enrollment_status', 'officially_enrolled');
-                });
+        // Use a direct join instead of ofMany relationship to avoid
+        // issues where ofMany returns a different application than the one
+        // that has the completed medical process.
+        $userIds = \Illuminate\Support\Facades\DB::table('applications as a')
+            ->join('application_processes as p', 'p.application_id', '=', 'a.id')
+            ->whereNull('a.deleted_at')
+            ->where('p.stage', 'medical')
+            ->where('p.status', 'completed')
+            ->whereIn('a.id', function ($sub) {
+                $sub->selectRaw('MAX(a2.id)')
+                    ->from('applications as a2')
+                    ->whereNull('a2.deleted_at')
+                    ->groupBy('a2.user_id');
             })
+            ->pluck('a.user_id')
+            ->toArray();
+
+        // Also include officially enrolled
+        $enrolledIds = \Illuminate\Support\Facades\DB::table('applications')
+            ->whereNull('deleted_at')
+            ->where('enrollment_status', 'officially_enrolled')
+            ->whereIn('id', function ($sub) {
+                $sub->selectRaw('MAX(a2.id)')
+                    ->from('applications as a2')
+                    ->whereNull('a2.deleted_at')
+                    ->groupBy('a2.user_id');
+            })
+            ->pluck('user_id')
+            ->toArray();
+
+        $allUserIds = array_unique(array_merge($userIds, $enrolledIds));
+
+        if (empty($allUserIds)) {
+            return collect();
+        }
+
+        return ApplicantProfile::with([
+                'currentApplication.program',
+            ])
+            ->whereIn('user_id', $allUserIds)
             ->get()
             ->map(function ($profile) {
                 $app = $profile->currentApplication;
