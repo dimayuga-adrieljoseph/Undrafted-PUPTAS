@@ -179,11 +179,14 @@ class UserService
      */
     public function getApplicantsForRecordStaff(): Collection
     {
-        return ApplicantProfile::with(['currentApplication' => function ($query) {
-                $query->select('id', 'user_id', 'status', 'enrollment_status', 'program_id', 'created_at');
-            }, 'currentApplication.program' => function ($query) {
-                $query->select('id', 'code', 'name');
-            }])
+        return ApplicantProfile::with([
+                'currentApplication' => function ($query) {
+                    $query->select('id', 'user_id', 'status', 'enrollment_status', 'program_id', 'created_at', 'updated_at', 'submitted_at', 'second_choice_id', 'enrollment_position', 'deleted_at');
+                },
+                'currentApplication.program' => function ($query) {
+                    $query->select('id', 'code', 'name');
+                },
+            ])
             ->whereHas('currentApplication', function ($query) {
                 $query->where(function ($q) {
                     $q->whereHas('processes', function ($process) {
@@ -193,35 +196,34 @@ class UserService
                     ->orWhere('enrollment_status', 'officially_enrolled');
                 });
             })
-            ->select('user_id', 'firstname', 'lastname', 'email', 'contactnumber', 'student_number')
-            ->get()
+            ->get(['user_id', 'firstname', 'lastname', 'email', 'contactnumber', 'student_number'])
             ->map(function ($profile) {
                 $app = $profile->currentApplication;
                 $program = $app?->program;
 
                 return [
-                    'id'               => $profile->user_id,
-                    'firstname'        => $profile->firstname,
-                    'lastname'         => $profile->lastname,
-                    'course'           => null,
-                    'email'            => $profile->email,
-                    'username'         => $profile->email,
-                    'phone'            => $profile->contactnumber,
-                    'company'          => null,
-                    'status'           => $app?->status ?? null,
+                    'id'                => $profile->user_id,
+                    'firstname'         => $profile->firstname,
+                    'lastname'          => $profile->lastname,
+                    'course'            => null,
+                    'email'             => $profile->email,
+                    'username'          => $profile->email,
+                    'phone'             => $profile->contactnumber,
+                    'company'           => null,
+                    'status'            => $app?->status ?? null,
                     'enrollment_status' => $app?->enrollment_status ?? null,
-                    'program'          => $program ? [
+                    'program'           => $program ? [
                         'id'   => $program->id,
                         'code' => $program->code,
                         'name' => $program->name,
                     ] : null,
-                    'application'      => $app ? [
-                        'id'               => $app->id,
-                        'status'           => $app->status,
+                    'application'       => $app ? [
+                        'id'                => $app->id,
+                        'status'            => $app->status,
                         'enrollment_status' => $app->enrollment_status,
-                        'program_id'       => $app->program_id,
-                        'created_at'       => $app->created_at,
-                        'program'          => $program ? [
+                        'program_id'        => $app->program_id,
+                        'created_at'        => $app->created_at,
+                        'program'           => $program ? [
                             'id'   => $program->id,
                             'code' => $program->code,
                             'name' => $program->name,
