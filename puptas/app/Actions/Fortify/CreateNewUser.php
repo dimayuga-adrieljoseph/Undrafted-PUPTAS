@@ -78,7 +78,7 @@ class CreateNewUser implements CreatesNewUsers
                 'city' => $input['city'],
                 'province' => $input['province'],
                 'postal_code' => $input['postal_code'] ?? null,
-                'password' => null,
+                'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)),
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
             ]);
