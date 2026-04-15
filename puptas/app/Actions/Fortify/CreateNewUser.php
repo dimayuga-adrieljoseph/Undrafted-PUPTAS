@@ -23,10 +23,10 @@ class CreateNewUser implements CreatesNewUsers
     public function create(array $input)
     {
         $pendingReg = session('pending_registration');
-        // IDP Bypass: If no pending registration, proceed as local user.
-        // if (!$pendingReg) {
-        //     abort(403, 'You must login via the IDP first.');
-        // }
+        // Enforce IDP-first registration flow
+        if (!$pendingReg) {
+            abort(403, 'You must sign in via the IDP before completing registration.');
+        }
 
         $rules = [
             'email' => ['nullable', 'string', 'email', 'max:255'],
@@ -50,7 +50,7 @@ class CreateNewUser implements CreatesNewUsers
         return DB::transaction(function () use ($input, $pendingReg) {
             // First, create the local User record
             $user = User::create([
-                'idp_user_id' => $pendingReg['user_id'] ?? null,
+                'idp_user_id' => $pendingReg['user_id'] ?? (string) \Illuminate\Support\Str::uuid(), // fallback UUID if IDP didn't return one
                 'email' => $pendingReg['email'] ?? ($input['email'] ?? null),
                 'role_id' => 1,
                 'firstname' => $input['firstname'],
@@ -69,9 +69,8 @@ class CreateNewUser implements CreatesNewUsers
                 'privacy_consent_at' => now(),
             ]);
 
-            // Create applicant profile serving as the primary demographic record
             $profile = ApplicantProfile::create([
-                'user_id' => $user->id, // Map exactly to local User ID
+                'user_id' => $user->id,
                 'email' => $user->email,
                 'firstname' => $input['firstname'],
                 'middlename' => $input['middlename'] ?? null,
@@ -84,12 +83,13 @@ class CreateNewUser implements CreatesNewUsers
                 'city' => $input['city'],
                 'province' => $input['province'],
                 'postal_code' => $input['postal_code'] ?? null,
-                // Keep traditional school fields if they exist
                 'school' => $input['school'] ?? null,
                 'school_address' => $input['schoolAdd'] ?? null,
                 'date_graduated' => $input['dateGrad'] ?? null,
                 'strand' => $input['strand'] ?? null,
                 'track' => $input['track'] ?? null,
+                'privacy_consent' => true,
+                'privacy_consent_at' => now(),
             ]);
 
             // Attach graduate type via junction table

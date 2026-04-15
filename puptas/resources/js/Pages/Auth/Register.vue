@@ -1,10 +1,22 @@
 <script setup>
-import { ref } from "vue";
-import { Head, Link, useForm, usePage } from "@inertiajs/vue3";
+import { ref, onMounted } from "vue";
+import { Head, Link, useForm, usePage, router } from "@inertiajs/vue3";
 import { computed } from "vue";
 import TermsandConditionsModal from "@/Pages/Modal/TermsandConditionsModal.vue";
 
-const flashError = computed(() => usePage().props.flash?.error);
+const page = usePage();
+const flashError = computed(() => page.props.flash?.error);
+
+// IDP pending registration data - set when user came from IDP login
+const pendingReg = computed(() => page.props.pending_registration);
+const idpEmail = computed(() => pendingReg.value?.email ?? null);
+
+// Redirect away if there's no pending IDP session
+onMounted(() => {
+    if (!pendingReg.value) {
+        router.visit('/auth/idp/redirect');
+    }
+});
 
 // Modal control variables
 const showTermsModal = ref(false);
@@ -37,7 +49,6 @@ const handleSubmit = () => {
 // Handle modal acceptance
 const handleTermsAccept = () => {
     showTermsModal.value = false;
-    // Submit the form after accepting terms
     form.post(route("register"), {
         onFinish: () => form.reset(),
     });
@@ -46,7 +57,6 @@ const handleTermsAccept = () => {
 // Handle modal cancellation
 const handleTermsCancel = () => {
     showTermsModal.value = false;
-    // Don't submit, user cancelled
 };
 </script>
 
@@ -109,6 +119,22 @@ const handleTermsCancel = () => {
                     class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg text-red-700 dark:text-red-400 text-sm"
                 >
                     {{ flashError }}
+                </div>
+
+                <!-- IDP Account Notice -->
+                <div
+                    v-if="idpEmail"
+                    class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg flex items-start gap-3"
+                >
+                    <svg class="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <p class="text-sm font-semibold text-blue-800 dark:text-blue-300">Completing registration for your IDP account</p>
+                        <p class="text-sm text-blue-700 dark:text-blue-400 mt-0.5">
+                            Registering as <span class="font-mono font-semibold">{{ idpEmail }}</span>. Once done, you can log in with this account.
+                        </p>
+                    </div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Left Side - Form Sections -->
