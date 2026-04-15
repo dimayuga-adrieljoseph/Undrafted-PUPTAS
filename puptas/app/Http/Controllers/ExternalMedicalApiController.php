@@ -45,7 +45,9 @@ class ExternalMedicalApiController extends Controller
     private function getEligibleApplicantQuery()
     {
         return ApplicantProfile::with([
-            'user',
+            'user' => function ($query) {
+                $query->select('id', 'idp_user_id', 'student_number');
+            },
             'currentApplication' => function ($query) {
                 $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
             },
@@ -53,7 +55,7 @@ class ExternalMedicalApiController extends Controller
                 $query->select('id', 'code', 'name');
             },
             'currentApplication.processes' => function ($query) {
-                $query->whereIn('stage', ['evaluator', 'interviewer', 'medical'])
+                $query->where('stage', 'medical')
                     ->orderBy('created_at', 'desc')
                     ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
             },
@@ -111,27 +113,55 @@ class ExternalMedicalApiController extends Controller
 
         $application    = $profile->currentApplication;
         $processes      = $application?->processes ?? collect();
-        $medicalProcess = $processes->firstWhere('stage', 'medical');
+        $medicalProcess = $processes->first();
 
         $payload = [
+            // Basic Identity
             'id'                     => $profile->user_id,
             'idp_user_id'            => $profile->user?->idp_user_id,
-            'student_number'         => $profile->user?->student_number,
+            'student_number'         => $profile->student_number ?? $profile->user?->student_number,
+            
+            // Personal Information
+            'salutation'             => $profile->salutation,
             'firstname'              => $profile->firstname,
             'middlename'             => $profile->middlename,
+            'extension_name'         => $profile->extension_name,
             'lastname'               => $profile->lastname,
+            'birthday'               => $profile->birthday,
+            'sex'                    => $profile->sex,
+            
+            // Contact Information
             'email'                  => $profile->email,
-            'contact_number'         => $profile->contactnumber,
-            'program'                => $application?->program ? [
-                'id'   => $application->program->id,
-                'code' => $application->program->code,
-                'name' => $application->program->name,
-            ] : null,
+            'contactnumber'          => $profile->contactnumber,
+            
+            // Address Information
+            'street_address'         => $profile->street_address,
+            'barangay'               => $profile->barangay,
+            'city'                   => $profile->city,
+            'province'               => $profile->province,
+            'postal_code'            => $profile->postal_code,
+            
+            // Educational Background
+            'school'                 => $profile->school,
+            'date_graduated'         => $profile->date_graduated,
+            'strand'                 => $profile->strand,
+            'track'                  => $profile->track,
+            
+            // Current Application (simplified)
             'application'            => $application ? [
                 'id'         => $application->id,
                 'status'     => $application->status,
                 'created_at' => $application->created_at,
             ] : null,
+            
+            // Current Program
+            'program'                => $application?->program ? [
+                'id'   => $application->program->id,
+                'code' => $application->program->code,
+                'name' => $application->program->name,
+            ] : null,
+            
+            // Medical Process Status
             'medical_process_status' => $medicalProcess?->status ?? 'in_progress',
         ];
 
