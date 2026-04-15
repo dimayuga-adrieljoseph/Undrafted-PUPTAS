@@ -180,9 +180,6 @@ class UserService
     public function getApplicantsForRecordStaff(): Collection
     {
         return ApplicantProfile::with([
-                'currentApplication' => function ($query) {
-                    $query->select('id', 'user_id', 'status', 'enrollment_status', 'program_id', 'created_at', 'updated_at', 'submitted_at', 'second_choice_id', 'enrollment_position', 'deleted_at');
-                },
                 'currentApplication.program' => function ($query) {
                     $query->select('id', 'code', 'name');
                 },
@@ -196,7 +193,7 @@ class UserService
                     ->orWhere('enrollment_status', 'officially_enrolled');
                 });
             })
-            ->get(['user_id', 'firstname', 'lastname', 'email', 'contactnumber', 'student_number'])
+            ->get()
             ->map(function ($profile) {
                 $app = $profile->currentApplication;
                 $program = $app?->program;
