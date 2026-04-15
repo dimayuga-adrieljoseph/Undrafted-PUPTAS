@@ -185,24 +185,63 @@ class ExternalMedicalApiController extends Controller
     public function webhookResult(Request $request): JsonResponse
     {
         $request->validate([
-            'student_number' => 'required|string',
+            'student_number' => 'nullable|string',
+            'idp_user_id' => 'nullable|string',
             'medical_status' => 'required|string|in:cleared,failed',
         ]);
 
+        // Ensure at least one identifier is provided
+        if (!$request->filled('student_number') && !$request->filled('idp_user_id')) {
+            return response()->json([
+                'message' => 'Either student_number or idp_user_id must be provided'
+            ], 422);
+        }
+
         $studentNumber = $request->input('student_number');
+        $idpUserId = $request->input('idp_user_id');
         $status = $request->input('medical_status');
+        
+        // Determine lookup identifier for logging
+        $lookupIdentifier = $studentNumber ?: $idpUserId;
 
-        $profile = $this->getEligibleApplicantQuery()
-            ->whereHas('user', function ($q) use ($studentNumber) {
-                $q->where('student_number', $studentNumber);
-            })->first();
-
-        if (!$profile) {
-            // Idempotency check: if medical is already completed, return success
-            $fallbackProfile = ApplicantProfile::with('currentApplication.processes')
+        // Try to find profile - prioritize student_number, fallback to idp_user_id
+        $profile = null;
+        
+        // First try: student_number (if provided and not empty)
+        if ($studentNumber) {
+            $profile = $this->getEligibleApplicantQuery()
                 ->whereHas('user', function ($q) use ($studentNumber) {
                     $q->where('student_number', $studentNumber);
                 })->first();
+        }
+        
+        // Second try: idp_user_id (if student_number failed or not provided)
+        if (!$profile && $idpUserId) {
+            $profile = $this->getEligibleApplicantQuery()
+                ->whereHas('user', function ($q) use ($idpUserId) {
+                    $q->where('idp_user_id', $idpUserId);
+                })->first();
+        }
+
+        if (!$profile) {
+            // Idempotency check: if medical is already completed, return success
+            $fallbackProfile = null;
+            
+            // Try fallback with student_number
+            if ($studentNumber) {
+                $fallbackProfile = ApplicantProfile::with('currentApplication.processes')
+                    ->whereHas('user', function ($q) use ($studentNumber) {
+                        $q->where('student_number', $studentNumber);
+                    })->first();
+            }
+            
+            // Try fallback with idp_user_id
+            if (!$fallbackProfile && $idpUserId) {
+                $fallbackProfile = ApplicantProfile::with('currentApplication.processes')
+                    ->whereHas('user', function ($q) use ($idpUserId) {
+                        $q->where('idp_user_id', $idpUserId);
+                    })->first();
+            }
 
             if ($fallbackProfile && $fallbackProfile->currentApplication) {
                 $latestMedical = $fallbackProfile->currentApplication->processes
@@ -217,7 +256,13 @@ class ExternalMedicalApiController extends Controller
             $this->auditLogService->logActivity(
                 'WEBHOOK_MISS',
                 'External Medical API',
-                sprintf('Webhook received for ineligible or unknown student: %s from IP %s.', $studentNumber, $request->ip() ?? 'unknown'),
+                sprintf(
+                    'Webhook received for ineligible or unknown student: %s (student_number: %s, idp_user_id: %s) from IP %s.',
+                    $lookupIdentifier,
+                    $studentNumber ?: 'not provided',
+                    $idpUserId ?: 'not provided',
+                    $request->ip() ?? 'unknown'
+                ),
                 null,
                 AuditLog::CATEGORY_ADMISSION_DATA
             );
@@ -256,7 +301,7 @@ class ExternalMedicalApiController extends Controller
         $this->auditLogService->logActivity(
             'UPDATE',
             'External Medical API',
-            sprintf('Medical webhook processed: student %s marked as %s from IP %s.', $studentNumber, $actionStr, $request->ip() ?? 'unknown'),
+            sprintf('Medical webhook processed: student %s marked as %s from IP %s.', $lookupIdentifier, $actionStr, $request->ip() ?? 'unknown'),
             null,
             AuditLog::CATEGORY_ADMISSION_DATA
         );
