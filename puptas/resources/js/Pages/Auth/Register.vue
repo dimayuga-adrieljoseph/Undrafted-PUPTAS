@@ -390,7 +390,6 @@ const handleTermsCancel = () => {
                                             type="text"
                                             required
                                             autocomplete="address-level3"
-                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Barangay"
                                         />
