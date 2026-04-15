@@ -63,6 +63,7 @@ trait ManagesApplicationFiles
         // Transform the response to map currentApplication to application for frontend compatibility
         $userData = [
             'id' => $user->id,
+            'student_number' => $user->applicantProfile?->student_number,
             'firstname' => $user->firstname,
             'lastname' => $user->lastname,
             'email' => $user->email,

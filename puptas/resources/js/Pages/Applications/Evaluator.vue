@@ -307,6 +307,9 @@
                     {{ selectedUser.firstname }}
                 </p>
                 <p class="text-gray-700 dark:text-gray-400">
+                    Student No: {{ selectedUser.student_number || 'N/A' }}
+                </p>
+                <p class="text-gray-700 dark:text-gray-400">
                     Email: {{ selectedUser.email }}
                 </p>
                 <!-- <p class="text-gray-700 dark:text-gray-400">

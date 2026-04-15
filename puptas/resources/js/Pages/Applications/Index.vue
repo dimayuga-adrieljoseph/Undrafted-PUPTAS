@@ -574,6 +574,7 @@ const clearFilters = () => {
                         <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
                             {{ selectedUser.lastname ? `${selectedUser.lastname}, ${selectedUser.firstname}` : (selectedUser.email || '—') }}
                         </h4>
+                        <p class="text-sm text-gray-700 dark:text-gray-300 mb-0.5">Student No: {{ selectedUser.student_number || 'N/A' }}</p>
                         <p class="text-gray-600 dark:text-gray-400">{{ selectedUser.email }}</p>
                     </div>
                 </div>
