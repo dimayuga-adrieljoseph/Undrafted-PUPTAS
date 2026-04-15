@@ -136,12 +136,12 @@
                                 <div
                                     class="w-12 h-12 mx-auto mb-3 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-bold text-lg dark:bg-gray-900 dark:text-gray-900"
                                 >
-                                    {{ program.code.charAt(0) }}
+                                    {{ program.code ? program.code.charAt(0) : '?' }}
                                 </div>
                                 <p
                                     class="font-semibold text-gray-900 dark:text-white text-sm mb-1"
                                 >
-                                    {{ program.code }}
+                                    {{ program.code || 'N/A' }}
                                 </p>
                                 <p class="text-2xl font-bold text-[#9E122C] dark:text-white">
                                     {{ program.applications_count || 0 }}
