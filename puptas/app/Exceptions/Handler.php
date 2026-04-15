@@ -36,6 +36,26 @@ class Handler extends ExceptionHandler
     {
         $this->logStructured($e, $request);
 
+        // For Inertia requests, return a proper Inertia error response instead of
+        // a raw HTML page (which causes the white popup modal in the browser).
+        // Must be checked BEFORE wantsJson() since Inertia also sends Accept: application/json.
+        if ($request->header('X-Inertia')) {
+            if ($e instanceof ValidationException) {
+                // Let Fortify/Inertia handle validation errors natively (field-level errors)
+                return parent::render($request, $e);
+            }
+
+            if ($e instanceof AuthenticationException) {
+                return redirect()->route('login');
+            }
+
+            if ($e instanceof AuthorizationException || $e instanceof AccessDeniedHttpException) {
+                return back()->with('error', $e->getMessage() ?: 'You do not have permission to perform this action.');
+            }
+
+            return back()->with('error', 'Something went wrong. Please try again later.');
+        }
+
         // If the request expects JSON (APIs, Axios, etc.), return standardized JSON errors.
         if ($request->wantsJson()) {
             if ($e instanceof ValidationException) {
@@ -76,18 +96,6 @@ class Handler extends ExceptionHandler
                 'message'   => 'Something went wrong. Please try again later.',
                 'errorCode' => 'INTERNAL_ERROR',
             ], 500, ['Content-Type' => 'application/json']);
-        }
-
-        // For Inertia requests, return a proper Inertia error response instead of
-        // a raw HTML page (which causes the white popup modal in the browser).
-        if ($request->header('X-Inertia')) {
-            $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
-
-            if ($e instanceof AuthenticationException) {
-                return redirect()->route('login');
-            }
-
-            return back()->with('error', 'Something went wrong. Please try again later.');
         }
 
         // If it's a standard web request, let Laravel handle it normally 

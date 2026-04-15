@@ -48,10 +48,24 @@ class CreateNewUser implements CreatesNewUsers
         Validator::make($input, $rules)->validate();
 
         return DB::transaction(function () use ($input, $pendingReg) {
+            $email = strtolower(trim($pendingReg['email'] ?? ''));
+
+            if (!$email) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'email' => 'No IDP email found in session. Please sign in via IDP again.',
+                ]);
+            }
+
+            if (User::where('email', $email)->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'email' => 'An account with this email already exists.',
+                ]);
+            }
+
             // First, create the local User record
             $user = User::create([
-                'idp_user_id' => $pendingReg['user_id'] ?? (string) \Illuminate\Support\Str::uuid(), // fallback UUID if IDP didn't return one
-                'email' => $pendingReg['email'] ?? ($input['email'] ?? null),
+                'idp_user_id' => $pendingReg['user_id'] ?? (string) \Illuminate\Support\Str::uuid(),
+                'email' => $email,
                 'role_id' => 1,
                 'firstname' => $input['firstname'],
                 'lastname' => $input['lastname'],
@@ -71,7 +85,7 @@ class CreateNewUser implements CreatesNewUsers
 
             $profile = ApplicantProfile::create([
                 'user_id' => $user->id,
-                'email' => $user->email,
+                'email' => $email,
                 'firstname' => $input['firstname'],
                 'middlename' => $input['middlename'] ?? null,
                 'lastname' => $input['lastname'],
