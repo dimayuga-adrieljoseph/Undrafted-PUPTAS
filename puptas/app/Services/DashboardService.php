@@ -264,7 +264,10 @@ class DashboardService
     {
         return [
             'allUsers' => $this->userService->getApplicantsForRecordStaff(),
-            'programs' => Program::withCount('applications')->get(),
+            'programs' => Program::withCount('applications')
+                ->select('id', 'code', 'name', 'slots')
+                ->get()
+                ->makeHidden(['strand_names']),
             'summary' => $this->applicationService->getApplicationSummary(),
         ];
     }

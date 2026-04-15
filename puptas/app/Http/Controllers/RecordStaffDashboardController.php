@@ -116,7 +116,10 @@ class RecordStaffDashboardController extends Controller
      */
     public function getPrograms()
     {
-        $programs = Program::where('slots', '>', 0)->get();
+        $programs = Program::where('slots', '>', 0)
+            ->select('id', 'code', 'name', 'slots')
+            ->get()
+            ->makeHidden(['strand_names']); // Prevent loading strands relationship
 
         return response()->json([
             'programs' => $programs
