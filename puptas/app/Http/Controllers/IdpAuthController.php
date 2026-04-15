@@ -362,10 +362,9 @@ class IdpAuthController extends Controller
             }
         }
 
-        // Redirect directly to the IDP's login page without OAuth parameters.
-        // This solves the infinite redirect loop (PUPTAS Logout -> PUPTAS '/' -> IDP OAuth -> auto-login back to PUPTAS)
-        // caused by removing the local PUPTAS landing page.
-        $idpLoginUrl = rtrim($idpConfig['base_url'], '/') . ($idpConfig['authorize_path'] ?? '/login');
-        return redirect()->away($idpLoginUrl)->with('status', 'Logged out successfully');
+        // Use Inertia::location() to force a full-page client-side redirect
+        // This is necessary because the logout is triggered via Inertia POST request
+        // Regular redirects don't work properly with Inertia's XHR-based navigation
+        return \Inertia\Inertia::location('/logged-out');
     }
 }
