@@ -122,7 +122,6 @@
                         {{ user.lastname }}
                         <span v-if="user.extension_name">{{ user.extension_name }}</span>
                       </p>
-                      <p class="text-xs text-gray-400">#{{ user.id }}</p>
                     </div>
                   </div>
                 </td>
