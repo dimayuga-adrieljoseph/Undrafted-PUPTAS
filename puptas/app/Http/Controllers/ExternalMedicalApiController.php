@@ -188,12 +188,42 @@ class ExternalMedicalApiController extends Controller
      */
     public function showByIdpUserId(Request $request, string $idpUserId): JsonResponse
     {
-        $profile = $this->getEligibleApplicantQuery()
-            ->whereHas('user', function ($q) use ($idpUserId) {
-                $q->where('idp_user_id', $idpUserId);
-            })->first();
-        
-        return $this->formatResponse($profile, "IDP User ID: $idpUserId", $request);
+        // Log the API call FIRST, before any potential errors
+        $this->auditLogService->logActivity(
+            'READ',
+            'External Medical API',
+            sprintf(
+                'API call to retrieve applicant by IDP User ID: %s from IP %s.',
+                $idpUserId,
+                $request->ip() ?? 'unknown'
+            ),
+            null,
+            AuditLog::CATEGORY_SYSTEM_OPERATION
+        );
+
+        try {
+            $profile = $this->getEligibleApplicantQuery()
+                ->whereHas('user', function ($q) use ($idpUserId) {
+                    $q->where('idp_user_id', $idpUserId);
+                })->first();
+            
+            return $this->formatResponse($profile, "IDP User ID: $idpUserId", $request);
+        } catch (\Throwable $e) {
+            // Log the error but still throw it
+            $this->auditLogService->logActivity(
+                'READ_ERROR',
+                'External Medical API',
+                sprintf(
+                    'API call failed for IDP User ID: %s from IP %s. Error: %s',
+                    $idpUserId,
+                    $request->ip() ?? 'unknown',
+                    $e->getMessage()
+                ),
+                null,
+                AuditLog::CATEGORY_SYSTEM_OPERATION
+            );
+            throw $e;
+        }
     }
 
     /**
@@ -201,12 +231,42 @@ class ExternalMedicalApiController extends Controller
      */
     public function showByStudentNumber(Request $request, string $studentNumber): JsonResponse
     {
-        $profile = $this->getEligibleApplicantQuery()
-            ->whereHas('user', function ($q) use ($studentNumber) {
-                $q->where('student_number', $studentNumber);
-            })->first();
-        
-        return $this->formatResponse($profile, "Student Number: $studentNumber", $request);
+        // Log the API call FIRST, before any potential errors
+        $this->auditLogService->logActivity(
+            'READ',
+            'External Medical API',
+            sprintf(
+                'API call to retrieve applicant by Student Number: %s from IP %s.',
+                $studentNumber,
+                $request->ip() ?? 'unknown'
+            ),
+            null,
+            AuditLog::CATEGORY_SYSTEM_OPERATION
+        );
+
+        try {
+            $profile = $this->getEligibleApplicantQuery()
+                ->whereHas('user', function ($q) use ($studentNumber) {
+                    $q->where('student_number', $studentNumber);
+                })->first();
+            
+            return $this->formatResponse($profile, "Student Number: $studentNumber", $request);
+        } catch (\Throwable $e) {
+            // Log the error but still throw it
+            $this->auditLogService->logActivity(
+                'READ_ERROR',
+                'External Medical API',
+                sprintf(
+                    'API call failed for Student Number: %s from IP %s. Error: %s',
+                    $studentNumber,
+                    $request->ip() ?? 'unknown',
+                    $e->getMessage()
+                ),
+                null,
+                AuditLog::CATEGORY_SYSTEM_OPERATION
+            );
+            throw $e;
+        }
     }
 
     /**
