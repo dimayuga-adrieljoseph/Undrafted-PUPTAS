@@ -91,9 +91,9 @@ class RecordStaffDashboardController extends Controller
         // Ensure user has records staff role
         $this->ensureRole($this->getRoleId());
 
-        // Return all applicants filtered by records stage (including completed)
+        // Return applicants who have completed medical OR are officially enrolled
         return response()->json(
-            $this->userService->getAllApplicantsByStage('records')
+            $this->userService->getApplicantsForRecordStaff()
         );
     }
 
