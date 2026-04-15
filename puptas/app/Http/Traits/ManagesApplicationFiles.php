@@ -25,7 +25,7 @@ trait ManagesApplicationFiles
 
         $user = User::with([
             'currentApplication.program',
-            'currentApplication.processes.performedBy:user_id,name',
+            'currentApplication.processes.performedBy:user_id,firstname,lastname',
             'files',
             'grades',
             'applicantProfile.graduateTypes',
