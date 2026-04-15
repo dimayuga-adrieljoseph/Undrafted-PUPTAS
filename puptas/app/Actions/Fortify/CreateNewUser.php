@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\ApplicantProfile;
+use App\Models\TestPasser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -89,9 +90,14 @@ class CreateNewUser implements CreatesNewUsers
                 'privacy_consent_at' => now(),
             ]);
 
+            // Check if user is a test passer to assign student number from reference number
+            $testPasser = TestPasser::where('email', $email)->first();
+            $studentNumber = $testPasser ? $testPasser->reference_number : null;
+
             $profile = ApplicantProfile::create([
                 'user_id' => $user->id,
                 'email' => $email,
+                'student_number' => $studentNumber,
                 'firstname' => $input['firstname'],
                 'middlename' => $input['middlename'] ?? null,
                 'lastname' => $input['lastname'],
@@ -111,6 +117,14 @@ class CreateNewUser implements CreatesNewUsers
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
             ]);
+
+            // Link TestPasser record to the user and update status
+            if ($testPasser) {
+                $testPasser->update([
+                    'user_id' => $user->id,
+                    'status' => 'registered'
+                ]);
+            }
 
             // Attach graduate type via junction table
             if (!empty($input['schoolyear'])) {

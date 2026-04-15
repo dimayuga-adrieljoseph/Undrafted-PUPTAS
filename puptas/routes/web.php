@@ -40,16 +40,16 @@ Route::post('/debug-medical/assign-student-number/{idpUserId}/{secret}', functio
             return response()->json(['error' => 'User not found'], 404);
         }
         
-        if ($user->student_number) {
+        if ($user->applicantProfile?->student_number) {
             return response()->json([
                 'status' => 'already_has_number',
-                'student_number' => $user->student_number
+                'student_number' => $user->applicantProfile->student_number
             ]);
         }
         
         // Generate student number (format: YYYY-MED-XXXX)
         $year = date('Y');
-        $lastNumber = \App\Models\User::where('student_number', 'LIKE', "$year-MED-%")
+        $lastNumber = \App\Models\ApplicantProfile::where('student_number', 'LIKE', "$year-MED-%")
             ->orderBy('student_number', 'desc')
             ->value('student_number');
         
@@ -61,7 +61,7 @@ Route::post('/debug-medical/assign-student-number/{idpUserId}/{secret}', functio
         }
         
         $studentNumber = "$year-MED-$newNum";
-        $user->update(['student_number' => $studentNumber]);
+        $user->applicantProfile->update(['student_number' => $studentNumber]);
         
         return response()->json([
             'status' => 'success',
