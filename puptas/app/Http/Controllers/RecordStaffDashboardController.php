@@ -294,10 +294,11 @@ class RecordStaffDashboardController extends Controller
             );
 
             // Automatically set to officially enrolled if records are completed 
-            // and application was accepted
-            if ($application->status === 'accepted') {
+            // and application was cleared for enrollment or accepted
+            if (in_array($application->status, ['cleared_for_enrollment', 'accepted'])) {
                 $application->update([
-                    'enrollment_status' => 'officially_enrolled'
+                    'status'            => 'accepted',
+                    'enrollment_status' => 'officially_enrolled',
                 ]);
             }
 
@@ -439,7 +440,8 @@ class RecordStaffDashboardController extends Controller
         DB::beginTransaction();
         try {
             $application->update([
-                'enrollment_status' => 'officially_enrolled'
+                'status'            => 'accepted',
+                'enrollment_status' => 'officially_enrolled',
             ]);
 
             ApplicationProcess::updateOrCreate(
@@ -489,7 +491,8 @@ class RecordStaffDashboardController extends Controller
         DB::beginTransaction();
         try {
             $application->update([
-                'enrollment_status' => 'temporary'
+                'status'            => 'cleared_for_enrollment',
+                'enrollment_status' => 'temporary',
             ]);
 
             // Update records process
