@@ -814,8 +814,8 @@ const showSnackbar = (msg, duration = 3000) => {
 
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
-    if (s === "accepted")
-        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
     if (s === "pending")
         return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
     if (s === "returned")

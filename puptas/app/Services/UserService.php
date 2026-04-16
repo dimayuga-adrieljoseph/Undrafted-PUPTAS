@@ -59,7 +59,7 @@ class UserService
                 ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
         }])
             ->whereHas('applications', function ($query) use ($stage) {
-                $query->whereNotIn('status', ['accepted'])
+                $query->whereNotIn('status', ['accepted', 'cleared_for_enrollment'])
                     ->whereHas('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
                             ->whereIn('status', ['in_progress', 'returned']);
