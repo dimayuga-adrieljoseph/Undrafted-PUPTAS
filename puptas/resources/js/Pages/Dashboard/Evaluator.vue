@@ -92,11 +92,11 @@ const summaryItems = computed(() => [
         color: 'green'
     },
     { 
-        label: "Pending", 
+        label: "Submitted", 
         value: props.summary?.pending ?? 0, 
         icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
         percentage: props.summary?.total > 0 ? Math.round((props.summary.pending / props.summary.total) * 100) : 0,
-        color: 'yellow'
+        color: 'blue'
     },
     { 
         label: "Returned", 
@@ -170,11 +170,11 @@ const chartDataset = computed(() => ({
         { 
             label: "Returned", 
             data: props.chartData.returned || [], 
-            borderColor: "#F59E0B",
-            backgroundColor: "rgba(245, 158, 11, 0.1)",
+            borderColor: "#EF4444",
+            backgroundColor: "rgba(239, 68, 68, 0.1)",
             fill: true,
             tension: 0.4,
-            pointBackgroundColor: "#F59E0B",
+            pointBackgroundColor: "#EF4444",
             pointBorderColor: "#ffffff",
             pointBorderWidth: 2,
             pointRadius: 4,
@@ -200,7 +200,7 @@ const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
     if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "submitted" || s === "pending") return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
     if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
 };
@@ -440,7 +440,7 @@ const submitPass = async () => {
                             <span class="text-sm text-gray-600 dark:text-gray-400">Accepted</span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-[#F59E0B]"></div>
+                            <div class="w-3 h-3 rounded-full bg-[#EF4444]"></div>
                             <span class="text-sm text-gray-600 dark:text-gray-400">Returned</span>
                         </div>
                     </div>
