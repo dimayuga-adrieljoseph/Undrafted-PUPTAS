@@ -59,7 +59,7 @@ class UserService
                 ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
         }])
             ->whereHas('applications', function ($query) use ($stage) {
-                $query->whereNotIn('status', ['accepted'])
+                $query->whereNotIn('status', ['accepted', 'cleared_for_enrollment'])
                     ->whereHas('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
                             ->whereIn('status', ['in_progress', 'returned']);
@@ -179,59 +179,78 @@ class UserService
      */
     public function getApplicantsForRecordStaff(): Collection
     {
-        return ApplicantProfile::with(['currentApplication' => function ($query) {
-                $query->select('id', 'user_id', 'status', 'enrollment_status', 'program_id', 'created_at');
-            }, 'currentApplication.program' => function ($query) {
-                $query->select('id', 'code', 'name');
-            }])
-            ->whereHas('currentApplication', function ($query) {
-                $query->where(function ($q) {
-                    // Get applications that have completed medical stage
-                    $q->whereHas('processes', function ($process) {
-                        $process->where('stage', 'medical')
-                            ->where('status', 'completed');
-                    })
-                        // OR applications that are officially enrolled
-                        ->orWhere('enrollment_status', 'officially_enrolled');
-                });
-            })
-            ->get()
-            ->map(function ($profile) {
-                $app = $profile->currentApplication;
-                $program = $app?->program;
+        // Get user IDs with completed medical on their latest application
+        $userIds = \Illuminate\Support\Facades\DB::table('applications as a')
+            ->join('application_processes as p', 'p.application_id', '=', 'a.id')
+            ->whereNull('a.deleted_at')
+            ->where('p.stage', 'medical')
+            ->where('p.status', 'completed')
+            ->whereRaw('a.id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = a.user_id AND a2.deleted_at IS NULL)')
+            ->pluck('a.user_id')
+            ->map(fn($id) => (string) $id)
+            ->toArray();
 
-                return [
-                    'id'               => $profile->user_id,
-                    'firstname'        => $profile->firstname,
-                    'lastname'         => $profile->lastname,
-                    'course'           => $profile->course ?? null,
-                    'email'            => $profile->email,
-                    'username'         => $profile->email,
-                    'phone'            => $profile->contactnumber,
-                    'company'          => $profile->company ?? null,
-                    'status'           => $app?->status ?? null,
-                    'enrollment_status' => $app?->enrollment_status ?? null,
-                    // Top-level program property for Applications/Records.vue
-                    'program'          => $program ? [
+        // Also include officially enrolled
+        $enrolledIds = \Illuminate\Support\Facades\DB::table('applications')
+            ->whereNull('deleted_at')
+            ->where('enrollment_status', 'officially_enrolled')
+            ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
+            ->pluck('user_id')
+            ->map(fn($id) => (string) $id)
+            ->toArray();
+
+        $allUserIds = array_unique(array_merge($userIds, $enrolledIds));
+
+        if (empty($allUserIds)) {
+            return collect();
+        }
+
+        // Load only what we need - no deep eager loading
+        $profiles = ApplicantProfile::whereIn('user_id', $allUserIds)
+            ->get(['user_id', 'firstname', 'lastname', 'email', 'contactnumber', 'student_number']);
+
+        // Load applications separately
+        $applications = \App\Models\Application::whereIn('user_id', $allUserIds)
+            ->whereNull('deleted_at')
+            ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
+            ->with(['program:id,code,name'])
+            ->get()
+            ->keyBy('user_id');
+
+        return $profiles->map(function ($profile) use ($applications) {
+            $app = $applications->get($profile->user_id);
+            $program = $app?->program;
+
+            return [
+                'id'                => $profile->user_id,
+                'firstname'         => $profile->firstname,
+                'lastname'          => $profile->lastname,
+                'course'            => null,
+                'email'             => $profile->email,
+                'username'          => $profile->email,
+                'phone'             => $profile->contactnumber,
+                'company'           => null,
+                'status'            => $app?->status ?? null,
+                'enrollment_status' => $app?->enrollment_status ?? null,
+                'program'           => $program ? [
+                    'id'   => $program->id,
+                    'code' => $program->code,
+                    'name' => $program->name,
+                ] : null,
+                'application'       => $app ? [
+                    'id'                => $app->id,
+                    'status'            => $app->status,
+                    'enrollment_status' => $app->enrollment_status,
+                    'program_id'        => $app->program_id,
+                    'created_at'        => $app->created_at,
+                    'program'           => $program ? [
                         'id'   => $program->id,
                         'code' => $program->code,
                         'name' => $program->name,
                     ] : null,
-                    // Nested application object for Dashboard/Records.vue
-                    'application'      => $app ? [
-                        'id'               => $app->id,
-                        'status'           => $app->status,
-                        'enrollment_status' => $app->enrollment_status,
-                        'program_id'       => $app->program_id,
-                        'created_at'       => $app->created_at,
-                        'program'          => $program ? [
-                            'id'   => $program->id,
-                            'code' => $program->code,
-                            'name' => $program->name,
-                        ] : null,
-                    ] : null,
-                ];
-            });
+                ] : null,
+            ];
+        });
     }
 
     /**

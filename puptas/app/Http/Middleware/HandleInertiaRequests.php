@@ -44,7 +44,14 @@ class HandleInertiaRequests extends Middleware
                 'new_client' => $request->session()->get('new_client'),
             ],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? [
+                    'id'         => $request->user()->id,
+                    'firstname'  => $request->user()->firstname,
+                    'lastname'   => $request->user()->lastname,
+                    'email'      => $request->user()->email,
+                    'role_id'    => $request->user()->role_id,
+                    'idp_user_id' => $request->user()->idp_user_id,
+                ] : null,
             ],
             'pending_registration' => $request->session()->get('pending_registration'),
             'privacy_consent' => [

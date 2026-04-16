@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\OpenRouterApiException;
 use App\Services\GradeExtractionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,29 +32,27 @@ class GradeExtractionController extends Controller
 
             return response()->json(['redirect' => $this->getStrandGradeUrl($user)]);
         } catch (\InvalidArgumentException $e) {
-            Log::warning('Grade extraction: no valid image files', [
+            Log::warning('Grade extraction: no valid image files, falling back to manual input', [
                 'user_id'    => $user?->id,
                 'message'    => $e->getMessage(),
                 'file_count' => \App\Models\UserFile::where('user_id', $user?->id)->count(),
             ]);
-            return response()->json(['error' => $e->getMessage()], 422);
-        } catch (OpenRouterApiException $e) {
-            Log::error('OpenRouter API error during grade extraction', [
-                'user_id'       => $user?->id,
-                'message'       => $e->getMessage(),
-                'status_code'   => $e->getStatusCode(),
-                'response_body' => $e->getResponseBody(),
+            return response()->json([
+                'redirect'      => $this->getStrandGradeUrl($user),
+                'fallback'      => true,
+                'fallback_reason' => $e->getMessage(),
             ]);
-
-            return response()->json(['error' => 'OpenRouter API is currently unavailable. Please try again later.'], 503);
         } catch (\RuntimeException $e) {
-            Log::error('Grade extraction failed', [
+            Log::error('Grade extraction failed, falling back to manual input', [
                 'user_id' => $user?->id,
                 'message' => $e->getMessage(),
-                'payload' => $e->getMessage(),
             ]);
 
-            return response()->json(['error' => $e->getMessage()], 422);
+            return response()->json([
+                'redirect'        => $this->getStrandGradeUrl($user),
+                'fallback'        => true,
+                'fallback_reason' => $e->getMessage(),
+            ]);
         }
     }
 

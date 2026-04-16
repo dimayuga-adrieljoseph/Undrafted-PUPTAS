@@ -24,7 +24,7 @@ class ApplicationService
     {
         return [
             'total' => Application::count(),
-            'accepted' => Application::where('status', 'accepted')->count(),
+            'accepted' => Application::whereIn('status', ['accepted', 'cleared_for_enrollment'])->count(),
             'pending' => Application::where('status', 'submitted')->count(),
             'returned' => Application::where('status', 'returned')->count(),
         ];

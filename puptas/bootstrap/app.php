@@ -16,6 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // Trust proxies for HTTPS detection behind Railway's reverse proxy
         $middleware->trustProxies(at: '*');
+
+        // Replace Jetstream's ShareInertiaData with a lightweight version
+        // to prevent $user->toArray() from loading all relationships on every request
+        $middleware->replace(
+            \Laravel\Jetstream\Http\Middleware\ShareInertiaData::class,
+            \App\Http\Middleware\ShareInertiaData::class,
+        );
         
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,

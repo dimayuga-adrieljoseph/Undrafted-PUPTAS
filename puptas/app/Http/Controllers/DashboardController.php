@@ -29,7 +29,7 @@ class DashboardController extends Controller
 
         $summary = [
             'total' => Application::count(),
-            'accepted' => Application::where('status', 'accepted')->count(),
+            'accepted' => Application::whereIn('status', ['accepted', 'cleared_for_enrollment'])->count(),
             'pending' => Application::where('status', 'submitted')->count(),
             'returned' => Application::where('status', 'returned')->count(),
         ];
@@ -67,7 +67,7 @@ class DashboardController extends Controller
 
         foreach ($dates as $date) {
             $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
-            $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
+            $accepted[]  = $applications->where('date', $date)->whereIn('status', ['accepted', 'cleared_for_enrollment'])->sum('count');
             $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
         }
 

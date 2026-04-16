@@ -105,18 +105,6 @@ const chartDataset = computed(() => ({
   labels: props.chartData.labels || [],
   datasets: [
     { 
-      label: "Submitted", 
-      data: props.chartData.submitted || [], 
-      borderColor: "#2563EB",
-      backgroundColor: "rgba(37, 99, 235, 0.1)",
-      fill: true,
-      tension: 0.4,
-      pointBackgroundColor: "#2563EB",
-      pointBorderColor: "#ffffff",
-      pointBorderWidth: 2,
-      pointRadius: 4,
-    },
-    { 
       label: "Accepted", 
       data: props.chartData.accepted || [], 
       borderColor: "#10B981",
@@ -124,6 +112,18 @@ const chartDataset = computed(() => ({
       fill: true,
       tension: 0.4,
       pointBackgroundColor: "#10B981",
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 2,
+      pointRadius: 4,
+    },
+    { 
+      label: "Pending", 
+      data: props.chartData.submitted || [], 
+      borderColor: "#EAB308",
+      backgroundColor: "rgba(234, 179, 8, 0.1)",
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: "#EAB308",
       pointBorderColor: "#ffffff",
       pointBorderWidth: 2,
       pointRadius: 4,
@@ -146,8 +146,9 @@ const chartDataset = computed(() => ({
 const getStatusClass = (status) => {
   const s = (status || "").toLowerCase();
   if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-  if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
-  if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+  if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+  if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+  if (s === "returned") return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
   return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
 };
 
@@ -211,7 +212,7 @@ const closeUserCard = () => {
             index === 0 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300' :
             index === 1 ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300' :
             index === 2 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300' :
-            'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300'
+            'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300'
           ]">
             <component :is="item.icon" class="w-6 h-6" />
           </div>
@@ -224,7 +225,7 @@ const closeUserCard = () => {
                 index === 0 ? 'bg-blue-500' :
                 index === 1 ? 'bg-green-500' :
                 index === 2 ? 'bg-yellow-500' :
-                'bg-red-500'
+                'bg-amber-500'
               ]"
               :style="{ width: item.percentage + '%' }"
             ></div>
@@ -247,12 +248,12 @@ const closeUserCard = () => {
           
           <div class="flex flex-wrap gap-4 mb-6">
             <div class="flex items-center space-x-2">
-              <div class="w-3 h-3 rounded-full bg-[#2563EB]"></div>
-              <span class="text-sm text-gray-600 dark:text-gray-400">Submitted</span>
-            </div>
-            <div class="flex items-center space-x-2">
               <div class="w-3 h-3 rounded-full bg-[#10B981]"></div>
               <span class="text-sm text-gray-600 dark:text-gray-400">Accepted</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <div class="w-3 h-3 rounded-full bg-[#EAB308]"></div>
+              <span class="text-sm text-gray-600 dark:text-gray-400">Pending</span>
             </div>
             <div class="flex items-center space-x-2">
               <div class="w-3 h-3 rounded-full bg-[#F59E0B]"></div>

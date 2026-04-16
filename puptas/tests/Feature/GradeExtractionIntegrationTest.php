@@ -6,166 +6,152 @@ use App\Models\UserFile;
 use App\Services\OpenRouterClient;
 use App\Services\GradeExtractionService;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Minimal valid JPEG binary (SOI + APP0 marker + EOI).
- */
 function minimalJpeg(): string
 {
     return "\xFF\xD8\xFF\xE0" . str_repeat("\x00", 12) . "\xFF\xD9";
 }
 
-/**
- * Valid Gemini JSON fixture with all four required keys.
- */
-function geminiJsonFixture(): string
+// Flat format matching the actual prompt/response structure
+function flatGeminiFixture(): string
 {
     return json_encode([
-        'math'    => ['algebra'            => ['grade' => 90, 'confidence' => 0.95]],
-        'science' => ['biology'            => ['grade' => 88, 'confidence' => 0.92]],
-        'english' => ['english'            => ['grade' => 92, 'confidence' => 0.97]],
-        'others'  => ['araling panlipunan' => ['grade' => 85, 'confidence' => 0.80]],
+        'subjects' => [
+            'math'    => ['General Mathematics' => '90'],
+            'science' => ['Earth and Life Science' => '88'],
+            'english' => ['Oral Communication' => '92'],
+            'others'  => ['Filipino' => '85'],
+        ],
     ]);
 }
 
 // ---------------------------------------------------------------------------
-// 9.1 Full extraction flow with stubbed Gemini response fixture
+// 9.1 Full extraction flow
 // ---------------------------------------------------------------------------
 
 describe('9.1 Full extraction flow', function () {
     beforeEach(function () {
-        Storage::fake('local');
+        Storage::fake('public');
     });
 
-    test('returns 200 with math/science/english/others keys when Gemini is stubbed', function () {
+    test('returns redirect URL with subjects when OpenRouter is stubbed', function () {
         $user = User::factory()->create();
 
-        // Create a real JPEG file in fake storage
-        Storage::put('uploads/photo.jpg', minimalJpeg());
+        Storage::disk('public')->put('uploads/photo.jpg', minimalJpeg());
 
         UserFile::create([
-            'user_id'   => $user->id,
-            'file_path' => 'uploads/photo.jpg',
-            'type'      => 'image',
-            'status'    => 'uploaded',
+            'user_id'      => $user->id,
+            'file_path'    => 'uploads/photo.jpg',
+            'type'         => 'photo_2x2',
+            'original_name'=> 'photo.jpg',
+            'status'       => 'pending',
         ]);
 
-        // Stub OpenRouterClient so no real HTTP call is made
         $this->mock(OpenRouterClient::class)
             ->shouldReceive('send')
             ->once()
-            ->andReturn(geminiJsonFixture());
+            ->andReturn(flatGeminiFixture());
 
         $response = $this->actingAs($user)->postJson('/api/grades/extract');
 
-        $response->assertOk()
-            ->assertJsonStructure(['redirect']);
+        $response->assertOk()->assertJsonStructure(['redirect']);
     });
 });
 
 // ---------------------------------------------------------------------------
-// 9.2 Rate limiting — 11th request returns 429
+// 9.2 Rate limiting — 31st request returns 429 (limit is 30/min)
 // ---------------------------------------------------------------------------
 
 describe('9.2 Rate limiting', function () {
-    test('returns 429 on the 11th request from the same user', function () {
+    test('returns 429 after exceeding 30 requests per minute', function () {
         $user = User::factory()->create();
 
-        // Clear any existing rate-limiter hits for this user
-        RateLimiter::clear('grade-extraction:' . $user->id);
-
         $extractionResult = [
-            'math'    => ['algebra' => ['grade' => 90, 'confidence' => 0.95]],
-            'science' => ['biology' => ['grade' => 88, 'confidence' => 0.92]],
-            'english' => ['english' => ['grade' => 92, 'confidence' => 0.97]],
-            'others'  => ['araling panlipunan' => ['grade' => 85, 'confidence' => 0.80]],
+            'subjects' => [
+                'math'    => ['general mathematics' => 90.0],
+                'science' => ['earth and life science' => 88.0],
+                'english' => ['oral communication' => 92.0],
+                'others'  => ['filipino' => 85.0],
+            ],
         ];
 
         $this->mock(GradeExtractionService::class)
             ->shouldReceive('extract')
-            ->times(10)
+            ->times(30)
             ->andReturn($extractionResult);
 
-        // First 10 requests should succeed
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < 30; $i++) {
             $this->actingAs($user)->postJson('/api/grades/extract')->assertOk();
         }
 
-        // 11th request must be rate-limited
         $this->actingAs($user)->postJson('/api/grades/extract')->assertStatus(429);
     });
 });
 
 // ---------------------------------------------------------------------------
-// 9.3 File ownership — user A cannot access user B's files
+// 9.3 File ownership — user A cannot trigger extraction on user B's files
 // ---------------------------------------------------------------------------
 
 describe('9.3 File ownership', function () {
     beforeEach(function () {
-        Storage::fake('local');
-        // OpenRouterClient must be mocked so the container can resolve it even
-        // though send() is never called (service throws before reaching it).
+        Storage::fake('public');
         $this->mock(OpenRouterClient::class)->shouldReceive('send')->never();
     });
 
-    test('returns 422 when acting user has no files (only other user\'s files exist)', function () {
+    test('returns 422 when acting user has no files', function () {
         $userA = User::factory()->create();
         $userB = User::factory()->create();
 
-        // Create image file belonging to user B only
-        Storage::put('uploads/userB_photo.jpg', minimalJpeg());
-
+        Storage::disk('public')->put('uploads/userB.jpg', minimalJpeg());
         UserFile::create([
-            'user_id'   => $userB->id,
-            'file_path' => 'uploads/userB_photo.jpg',
-            'type'      => 'image',
-            'status'    => 'uploaded',
+            'user_id'      => $userB->id,
+            'file_path'    => 'uploads/userB.jpg',
+            'type'         => 'photo_2x2',
+            'original_name'=> 'userB.jpg',
+            'status'       => 'pending',
         ]);
 
-        $response = $this->actingAs($userA)->postJson('/api/grades/extract');
-
-        $response->assertStatus(422)
+        $this->actingAs($userA)->postJson('/api/grades/extract')
+            ->assertStatus(422)
             ->assertJsonFragment(['error' => 'No valid image files found for extraction.']);
     });
 });
 
 // ---------------------------------------------------------------------------
-// 9.4 Gemini unreachable — 503 response and error logged
+// 9.4 OpenRouter unreachable — returns 503
 // ---------------------------------------------------------------------------
 
 describe('9.4 OpenRouter unreachable', function () {
     beforeEach(function () {
-        Storage::fake('local');
+        Storage::fake('public');
     });
 
-    test('returns 503 and logs error when OpenRouterClient throws OpenRouterApiException', function () {
+    test('returns 503 and logs error when OpenRouterClient throws', function () {
         $user = User::factory()->create();
 
-        Storage::put('uploads/photo.jpg', minimalJpeg());
-
+        Storage::disk('public')->put('uploads/photo.jpg', minimalJpeg());
         UserFile::create([
-            'user_id'   => $user->id,
-            'file_path' => 'uploads/photo.jpg',
-            'type'      => 'image',
-            'status'    => 'uploaded',
+            'user_id'      => $user->id,
+            'file_path'    => 'uploads/photo.jpg',
+            'type'         => 'photo_2x2',
+            'original_name'=> 'photo.jpg',
+            'status'       => 'pending',
         ]);
 
         $this->mock(OpenRouterClient::class)
             ->shouldReceive('send')
             ->once()
-            ->andThrow(new OpenRouterApiException('Connection refused'));
+            ->andThrow(new OpenRouterApiException('Connection refused', 0, ''));
 
         Log::spy();
 
-        $response = $this->actingAs($user)->postJson('/api/grades/extract');
-
-        $response->assertStatus(503)
+        $this->actingAs($user)->postJson('/api/grades/extract')
+            ->assertStatus(503)
             ->assertJsonFragment(['error' => 'OpenRouter API is currently unavailable. Please try again later.']);
 
         Log::shouldHaveReceived('error')->once();
@@ -173,33 +159,81 @@ describe('9.4 OpenRouter unreachable', function () {
 });
 
 // ---------------------------------------------------------------------------
-// 9.5 No image files — user has only non-image files, assert 422
+// 9.5 No image files — only non-image files present
 // ---------------------------------------------------------------------------
 
 describe('9.5 No image files', function () {
     beforeEach(function () {
-        Storage::fake('local');
-        // OpenRouterClient must be mocked so the container can resolve it even
-        // though send() is never called (service throws before reaching it).
+        Storage::fake('public');
         $this->mock(OpenRouterClient::class)->shouldReceive('send')->never();
     });
 
-    test('returns 422 with "No valid image files" when user has only a PDF', function () {
+    test('returns 422 when user has only a PDF', function () {
         $user = User::factory()->create();
 
-        // Store a PDF — not an image
-        Storage::put('uploads/report.pdf', '%PDF-1.4 fake content');
-
+        Storage::disk('public')->put('uploads/report.pdf', '%PDF-1.4 fake content');
         UserFile::create([
-            'user_id'   => $user->id,
-            'file_path' => 'uploads/report.pdf',
-            'type'      => 'document',
-            'status'    => 'uploaded',
+            'user_id'      => $user->id,
+            'file_path'    => 'uploads/report.pdf',
+            'type'         => 'photo_2x2',
+            'original_name'=> 'report.pdf',
+            'status'       => 'pending',
         ]);
 
-        $response = $this->actingAs($user)->postJson('/api/grades/extract');
-
-        $response->assertStatus(422)
+        $this->actingAs($user)->postJson('/api/grades/extract')
+            ->assertStatus(422)
             ->assertJsonFragment(['error' => 'No valid image files found for extraction.']);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// 9.6 Malformed AI response — returns 422
+// ---------------------------------------------------------------------------
+
+describe('9.6 Malformed AI response', function () {
+    beforeEach(function () {
+        Storage::fake('public');
+    });
+
+    test('returns 422 when OpenRouter returns invalid JSON', function () {
+        $user = User::factory()->create();
+
+        Storage::disk('public')->put('uploads/photo.jpg', minimalJpeg());
+        UserFile::create([
+            'user_id'      => $user->id,
+            'file_path'    => 'uploads/photo.jpg',
+            'type'         => 'photo_2x2',
+            'original_name'=> 'photo.jpg',
+            'status'       => 'pending',
+        ]);
+
+        $this->mock(OpenRouterClient::class)
+            ->shouldReceive('send')
+            ->once()
+            ->andReturn('Sorry, I cannot process that image.');
+
+        $this->actingAs($user)->postJson('/api/grades/extract')
+            ->assertStatus(422);
+    });
+
+    test('returns 422 when OpenRouter returns JSON missing subjects key', function () {
+        $user = User::factory()->create();
+
+        Storage::disk('public')->put('uploads/photo.jpg', minimalJpeg());
+        UserFile::create([
+            'user_id'      => $user->id,
+            'file_path'    => 'uploads/photo.jpg',
+            'type'         => 'photo_2x2',
+            'original_name'=> 'photo.jpg',
+            'status'       => 'pending',
+        ]);
+
+        $this->mock(OpenRouterClient::class)
+            ->shouldReceive('send')
+            ->once()
+            ->andReturn(json_encode(['math' => [], 'science' => [], 'english' => [], 'others' => []]));
+
+        $this->actingAs($user)->postJson('/api/grades/extract')
+            ->assertStatus(422);
     });
 });

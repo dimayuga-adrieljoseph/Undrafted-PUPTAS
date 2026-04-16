@@ -91,9 +91,9 @@ class RecordStaffDashboardController extends Controller
         // Ensure user has records staff role
         $this->ensureRole($this->getRoleId());
 
-        // Return all applicants filtered by records stage (including completed)
+        // Return applicants who have completed medical OR are officially enrolled
         return response()->json(
-            $this->userService->getAllApplicantsByStage('records')
+            $this->userService->getApplicantsForRecordStaff()
         );
     }
 
@@ -104,11 +104,37 @@ class RecordStaffDashboardController extends Controller
     {
         $this->ensureRole($this->getRoleId());
 
-        $dashboardData = $this->dashboardService->getRecordsDashboardData();
+        $summary = $this->applicationService->getApplicationSummary();
+
+        // Count officially enrolled per program
+        $programs = Program::select('id', 'code', 'name', 'slots')
+            ->withCount([
+                'applications as enrolled_count' => function ($q) {
+                    $q->where('enrollment_status', 'officially_enrolled')
+                      ->whereNull('deleted_at');
+                },
+                'applications as medical_cleared_count' => function ($q) {
+                    $q->whereHas('processes', function ($p) {
+                        $p->where('stage', 'medical')->where('status', 'completed');
+                    })->whereNull('deleted_at');
+                },
+            ])
+            ->get()
+            ->map(function ($program) {
+                return [
+                    'id'                    => $program->id,
+                    'code'                  => $program->code,
+                    'name'                  => $program->name,
+                    'slots'                 => $program->slots,
+                    'applications_count'    => $program->enrolled_count,
+                    'enrolled_count'        => $program->enrolled_count,
+                    'medical_cleared_count' => $program->medical_cleared_count,
+                ];
+            });
 
         return response()->json([
-            'summary' => $dashboardData['summary'] ?? [],
-            'programs' => $dashboardData['programs'] ?? [],
+            'summary'  => $summary,
+            'programs' => $programs,
         ]);
     }
 
@@ -268,10 +294,11 @@ class RecordStaffDashboardController extends Controller
             );
 
             // Automatically set to officially enrolled if records are completed 
-            // and application was accepted
-            if ($application->status === 'accepted') {
+            // and application was cleared for enrollment or accepted
+            if (in_array($application->status, ['cleared_for_enrollment', 'accepted'])) {
                 $application->update([
-                    'enrollment_status' => 'officially_enrolled'
+                    'status'            => 'accepted',
+                    'enrollment_status' => 'officially_enrolled',
                 ]);
             }
 
@@ -413,10 +440,10 @@ class RecordStaffDashboardController extends Controller
         DB::beginTransaction();
         try {
             $application->update([
-                'enrollment_status' => 'officially_enrolled'
+                'status'            => 'accepted',
+                'enrollment_status' => 'officially_enrolled',
             ]);
 
-            // Create or update records process
             ApplicationProcess::updateOrCreate(
                 [
                     'application_id' => $application->id,
@@ -431,7 +458,15 @@ class RecordStaffDashboardController extends Controller
             );
 
             DB::commit();
-            return response()->json(['message' => 'Tagged as officially enrolled successfully']);
+
+            // Return updated application data so frontend can update without full reload
+            $application->refresh();
+
+            return response()->json([
+                'message'            => 'Tagged as officially enrolled successfully',
+                'enrollment_status'  => $application->enrollment_status,
+                'application_status' => $application->status,
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Failed to tag: ' . $e->getMessage()], 500);
@@ -456,7 +491,8 @@ class RecordStaffDashboardController extends Controller
         DB::beginTransaction();
         try {
             $application->update([
-                'enrollment_status' => 'temporary'
+                'status'            => 'cleared_for_enrollment',
+                'enrollment_status' => 'temporary',
             ]);
 
             // Update records process

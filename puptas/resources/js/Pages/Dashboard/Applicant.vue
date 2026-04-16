@@ -228,17 +228,22 @@ const triggerExtraction = async () => {
   extractionError.value = '';
   try {
     const response = await axios.post('/api/grades/extract');
-    // Backend stores extraction result in session and returns the grade page URL.
-    // Using router.visit (GET) so the grade controller reads the session and passes
-    // extractionResult as an Inertia prop — fixes the router.visit({ data }) bug.
     const redirectUrl = response.data?.redirect;
     const strand = props.user?.strand;
     const fallback = strandRoutes[strand] || '/grades/abm';
+
+    if (response.data?.fallback) {
+      // AI failed — navigate to grade page anyway for manual input
+      router.visit(redirectUrl || fallback);
+      return;
+    }
+
     router.visit(redirectUrl || fallback);
   } catch (error) {
-    extractionError.value = error.response?.data?.error
-      || error.response?.data?.message
-      || 'Grade extraction failed. Please try again.';
+    // Unexpected network/server error — still redirect to grade page for manual input
+    const strand = props.user?.strand;
+    const fallback = strandRoutes[strand] || '/grades/abm';
+    router.visit(fallback);
   } finally {
     extracting.value = false;
   }
@@ -509,16 +514,6 @@ onMounted(() => {
         <!-- Error Message -->
         <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <p class="text-red-600 dark:text-red-400 text-center">{{ error }}</p>
-        </div>
-
-        <!-- Task 4.5: Extraction Error Banner — dismissible -->
-        <div v-if="extractionError" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center justify-between gap-4">
-          <p class="text-red-600 dark:text-red-400">{{ extractionError }}</p>
-          <button
-            @click="extractionError = ''"
-            class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 flex-shrink-0 text-xl leading-none"
-            aria-label="Dismiss"
-          >&times;</button>
         </div>
 
         <!-- Modals -->

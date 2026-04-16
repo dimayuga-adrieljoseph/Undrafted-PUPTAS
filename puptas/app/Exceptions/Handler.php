@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
@@ -89,6 +90,14 @@ class Handler extends ExceptionHandler
                     'message'   => 'The requested resource was not found.',
                     'errorCode' => 'NOT_FOUND',
                 ], 404, ['Content-Type' => 'application/json']);
+            }
+
+            if ($e instanceof ThrottleRequestsException) {
+                return response()->json([
+                    'success'   => false,
+                    'message'   => 'Too many requests. Please slow down.',
+                    'errorCode' => 'RATE_LIMITED',
+                ], 429, ['Content-Type' => 'application/json']);
             }
 
             return response()->json([
