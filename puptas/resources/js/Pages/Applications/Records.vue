@@ -539,7 +539,7 @@ const refreshApplicants = async () => {
         return;
     }
 
-    const existsInQueue = users.value.some((u) => u.id === selectedUser.value.id);
+    const existsInQueue = users.value.some((u) => String(u.id) === String(selectedUser.value.id));
     if (!existsInQueue) {
         closeUserCard();
     }
