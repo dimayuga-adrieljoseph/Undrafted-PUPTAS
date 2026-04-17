@@ -39,7 +39,7 @@ class ExternalStudentApiController extends Controller
     public function showByStudentNumber(Request $request, string $studentNumber): JsonResponse
     {
         $application = Application::query()
-            ->with(['user', 'program'])
+            ->with(['user.grades', 'program'])
             ->where('enrollment_status', 'officially_enrolled')
             ->whereHas('user', function ($query) use ($studentNumber) {
                 $query->where('student_number', $studentNumber);
@@ -66,6 +66,13 @@ class ExternalStudentApiController extends Controller
 
         $user = $application->user;
         $program = $application->program;
+        $grades = $user->grades;
+
+        // Calculate GWA (General Weighted Average) from G12 grades
+        $g12_gwa = null;
+        if ($grades && $grades->g12_first_sem && $grades->g12_second_sem) {
+            $g12_gwa = round(($grades->g12_first_sem + $grades->g12_second_sem) / 2, 2);
+        }
 
         $payload = [
             'id' => $user->id,
@@ -83,6 +90,7 @@ class ExternalStudentApiController extends Controller
             'city' => $user->city,
             'province' => $user->province,
             'postal_code' => $user->postal_code,
+            'g12_gwa' => $g12_gwa,
             'application' => [
                 'application_id' => $application->id,
                 'status' => $application->status,
@@ -119,7 +127,7 @@ class ExternalStudentApiController extends Controller
     public function showByIdpUserId(Request $request, string $idpUserId): JsonResponse
     {
         $application = Application::query()
-            ->with(['user.user', 'program'])
+            ->with(['user.user', 'user.grades', 'program'])
             ->where('enrollment_status', 'officially_enrolled')
             ->whereHas('user.user', function ($query) use ($idpUserId) {
                 $query->where('idp_user_id', $idpUserId);
@@ -149,6 +157,13 @@ class ExternalStudentApiController extends Controller
 
         $user = $profile;
         $program = $application->program;
+        $grades = $user->grades;
+
+        // Calculate GWA (General Weighted Average) from G12 grades
+        $g12_gwa = null;
+        if ($grades && $grades->g12_first_sem && $grades->g12_second_sem) {
+            $g12_gwa = round(($grades->g12_first_sem + $grades->g12_second_sem) / 2, 2);
+        }
 
         $payload = [
             'id' => $account->id,
@@ -167,6 +182,7 @@ class ExternalStudentApiController extends Controller
             'city' => $user->city,
             'province' => $user->province,
             'postal_code' => $user->postal_code,
+            'g12_gwa' => $g12_gwa,
             'application' => [
                 'application_id' => $application->id,
                 'status' => $application->status,
