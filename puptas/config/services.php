@@ -69,4 +69,10 @@ return [
         'secret' => env('MEDICAL_WEBHOOK_SECRET'),
     ],
 
+    'docling' => [
+        'url'     => env('DOCLING_URL', ''),
+        'api_key' => env('DOCLING_API_KEY'),
+        'timeout' => (int) env('DOCLING_TIMEOUT', 60),
+    ],
+
 ];

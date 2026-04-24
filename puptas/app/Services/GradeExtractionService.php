@@ -5,24 +5,50 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\UserFile;
 use App\Services\GeminiClient;
+use App\Services\OpenRouterClient;
 use Illuminate\Support\Facades\Storage;
 
 class GradeExtractionService
 {
     public function __construct(
-        private GeminiClient $geminiClient
+        private GeminiClient $geminiClient,
+        private OpenRouterClient $openRouterClient,
     ) {}
 
     /**
      * Main entry point: extract grades for the given user.
      *
+     * Prefers Docling JSON (already OCR'd) fed into OpenRouter over raw-image Gemini.
+     * Falls back to Gemini + raw images if no Docling data is available.
+     *
      * @param  User  $user
      * @return array  Normalized ExtractionResult
      *
-     * @throws \InvalidArgumentException if no valid image files are found
+     * @throws \InvalidArgumentException if no valid source data is found
      */
     public function extract(User $user): array
     {
+        // --- Primary path: Docling JSON → OpenRouter ---
+        $doclingJson = $this->loadDoclingJson($user);
+
+        if (!empty($doclingJson)) {
+            \Log::info('GradeExtractionService: using Docling JSON path', ['user_id' => $user->id]);
+
+            $prompt = $this->buildDoclingPrompt($doclingJson);
+            $raw    = $this->openRouterClient->sendText($prompt);
+
+            \Log::info('OpenRouter raw response (docling)', ['raw' => $raw]);
+
+            $sanitized = $this->sanitize($raw);
+            $parsed    = $this->parse($sanitized);
+            $validated = $this->validate($parsed);
+
+            return $this->normalizeKeys($validated);
+        }
+
+        // --- Fallback path: raw images → Gemini ---
+        \Log::info('GradeExtractionService: no Docling JSON, falling back to Gemini', ['user_id' => $user->id]);
+
         $images = $this->loadImages($user);
 
         if (empty($images)) {
@@ -30,17 +56,118 @@ class GradeExtractionService
         }
 
         $prompt = $this->buildPrompt();
-
-        $raw = $this->geminiClient->send($images, $prompt);
+        $raw    = $this->geminiClient->send($images, $prompt);
 
         \Log::info('Gemini raw response', ['raw' => $raw]);
 
         $sanitized = $this->sanitize($raw);
         $parsed    = $this->parse($sanitized);
         $validated = $this->validate($parsed);
-        $result    = $this->normalizeKeys($validated);
 
-        return $result;
+        return $this->normalizeKeys($validated);
+    }
+
+    /**
+     * Collect all non-null docling_json blobs from the user's uploaded files.
+     * Returns a flat array of the JSON objects (one per file).
+     */
+    protected function loadDoclingJson(User $user): array
+    {
+        return UserFile::where('user_id', $user->id)
+            ->whereNotNull('docling_json')
+            ->get()
+            ->map(fn ($f) => $f->docling_json)
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Build a text-only prompt that embeds the Docling JSON output.
+     * No images needed — the OCR text is already extracted.
+     */
+    protected function buildDoclingPrompt(array $doclingJsonItems): string
+    {
+        $encoded = json_encode($doclingJsonItems, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+        return <<<PROMPT
+You are an AI system that extracts and organizes academic grades from structured document data.
+
+Below is the OCR-extracted content from one or more school documents, provided as a JSON array produced by Docling. Each item represents a separate document page/file.
+
+DOCUMENT DATA:
+{$encoded}
+
+Your task:
+1. Read and interpret all visible text from the document data above.
+2. Extract subject-grade pairs.
+3. Categorize and map the extracted grades into Math, Science, and English groups.
+4. Include any additional subjects that do not belong to these categories under "others".
+
+Predefined Subject Mapping:
+
+Math:
+* General Mathematics
+* Business Mathematics
+* Statistics and Probability
+* Pre-Calculus
+* Basic Calculus
+
+Science:
+* Earth and Life Science
+* Physical Science
+* Earth Science
+* General Chemistry 1
+
+English:
+* Oral Communication
+* 21st Century Literature
+* English for Academic Purposes
+* Reading and Writing
+
+Instructions:
+* Identify all subject-grade pairs visible in the document data.
+* Consider both Grade 11 and Grade 12 subjects and grades.
+* Normalize and clean subject names.
+* Use reasoning to match subjects to the closest predefined subject and category:
+  * "Math", "Gen Math" → General Mathematics (Math)
+  * "Stats" → Statistics and Probability (Math)
+  * "Pre-Cal", "Precalculus" → Pre-Calculus (Math)
+  * "Basic Cal" → Basic Calculus (Math)
+  * "Gen Chem", "Gen Chem 1" → General Chemistry 1 (Science)
+  * "Earth Sci" → Earth Science (Science)
+  * "EAPP" → English for Academic Purposes (English)
+  * "21st Lit", "21st Century Lit" → 21st Century Literature (English)
+* If a subject matches a predefined subject, use the exact predefined name.
+* If a subject does NOT match any predefined subject, place it under "others".
+* If multiple grades appear for the same subject, select the final or most relevant grade.
+* Ignore unrelated numbers (student IDs, dates, etc.).
+* Merge information across multiple documents.
+
+Output format:
+* Return ONLY a valid JSON object.
+* Do NOT include explanations, comments, markdown fences, or extra text.
+* Ensure the output is directly parseable by JSON.parse().
+
+The JSON structure must be:
+{
+  "subjects": {
+    "math": { "Subject Name": "Grade" },
+    "science": { "Subject Name": "Grade" },
+    "english": { "Subject Name": "Grade" },
+    "others": { "Subject Name": "Grade" }
+  }
+}
+
+Rules:
+* Only include Grade 11 and Grade 12 subjects.
+* Do not duplicate subjects.
+* Omit subjects with no detected grade.
+* If a category has no subjects, return it as an empty object {}.
+* Do not invent or guess missing data.
+* Values must be numeric strings (e.g. "95").
+* Ensure valid JSON (no trailing commas, no comments).
+PROMPT;
     }
 
     /**

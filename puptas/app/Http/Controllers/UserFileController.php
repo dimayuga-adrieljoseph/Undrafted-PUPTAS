@@ -77,6 +77,7 @@ class UserFileController extends Controller
                             'original_name' => $stored['original_name'],
                             'application_id' => $request->application_id ?? null,
                             'status' => 'pending',
+                            'docling_json' => $stored['docling_json'] ?? null,
                         ]
                     );
                 } catch (\InvalidArgumentException $e) {

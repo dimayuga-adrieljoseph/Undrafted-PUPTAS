@@ -212,6 +212,7 @@ class ConfirmationService
                 'file_path' => $compressed['path'],
                 'original_name' => $compressed['original_name'],
                 'status' => 'pending',
+                'docling_json' => $compressed['docling_json'] ?? null,
             ]
         );
 

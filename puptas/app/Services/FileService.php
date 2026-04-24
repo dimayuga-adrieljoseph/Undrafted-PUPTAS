@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Helpers\FileMapper;
 use App\Models\UserFile;
+use App\Services\DoclingService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -13,12 +14,13 @@ class FileService
     public function __construct(
         protected ImageCompressionService $compressionService,
         protected FileMapper $fileMapper,
+        protected DoclingService $doclingService,
     ) {}
 
     /**
      * Compress and store an uploaded file on the active disk.
      *
-     * @return array{path: string, original_name: string}
+     * @return array{path: string, original_name: string, docling_json: array|null}
      * @throws \RuntimeException If the storage put() fails
      */
     public function store(UploadedFile $file, string $directory): array
@@ -49,9 +51,13 @@ class FileService
             );
         }
 
+        // Send the WebP to Docling for structured JSON extraction (non-fatal).
+        $doclingJson = $this->doclingService->convertToJson($result['webp_data'], $result['filename']);
+
         return [
             'path'          => $path,
             'original_name' => $result['original_name'],
+            'docling_json'  => $doclingJson,
         ];
     }
 

@@ -25,6 +25,57 @@ class OpenRouterClient
     }
 
     /**
+     * Send a text-only prompt to OpenRouter and return the raw text response.
+     * Used when document content is already extracted (e.g. via Docling JSON).
+     *
+     * @throws OpenRouterApiException
+     */
+    public function sendText(string $prompt): string
+    {
+        $body = [
+            'model'      => $this->model,
+            'max_tokens' => 1500,
+            'messages'   => [
+                ['role' => 'user', 'content' => $prompt],
+            ],
+        ];
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Content-Type'  => 'application/json',
+                'HTTP-Referer'  => config('app.url'),
+                'X-Title'       => config('app.name'),
+            ])->post($this->endpoint, $body);
+        } catch (\Throwable $e) {
+            throw new OpenRouterApiException(
+                'OpenRouter API connection failed: ' . $e->getMessage(),
+                0,
+                ''
+            );
+        }
+
+        if ($response->failed()) {
+            $status       = $response->status();
+            $responseBody = $response->body();
+
+            if ($status === 401) {
+                throw new OpenRouterApiException('OpenRouter API authentication failed: invalid API key.', 401, $responseBody);
+            }
+            if ($status === 429) {
+                throw new OpenRouterApiException('OpenRouter API rate limit exceeded.', 429, $responseBody);
+            }
+            if ($status === 503) {
+                throw new OpenRouterApiException('OpenRouter model is currently unavailable.', 503, $responseBody);
+            }
+
+            throw new OpenRouterApiException('OpenRouter API returned HTTP ' . $status . ': ' . $responseBody, $status, $responseBody);
+        }
+
+        return $response->json('choices.0.message.content') ?? '';
+    }
+
+    /**
      * Send images and a prompt to OpenRouter and return the raw text response.
      *
      * @param  array<int, array{mime_type: string, data: string}>  $images  Base64-encoded image parts
