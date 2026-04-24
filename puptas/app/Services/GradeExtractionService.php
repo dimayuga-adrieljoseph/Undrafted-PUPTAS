@@ -83,17 +83,35 @@ class GradeExtractionService
     }
 
     /**
+     * Strip heavy fields from a Docling JSON item before embedding in the prompt.
+     * Removes base64 page images and other non-text fields to keep token count low.
+     */
+    protected function stripDoclingJson(array $item): array
+    {
+        // Keep only the texts array — that's all the LLM needs
+        return [
+            'name'   => $item['name']    ?? null,
+            'texts'  => array_map(fn ($t) => [
+                'label' => $t['label'] ?? null,
+                'text'  => $t['text']  ?? $t['orig'] ?? null,
+            ], $item['texts'] ?? []),
+            'tables' => $item['tables'] ?? [],
+        ];
+    }
+
+    /**
      * Build a text-only prompt that embeds the Docling JSON output.
      * No images needed — the OCR text is already extracted.
      */
     protected function buildDoclingPrompt(array $doclingJsonItems): string
     {
-        $encoded = json_encode($doclingJsonItems, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $stripped = array_map(fn ($item) => $this->stripDoclingJson($item), $doclingJsonItems);
+        $encoded  = json_encode($stripped, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
         return <<<PROMPT
 You are an AI system that extracts and organizes academic grades from structured document data.
 
-Below is the OCR-extracted content from one or more school documents, provided as a JSON array produced by Docling. Each item represents a separate document page/file.
+Below is the OCR-extracted content from one or more school documents, provided as a JSON array produced by Docling. Each item has a "texts" array where each entry has a "label" (e.g. "section_header", "text") and "text" (the extracted string). Tables, if any, are in "tables".
 
 DOCUMENT DATA:
 {$encoded}
