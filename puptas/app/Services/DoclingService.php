@@ -45,7 +45,7 @@ class DoclingService
         try {
             $request = Http::timeout($this->timeout)
                 ->attach('files', $webpData, $filename, ['Content-Type' => 'image/webp'])
-                ->when($this->apiKey, fn ($http) => $http->withHeader('Authorization', $this->apiKey));
+                ->when($this->apiKey, fn ($http) => $http->withHeader('Authorization', 'Bearer ' . $this->apiKey));
 
             $response = $request->post("{$this->baseUrl}/v1/convert/file", [
                 'to_formats'   => 'json',
