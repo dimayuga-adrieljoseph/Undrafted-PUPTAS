@@ -1,4 +1,3 @@
-@if (config('services.chatwoot.url') && config('services.chatwoot.token'))
 <style>
     /* Push Chatwoot bubble above the Sienna accessibility widget */
     .woot-widget-bubble,
@@ -14,30 +13,22 @@
         }
     }
 </style>
-<script>
-    window.chatwootSettings = {
-        hideMessageBubble: false,
-        position: 'right',
-        locale: '{{ str_replace('_', '-', app()->getLocale()) }}',
-        type: 'standard',
-        darkMode: 'auto',
-    };
 
-    (function (d, t) {
-        var BASE_URL = "{{ rtrim(config('services.chatwoot.url'), '/') }}";
+<script>
+    (function(d,t) {
+        var BASE_URL = "https://chatwoot-production-49b7.up.railway.app";
         var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
         g.src = BASE_URL + "/packs/js/sdk.js";
-        g.defer = true;
         g.async = true;
         s.parentNode.insertBefore(g, s);
-        g.onload = function () {
+        g.onload = function() {
             window.chatwootSDK.run({
-                websiteToken: '{{ config('services.chatwoot.token') }}',
-                baseUrl: BASE_URL,
+                websiteToken: 'AsD5tPpqEd2z5As2jh2nwwGD',
+                baseUrl: BASE_URL
             });
 
             @auth
-            window.addEventListener('chatwoot:ready', function () {
+            window.addEventListener('chatwoot:ready', function() {
                 window.$chatwoot.setUser('{{ auth()->id() }}', {
                     name: '{{ addslashes(auth()->user()->name) }}',
                     email: '{{ auth()->user()->email }}',
@@ -47,4 +38,3 @@
         };
     })(document, "script");
 </script>
-@endif
