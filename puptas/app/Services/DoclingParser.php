@@ -119,9 +119,11 @@ class DoclingParser
                 foreach ($aliases as $alias) {
                     foreach ($lines as $line) {
                         if (stripos($line, $alias) !== false) {
-                            // Look for a numeric value on the same line
-                            if (preg_match('/(\d+(?:\.\d+)?)/', $line, $numMatch)) {
-                                $grade = $this->validateGrade($numMatch[1]);
+                            // Look for the last numeric value on the line — that's the final grade.
+                            // (Earlier numbers may be 1st/2nd sem grades or student IDs.)
+                            if (preg_match_all('/(\d+(?:\.\d+)?)/', $line, $numMatches)) {
+                                $lastNum = end($numMatches[1]);
+                                $grade = $this->validateGrade($lastNum);
                                 if ($grade !== null) {
                                     $key = strtolower(trim($canonicalName));
                                     // Only set if not already found by primary regex
@@ -166,13 +168,18 @@ class DoclingParser
                 $resolved = $this->resolveSubject($cellText);
 
                 if ($resolved !== null) {
-                    // Look at the next cell in the same row for a grade
-                    if (isset($rowCells[$i + 1])) {
-                        $gradeText = $rowCells[$i + 1]['text'] ?? '';
-                        $grade = $this->validateGrade(trim($gradeText));
+                    // Collect all numeric values in the remaining cells of this row.
+                    // The final grade is typically the last numeric value (rightmost column).
+                    $lastGrade = null;
+                    for ($j = $i + 1; $j < count($rowCells); $j++) {
+                        $gradeText = trim($rowCells[$j]['text'] ?? '');
+                        $grade = $this->validateGrade($gradeText);
                         if ($grade !== null) {
-                            $result[$resolved['name']] = $grade;
+                            $lastGrade = $grade;
                         }
+                    }
+                    if ($lastGrade !== null) {
+                        $result[$resolved['name']] = $lastGrade;
                     }
                 }
             }
