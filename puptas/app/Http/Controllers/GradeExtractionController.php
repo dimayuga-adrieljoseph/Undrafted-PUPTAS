@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\GradeExtractionService;
+use App\Services\DoclingParser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class GradeExtractionController extends Controller
 {
     public function __construct(
-        private GradeExtractionService $gradeExtractionService
+        private DoclingParser $doclingParser
     ) {}
 
     /**
@@ -23,8 +23,20 @@ class GradeExtractionController extends Controller
     {
         $user = $request->user();
 
+        $hasDoclingFiles = \App\Models\UserFile::where('user_id', $user->id)
+            ->whereNotNull('docling_json')
+            ->exists();
+
+        if (!$hasDoclingFiles) {
+            \Log::warning('GradeExtractionController: No UserFile records with docling_json found for user ' . $user->id);
+            return response()->json([
+                'redirect' => $this->getStrandGradeUrl($user),
+                'fallback' => true,
+            ]);
+        }
+
         try {
-            $result = $this->gradeExtractionService->extract($user);
+            $result = $this->doclingParser->extract($user);
 
             // Store extraction result in session so the grade input page can
             // receive it as a proper Inertia prop on the next GET request.
