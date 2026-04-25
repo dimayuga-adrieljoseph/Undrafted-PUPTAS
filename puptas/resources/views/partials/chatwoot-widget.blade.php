@@ -1,4 +1,19 @@
 @if (config('services.chatwoot.url') && config('services.chatwoot.token'))
+<style>
+    /* Push Chatwoot bubble above the Sienna accessibility widget */
+    .woot-widget-bubble,
+    .woot--bubble-holder {
+        bottom: 90px !important;
+        z-index: 99999 !important;
+    }
+
+    @media (max-width: 480px) {
+        .woot-widget-bubble,
+        .woot--bubble-holder {
+            bottom: 100px !important;
+        }
+    }
+</style>
 <script>
     window.chatwootSettings = {
         hideMessageBubble: false,
