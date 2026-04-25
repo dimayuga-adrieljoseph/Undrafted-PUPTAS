@@ -24,5 +24,6 @@
     @inertia
 
     @include('partials.sienna-widget')
+    @include('partials.chatwoot-widget')
 </body>
 </html>

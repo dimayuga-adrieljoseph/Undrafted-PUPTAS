@@ -189,19 +189,35 @@ class DoclingParser
                 ($b['start_col_offset_idx'] ?? $b['col'] ?? 0)
             );
 
-            // Find the subject cell (first cell that resolves to a known subject)
+            // Find the subject cell (first cell that resolves to a known subject,
+            // or any non-numeric, non-empty first-column cell for "others")
             $resolved = null;
+            $subjectName = null;
             $subjectColIndex = null;
             foreach ($rowCells as $cell) {
                 $cellText = trim($cell['text'] ?? '');
+                if ($cellText === '') {
+                    continue;
+                }
                 $resolved = $this->resolveSubject($cellText);
                 if ($resolved !== null) {
+                    $subjectName = $resolved['name'];
+                    $subjectColIndex = $cell['start_col_offset_idx'] ?? $cell['col'] ?? null;
+                    break;
+                }
+                // Treat any non-numeric text in the first cell as a potential "others" subject
+                if (!is_numeric($cellText) && strlen($cellText) > 2) {
+                    // Skip known header/summary labels
+                    if (in_array(strtolower($cellText), self::SKIP_LABELS, true)) {
+                        break;
+                    }
+                    $subjectName = $this->normalizeKey($cellText);
                     $subjectColIndex = $cell['start_col_offset_idx'] ?? $cell['col'] ?? null;
                     break;
                 }
             }
 
-            if ($resolved === null) {
+            if ($subjectName === null) {
                 continue;
             }
 
@@ -236,12 +252,33 @@ class DoclingParser
             }
 
             if ($grade !== null) {
-                $result[$resolved['name']] = $grade;
+                $result[$subjectName] = $grade;
             }
         }
 
         return $result;
     }
+
+    /**
+     * Strings that look like subject names but are actually table section headers,
+     * summary rows, or other non-subject labels. These are skipped during scanning.
+     */
+    private const SKIP_LABELS = [
+        'core subjects',
+        'applied and specialized subjects',
+        'applied subjects',
+        'specialized subjects',
+        'general average',
+        'general average for the semester',
+        'subjects',
+        'remarks',
+        'quarterly',
+        'semester',
+        'semester final grade',
+        'final grade',
+        'descriptors',
+        'grading scale',
+    ];
 
     /**
      * Resolve a raw subject name string to a canonical category key and name.

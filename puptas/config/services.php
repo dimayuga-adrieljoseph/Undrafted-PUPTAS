@@ -75,4 +75,9 @@ return [
         'timeout' => (int) env('DOCLING_TIMEOUT', 60),
     ],
 
+    'chatwoot' => [
+        'url'   => env('CHATWOOT_URL'),
+        'token' => env('CHATWOOT_TOKEN'),
+    ],
+
 ];
