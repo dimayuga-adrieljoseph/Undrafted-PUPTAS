@@ -143,6 +143,8 @@ class DoclingParser
 
     /**
      * Scan a Docling table structure for subject-grade pairs.
+     * Detects the "Semester Final Grade" (or "Final Grade") column header
+     * and reads grades from that column only.
      * Returns [ subject_name => float_grade ] or empty array.
      */
     protected function scanTable(array $table): array
@@ -150,38 +152,91 @@ class DoclingParser
         $result = [];
         $cells  = $table['data']['table_cells'] ?? [];
 
-        // Group cells by row
+        // Group cells by row index
         $rows = [];
         foreach ($cells as $cell) {
             $row = $cell['start_row_offset_idx'] ?? $cell['row'] ?? null;
             if ($row === null) {
-                // Fallback: treat all cells as a single flat list
                 $rows[0][] = $cell;
             } else {
                 $rows[$row][] = $cell;
             }
         }
 
-        foreach ($rows as $rowCells) {
-            for ($i = 0; $i < count($rowCells); $i++) {
-                $cellText = $rowCells[$i]['text'] ?? '';
-                $resolved = $this->resolveSubject($cellText);
+        ksort($rows);
+        $rowList = array_values($rows);
 
+        // --- Step 1: detect the "Final Grade" column index from header rows ---
+        // We scan the first few rows looking for a cell whose text contains
+        // "final grade" (case-insensitive). That column index is authoritative.
+        $finalGradeColIndex = null;
+
+        foreach (array_slice($rowList, 0, 5) as $headerRow) {
+            foreach ($headerRow as $cell) {
+                $text = strtolower(trim($cell['text'] ?? ''));
+                if (str_contains($text, 'final grade') || $text === 'final') {
+                    $finalGradeColIndex = $cell['start_col_offset_idx'] ?? $cell['col'] ?? null;
+                    break 2;
+                }
+            }
+        }
+
+        // --- Step 2: scan data rows ---
+        foreach ($rowList as $rowCells) {
+            // Sort cells by column index so we can rely on order
+            usort($rowCells, fn($a, $b) =>
+                ($a['start_col_offset_idx'] ?? $a['col'] ?? 0) <=>
+                ($b['start_col_offset_idx'] ?? $b['col'] ?? 0)
+            );
+
+            // Find the subject cell (first cell that resolves to a known subject)
+            $resolved = null;
+            $subjectColIndex = null;
+            foreach ($rowCells as $cell) {
+                $cellText = trim($cell['text'] ?? '');
+                $resolved = $this->resolveSubject($cellText);
                 if ($resolved !== null) {
-                    // Collect all numeric values in the remaining cells of this row.
-                    // The final grade is typically the last numeric value (rightmost column).
-                    $lastGrade = null;
-                    for ($j = $i + 1; $j < count($rowCells); $j++) {
-                        $gradeText = trim($rowCells[$j]['text'] ?? '');
-                        $grade = $this->validateGrade($gradeText);
-                        if ($grade !== null) {
-                            $lastGrade = $grade;
-                        }
-                    }
-                    if ($lastGrade !== null) {
-                        $result[$resolved['name']] = $lastGrade;
+                    $subjectColIndex = $cell['start_col_offset_idx'] ?? $cell['col'] ?? null;
+                    break;
+                }
+            }
+
+            if ($resolved === null) {
+                continue;
+            }
+
+            $grade = null;
+
+            if ($finalGradeColIndex !== null) {
+                // Use the detected final grade column
+                foreach ($rowCells as $cell) {
+                    $colIdx = $cell['start_col_offset_idx'] ?? $cell['col'] ?? null;
+                    if ($colIdx === $finalGradeColIndex) {
+                        $grade = $this->validateGrade(trim($cell['text'] ?? ''));
+                        break;
                     }
                 }
+            }
+
+            // Fallback: if no header was found or the column had no valid grade,
+            // take the last numeric value in the row (excluding Remarks-like text).
+            if ($grade === null) {
+                foreach (array_reverse($rowCells) as $cell) {
+                    $colIdx = $cell['start_col_offset_idx'] ?? $cell['col'] ?? null;
+                    // Skip the subject cell itself
+                    if ($colIdx === $subjectColIndex) {
+                        break;
+                    }
+                    $candidate = $this->validateGrade(trim($cell['text'] ?? ''));
+                    if ($candidate !== null) {
+                        $grade = $candidate;
+                        break;
+                    }
+                }
+            }
+
+            if ($grade !== null) {
+                $result[$resolved['name']] = $grade;
             }
         }
 
