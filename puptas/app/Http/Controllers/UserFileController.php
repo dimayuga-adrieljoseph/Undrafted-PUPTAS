@@ -65,7 +65,7 @@ class UserFileController extends Controller
                 try {
                     $uploadedFile = $request->file($inputName);
 
-                    $stored = $this->fileService->store($uploadedFile, 'storage/public/uploads/files');
+                    $stored = $this->fileService->store($uploadedFile, 'uploads/files');
 
                     UserFile::updateOrCreate(
                         [
