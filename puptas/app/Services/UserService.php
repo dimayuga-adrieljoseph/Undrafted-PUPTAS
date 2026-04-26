@@ -54,8 +54,9 @@ class UserService
             $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
         }, 'currentApplication.program' => function ($query) {
             $query->select('id', 'code', 'name');
-        }, 'currentApplication.processes' => function ($query) {
-            $query->orderBy('created_at', 'desc')
+        }, 'currentApplication.processes' => function ($query) use ($stage) {
+            $query->where('stage', $stage)
+                ->orderBy('created_at', 'desc')
                 ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
         }])
             ->whereHas('applications', function ($query) use ($stage) {
@@ -122,8 +123,9 @@ class UserService
             $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
         }, 'currentApplication.program' => function ($query) {
             $query->select('id', 'code', 'name');
-        }, 'currentApplication.processes' => function ($query) {
-            $query->orderBy('created_at', 'desc')
+        }, 'currentApplication.processes' => function ($query) use ($stage) {
+            $query->where('stage', $stage)
+                ->orderBy('created_at', 'desc')
                 ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
         }])
             ->whereHas('currentApplication', function ($query) use ($stage) {
