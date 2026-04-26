@@ -31,11 +31,12 @@ class TestPassersImport implements ToModel, WithHeadingRow
 
     $email = $row['email'] ?? null;
     $referenceNumber = $row['reference_number'] ?? null;
+    $user = null;
 
     // If a user with this email already exists, automatically link them and assign student number
     if ($email) {
         $user = User::where('email', $email)->first();
-        if ($user && $user->applicantProfile) {
+        if ($user && $user->applicantProfile && $referenceNumber) {
             $user->applicantProfile->update(['student_number' => $referenceNumber]);
         }
     }
@@ -55,7 +56,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
             'reference_number' => $referenceNumber,
             'batch_number' => $this->batch,
             'school_year' => $this->schoolYear,
-            'user_id' => $user->id ?? null,
+            'user_id' => $user?->id,
             'status' => $user ? 'registered' : 'pending'
         ]
     );
