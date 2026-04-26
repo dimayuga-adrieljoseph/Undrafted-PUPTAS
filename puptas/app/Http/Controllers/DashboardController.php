@@ -114,7 +114,7 @@ class DashboardController extends Controller
         }
 
         return response()->json(
-            ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes'])
+            ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
                 ->whereHas('currentApplication')
                 ->get()
                 ->map(function ($applicant) {
@@ -129,7 +129,6 @@ class DashboardController extends Controller
                         'phone' => $applicant->contactnumber,
                         'company' => null,
                         'program' => $applicant->currentApplication->program ?? null,
-                        'processes' => $applicant->currentApplication->processes ?? [],
                     ];
                 })
         );
@@ -143,7 +142,7 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 
-        $applicant = ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes', 'grades', 'graduateTypes'])
+        $applicant = ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,reviewer_notes,created_at', 'grades', 'graduateTypes'])
             ->where('user_id', $id)
             ->firstOrFail();
 

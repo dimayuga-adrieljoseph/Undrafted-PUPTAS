@@ -171,7 +171,8 @@ class RecordStaffDashboardController extends Controller
         $applicants = ApplicantProfile::with([
             'currentApplication.program',
             'currentApplication.processes' => function ($q) {
-                $q->whereIn('stage', ['medical', 'records'])
+                $q->select('id', 'application_id', 'stage', 'status', 'action', 'created_at')
+                    ->whereIn('stage', ['medical', 'records'])
                     ->where('status', 'completed');
             }
         ])
@@ -208,7 +209,7 @@ class RecordStaffDashboardController extends Controller
     {
         $user = ApplicantProfile::with([
             'currentApplication.program',
-            'currentApplication.processes',
+            'currentApplication.processes:id,application_id,stage,status,action,reviewer_notes,created_at',
             'grades',
             'graduateTypes',
         ])->where('user_id', $id)->firstOrFail();

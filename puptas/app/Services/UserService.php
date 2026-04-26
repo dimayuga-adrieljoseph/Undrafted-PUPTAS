@@ -22,7 +22,7 @@ class UserService
      */
     public function getApplicantsWithApplications(): Collection
     {
-        return ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes'])
+        return ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
             ->whereHas('currentApplication')
             ->get()
             ->map(function ($profile) {
@@ -212,7 +212,7 @@ class UserService
         $applications = \App\Models\Application::whereIn('user_id', $allUserIds)
             ->whereNull('deleted_at')
             ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
-            ->with(['program:id,code,name', 'processes'])
+            ->with(['program:id,code,name', 'processes:id,application_id,stage,status,action,created_at'])
             ->get()
             ->keyBy('user_id');
 
