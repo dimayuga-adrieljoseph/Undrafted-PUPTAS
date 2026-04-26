@@ -80,13 +80,13 @@ it(
         for ($i = 0; $i < $ownCount; $i++) {
             $path = "uploads/userA_{$i}.jpg";
             Storage::disk('public')->put($path, minimalJpeg());
-            UserFile::create(['user_id' => $userA->id, 'file_path' => $path, 'type' => 'photo_2x2', 'original_name' => 'a.jpg', 'status' => 'pending']);
+            UserFile::create(['user_id' => $userA->id, 'file_path' => $path, 'type' => "photo_{$i}", 'original_name' => 'a.jpg', 'status' => 'pending']);
         }
 
         for ($i = 0; $i < $otherCount; $i++) {
             $path = "uploads/userB_{$i}.jpg";
             Storage::disk('public')->put($path, minimalJpeg());
-            UserFile::create(['user_id' => $userB->id, 'file_path' => $path, 'type' => 'photo_2x2', 'original_name' => 'b.jpg', 'status' => 'pending']);
+            UserFile::create(['user_id' => $userB->id, 'file_path' => $path, 'type' => "photo_{$i}", 'original_name' => 'b.jpg', 'status' => 'pending']);
         }
 
         $ref = new ReflectionMethod(GradeExtractionService::class, 'loadImages');
@@ -137,7 +137,7 @@ it(
 
             $path = "uploads/mime_{$idx}.{$ext}";
             Storage::disk('public')->put($path, $content);
-            UserFile::create(['user_id' => $user->id, 'file_path' => $path, 'type' => 'photo_2x2', 'original_name' => "f.{$ext}", 'status' => 'pending']);
+            UserFile::create(['user_id' => $user->id, 'file_path' => $path, 'type' => "photo_{$idx}", 'original_name' => "f.{$ext}", 'status' => 'pending']);
 
             if (in_array($label, $allowedLabels, true)) {
                 $expectedCount++;
