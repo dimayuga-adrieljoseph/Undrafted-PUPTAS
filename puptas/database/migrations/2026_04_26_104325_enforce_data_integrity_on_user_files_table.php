@@ -12,26 +12,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // 1. Resolve existing duplicate (user_id, type) rows
-        // Keep the record with the maximum ID for each duplicate group, delete the rest.
+        // --- 1. DDL: Create Backup Table (Auto-commits in MySQL) ---
+        if (!Schema::hasTable('user_files_duplicates_backup')) {
+            Schema::create('user_files_duplicates_backup', function (Blueprint $table) {
+                $table->id('backup_id');
+                $table->unsignedBigInteger('original_id');
+                $table->string('user_id', 36)->nullable();
+                $table->string('type')->nullable();
+                $table->string('file_path')->nullable();
+                $table->timestamp('backed_up_at')->useCurrent();
+            });
+        }
+
         $driver = DB::connection()->getDriverName();
 
-        if ($driver === 'mysql' || $driver === 'mariadb') {
-            DB::statement('
-                DELETE uf FROM user_files uf
-                JOIN (
-                    SELECT user_id, type, MAX(id) as keep_id
-                    FROM user_files
-                    GROUP BY user_id, type
-                    HAVING COUNT(*) > 1
-                ) d ON uf.user_id = d.user_id AND uf.type = d.type AND uf.id <> d.keep_id
-            ');
-        } else {
-            // For SQLite (testing) or PostgreSQL, use standard IN with subquery
-            DB::statement('
-                DELETE FROM user_files
-                WHERE id IN (
-                    SELECT uf.id
+        // --- 2. DML: Data Cleanup (Wrapped in Transaction) ---
+        DB::transaction(function () use ($driver) {
+            // Backup duplicates before hard-deleting
+            if ($driver === 'mysql' || $driver === 'mariadb') {
+                DB::statement('
+                    INSERT INTO user_files_duplicates_backup (original_id, user_id, type, file_path)
+                    SELECT uf.id, uf.user_id, uf.type, uf.file_path
                     FROM user_files uf
                     JOIN (
                         SELECT user_id, type, MAX(id) as keep_id
@@ -39,22 +40,62 @@ return new class extends Migration
                         GROUP BY user_id, type
                         HAVING COUNT(*) > 1
                     ) d ON uf.user_id = d.user_id AND uf.type = d.type AND uf.id <> d.keep_id
-                )
-            ');
-        }
+                ');
 
-        // 2. Identify and clean up orphaned records (invalid application_id)
-        // Set application_id to null if the referenced application does not exist.
-        DB::table('user_files')
-            ->whereNotNull('application_id')
-            ->whereNotIn('application_id', function ($query) {
-                $query->select('id')->from('applications');
-            })
-            ->update(['application_id' => null]);
+                DB::statement('
+                    DELETE uf FROM user_files uf
+                    JOIN (
+                        SELECT user_id, type, MAX(id) as keep_id
+                        FROM user_files
+                        GROUP BY user_id, type
+                        HAVING COUNT(*) > 1
+                    ) d ON uf.user_id = d.user_id AND uf.type = d.type AND uf.id <> d.keep_id
+                ');
+            } else {
+                // SQLite / Postgres fallback
+                DB::statement('
+                    INSERT INTO user_files_duplicates_backup (original_id, user_id, type, file_path)
+                    SELECT uf.id, uf.user_id, uf.type, uf.file_path
+                    FROM user_files uf
+                    WHERE uf.id IN (
+                        SELECT uf2.id
+                        FROM user_files uf2
+                        JOIN (
+                            SELECT user_id, type, MAX(id) as keep_id
+                            FROM user_files
+                            GROUP BY user_id, type
+                            HAVING COUNT(*) > 1
+                        ) d ON uf2.user_id = d.user_id AND uf2.type = d.type AND uf2.id <> d.keep_id
+                    )
+                ');
 
-        // 3. Apply schema changes
+                DB::statement('
+                    DELETE FROM user_files
+                    WHERE id IN (
+                        SELECT uf.id
+                        FROM user_files uf
+                        JOIN (
+                            SELECT user_id, type, MAX(id) as keep_id
+                            FROM user_files
+                            GROUP BY user_id, type
+                            HAVING COUNT(*) > 1
+                        ) d ON uf.user_id = d.user_id AND uf.type = d.type AND uf.id <> d.keep_id
+                    )
+                ');
+            }
+
+            // Identify and clean up orphaned records (invalid application_id)
+            DB::table('user_files')
+                ->whereNotNull('application_id')
+                ->whereNotIn('application_id', function ($query) {
+                    $query->select('id')->from('applications');
+                })
+                ->update(['application_id' => null]);
+        });
+
+        // --- 3. DDL: Apply Schema Constraints (Auto-commits in MySQL) ---
         Schema::table('user_files', function (Blueprint $table) {
-            // Drop existing index on ['user_id', 'type'] if it exists to avoid duplication before making it UNIQUE
+            // Drop existing index on ['user_id', 'type'] if it exists
             $indexes = Schema::getIndexes('user_files');
             foreach ($indexes as $index) {
                 if ($index['columns'] === ['user_id', 'type'] && !$index['unique']) {
@@ -73,7 +114,7 @@ return new class extends Migration
                 }
             }
 
-            // Add the new FOREIGN KEY constraint with ON DELETE SET NULL
+            // Add the new FOREIGN KEY constraint
             $table->foreign('application_id')
                   ->references('id')
                   ->on('applications')
