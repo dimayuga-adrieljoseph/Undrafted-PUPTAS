@@ -54,28 +54,29 @@ return new class extends Migration
         // the next generated number never collides with data already in the DB.
         // Pattern expected:  YYYY-PREFIX-NNNN
         if (Schema::hasColumn('applicant_profiles', 'student_number')) {
-            $rows = DB::table('applicant_profiles')
-                ->whereNotNull('student_number')
-                ->select('student_number')
-                ->get();
-
             $maxByKey = [];
-            foreach ($rows as $row) {
-                $parts = explode('-', $row->student_number);
-                // We expect at least 3 segments: year, prefix, number
-                if (count($parts) >= 3) {
-                    $year   = $parts[0];
-                    // Everything in the middle is the prefix (handles multi-segment prefixes)
-                    $num    = array_pop($parts);
-                    array_shift($parts);
-                    $prefix = implode('-', $parts);
 
-                    if (is_numeric($year) && is_numeric($num)) {
-                        $key = "{$year}-{$prefix}";
-                        $maxByKey[$key] = max($maxByKey[$key] ?? 0, (int) $num);
+            DB::table('applicant_profiles')
+                ->whereNotNull('student_number')
+                ->select('id', 'student_number')
+                ->chunkById(1000, function ($rows) use (&$maxByKey) {
+                    foreach ($rows as $row) {
+                        $parts = explode('-', $row->student_number);
+                        // We expect at least 3 segments: year, prefix, number
+                        if (count($parts) >= 3) {
+                            $year   = $parts[0];
+                            // Everything in the middle is the prefix (handles multi-segment prefixes)
+                            $num    = array_pop($parts);
+                            array_shift($parts);
+                            $prefix = implode('-', $parts);
+
+                            if (is_numeric($year) && is_numeric($num)) {
+                                $key = "{$year}-{$prefix}";
+                                $maxByKey[$key] = max($maxByKey[$key] ?? 0, (int) $num);
+                            }
+                        }
                     }
-                }
-            }
+                });
 
             foreach ($maxByKey as $key => $lastNum) {
                 [$year, $prefix] = explode('-', $key, 2);
