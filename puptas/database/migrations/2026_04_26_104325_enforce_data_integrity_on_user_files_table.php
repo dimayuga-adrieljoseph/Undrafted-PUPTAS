@@ -14,23 +14,33 @@ return new class extends Migration
     {
         // 1. Resolve existing duplicate (user_id, type) rows
         // Keep the record with the maximum ID for each duplicate group, delete the rest.
-        $duplicates = DB::table('user_files')
-            ->select('user_id', 'type')
-            ->groupBy('user_id', 'type')
-            ->havingRaw('COUNT(*) > 1')
-            ->get();
+        $driver = DB::connection()->getDriverName();
 
-        foreach ($duplicates as $duplicate) {
-            $latestId = DB::table('user_files')
-                ->where('user_id', $duplicate->user_id)
-                ->where('type', $duplicate->type)
-                ->max('id');
-
-            DB::table('user_files')
-                ->where('user_id', $duplicate->user_id)
-                ->where('type', $duplicate->type)
-                ->where('id', '<>', $latestId)
-                ->delete();
+        if ($driver === 'mysql' || $driver === 'mariadb') {
+            DB::statement('
+                DELETE uf FROM user_files uf
+                JOIN (
+                    SELECT user_id, type, MAX(id) as keep_id
+                    FROM user_files
+                    GROUP BY user_id, type
+                    HAVING COUNT(*) > 1
+                ) d ON uf.user_id = d.user_id AND uf.type = d.type AND uf.id <> d.keep_id
+            ');
+        } else {
+            // For SQLite (testing) or PostgreSQL, use standard IN with subquery
+            DB::statement('
+                DELETE FROM user_files
+                WHERE id IN (
+                    SELECT uf.id
+                    FROM user_files uf
+                    JOIN (
+                        SELECT user_id, type, MAX(id) as keep_id
+                        FROM user_files
+                        GROUP BY user_id, type
+                        HAVING COUNT(*) > 1
+                    ) d ON uf.user_id = d.user_id AND uf.type = d.type AND uf.id <> d.keep_id
+                )
+            ');
         }
 
         // 2. Identify and clean up orphaned records (invalid application_id)
