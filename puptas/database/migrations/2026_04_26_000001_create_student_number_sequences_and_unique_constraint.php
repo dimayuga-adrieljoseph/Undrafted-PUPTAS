@@ -15,6 +15,27 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // ── 0. Pre-flight check for duplicates ────────────────────────────────
+        // Detect and log any existing duplicates BEFORE creating tables.
+        // If we throw after DDL statements, the DB is left in a partially migrated state.
+        if (Schema::hasColumn('applicant_profiles', 'student_number')) {
+            $duplicates = DB::table('applicant_profiles')
+                ->select('student_number', DB::raw('COUNT(*) as cnt'))
+                ->whereNotNull('student_number')
+                ->groupBy('student_number')
+                ->having('cnt', '>', 1)
+                ->get();
+
+            if ($duplicates->isNotEmpty()) {
+                $list = $duplicates->map(fn ($d) => "{$d->student_number} (×{$d->cnt})")->implode(', ');
+                throw new \RuntimeException(
+                    "Cannot add UNIQUE constraint on applicant_profiles.student_number: " .
+                    "duplicate values detected: {$list}. " .
+                    "Run php artisan db:seed --class=DeduplicateStudentNumbersSeeder to resolve them first."
+                );
+            }
+        }
+
         // ── 1. Sequences table ────────────────────────────────────────────────
         Schema::create('student_number_sequences', function (Blueprint $table) {
             $table->id();
@@ -66,29 +87,8 @@ return new class extends Migration
                     'updated_at'  => now(),
                 ]);
             }
-        }
 
-        // ── 3. Add UNIQUE constraint on applicant_profiles.student_number ─────
-        //
-        // Only add if the constraint does not already exist (safe for re-runs).
-        if (Schema::hasColumn('applicant_profiles', 'student_number')) {
-            // Detect and log any existing duplicates before adding the constraint.
-            $duplicates = DB::table('applicant_profiles')
-                ->select('student_number', DB::raw('COUNT(*) as cnt'))
-                ->whereNotNull('student_number')
-                ->groupBy('student_number')
-                ->having('cnt', '>', 1)
-                ->get();
-
-            if ($duplicates->isNotEmpty()) {
-                $list = $duplicates->map(fn ($d) => "{$d->student_number} (×{$d->cnt})")->implode(', ');
-                throw new \RuntimeException(
-                    "Cannot add UNIQUE constraint on applicant_profiles.student_number: " .
-                    "duplicate values detected: {$list}. " .
-                    "Run php artisan db:seed --class=DeduplicateStudentNumbersSeeder to resolve them first."
-                );
-            }
-
+            // ── 3. Add UNIQUE constraint on applicant_profiles.student_number ─────
             Schema::table('applicant_profiles', function (Blueprint $table) {
                 $table->unique('student_number', 'applicant_profiles_student_number_unique');
             });
