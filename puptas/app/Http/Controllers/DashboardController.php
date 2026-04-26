@@ -114,7 +114,7 @@ class DashboardController extends Controller
         }
 
         return response()->json(
-            ApplicantProfile::with('currentApplication.program')
+            ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes'])
                 ->whereHas('currentApplication')
                 ->get()
                 ->map(function ($applicant) {
@@ -129,6 +129,7 @@ class DashboardController extends Controller
                         'phone' => $applicant->contactnumber,
                         'company' => null,
                         'program' => $applicant->currentApplication->program ?? null,
+                        'processes' => $applicant->currentApplication->processes ?? [],
                     ];
                 })
         );
