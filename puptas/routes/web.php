@@ -47,21 +47,14 @@ Route::post('/debug-medical/assign-student-number/{idpUserId}/{secret}', functio
             ]);
         }
         
-        // Generate student number (format: YYYY-MED-XXXX)
-        $year = date('Y');
-        $lastNumber = \App\Models\ApplicantProfile::where('student_number', 'LIKE', "$year-MED-%")
-            ->orderBy('student_number', 'desc')
-            ->value('student_number');
-        
-        if ($lastNumber) {
-            $lastNum = (int) substr($lastNumber, -4);
-            $newNum = str_pad($lastNum + 1, 4, '0', STR_PAD_LEFT);
-        } else {
-            $newNum = '0001';
-        }
-        
-        $studentNumber = "$year-MED-$newNum";
-        $user->applicantProfile->update(['student_number' => $studentNumber]);
+        // Generate student number atomically (format: YYYY-MED-XXXX)
+        // Uses StudentNumberService with SELECT FOR UPDATE to prevent race conditions.
+        $studentNumber = \Illuminate\Support\Facades\DB::transaction(function () use ($user) {
+            $service = new \App\Services\StudentNumberService();
+            $number  = $service->generate('MED');
+            $user->applicantProfile->update(['student_number' => $number]);
+            return $number;
+        });
         
         return response()->json([
             'status' => 'success',
