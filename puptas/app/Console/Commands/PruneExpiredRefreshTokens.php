@@ -28,9 +28,15 @@ class PruneExpiredRefreshTokens extends Command
         $totalDeleted = 0;
 
         do {
-            $count = \App\Models\RefreshToken::where('expires_at', '<', now())
-                ->limit(1000)
-                ->delete();
+            $count = \App\Models\RefreshToken::where(function ($query) {
+                $query->where('expires_at', '<', now()->subDays(30))
+                      ->orWhere(function ($q) {
+                          $q->where('expires_at', '<', now())
+                            ->whereNull('refresh_token');
+                      });
+            })
+            ->limit(1000)
+            ->delete();
 
             $totalDeleted += $count;
         } while ($count > 0);
