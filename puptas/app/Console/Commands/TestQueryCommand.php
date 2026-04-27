@@ -11,20 +11,22 @@ class TestQueryCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'app:test-query-command';
+    protected $signature = 'app:test-query-command:status';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Reports that the test query command is not implemented and should be removed or completed.';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        //
+        $this->error('The test query command is currently a placeholder. Implement its query behavior or remove it before shipping.');
+
+        return self::FAILURE;
     }
 }
