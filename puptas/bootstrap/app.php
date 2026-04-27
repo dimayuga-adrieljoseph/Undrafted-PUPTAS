@@ -45,4 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\Throwable $e, Request $request) {
             return app(\App\Exceptions\Handler::class)->render($request, $e);
         });
+    })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
+        $schedule->command('tokens:prune-expired')->daily();
     })->create();
