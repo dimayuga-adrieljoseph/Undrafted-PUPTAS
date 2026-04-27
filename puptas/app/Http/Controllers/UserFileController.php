@@ -67,7 +67,7 @@ class UserFileController extends Controller
 
                     $stored = $this->fileService->store($uploadedFile, 'uploads/files');
 
-                    UserFile::updateOrCreate(
+                    $userFile = UserFile::updateOrCreate(
                         [
                             'user_id' => $user->id,
                             'type' => $type,
@@ -77,9 +77,11 @@ class UserFileController extends Controller
                             'original_name' => $stored['original_name'],
                             'application_id' => $request->application_id ?? null,
                             'status' => 'pending',
-                            'docling_json' => $stored['docling_json'] ?? null,
+                            'docling_json' => null,
                         ]
                     );
+
+                    \App\Jobs\ProcessGradeOcr::dispatch($userFile->id);
                 } catch (\InvalidArgumentException $e) {
                     return response()->json([
                         'message' => 'Image processing failed: ' . $e->getMessage(),
