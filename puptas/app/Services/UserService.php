@@ -22,7 +22,7 @@ class UserService
      */
     public function getApplicantsWithApplications(): Collection
     {
-        return ApplicantProfile::with('currentApplication.program')
+        return ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
             ->whereHas('currentApplication')
             ->get()
             ->map(function ($profile) {
@@ -37,6 +37,7 @@ class UserService
                     'phone' => $profile->contactnumber,
                     'company' => $profile->company ?? null,
                     'program' => $profile->currentApplication->program ?? null,
+                    'processes' => $profile->currentApplication->processes ?? [],
                 ];
             });
     }
@@ -75,7 +76,7 @@ class UserService
             ->map(function ($profile) use ($stage) {
                 $application = $profile->currentApplication;
                 $stageProcess = $application && $application->processes ?
-                    $application->processes->first() : null;
+                    $application->processes->where('stage', $stage)->first() : null;
 
                 return [
                     'id' => $profile->user_id,
@@ -137,7 +138,7 @@ class UserService
             ->map(function ($profile) use ($stage) {
                 $application = $profile->currentApplication;
                 $stageProcess = $application && $application->processes ?
-                    $application->processes->first() : null;
+                    $application->processes->where('stage', $stage)->first() : null;
 
                 return [
                     'id' => $profile->user_id,
@@ -213,7 +214,7 @@ class UserService
         $applications = \App\Models\Application::whereIn('user_id', $allUserIds)
             ->whereNull('deleted_at')
             ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
-            ->with(['program:id,code,name'])
+            ->with(['program:id,code,name', 'processes:id,application_id,stage,status,action,created_at'])
             ->get()
             ->keyBy('user_id');
 
@@ -243,6 +244,7 @@ class UserService
                     'enrollment_status' => $app->enrollment_status,
                     'program_id'        => $app->program_id,
                     'created_at'        => $app->created_at,
+                    'processes'         => $app->processes ?? [],
                     'program'           => $program ? [
                         'id'   => $program->id,
                         'code' => $program->code,
