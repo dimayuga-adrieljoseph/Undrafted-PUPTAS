@@ -61,30 +61,30 @@ class ExternalMedicalApiController extends Controller
             },
         ])
         ->whereHas('currentApplication', function ($query) {
-            // Must have evaluator stage completed (passed or transferred)
-            $query->whereHas('processes', function ($q) {
-                $q->where('stage', 'evaluator')
-                    ->where('status', 'completed')
-                    ->whereIn('action', ['passed', 'transferred']);
+            $query->join('application_processes as eval_proc', function ($join) {
+                $join->on('eval_proc.application_id', '=', 'applications.id')
+                    ->where('eval_proc.stage', '=', 'evaluator')
+                    ->where('eval_proc.status', '=', 'completed')
+                    ->whereIn('eval_proc.action', ['passed', 'transferred']);
             })
-            // Must have interviewer stage completed (passed or transferred)
-            ->whereHas('processes', function ($q) {
-                $q->where('stage', 'interviewer')
-                    ->where('status', 'completed')
-                    ->whereIn('action', ['passed', 'transferred']);
+            ->join('application_processes as int_proc', function ($join) {
+                $join->on('int_proc.application_id', '=', 'applications.id')
+                    ->where('int_proc.stage', '=', 'interviewer')
+                    ->where('int_proc.status', '=', 'completed')
+                    ->whereIn('int_proc.action', ['passed', 'transferred']);
             })
-            // Must currently be at the medical stage (in_progress or returned)
-            ->whereHas('processes', function ($q) {
-                $q->where('stage', 'medical')
-                    ->whereIn('status', ['in_progress', 'returned']);
+            ->join('application_processes as med_proc_active', function ($join) {
+                $join->on('med_proc_active.application_id', '=', 'applications.id')
+                    ->where('med_proc_active.stage', '=', 'medical')
+                    ->whereIn('med_proc_active.status', ['in_progress', 'returned']);
             })
-            // Exclude already-passed medical (already forwarded to registrar)
-            ->whereDoesntHave('processes', function ($q) {
-                $q->where('stage', 'medical')
-                    ->where('status', 'completed')
-                    ->whereIn('action', ['passed', 'transferred']);
+            ->leftJoin('application_processes as med_proc_completed', function ($join) {
+                $join->on('med_proc_completed.application_id', '=', 'applications.id')
+                    ->where('med_proc_completed.stage', '=', 'medical')
+                    ->where('med_proc_completed.status', '=', 'completed')
+                    ->whereIn('med_proc_completed.action', ['passed', 'transferred']);
             })
-            ->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)');
+            ->whereNull('med_proc_completed.id');
         });
     }
 
