@@ -144,3 +144,4 @@ it(
         expect($body['message'])->toBe('Something went wrong. Please try again later.');
     }
 )->with(array_map(fn ($m) => [$m], $leakyMessages));
+

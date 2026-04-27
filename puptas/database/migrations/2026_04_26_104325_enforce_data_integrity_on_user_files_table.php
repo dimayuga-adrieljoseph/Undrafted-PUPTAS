@@ -94,7 +94,7 @@ return new class extends Migration
         });
 
         // --- 3. DDL: Apply Schema Constraints (Auto-commits in MySQL) ---
-        Schema::table('user_files', function (Blueprint $table) {
+        Schema::table('user_files', function (Blueprint $table) use ($driver) {
             // Drop existing index on ['user_id', 'type'] if it exists
             $indexes = Schema::getIndexes('user_files');
             foreach ($indexes as $index) {
@@ -107,10 +107,13 @@ return new class extends Migration
             $table->unique(['user_id', 'type']);
 
             // Drop existing foreign key on application_id if it exists
-            $foreignKeys = Schema::getForeignKeys('user_files');
-            foreach ($foreignKeys as $fk) {
-                if ($fk['columns'] === ['application_id']) {
-                    $table->dropForeign($fk['name']);
+            // SQLite doesn't support dropping foreign keys by name, so skip for SQLite
+            if ($driver !== 'sqlite') {
+                $foreignKeys = Schema::getForeignKeys('user_files');
+                foreach ($foreignKeys as $fk) {
+                    if ($fk['columns'] === ['application_id']) {
+                        $table->dropForeign($fk['name']);
+                    }
                 }
             }
 
@@ -127,15 +130,20 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('user_files', function (Blueprint $table) {
+        $driver = DB::connection()->getDriverName();
+        
+        Schema::table('user_files', function (Blueprint $table) use ($driver) {
             // Drop unique index
             $table->dropUnique(['user_id', 'type']);
 
             // Drop foreign key
-            $foreignKeys = Schema::getForeignKeys('user_files');
-            foreach ($foreignKeys as $fk) {
-                if ($fk['columns'] === ['application_id']) {
-                    $table->dropForeign($fk['name']);
+            // SQLite doesn't support dropping foreign keys by name, so skip for SQLite
+            if ($driver !== 'sqlite') {
+                $foreignKeys = Schema::getForeignKeys('user_files');
+                foreach ($foreignKeys as $fk) {
+                    if ($fk['columns'] === ['application_id']) {
+                        $table->dropForeign($fk['name']);
+                    }
                 }
             }
 

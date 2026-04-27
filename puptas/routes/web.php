@@ -177,6 +177,7 @@ Route::middleware(['auth'])->post('/test-passers/upload', [Notify::class, 'handl
 Route::middleware(['auth'])->get('/test-passers/form', [Notify::class, 'showUploadForm'])->name('upload.form');
 
 Route::get('/sar/download/{filename}/{reference}', [TestPasserController::class, 'downloadSar'])
+    ->middleware('auth')
     ->name('sar.passer-download');
 
 Route::get('/applications', function () {
@@ -206,6 +207,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::resource('schedules', ScheduleController::class)
+    ->middleware(['auth', 'role:2,4'])
     ->names([
         'index' => 'schedules.index',
         'create' => 'schedules.create',
@@ -304,6 +306,5 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/api-clients/{id}/regenerate', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'regenerate'])->name('api-clients.regenerate');
 });
 
-// Callback Routes - Public access for loading screen with API callback
+// Callback Routes - Public access for loading screen
 Route::get('/callback', [CallbackController::class, 'index']);
-Route::post('/api/callback', [CallbackController::class, 'handle']);

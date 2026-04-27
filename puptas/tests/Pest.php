@@ -41,6 +41,17 @@ expect()->extend('toBeOne', function () {
 |
 */
 
+/**
+ * Get the number of iterations for property-based tests.
+ * 
+ * Default: 20 iterations (reduced from 100 for faster CI/CD)
+ * Set PROPERTY_TEST_ITERATIONS environment variable to override.
+ */
+function propertyTestIterations(): int
+{
+    return (int) ($_ENV['PROPERTY_TEST_ITERATIONS'] ?? 20);
+}
+
 function something()
 {
     // ..

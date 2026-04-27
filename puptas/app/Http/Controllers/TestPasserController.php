@@ -310,6 +310,20 @@ class TestPasserController extends Controller
      */
     public function downloadSar($filename, $reference)
     {
+        // Validate filename pattern (alphanumeric, dash, underscore, period only)
+        if (!preg_match('/^[a-zA-Z0-9_\-\.]+$/', $filename)) {
+            abort(400, 'Invalid filename pattern');
+        }
+
+        // Block any path traversal attempts
+        if (strpos($filename, '..') !== false) {
+            \Log::warning('SAR download blocked: path traversal attempt detected', [
+                'filename' => $filename,
+                'reference' => $reference,
+            ]);
+            abort(400, 'Invalid filename');
+        }
+
         // Validate reference number exists
         $passer = TestPasser::where('reference_number', $reference)->first();
 
@@ -319,12 +333,6 @@ class TestPasserController extends Controller
 
         // Sanitize filename to prevent path traversal attacks
         $filename = basename($filename);
-
-        // Block any path traversal attempts
-        if (strpos($filename, '..') !== false || strpos($filename, '/') !== false || strpos($filename, '\\') !== false) {
-            \Log::warning('SAR download blocked: path traversal attempt detected');
-            abort(403, 'Invalid filename');
-        }
 
         // Construct the expected filename pattern
         $expectedFilenamePattern = 'SAR_' . $reference . '_';

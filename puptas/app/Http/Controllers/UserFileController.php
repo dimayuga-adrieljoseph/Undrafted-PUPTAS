@@ -138,6 +138,7 @@ class UserFileController extends Controller
     public function getUserApplication()
     {
         $user = auth()->user();
+        $user->load('applicantProfile');
 
         $files = UserFile::where('user_id', $user->id)->get();
 
@@ -168,6 +169,8 @@ class UserFileController extends Controller
             }
         }
 
+        $applicantProfile = $user->applicantProfile;
+
         // Return all necessary user data + files
         return response()->json([
             'firstname' => $user->firstname,
@@ -182,12 +185,12 @@ class UserFileController extends Controller
             'province' => $user->province,
             'postal_code' => $user->postal_code,
             'email' => $user->email,
-            'school' => $user->school,
-            'schoolAdd' => $user->schoolAdd,
+            'school' => $applicantProfile?->school,
+            'schoolAdd' => $applicantProfile?->school_address,
             'schoolyear' => $user->schoolyear,
-            'dateGrad' => $user->dateGrad,
-            'strand' => $user->strand,
-            'track' => $user->track,
+            'dateGrad' => $applicantProfile?->date_graduated?->format('Y-m-d'),
+            'strand' => $applicantProfile?->strand,
+            'track' => $applicantProfile?->track,
             'uploadedFiles' => $uploadedFiles,
         ]);
     }

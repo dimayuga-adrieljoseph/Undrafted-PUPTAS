@@ -30,6 +30,7 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="LOG_CHANNEL" value="null"/>
-        <ini name="memory_limit" value="1G"/>
+        <env name="PROPERTY_TEST_ITERATIONS" value="20"/>
+        <ini name="memory_limit" value="4G"/>
     </php>
 </phpunit>

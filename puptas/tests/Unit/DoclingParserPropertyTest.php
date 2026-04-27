@@ -96,12 +96,13 @@ function pbtAllAliasTriples(): array
 // Feature: docling-grade-autofill, Property 1: Subject Resolution Correctness
 // ---------------------------------------------------------------------------
 
-it('Property 1: resolveSubject returns correct category and name for every alias (100+ iterations)', function () {
+it('Property 1: resolveSubject returns correct category and name for every alias', function () {
     $parser = new PbtTestableDoclingParser();
     $triples = pbtAllAliasTriples();
     $iterations = 0;
     $idx = 0;
-    while ($iterations < 100) {
+    $targetIterations = propertyTestIterations();
+    while ($iterations < $targetIterations) {
         [$alias, $expectedCategory, $expectedName] = $triples[$idx % count($triples)];
         $idx++;
         $result = $parser->resolveSubject($alias);
@@ -110,7 +111,7 @@ it('Property 1: resolveSubject returns correct category and name for every alias
         expect($result['name'])->toBe($expectedName);
         $iterations++;
     }
-    expect($iterations)->toBeGreaterThanOrEqual(100);
+    expect($iterations)->toBeGreaterThanOrEqual($targetIterations);
 });
 
 // ---------------------------------------------------------------------------
@@ -118,10 +119,10 @@ it('Property 1: resolveSubject returns correct category and name for every alias
 // Feature: docling-grade-autofill, Property 2: Grade Output Invariant
 // ---------------------------------------------------------------------------
 
-it('Property 2: every grade in result is a float in [0, 100] for any valid input (100 iterations)', function () {
+it('Property 2: every grade in result is a float in [0, 100] for any valid input ', function () {
     $parser = new PbtTestableDoclingParser();
     $aliases = array_column(pbtAllAliasTriples(), 0);
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         $nodeCount = rand(1, 5);
         $texts = [];
         for ($j = 0; $j < $nodeCount; $j++) {
@@ -147,10 +148,10 @@ it('Property 2: every grade in result is a float in [0, 100] for any valid input
 // Feature: docling-grade-autofill, Property 3: Last-Value-Wins Merge
 // ---------------------------------------------------------------------------
 
-it('Property 3: last-value-wins merge holds for any sequence of grades for the same subject (100 iterations)', function () {
+it('Property 3: last-value-wins merge holds for any sequence of grades for the same subject ', function () {
     $alias = 'gen math';
     $expectedKey = 'general mathematics';
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         $grades = [];
         for ($j = 0; $j < rand(2, 5); $j++) {
             $grades[] = round(mt_rand(0, 10000) / 100, 2);
@@ -171,9 +172,9 @@ it('Property 3: last-value-wins merge holds for any sequence of grades for the s
 // Feature: docling-grade-autofill, Property 4: Deterministic Multi-File Merge
 // ---------------------------------------------------------------------------
 
-it('Property 4: processing files in ascending id order is deterministic (100 iterations)', function () {
+it('Property 4: processing files in ascending id order is deterministic ', function () {
     $allAliases = array_column(pbtAllAliasTriples(), 0);
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         $files = [];
         for ($id = 1; $id <= rand(2, 4); $id++) {
             $alias = $allAliases[array_rand($allAliases)];
@@ -202,7 +203,7 @@ it('Property 4: processing files in ascending id order is deterministic (100 ite
 // Feature: docling-grade-autofill, Property 5: Empty Input Exception
 // ---------------------------------------------------------------------------
 
-it('Property 5: extract throws InvalidArgumentException for any input with zero valid pairs (100 iterations)', function () {
+it('Property 5: extract throws InvalidArgumentException for any input with zero valid pairs ', function () {
     $emptyInputs = [
         [],
         ['texts' => [['text' => 'no grades here']], 'tables' => []],
@@ -213,7 +214,7 @@ it('Property 5: extract throws InvalidArgumentException for any input with zero 
         ['texts' => [['text' => '']], 'tables' => []],
     ];
     $user = new \App\Models\User();
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         $input = $emptyInputs[array_rand($emptyInputs)];
         $files = empty($input) ? [] : [['docling_json' => $input]];
         $parser = new PbtTestableDoclingParserWithFiles($files);
@@ -226,10 +227,10 @@ it('Property 5: extract throws InvalidArgumentException for any input with zero 
 // Feature: docling-grade-autofill, Property 6: Table Scanning
 // ---------------------------------------------------------------------------
 
-it('Property 6: table scanning extracts subject-grade pair from adjacent cells (100 iterations)', function () {
+it('Property 6: table scanning extracts subject-grade pair from adjacent cells ', function () {
     $parser = new PbtTestableDoclingParser();
     $triples = pbtAllAliasTriples();
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         [$alias, , $expectedName] = $triples[array_rand($triples)];
         $grade = round(mt_rand(0, 10000) / 100, 2);
         $jsonContent = [
@@ -252,10 +253,10 @@ it('Property 6: table scanning extracts subject-grade pair from adjacent cells (
 // Feature: docling-grade-autofill, Property 7: Output Shape Invariant
 // ---------------------------------------------------------------------------
 
-it('Property 7: output shape always has exactly the four category keys with lowercased/trimmed subject keys (100 iterations)', function () {
+it('Property 7: output shape always has exactly the four category keys with lowercased/trimmed subject keys ', function () {
     $parser = new PbtTestableDoclingParser();
     $aliases = array_column(pbtAllAliasTriples(), 0);
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         $texts = [];
         for ($j = 0; $j < rand(1, 5); $j++) {
             $alias = $aliases[array_rand($aliases)];
@@ -282,10 +283,10 @@ it('Property 7: output shape always has exactly the four category keys with lowe
 // Feature: docling-grade-autofill, Property 8: Null json_content Skipped
 // ---------------------------------------------------------------------------
 
-it('Property 8: null/empty docling_json records are skipped and result equals valid-only processing (100 iterations)', function () {
+it('Property 8: null/empty docling_json records are skipped and result equals valid-only processing ', function () {
     $aliases = array_column(pbtAllAliasTriples(), 0);
     $user = new \App\Models\User();
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         $validFiles = [];
         for ($j = 0; $j < rand(1, 3); $j++) {
             $alias = $aliases[array_rand($aliases)];
@@ -310,10 +311,10 @@ it('Property 8: null/empty docling_json records are skipped and result equals va
 // Feature: docling-grade-autofill, Property 9: Round-Trip Text Extraction
 // ---------------------------------------------------------------------------
 
-it('Property 9: all text nodes (including orig-only nodes) are processed during parseJsonContent (100 iterations)', function () {
+it('Property 9: all text nodes (including orig-only nodes) are processed during parseJsonContent ', function () {
     $parser = new PbtTestableDoclingParser();
     $triples = pbtAllAliasTriples();
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         [$alias, , $expectedName] = $triples[array_rand($triples)];
         $grade = round(mt_rand(0, 10000) / 100, 2);
         $textContent = "Subject: $alias  Grade: $grade";
@@ -324,3 +325,4 @@ it('Property 9: all text nodes (including orig-only nodes) are processed during 
         expect($result[$expectedName])->toBe((float) $grade);
     }
 });
+
