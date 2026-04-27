@@ -47,5 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
-        $schedule->command('tokens:prune-expired')->daily();
+        // Do not schedule tokens:prune-expired until the command prunes using
+        // a column/criterion that reflects final token-record expiry rather than
+        // the access-token expires_at used by middleware.
     })->create();

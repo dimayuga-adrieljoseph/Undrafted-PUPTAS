@@ -41,6 +41,8 @@ class PruneExpiredRefreshTokens extends Command
             $totalDeleted += $count;
         } while ($count > 0);
 
-        $this->info("Successfully pruned {$totalDeleted} expired refresh tokens.");
+        $tokenLabel = $totalDeleted === 1 ? 'token' : 'tokens';
+
+        $this->info("Successfully pruned {$totalDeleted} expired refresh {$tokenLabel}.");
     }
 }
