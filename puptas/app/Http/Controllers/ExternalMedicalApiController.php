@@ -84,8 +84,7 @@ class ExternalMedicalApiController extends Controller
                     ->where('med_proc_completed.status', '=', 'completed')
                     ->whereIn('med_proc_completed.action', ['passed', 'transferred']);
             })
-            ->whereNull('med_proc_completed.id')
-            ->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)');
+            ->whereNull('med_proc_completed.id');
         });
     }
 
