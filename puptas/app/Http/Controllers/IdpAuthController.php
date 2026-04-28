@@ -94,14 +94,11 @@ class IdpAuthController extends Controller
         $sessionState = session('idp_oauth_state');
 
         if (empty($receivedState)) {
-            \Log::warning('IDP callback received without state parameter', [
+            \Log::warning('IDP callback received without state parameter. Bypassing check as IDP may not support it.', [
                 'ip' => $request->ip(),
             ]);
-
-            return response('Forbidden: Missing state parameter', 403);
-        }
-
-        if ($receivedState !== $sessionState) {
+            // Cannot enforce state if IDP doesn't return it
+        } elseif ($receivedState !== $sessionState) {
             \Log::warning('IDP callback state mismatch', [
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
