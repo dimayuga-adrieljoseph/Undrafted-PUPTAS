@@ -314,7 +314,7 @@ onMounted(() => {
             </div>
             <div class="flex-1">
               <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                🎉 Evaluation & Interview Complete!
+                Evaluation & Interview Complete!
               </h3>
               <p class="text-gray-700 dark:text-gray-300 mb-4">
                 Congratulations! You've successfully completed the evaluation and interview stages. 
