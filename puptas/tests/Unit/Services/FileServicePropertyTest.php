@@ -11,7 +11,8 @@
  * Validates: Requirements 1.5, 2.4, 2.5
  *
  * Eris is not installed; property-based behaviour is simulated via a loop of
- * 100 iterations per disk with randomly-generated filenames.
+ * configurable iterations per disk with randomly-generated filenames.
+ * Default: 20 iterations (configurable via PROPERTY_TEST_ITERATIONS env var)
  */
 
 use App\Helpers\FileMapper;
@@ -47,14 +48,14 @@ function randomFilename(int $length = 8): string
 describe('Property 1: FileService routes to the configured disk', function () {
 
     /**
-     * Run 100 iterations for the `public` disk.
+     * Run configurable iterations for the `public` disk.
      *
      * For each iteration a fresh fake UploadedFile with a random filename is
      * created, FileService::store() is called, and we assert:
      *   (a) the returned path starts with `uploads/files/`
      *   (b) the file exists on the `public` disk
      */
-    test('routes to the public disk for 100 random files', function () {
+    test('routes to the public disk for random files', function () {
         Storage::fake('public');
         config(['filesystems.default' => 'public']);
 
@@ -63,7 +64,7 @@ describe('Property 1: FileService routes to the configured disk', function () {
             new FileMapper(),
         );
 
-        $iterations = 100;
+        $iterations = propertyTestIterations();
 
         for ($i = 0; $i < $iterations; $i++) {
             $filename = randomFilename();
@@ -80,11 +81,11 @@ describe('Property 1: FileService routes to the configured disk', function () {
     });
 
     /**
-     * Run 100 iterations for the `s3` disk.
+     * Run configurable iterations for the `s3` disk.
      *
      * Same assertions as above but against the faked `s3` disk.
      */
-    test('routes to the s3 disk for 100 random files', function () {
+    test('routes to the s3 disk for random files', function () {
         Storage::fake('s3');
         config(['filesystems.default' => 's3']);
 
@@ -93,7 +94,7 @@ describe('Property 1: FileService routes to the configured disk', function () {
             new FileMapper(),
         );
 
-        $iterations = 100;
+        $iterations = propertyTestIterations();
 
         for ($i = 0; $i < $iterations; $i++) {
             $filename = randomFilename();

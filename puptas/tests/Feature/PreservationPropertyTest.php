@@ -212,3 +212,4 @@ test('Preservation 3: applicant with existing grades redirects to /applicant-das
 
     $response->assertRedirect('/applicant-dashboard');
 });
+

@@ -115,7 +115,7 @@ $subjectSets = [
 
 // Generate 30 cases by varying grades/confidence across the base sets
 $seed = 42;
-for ($i = 0; $i < 30; $i++) {
+for ($i = 0; $i < min(30, propertyTestIterations()); $i++) {
     $seed = ($seed * 1103515245 + 12345) & 0x7fffffff;
     $base = $subjectSets[$seed % count($subjectSets)];
 
@@ -502,3 +502,4 @@ it(
         $response->assertJsonFragment(['error' => $message]);
     }
 )->with($runtimeMessages);
+

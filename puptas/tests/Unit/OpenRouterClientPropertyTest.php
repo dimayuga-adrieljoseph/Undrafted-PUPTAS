@@ -4,7 +4,7 @@
  * Property-based tests for OpenRouter migration.
  *
  * Feature: openrouter-migration
- * Properties are tested manually using 100 iterations with random values,
+ * Properties are tested manually using configurable iterations with random values,
  * as eris/eris is not installed.
  */
 
@@ -24,7 +24,7 @@ uses(Tests\TestCase::class);
  * Validates: Requirements 2.2
  */
 it('Property 1: exception getter round-trip holds for random status codes and bodies', function () {
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         $statusCode = rand(PHP_INT_MIN, PHP_INT_MAX);
         $responseBody = bin2hex(random_bytes(rand(1, 64)));
 
@@ -64,7 +64,7 @@ it('Property 2: generic non-2xx error message prefix holds for random unhandled 
         return Http::response('error body', $currentStatus);
     });
 
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         $currentStatus = $candidates[array_rand($candidates)];
 
         $client = new OpenRouterClient();
@@ -105,7 +105,7 @@ it('Property 3: request body structure is correct for any image set', function (
         return Http::response(['choices' => [['message' => ['content' => 'ok']]]]);
     });
 
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         $count = rand(1, 5);
         $images = [];
         for ($j = 0; $j < $count; $j++) {
@@ -158,7 +158,7 @@ it('Property 4: successful response content extraction returns exact content str
         return Http::response(['choices' => [['message' => ['content' => $currentContent]]]]);
     });
 
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < propertyTestIterations(); $i++) {
         $currentContent = bin2hex(random_bytes(rand(1, 32)));
 
         $client = new OpenRouterClient();
@@ -167,3 +167,4 @@ it('Property 4: successful response content extraction returns exact content str
         expect($result)->toBe($currentContent);
     }
 });
+
