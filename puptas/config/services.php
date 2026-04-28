@@ -28,13 +28,6 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
-    'slack' => [
-        'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
-        ],
-    ],
-
     'idp' => [
         'base_url' => env('IDP_BASE_URL', 'https://identity-provider.isaxbsit2027.com'),
         // Using /login as the authorize_path to bypass broken API endpoints on IDP side
@@ -87,4 +80,11 @@ return [
         'timeout' => (int) env('DOCLING_TIMEOUT', 60),
     ],
 
+    'chatwoot' => [
+        'access_token' => env('CHATWOOT_ACCESS_TOKEN'),
+        'secret_key' => env('CHATWOOT_SECRET_KEY'),
+        'base_url' => env('CHATWOOT_BASE_URL'),
+        'website_token' => env('CHATWOOT_WEBSITE_TOKEN'),
+        'hmac_token' => env('CHATWOOT_HMAC_TOKEN'),
+    ],
 ];
