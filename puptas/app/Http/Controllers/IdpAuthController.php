@@ -98,8 +98,10 @@ class IdpAuthController extends Controller
         if ($receivedState !== $sessionState) {
             \Log::warning('IDP callback state mismatch', [
                 'ip' => $request->ip(),
-                'received_state' => $receivedState,
-                'session_state' => $sessionState,
+                'user_agent' => $request->userAgent(),
+                'has_session_state' => !empty($sessionState),
+                'received_state_hash' => substr(hash('sha256', $receivedState), 0, 12),
+                'session_state_hash' => !empty($sessionState) ? substr(hash('sha256', $sessionState), 0, 12) : null,
             ]);
 
             return response('Forbidden: Invalid state parameter', 403);
