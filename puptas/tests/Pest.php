@@ -49,7 +49,13 @@ expect()->extend('toBeOne', function () {
  */
 function propertyTestIterations(): int
 {
-    return (int) ($_ENV['PROPERTY_TEST_ITERATIONS'] ?? 20);
+    $iterations = getenv('PROPERTY_TEST_ITERATIONS');
+
+    if ($iterations === false || $iterations === '') {
+        return 20;
+    }
+
+    return max(1, (int) $iterations);
 }
 
 function something()
