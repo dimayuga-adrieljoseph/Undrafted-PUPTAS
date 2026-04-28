@@ -40,4 +40,51 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-2.0-flash-exp'),
     ],
 
+    'idp' => [
+        'base_url' => env('IDP_BASE_URL', 'https://identity-provider.isaxbsit2027.com'),
+        // Using /login as the authorize_path to bypass broken API endpoints on IDP side
+        'authorize_path' => env('IDP_AUTHORIZE_PATH', '/login'),
+        'token_path' => env('IDP_TOKEN_PATH', '/api/v1/auth/token'),
+        'user_path' => env('IDP_USER_PATH', '/api/v1/me'),
+        'client_id' => env('IDP_CLIENT_ID'),
+        'client_secret' => env('IDP_CLIENT_SECRET'),
+        'redirect_uri' => env('IDP_REDIRECT_URI'),
+        'scope' => env('IDP_SCOPE', 'openid profile email'),
+    ],
+
+    'external_api' => [
+        'token' => env('EXTERNAL_API_TOKEN'),
+        'second_limit' => (int) env('EXTERNAL_API_SECOND_LIMIT', 5),
+        'daily_limit' => (int) env('EXTERNAL_API_DAILY_LIMIT', 200),
+        'minute_limit' => (int) env('EXTERNAL_API_MINUTE_LIMIT', 20),
+    ],
+
+    'external_program_api' => [
+        'token' => env('EXTERNAL_PROGRAM_API_TOKEN'),
+        'daily_limit' => (int) env('EXTERNAL_PROGRAM_API_DAILY_LIMIT', 50),
+    ],
+
+    'external_medical_api' => [
+        'token' => env('EXTERNAL_MEDICAL_API_TOKEN'),
+        'second_limit' => (int) env('EXTERNAL_MEDICAL_API_SECOND_LIMIT', 5),
+        'minute_limit' => (int) env('EXTERNAL_MEDICAL_API_MINUTE_LIMIT', 80),
+        'daily_limit' => (int) env('EXTERNAL_MEDICAL_API_DAILY_LIMIT', 1500),
+    ],
+
+    'openrouter' => [
+        'key' => env('OPENROUTER_API_KEY'),
+        'endpoint' => env('OPENROUTER_ENDPOINT', 'https://openrouter.ai/api/v1/chat/completions'),
+        'model' => env('OPENROUTER_MODEL', 'google/gemini-flash-1.5'),
+    ],
+    
+    'medical_webhook' => [
+        'secret' => env('MEDICAL_WEBHOOK_SECRET'),
+    ],
+
+    'docling' => [
+        'url'     => env('DOCLING_URL', ''),
+        'api_key' => env('DOCLING_API_KEY'),
+        'timeout' => (int) env('DOCLING_TIMEOUT', 60),
+    ],
+
 ];
