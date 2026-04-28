@@ -19,6 +19,7 @@ const previewSrc = ref("");
 const uploadingKeys = ref([]);
 const fileUploadProgress = ref({});
 const uploadErrors = ref({});
+const showMedicalRedirect = ref(false);
 
 // Task 4.1: allDocumentsUploaded — true when every fileStatuses slot has a non-null url
 const allDocumentsUploaded = computed(() => {
@@ -127,6 +128,7 @@ const fetchData = async () => {
     applicationStatus.value = data.status || "";
     enrollmentStatus.value = data.enrollment_status || "";
     applicationProcesses.value = data.processes || [];
+    showMedicalRedirect.value = data.show_medical_redirect || false;
   } catch {
     error.value = "Could not load application data.";
   } finally {
@@ -297,6 +299,53 @@ onMounted(() => {
             </svg>
             <span class="font-medium">{{ extracting ? 'Extracting...' : 'Review Grades' }}</span>
           </button>
+          </div>
+        </div>
+
+        <!-- Medical System Redirect Card -->
+        <div v-if="showMedicalRedirect" class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl shadow-md border-2 border-green-300 dark:border-green-700 p-6">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0">
+              <div class="w-14 h-14 rounded-full bg-green-600 flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                🎉 Evaluation & Interview Complete!
+              </h3>
+              <p class="text-gray-700 dark:text-gray-300 mb-4">
+                Congratulations! You've successfully completed the evaluation and interview stages. 
+                Your next step is to create a Health Record in the Medical System.
+              </p>
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border border-green-200 dark:border-green-700">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2">📋 Instructions:</p>
+                <ol class="text-sm text-gray-700 dark:text-gray-300 space-y-1 list-decimal list-inside">
+                  <li>Click the button below to go to the Medical System</li>
+                  <li>Log in with your credentials</li>
+                  <li>Go to <strong>My Account</strong> dropdown menu</li>
+                  <li>Click <strong>Health Record</strong></li>
+                  <li>Click <strong>Complete Form Now</strong></li>
+                  <li>Fill up the information sheet completely</li>
+                </ol>
+              </div>
+              <a
+                href="https://clinic-ms.inaebsit2027.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-md transition-all hover:shadow-lg font-medium min-h-[44px]"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                </svg>
+                Go to Medical System
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </a>
+            </div>
           </div>
         </div>
 
