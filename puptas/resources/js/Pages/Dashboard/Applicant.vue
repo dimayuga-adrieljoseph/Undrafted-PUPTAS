@@ -329,6 +329,7 @@ onMounted(() => {
                   <li>Click <strong>Health Record</strong></li>
                   <li>Click <strong>Complete Form Now</strong></li>
                   <li>Fill up the information sheet completely</li>
+                  <li>When you are done filling up the sheets you may now proceed to the clinic for the medical assessment</li>
                 </ol>
               </div>
               <a
