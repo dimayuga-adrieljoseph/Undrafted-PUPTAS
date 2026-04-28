@@ -307,4 +307,4 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
 });
 
 // Callback Routes - Public access for loading screen
-Route::get('/callback', [CallbackController::class, 'index']);
+Route::get('/callback-loading', [CallbackController::class, 'index']);
