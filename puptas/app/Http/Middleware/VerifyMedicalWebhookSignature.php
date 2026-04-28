@@ -18,9 +18,11 @@ class VerifyMedicalWebhookSignature
     {
         // Validation order is intentional for security and performance:
         // 1. Timestamp check (fast, prevents replay of old requests)
-        // 2. Nonce check (fast, prevents replay of recent requests)
+        // 2. Nonce check (fast, prevents replay of recent requests - but NOT stored yet)
         // 3. HMAC signature check (expensive, validates authenticity)
-        // This ensures we fail fast on cheaper checks before performing expensive HMAC validation.
+        // 4. Nonce storage (only after authentication succeeds)
+        // This ensures we fail fast on cheaper checks before performing expensive HMAC validation,
+        // and prevents unauthenticated requests from poisoning the nonce cache.
         
         // Extract and validate timestamp from payload
         $payloadData = $request->json()->all();
@@ -46,14 +48,12 @@ class VerifyMedicalWebhookSignature
         $nonce = $payloadData['nonce'];
         $cacheKey = 'webhook_nonce_' . $nonce;
         
-        // Check if nonce has been seen before
+        // Check if nonce has been seen before (but don't store it yet)
         if (Cache::has($cacheKey)) {
             return response()->json(['message' => 'Duplicate request'], 403);
         }
         
-        // Store nonce in cache with 10-minute expiration
-        Cache::put($cacheKey, true, 600); // 600 seconds = 10 minutes
-        
+        // Validate HMAC signature before storing nonce
         $signature = $request->header('X-Medical-Signature');
 
         if (!$signature) {
@@ -72,6 +72,10 @@ class VerifyMedicalWebhookSignature
         if (!hash_equals($expectedSignature, $signature)) {
             return response()->json(['message' => 'Invalid Signature'], 403);
         }
+
+        // Only store nonce after HMAC validation succeeds
+        // This prevents unauthenticated requests from poisoning the cache
+        Cache::put($cacheKey, true, 600); // 600 seconds = 10 minutes
 
         return $next($request);
     }

@@ -81,7 +81,13 @@ class IdpAuthController extends Controller
      */
     public function callback(Request $request)
     {
-        \Log::info('IDP callback reached', ['params' => $request->all()]);
+        // Log callback without sensitive OAuth data
+        \Log::info('IDP callback reached', [
+            'ip' => $request->ip(),
+            'has_code' => $request->has('code'),
+            'has_state' => $request->has('state'),
+            'request_id' => $request->header('X-Request-ID'),
+        ]);
 
         // Validate state parameter for CSRF protection
         $receivedState = $request->query('state');

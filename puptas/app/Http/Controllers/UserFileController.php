@@ -170,6 +170,10 @@ class UserFileController extends Controller
         }
 
         $applicantProfile = $user->applicantProfile;
+        
+        // Load graduate type to derive schoolyear (same as ConfirmationService)
+        $applicantProfile?->load('graduateTypes');
+        $graduateType = $applicantProfile?->graduateTypes->first()?->label ?? null;
 
         // Return all necessary user data + files
         return response()->json([
@@ -187,7 +191,7 @@ class UserFileController extends Controller
             'email' => $user->email,
             'school' => $applicantProfile?->school,
             'schoolAdd' => $applicantProfile?->school_address,
-            'schoolyear' => $user->schoolyear,
+            'schoolyear' => $graduateType,
             'dateGrad' => $applicantProfile?->date_graduated?->format('Y-m-d'),
             'strand' => $applicantProfile?->strand,
             'track' => $applicantProfile?->track,
