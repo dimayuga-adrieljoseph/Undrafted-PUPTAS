@@ -126,11 +126,11 @@ class WebhookTimestampValidationTest extends TestCase
     }
 
     /**
-     * Test that timestamp exactly at 5 minute boundary is considered expired
+     * Test that timestamp exactly at 5 minute boundary is not considered expired
      *
      * **Validates: Requirements 5.3**
      */
-    public function test_webhook_with_timestamp_at_five_minute_boundary_is_expired(): void
+    public function test_webhook_with_timestamp_at_five_minute_boundary_is_not_expired(): void
     {
         // Arrange: Setup OAuth client with medical-write scope
         Passport::actingAsClient(
