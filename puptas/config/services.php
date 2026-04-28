@@ -121,6 +121,8 @@ return [
         'access_token' => env('CHATWOOT_ACCESS_TOKEN'),
         'secret_key' => env('CHATWOOT_SECRET_KEY'),
         'base_url' => env('CHATWOOT_BASE_URL'),
+        'website_token' => env('CHATWOOT_WEBSITE_TOKEN'),
+        'hmac_token' => env('CHATWOOT_HMAC_TOKEN'),
     ],
     
     'medical_webhook' => [

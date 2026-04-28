@@ -5,9 +5,26 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Helpers\ChatwootHelper;
 
 class ChatwootWebhookController extends Controller
 {
+    /**
+     * Get Chatwoot widget configuration with identity validation
+     */
+    public function getWidgetConfig(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+        
+        $config = ChatwootHelper::getWidgetConfig($user);
+        
+        return response()->json($config);
+    }
+
     public function handleMessage(Request $request)
     {
         try {
