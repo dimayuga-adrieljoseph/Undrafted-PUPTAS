@@ -70,6 +70,7 @@ class ConfirmationService
             'enrollment_status' => $application?->enrollment_status ?? null,
             'program_id' => $application?->program_id ?? $profile?->first_choice_program,
             'second_choice_id' => $application?->second_choice_id ?? $profile?->second_choice_program,
+            'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
         ];
     }
 
@@ -91,6 +92,42 @@ class ConfirmationService
             ->orderBy('created_at')
             ->get(['stage', 'status', 'action', 'decision_reason', 'reviewer_notes', 'performed_by', 'created_at'])
             ->toArray();
+    }
+
+    /**
+     * Check if medical redirect should be shown
+     * Returns true when both evaluator and interviewer stages are completed
+     * but medical stage has not been completed yet
+     *
+     * @param Application|null $application
+     * @return bool
+     */
+    private function shouldShowMedicalRedirect(?Application $application): bool
+    {
+        if (!$application) {
+            return false;
+        }
+
+        // Check if evaluator stage is completed
+        $evaluatorCompleted = $application->processes()
+            ->where('stage', 'evaluator')
+            ->where('status', 'completed')
+            ->exists();
+
+        // Check if interviewer stage is completed
+        $interviewerCompleted = $application->processes()
+            ->where('stage', 'interviewer')
+            ->where('status', 'completed')
+            ->exists();
+
+        // Check if medical stage is completed
+        $medicalCompleted = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'completed')
+            ->exists();
+
+        // Show redirect only when evaluator and interviewer are done, but medical is not yet completed
+        return $evaluatorCompleted && $interviewerCompleted && !$medicalCompleted;
     }
 
     /**
