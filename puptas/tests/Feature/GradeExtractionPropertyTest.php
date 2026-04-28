@@ -105,7 +105,7 @@ it(
 $mimeFilterCases = [];
 $mimeOptions = ['jpeg', 'png', 'pdf', 'txt', 'gif', 'webp'];
 $seed = 42;
-for ($i = 0; $i < 100; $i++) {
+for ($i = 0; $i < propertyTestIterations(); $i++) {
     $seed = ($seed * 1103515245 + 12345) & 0x7fffffff;
     $count = ($seed % 5) + 1;
     $types = [];
@@ -267,7 +267,7 @@ $subjectNameCases = [
 ];
 
 $seed4 = 99;
-while (count($subjectNameCases) < 100) {
+while (count($subjectNameCases) < propertyTestIterations()) {
     $seed4 = ($seed4 * 1103515245 + 12345) & 0x7fffffff;
     $len = ($seed4 % 15) + 3;
     $name = '';
@@ -322,7 +322,7 @@ $sanitizeCases = [
 $prosePrefixes = ['Here are the grades: ', 'Based on the document, ', "Result:\n", "```json\n", "```\n"];
 $proseSuffixes = [' Hope this helps!', "\nDone.", "\n```", ''];
 $seed5 = 17;
-while (count($sanitizeCases) < 100) {
+while (count($sanitizeCases) < propertyTestIterations()) {
     $seed5 = ($seed5 * 1103515245 + 12345) & 0x7fffffff;
     $prefix = $prosePrefixes[$seed5 % count($prosePrefixes)];
     $seed5 = ($seed5 * 1103515245 + 12345) & 0x7fffffff;
@@ -410,3 +410,4 @@ it(
             ->assertSessionHasErrors(['mathematics']);
     }
 )->with($invalidGradeValues);
+

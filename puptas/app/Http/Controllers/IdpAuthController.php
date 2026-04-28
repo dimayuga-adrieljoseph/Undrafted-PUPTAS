@@ -48,6 +48,7 @@ class IdpAuthController extends Controller
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
             'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
+            'state'         => $state,
         ];
 
         // Construct the full authorization URL using configurable path
@@ -80,7 +81,40 @@ class IdpAuthController extends Controller
      */
     public function callback(Request $request)
     {
-        \Log::info('IDP callback reached', ['params' => $request->all()]);
+        // Log callback without sensitive OAuth data
+        \Log::info('IDP callback reached', [
+            'ip' => $request->ip(),
+            'has_code' => $request->has('code'),
+            'has_state' => $request->has('state'),
+            'request_id' => $request->header('X-Request-ID'),
+        ]);
+
+        // Validate state parameter for CSRF protection
+        $receivedState = $request->query('state');
+        $sessionState = session('idp_oauth_state');
+
+        if (empty($receivedState)) {
+            \Log::warning('IDP callback received without state parameter', [
+                'ip' => $request->ip(),
+            ]);
+
+            return response('Forbidden: Missing state parameter', 403);
+        }
+
+        if ($receivedState !== $sessionState) {
+            \Log::warning('IDP callback state mismatch', [
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'has_session_state' => !empty($sessionState),
+                'received_state_hash' => substr(hash('sha256', $receivedState), 0, 12),
+                'session_state_hash' => !empty($sessionState) ? substr(hash('sha256', $sessionState), 0, 12) : null,
+            ]);
+
+            return response('Forbidden: Invalid state parameter', 403);
+        }
+
+        // Remove state from session after successful validation
+        session()->forget('idp_oauth_state');
 
         // Extract the authorization code from query parameters
         $code = $request->query('code');

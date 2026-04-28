@@ -45,4 +45,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\Throwable $e, Request $request) {
             return app(\App\Exceptions\Handler::class)->render($request, $e);
         });
+    })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
+        // Do not schedule tokens:prune-expired until the command prunes using
+        // a column/criterion that reflects final token-record expiry rather than
+        // the access-token expires_at used by middleware.
     })->create();

@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+        
         $tablesToModify = [
             'schedules' => 'created_by',
             'sar_generations' => 'created_by_user_id',
@@ -18,22 +20,25 @@ return new class extends Migration
         ];
 
         // Ensure we safely drop the foreign keys first
-        foreach ($tablesToModify as $tableName => $columnName) {
-            if (Schema::hasTable($tableName)) {
-                $foreignKeys = Schema::getForeignKeys($tableName);
-                $fkNameToDrop = null;
+        // SQLite doesn't support dropping foreign keys by name, so skip for SQLite
+        if ($driver !== 'sqlite') {
+            foreach ($tablesToModify as $tableName => $columnName) {
+                if (Schema::hasTable($tableName)) {
+                    $foreignKeys = Schema::getForeignKeys($tableName);
+                    $fkNameToDrop = null;
 
-                foreach ($foreignKeys as $fk) {
-                    if (in_array($columnName, $fk['columns'])) {
-                        $fkNameToDrop = $fk['name'];
-                        break;
+                    foreach ($foreignKeys as $fk) {
+                        if (in_array($columnName, $fk['columns'])) {
+                            $fkNameToDrop = $fk['name'];
+                            break;
+                        }
                     }
-                }
 
-                if ($fkNameToDrop) {
-                    Schema::table($tableName, function (Blueprint $table) use ($fkNameToDrop) {
-                        $table->dropForeign($fkNameToDrop);
-                    });
+                    if ($fkNameToDrop) {
+                        Schema::table($tableName, function (Blueprint $table) use ($fkNameToDrop) {
+                            $table->dropForeign($fkNameToDrop);
+                        });
+                    }
                 }
             }
         }
