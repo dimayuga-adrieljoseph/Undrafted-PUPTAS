@@ -28,13 +28,6 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
-    'slack' => [
-        'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
-        ],
-    ],
-
     'idp' => [
         'base_url' => env('IDP_BASE_URL', 'https://identity-provider.isaxbsit2027.com'),
         // Using /login as the authorize_path to bypass broken API endpoints on IDP side
@@ -122,6 +115,12 @@ return [
         'key' => env('OPENROUTER_API_KEY'),
         'endpoint' => env('OPENROUTER_ENDPOINT', 'https://openrouter.ai/api/v1/chat/completions'),
         'model' => env('OPENROUTER_MODEL', 'google/gemini-flash-1.5'),
+    ],
+
+    'chatwoot' => [
+        'access_token' => env('CHATWOOT_ACCESS_TOKEN'),
+        'secret_key' => env('CHATWOOT_SECRET_KEY'),
+        'base_url' => env('CHATWOOT_BASE_URL'),
     ],
     
     'medical_webhook' => [
