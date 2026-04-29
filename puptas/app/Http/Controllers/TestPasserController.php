@@ -345,10 +345,70 @@ class TestPasserController extends Controller
         // Use sar_tmp disk for consistent file access
         $disk = Storage::disk('sar_tmp');
 
-        // Check if file exists
+        // Check if file exists - if not, try to regenerate it
         if (!$disk->exists($filename)) {
-            \Log::error('SAR file not found for applicant download');
-            abort(404, 'File not found or expired');
+            \Log::warning('SAR file not found, attempting to regenerate', [
+                'filename' => $filename,
+                'reference' => $reference,
+            ]);
+
+            // Try to regenerate the SAR file
+            try {
+                $sarGeneration = SarGeneration::where('filename', $filename)
+                    ->where('test_passer_id', $passer->test_passer_id)
+                    ->first();
+
+                if (!$sarGeneration) {
+                    \Log::error('SAR generation record not found', [
+                        'filename' => $filename,
+                        'reference' => $reference,
+                    ]);
+                    abort(404, 'File not found or expired. Please contact the admission office.');
+                }
+
+                // Regenerate the SAR file
+                $sarService = app(\App\Services\SarFormService::class);
+                
+                $rowData = [
+                    'reference_number' => $passer->reference_number,
+                    'full_name' => $passer->full_name,
+                    'graduation_year' => $passer->graduation_year ?? date('Y'),
+                    'school_attended' => $passer->school_attended ?? 'N/A',
+                    'shs_strand' => $passer->shs_strand ?? 'N/A',
+                    'enrollment_date' => $sarGeneration->enrollment_date ? 
+                        \Carbon\Carbon::parse($sarGeneration->enrollment_date)->format('F d, Y') : 
+                        date('F d, Y'),
+                    'enrollment_time' => $sarGeneration->enrollment_time ?? date('h:i A'),
+                    'student_number' => $passer->student_number ?? '',
+                    'admission_status' => 'Admitted',
+                ];
+
+                $result = $sarService->generateSarPdf($rowData);
+
+                if (!$result['success']) {
+                    \Log::error('SAR regeneration failed', [
+                        'filename' => $filename,
+                        'error' => $result['error'] ?? 'Unknown error',
+                    ]);
+                    abort(500, 'Unable to regenerate file. Please contact the admission office.');
+                }
+
+                // Update the filename in case it changed
+                $filename = $result['filename'];
+                
+                \Log::info('SAR file regenerated successfully', [
+                    'filename' => $filename,
+                    'reference' => $reference,
+                ]);
+
+            } catch (\Exception $e) {
+                \Log::error('SAR regeneration exception', [
+                    'filename' => $filename,
+                    'reference' => $reference,
+                    'error' => $e->getMessage(),
+                ]);
+                abort(500, 'Unable to regenerate file. Please contact the admission office.');
+            }
         }
 
         // Return file download response
@@ -405,10 +465,67 @@ class TestPasserController extends Controller
         // Use sar_tmp disk for consistent file access
         $disk = Storage::disk('sar_tmp');
 
-        // Check if file exists
+        // Check if file exists - if not, try to regenerate it
         if (!$disk->exists($sarGeneration->filename)) {
-            \Log::error('SAR file not found', ['id' => $id]);
-            abort(404, 'File not found or expired');
+            \Log::warning('SAR file not found for admin download, attempting to regenerate', [
+                'id' => $id,
+                'filename' => $sarGeneration->filename,
+            ]);
+
+            // Try to regenerate the SAR file
+            try {
+                $passer = $sarGeneration->testPasser;
+
+                if (!$passer) {
+                    \Log::error('Test passer not found for SAR generation', ['id' => $id]);
+                    abort(404, 'Test passer record not found');
+                }
+
+                // Regenerate the SAR file
+                $sarService = app(\App\Services\SarFormService::class);
+                
+                $rowData = [
+                    'reference_number' => $passer->reference_number,
+                    'full_name' => $passer->full_name,
+                    'graduation_year' => $passer->graduation_year ?? date('Y'),
+                    'school_attended' => $passer->school_attended ?? 'N/A',
+                    'shs_strand' => $passer->shs_strand ?? 'N/A',
+                    'enrollment_date' => $sarGeneration->enrollment_date ? 
+                        \Carbon\Carbon::parse($sarGeneration->enrollment_date)->format('F d, Y') : 
+                        date('F d, Y'),
+                    'enrollment_time' => $sarGeneration->enrollment_time ?? date('h:i A'),
+                    'student_number' => $passer->student_number ?? '',
+                    'admission_status' => 'Admitted',
+                ];
+
+                $result = $sarService->generateSarPdf($rowData);
+
+                if (!$result['success']) {
+                    \Log::error('SAR regeneration failed for admin', [
+                        'id' => $id,
+                        'error' => $result['error'] ?? 'Unknown error',
+                    ]);
+                    abort(500, 'Unable to regenerate file. Please try again or contact support.');
+                }
+
+                // Update the filename in the database if it changed
+                if ($result['filename'] !== $sarGeneration->filename) {
+                    $sarGeneration->filename = $result['filename'];
+                    $sarGeneration->save();
+                }
+                
+                \Log::info('SAR file regenerated successfully for admin', [
+                    'id' => $id,
+                    'filename' => $result['filename'],
+                ]);
+
+            } catch (\Exception $e) {
+                \Log::error('SAR regeneration exception for admin', [
+                    'id' => $id,
+                    'error' => $e->getMessage(),
+                ]);
+                abort(500, 'Unable to regenerate file. Please try again or contact support.');
+            }
         }
 
         // Return file download response
