@@ -73,8 +73,8 @@ class SarFormService
             
             // Generate download URL (public download route)
             $downloadUrl = route('sar.passer-download', [
-                'filename' => $filename,
-                'reference' => $validated['reference_number']
+                'reference' => $validated['reference_number'],
+                'filename' => $filename
             ]);
             
             return [

@@ -176,7 +176,7 @@ Route::get('/home', function () {
 Route::middleware(['auth'])->post('/test-passers/upload', [Notify::class, 'handleUpload']);
 Route::middleware(['auth'])->get('/test-passers/form', [Notify::class, 'showUploadForm'])->name('upload.form');
 
-Route::get('/sar/download/{filename}/{reference}', [TestPasserController::class, 'downloadSar'])
+Route::get('/sar/download/{reference}/{filename}', [TestPasserController::class, 'downloadSar'])
     ->middleware('auth')
     ->where('filename', '.*')
     ->name('sar.passer-download');

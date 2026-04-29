@@ -110,8 +110,8 @@ class TestPasserController extends Controller
                 if ($result['success']) {
                     // Generate download URL (valid for 7 days)
                     $downloadUrl = route('sar.passer-download', [
-                        'filename' => $result['filename'],
-                        'reference' => $passer->reference_number
+                        'reference' => $passer->reference_number,
+                        'filename' => $result['filename']
                     ]);
 
                     // Create SAR generation record BEFORE sending email (no sent_at yet)
@@ -308,7 +308,7 @@ class TestPasserController extends Controller
      * Download SAR PDF for a specific test passer
      * Public route with reference number verification
      */
-    public function downloadSar($filename, $reference)
+    public function downloadSar($reference, $filename)
     {
         // Validate filename pattern (alphanumeric, dash, underscore, period only)
         if (!preg_match('/^[a-zA-Z0-9_\-\.]+$/', $filename)) {
@@ -570,8 +570,8 @@ class TestPasserController extends Controller
 
         // Generate a sample download URL (won't actually work, just for preview)
         $downloadUrl = route('sar.passer-download', [
-            'filename' => 'PREVIEW_SAR_' . $passer->reference_number . '_SAMPLE.pdf',
-            'reference' => $passer->reference_number
+            'reference' => $passer->reference_number,
+            'filename' => 'PREVIEW_SAR_' . $passer->reference_number . '_SAMPLE.pdf'
         ]);
 
         // Return the email view directly
