@@ -178,6 +178,7 @@ Route::middleware(['auth'])->get('/test-passers/form', [Notify::class, 'showUplo
 
 Route::get('/sar/download/{filename}/{reference}', [TestPasserController::class, 'downloadSar'])
     ->middleware('auth')
+    ->where('filename', '.*')
     ->name('sar.passer-download');
 
 Route::get('/applications', function () {
