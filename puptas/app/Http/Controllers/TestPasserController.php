@@ -412,9 +412,28 @@ class TestPasserController extends Controller
         }
 
         // Return file download response
-        return response()->download($disk->path($filename), $filename, [
-            'Content-Type' => 'application/pdf',
-        ]);
+        $disk = Storage::disk('sar_tmp');
+        
+        // Check if using S3 by checking if path() method throws exception
+        try {
+            $localPath = $disk->path($filename);
+            // Local storage - use regular download
+            return response()->download($localPath, $filename, [
+                'Content-Type' => 'application/pdf',
+            ]);
+        } catch (\RuntimeException $e) {
+            // S3 storage - stream the file
+            return response()->stream(function () use ($disk, $filename) {
+                $stream = $disk->readStream($filename);
+                fpassthru($stream);
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+        }
     }
 
     /**
@@ -529,9 +548,28 @@ class TestPasserController extends Controller
         }
 
         // Return file download response
-        return response()->download($disk->path($sarGeneration->filename), $sarGeneration->filename, [
-            'Content-Type' => 'application/pdf',
-        ]);
+        $disk = Storage::disk('sar_tmp');
+        
+        // Check if using S3 by checking if path() method throws exception
+        try {
+            $localPath = $disk->path($sarGeneration->filename);
+            // Local storage - use regular download
+            return response()->download($localPath, $sarGeneration->filename, [
+                'Content-Type' => 'application/pdf',
+            ]);
+        } catch (\RuntimeException $e) {
+            // S3 storage - stream the file
+            return response()->stream(function () use ($disk, $sarGeneration) {
+                $stream = $disk->readStream($sarGeneration->filename);
+                fpassthru($stream);
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $sarGeneration->filename . '"',
+            ]);
+        }
     }
 
     /**
@@ -550,11 +588,27 @@ class TestPasserController extends Controller
             abort(404, 'File not found or expired');
         }
 
-        // Return PDF for inline preview
-        return response()->file($disk->path($sarGeneration->filename), [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $sarGeneration->filename . '"',
-        ]);
+        // Check if using S3 by checking if path() method throws exception
+        try {
+            $localPath = $disk->path($sarGeneration->filename);
+            // Local storage - return PDF for inline preview
+            return response()->file($localPath, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $sarGeneration->filename . '"',
+            ]);
+        } catch (\RuntimeException $e) {
+            // S3 storage - stream the file for inline preview
+            return response()->stream(function () use ($disk, $sarGeneration) {
+                $stream = $disk->readStream($sarGeneration->filename);
+                fpassthru($stream);
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $sarGeneration->filename . '"',
+            ]);
+        }
     }
 
     /**
