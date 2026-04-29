@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
@@ -54,6 +55,10 @@ class Handler extends ExceptionHandler
                 return back()->with('error', $e->getMessage() ?: 'You do not have permission to perform this action.');
             }
 
+            if ($e instanceof InvalidSignatureException) {
+                return back()->with('error', 'This link is invalid or has expired. Please request a new link.');
+            }
+
             return back()->with('error', 'Something went wrong. Please try again later.');
         }
 
@@ -81,6 +86,14 @@ class Handler extends ExceptionHandler
                     'success'   => false,
                     'message'   => 'You do not have permission to perform this action.',
                     'errorCode' => 'FORBIDDEN',
+                ], 403, ['Content-Type' => 'application/json']);
+            }
+
+            if ($e instanceof InvalidSignatureException) {
+                return response()->json([
+                    'success'   => false,
+                    'message'   => 'This link is invalid or has expired. Please request a new link.',
+                    'errorCode' => 'INVALID_SIGNATURE',
                 ], 403, ['Content-Type' => 'application/json']);
             }
 

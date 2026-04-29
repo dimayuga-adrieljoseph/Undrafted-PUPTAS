@@ -108,11 +108,15 @@ class TestPasserController extends Controller
                 $result = $sarService->generateSarPdf($sarData);
 
                 if ($result['success']) {
-                    // Generate download URL (valid for 7 days)
-                    $downloadUrl = route('sar.passer-download', [
-                        'reference' => $passer->reference_number,
-                        'filename' => $result['filename']
-                    ]);
+                    // Generate signed download URL (valid for 30 days)
+                    $downloadUrl = \URL::temporarySignedRoute(
+                        'sar.passer-download',
+                        now()->addDays(30),
+                        [
+                            'reference' => $passer->reference_number,
+                            'filename' => $result['filename']
+                        ]
+                    );
 
                     // Create SAR generation record BEFORE sending email (no sent_at yet)
                     $sarGeneration = SarGeneration::create([
@@ -369,12 +373,14 @@ class TestPasserController extends Controller
                 // Regenerate the SAR file
                 $sarService = app(\App\Services\SarFormService::class);
                 
+                $fullName = trim("{$passer->surname}, {$passer->first_name} " . ($passer->middle_name ?? ''));
+                
                 $rowData = [
                     'reference_number' => $passer->reference_number,
-                    'full_name' => $passer->full_name,
-                    'graduation_year' => $passer->graduation_year ?? date('Y'),
-                    'school_attended' => $passer->school_attended ?? 'N/A',
-                    'shs_strand' => $passer->shs_strand ?? 'N/A',
+                    'full_name' => $fullName,
+                    'graduation_year' => $passer->year_graduated ?? date('Y'),
+                    'school_attended' => $passer->shs_school ?? 'N/A',
+                    'shs_strand' => $passer->strand ?? 'N/A',
                     'enrollment_date' => $sarGeneration->enrollment_date ? 
                         \Carbon\Carbon::parse($sarGeneration->enrollment_date)->format('F d, Y') : 
                         date('F d, Y'),
@@ -503,12 +509,14 @@ class TestPasserController extends Controller
                 // Regenerate the SAR file
                 $sarService = app(\App\Services\SarFormService::class);
                 
+                $fullName = trim("{$passer->surname}, {$passer->first_name} " . ($passer->middle_name ?? ''));
+                
                 $rowData = [
                     'reference_number' => $passer->reference_number,
-                    'full_name' => $passer->full_name,
-                    'graduation_year' => $passer->graduation_year ?? date('Y'),
-                    'school_attended' => $passer->school_attended ?? 'N/A',
-                    'shs_strand' => $passer->shs_strand ?? 'N/A',
+                    'full_name' => $fullName,
+                    'graduation_year' => $passer->year_graduated ?? date('Y'),
+                    'school_attended' => $passer->shs_school ?? 'N/A',
+                    'shs_strand' => $passer->strand ?? 'N/A',
                     'enrollment_date' => $sarGeneration->enrollment_date ? 
                         \Carbon\Carbon::parse($sarGeneration->enrollment_date)->format('F d, Y') : 
                         date('F d, Y'),

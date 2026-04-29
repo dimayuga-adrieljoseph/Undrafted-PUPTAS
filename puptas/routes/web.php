@@ -176,8 +176,9 @@ Route::get('/home', function () {
 Route::middleware(['auth'])->post('/test-passers/upload', [Notify::class, 'handleUpload']);
 Route::middleware(['auth'])->get('/test-passers/form', [Notify::class, 'showUploadForm'])->name('upload.form');
 
+// Public SAR download with signed URL (expires in 30 days)
 Route::get('/sar/download/{reference}/{filename}', [TestPasserController::class, 'downloadSar'])
-    ->middleware('auth')
+    ->middleware('signed')
     ->where('filename', '.*')
     ->name('sar.passer-download');
 
