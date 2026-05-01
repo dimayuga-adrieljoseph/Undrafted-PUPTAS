@@ -204,6 +204,9 @@ class InterviewerDashboardController extends Controller
 
         $application = $this->applicationService->getApplicationByUserId($userId);
 
+        // Check authorization using ApplicationPolicy
+        $this->authorize('changeCourse', $application);
+
         // Check if evaluator stage is completed
         $this->applicationService->ensureStageCompleted(
             $application,

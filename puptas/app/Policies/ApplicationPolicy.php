@@ -12,7 +12,7 @@ class ApplicationPolicy
      *
      * Authorization rules:
      * - Admins (role_id=2) and Superadmins (role_id=7): unrestricted access
-     * - Interviewers (role_id=4): authorized only when enrollment_status != 'officially_enrolled'
+     * - Interviewers (role_id=4): authorized only when enrollment_status != 'officially_enrolled' AND status != 'accepted'
      * - All other roles: denied
      *
      * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
@@ -26,9 +26,10 @@ class ApplicationPolicy
             return true;
         }
         
-        // Interviewers: restricted by enrollment_status
+        // Interviewers: restricted by enrollment_status and status
         if ($user->role_id === 4) {
-            return $application->enrollment_status !== 'officially_enrolled';
+            return $application->enrollment_status !== 'officially_enrolled'
+                && $application->status !== 'accepted';
         }
         
         // All other roles: denied

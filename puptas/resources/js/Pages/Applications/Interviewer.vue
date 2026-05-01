@@ -310,8 +310,8 @@
                     <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
                         ⚠️ Transfer to Different Program
                     </h5>
-                    <p v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled'" class="text-xs text-red-600 dark:text-red-400 mb-3 font-semibold">
-                        ⛔ Cannot transfer officially enrolled applicants. Only admins can change courses for enrolled students.
+                    <p v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'" class="text-xs text-red-600 dark:text-red-400 mb-3 font-semibold">
+                        ⛔ Cannot transfer officially enrolled or accepted applicants. Only admins can change courses for these students.
                     </p>
                     <p v-else class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
                         Transfer applicant to a different program. This action will be logged in the audit trail.
@@ -319,7 +319,7 @@
                     <select
                         v-model="changeCourseSelectedId"
                         id="change-course-select"
-                        :disabled="selectedUser?.application?.enrollment_status === 'officially_enrolled'"
+                        :disabled="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-3 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <option value="" disabled>Select new program…</option>
@@ -335,7 +335,7 @@
                     </select>
                     <button
                         @click="changeCourse"
-                        :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse || selectedUser?.application?.enrollment_status === 'officially_enrolled'"
+                        :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse || selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
                         class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium dark:text-gray-900"
                     >
                         <span v-if="isChangingCourse">Transferring…</span>
@@ -553,8 +553,15 @@ const getStatusClass = (status) => {
 // Get evaluation-specific status text
 const getEvaluationStatusText = (user) => {
     if (user.is_evaluation_completed) {
-        // Show what action was taken
-        if (user.process_action === 'accepted') return "Completed - Accepted";
+        // Check application status first - show if officially enrolled or accepted
+        if (user.application?.enrollment_status === 'officially_enrolled') {
+            return "Officially Enrolled";
+        }
+        if (user.application?.status === 'accepted') {
+            return "Accepted";
+        }
+        // Show what action was taken during interview stage
+        if (user.process_action === 'passed') return "Completed - Passed";
         if (user.process_action === 'transferred') return "Completed - Transferred";
         return "Completed";
     }
@@ -565,9 +572,16 @@ const getEvaluationStatusText = (user) => {
 // Get evaluation-specific status styling
 const getEvaluationStatusClass = (user) => {
     if (user.is_evaluation_completed) {
-        if (user.process_action === 'accepted') return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
+        // Check application status first - show special styling for enrolled/accepted
+        if (user.application?.enrollment_status === 'officially_enrolled') {
+            return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 font-semibold";
+        }
+        if (user.application?.status === 'accepted') {
+            return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold";
+        }
+        if (user.process_action === 'passed') return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
         if (user.process_action === 'transferred') return "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300";
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
+        return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
     }
     if (user.process_status === 'in_progress') return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300";
     return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
@@ -879,11 +893,17 @@ const changeCourse = async () => {
         }
     } catch (e) {
         console.error("Course change failed:", e);
-        const msg =
-            e.response?.data?.message ??
-            e.response?.data?.errors?.program_id?.[0] ??
-            "Failed to transfer applicant.";
-        showSnackbar(msg);
+        
+        // Handle 403 Forbidden specifically
+        if (e.response?.status === 403) {
+            showSnackbar("You do not have permission to transfer this applicant. Only admins can change courses for officially enrolled or accepted students.", "error");
+        } else {
+            const msg =
+                e.response?.data?.message ??
+                e.response?.data?.errors?.program_id?.[0] ??
+                "Failed to transfer applicant.";
+            showSnackbar(msg, "error");
+        }
     } finally {
         isChangingCourse.value = false;
     }
