@@ -348,13 +348,21 @@ class RecordStaffDashboardController extends Controller
         // Perform the update within a database transaction
         DB::beginTransaction();
         try {
-            // Store old program_id value before update
+            // Store old program_id and enrollment_status before update
             $oldProgramId = $application->program_id;
+            $isOfficiallyEnrolled = $application->enrollment_status === 'officially_enrolled';
             
-            // Update application program_id with validated value from request
-            $application->update([
-                'program_id' => $newProgramId
-            ]);
+            // Update application program_id
+            // If officially enrolled, keep status as 'accepted' and enrollment_status as 'officially_enrolled'
+            // If not officially enrolled, set status to 'transferred' (for interviewers during interview stage)
+            $updateData = ['program_id' => $newProgramId];
+            
+            // Only change status to 'transferred' if NOT officially enrolled
+            if (!$isOfficiallyEnrolled && $application->status !== 'transferred') {
+                $updateData['status'] = 'transferred';
+            }
+            
+            $application->update($updateData);
 
             // Safely compute performed_by: only use numeric IDs for FK constraint
             $authUser = auth()->user();
@@ -370,7 +378,8 @@ class RecordStaffDashboardController extends Controller
                 'stage'          => 'records',
                 'action'         => 'course_changed',
                 'status'         => 'completed',
-                'reviewer_notes' => 'Changed from program ID ' . $oldProgramId . ' to ' . $newProgramId,
+                'reviewer_notes' => 'Changed from program ID ' . $oldProgramId . ' to ' . $newProgramId . 
+                                   ($isOfficiallyEnrolled ? ' (officially enrolled - status preserved)' : ''),
                 'performed_by'   => $performedBy,
                 'ip_address'     => request()->ip()
             ]);
