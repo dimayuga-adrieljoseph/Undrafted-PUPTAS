@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -13,9 +14,16 @@ use App\Services\DoclingService;
 use App\Helpers\FileMapper;
 use Illuminate\Support\Facades\Storage;
 
-class ProcessGradeOcr implements ShouldQueue
+class ProcessGradeOcr implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public $uniqueFor = 3600;
+
+    public function uniqueId(): string
+    {
+        return (string) $this->userFileId;
+    }
 
     public function __construct(
         public int $userFileId

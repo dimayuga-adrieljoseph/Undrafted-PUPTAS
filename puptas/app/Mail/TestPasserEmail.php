@@ -4,15 +4,23 @@ namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Symfony\Component\Mime\Part\TextPart;
 
-class TestPasserEmail extends Mailable implements ShouldQueue
+class TestPasserEmail extends Mailable implements ShouldQueue, ShouldBeUnique
 {
     use Queueable, SerializesModels;
+
+    public $uniqueFor = 3600;
+
+    public function uniqueId(): string
+    {
+        return (string) $this->passer->test_passer_id;
+    }
 
     /**
      * Create a new message instance.
