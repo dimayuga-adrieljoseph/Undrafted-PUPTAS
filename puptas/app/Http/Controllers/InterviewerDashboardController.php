@@ -260,33 +260,47 @@ class InterviewerDashboardController extends Controller
             }
             \Log::info("📉 Program slots updated. New slots: {$program->slots}");
 
-            // Close current interviewer in-progress process
-            $inProgress = $application->processes()
+            // Handle interviewer process - could be in_progress or already completed
+            $interviewerProcess = $application->processes()
                 ->where('stage', 'interviewer')
-                ->where('status', 'in_progress')
+                ->whereIn('status', ['in_progress', 'completed'])
                 ->latest()
                 ->first();
 
-            if (!$inProgress) {
-                return response()->json([
-                    'message' => 'This action has already been completed or is not available.',
-                ], 409);
+            if ($interviewerProcess) {
+                // Update existing process to reflect the transfer
+                $interviewerProcess->update([
+                    'status' => 'completed',
+                    'action' => 'transferred',
+                    'reviewer_notes' => 'Transferred to program ID ' . $program->id,
+                    'performed_by' => auth()->id(),
+                ]);
+            } else {
+                // No interviewer process exists - create one
+                ApplicationProcess::create([
+                    'application_id' => $application->id,
+                    'stage' => 'interviewer',
+                    'status' => 'completed',
+                    'action' => 'transferred',
+                    'reviewer_notes' => 'Transferred to program ID ' . $program->id,
+                    'performed_by' => auth()->id(),
+                ]);
             }
 
-            $inProgress->update([
-                'status' => 'completed',
-                'action' => 'transferred',
-                'reviewer_notes' => 'Transferred to program ID ' . $program->id,
-                'performed_by' => auth()->id(),
-            ]);
+            // Ensure medical stage exists if not already present
+            $medicalProcess = $application->processes()
+                ->where('stage', 'medical')
+                ->latest()
+                ->first();
 
-            // Create next stage (medical)
-            ApplicationProcess::create([
-                'application_id' => $application->id,
-                'stage' => 'medical',
-                'status' => 'in_progress',
-                'performed_by' => null,
-            ]);
+            if (!$medicalProcess) {
+                ApplicationProcess::create([
+                    'application_id' => $application->id,
+                    'stage' => 'medical',
+                    'status' => 'in_progress',
+                    'performed_by' => null,
+                ]);
+            }
 
             \Log::info("📝 ApplicationProcess logged for application {$application->id}");
         });
