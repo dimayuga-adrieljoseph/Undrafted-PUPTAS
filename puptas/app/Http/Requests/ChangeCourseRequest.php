@@ -41,7 +41,7 @@ class ChangeCourseRequest extends FormRequest
                 Rule::exists(Program::class, 'id'),
                 function ($attribute, $value, $fail) {
                     // Get the applicant's current application
-                    $applicantId = $this->route('id');
+                    $applicantId = $this->route('applicantId');
                     $application = Application::where('user_id', $applicantId)->first();
                     
                     // Check if the new program_id is different from current program_id
