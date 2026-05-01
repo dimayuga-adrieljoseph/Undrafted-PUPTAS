@@ -120,7 +120,7 @@ class UserService
     public function getAllApplicantsByStage(string $stage): Collection
     {
         return ApplicantProfile::with(['currentApplication' => function ($query) {
-            $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
+            $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id');
         }, 'currentApplication.program' => function ($query) {
             $query->select('id', 'code', 'name');
         }, 'currentApplication.processes' => function ($query) use ($stage) {
@@ -158,6 +158,7 @@ class UserService
                     'application' => $application ? [
                         'id' => $application->id,
                         'status' => $application->status,
+                        'enrollment_status' => $application->enrollment_status,
                         'created_at' => $application->created_at,
                         'program' => $application->program ? [
                             'id' => $application->program->id,
