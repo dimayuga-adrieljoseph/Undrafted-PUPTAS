@@ -194,122 +194,131 @@ class InterviewerDashboardController extends Controller
 
     public function transferToProgram(Request $request, $userId)
     {
-        $validated = $request->validate([
-            'program_id' => 'required|exists:programs,id',
-        ]);
+        try {
+            $validated = $request->validate([
+                'program_id' => 'required|exists:programs,id',
+            ]);
 
-        $this->ensureRole(4);
+            $this->ensureRole(4);
 
-        \Log::info("🚀 Transfer requested for user {$userId} to program {$validated['program_id']}");
+            \Log::info("🚀 Transfer requested for user {$userId} to program {$validated['program_id']}");
 
-        $application = $this->applicationService->getApplicationByUserId($userId);
+            $application = $this->applicationService->getApplicationByUserId($userId);
 
-        // Check authorization using ApplicationPolicy
-        $this->authorize('changeCourse', $application);
+            // Check authorization using ApplicationPolicy
+            $this->authorize('changeCourse', $application);
 
-        // Check if evaluator stage is completed
-        $this->applicationService->ensureStageCompleted(
-            $application,
-            'evaluator',
-            "Cannot transfer - evaluator stage not completed."
-        );
+            // Check if evaluator stage is completed
+            $this->applicationService->ensureStageCompleted(
+                $application,
+                'evaluator',
+                "Cannot transfer - evaluator stage not completed."
+            );
 
-        $grades = Grade::where('user_id', $userId)->first();
+            $grades = Grade::where('user_id', $userId)->first();
 
-        if (!$grades) {
-            \Log::warning("⚠️ No grades found for user {$userId}");
-            return response()->json(['message' => 'User has no grades recorded.'], 400);
-        }
-
-        DB::transaction(function () use ($application, $validated, $grades, $userId) {
-            $program = Program::lockForUpdate()->findOrFail($validated['program_id']);
-
-            \Log::info("📦 Fetched program: {$program->id}, current slots: {$program->slots}");
-
-            if ($program->slots <= 0) {
-                \Log::warning("❌ No slots left in program {$program->id}");
-                throw new \Exception("No available slots in the selected program.");
+            if (!$grades) {
+                \Log::warning("⚠️ No grades found for user {$userId}");
+                return response()->json(['message' => 'User has no grades recorded.'], 400);
             }
 
-            if (
-                $grades->mathematics < $program->math ||
-                $grades->science < $program->science ||
-                $grades->english < $program->english
-            ) {
-                \Log::warning("📉 User {$userId} does not meet grade requirements for program {$program->id}");
-                throw new \Exception("User does not meet the grade requirements for this program.");
-            }
+            DB::transaction(function () use ($application, $validated, $grades, $userId) {
+                $program = Program::lockForUpdate()->findOrFail($validated['program_id']);
 
-            $oldProgramId = $application->program_id;
-            $application->program_id = $program->id;
-            $application->status = 'transferred';
-            $application->save();
-            \Log::info("✅ Application updated with program_id {$program->id}");
+                \Log::info("📦 Fetched program: {$program->id}, current slots: {$program->slots}");
 
-            // Decrement new program slots
-            $program->slots -= 1;
-            $program->save();
-
-            // Increment old program slots
-            if ($oldProgramId) {
-                $oldProgram = Program::find($oldProgramId);
-                if ($oldProgram) {
-                    $oldProgram->slots += 1;
-                    $oldProgram->save();
+                if ($program->slots <= 0) {
+                    \Log::warning("❌ No slots left in program {$program->id}");
+                    throw new \Exception("No available slots in the selected program.");
                 }
-            }
-            \Log::info("📉 Program slots updated. New slots: {$program->slots}");
 
-            // Handle interviewer process - could be in_progress or already completed
-            $interviewerProcess = $application->processes()
-                ->where('stage', 'interviewer')
-                ->whereIn('status', ['in_progress', 'completed'])
-                ->latest()
-                ->first();
+                if (
+                    $grades->mathematics < $program->math ||
+                    $grades->science < $program->science ||
+                    $grades->english < $program->english
+                ) {
+                    \Log::warning("📉 User {$userId} does not meet grade requirements for program {$program->id}");
+                    throw new \Exception("User does not meet the grade requirements for this program.");
+                }
 
-            if ($interviewerProcess) {
-                // Update existing process to reflect the transfer
-                $interviewerProcess->update([
-                    'status' => 'completed',
-                    'action' => 'transferred',
-                    'reviewer_notes' => 'Transferred to program ID ' . $program->id,
-                    'performed_by' => auth()->id(),
-                ]);
-            } else {
-                // No interviewer process exists - create one
-                ApplicationProcess::create([
-                    'application_id' => $application->id,
-                    'stage' => 'interviewer',
-                    'status' => 'completed',
-                    'action' => 'transferred',
-                    'reviewer_notes' => 'Transferred to program ID ' . $program->id,
-                    'performed_by' => auth()->id(),
-                ]);
-            }
+                $oldProgramId = $application->program_id;
+                $application->program_id = $program->id;
+                $application->status = 'transferred';
+                $application->save();
+                \Log::info("✅ Application updated with program_id {$program->id}");
 
-            // Ensure medical stage exists if not already present
-            $medicalProcess = $application->processes()
-                ->where('stage', 'medical')
-                ->latest()
-                ->first();
+                // Decrement new program slots
+                $program->slots -= 1;
+                $program->save();
 
-            if (!$medicalProcess) {
-                ApplicationProcess::create([
-                    'application_id' => $application->id,
-                    'stage' => 'medical',
-                    'status' => 'in_progress',
-                    'performed_by' => null,
-                ]);
-            }
+                // Increment old program slots
+                if ($oldProgramId) {
+                    $oldProgram = Program::find($oldProgramId);
+                    if ($oldProgram) {
+                        $oldProgram->slots += 1;
+                        $oldProgram->save();
+                    }
+                }
+                \Log::info("📉 Program slots updated. New slots: {$program->slots}");
 
-            \Log::info("📝 ApplicationProcess logged for application {$application->id}");
-        });
+                // Handle interviewer process - could be in_progress or already completed
+                $interviewerProcess = $application->processes()
+                    ->where('stage', 'interviewer')
+                    ->whereIn('status', ['in_progress', 'completed'])
+                    ->latest()
+                    ->first();
 
-        \Log::info("🎉 Transfer completed for user {$userId}");
+                if ($interviewerProcess) {
+                    // Update existing process to reflect the transfer
+                    $interviewerProcess->update([
+                        'status' => 'completed',
+                        'action' => 'transferred',
+                        'reviewer_notes' => 'Transferred to program ID ' . $program->id,
+                        'performed_by' => auth()->id(),
+                    ]);
+                } else {
+                    // No interviewer process exists - create one
+                    ApplicationProcess::create([
+                        'application_id' => $application->id,
+                        'stage' => 'interviewer',
+                        'status' => 'completed',
+                        'action' => 'transferred',
+                        'reviewer_notes' => 'Transferred to program ID ' . $program->id,
+                        'performed_by' => auth()->id(),
+                    ]);
+                }
 
-        $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer transferred applicant ID {$userId} to program ID {$validated['program_id']}.", null, 'ADMISSION_DATA');
+                // Ensure medical stage exists if not already present
+                $medicalProcess = $application->processes()
+                    ->where('stage', 'medical')
+                    ->latest()
+                    ->first();
 
-        return response()->json(['message' => 'Transferred successfully.']);
+                if (!$medicalProcess) {
+                    ApplicationProcess::create([
+                        'application_id' => $application->id,
+                        'stage' => 'medical',
+                        'status' => 'in_progress',
+                        'performed_by' => null,
+                    ]);
+                }
+
+                \Log::info("📝 ApplicationProcess logged for application {$application->id}");
+            });
+
+            \Log::info("🎉 Transfer completed for user {$userId}");
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer transferred applicant ID {$userId} to program ID {$validated['program_id']}.", null, 'ADMISSION_DATA');
+
+            return response()->json(['message' => 'Transferred successfully.']);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            \Log::warning("🚫 Authorization failed for user {$userId}: " . $e->getMessage());
+            return response()->json(['message' => 'You do not have permission to transfer this applicant.'], 403);
+        } catch (\Exception $e) {
+            \Log::error("❌ Transfer failed for user {$userId}: " . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
     }
 
     private function ensureRole(int $roleId): void
