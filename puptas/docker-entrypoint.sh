@@ -103,10 +103,17 @@ apache2ctl -M 2>/dev/null | grep mpm || echo "No MPM modules listed"
 echo "[12/13] Final permission fix..."
 chown -R www-data:www-data storage bootstrap/cache
 
-# Start Apache
-echo "[13/13] Starting Apache..."
-echo "=========================================="
-echo "APACHE STARTED SUCCESSFULLY"
-echo "=========================================="
-
-exec apache2-foreground
+# Start Apache or execute custom command
+if [ "$1" != "" ]; then
+    echo "=========================================="
+    echo "EXECUTING CUSTOM COMMAND: $@"
+    echo "=========================================="
+    exec "$@"
+else
+    echo "[13/13] Starting Apache..."
+    echo "=========================================="
+    echo "APACHE STARTED SUCCESSFULLY"
+    echo "=========================================="
+    
+    exec apache2-foreground
+fi
