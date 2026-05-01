@@ -308,15 +308,19 @@
                     class="mt-5 p-3 border border-yellow-300 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700"
                 >
                     <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                        ⚠️ Change Course
+                        ⚠️ Transfer to Different Program
                     </h5>
-                    <p class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
-                        Changing the course of an officially enrolled applicant will be logged in the audit trail.
+                    <p v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled'" class="text-xs text-red-600 dark:text-red-400 mb-3 font-semibold">
+                        ⛔ Cannot transfer officially enrolled applicants. Only admins can change courses for enrolled students.
+                    </p>
+                    <p v-else class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
+                        Transfer applicant to a different program. This action will be logged in the audit trail.
                     </p>
                     <select
                         v-model="changeCourseSelectedId"
                         id="change-course-select"
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-3"
+                        :disabled="selectedUser?.application?.enrollment_status === 'officially_enrolled'"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-3 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <option value="" disabled>Select new program…</option>
                         <option
@@ -331,11 +335,11 @@
                     </select>
                     <button
                         @click="changeCourse"
-                        :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse"
+                        :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse || selectedUser?.application?.enrollment_status === 'officially_enrolled'"
                         class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium dark:text-gray-900"
                     >
-                        <span v-if="isChangingCourse">Applying…</span>
-                        <span v-else>Apply Changes</span>
+                        <span v-if="isChangingCourse">Transferring…</span>
+                        <span v-else>Transfer Applicant</span>
                     </button>
                 </div>
 
@@ -838,28 +842,31 @@ const changeCourse = async () => {
         return;
     }
 
+    // Check if applicant is officially enrolled - interviewers cannot change course for officially enrolled applicants
+    const isOfficiallyEnrolled = selectedUser.value?.application?.enrollment_status === 'officially_enrolled';
+    if (isOfficiallyEnrolled) {
+        showSnackbar("Cannot change course for officially enrolled applicants. Only admins can perform this action.");
+        return;
+    }
+
     const selectedProg = availablePrograms.value.find(
         (p) => p.id === changeCourseSelectedId.value
     );
     const confirmMsg = selectedProg
-        ? `Change course to "${selectedProg.code} - ${selectedProg.name}"? This action will be logged.`
-        : "Change course? This action will be logged.";
+        ? `Transfer applicant to "${selectedProg.code} - ${selectedProg.name}"? This action will be logged.`
+        : "Transfer applicant? This action will be logged.";
 
     if (!confirm(confirmMsg)) return;
 
     isChangingCourse.value = true;
     try {
-        const isEnrolled = selectedUser.value?.application?.enrollment_status === 'officially_enrolled';
-        const endpoint = isEnrolled 
-            ? `/record-dashboard/change-course/${selectedUser.value.id}`
-            : `/interviewer-dashboard/transfer/${selectedUser.value.id}`;
-
+        // Interviewers always use the transfer endpoint
         const res = await axios.post(
-            endpoint,
+            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
             { program_id: changeCourseSelectedId.value }
         );
         
-        showSnackbar(res.data?.message ?? (isEnrolled ? "Course updated successfully." : "Applicant transferred successfully!"));
+        showSnackbar(res.data?.message ?? "Applicant transferred successfully!");
         changeCourseSelectedId.value = "";
 
         await fetchUsers();
@@ -875,7 +882,7 @@ const changeCourse = async () => {
         const msg =
             e.response?.data?.message ??
             e.response?.data?.errors?.program_id?.[0] ??
-            "Failed to change course.";
+            "Failed to transfer applicant.";
         showSnackbar(msg);
     } finally {
         isChangingCourse.value = false;
