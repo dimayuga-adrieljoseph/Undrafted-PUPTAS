@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use App\Models\ApplicantProfile;
 use App\Models\UserFile;
 use Inertia\Inertia;
@@ -17,6 +18,7 @@ use App\Services\DashboardService;
 use App\Services\UserService;
 use App\Services\ApplicationService;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\ChangeCourseRequest;
 
 class RecordStaffDashboardController extends Controller
 {
@@ -25,15 +27,18 @@ class RecordStaffDashboardController extends Controller
     protected DashboardService $dashboardService;
     protected UserService $userService;
     protected ApplicationService $applicationService;
+    protected \App\Services\AuditLogService $auditLogService;
 
     public function __construct(
         DashboardService $dashboardService,
         UserService $userService,
-        ApplicationService $applicationService
+        ApplicationService $applicationService,
+        \App\Services\AuditLogService $auditLogService
     ) {
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
         $this->applicationService = $applicationService;
+        $this->auditLogService = $auditLogService;
     }
 
     /**
@@ -312,53 +317,77 @@ class RecordStaffDashboardController extends Controller
     }
 
     /**
-     * Change course/program for an officially enrolled applicant
+     * Change course/program for an applicant based on role and enrollment status
+     * 
+     * Interviewers can change courses for non-officially-enrolled applicants (pending, temporary)
+     * Admins and Superadmins can change courses regardless of enrollment status
      */
-    public function changeCourse(Request $request, $applicantId)
+    public function changeCourse(ChangeCourseRequest $request, string $applicantId): JsonResponse
     {
+        // Retrieve Application by user_id matching $applicantId
+        $application = Application::where('user_id', $applicantId)->first();
+        
+        // Return 404 JSON response if application not found
+        if (!$application) {
+            return response()->json(['message' => 'Application not found.'], 404);
+        }
+        
+        // Call authorization check - Laravel will automatically return 403 if authorization fails
+        $this->authorize('changeCourse', $application);
+
         $request->validate([
             'program_id' => 'required|exists:programs,id'
         ]);
 
         $newProgramId = $request->program_id;
 
-        // Verify the applicant profile exists
-        $applicant = ApplicantProfile::where('user_id', $applicantId)->firstOrFail();
-
-        $application = Application::where('user_id', $applicantId)->firstOrFail();
-
-        if ($application->enrollment_status !== 'officially_enrolled') {
-            return response()->json(['message' => 'Course can only be changed for officially enrolled applicants.'], 409);
-        }
-
         if ($application->program_id == $newProgramId) {
             return response()->json(['message' => 'The selected program is the same as the current program.'], 422);
         }
 
-        $oldProgramId = $application->program_id;
-
-        // Perform the update
+        // Perform the update within a database transaction
         DB::beginTransaction();
         try {
+            // Store old program_id value before update
+            $oldProgramId = $application->program_id;
+            
+            // Update application program_id with validated value from request
             $application->update([
                 'program_id' => $newProgramId
             ]);
 
-            // Define user ID safely for mock / idp
-            $perfBy = auth()->user() ? auth()->user()->id : null;
-
-            // Log the process
-            \App\Models\ApplicationProcess::create([
+            // Create ApplicationProcess record with action='course_changed', stage='records', status='completed'
+            ApplicationProcess::create([
                 'application_id' => $application->id,
-                'stage'          => 'course_changed',
+                'stage'          => 'records',
                 'action'         => 'course_changed',
                 'status'         => 'completed',
                 'reviewer_notes' => 'Changed from program ID ' . $oldProgramId . ' to ' . $newProgramId,
-                'performed_by'   => $perfBy,
+                'performed_by'   => auth()->user() ? auth()->user()->id : null,
                 'ip_address'     => request()->ip()
             ]);
 
             DB::commit();
+
+            // Log successful course change - handle failures gracefully
+            try {
+                $user = auth()->user();
+                $this->auditLogService->logActivity(
+                    'UPDATE',
+                    'Applications',
+                    "Changed course for applicant {$applicantId} from program {$oldProgramId} to {$newProgramId}",
+                    $user,
+                    \App\Models\AuditLog::CATEGORY_ADMISSION_DATA
+                );
+            } catch (\Throwable $e) {
+                // Log the error but don't fail the operation
+                logger()->error('[RecordStaffDashboard] Failed to log course change audit', [
+                    'applicant_id' => $applicantId,
+                    'old_program_id' => $oldProgramId,
+                    'new_program_id' => $newProgramId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             $newProgram = Program::find($newProgramId);
 
