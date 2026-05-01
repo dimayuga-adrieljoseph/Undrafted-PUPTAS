@@ -11,6 +11,8 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\TestPasserEmail;
 use App\Mail\SarFormEmail;
+use App\Jobs\SendPasserEmail;
+use App\Jobs\SendSarFormEmail;
 use App\Services\SarFormService;
 use App\Services\AuditLogService;
 use Symfony\Component\Mime\Part\TextPart;
@@ -77,8 +79,7 @@ class TestPasserController extends Controller
                 $messageTemplate
             );
 
-            Mail::to($passer->email)
-                ->send(new TestPasserEmail($passer, $personalizedMessage));
+            SendPasserEmail::dispatch($passer, $personalizedMessage);
         }
 
         $this->auditLogService->logActivity('CREATE', 'Test Passers', "Sent emails to " . count($passerIds) . " passer(s) using {$templateType} template.", null, 'ADMISSION_DATA');
@@ -130,15 +131,9 @@ class TestPasserController extends Controller
                         'email_sent_successfully' => false,
                     ]);
 
-                    // Send email with download link
-                    Mail::to($passer->email)
-                        ->send(new SarFormEmail($passer, $downloadUrl));
-
-                    // Mark as sent successfully
-                    $sarGeneration->update([
-                        'sent_at' => now(),
-                        'email_sent_successfully' => true,
-                    ]);
+                    // Dispatch unique job — prevents duplicate sends if worker was down
+                    // The job itself will mark the record as sent after delivery
+                    SendSarFormEmail::dispatch($passer, $downloadUrl, $sarGeneration->id);
 
                     $emailSuccess = true;
                     $successCount++;

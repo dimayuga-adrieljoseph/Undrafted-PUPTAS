@@ -7,18 +7,10 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 
-class SarFormEmail extends Mailable implements ShouldQueue, ShouldBeUnique
+class SarFormEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
-
-    public $uniqueFor = 3600;
-
-    public function uniqueId(): string
-    {
-        return (string) $this->passer->test_passer_id;
-    }
 
     public $passer;
     public $downloadUrl;
