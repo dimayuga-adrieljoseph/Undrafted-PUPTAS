@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Application;
-use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 class ApplicationPolicy
 {
@@ -15,11 +15,11 @@ class ApplicationPolicy
      * - Interviewers (role_id=4): authorized only when enrollment_status != 'officially_enrolled'
      * - All other roles: denied
      *
-     * @param  \App\Models\User  $user
+     * @param  \Illuminate\Contracts\Auth\Authenticatable  $user
      * @param  \App\Models\Application  $application
      * @return bool
      */
-    public function changeCourse(User $user, Application $application): bool
+    public function changeCourse(Authenticatable $user, Application $application): bool
     {
         // Admins and Superadmins: unrestricted access
         if (in_array($user->role_id, [2, 7], true)) {

@@ -356,6 +356,14 @@ class RecordStaffDashboardController extends Controller
                 'program_id' => $newProgramId
             ]);
 
+            // Safely compute performed_by: only use numeric IDs for FK constraint
+            $authUser = auth()->user();
+            $performedBy = null;
+            if ($authUser) {
+                $userId = $authUser->id ?? $authUser->idp_user_id ?? null;
+                $performedBy = ($userId !== null && is_numeric($userId)) ? (int)$userId : null;
+            }
+
             // Create ApplicationProcess record with action='course_changed', stage='records', status='completed'
             ApplicationProcess::create([
                 'application_id' => $application->id,
@@ -363,7 +371,7 @@ class RecordStaffDashboardController extends Controller
                 'action'         => 'course_changed',
                 'status'         => 'completed',
                 'reviewer_notes' => 'Changed from program ID ' . $oldProgramId . ' to ' . $newProgramId,
-                'performed_by'   => auth()->user() ? auth()->user()->id : null,
+                'performed_by'   => $performedBy,
                 'ip_address'     => request()->ip()
             ]);
 
