@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Models\ApplicationProcess;
 use App\Models\Program;
 use App\Models\Grade;
@@ -19,7 +20,7 @@ use App\Services\UserService;
 
 class InterviewerDashboardController extends Controller
 {
-    use ManagesApplicationFiles;
+    use ManagesApplicationFiles, AuthorizesRequests;
 
     protected ApplicationService $applicationService;
     protected ApplicationProcessService $processService;
