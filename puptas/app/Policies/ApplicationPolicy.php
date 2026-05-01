@@ -28,8 +28,12 @@ class ApplicationPolicy
         
         // Interviewers: restricted by enrollment_status and status
         if ($user->role_id === 4) {
-            return $application->enrollment_status !== 'officially_enrolled'
-                && $application->status !== 'accepted';
+            // Allow transfer if NOT officially enrolled AND NOT accepted
+            $enrollmentStatus = $application->enrollment_status ?? '';
+            $applicationStatus = $application->status ?? '';
+            
+            return $enrollmentStatus !== 'officially_enrolled'
+                && $applicationStatus !== 'accepted';
         }
         
         // All other roles: denied

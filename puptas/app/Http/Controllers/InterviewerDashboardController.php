@@ -195,18 +195,27 @@ class InterviewerDashboardController extends Controller
     public function transferToProgram(Request $request, $userId)
     {
         try {
+            \Log::info("🚀 Transfer START for user {$userId}");
+            
             $validated = $request->validate([
                 'program_id' => 'required|exists:programs,id',
             ]);
+            
+            \Log::info("✅ Validation passed", ['program_id' => $validated['program_id']]);
 
             $this->ensureRole(4);
-
-            \Log::info("🚀 Transfer requested for user {$userId} to program {$validated['program_id']}");
+            \Log::info("✅ Role check passed");
 
             $application = $this->applicationService->getApplicationByUserId($userId);
+            \Log::info("✅ Application found", [
+                'application_id' => $application->id,
+                'status' => $application->status,
+                'enrollment_status' => $application->enrollment_status,
+            ]);
 
             // Check authorization using ApplicationPolicy
             $this->authorize('changeCourse', $application);
+            \Log::info("✅ Authorization passed");
 
             // Check if evaluator stage is completed
             $this->applicationService->ensureStageCompleted(
@@ -214,6 +223,7 @@ class InterviewerDashboardController extends Controller
                 'evaluator',
                 "Cannot transfer - evaluator stage not completed."
             );
+            \Log::info("✅ Evaluator stage check passed");
 
             $grades = Grade::where('user_id', $userId)->first();
 
@@ -221,8 +231,12 @@ class InterviewerDashboardController extends Controller
                 \Log::warning("⚠️ No grades found for user {$userId}");
                 return response()->json(['message' => 'User has no grades recorded.'], 400);
             }
+            
+            \Log::info("✅ Grades found");
 
             DB::transaction(function () use ($application, $validated, $grades, $userId) {
+                \Log::info("🔄 Starting transaction");
+                
                 $program = Program::lockForUpdate()->findOrFail($validated['program_id']);
 
                 \Log::info("📦 Fetched program: {$program->id}, current slots: {$program->slots}");
@@ -268,6 +282,11 @@ class InterviewerDashboardController extends Controller
                     ->latest()
                     ->first();
 
+                \Log::info("🔍 Interviewer process search", [
+                    'found' => $interviewerProcess ? 'yes' : 'no',
+                    'process_id' => $interviewerProcess?->id,
+                ]);
+
                 if ($interviewerProcess) {
                     // Update existing process to reflect the transfer
                     $interviewerProcess->update([
@@ -276,6 +295,7 @@ class InterviewerDashboardController extends Controller
                         'reviewer_notes' => 'Transferred to program ID ' . $program->id,
                         'performed_by' => auth()->id(),
                     ]);
+                    \Log::info("✅ Updated existing interviewer process");
                 } else {
                     // No interviewer process exists - create one
                     ApplicationProcess::create([
@@ -286,6 +306,7 @@ class InterviewerDashboardController extends Controller
                         'reviewer_notes' => 'Transferred to program ID ' . $program->id,
                         'performed_by' => auth()->id(),
                     ]);
+                    \Log::info("✅ Created new interviewer process");
                 }
 
                 // Ensure medical stage exists if not already present
@@ -294,6 +315,11 @@ class InterviewerDashboardController extends Controller
                     ->latest()
                     ->first();
 
+                \Log::info("🔍 Medical process search", [
+                    'found' => $medicalProcess ? 'yes' : 'no',
+                    'process_id' => $medicalProcess?->id,
+                ]);
+
                 if (!$medicalProcess) {
                     ApplicationProcess::create([
                         'application_id' => $application->id,
@@ -301,6 +327,7 @@ class InterviewerDashboardController extends Controller
                         'status' => 'in_progress',
                         'performed_by' => null,
                     ]);
+                    \Log::info("✅ Created medical process");
                 }
 
                 \Log::info("📝 ApplicationProcess logged for application {$application->id}");
@@ -314,9 +341,14 @@ class InterviewerDashboardController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             \Log::warning("🚫 Authorization failed for user {$userId}: " . $e->getMessage());
             return response()->json(['message' => 'You do not have permission to transfer this applicant.'], 403);
-        } catch (\Exception $e) {
-            \Log::error("❌ Transfer failed for user {$userId}: " . $e->getMessage());
-            \Log::error($e->getTraceAsString());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning("⚠️ Validation failed for user {$userId}: " . $e->getMessage());
+            throw $e; // Re-throw validation exceptions
+        } catch (\Throwable $e) {
+            \Log::error("❌ Transfer failed for user {$userId}");
+            \Log::error("Error message: " . $e->getMessage());
+            \Log::error("Error file: " . $e->getFile() . " line " . $e->getLine());
+            \Log::error("Stack trace: " . $e->getTraceAsString());
             return response()->json(['message' => $e->getMessage()], 400);
         }
     }
