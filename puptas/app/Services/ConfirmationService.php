@@ -11,6 +11,7 @@ use App\Helpers\FileMapper;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Confirmation Service
@@ -239,18 +240,25 @@ class ConfirmationService
         // Delete existing file
         $this->deleteExistingFile($user, $type);
 
+        // Prepare update data
+        $updateData = [
+            'file_path' => $compressed['path'],
+            'original_name' => $compressed['original_name'],
+            'status' => 'pending',
+        ];
+
+        // Only include docling_json if column exists
+        if (Schema::hasColumn('user_files', 'docling_json')) {
+            $updateData['docling_json'] = $compressed['docling_json'] ?? null;
+        }
+
         // Save new file record
         UserFile::updateOrCreate(
             [
                 'user_id' => $user->id,
                 'type' => $type,
             ],
-            [
-                'file_path' => $compressed['path'],
-                'original_name' => $compressed['original_name'],
-                'status' => 'pending',
-                'docling_json' => $compressed['docling_json'] ?? null,
-            ]
+            $updateData
         );
 
         $savedFile = UserFile::where('user_id', $user->id)
