@@ -31,7 +31,7 @@
                 </div>
             </div>
 
-            <form @submit.prevent="submitForm">
+            <form @submit.prevent="openReviewModal">
                 <!-- AI Autofill Banner -->
                 <div v-if="extractionResult && !bannerDismissed" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-4">
                     <div class="flex items-center gap-2">
@@ -638,6 +638,14 @@
                     </div>
                 </transition>
             </form>
+
+            <GradesReviewModal
+                :show="showReviewModal"
+                :loading="loading"
+                :form-data="form"
+                @close="closeReviewModal"
+                @confirm="confirmSaveGrades"
+            />
         </div>
     </ApplicantLayout>
 </template>
@@ -646,6 +654,7 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
+import GradesReviewModal from "@/Components/GradesReviewModal.vue";
 
 const page = usePage();
 const props = defineProps({
@@ -662,6 +671,7 @@ const errors = ref({});
 const confidenceMap = ref({});
 const bannerDismissed = ref(false);
 const otherSubjects = ref([{ name: '', grade: null }])
+const showReviewModal = ref(false);
 
 const form = reactive({
     g11_general_mathematics: null,
@@ -934,6 +944,22 @@ onMounted(() => {
         applyAutofill(props.extractionResult);
     }
 });
+
+const openReviewModal = () => {
+    errors.value = {};
+    showReviewModal.value = true;
+};
+
+const closeReviewModal = () => {
+    if (!loading.value) {
+        showReviewModal.value = false;
+    }
+};
+
+const confirmSaveGrades = () => {
+    showReviewModal.value = false;
+    submitForm();
+};
 
 const submitForm = async () => {
     loading.value = true;
