@@ -29,7 +29,8 @@ class ReportController extends Controller
 
         $formatted = $applicants->map(function ($app) {
             return [
-                'id' => $app->user_id,
+                'id' => $app->id,
+                'user_id' => $app->user_id,
                 'student_number' => $app->user->student_number ?? 'N/A',
                 'name' => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
                 'email' => $app->user->email ?? 'N/A',
@@ -81,7 +82,14 @@ class ReportController extends Controller
 
     private function buildReportQuery(Request $request)
     {
-        $query = Application::query();
+        // Scope to the latest application per user
+        $query = Application::query()
+            ->whereIn('id', function ($sub) {
+                $sub->selectRaw('MAX(id)')
+                    ->from('applications')
+                    ->whereNull('deleted_at')
+                    ->groupBy('user_id');
+            });
 
         // Filter by type
         $type = $request->input('type');
