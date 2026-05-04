@@ -135,17 +135,14 @@ class CreateNewUser implements CreatesNewUsers
             }
 
             if (!empty($pendingReg['access_token'])) {
+                // Store IDP tokens server-side only — never expose them in browser cookies.
+                // The IDP callback flow already follows this pattern (see IdpAuthController@callback).
                 \App\Models\RefreshToken::create([
                     'user_id'       => $user->id,
                     'access_token'  => $pendingReg['access_token'],
                     'refresh_token' => $pendingReg['refresh_token'] ?? null,
                     'expires_at'    => $pendingReg['expires_at'] ?? now()->addHour(),
                 ]);
-
-                \Illuminate\Support\Facades\Cookie::queue('access_token', $pendingReg['access_token'], 60, null, null, false, false);
-                if (!empty($pendingReg['refresh_token'])) {
-                    \Illuminate\Support\Facades\Cookie::queue('refresh_token', $pendingReg['refresh_token'], 60 * 24 * 30, null, null, false, false);
-                }
             }
 
             // Clear the pending registration from session
