@@ -72,10 +72,14 @@ class SarFormService
             $fileSize = $disk->size($filename);
             
             // Generate download URL (public download route)
-            $downloadUrl = route('sar.passer-download', [
-                'reference' => $validated['reference_number'],
-                'filename' => $filename
-            ]);
+            $downloadUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                'sar.passer-download',
+                now()->addDays(30),
+                [
+                    'reference' => $validated['reference_number'],
+                    'filename' => $filename
+                ]
+            );
             
             return [
                 'success' => true,

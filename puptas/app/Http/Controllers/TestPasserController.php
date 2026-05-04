@@ -637,10 +637,14 @@ class TestPasserController extends Controller
         $passer = TestPasser::findOrFail($request->passer_id);
 
         // Generate a sample download URL (won't actually work, just for preview)
-        $downloadUrl = route('sar.passer-download', [
-            'reference' => $passer->reference_number,
-            'filename' => 'PREVIEW_SAR_' . $passer->reference_number . '_SAMPLE.pdf'
-        ]);
+        $downloadUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'sar.passer-download',
+            now()->addMinutes(30),
+            [
+                'reference' => $passer->reference_number,
+                'filename' => 'PREVIEW_SAR_' . $passer->reference_number . '_SAMPLE.pdf'
+            ]
+        );
 
         // Return the email view directly
         return view('emails.sar-form', [
