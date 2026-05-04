@@ -424,15 +424,26 @@ class TestPasserController extends Controller
             ]);
         } catch (\RuntimeException $e) {
             // S3 storage - stream the file
-            return response()->stream(function () use ($disk, $filename) {
-                $stream = $disk->readStream($filename);
-                fpassthru($stream);
-                if (is_resource($stream)) {
-                    fclose($stream);
+            $stream = $disk->readStream($filename);
+
+            if (! is_resource($stream)) {
+                \Log::error('SAR S3 stream could not be opened', [
+                    'filename' => $filename,
+                    'disk'     => 'sar_tmp',
+                ]);
+                abort(404, 'SAR file could not be retrieved. Please contact the admission office.');
+            }
+
+            return response()->streamDownload(function () use ($stream) {
+                try {
+                    fpassthru($stream);
+                } finally {
+                    if (is_resource($stream)) {
+                        fclose($stream);
+                    }
                 }
-            }, 200, [
+            }, $filename, [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ]);
         }
     }
