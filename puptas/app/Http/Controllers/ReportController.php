@@ -69,15 +69,23 @@ class ReportController extends Controller
 
         $data = $applicants->map(function ($app) {
             return [
-                'Student Number' => $app->user->student_number ?? 'N/A',
-                'Name' => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
-                'Program' => $app->program->code ?? 'N/A',
-                'Status' => $this->determineStatus($app),
-                'Date' => $app->updated_at->format('Y-m-d')
+                'Student Number' => $this->sanitizeExcelValue($app->user->student_number ?? 'N/A'),
+                'Name' => $this->sanitizeExcelValue(trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? ''))),
+                'Program' => $this->sanitizeExcelValue($app->program->code ?? 'N/A'),
+                'Status' => $this->sanitizeExcelValue($this->determineStatus($app)),
+                'Date' => $this->sanitizeExcelValue($app->updated_at->format('Y-m-d'))
             ];
         });
 
         return Excel::download(new ApplicantsExport($data), 'applicant_report.xlsx');
+    }
+
+    private function sanitizeExcelValue($value)
+    {
+        if (is_string($value) && in_array(substr($value, 0, 1), ['=', '+', '-', '@'])) {
+            return "'" . $value;
+        }
+        return $value;
     }
 
     private function buildReportQuery(Request $request)
