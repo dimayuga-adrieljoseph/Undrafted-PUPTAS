@@ -12,7 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
-        
+
+        // SQLite (used in tests) does not support ALTER COLUMN type changes via ->change().
+        // The column type constraint is irrelevant for SQLite's dynamic typing, so we skip
+        // the entire migration on SQLite. Production uses MySQL/Postgres where this is needed.
+        if ($driver === 'sqlite') {
+            return;
+        }
+
         // All tables that have a user_id column that needs changing to a string
         $allTablesToModify = [
             'applications',
@@ -27,26 +34,23 @@ return new class extends Migration
             'team_user'
         ];
 
-        // SQLite doesn't support dropping foreign keys by name, so skip for SQLite
-        if ($driver !== 'sqlite') {
-            foreach ($allTablesToModify as $tableName) {
-                if (Schema::hasTable($tableName)) {
-                    // First safely drop the foreign key if it exists
-                    $foreignKeys = Schema::getForeignKeys($tableName);
-                    $fkNameToDrop = null;
+        foreach ($allTablesToModify as $tableName) {
+            if (Schema::hasTable($tableName)) {
+                // First safely drop the foreign key on user_id if it exists
+                $foreignKeys = Schema::getForeignKeys($tableName);
+                $fkNameToDrop = null;
 
-                    foreach ($foreignKeys as $fk) {
-                        if (in_array('user_id', $fk['columns'])) {
-                            $fkNameToDrop = $fk['name'];
-                            break;
-                        }
+                foreach ($foreignKeys as $fk) {
+                    if (in_array('user_id', $fk['columns'])) {
+                        $fkNameToDrop = $fk['name'];
+                        break;
                     }
+                }
 
-                    if ($fkNameToDrop) {
-                        Schema::table($tableName, function (Blueprint $table) use ($fkNameToDrop) {
-                            $table->dropForeign($fkNameToDrop);
-                        });
-                    }
+                if ($fkNameToDrop) {
+                    Schema::table($tableName, function (Blueprint $table) use ($fkNameToDrop) {
+                        $table->dropForeign($fkNameToDrop);
+                    });
                 }
             }
         }
@@ -66,6 +70,13 @@ return new class extends Migration
      */
     public function down(): void
     {
+        $driver = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+
+        // SQLite does not support ALTER COLUMN type changes; skip on SQLite (matches up() behaviour).
+        if ($driver === 'sqlite') {
+            return;
+        }
+
         // To reverse, we convert strings back to unsigned big integers and restore keys.
         // NOTE: This will likely cause data truncation if UUIDs are present in the table.
 
