@@ -25,9 +25,9 @@ class ReportController extends Controller
     public function getReportData(Request $request)
     {
         $query = $this->buildReportQuery($request);
-        $applicants = $query->with(['user', 'program', 'processes'])->get();
+        $paginator = $query->with(['user', 'program', 'processes'])->paginate(15);
 
-        $formatted = $applicants->map(function ($app) {
+        $paginator->getCollection()->transform(function ($app) {
             return [
                 'id' => $app->id,
                 'user_id' => $app->user_id,
@@ -40,13 +40,14 @@ class ReportController extends Controller
             ];
         });
 
-        return response()->json($formatted);
+        return response()->json($paginator);
     }
 
     public function exportPdf(Request $request)
     {
         $query = $this->buildReportQuery($request);
-        $applicants = $query->with(['user', 'program', 'processes'])->get();
+        // Limit PDF export to prevent memory exhaustion and extremely slow generation
+        $applicants = $query->with(['user', 'program', 'processes'])->limit(1000)->get();
 
         $data = $applicants->map(function ($app) {
             return [
@@ -65,19 +66,10 @@ class ReportController extends Controller
     public function exportExcel(Request $request)
     {
         $query = $this->buildReportQuery($request);
-        $applicants = $query->with(['user', 'program', 'processes'])->get();
+        // Pass the builder instance to the export class for chunked query execution
+        $query->with(['user', 'program', 'processes']);
 
-        $data = $applicants->map(function ($app) {
-            return [
-                'Student Number' => $this->sanitizeExcelValue($app->user->student_number ?? 'N/A'),
-                'Name' => $this->sanitizeExcelValue(trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? ''))),
-                'Program' => $this->sanitizeExcelValue($app->program->code ?? 'N/A'),
-                'Status' => $this->sanitizeExcelValue($this->determineStatus($app)),
-                'Date' => $this->sanitizeExcelValue($app->updated_at->format('Y-m-d'))
-            ];
-        });
-
-        return Excel::download(new ApplicantsExport($data), 'applicant_report.xlsx');
+        return Excel::download(new ApplicantsExport($query), 'applicant_report.xlsx');
     }
 
     private function sanitizeExcelValue($value)

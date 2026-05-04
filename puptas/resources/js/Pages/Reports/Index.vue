@@ -10,24 +10,31 @@ const props = defineProps({
 
 const applicants = ref([]);
 const loading = ref(false);
+const currentPage = ref(1);
+const lastPage = ref(1);
+const total = ref(0);
 
 const filterType = ref("overall");
 const filterDate = ref("");
 const filterMonth = ref("");
 const filterProgram = ref("");
 
-const fetchReportData = async () => {
+const fetchReportData = async (page = 1) => {
     loading.value = true;
     try {
         const params = {
             type: filterType.value,
+            page: page,
         };
         if (filterDate.value) params.date_filter = filterDate.value;
         if (filterMonth.value) params.month_filter = filterMonth.value;
         if (filterProgram.value) params.program_id = filterProgram.value;
 
         const response = await axios.get(route('reports.data'), { params });
-        applicants.value = response.data;
+        applicants.value = response.data.data;
+        currentPage.value = response.data.current_page;
+        lastPage.value = response.data.last_page;
+        total.value = response.data.total;
     } catch (err) {
         console.error("Failed to fetch report data:", err);
     } finally {
@@ -36,7 +43,7 @@ const fetchReportData = async () => {
 };
 
 onMounted(() => {
-    fetchReportData();
+    fetchReportData(1);
 });
 
 const downloadPdf = () => {
@@ -102,7 +109,7 @@ const getStatusClass = (status) => {
 
             <!-- Action Buttons -->
             <div class="flex gap-4 mb-6">
-                <button @click="fetchReportData" class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#800000] transition">
+                <button @click="fetchReportData(1)" class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#800000] transition">
                     Generate Report
                 </button>
                 <button @click="downloadPdf" class="px-4 py-2 border border-[#9E122C] text-[#9E122C] rounded-lg hover:bg-[#9E122C] hover:text-white transition dark:text-white dark:hover:text-gray-900">
@@ -145,6 +152,31 @@ const getStatusClass = (status) => {
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Pagination -->
+            <div v-if="lastPage > 1 && !loading" class="mt-4 flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow gap-4">
+                <div class="text-sm text-gray-700 dark:text-gray-300">
+                    Showing page <span class="font-semibold">{{ currentPage }}</span> of <span class="font-semibold">{{ lastPage }}</span> (Total: {{ total }} records)
+                </div>
+                <div class="flex gap-2">
+                    <button 
+                        @click="fetchReportData(currentPage - 1)" 
+                        :disabled="currentPage === 1"
+                        class="px-3 py-1.5 rounded-md border text-sm font-medium transition-colors"
+                        :class="currentPage === 1 ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed dark:text-gray-500' : 'text-gray-700 border-gray-300 hover:bg-gray-50 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700'"
+                    >
+                        Previous
+                    </button>
+                    <button 
+                        @click="fetchReportData(currentPage + 1)" 
+                        :disabled="currentPage === lastPage"
+                        class="px-3 py-1.5 rounded-md border text-sm font-medium transition-colors"
+                        :class="currentPage === lastPage ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed dark:text-gray-500' : 'text-gray-700 border-gray-300 hover:bg-gray-50 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700'"
+                    >
+                        Next
+                    </button>
+                </div>
             </div>
         </div>
     </AppLayout>
