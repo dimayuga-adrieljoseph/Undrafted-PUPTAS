@@ -19,7 +19,14 @@ const filterDate = ref("");
 const filterMonth = ref("");
 const filterProgram = ref("");
 
+let abortController = null;
+
 const fetchReportData = async (page = 1) => {
+    if (abortController) {
+        abortController.abort();
+    }
+    abortController = new AbortController();
+
     loading.value = true;
     try {
         const params = {
@@ -30,15 +37,25 @@ const fetchReportData = async (page = 1) => {
         if (filterMonth.value) params.month_filter = filterMonth.value;
         if (filterProgram.value) params.program_id = filterProgram.value;
 
-        const response = await axios.get(route('reports.data'), { params });
+        const response = await axios.get(route('reports.data'), { 
+            params,
+            signal: abortController.signal 
+        });
+        
         applicants.value = response.data.data;
         currentPage.value = response.data.current_page;
         lastPage.value = response.data.last_page;
         total.value = response.data.total;
     } catch (err) {
-        console.error("Failed to fetch report data:", err);
+        if (axios.isCancel(err)) {
+            console.log("Request canceled due to new request.");
+        } else {
+            console.error("Failed to fetch report data:", err);
+        }
     } finally {
-        loading.value = false;
+        if (!abortController.signal.aborted) {
+            loading.value = false;
+        }
     }
 };
 
@@ -117,16 +134,16 @@ const getStatusClass = (status) => {
 
             <!-- Action Buttons -->
             <div class="flex flex-wrap gap-4 mb-6">
-                <button @click="fetchReportData(1)" class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#800000] transition">
+                <button @click="fetchReportData(1)" :disabled="loading" class="px-4 py-2 bg-[#9E122C] text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#800000]">
                     Generate Report
                 </button>
-                <button @click="clearFilters" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <button @click="clearFilters" :disabled="loading" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700">
                     Clear Filters
                 </button>
-                <button @click="downloadPdf" class="px-4 py-2 border border-[#9E122C] text-[#9E122C] rounded-lg hover:bg-[#9E122C] hover:text-white transition dark:text-white dark:hover:text-gray-900">
+                <button @click="downloadPdf" :disabled="loading" class="px-4 py-2 border border-[#9E122C] text-[#9E122C] rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#9E122C] hover:text-white dark:text-white dark:hover:text-gray-900">
                     Export PDF
                 </button>
-                <button @click="downloadExcel" class="px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-600 hover:text-white transition dark:text-green-400 dark:hover:text-white">
+                <button @click="downloadExcel" :disabled="loading" class="px-4 py-2 border border-green-600 text-green-600 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 hover:text-white dark:text-green-400 dark:hover:text-white">
                     Export Excel
                 </button>
             </div>
