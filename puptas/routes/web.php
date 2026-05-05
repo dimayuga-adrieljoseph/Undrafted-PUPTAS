@@ -320,3 +320,6 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
 
 // Callback Routes - Public access for loading screen
 Route::get('/callback-loading', [CallbackController::class, 'index']);
+
+// Public Admission Status Checker - No auth required
+Route::get('/check-status', fn () => Inertia::render('Public/CheckStatus'))->name('public.check-status');
