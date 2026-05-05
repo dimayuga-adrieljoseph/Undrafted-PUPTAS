@@ -5,7 +5,6 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
-use App\Actions\Fortify\UpdateUserProfileInformation;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -29,9 +28,29 @@ class FortifyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Fortify::createUsersUsing(CreateNewUser::class);
-        Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
+
+        // Redirect login view to IDP unless there are errors
+        Fortify::loginView(function () {
+            if (session()->has('errors') || request()->has('idp_error')) {
+                return \Inertia\Inertia::render('Auth/Login', [
+                    'canResetPassword' => \Illuminate\Support\Facades\Route::has('password.request'),
+                    'status' => session('status'),
+                ]);
+            }
+            return redirect()->route('idp.redirect');
+        });
+
+        // Register custom logout response to redirect to IDP
+        $this->app->singleton(\Laravel\Fortify\Contracts\LogoutResponse::class, function () {
+            return new class implements \Laravel\Fortify\Contracts\LogoutResponse {
+                public function toResponse($request)
+                {
+                    return redirect()->route('idp.redirect');
+                }
+            };
+        });
 
         // Register custom authenticated session controller for dynamic redirects
         $this->app->singleton(\Laravel\Fortify\Contracts\LoginResponse::class, \App\Http\Controllers\AuthenticatedSessionController::class);

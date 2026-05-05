@@ -60,6 +60,35 @@ class UserController extends Controller
 
         event(new Registered($user));
 
+        $roleId = $user->role_id;
+
+        // Assign to multiple programs for staff
+        if (in_array($roleId, [3, 4]) && $request->filled('program') && is_array($request->program)) {
+            $programs = Program::whereIn('code', $request->program)->get();
+            $syncData = [];
+            foreach ($programs as $prog) {
+                $syncData[$prog->id] = ['role_id' => $roleId];
+            }
+            $user->programs()->sync($syncData);
+        }
+
+        // For Applicants added manually
+        if ($roleId == 1 && $request->filled('applicant_program')) {
+            $program = Program::where('code', $request->applicant_program)->first();
+            if ($program) {
+                ApplicantProfile::create([
+                    'user_id' => $user->idp_user_id ?: $user->id, // Use string uuid fallback
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'middlename' => $user->middlename,
+                    'extension_name' => $user->extension_name,
+                    'email' => $user->email,
+                    'contactnumber' => $user->contactnumber,
+                    'first_choice_program' => $program->id
+                ]);
+            }
+        }
+
         $this->auditLogService->logActivity(
             'CREATE',
             'Users',
@@ -94,24 +123,32 @@ class UserController extends Controller
      */
     public function edit($id)
     {
-        // Try staff first, then applicant
-        $staff = \App\Models\StaffProfile::where('user_id', $id)->first();
-        if ($staff) {
+        // Fetch the user model primarily to check role. Fallback to ID match.
+        $userModel = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->firstOrFail();
+
+        if ($userModel->role_id > 1) {
+            $userModel->load('programs');
             $user = (object) [
-                'id' => $staff->user_id,
-                'firstname' => $staff->name,
-                'lastname' => '',
-                'email' => $staff->email,
-                'role_id' => $staff->role_id,
-                'programs' => $staff->programs
+                'id' => $userModel->idp_user_id ?: $userModel->id,
+                'firstname' => $userModel->firstname,
+                'middlename' => $userModel->middlename,
+                'lastname' => $userModel->lastname,
+                'extension_name' => $userModel->extension_name,
+                'email' => $userModel->email,
+                'contactnumber' => $userModel->contactnumber,
+                'role_id' => $userModel->role_id,
+                'programs' => $userModel->programs,
             ];
         } else {
-            $applicant = \App\Models\ApplicantProfile::where('user_id', $id)->firstOrFail();
+            $applicant = \App\Models\ApplicantProfile::where('user_id', $id)->orWhere('user_id', $userModel->id)->firstOrFail();
             $user = (object) [
                 'id' => $applicant->user_id,
                 'firstname' => $applicant->firstname,
+                'middlename' => $applicant->middlename,
                 'lastname' => $applicant->lastname,
+                'extension_name' => $applicant->extension_name,
                 'email' => $applicant->email,
+                'contactnumber' => $applicant->contactnumber,
                 'role_id' => 1,
                 'applicant_profile' => $applicant
             ];
@@ -132,19 +169,59 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $request->validate([
+            'firstname' => 'required|string|max:255',
+            'lastname' => 'required|string|max:255',
+            'middlename' => 'nullable|string|max:255',
+            'extension_name' => 'nullable|string|max:255',
+            'email' => 'required|email|max:255',
+            'contactnumber' => 'nullable|string|max:20',
+            'role_id' => 'required|integer',
+        ]);
+
         // If Role is 1 (Applicant), we find them in ApplicantProfile. Else StaffProfile.
         $roleId = $request->role_id;
 
         return DB::transaction(function () use ($request, $id, $roleId) {
-            // Handle program assignments based on role
-            $programsToSync = [];
+            
+            $user = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
+            $applicantProfile = \App\Models\ApplicantProfile::where('user_id', $id)->orWhere('user_id', optional($user)->id)->first();
+            
+            if ($user) {
+                $user->update([
+                    'firstname' => $request->firstname,
+                    'middlename' => $request->middlename,
+                    'lastname' => $request->lastname,
+                    'extension_name' => $request->extension_name,
+                    'email' => $request->email,
+                    'contactnumber' => $request->contactnumber,
+                    'role_id' => $roleId,
+                ]);
 
+                if ($request->filled('password')) {
+                    $user->update(['password' => Hash::make($request->password)]);
+                }
+            }
+
+            if ($applicantProfile) {
+                $applicantProfile->update([
+                    'firstname' => $request->firstname,
+                    'middlename' => $request->middlename,
+                    'lastname' => $request->lastname,
+                    'extension_name' => $request->extension_name,
+                    'email' => $request->email,
+                    'contactnumber' => $request->contactnumber,
+                ]);
+            }
+
+            $userEmail = $request->email;
+            $actionDetails = "Updated User {$userEmail}";
+
+            // Handle program assignments based on role
             if ($roleId == 1 && $request->filled('applicant_program')) {
                 // For Applicants: use applicant_program field (using program code)
                 $program = Program::where('code', $request->applicant_program)->first();
-                if ($program) {
-                    $applicantProfile = ApplicantProfile::where('user_id', $id)->firstOrFail();
-
+                if ($program && $applicantProfile) {
                     // Update the applicant profile with the first choice program
                     $applicantProfile->update(['first_choice_program' => $program->id]);
 
@@ -165,33 +242,37 @@ class UserController extends Controller
                         }
                     }
 
-                    $actionDetails = "Updated Applicant's program to {$program->code}";
-                    $userEmail = $applicantProfile->email;
+                    $actionDetails = "Updated Applicant {$userEmail} program to {$program->code}";
                 }
-            } elseif (in_array($roleId, [3, 4]) && $request->filled('program')) {
-                // For Evaluators (3) and Interviewers (4): use program field (using program code)
-                $staff = \App\Models\StaffProfile::where('user_id', $id)->firstOrFail();
-                $program = Program::where('code', $request->program)->first();
-                if ($program) {
-                    $staff->programs()->sync([$program->id => ['role_id' => $roleId]]);
+            } elseif (in_array($roleId, [3, 4]) && $request->filled('program') && is_array($request->program) && $user) {
+                // For Evaluators (3) and Interviewers (4): handle program arrays (using program code)
+                $programs = Program::whereIn('code', $request->program)->get();
+                if ($programs->count() > 0) {
+                    $syncData = [];
+                    $programCodes = [];
+                    foreach ($programs as $prog) {
+                        $syncData[$prog->id] = ['role_id' => $roleId];
+                        $programCodes[] = $prog->code;
+                    }
+                    $user->programs()->sync($syncData);
+                    $actionDetails = "Updated Staff {$userEmail} programs to: " . implode(', ', $programCodes);
                 } else {
-                    $staff->programs()->detach();
+                    $user->programs()->detach();
+                    $actionDetails = "Updated Staff {$userEmail} programs to None";
                 }
-                $actionDetails = "Updated Staff program to " . ($program ? $program->code : 'None');
-                $userEmail = $staff->email;
+            } elseif ($user) {
+                $user->programs()->detach();
             }
 
-            if (isset($actionDetails)) {
-                $this->auditLogService->logActivity(
-                    'UPDATE',
-                    'Users',
-                    "Updated assigned program for user {($userEmail)}.",
-                    null,
-                    'USER_MANAGEMENT'
-                );
-            }
+            $this->auditLogService->logActivity(
+                'UPDATE',
+                'Users',
+                $actionDetails,
+                null,
+                'USER_MANAGEMENT'
+            );
 
-            return redirect()->route('users.index')->with('status', 'Program assignment updated successfully!');
+            return redirect()->route('users.index')->with('status', 'User details updated successfully!');
         });
     }
 
@@ -201,8 +282,8 @@ class UserController extends Controller
     public function destroy($id)
     {
         // For IDP, users are not deleted locally, but we might want to drop their profiles locally
-        $staff = \App\Models\StaffProfile::find($id);
-        if ($staff) {
+        $staff = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
+        if ($staff && $staff->role_id > 1) {
             $staff->delete();
         }
         $app = \App\Models\ApplicantProfile::where('user_id', $id)->first();

@@ -25,7 +25,7 @@ trait ManagesApplicationFiles
 
         $user = User::with([
             'currentApplication.program',
-            'currentApplication.processes.performedBy:user_id,name',
+            'currentApplication.processes.performedBy:id,firstname,lastname',
             'files',
             'grades',
             'applicantProfile.graduateTypes',
@@ -63,6 +63,7 @@ trait ManagesApplicationFiles
         // Transform the response to map currentApplication to application for frontend compatibility
         $userData = [
             'id' => $user->id,
+            'student_number' => $user->applicantProfile?->student_number,
             'firstname' => $user->firstname,
             'lastname' => $user->lastname,
             'email' => $user->email,

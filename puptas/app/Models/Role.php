@@ -13,6 +13,6 @@ class Role extends Model
 
     public function users()
     {
-        return $this->hasMany(StaffProfile::class);
+        return $this->hasMany(User::class);
     }
 }

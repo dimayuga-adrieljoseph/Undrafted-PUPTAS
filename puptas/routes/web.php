@@ -16,7 +16,6 @@ use App\Http\Controllers\UserFileController;
 use App\Http\Controllers\EvaluatorDashboardController;
 use App\Http\Controllers\InterviewerDashboardController;
 use App\Http\Controllers\RecordStaffDashboardController;
-use App\Http\Controllers\Admin\Assign\AssignController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\Notify\Notify;
 use App\Http\Controllers\PrivacyConsentController;
@@ -27,28 +26,28 @@ use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
+use App\Http\Controllers\ReportController;
 
+
+
+// IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
 Route::get('/', function () {
-    return Inertia::render('Auth/Login', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    return redirect()->route('idp.redirect');
 })->middleware('guest')->name('welcome');
 
-// IDP Authentication Routes - Public access for OAuth2 login flow
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
-    ->middleware('guest')
     ->name('idp.redirect');
 
 Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
-    ->middleware('guest')
     ->name('idp.callback');
 
-Route::post('/auth/idp/logout', [IdpAuthController::class, 'logout'])
+Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
+    ->name('idp.callback.alias');
+
+Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
     ->middleware('auth')
     ->name('idp.logout');
+
 
 // Backward-compatible callback aliases in case IDP client is configured with older paths.
 Route::get('/callback', [IdpAuthController::class, 'callback'])
@@ -178,7 +177,10 @@ Route::get('/home', function () {
 Route::middleware(['auth'])->post('/test-passers/upload', [Notify::class, 'handleUpload']);
 Route::middleware(['auth'])->get('/test-passers/form', [Notify::class, 'showUploadForm'])->name('upload.form');
 
-Route::get('/sar/download/{filename}/{reference}', [TestPasserController::class, 'downloadSar'])
+// Public SAR download with signed URL (expires in 30 days)
+Route::get('/sar/download/{reference}/{filename}', [TestPasserController::class, 'downloadSar'])
+    ->middleware('signed')
+    ->where('filename', '.*')
     ->name('sar.passer-download');
 
 Route::get('/applications', function () {
@@ -208,6 +210,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::resource('schedules', ScheduleController::class)
+    ->middleware(['auth', 'role:2,4'])
     ->names([
         'index' => 'schedules.index',
         'create' => 'schedules.create',
@@ -254,7 +257,7 @@ Route::middleware(['auth', 'role:4'])->group(function () {
     Route::get('/interviewer-dashboard/applicants', [InterviewerDashboardController::class, 'getUsers']);
     Route::get('/interviewer-dashboard/application/{id}', [InterviewerDashboardController::class, 'getUserFiles']);
     Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
-    Route::post('/interviewer-dashboard/transfer/{id}', [InterviewerDashboardController::class, 'transfertoProgram']);
+    Route::post('/interviewer-dashboard/transfer/{id}', [InterviewerDashboardController::class, 'transferToProgram']);
     Route::get('/interviewer-dashboard/programs', [InterviewerDashboardController::class, 'getPrograms']);
 });
 
@@ -276,10 +279,13 @@ Route::middleware(['auth', 'role:2,3,4,7'])->group(function () {
     Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
 });
 
-Route::middleware(['auth', 'role:2,4,7'])->group(function () {
+Route::middleware(['auth', 'role:2,4,6,7'])->group(function () {
     Route::get('/record-dashboard/programs', [RecordStaffDashboardController::class, 'getPrograms']);
-    Route::post('/record-dashboard/change-course/{id}', [RecordStaffDashboardController::class, 'changeCourse']);
 });
+
+Route::middleware(['auth', 'role:2,4,7'])
+    ->post('/record-dashboard/change-course/{applicantId}', [RecordStaffDashboardController::class, 'changeCourse'])
+    ->name('record.change-course');
 
 // User Management Routes (Protected - Admin Only)
 Route::middleware(['auth', EnsureAdmin::class])->group(function () {
@@ -291,11 +297,12 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-    Route::get('/admin/users/create', [AssignController::class, 'createUserForm'])->name('admin.users.create');
-    Route::post('/admin/users/store', [AssignController::class, 'storeUser'])->name('admin.users.store');
-    Route::get('/admin/users/edit/{id}', [AssignController::class, 'editUser'])->name('admin.users.edit');
-    Route::post('/admin/users/update/{id}', [AssignController::class, 'updateUser'])->name('admin.users.update');
-    Route::delete('/admin/users/delete/{id}', [AssignController::class, 'deleteUser'])->name('admin.users.delete');
+
+    // Admin Reports
+    Route::get('/admin/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/admin/reports/data', [ReportController::class, 'getReportData'])->name('reports.data');
+    Route::get('/admin/reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export.pdf');
+    Route::get('/admin/reports/export/excel', [ReportController::class, 'exportExcel'])->name('reports.export.excel');
 });
 
 // Audit log routes - Protected by Superadmin middleware
@@ -311,6 +318,5 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/api-clients/{id}/regenerate', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'regenerate'])->name('api-clients.regenerate');
 });
 
-// Callback Routes - Public access for loading screen with API callback
-Route::get('/callback', [CallbackController::class, 'index']);
-Route::post('/api/callback', [CallbackController::class, 'handle']);
+// Callback Routes - Public access for loading screen
+Route::get('/callback-loading', [CallbackController::class, 'index']);

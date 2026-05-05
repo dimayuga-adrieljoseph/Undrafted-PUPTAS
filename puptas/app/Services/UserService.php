@@ -22,7 +22,7 @@ class UserService
      */
     public function getApplicantsWithApplications(): Collection
     {
-        return ApplicantProfile::with('currentApplication.program')
+        return ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
             ->whereHas('currentApplication')
             ->get()
             ->map(function ($profile) {
@@ -37,6 +37,7 @@ class UserService
                     'phone' => $profile->contactnumber,
                     'company' => $profile->company ?? null,
                     'program' => $profile->currentApplication->program ?? null,
+                    'processes' => $profile->currentApplication->processes ?? [],
                 ];
             });
     }
@@ -59,7 +60,7 @@ class UserService
                 ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
         }])
             ->whereHas('applications', function ($query) use ($stage) {
-                $query->whereNotIn('status', ['accepted'])
+                $query->whereNotIn('status', ['accepted', 'cleared_for_enrollment'])
                     ->whereHas('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
                             ->whereIn('status', ['in_progress', 'returned']);
@@ -75,7 +76,7 @@ class UserService
             ->map(function ($profile) use ($stage) {
                 $application = $profile->currentApplication;
                 $stageProcess = $application && $application->processes ?
-                    $application->processes->first() : null;
+                    $application->processes->where('stage', $stage)->first() : null;
 
                 return [
                     'id' => $profile->user_id,
@@ -119,7 +120,7 @@ class UserService
     public function getAllApplicantsByStage(string $stage): Collection
     {
         return ApplicantProfile::with(['currentApplication' => function ($query) {
-            $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
+            $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id');
         }, 'currentApplication.program' => function ($query) {
             $query->select('id', 'code', 'name');
         }, 'currentApplication.processes' => function ($query) use ($stage) {
@@ -137,7 +138,7 @@ class UserService
             ->map(function ($profile) use ($stage) {
                 $application = $profile->currentApplication;
                 $stageProcess = $application && $application->processes ?
-                    $application->processes->first() : null;
+                    $application->processes->where('stage', $stage)->first() : null;
 
                 return [
                     'id' => $profile->user_id,
@@ -157,6 +158,7 @@ class UserService
                     'application' => $application ? [
                         'id' => $application->id,
                         'status' => $application->status,
+                        'enrollment_status' => $application->enrollment_status,
                         'created_at' => $application->created_at,
                         'program' => $application->program ? [
                             'id' => $application->program->id,
@@ -179,51 +181,79 @@ class UserService
      */
     public function getApplicantsForRecordStaff(): Collection
     {
-        return ApplicantProfile::with('currentApplication.program')
-            ->whereHas('currentApplication', function ($query) {
-                $query->where(function ($q) {
-                    // Get applications that have completed medical stage
-                    $q->whereHas('processes', function ($process) {
-                        $process->where('stage', 'medical')
-                            ->where('status', 'completed');
-                    })
-                        // OR applications that are officially enrolled
-                        ->orWhere('enrollment_status', 'officially_enrolled');
-                });
-            })
-            ->get()
-            ->map(function ($profile) {
-                $app = $profile->currentApplication;
-                $program = $app?->program;
+        // Get user IDs with completed medical on their latest application
+        $userIds = \Illuminate\Support\Facades\DB::table('applications as a')
+            ->join('application_processes as p', 'p.application_id', '=', 'a.id')
+            ->whereNull('a.deleted_at')
+            ->where('p.stage', 'medical')
+            ->where('p.status', 'completed')
+            ->whereRaw('a.id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = a.user_id AND a2.deleted_at IS NULL)')
+            ->pluck('a.user_id')
+            ->map(fn($id) => (string) $id)
+            ->toArray();
 
-                return [
-                    'id'               => $profile->user_id,
-                    'firstname'        => $profile->firstname,
-                    'lastname'         => $profile->lastname,
-                    'course'           => $profile->course ?? null,
-                    'email'            => $profile->email,
-                    'username'         => $profile->email,
-                    'phone'            => $profile->contactnumber,
-                    'company'          => $profile->company ?? null,
-                    'status'           => $app?->status ?? null,
-                    'enrollment_status' => $app?->enrollment_status ?? null,
-                    // Top-level program property for Applications/Records.vue
-                    'program'          => $program,
-                    // Nested application object for Dashboard/Records.vue
-                    'application'      => $app ? [
-                        'id'               => $app->id,
-                        'status'           => $app->status,
-                        'enrollment_status' => $app->enrollment_status,
-                        'program_id'       => $app->program_id,
-                        'created_at'       => $app->created_at,
-                        'program'          => $program ? [
-                            'id'   => $program->id,
-                            'code' => $program->code,
-                            'name' => $program->name,
-                        ] : null,
+        // Also include officially enrolled
+        $enrolledIds = \Illuminate\Support\Facades\DB::table('applications')
+            ->whereNull('deleted_at')
+            ->where('enrollment_status', 'officially_enrolled')
+            ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
+            ->pluck('user_id')
+            ->map(fn($id) => (string) $id)
+            ->toArray();
+
+        $allUserIds = array_unique(array_merge($userIds, $enrolledIds));
+
+        if (empty($allUserIds)) {
+            return collect();
+        }
+
+        // Load only what we need - no deep eager loading
+        $profiles = ApplicantProfile::whereIn('user_id', $allUserIds)
+            ->get(['user_id', 'firstname', 'lastname', 'email', 'contactnumber', 'student_number']);
+
+        // Load applications separately
+        $applications = \App\Models\Application::whereIn('user_id', $allUserIds)
+            ->whereNull('deleted_at')
+            ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
+            ->with(['program:id,code,name', 'processes:id,application_id,stage,status,action,created_at'])
+            ->get()
+            ->keyBy('user_id');
+
+        return $profiles->map(function ($profile) use ($applications) {
+            $app = $applications->get($profile->user_id);
+            $program = $app?->program;
+
+            return [
+                'id'                => $profile->user_id,
+                'firstname'         => $profile->firstname,
+                'lastname'          => $profile->lastname,
+                'course'            => null,
+                'email'             => $profile->email,
+                'username'          => $profile->email,
+                'phone'             => $profile->contactnumber,
+                'company'           => null,
+                'status'            => $app?->status ?? null,
+                'enrollment_status' => $app?->enrollment_status ?? null,
+                'program'           => $program ? [
+                    'id'   => $program->id,
+                    'code' => $program->code,
+                    'name' => $program->name,
+                ] : null,
+                'application'       => $app ? [
+                    'id'                => $app->id,
+                    'status'            => $app->status,
+                    'enrollment_status' => $app->enrollment_status,
+                    'program_id'        => $app->program_id,
+                    'created_at'        => $app->created_at,
+                    'processes'         => $app->processes ?? [],
+                    'program'           => $program ? [
+                        'id'   => $program->id,
+                        'code' => $program->code,
+                        'name' => $program->name,
                     ] : null,
-                ];
-            });
+                ] : null,
+            ];
+        });
     }
 
     /**
@@ -233,27 +263,23 @@ class UserService
      */
     public function getAllUsersWithDetails(): Collection
     {
-        // Get all staff profiles
-        $staff = \App\Models\StaffProfile::with(['programs:id,name,code'])
+        // Get all staff profiles natively from Users table
+        $staff = \App\Models\User::with(['programs:id,name,code', 'role'])
+            ->where('role_id', '>', 1)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($staff) {
-                // Approximate first/last name from full name
-                $parts = explode(' ', $staff->name);
-                $firstname = array_shift($parts);
-                $lastname = count($parts) > 0 ? implode(' ', $parts) : '';
-
                 return (object) [
-                    'id' => $staff->user_id,
-                    'firstname' => $firstname,
-                    'middlename' => null,
-                    'lastname' => $lastname,
-                    'extension_name' => null,
+                    'id' => $staff->idp_user_id ?: $staff->id,
+                    'firstname' => $staff->firstname,
+                    'middlename' => $staff->middlename,
+                    'lastname' => $staff->lastname,
+                    'extension_name' => $staff->extension_name,
                     'email' => $staff->email,
-                    'contactnumber' => null,
+                    'contactnumber' => $staff->contactnumber,
                     'role_id' => $staff->role_id,
                     'created_at' => $staff->created_at,
-                    'role' => (object) ['name' => $staff->role_name],
+                    'role' => (object) ['name' => $staff->role ? $staff->role->name : 'Staff'],
                     'programs' => $staff->programs,
                     'applicantProfile' => null,
                     'currentApplication' => null,
@@ -305,7 +331,8 @@ class UserService
      */
     public function getUserCountsByRole(): array
     {
-        $staffCounts = \App\Models\StaffProfile::select('role_id', DB::raw('count(*) as total'))
+        $staffCounts = \App\Models\User::where('role_id', '>', 1)
+            ->select('role_id', DB::raw('count(*) as total'))
             ->groupBy('role_id')
             ->pluck('total', 'role_id')
             ->toArray();
@@ -324,7 +351,29 @@ class UserService
      */
     public function getTotalUserCount(): int
     {
-        return \App\Models\StaffProfile::count() + ApplicantProfile::count();
+        return \App\Models\User::where('role_id', '>', 1)->count() + ApplicantProfile::count();
+    }
+
+    /**
+     * Create a new user (Staff or generic account) natively
+     *
+     * @param array $data
+     * @return \App\Models\User
+     */
+    public function createUser(array $data): \App\Models\User
+    {
+        return \App\Models\User::create([
+            'idp_user_id' => (string) \Illuminate\Support\Str::uuid(), // Assign standalone IDP uuid format locally as falback
+            'firstname' => $data['firstname'] ?? 'Pending IDP Sync',
+            'middlename' => $data['middlename'] ?? null,
+            'lastname' => $data['lastname'] ?? 'Pending IDP Sync',
+            'email' => $data['email'],
+            'role_id' => $data['role_id'] ?? 1,
+            'salutation' => $data['salutation'] ?? null,
+            'contactnumber' => $data['contactnumber'] ?? '0000000000',
+            'sex' => $data['sex'] ?? null,
+            'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)), // IDP handles real passwords
+        ]);
     }
 
 

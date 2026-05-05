@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 
 class CallbackController extends Controller
@@ -118,18 +117,15 @@ class CallbackController extends Controller
     /**
      * Handle the actual API callback.
      * 
-     * This is the endpoint that will be called from the frontend.
-     * Connect your API logic here.
+     * REMOVED: This method contained an SSRF vulnerability where user-supplied
+     * URLs were used directly in HTTP::post() calls. If this functionality is
+     * needed, implement it with a strict allowlist of permitted endpoints.
      */
     public function handle(Request $request)
     {
-        $response = Http::post($request->input('api_url'), $request->all());
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Callback processed successfully',
-            'data' => $request->all(),
-        ]);
+        // This endpoint has been disabled for security reasons.
+        // The previous implementation allowed arbitrary HTTP requests (SSRF vulnerability).
+        abort(410, 'This endpoint has been deprecated for security reasons.');
     }
 
     /**

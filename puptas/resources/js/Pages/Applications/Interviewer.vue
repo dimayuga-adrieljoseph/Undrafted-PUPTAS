@@ -256,6 +256,9 @@
                     {{ selectedUser.firstname }}
                 </p>
                 <p class="text-gray-700 dark:text-gray-400">
+                    Student No: {{ selectedUser.student_number || 'N/A' }}
+                </p>
+                <p class="text-gray-700 dark:text-gray-400">
                     Email: {{ selectedUser.email }}
                 </p>
                 <h4
@@ -305,15 +308,19 @@
                     class="mt-5 p-3 border border-yellow-300 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700"
                 >
                     <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                        ⚠️ Change Course
+                        ⚠️ Transfer to Different Program
                     </h5>
-                    <p class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
-                        Changing the course of an officially enrolled applicant will be logged in the audit trail.
+                    <p v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'" class="text-xs text-red-600 dark:text-red-400 mb-3 font-semibold">
+                        ⛔ Cannot transfer officially enrolled or accepted applicants. Only admins can change courses for these students.
+                    </p>
+                    <p v-else class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
+                        Transfer applicant to a different program. This action will be logged in the audit trail.
                     </p>
                     <select
                         v-model="changeCourseSelectedId"
                         id="change-course-select"
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-3"
+                        :disabled="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-3 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <option value="" disabled>Select new program…</option>
                         <option
@@ -328,11 +335,11 @@
                     </select>
                     <button
                         @click="changeCourse"
-                        :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse"
+                        :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse || selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
                         class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium dark:text-gray-900"
                     >
-                        <span v-if="isChangingCourse">Applying…</span>
-                        <span v-else>Apply Changes</span>
+                        <span v-if="isChangingCourse">Transferring…</span>
+                        <span v-else>Transfer Applicant</span>
                     </button>
                 </div>
 
@@ -432,6 +439,22 @@
                 </section>
             </div>
         </transition>
+
+        <!-- Snackbar Notification -->
+        <transition name="fade">
+            <div
+                v-if="snackbar.visible"
+                data-testid="snackbar"
+                :class="[
+                    'fixed bottom-8 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg text-white font-medium z-50',
+                    snackbar.type === 'success' ? 'bg-green-600' : '',
+                    snackbar.type === 'error' ? 'bg-red-600' : '',
+                    snackbar.type === 'info' ? 'bg-blue-600' : ''
+                ]"
+            >
+                {{ snackbar.message }}
+            </div>
+        </transition>
     </InterviewerLayout>
 </template>
 
@@ -485,10 +508,12 @@ const selectedUserFiles = ref({});
 const snackbar = ref({
     visible: false,
     message: "",
+    type: "success",
 });
 
-const showSnackbar = (msg, duration = 3000) => {
+const showSnackbar = (msg, type = "success", duration = 3000) => {
     snackbar.value.message = msg;
+    snackbar.value.type = type;
     snackbar.value.visible = true;
     setTimeout(() => {
         snackbar.value.visible = false;
@@ -518,16 +543,25 @@ const chartData = {
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
+    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700";
+    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700";
     if (s === "rejected") return "bg-red-100 text-red-700";
+    if (s === "returned") return "bg-red-100 text-red-700";
     return "bg-gray-100 text-gray-600";
 };
 
 // Get evaluation-specific status text
 const getEvaluationStatusText = (user) => {
     if (user.is_evaluation_completed) {
-        // Show what action was taken
-        if (user.process_action === 'accepted') return "Completed - Accepted";
+        // Check application status first - show if officially enrolled or accepted
+        if (user.application?.enrollment_status === 'officially_enrolled') {
+            return "Officially Enrolled";
+        }
+        if (user.application?.status === 'accepted') {
+            return "Accepted";
+        }
+        // Show what action was taken during interview stage
+        if (user.process_action === 'passed') return "Completed - Passed";
         if (user.process_action === 'transferred') return "Completed - Transferred";
         return "Completed";
     }
@@ -538,9 +572,16 @@ const getEvaluationStatusText = (user) => {
 // Get evaluation-specific status styling
 const getEvaluationStatusClass = (user) => {
     if (user.is_evaluation_completed) {
-        if (user.process_action === 'accepted') return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
+        // Check application status first - show special styling for enrolled/accepted
+        if (user.application?.enrollment_status === 'officially_enrolled') {
+            return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 font-semibold";
+        }
+        if (user.application?.status === 'accepted') {
+            return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold";
+        }
+        if (user.process_action === 'passed') return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
         if (user.process_action === 'transferred') return "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300";
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
+        return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
     }
     if (user.process_status === 'in_progress') return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300";
     return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
@@ -620,6 +661,7 @@ const selectUser = async (user) => {
 
         selectedUser.value = {
             ...user,
+            ...response.data.user,
             application: {
                 ...response.data.user.application,
                 processes: response.data.user.application?.processes || [],
@@ -634,6 +676,14 @@ const selectUser = async (user) => {
         await fetchPrograms();
     } catch (error) {
         console.error("Failed to fetch user data:", error);
+        
+        // Display user-friendly error notification
+        if (error.response && error.response.status === 403) {
+            showSnackbar("Unauthorized access. Application is not at the interviewer stage.", "error");
+        } else {
+            showSnackbar("Failed to load applicant data. Please try again.", "error");
+        }
+        
         selectedUserFiles.value = {};
         selectedUser.value = null;
     }
@@ -806,28 +856,31 @@ const changeCourse = async () => {
         return;
     }
 
+    // Check if applicant is officially enrolled - interviewers cannot change course for officially enrolled applicants
+    const isOfficiallyEnrolled = selectedUser.value?.application?.enrollment_status === 'officially_enrolled';
+    if (isOfficiallyEnrolled) {
+        showSnackbar("Cannot change course for officially enrolled applicants. Only admins can perform this action.");
+        return;
+    }
+
     const selectedProg = availablePrograms.value.find(
         (p) => p.id === changeCourseSelectedId.value
     );
     const confirmMsg = selectedProg
-        ? `Change course to "${selectedProg.code} - ${selectedProg.name}"? This action will be logged.`
-        : "Change course? This action will be logged.";
+        ? `Transfer applicant to "${selectedProg.code} - ${selectedProg.name}"? This action will be logged.`
+        : "Transfer applicant? This action will be logged.";
 
     if (!confirm(confirmMsg)) return;
 
     isChangingCourse.value = true;
     try {
-        const isEnrolled = selectedUser.value?.application?.enrollment_status === 'officially_enrolled';
-        const endpoint = isEnrolled 
-            ? `/record-dashboard/change-course/${selectedUser.value.id}`
-            : `/interviewer-dashboard/transfer/${selectedUser.value.id}`;
-
+        // Interviewers always use the transfer endpoint
         const res = await axios.post(
-            endpoint,
+            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
             { program_id: changeCourseSelectedId.value }
         );
         
-        showSnackbar(res.data?.message ?? (isEnrolled ? "Course updated successfully." : "Applicant transferred successfully!"));
+        showSnackbar(res.data?.message ?? "Applicant transferred successfully!");
         changeCourseSelectedId.value = "";
 
         await fetchUsers();
@@ -840,11 +893,17 @@ const changeCourse = async () => {
         }
     } catch (e) {
         console.error("Course change failed:", e);
-        const msg =
-            e.response?.data?.message ??
-            e.response?.data?.errors?.program_id?.[0] ??
-            "Failed to change course.";
-        showSnackbar(msg);
+        
+        // Handle 403 Forbidden specifically
+        if (e.response?.status === 403) {
+            showSnackbar("You do not have permission to transfer this applicant. Only admins can change courses for officially enrolled or accepted students.", "error");
+        } else {
+            const msg =
+                e.response?.data?.message ??
+                e.response?.data?.errors?.program_id?.[0] ??
+                "Failed to transfer applicant.";
+            showSnackbar(msg, "error");
+        }
     } finally {
         isChangingCourse.value = false;
     }
@@ -900,6 +959,15 @@ const clearFilters = () => {
 .slide-fade-enter-from,
 .slide-fade-leave-to {
     transform: translateX(100%);
+    opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
     opacity: 0;
 }
 </style>

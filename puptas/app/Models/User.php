@@ -38,7 +38,6 @@ class User extends Authenticatable
 
     protected $fillable = [
         'idp_user_id',
-        'student_number',
         'email',
         'password',
         'role_id',
@@ -143,6 +142,11 @@ class User extends Authenticatable
         return $this->hasOne(ApplicantProfile::class);
     }
 
+    public function getStudentNumberAttribute()
+    {
+        return $this->applicantProfile?->student_number;
+    }
+
     public function testPasser()
     {
         return $this->hasOne(TestPasser::class);
@@ -176,7 +180,6 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
             'privacy_consent_at' => 'datetime',
         ];
     }

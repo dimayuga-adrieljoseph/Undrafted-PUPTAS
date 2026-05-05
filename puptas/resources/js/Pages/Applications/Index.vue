@@ -138,8 +138,10 @@ watch([searchQuery, statusFilter, sortKey, sortAsc], () => {
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
     if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
     if (s === "rejected") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400";
 };
 
@@ -158,6 +160,7 @@ const selectUser = async (user) => {
 
         selectedUser.value = {
             ...user,
+            ...response.data.user,
             application: {
                 ...response.data.user.application,
                 processes: response.data.user.application?.processes || [],
@@ -401,6 +404,15 @@ const clearFilters = () => {
                         <button
                             class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
                             @click="
+                                statusFilter = 'cleared_for_enrollment';
+                                showStatusDropdown = false;
+                            "
+                        >
+                            Cleared for Enrollment
+                        </button>
+                        <button
+                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="
                                 statusFilter = 'submitted';
                                 showStatusDropdown = false;
                             "
@@ -574,6 +586,7 @@ const clearFilters = () => {
                         <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
                             {{ selectedUser.lastname ? `${selectedUser.lastname}, ${selectedUser.firstname}` : (selectedUser.email || '—') }}
                         </h4>
+                        <p class="text-sm text-gray-700 dark:text-gray-300 mb-0.5">Student No: {{ selectedUser.student_number || 'N/A' }}</p>
                         <p class="text-gray-600 dark:text-gray-400">{{ selectedUser.email }}</p>
                     </div>
                 </div>

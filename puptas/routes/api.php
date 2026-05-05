@@ -50,6 +50,10 @@ Route::prefix('v1')
         Route::post('/webhooks/medical-result', [ExternalMedicalApiController::class, 'webhookResult']);
     });
 
+use App\Http\Controllers\ChatwootWebhookController;
+
+Route::post('/webhooks/chatwoot', [ChatwootWebhookController::class, 'handleMessage']);
+Route::get('/chatwoot/widget-config', [ChatwootWebhookController::class, 'getWidgetConfig'])->middleware('auth:sanctum');
 
 // Route::get('/user-stats', [UserController::class, 'getUserStats']);
 // Route::get('/programs', [ProgramController::class, 'index']);

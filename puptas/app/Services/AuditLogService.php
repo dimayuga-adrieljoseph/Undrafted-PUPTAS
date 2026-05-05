@@ -149,6 +149,44 @@ class AuditLogService
         ]);
     }
 
+    /**
+     * Log a course change operation.
+     * Records both successful and denied course change attempts for audit trail.
+     *
+     * @param Authenticatable $user          The user performing the course change
+     * @param \App\Models\Application $application   The application being modified
+     * @param int             $oldProgramId  The previous program ID
+     * @param int             $newProgramId  The new program ID
+     * @param bool            $success       Whether the operation succeeded
+     * @param string|null     $reason        Reason for denial (if applicable)
+     * @return AuditLog
+     */
+    public function logCourseChange(
+        Authenticatable $user,
+        \App\Models\Application $application,
+        int $oldProgramId,
+        int $newProgramId,
+        bool $success,
+        ?string $reason = null
+    ): AuditLog {
+        $userId = $application->user_id;
+        
+        if ($success) {
+            $description = "Changed course for applicant {$userId} from program {$oldProgramId} to {$newProgramId}";
+        } else {
+            $description = "Denied course change: {$reason}";
+        }
+
+        return $this->write([
+            'user'         => $user,
+            'action_type'  => AuditLog::ACTION_UPDATE,
+            'log_category' => AuditLog::CATEGORY_ADMISSION_DATA,
+            'log_type'     => AuditLog::TYPE_AUDIT,
+            'module_name'  => 'Applications',
+            'description'  => $description,
+        ]);
+    }
+
     // ─── Internal ───────────────────────────────────────────────────
 
     /**

@@ -23,7 +23,6 @@ class ApiTestStudentsSeeder extends Seeder
             $user = User::updateOrCreate(
                 ['email' => "apitest.student{$num}@example.com"],
                 [
-                    'student_number' => "2026-TST-{$num}",
                     'firstname' => "APITest{$num}",
                     'lastname' => 'Student',
                     'contactnumber' => '09170000000',
@@ -32,8 +31,13 @@ class ApiTestStudentsSeeder extends Seeder
                 ]
             );
 
+            \App\Models\ApplicantProfile::updateOrCreate(
+                ['user_id' => $user->idp_user_id ?? $user->id], // fallback logic depending on setup
+                ['user_id' => $user->id, 'student_number' => "2026-TST-{$num}"]
+            );
+
             Application::updateOrCreate(
-                ['user_id' => $user->id],
+                ['user_id' => $user->id], 
                 [
                     'program_id' => $program->id,
                     'status' => 'accepted',

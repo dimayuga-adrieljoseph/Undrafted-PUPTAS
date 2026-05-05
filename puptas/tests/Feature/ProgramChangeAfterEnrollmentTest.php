@@ -52,14 +52,20 @@ function makeEnrolledApplication($applicant, Program $program): Application
     return $application;
 }
 
-test('interviewer can change course for an officially enrolled applicant', function () {
+test('interviewer can change course for a pending applicant', function () {
     $this->withoutExceptionHandling();
     $applicant   = makeApplicant();
     $interviewer = makeInterviewer();
     $programA    = makeProgram('P-A');
     $programB    = makeProgram('P-B');
 
-    makeEnrolledApplication($applicant, $programA);
+    // Create application with pending enrollment status
+    Application::create([
+        'user_id'           => $applicant->id,
+        'program_id'        => $programA->id,
+        'status'            => 'submitted',
+        'enrollment_status' => 'pending',
+    ]);
 
     $this->actingAs($interviewer)
         ->postJson("/record-dashboard/change-course/{$applicant->id}", [
@@ -71,7 +77,36 @@ test('interviewer can change course for an officially enrolled applicant', funct
     $this->assertDatabaseHas('applications', [
         'user_id'           => $applicant->id,
         'program_id'        => $programB->id,
-        'enrollment_status' => 'officially_enrolled',
+        'enrollment_status' => 'pending',
+    ]);
+});
+
+test('interviewer can change course for a temporary applicant', function () {
+    $this->withoutExceptionHandling();
+    $applicant   = makeApplicant();
+    $interviewer = makeInterviewer();
+    $programA    = makeProgram('T-A');
+    $programB    = makeProgram('T-B');
+
+    // Create application with temporary enrollment status
+    Application::create([
+        'user_id'           => $applicant->id,
+        'program_id'        => $programA->id,
+        'status'            => 'submitted',
+        'enrollment_status' => 'temporary',
+    ]);
+
+    $this->actingAs($interviewer)
+        ->postJson("/record-dashboard/change-course/{$applicant->id}", [
+            'program_id' => $programB->id,
+        ])
+        ->assertOk()
+        ->assertJson(['message' => 'Course updated successfully.']);
+
+    $this->assertDatabaseHas('applications', [
+        'user_id'           => $applicant->id,
+        'program_id'        => $programB->id,
+        'enrollment_status' => 'temporary',
     ]);
 });
 
@@ -82,7 +117,13 @@ test('a course_changed ApplicationProcess row is created on success', function (
     $programA    = makeProgram('CCA');
     $programB    = makeProgram('CCB');
 
-    $application = makeEnrolledApplication($applicant, $programA);
+    // Create application with pending enrollment status
+    $application = Application::create([
+        'user_id'           => $applicant->id,
+        'program_id'        => $programA->id,
+        'status'            => 'submitted',
+        'enrollment_status' => 'pending',
+    ]);
 
     $this->actingAs($interviewer)
         ->postJson("/record-dashboard/change-course/{$applicant->id}", [
@@ -167,26 +208,20 @@ test('guest is redirected when attempting a course change', function () {
         ->assertRedirect('/login');
 });
 
-test('cannot change course when applicant is not officially enrolled', function () {
-    $this->withoutExceptionHandling();
+test('interviewer cannot change course when applicant is officially enrolled', function () {
     $applicant   = makeApplicant();
     $interviewer = makeInterviewer();
     $programA    = makeProgram('NE-A');
     $programB    = makeProgram('NE-B');
 
-    $application = Application::create([
-        'user_id'           => $applicant->id,
-        'program_id'        => $programA->id,
-        'status'            => 'submitted',
-        'enrollment_status' => 'pending',
-    ]);
+    // Create officially enrolled application
+    makeEnrolledApplication($applicant, $programA);
 
     $this->actingAs($interviewer)
         ->postJson("/record-dashboard/change-course/{$applicant->id}", [
             'program_id' => $programB->id,
         ])
-        ->assertStatus(409)
-        ->assertJson(['message' => 'Course can only be changed for officially enrolled applicants.']);
+        ->assertForbidden();
 });
 
 test('changing to the same program returns 422', function () {
@@ -195,7 +230,13 @@ test('changing to the same program returns 422', function () {
     $interviewer = makeInterviewer();
     $programA    = makeProgram('SAME');
 
-    makeEnrolledApplication($applicant, $programA);
+    // Create application with pending enrollment status
+    Application::create([
+        'user_id'           => $applicant->id,
+        'program_id'        => $programA->id,
+        'status'            => 'submitted',
+        'enrollment_status' => 'pending',
+    ]);
 
     $this->actingAs($interviewer)
         ->postJson("/record-dashboard/change-course/{$applicant->id}", [
@@ -210,7 +251,13 @@ test('cannot change course to a non-existent program', function () {
     $interviewer = makeInterviewer();
     $programA    = makeProgram('EXA');
 
-    makeEnrolledApplication($applicant, $programA);
+    // Create application with pending enrollment status
+    Application::create([
+        'user_id'           => $applicant->id,
+        'program_id'        => $programA->id,
+        'status'            => 'submitted',
+        'enrollment_status' => 'pending',
+    ]);
 
     $this->actingAs($interviewer)
         ->postJson("/record-dashboard/change-course/{$applicant->id}", [
@@ -225,7 +272,13 @@ test('request without program_id fails validation', function () {
     $interviewer = makeInterviewer();
     $programA  = makeProgram('VA');
 
-    makeEnrolledApplication($applicant, $programA);
+    // Create application with pending enrollment status
+    Application::create([
+        'user_id'           => $applicant->id,
+        'program_id'        => $programA->id,
+        'status'            => 'submitted',
+        'enrollment_status' => 'pending',
+    ]);
 
     $this->actingAs($interviewer)
         ->postJson("/record-dashboard/change-course/{$applicant->id}", [])

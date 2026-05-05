@@ -52,6 +52,17 @@ class AuditLogController extends Controller
                 ];
             });
 
+        // Add a "System/API" option for logs without a user_id
+        $hasSystemLogs = AuditLog::whereNull('user_id')->exists();
+        if ($hasSystemLogs) {
+            $users->prepend([
+                'id' => 'system',
+                'firstname' => 'System/API',
+                'lastname' => '',
+                'email' => 'system',
+            ]);
+        }
+
         return Inertia::render('SuperAdmin/Logs', [
             'logs' => $logs,
             'users' => $users,
@@ -103,7 +114,12 @@ class AuditLogController extends Controller
     private function applyFilters($query, array $filters): void
     {
         if (!empty($filters['user_id'])) {
-            $query->where('user_id', $filters['user_id']); // using where instead of forUser
+            // Support filtering by 'system' for API/system logs
+            if ($filters['user_id'] === 'system') {
+                $query->whereNull('user_id');
+            } else {
+                $query->where('user_id', $filters['user_id']);
+            }
         }
 
         if (!empty($filters['date'])) {

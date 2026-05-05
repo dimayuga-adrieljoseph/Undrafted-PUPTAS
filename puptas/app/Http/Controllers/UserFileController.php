@@ -7,8 +7,10 @@ use App\Models\User;
 use App\Models\UserFile;
 use App\Helpers\FileMapper;
 use App\Services\ImageCompressionService;
+use App\Services\FileService;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\HeaderUtils;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Rules\ValidationRules;
 
@@ -22,11 +24,17 @@ class UserFileController extends Controller
     protected ImageCompressionService $compressionService;
 
     /**
+     * @var FileService
+     */
+    protected FileService $fileService;
+
+    /**
      * Create a new controller instance.
      */
-    public function __construct(ImageCompressionService $compressionService)
+    public function __construct(ImageCompressionService $compressionService, FileService $fileService)
     {
         $this->compressionService = $compressionService;
+        $this->fileService = $fileService;
     }
 
     public function uploadFiles(Request $request)
@@ -57,35 +65,65 @@ class UserFileController extends Controller
                 try {
                     $uploadedFile = $request->file($inputName);
 
-                    // Compress and convert to WebP using ImageCompressionService
-                    $compressed = $this->compressionService->compress(
-                        $uploadedFile,
-                        'uploads/files'
-                    );
+                    $stored = $this->fileService->store($uploadedFile, 'uploads/files');
 
-                    UserFile::updateOrCreate(
+                    $userFile = UserFile::updateOrCreate(
                         [
                             'user_id' => $user->id,
                             'type' => $type,
                         ],
                         [
-                            'file_path' => $compressed['path'],
-                            'original_name' => $compressed['original_name'],
+                            'file_path' => $stored['path'],
+                            'original_name' => $stored['original_name'],
                             'application_id' => $request->application_id ?? null,
                             'status' => 'pending',
+                            'docling_json' => null,
                         ]
                     );
+
+                    \App\Jobs\ProcessGradeOcr::dispatch($userFile->id);
                 } catch (\InvalidArgumentException $e) {
                     return response()->json([
                         'message' => 'Image processing failed: ' . $e->getMessage(),
                     ], Response::HTTP_UNPROCESSABLE_ENTITY);
-                } catch (\Exception $e) {
-                    \Log::error('Image compression failed', [
-                        'error' => $e->getMessage(),
-                        'file' => $inputName,
+                } catch (\RuntimeException $e) {
+                    $disk = config('filesystems.default', 'public');
+                    $isConnectivityError = str_contains($e->getMessage(), 'S3') ||
+                        str_contains($e->getMessage(), 'connect') ||
+                        str_contains($e->getMessage(), 'Connection') ||
+                        str_contains($e->getMessage(), 'timeout') ||
+                        str_contains($e->getMessage(), 'unreachable') ||
+                        str_contains($e->getMessage(), 'Could not resolve host') ||
+                        str_contains($e->getMessage(), 'cURL');
+
+                    Log::error('FileService store() failed', [
+                        'user_id'           => $user->id,
+                        'file_type'         => $type,
+                        'disk'              => $disk,
+                        'exception_message' => $e->getMessage(),
                     ]);
+
+                    if ($isConnectivityError) {
+                        return response()->json([
+                            'message' => 'Storage service temporarily unavailable.',
+                        ], Response::HTTP_SERVICE_UNAVAILABLE);
+                    }
+
                     return response()->json([
-                        'message' => 'Failed to process uploaded image',
+                        'message' => 'File operation failed. Please try again.',
+                    ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                } catch (\Exception $e) {
+                    $disk = config('filesystems.default', 'public');
+
+                    Log::error('FileService store() failed', [
+                        'user_id'           => $user->id,
+                        'file_type'         => $type,
+                        'disk'              => $disk,
+                        'exception_message' => $e->getMessage(),
+                    ]);
+
+                    return response()->json([
+                        'message' => 'File operation failed. Please try again.',
                     ], Response::HTTP_INTERNAL_SERVER_ERROR);
                 }
             }
@@ -100,6 +138,7 @@ class UserFileController extends Controller
     public function getUserApplication()
     {
         $user = auth()->user();
+        $user->load('applicantProfile');
 
         $files = UserFile::where('user_id', $user->id)->get();
 
@@ -130,6 +169,12 @@ class UserFileController extends Controller
             }
         }
 
+        $applicantProfile = $user->applicantProfile;
+        
+        // Load graduate type to derive schoolyear (same as ConfirmationService)
+        $applicantProfile?->load('graduateTypes');
+        $graduateType = $applicantProfile?->graduateTypes->first()?->label ?? null;
+
         // Return all necessary user data + files
         return response()->json([
             'firstname' => $user->firstname,
@@ -144,12 +189,12 @@ class UserFileController extends Controller
             'province' => $user->province,
             'postal_code' => $user->postal_code,
             'email' => $user->email,
-            'school' => $user->school,
-            'schoolAdd' => $user->schoolAdd,
-            'schoolyear' => $user->schoolyear,
-            'dateGrad' => $user->dateGrad,
-            'strand' => $user->strand,
-            'track' => $user->track,
+            'school' => $applicantProfile?->school,
+            'schoolAdd' => $applicantProfile?->school_address,
+            'schoolyear' => $graduateType,
+            'dateGrad' => $applicantProfile?->date_graduated?->format('Y-m-d'),
+            'strand' => $applicantProfile?->strand,
+            'track' => $applicantProfile?->track,
             'uploadedFiles' => $uploadedFiles,
         ]);
     }

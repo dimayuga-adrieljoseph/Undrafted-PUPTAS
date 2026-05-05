@@ -2,6 +2,18 @@
 
 return [
 
+    /*
+    |--------------------------------------------------------------------------
+    | Third Party Services
+    |--------------------------------------------------------------------------
+    |
+    | This file is for storing the credentials for third party services such
+    | as Mailgun, Postmark, AWS and more. This file provides the de facto
+    | location for this type of information, allowing packages to have
+    | a conventional file to locate the various service credentials.
+    |
+    */
+
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
@@ -13,19 +25,13 @@ return [
     ],
 
     'resend' => [
-        'key' => env('RESEND_KEY'),
-    ],
-
-    'slack' => [
-        'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
-        ],
+        'key' => env('RESEND_API_KEY'),
     ],
 
     'idp' => [
         'base_url' => env('IDP_BASE_URL', 'https://identity-provider.isaxbsit2027.com'),
-        'authorize_path' => env('IDP_AUTHORIZE_PATH', '/api/v1/auth/authorize'),
+        // Using /login as the authorize_path to bypass broken API endpoints on IDP side
+        'authorize_path' => env('IDP_AUTHORIZE_PATH', '/login'),
         'token_path' => env('IDP_TOKEN_PATH', '/api/v1/auth/token'),
         'user_path' => env('IDP_USER_PATH', '/api/v1/me'),
         'client_id' => env('IDP_CLIENT_ID'),
@@ -53,13 +59,32 @@ return [
         'daily_limit' => (int) env('EXTERNAL_MEDICAL_API_DAILY_LIMIT', 1500),
     ],
 
+    'gemini' => [
+        'key'   => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+    ],
+
     'openrouter' => [
         'key' => env('OPENROUTER_API_KEY'),
         'endpoint' => env('OPENROUTER_ENDPOINT', 'https://openrouter.ai/api/v1/chat/completions'),
         'model' => env('OPENROUTER_MODEL', 'google/gemini-flash-1.5'),
-      
+    ],
+
     'medical_webhook' => [
         'secret' => env('MEDICAL_WEBHOOK_SECRET'),
     ],
 
+    'docling' => [
+        'url'     => env('DOCLING_URL', ''),
+        'api_key' => env('DOCLING_API_KEY'),
+        'timeout' => (int) env('DOCLING_TIMEOUT', 60),
+    ],
+
+    'chatwoot' => [
+        'access_token' => env('CHATWOOT_ACCESS_TOKEN'),
+        'secret_key' => env('CHATWOOT_SECRET_KEY'),
+        'base_url' => env('CHATWOOT_BASE_URL'),
+        'website_token' => env('CHATWOOT_WEBSITE_TOKEN'),
+        'hmac_token' => env('CHATWOOT_HMAC_TOKEN'),
+    ],
 ];

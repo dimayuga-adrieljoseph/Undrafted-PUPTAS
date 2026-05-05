@@ -25,7 +25,9 @@ class Program extends Model
         'gwa' => 'decimal:2',
     ];
 
-    protected $appends = ['strand_names'];
+    // Temporarily commented out to prevent memory issues when loading programs
+    // The strand_names accessor causes circular reference issues
+    // protected $appends = ['strand_names'];
 
     /**
      * Accessor for strand names (for backward compatibility in frontend)
@@ -42,7 +44,7 @@ class Program extends Model
 
     public function users()
     {
-        return $this->belongsToMany(StaffProfile::class, 'program_user', 'program_id', 'user_id')
+        return $this->belongsToMany(User::class, 'program_user', 'program_id', 'user_id')
             ->withPivot('role_id')
             ->withTimestamps();
     }

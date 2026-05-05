@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\ApplicantProfile;
-use App\Models\StaffProfile; // Just in case
 use Inertia\Inertia;
 use App\Models\Application;
 use App\Models\ApplicationProcess;
@@ -30,7 +29,7 @@ class DashboardController extends Controller
 
         $summary = [
             'total' => Application::count(),
-            'accepted' => Application::where('status', 'accepted')->count(),
+            'accepted' => Application::whereIn('status', ['accepted', 'cleared_for_enrollment'])->count(),
             'pending' => Application::where('status', 'submitted')->count(),
             'returned' => Application::where('status', 'returned')->count(),
         ];
@@ -68,7 +67,7 @@ class DashboardController extends Controller
 
         foreach ($dates as $date) {
             $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
-            $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
+            $accepted[]  = $applications->where('date', $date)->whereIn('status', ['accepted', 'cleared_for_enrollment'])->sum('count');
             $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
         }
 
@@ -115,7 +114,7 @@ class DashboardController extends Controller
         }
 
         return response()->json(
-            ApplicantProfile::with('currentApplication.program')
+            ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
                 ->whereHas('currentApplication')
                 ->get()
                 ->map(function ($applicant) {
@@ -143,7 +142,7 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 
-        $applicant = ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes', 'grades', 'graduateTypes'])
+        $applicant = ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,reviewer_notes,created_at', 'grades', 'graduateTypes'])
             ->where('user_id', $id)
             ->firstOrFail();
 
@@ -152,6 +151,7 @@ class DashboardController extends Controller
         // Transform the response to use 'application' key for frontend compatibility
         $userData = [
             'id' => $applicant->user_id,
+            'student_number' => $applicant->student_number,
             'firstname' => $applicant->firstname,
             'lastname' => $applicant->lastname,
             'email' => $applicant->email,
