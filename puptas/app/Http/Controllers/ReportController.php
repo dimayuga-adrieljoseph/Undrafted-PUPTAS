@@ -143,8 +143,10 @@ class ReportController extends Controller
         if ($interview) {
             if ($interview->action === 'transferred') {
                 return 'Interview Finished (Transferred)';
+            } elseif ($interview->action === 'passed') {
+                return 'Interview Finished (Passed)';
             }
-            return 'Interview Finished (Passed)';
+            return 'Interview Finished';
         }
 
         return ucfirst(str_replace('_', ' ', $application->status));

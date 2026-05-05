@@ -66,8 +66,10 @@ class ApplicantsExport implements FromQuery, WithMapping, WithHeadings
         if ($interview) {
             if ($interview->action === 'transferred') {
                 return 'Interview Finished (Transferred)';
+            } elseif ($interview->action === 'passed') {
+                return 'Interview Finished (Passed)';
             }
-            return 'Interview Finished (Passed)';
+            return 'Interview Finished';
         }
 
         return ucfirst(str_replace('_', ' ', $application->status));
