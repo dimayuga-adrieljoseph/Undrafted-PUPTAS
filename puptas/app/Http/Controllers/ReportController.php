@@ -95,7 +95,7 @@ class ReportController extends Controller
         $type = $request->input('type');
         if ($type === 'interview') {
             $query->whereHas('processes', function ($q) {
-                $q->where('stage', 'interview')->where('status', 'completed');
+                $q->where('stage', 'interviewer')->where('status', 'completed');
             });
         } elseif ($type === 'medical') {
             $query->whereHas('processes', function ($q) {
@@ -139,9 +139,12 @@ class ReportController extends Controller
             return 'Medical Cleared';
         }
 
-        $interview = $application->processes->where('stage', 'interview')->where('status', 'completed')->first();
+        $interview = $application->processes->where('stage', 'interviewer')->where('status', 'completed')->sortByDesc('created_at')->first();
         if ($interview) {
-            return 'Interview Finished';
+            if ($interview->action === 'transferred') {
+                return 'Interview Finished (Transferred)';
+            }
+            return 'Interview Finished (Passed)';
         }
 
         return ucfirst(str_replace('_', ' ', $application->status));
