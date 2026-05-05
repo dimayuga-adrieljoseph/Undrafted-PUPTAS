@@ -672,24 +672,6 @@ watch(isSidebarOpen, (val) => {
         <!-- Bottom Section -->
         <div class="sidebar-footer mt-auto pt-8 border-t border-white/10">
             <ul class="space-y-2">
-                <!-- Dark Mode Toggle -->
-                <li>
-                    <button
-                        @click="toggleDarkMode"
-                        class="nav-item group w-full text-left cursor-pointer"
-                    >
-                        <div class="nav-icon">
-                            <FontAwesomeIcon
-                                :icon="isDarkMode ? 'sun' : 'moon'"
-                                class="text-lg"
-                            />
-                        </div>
-                        <span v-if="isSidebarOpen" class="nav-label">
-                            {{ isDarkMode ? "Light Mode" : "Dark Mode" }}
-                        </span>
-                    </button>
-                </li>
-
                 <!-- Logout -->
                 <li>
                     <form @submit.prevent="logout">

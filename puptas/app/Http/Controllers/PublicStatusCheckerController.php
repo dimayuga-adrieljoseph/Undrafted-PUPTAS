@@ -31,7 +31,7 @@ class PublicStatusCheckerController extends Controller
             return response()->json([
                 'qualified'    => true,
                 'batch_number' => $passer->batch_number,
-                'message'      => 'You are qualified for the entrance exam.',
+                'message'      => 'Congratulations! You have passed the entrance exam.',
             ]);
         }
 

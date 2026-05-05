@@ -104,7 +104,7 @@ function reset() {
 </script>
 
 <template>
-    <Head title="Check Admission Status" />
+    <Head title="Check Exam Result" />
 
     <!-- Full-page centered layout -->
     <div class="relative min-h-screen bg-cover bg-center bg-[url('/assets/images/2.jpg')]">
@@ -125,9 +125,9 @@ function reset() {
                         <div class="w-16 h-16 bg-gradient-to-br from-red-100 to-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
                             <span class="text-3xl font-bold text-red-800">P</span>
                         </div>
-                        <h1 class="text-2xl font-bold text-gray-900">Check Admission Status</h1>
+                        <h1 class="text-2xl font-bold text-gray-900">Check Exam Result</h1>
                         <p class="text-sm text-gray-600 mt-1">
-                            Enter your reference number and email to verify your qualification.
+                            Enter your reference number and email to check if you passed the entrance exam.
                         </p>
                     </div>
 
