@@ -62,6 +62,14 @@ const downloadExcel = () => {
     window.open(url, '_blank');
 };
 
+const clearFilters = () => {
+    filterType.value = "overall";
+    filterDate.value = "";
+    filterMonth.value = "";
+    filterProgram.value = "";
+    fetchReportData(1);
+};
+
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s.includes("enrolled")) return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
@@ -108,9 +116,12 @@ const getStatusClass = (status) => {
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex gap-4 mb-6">
+            <div class="flex flex-wrap gap-4 mb-6">
                 <button @click="fetchReportData(1)" class="px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#800000] transition">
                     Generate Report
+                </button>
+                <button @click="clearFilters" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    Clear Filters
                 </button>
                 <button @click="downloadPdf" class="px-4 py-2 border border-[#9E122C] text-[#9E122C] rounded-lg hover:bg-[#9E122C] hover:text-white transition dark:text-white dark:hover:text-gray-900">
                     Export PDF
