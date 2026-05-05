@@ -10,9 +10,17 @@ use App\Models\ApplicantProfile;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ApplicantsExport;
+use App\Services\ApplicationStatusService;
 
 class ReportController extends Controller
 {
+    protected ApplicationStatusService $statusService;
+
+    public function __construct(ApplicationStatusService $statusService)
+    {
+        $this->statusService = $statusService;
+    }
+
     public function index()
     {
         $programs = Program::all(['id', 'code', 'name']);
@@ -35,7 +43,7 @@ class ReportController extends Controller
                 'name' => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
                 'email' => $app->user->email ?? 'N/A',
                 'program' => $app->program->code ?? 'N/A',
-                'status' => $this->determineStatus($app),
+                'status' => $this->statusService->determineStatus($app),
                 'date' => $app->updated_at->format('Y-m-d')
             ];
         });
@@ -54,7 +62,7 @@ class ReportController extends Controller
                 'student_number' => $app->user->student_number ?? 'N/A',
                 'name' => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
                 'program' => $app->program->code ?? 'N/A',
-                'status' => $this->determineStatus($app),
+                'status' => $this->statusService->determineStatus($app),
                 'date' => $app->updated_at->format('Y-m-d')
             ];
         });
@@ -69,7 +77,7 @@ class ReportController extends Controller
         // Pass the builder instance to the export class for chunked query execution
         $query->with(['user', 'program', 'processes']);
 
-        return Excel::download(new ApplicantsExport($query), 'applicant_report.xlsx');
+        return Excel::download(new ApplicantsExport($query, $this->statusService), 'applicant_report.xlsx');
     }
 
     private function sanitizeExcelValue($value)
@@ -95,7 +103,9 @@ class ReportController extends Controller
         $type = $request->input('type');
         if ($type === 'interview') {
             $query->whereHas('processes', function ($q) {
-                $q->where('stage', 'interview')->where('status', 'completed');
+                $q->where('stage', 'interviewer')
+                  ->where('status', 'completed')
+                  ->whereIn('action', ['passed', 'transferred']);
             });
         } elseif ($type === 'medical') {
             $query->whereHas('processes', function ($q) {
@@ -126,24 +136,5 @@ class ReportController extends Controller
         }
 
         return $query;
-    }
-
-    private function determineStatus($application)
-    {
-        if ($application->enrollment_status === 'officially_enrolled') {
-            return 'Enrolled';
-        }
-
-        $medical = $application->processes->where('stage', 'medical')->where('status', 'completed')->first();
-        if ($medical) {
-            return 'Medical Cleared';
-        }
-
-        $interview = $application->processes->where('stage', 'interview')->where('status', 'completed')->first();
-        if ($interview) {
-            return 'Interview Finished';
-        }
-
-        return ucfirst(str_replace('_', ' ', $application->status));
     }
 }

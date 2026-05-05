@@ -6,14 +6,17 @@ use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Illuminate\Database\Eloquent\Builder;
+use App\Services\ApplicationStatusService;
 
 class ApplicantsExport implements FromQuery, WithMapping, WithHeadings
 {
     protected $query;
+    protected ApplicationStatusService $statusService;
 
-    public function __construct(Builder $query)
+    public function __construct(Builder $query, ApplicationStatusService $statusService)
     {
         $this->query = $query;
+        $this->statusService = $statusService;
     }
 
     public function query()
@@ -38,7 +41,7 @@ class ApplicantsExport implements FromQuery, WithMapping, WithHeadings
             $this->sanitizeExcelValue($app->user->student_number ?? 'N/A'),
             $this->sanitizeExcelValue(trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? ''))),
             $this->sanitizeExcelValue($app->program->code ?? 'N/A'),
-            $this->sanitizeExcelValue($this->determineStatus($app)),
+            $this->sanitizeExcelValue($this->statusService->determineStatus($app)),
             $this->sanitizeExcelValue($app->updated_at->format('Y-m-d'))
         ];
     }
@@ -49,24 +52,5 @@ class ApplicantsExport implements FromQuery, WithMapping, WithHeadings
             return "'" . $value;
         }
         return $value;
-    }
-
-    private function determineStatus($application)
-    {
-        if ($application->enrollment_status === 'officially_enrolled') {
-            return 'Enrolled';
-        }
-
-        $medical = $application->processes->where('stage', 'medical')->where('status', 'completed')->first();
-        if ($medical) {
-            return 'Medical Cleared';
-        }
-
-        $interview = $application->processes->where('stage', 'interview')->where('status', 'completed')->first();
-        if ($interview) {
-            return 'Interview Finished';
-        }
-
-        return ucfirst(str_replace('_', ' ', $application->status));
     }
 }
