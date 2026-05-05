@@ -95,7 +95,9 @@ class ReportController extends Controller
         $type = $request->input('type');
         if ($type === 'interview') {
             $query->whereHas('processes', function ($q) {
-                $q->where('stage', 'interviewer')->where('status', 'completed');
+                $q->where('stage', 'interviewer')
+                  ->where('status', 'completed')
+                  ->whereIn('action', ['passed', 'transferred']);
             });
         } elseif ($type === 'medical') {
             $query->whereHas('processes', function ($q) {
