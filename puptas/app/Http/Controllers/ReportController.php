@@ -106,10 +106,21 @@ class ReportController extends Controller
                 $q->where('stage', 'interviewer')
                   ->where('status', 'completed')
                   ->whereIn('action', ['passed', 'transferred']);
+            })
+            ->whereDoesntHave('processes', function ($q) {
+                $q->where('stage', 'medical')->where('status', 'completed');
+            })
+            ->where(function($q) {
+                $q->where('enrollment_status', '!=', 'officially_enrolled')
+                  ->orWhereNull('enrollment_status');
             });
         } elseif ($type === 'medical') {
             $query->whereHas('processes', function ($q) {
                 $q->where('stage', 'medical')->where('status', 'completed');
+            })
+            ->where(function($q) {
+                $q->where('enrollment_status', '!=', 'officially_enrolled')
+                  ->orWhereNull('enrollment_status');
             });
         } elseif ($type === 'enrollment') {
             $query->where('enrollment_status', 'officially_enrolled');
