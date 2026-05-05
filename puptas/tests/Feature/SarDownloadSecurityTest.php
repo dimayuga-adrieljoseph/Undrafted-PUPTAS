@@ -18,7 +18,7 @@ beforeEach(function () {
     Storage::fake('sar_tmp');
 });
 
-test('unauthenticated user accessing SAR download redirects to login', function () {
+test('unsigned URL is rejected with 403', function () {
     // Create a test passer with reference number
     $passer = TestPasser::create([
         'surname' => 'Doe',
@@ -44,7 +44,7 @@ test('unauthenticated user accessing SAR download redirects to login', function 
         'reference' => 'REF123456',
     ]));
     
-    $response->assertRedirect('/auth/idp/redirect');
+    $response->assertStatus(403);
 });
 
 test('authenticated user can download valid SAR PDF', function () {
@@ -73,7 +73,7 @@ test('authenticated user can download valid SAR PDF', function () {
     // Create a fake PDF file
     Storage::disk('sar_tmp')->put($filename, 'fake pdf content');
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'REF123456',
     ]));
@@ -105,7 +105,7 @@ test('path traversal with forward slash dot dot returns 400', function () {
 
     $filename = '../../../etc/passwd';
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'REF123456',
     ]));
@@ -136,7 +136,7 @@ test('path traversal with backslash dot dot returns 400', function () {
 
     $filename = '..\\..\\windows\\system32\\config\\sam';
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'REF123456',
     ]));
@@ -167,7 +167,7 @@ test('filename with special characters returns 400', function () {
 
     $filename = 'SAR_REF123456_<script>alert(1)</script>.pdf';
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'REF123456',
     ]));
@@ -198,7 +198,7 @@ test('filename with null bytes returns 400', function () {
 
     $filename = "SAR_REF123456\x00.pdf";
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'REF123456',
     ]));
@@ -229,7 +229,7 @@ test('filename with forward slash returns 400', function () {
 
     $filename = 'path/to/SAR_REF123456.pdf';
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'REF123456',
     ]));
@@ -260,7 +260,7 @@ test('filename with backslash returns 400', function () {
 
     $filename = 'path\\to\\SAR_REF123456.pdf';
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'REF123456',
     ]));
@@ -294,7 +294,7 @@ test('valid filename with alphanumeric dash underscore period is accepted', func
     // Create a fake PDF file
     Storage::disk('sar_tmp')->put($filename, 'fake pdf content');
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'REF123456',
     ]));
@@ -307,7 +307,7 @@ test('invalid reference number returns 404', function () {
     
     $filename = 'SAR_INVALID_20240101.pdf';
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'INVALID',
     ]));
@@ -339,7 +339,7 @@ test('mismatched filename and reference returns 403', function () {
     // Filename doesn't match the reference number
     $filename = 'SAR_DIFFERENT_20240101.pdf';
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'REF123456',
     ]));
@@ -372,7 +372,7 @@ test('non-existent file returns 404', function () {
     
     // Don't create the file - it should not exist
     
-    $response = $this->actingAs($user)->get(route('sar.passer-download', [
+    $response = $this->actingAs($user)->get(\Illuminate\Support\Facades\URL::signedRoute('sar.passer-download', [
         'filename' => $filename,
         'reference' => 'REF123456',
     ]));

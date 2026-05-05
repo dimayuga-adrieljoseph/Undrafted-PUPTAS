@@ -25,6 +25,7 @@ import {
     faUserCircle,
     faHistory,
     faNetworkWired,
+    faChartPie,
 } from "@fortawesome/free-solid-svg-icons";
 
 import NavLink from "@/Components/NavLink.vue";
@@ -53,6 +54,7 @@ library.add(
     faUserCircle,
     faHistory,
     faNetworkWired,
+    faChartPie
 );
 
 const page = usePage();
@@ -116,6 +118,7 @@ const isScheduleActive = isActiveRouteFor(["schedules.index"]);
 const isUploadFormActive = isActiveRouteFor(["upload.form"]);
 const isListPassersActive = isActiveRouteFor(["lists"]);
 const isProgramsActive = isActiveRouteFor(["programs.index"]);
+const isReportsActive = isActiveRouteFor(["reports.index"]);
 const isManageActive = isActiveRouteFor(["users.index"]);
 const isUserSettingsActive = isActiveRouteFor([
     "api-tokens.index",
@@ -466,6 +469,32 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
                                 :class="{ active: isProgramsActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Reports -->
+                    <li>
+                        <NavLink
+                            :href="route('reports.index')"
+                            :active="isReportsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isReportsActive }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="chart-pie"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Reports
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ active: isReportsActive }"
                             ></div>
                         </NavLink>
                     </li>

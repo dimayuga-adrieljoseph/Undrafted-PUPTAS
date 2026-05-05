@@ -26,6 +26,7 @@ use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
+use App\Http\Controllers\ReportController;
 
 
 
@@ -296,6 +297,12 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+    // Admin Reports
+    Route::get('/admin/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/admin/reports/data', [ReportController::class, 'getReportData'])->name('reports.data');
+    Route::get('/admin/reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export.pdf');
+    Route::get('/admin/reports/export/excel', [ReportController::class, 'exportExcel'])->name('reports.export.excel');
 });
 
 // Audit log routes - Protected by Superadmin middleware
