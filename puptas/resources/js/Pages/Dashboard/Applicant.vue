@@ -20,6 +20,13 @@ const uploadingKeys = ref([]);
 const fileUploadProgress = ref({});
 const uploadErrors = ref({});
 const showMedicalRedirect = ref(false);
+const activeUploadKey = ref("");
+const activeUploadFile = ref(null);
+const activeUploadDropActive = ref(false);
+const activeUploadUploading = ref(false);
+const activeUploadProgress = ref(0);
+const activeUploadError = ref("");
+const activeUploadSuccess = ref(false);
 
 // Task 4.1: allDocumentsUploaded — true when every fileStatuses slot has a non-null url
 const allDocumentsUploaded = computed(() => {
@@ -67,6 +74,13 @@ const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const formatTimestamp = (ts) => ts ? new Date(ts).toLocaleString(undefined, { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" }) : "";
 const getFileUrl = (file) => file?.url || "";
 const hasImagePreview = (file) => Boolean(getFileUrl(file)) && file?.isImage !== false;
+const formatFileSize = (bytes) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, index);
+  return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
+};
 
 const getStatusShort = (status) => {
   switch ((status || "").toLowerCase()) {
@@ -144,56 +158,127 @@ const triggerFileInput = (key) => {
   }
 };
 
+// Wrapper to open inline uploader and trigger file picker.
+// Prevents opening another uploader while an upload is in progress.
+const handleOpenUpload = (key) => {
+  if (activeUploadUploading.value) return;
+  openInlineUpload(key);
+  triggerFileInput(key);
+};
+
 const reuploadFile = async (e, key) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const maxSize = 2 * 1024 * 1024;
+  // Validate and set in inline uploader
+  selectInlineFile(file);
+  // Auto-upload if validation passed (no error)
+  if (!activeUploadError.value) {
+    uploadInlineFile();
+  }
+};
+
+const openInlineUpload = (key) => {
+  if (activeUploadUploading.value) return;
+  activeUploadKey.value = key;
+  activeUploadFile.value = null;
+  activeUploadDropActive.value = false;
+  activeUploadProgress.value = 0;
+  activeUploadError.value = "";
+  activeUploadSuccess.value = false;
+};
+
+const closeInlineUpload = () => {
+  if (activeUploadUploading.value) return;
+  activeUploadKey.value = "";
+  activeUploadFile.value = null;
+  activeUploadDropActive.value = false;
+  activeUploadProgress.value = 0;
+  activeUploadError.value = "";
+  activeUploadSuccess.value = false;
+};
+
+const onInlineFileChange = (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  selectInlineFile(file);
+  // Auto-upload if validation passed (no error)
+  if (!activeUploadError.value) {
+    uploadInlineFile();
+  }
+};
+
+const selectInlineFile = (file) => {
+  activeUploadSuccess.value = false;
+  const maxSize = 5 * 1024 * 1024;
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
   if (file.size > maxSize) {
-    uploadErrors.value[key] = "File size must be less than 2MB";
-    setTimeout(() => {
-      delete uploadErrors.value[key];
-    }, 5000);
+    activeUploadError.value = 'File size must not exceed 5MB.';
     return;
   }
-
-  const validTypes = ['image/jpeg', 'image/png'];
   if (!validTypes.includes(file.type)) {
-    uploadErrors.value[key] = "Please upload a JPG, JPEG, or PNG image only";
-    setTimeout(() => {
-      delete uploadErrors.value[key];
-    }, 5000);
+    activeUploadError.value = 'Please upload JPG, PNG, WebP, or GIF images only.';
     return;
   }
+  activeUploadFile.value = file;
+  activeUploadError.value = '';
+};
 
-  uploadingKeys.value.push(key);
-  fileUploadProgress.value[key] = 0;
-  delete uploadErrors.value[key];
+const onInlineDragEnter = () => (activeUploadDropActive.value = true);
+const onInlineDragOver = () => (activeUploadDropActive.value = true);
+const onInlineDragLeave = () => (activeUploadDropActive.value = false);
+const onInlineDrop = (event) => {
+  activeUploadDropActive.value = false;
+  const file = event.dataTransfer?.files?.[0];
+  if (file) {
+    selectInlineFile(file);
+    // Auto-upload if validation passed (no error)
+    if (!activeUploadError.value) {
+      uploadInlineFile();
+    }
+  }
+};
+
+const clearInlineSelection = () => {
+  activeUploadFile.value = null;
+  activeUploadProgress.value = 0;
+  activeUploadError.value = '';
+  const input = document.getElementById('inline-file-input-' + activeUploadKey.value);
+  if (input) input.value = '';
+};
+
+const uploadInlineFile = async () => {
+  const key = activeUploadKey.value;
+  const file = activeUploadFile.value;
+  if (!key || !file) return;
+
+  activeUploadUploading.value = true;
+  activeUploadProgress.value = 0;
+  activeUploadError.value = '';
+  activeUploadSuccess.value = false;
 
   const form = new FormData();
-  form.append("file", file);
-  form.append("field", key);
+  form.append('file', file);
+  form.append('field', key);
 
   try {
-    const { data } = await axios.post("/user/application/reupload", form, {
+    const { data } = await axios.post('/user/application/reupload', form, {
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          fileUploadProgress.value[key] = percentCompleted;
+          activeUploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         }
       }
     });
-    
+
+    // Update local status and refresh
     fileStatuses.value[key] = data.file;
     await fetchData();
-  } catch (error) {
-    uploadErrors.value[key] = error.response?.data?.message || "Failed to upload file.";
-    setTimeout(() => {
-      delete uploadErrors.value[key];
-    }, 5000);
+    activeUploadSuccess.value = true;
+  } catch (err) {
+    activeUploadError.value = err.response?.data?.message || 'Failed to upload file.';
+    activeUploadSuccess.value = false;
   } finally {
-    uploadingKeys.value = uploadingKeys.value.filter(k => k !== key);
-    delete fileUploadProgress.value[key];
+    activeUploadUploading.value = false;
   }
 };
 
@@ -512,44 +597,75 @@ onMounted(() => {
                       {{ formatKey(key) }}
                     </p>
 
-                    <!-- Action Button -->
-                    <button
-                      v-if="!fileStatuses[key]?.url"
-                      @click="triggerFileInput(key)"
-                      class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900 min-h-[44px]"
-                      :disabled="uploadingKeys.includes(key)"
-                    >
-                      {{ uploadingKeys.includes(key) ? 'Uploading...' : 'Upload' }}
-                    </button>
-                    <button
-                      v-else
-                      @click="triggerFileInput(key)"
-                      class="w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded transition-colors min-h-[44px]"
-                      :disabled="uploadingKeys.includes(key)"
-                    >
-                      Replace
-                    </button>
+                    <!-- Upload / Replace button: clicking opens file picker and shows drag-drop area below -->
+                    <div v-if="activeUploadKey !== key">
+                      <button
+                        v-if="!fileStatuses[key]?.url"
+                        @click.prevent="handleOpenUpload(key)"
+                        :disabled="activeUploadUploading"
+                        class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900 min-h-[44px] disabled:opacity-70"
+                      >
+                        Upload
+                      </button>
+                      <button
+                        v-else
+                        @click.prevent="handleOpenUpload(key)"
+                        :disabled="activeUploadUploading"
+                        class="w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded transition-colors min-h-[44px] disabled:opacity-70"
+                      >
+                        Replace
+                      </button>
 
-                    <!-- Hidden File Input -->
-                    <input
-                      type="file"
-                      :id="'file-input-' + key"
-                      class="hidden"
-                      accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-                      @change="reuploadFile($event, key)"
-                    />
-
-                    <!-- Upload Progress -->
-                    <div v-if="fileUploadProgress && fileUploadProgress[key] !== undefined" class="mt-2">
-                      <div class="w-full bg-gray-200 rounded-full h-1 dark:bg-gray-700">
-                        <div class="bg-maroon-600 h-1 rounded-full" :style="{ width: fileUploadProgress[key] + '%' }"></div>
-                      </div>
+                      <!-- Hidden File Input for file picker -->
+                      <input
+                        type="file"
+                        :id="'file-input-' + key"
+                        class="hidden"
+                        accept=".jpg,.jpeg,.png,image/jpeg,image/png,.webp,.gif,image/*"
+                        @change="reuploadFile($event, key)"
+                      />
                     </div>
 
-                    <!-- Error Message -->
-                    <p v-if="uploadErrors && uploadErrors[key]" class="text-xs text-red-500 text-center mt-1 dark:text-red-300">
-                      {{ uploadErrors[key] }}
-                    </p>
+                    <!-- Drag and drop area appears below button when Upload/Replace is clicked -->
+                    <div v-else class="mt-3 rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-3 shadow-sm dark:border-gray-700 dark:from-gray-950/70 dark:via-gray-900 dark:to-gray-950/80">
+                      <div
+                        class="group rounded-2xl border-2 border-dashed p-4 text-center transition-all duration-200"
+                        :class="activeUploadDropActive ? 'border-[#9E122C] bg-[#9E122C]/5 shadow-inner' : 'border-gray-300 bg-white/80 hover:border-[#9E122C]/70 hover:bg-white dark:border-gray-700 dark:bg-gray-900/60 dark:hover:bg-gray-900/80'"
+                        @click.stop="document.getElementById('inline-file-input-' + key)?.click()"
+                        @dragenter.prevent.stop="onInlineDragEnter"
+                        @dragover.prevent.stop="onInlineDragOver"
+                        @dragleave.prevent.stop="onInlineDragLeave"
+                        @drop.prevent.stop="onInlineDrop"
+                      >
+                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#9E122C]/10 text-[#9E122C] transition-transform group-hover:scale-105 dark:bg-white/10 dark:text-white">
+                          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.902A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                          </svg>
+                        </div>
+
+                        <p class="mt-2 text-xs font-medium text-gray-900 dark:text-white">
+                          Choose a file or drag and drop it here
+                        </p>
+
+                        <input :id="'inline-file-input-' + key" type="file" class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,image/*" @change="onInlineFileChange" />
+                      </div>
+
+                      <div v-if="activeUploadKey === key" class="mt-3 space-y-3">
+                        <p v-if="activeUploadError && activeUploadKey === key" class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                          {{ activeUploadError }}
+                        </p>
+
+                        <div class="flex gap-2">
+                          <button
+                            class="flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+                            :disabled="activeUploadUploading"
+                            @click="closeInlineUpload"
+                          >
+                            {{ activeUploadSuccess ? 'Done' : 'Cancel' }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
