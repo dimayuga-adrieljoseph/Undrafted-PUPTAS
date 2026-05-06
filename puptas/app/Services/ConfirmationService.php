@@ -8,10 +8,15 @@ use App\Models\Program;
 use App\Models\User;
 use App\Models\UserFile;
 use App\Helpers\FileMapper;
+use App\Jobs\ProcessGradeOcr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+<<<<<<< Updated upstream
 use Illuminate\Support\Facades\Storage;
+=======
+use Illuminate\Support\Facades\Schema;
+>>>>>>> Stashed changes
 
 /**
  * Confirmation Service
@@ -208,22 +213,27 @@ class ConfirmationService
         // Delete existing file
         $this->deleteExistingFile($user, $type);
 
+        // Prepare update data
+        $updateData = [
+            'file_path' => $compressed['path'],
+            'original_name' => $compressed['original_name'],
+            'status' => 'pending',
+        ];
+        // Explicitly null docling_json on reupload to clear old OCR data
+        if (Schema::hasColumn('user_files', 'docling_json')) {
+            $updateData['docling_json'] = null;
+        }
         // Save new file record
-        UserFile::updateOrCreate(
+        $savedFile = UserFile::updateOrCreate(
             [
                 'user_id' => $user->id,
                 'type' => $type,
             ],
-            [
-                'file_path' => $compressed['path'],
-                'original_name' => $compressed['original_name'],
-                'status' => 'pending',
-            ]
+            $updateData
         );
 
-        $savedFile = UserFile::where('user_id', $user->id)
-            ->where('type', $type)
-            ->first();
+        // Dispatch OCR processing job for the reuploaded file
+        ProcessGradeOcr::dispatch($savedFile->id);
 
         Log::info('File reuploaded', [
             'user_id' => $user->id,
