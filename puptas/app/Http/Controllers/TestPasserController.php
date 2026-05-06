@@ -11,6 +11,8 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\TestPasserEmail;
 use App\Mail\SarFormEmail;
+use App\Jobs\SendPasserEmail;
+use App\Jobs\SendSarFormEmail;
 use App\Services\SarFormService;
 use App\Services\AuditLogService;
 use Symfony\Component\Mime\Part\TextPart;
@@ -35,7 +37,7 @@ class TestPasserController extends Controller
 
         return Inertia::render('TestPassers/Email', [
             'groupedPassers' => $passers,
-            'registrationUrl' => url('/register'),
+            'registrationUrl' => 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad',
         ]);
     }
 
@@ -77,8 +79,7 @@ class TestPasserController extends Controller
                 $messageTemplate
             );
 
-            Mail::to($passer->email)
-                ->send(new TestPasserEmail($passer, $personalizedMessage));
+            SendPasserEmail::dispatch($passer, $personalizedMessage);
         }
 
         $this->auditLogService->logActivity('CREATE', 'Test Passers', "Sent emails to " . count($passerIds) . " passer(s) using {$templateType} template.", null, 'ADMISSION_DATA');
@@ -108,11 +109,15 @@ class TestPasserController extends Controller
                 $result = $sarService->generateSarPdf($sarData);
 
                 if ($result['success']) {
-                    // Generate download URL (valid for 7 days)
-                    $downloadUrl = route('sar.passer-download', [
-                        'filename' => $result['filename'],
-                        'reference' => $passer->reference_number
-                    ]);
+                    // Generate signed download URL (valid for 30 days)
+                    $downloadUrl = \URL::temporarySignedRoute(
+                        'sar.passer-download',
+                        now()->addDays(30),
+                        [
+                            'reference' => $passer->reference_number,
+                            'filename' => $result['filename']
+                        ]
+                    );
 
                     // Create SAR generation record BEFORE sending email (no sent_at yet)
                     $sarGeneration = SarGeneration::create([
@@ -126,15 +131,9 @@ class TestPasserController extends Controller
                         'email_sent_successfully' => false,
                     ]);
 
-                    // Send email with download link
-                    Mail::to($passer->email)
-                        ->send(new SarFormEmail($passer, $downloadUrl));
-
-                    // Mark as sent successfully
-                    $sarGeneration->update([
-                        'sent_at' => now(),
-                        'email_sent_successfully' => true,
-                    ]);
+                    // Dispatch unique job — prevents duplicate sends if worker was down
+                    // The job itself will mark the record as sent after delivery
+                    SendSarFormEmail::dispatch($passer, $downloadUrl, $sarGeneration->id);
 
                     $emailSuccess = true;
                     $successCount++;
@@ -308,8 +307,22 @@ class TestPasserController extends Controller
      * Download SAR PDF for a specific test passer
      * Public route with reference number verification
      */
-    public function downloadSar($filename, $reference)
+    public function downloadSar($reference, $filename)
     {
+        // Validate filename pattern (alphanumeric, dash, underscore, period only)
+        if (!preg_match('/^[a-zA-Z0-9_\-\.]+$/', $filename)) {
+            abort(400, 'Invalid filename pattern');
+        }
+
+        // Block any path traversal attempts
+        if (strpos($filename, '..') !== false) {
+            \Log::warning('SAR download blocked: path traversal attempt detected', [
+                'filename' => $filename,
+                'reference' => $reference,
+            ]);
+            abort(400, 'Invalid filename');
+        }
+
         // Validate reference number exists
         $passer = TestPasser::where('reference_number', $reference)->first();
 
@@ -319,12 +332,6 @@ class TestPasserController extends Controller
 
         // Sanitize filename to prevent path traversal attacks
         $filename = basename($filename);
-
-        // Block any path traversal attempts
-        if (strpos($filename, '..') !== false || strpos($filename, '/') !== false || strpos($filename, '\\') !== false) {
-            \Log::warning('SAR download blocked: path traversal attempt detected');
-            abort(403, 'Invalid filename');
-        }
 
         // Construct the expected filename pattern
         $expectedFilenamePattern = 'SAR_' . $reference . '_';
@@ -337,16 +344,108 @@ class TestPasserController extends Controller
         // Use sar_tmp disk for consistent file access
         $disk = Storage::disk('sar_tmp');
 
-        // Check if file exists
+        // Check if file exists - if not, try to regenerate it
         if (!$disk->exists($filename)) {
-            \Log::error('SAR file not found for applicant download');
-            abort(404, 'File not found or expired');
+            \Log::warning('SAR file not found, attempting to regenerate', [
+                'filename' => $filename,
+                'reference' => $reference,
+            ]);
+
+            // Try to regenerate the SAR file
+            try {
+                $sarGeneration = SarGeneration::where('filename', $filename)
+                    ->where('test_passer_id', $passer->test_passer_id)
+                    ->first();
+
+                if (!$sarGeneration) {
+                    \Log::error('SAR generation record not found', [
+                        'filename' => $filename,
+                        'reference' => $reference,
+                    ]);
+                    abort(404, 'File not found or expired. Please contact the admission office.');
+                }
+
+                // Regenerate the SAR file
+                $sarService = app(\App\Services\SarFormService::class);
+                
+                $fullName = trim("{$passer->surname}, {$passer->first_name} " . ($passer->middle_name ?? ''));
+                
+                $rowData = [
+                    'reference_number' => $passer->reference_number,
+                    'full_name' => $fullName,
+                    'graduation_year' => $passer->year_graduated ?? date('Y'),
+                    'school_attended' => $passer->shs_school ?? 'N/A',
+                    'shs_strand' => $passer->strand ?? 'N/A',
+                    'enrollment_date' => $sarGeneration->enrollment_date ? 
+                        \Carbon\Carbon::parse($sarGeneration->enrollment_date)->format('F d, Y') : 
+                        date('F d, Y'),
+                    'enrollment_time' => $sarGeneration->enrollment_time ?? date('h:i A'),
+                    'student_number' => $passer->student_number ?? '',
+                    'admission_status' => 'Admitted',
+                ];
+
+                $result = $sarService->generateSarPdf($rowData);
+
+                if (!$result['success']) {
+                    \Log::error('SAR regeneration failed', [
+                        'filename' => $filename,
+                        'error' => $result['error'] ?? 'Unknown error',
+                    ]);
+                    abort(500, 'Unable to regenerate file. Please contact the admission office.');
+                }
+
+                // Update the filename in case it changed
+                $filename = $result['filename'];
+                
+                \Log::info('SAR file regenerated successfully', [
+                    'filename' => $filename,
+                    'reference' => $reference,
+                ]);
+
+            } catch (\Exception $e) {
+                \Log::error('SAR regeneration exception', [
+                    'filename' => $filename,
+                    'reference' => $reference,
+                    'error' => $e->getMessage(),
+                ]);
+                abort(500, 'Unable to regenerate file. Please contact the admission office.');
+            }
         }
 
         // Return file download response
-        return response()->download($disk->path($filename), $filename, [
-            'Content-Type' => 'application/pdf',
-        ]);
+        $disk = Storage::disk('sar_tmp');
+        
+        // Check if using S3 by checking if path() method throws exception
+        try {
+            $localPath = $disk->path($filename);
+            // Local storage - use regular download
+            return response()->download($localPath, $filename, [
+                'Content-Type' => 'application/pdf',
+            ]);
+        } catch (\RuntimeException $e) {
+            // S3 storage - stream the file
+            $stream = $disk->readStream($filename);
+
+            if (! is_resource($stream)) {
+                \Log::error('SAR S3 stream could not be opened', [
+                    'filename' => $filename,
+                    'disk'     => 'sar_tmp',
+                ]);
+                abort(404, 'SAR file could not be retrieved. Please contact the admission office.');
+            }
+
+            return response()->streamDownload(function () use ($stream) {
+                try {
+                    fpassthru($stream);
+                } finally {
+                    if (is_resource($stream)) {
+                        fclose($stream);
+                    }
+                }
+            }, $filename, [
+                'Content-Type' => 'application/pdf',
+            ]);
+        }
     }
 
     /**
@@ -397,16 +496,94 @@ class TestPasserController extends Controller
         // Use sar_tmp disk for consistent file access
         $disk = Storage::disk('sar_tmp');
 
-        // Check if file exists
+        // Check if file exists - if not, try to regenerate it
         if (!$disk->exists($sarGeneration->filename)) {
-            \Log::error('SAR file not found', ['id' => $id]);
-            abort(404, 'File not found or expired');
+            \Log::warning('SAR file not found for admin download, attempting to regenerate', [
+                'id' => $id,
+                'filename' => $sarGeneration->filename,
+            ]);
+
+            // Try to regenerate the SAR file
+            try {
+                $passer = $sarGeneration->testPasser;
+
+                if (!$passer) {
+                    \Log::error('Test passer not found for SAR generation', ['id' => $id]);
+                    abort(404, 'Test passer record not found');
+                }
+
+                // Regenerate the SAR file
+                $sarService = app(\App\Services\SarFormService::class);
+                
+                $fullName = trim("{$passer->surname}, {$passer->first_name} " . ($passer->middle_name ?? ''));
+                
+                $rowData = [
+                    'reference_number' => $passer->reference_number,
+                    'full_name' => $fullName,
+                    'graduation_year' => $passer->year_graduated ?? date('Y'),
+                    'school_attended' => $passer->shs_school ?? 'N/A',
+                    'shs_strand' => $passer->strand ?? 'N/A',
+                    'enrollment_date' => $sarGeneration->enrollment_date ? 
+                        \Carbon\Carbon::parse($sarGeneration->enrollment_date)->format('F d, Y') : 
+                        date('F d, Y'),
+                    'enrollment_time' => $sarGeneration->enrollment_time ?? date('h:i A'),
+                    'student_number' => $passer->student_number ?? '',
+                    'admission_status' => 'Admitted',
+                ];
+
+                $result = $sarService->generateSarPdf($rowData);
+
+                if (!$result['success']) {
+                    \Log::error('SAR regeneration failed for admin', [
+                        'id' => $id,
+                        'error' => $result['error'] ?? 'Unknown error',
+                    ]);
+                    abort(500, 'Unable to regenerate file. Please try again or contact support.');
+                }
+
+                // Update the filename in the database if it changed
+                if ($result['filename'] !== $sarGeneration->filename) {
+                    $sarGeneration->filename = $result['filename'];
+                    $sarGeneration->save();
+                }
+                
+                \Log::info('SAR file regenerated successfully for admin', [
+                    'id' => $id,
+                    'filename' => $result['filename'],
+                ]);
+
+            } catch (\Exception $e) {
+                \Log::error('SAR regeneration exception for admin', [
+                    'id' => $id,
+                    'error' => $e->getMessage(),
+                ]);
+                abort(500, 'Unable to regenerate file. Please try again or contact support.');
+            }
         }
 
         // Return file download response
-        return response()->download($disk->path($sarGeneration->filename), $sarGeneration->filename, [
-            'Content-Type' => 'application/pdf',
-        ]);
+        $disk = Storage::disk('sar_tmp');
+        
+        // Check if using S3 by checking if path() method throws exception
+        try {
+            $localPath = $disk->path($sarGeneration->filename);
+            // Local storage - use regular download
+            return response()->download($localPath, $sarGeneration->filename, [
+                'Content-Type' => 'application/pdf',
+            ]);
+        } catch (\RuntimeException $e) {
+            // S3 storage - stream the file
+            return response()->stream(function () use ($disk, $sarGeneration) {
+                $stream = $disk->readStream($sarGeneration->filename);
+                fpassthru($stream);
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $sarGeneration->filename . '"',
+            ]);
+        }
     }
 
     /**
@@ -425,11 +602,27 @@ class TestPasserController extends Controller
             abort(404, 'File not found or expired');
         }
 
-        // Return PDF for inline preview
-        return response()->file($disk->path($sarGeneration->filename), [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $sarGeneration->filename . '"',
-        ]);
+        // Check if using S3 by checking if path() method throws exception
+        try {
+            $localPath = $disk->path($sarGeneration->filename);
+            // Local storage - return PDF for inline preview
+            return response()->file($localPath, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $sarGeneration->filename . '"',
+            ]);
+        } catch (\RuntimeException $e) {
+            // S3 storage - stream the file for inline preview
+            return response()->stream(function () use ($disk, $sarGeneration) {
+                $stream = $disk->readStream($sarGeneration->filename);
+                fpassthru($stream);
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $sarGeneration->filename . '"',
+            ]);
+        }
     }
 
     /**
@@ -444,10 +637,14 @@ class TestPasserController extends Controller
         $passer = TestPasser::findOrFail($request->passer_id);
 
         // Generate a sample download URL (won't actually work, just for preview)
-        $downloadUrl = route('sar.passer-download', [
-            'filename' => 'PREVIEW_SAR_' . $passer->reference_number . '_SAMPLE.pdf',
-            'reference' => $passer->reference_number
-        ]);
+        $downloadUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'sar.passer-download',
+            now()->addMinutes(30),
+            [
+                'reference' => $passer->reference_number,
+                'filename' => 'PREVIEW_SAR_' . $passer->reference_number . '_SAMPLE.pdf'
+            ]
+        );
 
         // Return the email view directly
         return view('emails.sar-form', [

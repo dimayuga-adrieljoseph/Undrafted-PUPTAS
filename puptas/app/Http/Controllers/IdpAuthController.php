@@ -43,21 +43,25 @@ class IdpAuthController extends Controller
         session(['idp_oauth_state' => $state]);
 
         // Build authorization query parameters
-        // prompt=login forces the IDP to always show its login page,
-        // even if the user has an existing IDP session.
+        // Removed prompt=login to support Update #3 (SSO Session Checker)
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
             'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
-            'prompt'        => 'login',
+            'state'         => $state,
         ];
 
         // Construct the full authorization URL using configurable path
-        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/login';
-        
+        // Updated fallback to /login as a hard-override to bypass the IDP's broken /api/v1/auth/authorize handling
+        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
+
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
-        return \Inertia\Inertia::location($authorizeUrl);
+        // Log the full URL so it's visible in Railway for debugging
+        \Log::info('IDP redirecting to authorize URL: ' . $authorizeUrl);
+
+        // Use standard external redirect instead of Inertia::location
+        return redirect()->away($authorizeUrl);
     }
 
     /**
@@ -77,7 +81,37 @@ class IdpAuthController extends Controller
      */
     public function callback(Request $request)
     {
-        \Log::info('IDP callback reached', ['params' => $request->all()]);
+        // Log callback without sensitive OAuth data
+        \Log::info('IDP callback reached', [
+            'ip' => $request->ip(),
+            'has_code' => $request->has('code'),
+            'has_state' => $request->has('state'),
+            'request_id' => $request->header('X-Request-ID'),
+        ]);
+
+        // Validate state parameter for CSRF protection
+        $receivedState = $request->query('state');
+        $sessionState = session('idp_oauth_state');
+
+        if (empty($receivedState)) {
+            \Log::warning('IDP callback received without state parameter. Bypassing check as IDP may not support it.', [
+                'ip' => $request->ip(),
+            ]);
+            // Cannot enforce state if IDP doesn't return it
+        } elseif ($receivedState !== $sessionState) {
+            \Log::warning('IDP callback state mismatch', [
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'has_session_state' => !empty($sessionState),
+                'received_state_hash' => substr(hash('sha256', $receivedState), 0, 12),
+                'session_state_hash' => !empty($sessionState) ? substr(hash('sha256', $sessionState), 0, 12) : null,
+            ]);
+
+            return response('Forbidden: Invalid state parameter', 403);
+        }
+
+        // Remove state from session after successful validation
+        session()->forget('idp_oauth_state');
 
         // Extract the authorization code from query parameters
         $code = $request->query('code');
@@ -143,7 +177,7 @@ class IdpAuthController extends Controller
                     'token_url'    => $tokenUrl,
                 ]);
 
-                return redirect('/login')->withErrors([
+                return redirect('/login?idp_error=true')->withErrors([
                     'idp' => "IDP Error: {$idpError}. Please try signing in again.",
                 ]);
             }
@@ -222,9 +256,27 @@ class IdpAuthController extends Controller
                 return redirect('/register');
             }
 
-            // Sync the idp_user_id just in case
+            // Sync user data on login from IDP
+            $updateData = [];
+
+            // Map the exact IDP field names to our database schema
+            // IDP -> DB
+            if (isset($idpUser['first_name'])) {
+                $updateData['firstname'] = $idpUser['first_name'];
+            }
+            if (isset($idpUser['last_name'])) {
+                $updateData['lastname'] = $idpUser['last_name'];
+            }
+            if (isset($idpUser['middle_name'])) {
+                $updateData['middlename'] = $idpUser['middle_name'];
+            }
+
             if ($localDbUser->idp_user_id !== ($idpUser['id'] ?? null)) {
-                $localDbUser->update(['idp_user_id' => $idpUser['id'] ?? null]);
+                $updateData['idp_user_id'] = $idpUser['id'] ?? null;
+            }
+
+            if (!empty($updateData)) {
+                $localDbUser->update($updateData);
             }
 
             // Authenticate the user in the local app securely with the eloquent driver
@@ -241,7 +293,7 @@ class IdpAuthController extends Controller
             );
 
             $roleId = (int) $localDbUser->role_id;
-            
+
             \Log::info('User logged in seamlessly via Local DB Match', ['local_user_id' => $localDbUser->id, 'role_id' => $roleId]);
 
             $response = redirect('/dashboard');
@@ -264,9 +316,9 @@ class IdpAuthController extends Controller
                     break;
             }
 
-            return $response
-                ->withCookie(cookie('access_token', $accessToken, $expiresIn / 60, null, null, false, false))
-                ->withCookie(cookie('refresh_token', $refreshToken, 60 * 24 * 30, null, null, false, false));
+            return $response;
+            // Removed manual cookie setting based on IDP change #5 (Remove readable refresh_tokens in cookies)
+            // The SSO Session Checker (#3) and Auth header will manage the session now.
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             \Log::error('IDP connection error', [
                 'error' => $e->getMessage(),
@@ -294,7 +346,7 @@ class IdpAuthController extends Controller
         // 1. Revoke all tokens of the user in our system
         if (Auth::check()) {
             $user = Auth::user();
-            
+
             // Get IDP access token from DB and remove the record
             $tokenRecord = \App\Models\RefreshToken::where('user_id', $user->id)->first();
             if ($tokenRecord) {
@@ -312,37 +364,49 @@ class IdpAuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // 2. Send POST request to IDP logout
+        // Queue clearing of application cookies (Safety cleanup)
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('access_token'));
+        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('refresh_token'));
+
+        // 2. Send request to IDP logout endpoint
+        // Updated based on IDP change #11 (Logout fix)
         if ($accessToken && !empty($idpConfig['base_url'])) {
             $logoutPath = $idpConfig['logout_path'] ?? '/api/v1/auth/logout';
             $logoutUrl = rtrim($idpConfig['base_url'], '/') . $logoutPath;
 
             try {
-                \Log::info('Sending POST request to IDP logout API to revoke IDP session', ['url' => $logoutUrl]);
+                \Log::info('Sending logout request to IDP', ['url' => $logoutUrl]);
 
+                // We try a POST request first as per previous spec
                 $response = Http::withToken($accessToken)
                     ->acceptJson()
                     ->timeout(15)
                     ->post($logoutUrl, [
-                        'client_id' => $idpConfig['client_id']
+                        'client_id'    => $idpConfig['client_id'],
+                        'base_url'     => config('app.url')
                     ]);
 
-                if (!$response->successful()) {
-                    \Log::warning('IDP Logout API returned non-success', [
-                        'status' => $response->status(),
-                        'body' => $response->body()
-                    ]);
-                }
+                // If they've implemented a redirect-based logout fix, we might need to hit it differently,
+                // but for now we follow the API-style logout.
             } catch (\Exception $e) {
                 \Log::error('IDP Logout API failed', ['error' => $e->getMessage()]);
             }
         }
 
-        // Queue clearing of application cookies
-        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('access_token'));
-        \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('refresh_token'));
-
-        // Then our system should redirect the user to our landing page
-        return redirect('/');
+        // Use Inertia::location() to force a full-page redirect to the IDP OAuth authorize endpoint
+        // This is necessary because the logout is triggered via Inertia POST request
+        // Regular redirects don't work properly with Inertia's XHR-based navigation
+        
+        // Build the full OAuth authorize URL with all required parameters
+        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
+        $authorizeQuery = [
+            'client_id'     => $idpConfig['client_id'],
+            'response_type' => 'code',
+            'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
+        ];
+        
+        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
+        
+        return \Inertia\Inertia::location($authorizeUrl);
     }
 }

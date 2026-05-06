@@ -122,3 +122,4 @@ it('Property 1 & 2: ValidationException also satisfies ErrorResponse structural 
     expect($body['message'])->toBeString()->not->toBeEmpty();
     expect($body['errorCode'])->toBeString()->not->toBeEmpty();
 });
+

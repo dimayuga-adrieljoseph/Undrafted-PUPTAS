@@ -23,6 +23,11 @@ class PrivacyConsentController extends Controller
         $user->privacy_consent_at = now();
         $user->save();
 
+        session([
+            'privacy_consent_accepted' => true,
+            'privacy_consent_at' => now()->toDateTimeString(),
+        ]);
+
         return response()->json(['success' => true]);
     }
 

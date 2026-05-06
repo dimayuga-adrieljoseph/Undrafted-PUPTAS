@@ -11,7 +11,6 @@ use App\Helpers\FileMapper;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Confirmation Service
@@ -23,17 +22,12 @@ use Illuminate\Support\Facades\Storage;
 class ConfirmationService
 {
     /**
-     * @var ImageCompressionService
-     */
-    protected ImageCompressionService $compressionService;
-
-    /**
      * Create a new service instance.
      */
-    public function __construct(ImageCompressionService $compressionService)
-    {
-        $this->compressionService = $compressionService;
-    }
+    public function __construct(
+        protected FileService $fileService,
+    ) {}
+
 
     /**
      * Get confirmation data for a user
@@ -76,6 +70,7 @@ class ConfirmationService
             'enrollment_status' => $application?->enrollment_status ?? null,
             'program_id' => $application?->program_id ?? $profile?->first_choice_program,
             'second_choice_id' => $application?->second_choice_id ?? $profile?->second_choice_program,
+            'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
         ];
     }
 
@@ -97,6 +92,42 @@ class ConfirmationService
             ->orderBy('created_at')
             ->get(['stage', 'status', 'action', 'decision_reason', 'reviewer_notes', 'performed_by', 'created_at'])
             ->toArray();
+    }
+
+    /**
+     * Check if medical redirect should be shown
+     * Returns true when both evaluator and interviewer stages are completed
+     * but medical stage has not been completed yet
+     *
+     * @param Application|null $application
+     * @return bool
+     */
+    private function shouldShowMedicalRedirect(?Application $application): bool
+    {
+        if (!$application) {
+            return false;
+        }
+
+        // Check if evaluator stage is completed
+        $evaluatorCompleted = $application->processes()
+            ->where('stage', 'evaluator')
+            ->where('status', 'completed')
+            ->exists();
+
+        // Check if interviewer stage is completed
+        $interviewerCompleted = $application->processes()
+            ->where('stage', 'interviewer')
+            ->where('status', 'completed')
+            ->exists();
+
+        // Check if medical stage is completed
+        $medicalCompleted = $application->processes()
+            ->where('stage', 'medical')
+            ->where('status', 'completed')
+            ->exists();
+
+        // Show redirect only when evaluator and interviewer are done, but medical is not yet completed
+        return $evaluatorCompleted && $interviewerCompleted && !$medicalCompleted;
     }
 
     /**
@@ -202,8 +233,8 @@ class ConfirmationService
             throw new \InvalidArgumentException('Invalid field name');
         }
 
-        // Use ImageCompressionService to compress and convert to WebP
-        $compressed = $this->compressionService->compress($uploadedFile, 'uploads/files');
+        // Use FileService to compress and store the file
+        $compressed = $this->fileService->store($uploadedFile, 'uploads/files');
 
         // Delete existing file
         $this->deleteExistingFile($user, $type);
@@ -218,6 +249,7 @@ class ConfirmationService
                 'file_path' => $compressed['path'],
                 'original_name' => $compressed['original_name'],
                 'status' => 'pending',
+                'docling_json' => $compressed['docling_json'] ?? null,
             ]
         );
 
@@ -250,8 +282,8 @@ class ConfirmationService
             ->where('type', $type)
             ->first();
 
-        if ($existingFile && Storage::disk('public')->exists($existingFile->file_path)) {
-            Storage::disk('public')->delete($existingFile->file_path);
+        if ($existingFile) {
+            $this->fileService->delete($existingFile->file_path);
         }
     }
 

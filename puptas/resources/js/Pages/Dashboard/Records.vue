@@ -136,12 +136,12 @@
                                 <div
                                     class="w-12 h-12 mx-auto mb-3 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-bold text-lg dark:bg-gray-900 dark:text-gray-900"
                                 >
-                                    {{ program.code.charAt(0) }}
+                                    {{ program.code ? program.code.charAt(0) : '?' }}
                                 </div>
                                 <p
                                     class="font-semibold text-gray-900 dark:text-white text-sm mb-1"
                                 >
-                                    {{ program.code }}
+                                    {{ program.code || 'N/A' }}
                                 </p>
                                 <p class="text-2xl font-bold text-[#9E122C] dark:text-white">
                                     {{ program.applications_count || 0 }}
@@ -814,10 +814,9 @@ const showSnackbar = (msg, duration = 3000) => {
 
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
-    if (s === "accepted")
-        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "pending")
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
     if (s === "returned")
         return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
@@ -843,8 +842,8 @@ const fetchUsers = async () => {
 const fetchStats = async () => {
     try {
         const response = await axios.get("/record-dashboard/stats");
-        summary.value = response.data.summary;
-        programs.value = response.data.programs;
+        summary.value = response.data.summary || { total: 0, accepted: 0, pending: 0, returned: 0 };
+        programs.value = response.data.programs || [];
     } catch (error) {
         console.error("Failed to fetch stats:", error);
     }
@@ -861,7 +860,7 @@ onMounted(() => {
             return;
         }
 
-        const existsInQueue = users.value.some((u) => u.id === selectedUser.value.id);
+        const existsInQueue = users.value.some((u) => String(u.id) === String(selectedUser.value.id));
         if (!existsInQueue) {
             closeUserCard();
         }
@@ -888,8 +887,20 @@ const filteredUsers = computed(() => {
 });
 
 const displayedUsers = computed(() => {
-    if (searchQuery.value.trim()) return filteredUsers.value;
-    return users.value.slice(0, 5);
+    // Recent applications = only those NOT yet officially enrolled
+    const pending = users.value.filter(
+        u => u.enrollment_status !== 'officially_enrolled' &&
+             u.application?.enrollment_status !== 'officially_enrolled'
+    );
+    if (searchQuery.value.trim()) {
+        const q = searchQuery.value.toLowerCase();
+        return pending.filter(u =>
+            u.firstname?.toLowerCase().includes(q) ||
+            u.lastname?.toLowerCase().includes(q) ||
+            u.email?.toLowerCase().includes(q)
+        );
+    }
+    return pending.slice(0, 5);
 });
 
 const selectUser = async (user) => {
@@ -978,11 +989,16 @@ const formatDate = (date) => {
 
 const acceptApplication = async () => {
     try {
-        await axios.post(`/record-dashboard/tag/${selectedUser.value.id}`);
+        const taggedId = selectedUser.value.id;
+        await axios.post(`/record-dashboard/tag/${taggedId}`);
         showSnackbar("Tagged as officially enrolled");
+
+        // Immediately remove from the list so UI updates without waiting for refetch
+        users.value = users.value.filter(u => u.id !== taggedId);
         selectedUser.value = null;
-        fetchUsers();
-        fetchStats();
+
+        await fetchUsers();
+        await fetchStats();
     } catch (e) {
         console.error("Tag failed:", e);
         const msg = e.response?.data?.message || "Failed to tag application";
@@ -995,8 +1011,8 @@ const untagApplication = async () => {
         await axios.post(`/record-dashboard/untag/${selectedUser.value.id}`);
         showSnackbar("Reverted to temporary enrolled");
         selectedUser.value = null;
-        fetchUsers();
-        fetchStats();
+        await fetchUsers();
+        await fetchStats();
     } catch (e) {
         console.error("Untag failed:", e);
         const msg = e.response?.data?.message || "Failed to untag application";

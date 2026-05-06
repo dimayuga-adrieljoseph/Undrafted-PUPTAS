@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\OpenRouterApiException;
-use App\Services\GradeExtractionService;
+use App\Services\DoclingParser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -11,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class GradeExtractionController extends Controller
 {
     public function __construct(
-        private GradeExtractionService $gradeExtractionService
+        private DoclingParser $doclingParser
     ) {}
 
     /**
@@ -24,8 +23,20 @@ class GradeExtractionController extends Controller
     {
         $user = $request->user();
 
+        $hasDoclingFiles = \App\Models\UserFile::where('user_id', $user->id)
+            ->whereNotNull('docling_json')
+            ->exists();
+
+        if (!$hasDoclingFiles) {
+            \Log::warning('GradeExtractionController: No UserFile records with docling_json found for user ' . $user->id);
+            return response()->json([
+                'redirect' => $this->getStrandGradeUrl($user),
+                'fallback' => true,
+            ]);
+        }
+
         try {
-            $result = $this->gradeExtractionService->extract($user);
+            $result = $this->doclingParser->extract($user);
 
             // Store extraction result in session so the grade input page can
             // receive it as a proper Inertia prop on the next GET request.
@@ -33,29 +44,27 @@ class GradeExtractionController extends Controller
 
             return response()->json(['redirect' => $this->getStrandGradeUrl($user)]);
         } catch (\InvalidArgumentException $e) {
-            Log::warning('Grade extraction: no valid image files', [
+            Log::warning('Grade extraction: no valid image files, falling back to manual input', [
                 'user_id'    => $user?->id,
                 'message'    => $e->getMessage(),
                 'file_count' => \App\Models\UserFile::where('user_id', $user?->id)->count(),
             ]);
-            return response()->json(['error' => $e->getMessage()], 422);
-        } catch (OpenRouterApiException $e) {
-            Log::error('OpenRouter API error during grade extraction', [
-                'user_id'       => $user?->id,
-                'message'       => $e->getMessage(),
-                'status_code'   => $e->getStatusCode(),
-                'response_body' => $e->getResponseBody(),
+            return response()->json([
+                'redirect'      => $this->getStrandGradeUrl($user),
+                'fallback'      => true,
+                'fallback_reason' => $e->getMessage(),
             ]);
-
-            return response()->json(['error' => 'OpenRouter API is currently unavailable. Please try again later.'], 503);
         } catch (\RuntimeException $e) {
-            Log::error('Grade extraction failed', [
+            Log::error('Grade extraction failed, falling back to manual input', [
                 'user_id' => $user?->id,
                 'message' => $e->getMessage(),
-                'payload' => $e->getMessage(),
             ]);
 
-            return response()->json(['error' => $e->getMessage()], 422);
+            return response()->json([
+                'redirect'        => $this->getStrandGradeUrl($user),
+                'fallback'        => true,
+                'fallback_reason' => $e->getMessage(),
+            ]);
         }
     }
 

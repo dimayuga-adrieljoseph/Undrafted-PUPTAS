@@ -24,5 +24,10 @@
     @inertia
 
     @include('partials.sienna-widget')
+    @auth
+        @if(auth()->user()->role_id === 1)
+            @include('partials.chatwoot-widget')
+        @endif
+    @endauth
 </body>
 </html>

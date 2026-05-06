@@ -106,7 +106,7 @@ class DashboardService
 
         foreach ($dates as $date) {
             $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
-            $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
+            $accepted[]  = $applications->where('date', $date)->whereIn('status', ['accepted', 'cleared_for_enrollment'])->sum('count');
             $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
         }
 
@@ -157,7 +157,7 @@ class DashboardService
 
         foreach ($dates as $date) {
             $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
-            $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
+            $accepted[]  = $applications->where('date', $date)->whereIn('status', ['accepted', 'cleared_for_enrollment'])->sum('count');
             $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
         }
 
@@ -262,9 +262,23 @@ class DashboardService
      */
     public function getRecordsDashboardData(): array
     {
+        // Use map to create plain arrays and avoid triggering accessors
+        $programs = Program::withCount('applications')
+            ->select('id', 'code', 'name', 'slots')
+            ->get()
+            ->map(function ($program) {
+                return [
+                    'id' => $program->id,
+                    'code' => $program->code,
+                    'name' => $program->name,
+                    'slots' => $program->slots,
+                    'applications_count' => $program->applications_count,
+                ];
+            });
+
         return [
             'allUsers' => $this->userService->getApplicantsForRecordStaff(),
-            'programs' => Program::withCount('applications')->get(),
+            'programs' => $programs,
             'summary' => $this->applicationService->getApplicationSummary(),
         ];
     }

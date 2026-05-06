@@ -307,6 +307,9 @@
                     {{ selectedUser.firstname }}
                 </p>
                 <p class="text-gray-700 dark:text-gray-400">
+                    Student No: {{ selectedUser.student_number || 'N/A' }}
+                </p>
+                <p class="text-gray-700 dark:text-gray-400">
                     Email: {{ selectedUser.email }}
                 </p>
                 <!-- <p class="text-gray-700 dark:text-gray-400">
@@ -521,8 +524,10 @@ const chartData = {
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700";
+    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700";
+    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700";
     if (s === "rejected") return "bg-red-100 text-red-700";
+    if (s === "returned") return "bg-red-100 text-red-700";
     return "bg-gray-100 text-gray-600";
 };
 
@@ -581,7 +586,7 @@ const refreshApplicants = async () => {
         return;
     }
 
-    const existsInQueue = users.value.some((u) => u.id === selectedUser.value.id);
+    const existsInQueue = users.value.some((u) => String(u.id) === String(selectedUser.value.id));
     if (!existsInQueue) {
         closeUserCard();
     }
@@ -641,6 +646,7 @@ const selectUser = async (user) => {
 
         selectedUser.value = {
             ...user,
+            ...response.data.user,
             application: {
                 ...response.data.user.application,
                 processes: response.data.user.application?.processes || [],

@@ -17,19 +17,20 @@ class ValidationRules
     public static function userStore()
     {
         return [
-            'firstname' => 'required|string|max:255',
-            'lastname' => 'required|string|max:255',
+            'firstname' => 'nullable|string|max:255',
+            'lastname' => 'nullable|string|max:255',
             'middlename' => 'nullable|string|max:255',
             'extension_name' => 'nullable|string|in:Jr.,Sr.,II,III,IV', // Added
-            'email' => 'required|string|email|max:255|unique:users|regex:/^[a-z0-9._%+\-]+@gmail\.com$/', // Added Gmail validation
-            'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/',
+            'email' => 'required|string|email|max:255|unique:users', // Temp removed Gmail validation
+            'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/',
             'role_id' => 'required|integer|in:1,2,3,4,5,6', // Changed from exists:roles,id
-            'program' => 'nullable|string|exists:programs,code', // Added for evaluators & interviewers
+            'program' => 'nullable|array', // Allow multiple programs assigned to staff
+            'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
             // These fields might not be in your form anymore, but keeping for compatibility
             'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
-            'contactnumber' => 'required|string|regex:/^\d{10}$/', // Changed to 10-digit validation
+            'contactnumber' => 'nullable|string|regex:/^\d{10}$/', // Changed to 10-digit validation
             'street_address' => 'nullable|string|max:255',
             'barangay' => 'nullable|string|max:100',
             'city' => 'nullable|string|max:100',
@@ -56,7 +57,8 @@ class ValidationRules
             ], // Added Gmail validation with proper Rule syntax
             'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/',
             'role_id' => 'required|integer|in:1,2,3,4,5,6', // Changed from exists:roles,id
-            'program' => 'nullable|string|exists:programs,code', // Added for evaluators & interviewers
+            'program' => 'nullable|array', // Allow multiple programs assigned to staff
+            'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
 
             'birthday' => 'nullable|date',

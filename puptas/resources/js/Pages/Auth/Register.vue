@@ -1,14 +1,25 @@
 <script setup>
-import { ref } from "vue";
-import { Head, Link, useForm } from "@inertiajs/vue3";
+import { ref, onMounted } from "vue";
+import { Head, Link, useForm, usePage, router } from "@inertiajs/vue3";
+import { computed } from "vue";
 import TermsandConditionsModal from "@/Pages/Modal/TermsandConditionsModal.vue";
+
+const page = usePage();
+const flashError = computed(() => page.props.flash?.error);
+
+// IDP pending registration data - set when user came from IDP login
+const pendingReg = computed(() => page.props.pending_registration);
+const idpEmail = computed(() => pendingReg.value?.email ?? null);
+
+// Redirect away if there's no pending IDP session
+onMounted(() => {
+    if (!pendingReg.value) {
+        router.visit('/auth/idp/redirect');
+    }
+});
 
 // Modal control variables
 const showTermsModal = ref(false);
-
-// Password visibility toggles
-const showPassword = ref(false);
-const showConfirmPassword = ref(false);
 
 const form = useForm({
     lastname: "",
@@ -28,10 +39,21 @@ const form = useForm({
     dateGrad: "",
     strand: "",
     track: "",
-    email: "",
-    password: "",
-    password_confirmation: "",
 });
+
+// Allow only letters, spaces, hyphens, and apostrophes (for names)
+const onlyLetters = (e) => {
+    if (!/^[a-zA-ZÀ-ÿ\s'\-.]$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'].includes(e.key)) {
+        e.preventDefault();
+    }
+};
+
+// Allow only digits
+const onlyDigits = (e) => {
+    if (!/^\d$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'].includes(e.key)) {
+        e.preventDefault();
+    }
+};
 
 // Handle form submission - show modal first
 const handleSubmit = () => {
@@ -41,16 +63,14 @@ const handleSubmit = () => {
 // Handle modal acceptance
 const handleTermsAccept = () => {
     showTermsModal.value = false;
-    // Submit the form after accepting terms
     form.post(route("register"), {
-        onFinish: () => form.reset("password", "password_confirmation"),
+        onFinish: () => form.reset(),
     });
 };
 
 // Handle modal cancellation
 const handleTermsCancel = () => {
     showTermsModal.value = false;
-    // Don't submit, user cancelled
 };
 </script>
 
@@ -107,6 +127,29 @@ const handleTermsCancel = () => {
 
             <!-- Registration Form -->
             <div class="p-8 md:p-10">
+                <!-- Server error banner -->
+                <div
+                    v-if="flashError"
+                    class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg text-red-700 dark:text-red-400 text-sm"
+                >
+                    {{ flashError }}
+                </div>
+
+                <!-- IDP Account Notice -->
+                <div
+                    v-if="idpEmail"
+                    class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg flex items-start gap-3"
+                >
+                    <svg class="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <p class="text-sm font-semibold text-blue-800 dark:text-blue-300">Completing registration for your IDP account</p>
+                        <p class="text-sm text-blue-700 dark:text-blue-400 mt-0.5">
+                            Registering as <span class="font-mono font-semibold">{{ idpEmail }}</span>. Once done, you can log in with this account.
+                        </p>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <!-- Left Side - Form Sections -->
                     <div class="lg:col-span-2">
@@ -150,6 +193,19 @@ const handleTermsCancel = () => {
                                 <div
                                     class="grid grid-cols-1 md:grid-cols-2 gap-6"
                                 >
+                                    <!-- Email - display only, sourced from IDP session -->
+                                    <div class="md:col-span-2 space-y-2">
+                                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                            Email Address
+                                        </label>
+                                        <div class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 text-sm">
+                                            {{ idpEmail }}
+                                        </div>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                                            This is your IDP account email. Your local account will be created with this email.
+                                        </p>
+                                    </div>
+
                                     <div class="space-y-2">
                                         <label
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
@@ -162,6 +218,7 @@ const handleTermsCancel = () => {
                                             type="text"
                                             required
                                             autocomplete="family-name"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your last name"
                                         />
@@ -196,6 +253,7 @@ const handleTermsCancel = () => {
                                             type="text"
                                             required
                                             autocomplete="given-name"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your first name"
                                         />
@@ -227,6 +285,7 @@ const handleTermsCancel = () => {
                                             v-model="form.middlename"
                                             type="text"
                                             autocomplete="additional-name"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="Enter your middle name"
                                         />
@@ -293,6 +352,9 @@ const handleTermsCancel = () => {
                                                 type="tel"
                                                 required
                                                 autocomplete="tel"
+                                                inputmode="numeric"
+                                                maxlength="10"
+                                                @keydown="onlyDigits"
                                                 placeholder="912 345 6789"
                                                 class="flex-1 rounded-r-lg border border-gray-300 dark:border-gray-600 px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             />
@@ -345,6 +407,7 @@ const handleTermsCancel = () => {
                                             type="text"
                                             required
                                             autocomplete="address-level2"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="e.g., Taguig City"
                                         />
@@ -362,6 +425,7 @@ const handleTermsCancel = () => {
                                             type="text"
                                             required
                                             autocomplete="address-level1"
+                                            @keydown="onlyLetters"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="e.g., Metro Manila"
                                         />
@@ -376,7 +440,9 @@ const handleTermsCancel = () => {
                                         <input
                                             v-model="form.postal_code"
                                             type="text"
-                                            maxlength="10"
+                                            inputmode="numeric"
+                                            maxlength="4"
+                                            @keydown="onlyDigits"
                                             autocomplete="postal-code"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="e.g., 1630"
@@ -501,7 +567,7 @@ const handleTermsCancel = () => {
                                             v-model="form.dateGrad"
                                             type="date"
                                             required
-                                            autocomplete="bday"
+                                            autocomplete="off"
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         />
                                     </div>
@@ -566,176 +632,6 @@ const handleTermsCancel = () => {
                                             class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="e.g., ICT Programming, Cookery, Animation"
                                         />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Section 3: Account Credentials -->
-                            <div
-                                class="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm"
-                            >
-                                <div class="flex items-center mb-6">
-                                    <div
-                                        class="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20 rounded-lg flex items-center justify-center mr-4"
-                                    >
-                                        <svg
-                                            class="w-5 h-5 text-blue-600 dark:text-blue-400"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                                            ></path>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h2
-                                            class="text-xl font-bold text-gray-800 dark:text-white"
-                                        >
-                                            Account Credentials
-                                        </h2>
-                                        <p
-                                            class="text-sm text-gray-600 dark:text-gray-400"
-                                        >
-                                            Create your login credentials
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div
-                                    class="grid grid-cols-1 md:grid-cols-2 gap-6"
-                                >
-                                    <div class="md:col-span-2 space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Email Address
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.email"
-                                            type="email"
-                                            required
-                                            autocomplete="email"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="your.email@example.com"
-                                        />
-                                        <div
-                                            v-if="form.errors.email"
-                                            class="text-red-500 text-sm mt-1 flex items-center dark:text-red-300"
-                                        >
-                                            <svg
-                                                class="w-4 h-4 mr-1"
-                                                fill="currentColor"
-                                                viewBox="0 0 20 20"
-                                            >
-                                                <path
-                                                    fill-rule="evenodd"
-                                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                                    clip-rule="evenodd"
-                                                />
-                                            </svg>
-                                            {{ form.errors.email }}
-                                        </div>
-                                        <p
-                                            class="text-xs text-gray-500 dark:text-gray-400 mt-1"
-                                        >
-                                            This will be your username for login
-                                            and official communication
-                                        </p>
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Password
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <div class="relative">
-                                            <input
-                                                v-model="form.password"
-                                                :type="showPassword ? 'text' : 'password'"
-                                                required
-                                                autocomplete="new-password"
-                                                class="w-full px-4 py-3 pr-12 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                                placeholder="Create a strong password"
-                                            />
-                                            <button
-                                                type="button"
-                                                @click="showPassword = !showPassword"
-                                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-200"
-                                                :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                                            >
-                                                <svg v-if="showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                                </svg>
-                                                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        <div
-                                            v-if="form.errors.password"
-                                            class="text-red-500 text-sm mt-1 flex items-center dark:text-red-300"
-                                        >
-                                            <svg
-                                                class="w-4 h-4 mr-1"
-                                                fill="currentColor"
-                                                viewBox="0 0 20 20"
-                                            >
-                                                <path
-                                                    fill-rule="evenodd"
-                                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                                    clip-rule="evenodd"
-                                                />
-                                            </svg>
-                                            {{ form.errors.password }}
-                                        </div>
-                                        <p
-                                            class="text-xs text-gray-500 dark:text-gray-400 mt-1"
-                                        >
-                                            Minimum 8 characters with letters
-                                            and numbers
-                                        </p>
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Confirm Password
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <div class="relative">
-                                            <input
-                                                v-model="form.password_confirmation"
-                                                :type="showConfirmPassword ? 'text' : 'password'"
-                                                required
-                                                autocomplete="new-password"
-                                                class="w-full px-4 py-3 pr-12 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                                placeholder="Re-enter your password"
-                                            />
-                                            <button
-                                                type="button"
-                                                @click="showConfirmPassword = !showConfirmPassword"
-                                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 dark:text-gray-200"
-                                                :aria-label="showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'"
-                                            >
-                                                <svg v-if="showConfirmPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                                </svg>
-                                                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
                             </div>

@@ -170,10 +170,10 @@
                             </td>
                             <td class="py-3">
                                 <span
-                                    :class="getStatusClass(user.status)"
+                                    :class="getStatusClass(user.enrollment_status === 'officially_enrolled' ? 'officially_enrolled' : user.status)"
                                     class="px-2.5 py-1 rounded-full text-xs font-medium"
                                 >
-                                    {{ user.status || "Unknown" }}
+                                    {{ user.enrollment_status === 'officially_enrolled' ? 'Officially Enrolled' : (user.status || 'Unknown') }}
                                 </span>
                             </td>
                         </tr>
@@ -239,6 +239,9 @@
                 <p class="text-gray-800 dark:text-gray-200 font-medium">
                     Name: {{ selectedUser.lastname }},
                     {{ selectedUser.firstname }}
+                </p>
+                <p class="text-gray-700 dark:text-gray-400">
+                    Student No: {{ selectedUser.student_number || 'N/A' }}
                 </p>
                 <p class="text-gray-700 dark:text-gray-400">
                     Email: {{ selectedUser.email }}
@@ -501,6 +504,8 @@ const chartData = {
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "accepted") return "bg-green-100 text-green-700";
+    if (s === "officially_enrolled") return "bg-blue-100 text-blue-700";
+    if (s === "cleared_for_enrollment") return "bg-teal-100 text-teal-700";
     if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700";
     if (s === "rejected") return "bg-red-100 text-red-700";
     return "bg-gray-100 text-gray-600";
@@ -536,7 +541,7 @@ const refreshApplicants = async () => {
         return;
     }
 
-    const existsInQueue = users.value.some((u) => u.id === selectedUser.value.id);
+    const existsInQueue = users.value.some((u) => String(u.id) === String(selectedUser.value.id));
     if (!existsInQueue) {
         closeUserCard();
     }
@@ -598,6 +603,7 @@ const selectUser = async (user) => {
 
         selectedUser.value = {
             ...user,
+            ...response.data.user,
             application: {
                 ...response.data.user.application,
                 processes: response.data.user.application?.processes || [],
@@ -721,9 +727,28 @@ const formatDate = (date) => {
 
 const acceptApplication = async () => {
     try {
-        await axios.post(`/record-dashboard/tag/${selectedUser.value.id}`);
+        const response = await axios.post(`/record-dashboard/tag/${selectedUser.value.id}`);
         showSnackbar("Tagged as officially enrolled.");
-        selectedUser.value = null;
+
+        // Update the selected user's enrollment status immediately in the UI
+        if (selectedUser.value?.application) {
+            selectedUser.value.application.enrollment_status = response.data.enrollment_status || 'officially_enrolled';
+            selectedUser.value.enrollment_status = response.data.enrollment_status || 'officially_enrolled';
+        }
+
+        // Also update in the users list
+        const idx = users.value.findIndex(u => u.id === selectedUser.value.id);
+        if (idx !== -1) {
+            users.value[idx] = {
+                ...users.value[idx],
+                enrollment_status: response.data.enrollment_status || 'officially_enrolled',
+                application: {
+                    ...users.value[idx].application,
+                    enrollment_status: response.data.enrollment_status || 'officially_enrolled',
+                }
+            };
+        }
+
         await fetchUsers();
     } catch (e) {
         console.error("Accept failed:", e);

@@ -189,3 +189,4 @@ it('sanitize() preserves non-sensitive-only data unchanged', function () {
     $input = ['name' => 'Alice', 'email' => 'alice@example.com', 'age' => 30];
     expect(callSanitize($input))->toBe($input);
 });
+

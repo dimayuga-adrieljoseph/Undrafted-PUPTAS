@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Symfony\Component\Mime\Part\TextPart;
 
-class TestPasserEmail extends Mailable
+class TestPasserEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

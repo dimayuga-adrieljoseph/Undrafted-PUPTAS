@@ -138,18 +138,6 @@ const chartDataset = computed(() => ({
     labels: props.chartData.labels ?? props.chartData.years ?? [],
     datasets: [
         {
-            label: "Submitted",
-            data: props.chartData.submitted || [],
-            borderColor: "#2563EB",
-            backgroundColor: "rgba(37, 99, 235, 0.1)",
-            fill: true,
-            tension: 0.4,
-            pointBackgroundColor: "#2563EB",
-            pointBorderColor: "#ffffff",
-            pointBorderWidth: 2,
-            pointRadius: 4,
-        },
-        {
             label: "Accepted",
             data: props.chartData.accepted || [],
             borderColor: "#10B981",
@@ -162,13 +150,25 @@ const chartDataset = computed(() => ({
             pointRadius: 4,
         },
         {
-            label: "Returned",
-            data: props.chartData.returned || [],
-            borderColor: "#F59E0B",
-            backgroundColor: "rgba(245, 158, 11, 0.1)",
+            label: "Pending",
+            data: props.chartData.submitted || [],
+            borderColor: "#EAB308",
+            backgroundColor: "rgba(234, 179, 8, 0.1)",
             fill: true,
             tension: 0.4,
-            pointBackgroundColor: "#F59E0B",
+            pointBackgroundColor: "#EAB308",
+            pointBorderColor: "#ffffff",
+            pointBorderWidth: 2,
+            pointRadius: 4,
+        },
+        {
+            label: "Returned",
+            data: props.chartData.returned || [],
+            borderColor: "#EF4444",
+            backgroundColor: "rgba(239, 68, 68, 0.1)",
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "#EF4444",
             pointBorderColor: "#ffffff",
             pointBorderWidth: 2,
             pointRadius: 4,
@@ -179,7 +179,8 @@ const chartDataset = computed(() => ({
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
     if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
 };
@@ -428,15 +429,15 @@ const fetchPrograms = async () => {
                     
                     <div class="flex flex-wrap gap-4 mb-6">
                         <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-[#2563EB]"></div>
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Submitted</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
                             <div class="w-3 h-3 rounded-full bg-[#10B981]"></div>
                             <span class="text-sm text-gray-600 dark:text-gray-400">Accepted</span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-[#F59E0B]"></div>
+                            <div class="w-3 h-3 rounded-full bg-[#EAB308]"></div>
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Pending</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-[#EF4444]"></div>
                             <span class="text-sm text-gray-600 dark:text-gray-400">Returned</span>
                         </div>
                     </div>
