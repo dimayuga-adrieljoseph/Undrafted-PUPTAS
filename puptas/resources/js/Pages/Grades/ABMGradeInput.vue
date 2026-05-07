@@ -31,7 +31,7 @@
                 </div>
             </div>
 
-            <form @submit.prevent="submitForm">
+            <form @submit.prevent="openReviewModal">
                 <!-- AI Autofill Banner -->
                 <div v-if="extractionResult && !bannerDismissed" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-4">
                     <div class="flex items-center gap-2">
@@ -685,6 +685,15 @@
                     </div>
                 </transition>
             </form>
+
+            <GradesReviewModal
+                :show="showReviewModal"
+                :loading="loading"
+                :form-data="reviewData"
+                :sections="reviewSections"
+                @close="closeReviewModal"
+                @confirm="confirmSaveGrades"
+            />
         </div>
     </ApplicantLayout>
 </template>
@@ -693,6 +702,7 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
+import GradesReviewModal from "@/Components/GradesReviewModal.vue";
 
 const page = usePage();
 const props = defineProps({
@@ -709,6 +719,7 @@ const errors = ref({});
 const confidenceMap = ref({});
 const bannerDismissed = ref(false);
 const otherSubjects = ref([{ name: '', grade: null }]);
+const showReviewModal = ref(false);
 
 const form = reactive({
     g11_general_mathematics: null,
@@ -767,6 +778,111 @@ const mathAverage = computed(() => {
 
     return (requiredGrades.reduce((a, b) => a + parseFloat(b), 0) / requiredGrades.length).toFixed(2);
 });
+
+const reviewData = computed(() => ({
+    g11_general_mathematics: form.g11_general_mathematics,
+    g11_business_mathematics: form.g11_business_mathematics,
+    g11_statistics_probability: form.g11_statistics_probability,
+    g11_oral_communication: form.g11_oral_communication,
+    g11_academic_professional: form.g11_academic_professional,
+    g11_reading_writing: form.g11_reading_writing,
+    g11_earth_life_science: form.g11_earth_life_science,
+    g11_physical_science: form.g11_physical_science,
+    g12_math_subject_1: form.g12_math_subject_1,
+    g12_math_grade_1: form.g12_math_grade_1,
+    g12_math_subject_2: form.g12_math_subject_2,
+    g12_math_grade_2: form.g12_math_grade_2,
+    g12_math_subject_3: form.g12_math_subject_3,
+    g12_math_grade_3: form.g12_math_grade_3,
+    g12_science_subject_1: form.g12_science_subject_1,
+    g12_science_grade_1: form.g12_science_grade_1,
+    g12_science_subject_2: form.g12_science_subject_2,
+    g12_science_grade_2: form.g12_science_grade_2,
+    g12_english_subject_1: form.g12_english_subject_1,
+    g12_english_grade_1: form.g12_english_grade_1,
+    g12_english_subject_2: form.g12_english_subject_2,
+    g12_english_grade_2: form.g12_english_grade_2,
+    g12_english_subject_3: form.g12_english_subject_3,
+    g12_english_grade_3: form.g12_english_grade_3,
+    g12_english_subject_4: form.g12_english_subject_4,
+    g12_english_grade_4: form.g12_english_grade_4,
+    g12_first_sem_gwa: form.g12_first_sem_gwa,
+    g12_second_sem_gwa: form.g12_second_sem_gwa,
+    first_choice_program: getSelectedProgramName(form.first_choice_program),
+    second_choice_program: getSelectedProgramName(form.second_choice_program),
+    math_average: mathAverage.value,
+    english_average: englishAverage.value,
+    science_average: scienceAverage.value,
+    g12_gwa: g12GWA.value,
+}));
+
+const reviewSections = computed(() => [
+    {
+        title: 'Grade 11 Subjects',
+        items: [
+            { label: 'General Mathematics', value: reviewData.value.g11_general_mathematics },
+            { label: 'Business Mathematics', value: reviewData.value.g11_business_mathematics },
+            { label: 'Statistics and Probability', value: reviewData.value.g11_statistics_probability },
+            { label: 'Oral Communication', value: reviewData.value.g11_oral_communication },
+            { label: 'Academic and Professional Purposes', value: reviewData.value.g11_academic_professional },
+            { label: 'Reading and Writing', value: reviewData.value.g11_reading_writing },
+            { label: 'Earth and Life Science', value: reviewData.value.g11_earth_life_science },
+            { label: 'Physical Science', value: reviewData.value.g11_physical_science },
+        ],
+    },
+    {
+        title: 'Grade 12 Subjects',
+        items: [
+            { label: 'Math Subject 1', value: reviewData.value.g12_math_subject_1 },
+            { label: 'Math Grade 1', value: reviewData.value.g12_math_grade_1 },
+            { label: 'Math Subject 2', value: reviewData.value.g12_math_subject_2 },
+            { label: 'Math Grade 2', value: reviewData.value.g12_math_grade_2 },
+            { label: 'Math Subject 3', value: reviewData.value.g12_math_subject_3 },
+            { label: 'Math Grade 3', value: reviewData.value.g12_math_grade_3 },
+            { label: 'Science Subject 1', value: reviewData.value.g12_science_subject_1 },
+            { label: 'Science Grade 1', value: reviewData.value.g12_science_grade_1 },
+            { label: 'Science Subject 2', value: reviewData.value.g12_science_subject_2 },
+            { label: 'Science Grade 2', value: reviewData.value.g12_science_grade_2 },
+            { label: 'English Subject 1', value: reviewData.value.g12_english_subject_1 },
+            { label: 'English Grade 1', value: reviewData.value.g12_english_grade_1 },
+            { label: 'English Subject 2', value: reviewData.value.g12_english_subject_2 },
+            { label: 'English Grade 2', value: reviewData.value.g12_english_grade_2 },
+            { label: 'English Subject 3', value: reviewData.value.g12_english_subject_3 },
+            { label: 'English Grade 3', value: reviewData.value.g12_english_grade_3 },
+            { label: 'English Subject 4', value: reviewData.value.g12_english_subject_4 },
+            { label: 'English Grade 4', value: reviewData.value.g12_english_grade_4 },
+            { label: 'First Semester GWA', value: reviewData.value.g12_first_sem_gwa },
+            { label: 'Second Semester GWA', value: reviewData.value.g12_second_sem_gwa },
+        ],
+    },
+    {
+        title: 'Program Choices and Averages',
+        items: [
+            { label: 'First Choice Program', value: reviewData.value.first_choice_program },
+            { label: 'Second Choice Program', value: reviewData.value.second_choice_program },
+            { label: 'Math Average', value: reviewData.value.math_average },
+            { label: 'English Average', value: reviewData.value.english_average },
+            { label: 'Science Average', value: reviewData.value.science_average },
+            { label: 'G12 GWA', value: reviewData.value.g12_gwa },
+        ],
+    },
+]);
+
+const openReviewModal = () => {
+    errors.value = {};
+    showReviewModal.value = true;
+};
+
+const closeReviewModal = () => {
+    if (!loading.value) {
+        showReviewModal.value = false;
+    }
+};
+
+const confirmSaveGrades = () => {
+    showReviewModal.value = false;
+    submitForm();
+};
 
 const englishAverage = computed(() => {
     const requiredGrades = [
