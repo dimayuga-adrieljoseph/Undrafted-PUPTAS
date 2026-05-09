@@ -451,7 +451,7 @@
                                             This template will notify applicants about their waitlist status
                                         </p>
                                         <p class="text-xs text-yellow-700 mt-2 dark:text-yellow-400">
-                                            Available placeholders: {{'{{'}}firstname{{'}}'}}, {{'{{'}}surname{{'}}'}}, {{'{{'}}reference_no{{'}}'}}
+                                            Available placeholders: {{ '{{firstname}}' }}, {{ '{{surname}}' }}, {{ '{{reference_no}}' }}
                                         </p>
                                     </div>
                                 </div>
