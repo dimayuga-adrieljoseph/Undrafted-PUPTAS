@@ -429,6 +429,26 @@ Route::get('/debug-sar-error', function () {
 // Callback Routes - Public access for loading screen
 Route::get('/callback-loading', [CallbackController::class, 'index']);
 
+// LOCAL DEV ONLY - bypasses IDP login for UI development
+// Role IDs: 1=applicant, 2=admin, 3=evaluator, 4=interviewer, 6=record staff, 7=registrar
+if (app()->environment('local')) {
+    Route::get('/dev-login/{role_id?}', function ($roleId = 2) {
+        $user = \App\Models\User::where('role_id', $roleId)->firstOrFail();
+        \Auth::login($user);
+
+        $redirectMap = [
+            1 => '/applicant-dashboard',
+            2 => '/dashboard',
+            3 => '/evaluator-dashboard',
+            4 => '/interviewer-dashboard',
+            6 => '/record-dashboard',
+            7 => '/dashboard',
+        ];
+
+        return redirect($redirectMap[(int) $roleId] ?? '/dashboard');
+    })->name('dev.login');
+}
+
 // Public Admission Status Checker - No auth required
 Route::get('/admission-results', fn () => Inertia::render('Public/CheckStatus'))->name('public.check-status');
 
