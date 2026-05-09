@@ -344,7 +344,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 Select Template Type
                             </label>
-                            <div class="grid grid-cols-3 gap-2">
+                            <div class="grid grid-cols-2 gap-2">
                                 <button
                                     v-for="type in templateTypes"
                                     :key="type.value"
@@ -430,6 +430,61 @@
                                 
                                 <p class="text-xs text-gray-600 text-center dark:text-gray-400">
                                     Preview the actual SAR form and email before sending
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Waitlisted Template Editor -->
+                        <div v-else-if="templateType === 'waitlisted'" class="mt-4">
+                            <div class="p-4 rounded-xl bg-yellow-50 border border-yellow-200 mb-4 dark:bg-yellow-900 dark:border-yellow-700">
+                                <div class="flex items-start gap-3">
+                                    <div class="p-2 bg-yellow-100 rounded-lg dark:bg-yellow-800">
+                                        <svg class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-yellow-900 mb-1 dark:text-yellow-200">
+                                            Waitlisted Applicant Template
+                                        </h4>
+                                        <p class="text-sm text-yellow-800 dark:text-yellow-300">
+                                            This template will notify applicants about their waitlist status
+                                        </p>
+                                        <p class="text-xs text-yellow-700 mt-2 dark:text-yellow-400">
+                                            <span v-pre>Available placeholders: {{firstname}}, {{surname}}, {{reference_no}}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
+                                Custom Message (Optional)
+                            </label>
+                            <div class="border border-gray-300 rounded-xl overflow-hidden dark:border-gray-600">
+                                <QuillEditor
+                                    v-model="emailTemplate"
+                                    style="min-height: 300px"
+                                    theme="snow"
+                                    toolbar="full"
+                                    placeholder="Enter additional message for waitlisted applicants (content will be provided by Ma'am Dianne)..."
+                                />
+                            </div>
+                            
+                            <!-- Preview Waitlisted Email Template Button -->
+                            <div class="mt-4">
+                                <button
+                                    @click="previewWaitlistedEmailTemplate"
+                                    :disabled="selectedPassers.length === 0"
+                                    class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                >
+                                    <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    Preview Email Template
+                                </button>
+                                <p class="text-xs text-gray-600 text-center mt-2 dark:text-gray-400">
+                                    Preview the waitlisted email before sending
                                 </p>
                             </div>
                         </div>
@@ -701,6 +756,43 @@
                         <iframe
                             v-else-if="sarEmailPreviewHtml"
                             :srcdoc="sarEmailPreviewHtml"
+                            class="w-full h-full border-0 bg-white rounded-lg shadow-sm dark:bg-gray-800"
+                            style="min-height: 600px;"
+                        ></iframe>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Waitlisted Email Template Preview Modal -->
+            <div
+                v-if="showWaitlistedEmailPreview"
+                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50 dark:bg-white"
+                @click.self="closeWaitlistedEmailPreview"
+            >
+                <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl dark:bg-gray-800">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-200">
+                            Waitlisted Email Template Preview
+                        </h2>
+                        <button
+                            @click="closeWaitlistedEmailPreview"
+                            class="p-2 hover:bg-gray-100 rounded-lg transition dark:hover:bg-gray-800"
+                        >
+                            <svg class="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-900">
+                        <div v-if="loadingWaitlistedPreview" class="flex items-center justify-center h-full">
+                            <div class="text-center">
+                                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600"></div>
+                                <p class="text-gray-600 mt-4 dark:text-gray-400">Loading preview...</p>
+                            </div>
+                        </div>
+                        <iframe
+                            v-else-if="waitlistedEmailPreviewHtml"
+                            :srcdoc="waitlistedEmailPreviewHtml"
                             class="w-full h-full border-0 bg-white rounded-lg shadow-sm dark:bg-gray-800"
                             style="min-height: 600px;"
                         ></iframe>
@@ -1173,7 +1265,8 @@ onMounted(() => {
 const templateTypes = [
     { label: 'Default', value: 'default' },
     { label: 'Custom', value: 'custom' },
-    { label: 'SAR Form', value: 'sar' }
+    { label: 'SAR Form', value: 'sar' },
+    { label: 'Waitlisted', value: 'waitlisted' }
 ];
 
 // All existing functionality remains exactly the same
@@ -1658,6 +1751,40 @@ const closeSarPdfPreview = () => {
     }
     showSarPdfPreview.value = false;
     sarPdfPreviewUrl.value = '';
+};
+
+// Waitlisted Email Template Preview
+const showWaitlistedEmailPreview = ref(false);
+const waitlistedEmailPreviewHtml = ref('');
+const loadingWaitlistedPreview = ref(false);
+
+const previewWaitlistedEmailTemplate = async () => {
+    if (selectedPassers.value.length === 0) {
+        show('Please select at least one passer to preview', 'error');
+        return;
+    }
+
+    loadingWaitlistedPreview.value = true;
+    showWaitlistedEmailPreview.value = true;
+    
+    try {
+        const response = await axios.post('/admin/waitlisted/preview-email-template', {
+            passer_id: selectedPassers.value[0],
+            message_template: emailTemplate.value
+        });
+        waitlistedEmailPreviewHtml.value = response.data;
+    } catch (error) {
+        console.error('Failed to preview waitlisted email template:', error);
+        show('Failed to load email preview', 'error');
+        closeWaitlistedEmailPreview();
+    } finally {
+        loadingWaitlistedPreview.value = false;
+    }
+};
+
+const closeWaitlistedEmailPreview = () => {
+    showWaitlistedEmailPreview.value = false;
+    waitlistedEmailPreviewHtml.value = '';
 };
 
 // Watch filters to reload SAR history

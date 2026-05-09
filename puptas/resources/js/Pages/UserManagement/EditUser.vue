@@ -20,10 +20,10 @@ const form = useForm({
     email: props.user.email || '',
     contactnumber: props.user.contactnumber || '',
     role_id: props.user.role_id || '',
-    // Use an array of program CODEs
+    // Use an array of program CODEs for staff (evaluators, interviewers)
     program: props.user.programs && props.user.programs.length > 0 ? props.user.programs.map(p => p.code) : [],
-    // For applicants: use single selection
-    applicant_program: props.user.programs && props.user.programs.length > 0 ? props.user.programs[0].code : ''
+    // For applicants: use single selection from their program
+    applicant_program: props.user.program ? props.user.program.code : ''
 });
 
 const showProgramAssignment = computed(() => {
