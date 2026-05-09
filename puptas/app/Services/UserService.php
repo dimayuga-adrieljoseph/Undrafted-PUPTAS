@@ -314,9 +314,15 @@ class UserService
                     'created_at' => $applicant->created_at,
                     'role' => (object) ['name' => 'Applicant'],
                     'programs' => collect(), // Applicants don't manage programs this way
-                    'applicantProfile' => $applicant,
-                    'currentApplication' => $applicant->currentApplication,
-                    'officiallyEnrolledApplication' => $applicant->officiallyEnrolledApplication,
+                    'applicant_profile' => (object) [
+                        'first_choice_program' => $applicant->firstChoiceProgram
+                    ],
+                    'current_application' => $applicant->currentApplication ? (object) [
+                        'program' => $applicant->currentApplication->program
+                    ] : null,
+                    'officially_enrolled_application' => $applicant->officiallyEnrolledApplication ? (object) [
+                        'program' => $applicant->officiallyEnrolledApplication->program
+                    ] : null,
                 ];
             });
 
