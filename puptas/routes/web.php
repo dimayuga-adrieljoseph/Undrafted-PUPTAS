@@ -197,6 +197,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/sar/{id}/preview', [TestPasserController::class, 'adminPreviewSar'])->name('admin.sar-preview');
         Route::post('/admin/sar/preview-email-template', [TestPasserController::class, 'previewSarEmailTemplate'])->name('admin.sar-preview-email');
         Route::post('/admin/sar/preview-pdf-template', [TestPasserController::class, 'previewSarPdfTemplate'])->name('admin.sar-preview-pdf');
+        Route::post('/admin/waitlisted/preview-email-template', [TestPasserController::class, 'previewWaitlistedEmailTemplate'])->name('admin.waitlisted-preview-email');
     });
 });
 

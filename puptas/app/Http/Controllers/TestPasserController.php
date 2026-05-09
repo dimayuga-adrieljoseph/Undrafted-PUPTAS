@@ -11,8 +11,10 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\TestPasserEmail;
 use App\Mail\SarFormEmail;
+use App\Mail\WaitlistedEmail;
 use App\Jobs\SendPasserEmail;
 use App\Jobs\SendSarFormEmail;
+use App\Jobs\SendWaitlistedEmail;
 use App\Services\SarFormService;
 use App\Services\AuditLogService;
 use Symfony\Component\Mime\Part\TextPart;
@@ -64,6 +66,28 @@ class TestPasserController extends Controller
                 return response()->json(['error' => 'Enrollment date and time are required for SAR template'], 422);
             }
             return $this->sendSarEmails($passers, $enrollmentDate, $enrollmentTime);
+        }
+
+        // Handle Waitlisted Template
+        if ($templateType === 'waitlisted') {
+            if (!$messageTemplate) {
+                return response()->json(['error' => 'Message template is required for waitlisted emails'], 422);
+            }
+
+            foreach ($passers as $passer) {
+                // Replace placeholders in template for personalization
+                $personalizedMessage = str_replace(
+                    ['{{firstname}}', '{{surname}}', '{{reference_no}}'],
+                    [$passer->first_name, $passer->surname, $passer->reference_number],
+                    $messageTemplate
+                );
+
+                SendWaitlistedEmail::dispatch($passer, $personalizedMessage);
+            }
+
+            $this->auditLogService->logActivity('CREATE', 'Test Passers', "Sent waitlisted emails to " . count($passerIds) . " passer(s).", null, 'ADMISSION_DATA');
+
+            return response()->json(['message' => 'Waitlisted emails sent successfully!']);
         }
 
         // Handle Default and Custom templates
@@ -708,5 +732,35 @@ class TestPasserController extends Controller
             // Return sanitized error message to user
             return response()->json(['error' => 'Failed to generate preview'], 500);
         }
+    }
+
+    /**
+     * Preview Waitlisted email template
+     */
+    public function previewWaitlistedEmailTemplate(Request $request)
+    {
+        $request->validate([
+            'passer_id' => 'required|exists:test_passers,test_passer_id',
+            'message_template' => 'nullable|string',
+        ]);
+
+        $passer = TestPasser::findOrFail($request->passer_id);
+        $messageTemplate = $request->message_template ?? '';
+
+        // Replace placeholders in template for preview
+        $personalizedMessage = str_replace(
+            ['{{firstname}}', '{{surname}}', '{{reference_no}}'],
+            [$passer->first_name, $passer->surname, $passer->reference_number],
+            $messageTemplate
+        );
+
+        // Return the email view directly
+        return view('emails.waitlisted', [
+            'passerName' => trim($passer->first_name . ' ' . $passer->surname),
+            'firstName' => $passer->first_name,
+            'surname' => $passer->surname,
+            'referenceNumber' => $passer->reference_number,
+            'customMessage' => $personalizedMessage,
+        ]);
     }
 }
