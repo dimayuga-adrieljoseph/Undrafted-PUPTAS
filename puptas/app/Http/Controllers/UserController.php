@@ -141,6 +141,7 @@ class UserController extends Controller
             ];
         } else {
             $applicant = \App\Models\ApplicantProfile::where('user_id', $id)->orWhere('user_id', $userModel->id)->firstOrFail();
+            $applicant->load('firstChoiceProgram');
             $user = (object) [
                 'id' => $applicant->user_id,
                 'firstname' => $applicant->firstname,
@@ -150,7 +151,8 @@ class UserController extends Controller
                 'email' => $applicant->email,
                 'contactnumber' => $applicant->contactnumber,
                 'role_id' => 1,
-                'applicant_profile' => $applicant
+                'applicant_profile' => $applicant,
+                'program' => $applicant->firstChoiceProgram
             ];
         }
 
