@@ -49,6 +49,7 @@ class CreateNewUser implements CreatesNewUsers
             'city' => ['required', 'string', 'max:100'],
             'province' => ['required', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:10'],
+            'reference_number' => ['required', 'string', 'max:100'],
             'schoolyear' => ['required', 'string', 'exists:graduate_types,label'],
         ];
 
@@ -90,9 +91,18 @@ class CreateNewUser implements CreatesNewUsers
                 'privacy_consent_at' => now(),
             ]);
 
-            // Check if user is a test passer to assign student number from reference number
-            $testPasser = TestPasser::where('email', $email)->first();
-            $studentNumber = $testPasser ? $testPasser->reference_number : null;
+            // Only test passers are allowed to register. Validate the reference number
+            // against the test_passers table — registration is rejected if not found.
+            $inputRefNumber = trim($input['reference_number']);
+            $testPasser = TestPasser::where('reference_number', $inputRefNumber)->first();
+
+            if (!$testPasser) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'reference_number' => 'The reference number you entered is not recognized. Only admitted test passers are allowed to create an account. Please verify your reference number and try again.',
+                ]);
+            }
+
+            $studentNumber = $testPasser->reference_number;
 
             $profile = ApplicantProfile::create([
                 'user_id' => $user->id,
