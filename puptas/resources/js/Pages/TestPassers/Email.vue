@@ -279,7 +279,7 @@
                                                     SY: {{ passer.schoolYear }}
                                                 </span>
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-300">
-                                                    Batch: {{ passer.batchNumber }}
+                                                    {{ passer.batchNumber }}
                                                 </span>
                                             </div>
                                         </td>
