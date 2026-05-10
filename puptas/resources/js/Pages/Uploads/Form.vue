@@ -1,4 +1,5 @@
 <template>
+  <Head title="Upload Passers" />
   <AppLayout>
     <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
       <!-- Header -->
@@ -105,6 +106,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import { Head } from "@inertiajs/vue3";
 const axios = window.axios;
 
 const batch = ref("Batch 1");

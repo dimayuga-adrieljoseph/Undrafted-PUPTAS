@@ -1,4 +1,5 @@
 <template>
+    <Head title="ICT Grade Input" />
     <ApplicantLayout>
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Header Section -->
@@ -667,6 +668,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
+import { Head } from "@inertiajs/vue3";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import GradesReviewModal from "@/Components/GradesReviewModal.vue";
 

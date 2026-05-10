@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
+import { Head } from "@inertiajs/vue3";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout.vue";
 import AuditLogDetailsModal from "@/Pages/Modal/AuditLogDetailsModal.vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -261,6 +262,7 @@ const getPageUrl = (pageNum) => {
 </script>
 
 <template>
+    <Head title="Audit Logs" />
     <SuperAdminLayout title="Audit Logs">
         <div class="px-4 md:px-8 py-8 w-full">
             <!-- Header Section -->

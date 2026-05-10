@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
+import { Head } from '@inertiajs/vue3'
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout.vue'
 import CreateClientModal from '@/Pages/SuperAdmin/Partials/CreateClientModal.vue'
 import SecretRevealModal from '@/Pages/SuperAdmin/Partials/SecretRevealModal.vue'
@@ -85,6 +86,7 @@ const totalScopes = computed(() => {
 </script>
 
 <template>
+    <Head title="API Client Management" />
     <SuperAdminLayout title="API Client Management">
         <div class="px-4 md:px-8 py-8 w-full">
 

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, watch } from "vue"
 import { Link, useForm } from "@inertiajs/vue3"
+import { Head } from "@inertiajs/vue3"
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome"
 import { faArrowLeft, faSave, faTimes } from "@fortawesome/free-solid-svg-icons"
 
@@ -41,6 +42,7 @@ const submit = () => {
 </script>
 
 <template>
+    <Head title="Add User" />
     <div class="page-header max-w-[800px] mx-auto mt-8 px-8">
         <Link :href="route('users.index')" class="back-button">
             <FontAwesomeIcon :icon="faArrowLeft" /> Back to Manage Users

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
@@ -51,6 +52,7 @@ const submitForm = () => {
 </script>
 
 <template>
+    <Head title="Edit User" />
     <AppLayout title="Edit User">
         <div class="page-container">
             <!-- Header Section -->

@@ -1,4 +1,5 @@
 <template>
+    <Head title="PUPCET Passers Email" />
     <div
         ref="scrollWrapper"
         class="scroll-wrapper"
@@ -1278,6 +1279,7 @@
 import { ref, computed, watch} from "vue";
 const axios = window.axios;
 import AppLayout from "@/Layouts/AppLayout.vue";
+import { Head } from "@inertiajs/vue3";
 import { QuillEditor } from "@vueup/vue-quill";
 import "@vueup/vue-quill/dist/vue-quill.snow.css";
 import { useGlobalLoading } from "@/Composables/useGlobalLoading";

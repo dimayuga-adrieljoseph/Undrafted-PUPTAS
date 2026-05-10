@@ -1,6 +1,7 @@
 <script setup>
 import { defineProps, ref, computed, onMounted } from "vue";
 import { router } from "@inertiajs/vue3";
+import { Head } from "@inertiajs/vue3";
 const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
@@ -342,6 +343,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <Head title="Applicant Dashboard" />
   <ApplicantLayout title="Applicant Dashboard">
     <template #header>
       <h2 class="font-bold text-2xl text-gray-900 dark:text-gray-100">
