@@ -763,4 +763,182 @@ class TestPasserController extends Controller
             'customMessage' => $personalizedMessage,
         ]);
     }
+
+    /**
+     * Bulk-enroll selected TestPassers as officially_enrolled accounts.
+     *
+     * For each passer:
+     *   1. Creates (or updates) a User record keyed by email.
+     *   2. Creates (or updates) an ApplicantProfile with a unique student number.
+     *   3. Creates a Grade record with passing grades so all grade checks pass.
+     *   4. Creates (or updates) an Application set to accepted + officially_enrolled.
+     *   5. Inserts completed ApplicationProcess records for every pipeline stage.
+     *
+     * The operation is fully idempotent — safe to call multiple times.
+     *
+     * POST /test-passers/bulk-enroll
+     * Body: { passer_ids: [1, 2, 3, ...] }
+     */
+    public function bulkEnroll(
+        \Illuminate\Http\Request $request
+    ): \Illuminate\Http\JsonResponse {
+        $request->validate([
+            'passer_ids'   => 'required|array|min:1',
+            'passer_ids.*' => 'integer',
+        ]);
+
+        $passers = TestPasser::whereIn('test_passer_id', $request->passer_ids)->get();
+
+        if ($passers->isEmpty()) {
+            return response()->json(['error' => 'No passers found for the given IDs.'], 422);
+        }
+
+        // Pick the first available program — mock accounts just need a valid program_id
+        $program = \App\Models\Program::orderBy('id')->first();
+        if (! $program) {
+            return response()->json(['error' => 'No programs found in the database. Please seed programs first.'], 422);
+        }
+
+        $stages  = ['evaluator', 'interviewer', 'medical', 'records'];
+        $results = ['enrolled' => [], 'skipped' => [], 'errors' => []];
+
+        foreach ($passers as $passer) {
+            try {
+                \Illuminate\Support\Facades\DB::transaction(function () use (
+                    $passer, $program, $stages, &$results
+                ) {
+                    // ── 1. User ───────────────────────────────────────────
+                    $user = \App\Models\User::updateOrCreate(
+                        ['email' => $passer->email],
+                        [
+                            'firstname'          => $passer->first_name,
+                            'middlename'         => $passer->middle_name ?? null,
+                            'lastname'           => $passer->surname,
+                            'salutation'         => 'Mr.',
+                            'birthday'           => $passer->date_of_birth ?? '2005-01-01',
+                            'sex'                => 'Male',
+                            'contactnumber'      => '09000000000',
+                            'street_address'     => $passer->address ?? 'N/A',
+                            'barangay'           => 'N/A',
+                            'city'               => 'Quezon City',
+                            'province'           => 'Metro Manila',
+                            'postal_code'        => '1100',
+                            'role_id'            => 1,
+                            'password'           => \Illuminate\Support\Facades\Hash::make('Password123'),
+                            'privacy_consent'    => true,
+                            'privacy_consent_at' => now(),
+                        ]
+                    );
+
+                    // ── 2. ApplicantProfile ───────────────────────────────
+                    // Use the passer's reference_number as the student number.
+                    $studentNumber = $passer->reference_number;
+
+                    \App\Models\ApplicantProfile::updateOrCreate(
+                        ['user_id' => $user->id],
+                        [
+                            'student_number'       => $studentNumber,
+                            'email'                => $passer->email,
+                            'firstname'            => $passer->first_name,
+                            'middlename'           => $passer->middle_name ?? null,
+                            'lastname'             => $passer->surname,
+                            'salutation'           => 'Mr.',
+                            'birthday'             => $passer->date_of_birth ?? '2005-01-01',
+                            'sex'                  => 'Male',
+                            'contactnumber'        => '09000000000',
+                            'street_address'       => $passer->address ?? 'N/A',
+                            'barangay'             => 'N/A',
+                            'city'                 => 'Quezon City',
+                            'province'             => 'Metro Manila',
+                            'postal_code'          => '1100',
+                            'privacy_consent'      => true,
+                            'privacy_consent_at'   => now(),
+                            'school'               => $passer->shs_school ?? 'N/A',
+                            'school_address'       => $passer->school_address ?? 'N/A',
+                            'strand'               => $passer->strand ?? 'STEM',
+                            'track'                => 'Academic',
+                            'date_graduated'       => $passer->year_graduated
+                                ? ($passer->year_graduated . '-04-01')
+                                : '2024-04-01',
+                            'first_choice_program' => $program->id,
+                        ]
+                    );
+
+                    // ── 3. Grades ─────────────────────────────────────────
+                    \App\Models\Grade::updateOrCreate(
+                        ['user_id' => $user->id],
+                        [
+                            'english'        => 90.00,
+                            'mathematics'    => 90.00,
+                            'science'        => 90.00,
+                            'g12_first_sem'  => 90.00,
+                            'g12_second_sem' => 90.00,
+                        ]
+                    );
+
+                    // ── 4. Application ────────────────────────────────────
+                    $application = \App\Models\Application::updateOrCreate(
+                        ['user_id' => $user->id],
+                        [
+                            'program_id'        => $program->id,
+                            'status'            => 'accepted',
+                            'enrollment_status' => 'officially_enrolled',
+                            'submitted_at'      => now(),
+                        ]
+                    );
+
+                    // ── 5. ApplicationProcesses (all stages completed) ────
+                    foreach ($stages as $stage) {
+                        \App\Models\ApplicationProcess::updateOrCreate(
+                            ['application_id' => $application->id, 'stage' => $stage],
+                            [
+                                'status'         => 'completed',
+                                'action'         => 'passed',
+                                'reviewer_notes' => '[GUIDANCE-BULK-ENROLL] Auto-enrolled from TestPasser record #' . $passer->test_passer_id,
+                                'performed_by'   => null,
+                                'ip_address'     => request()->ip(),
+                            ]
+                        );
+                    }
+
+                    $results['enrolled'][] = [
+                        'passer_id'      => $passer->test_passer_id,
+                        'name'           => $passer->first_name . ' ' . $passer->surname,
+                        'email'          => $passer->email,
+                        'student_number' => $studentNumber,
+                    ];
+                });
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('[BulkEnroll] Failed for passer #' . $passer->test_passer_id, [
+                    'email' => $passer->email,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $results['errors'][] = [
+                    'passer_id' => $passer->test_passer_id,
+                    'name'      => $passer->first_name . ' ' . $passer->surname,
+                    'email'     => $passer->email,
+                    'reason'    => $e->getMessage(),
+                ];
+            }
+        }
+
+        $this->auditLogService->logActivity(
+            'CREATE',
+            'Bulk Enrollment',
+            sprintf(
+                'Bulk-enrolled %d passer(s) as officially_enrolled. %d error(s).',
+                count($results['enrolled']),
+                count($results['errors'])
+            ),
+            null,
+            'USER_MANAGEMENT'
+        );
+
+        return response()->json([
+            'message'  => count($results['enrolled']) . ' passer(s) successfully enrolled.',
+            'enrolled' => $results['enrolled'],
+            'errors'   => $results['errors'],
+        ]);
+    }
 }

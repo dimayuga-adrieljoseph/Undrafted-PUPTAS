@@ -178,6 +178,27 @@
                                 </svg>
                                 {{ areAllSelected ? 'Deselect All' : 'Select All' }} ({{ selectedPassers.length }})
                             </button>
+
+                            <!-- Auto-Enroll Button -->
+                            <button
+                                id="bulk-enroll-btn"
+                                @click.prevent="runBulkEnroll"
+                                :disabled="selectedPassers.length === 0 || bulkEnrollRunning"
+                                class="inline-flex items-center px-4 py-3 rounded-xl font-medium text-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                :class="selectedPassers.length > 0 && !bulkEnrollRunning
+                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'"
+                                title="Auto-enroll selected passers as officially_enrolled"
+                            >
+                                <svg v-if="bulkEnrollRunning" class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                </svg>
+                                <svg v-else class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {{ bulkEnrollRunning ? 'Enrolling…' : `Auto-Enroll Selected (${selectedPassers.length})` }}
+                            </button>
                         </div>
                     </div>
 
@@ -759,6 +780,80 @@
                             class="w-full h-full border-0 bg-white rounded-lg shadow-sm dark:bg-gray-800"
                             style="min-height: 600px;"
                         ></iframe>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Enroll Result Modal -->
+            <div
+                v-if="showBulkEnrollResult"
+                class="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center p-4 z-50"
+                @click.self="showBulkEnrollResult = false"
+            >
+                <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+                    <!-- Modal Header -->
+                    <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
+                                <svg class="h-6 w-6 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Bulk Enrollment Results</h2>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ bulkEnrollResult.message }}</p>
+                            </div>
+                        </div>
+                        <button @click="showBulkEnrollResult = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                            <svg class="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="overflow-y-auto flex-1 p-5 space-y-4">
+                        <!-- Success list -->
+                        <div v-if="bulkEnrollResult.enrolled?.length">
+                            <h3 class="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                Successfully Enrolled ({{ bulkEnrollResult.enrolled.length }})
+                            </h3>
+                            <div class="space-y-1.5">
+                                <div
+                                    v-for="r in bulkEnrollResult.enrolled"
+                                    :key="r.passer_id"
+                                    class="flex items-center justify-between px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-sm"
+                                >
+                                    <span class="font-medium text-gray-800 dark:text-gray-200">{{ r.name }}</span>
+                                    <span class="font-mono text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded">{{ r.student_number }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Error list -->
+                        <div v-if="bulkEnrollResult.errors?.length">
+                            <h3 class="text-sm font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                Failed ({{ bulkEnrollResult.errors.length }})
+                            </h3>
+                            <div class="space-y-1.5">
+                                <div
+                                    v-for="e in bulkEnrollResult.errors"
+                                    :key="e.passer_id"
+                                    class="px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-sm"
+                                >
+                                    <div class="font-medium text-gray-800 dark:text-gray-200">{{ e.name }} <span class="text-gray-500">({{ e.email }})</span></div>
+                                    <div class="text-xs text-red-600 dark:text-red-400 mt-0.5">{{ e.reason }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                        <button
+                            @click="showBulkEnrollResult = false"
+                            class="px-5 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 rounded-xl text-sm font-medium hover:opacity-90 transition"
+                        >Close</button>
                     </div>
                 </div>
             </div>
@@ -1798,6 +1893,51 @@ watch([filterSchoolYear, filterBatchNumber, debouncedSearchTerm], () => {
 onMounted(() => {
     loadSarHistory();
 });
+
+// ── Bulk Enroll ───────────────────────────────────────────────────────────────
+const bulkEnrollRunning    = ref(false);
+const showBulkEnrollResult = ref(false);
+const bulkEnrollResult     = ref({ message: '', enrolled: [], errors: [] });
+
+const runBulkEnroll = async () => {
+    if (selectedPassers.value.length === 0) {
+        show('Please select at least one passer first.', 'error');
+        return;
+    }
+
+    if (!confirm(
+        `Auto-enroll ${selectedPassers.value.length} selected passer(s) as Officially Enrolled?\n\n` +
+        `This will create their accounts, profiles, and complete all admission stages automatically.\n` +
+        `The operation is safe to run multiple times.`
+    )) return;
+
+    bulkEnrollRunning.value = true;
+
+    try {
+        const response = await axios.post('/test-passers/bulk-enroll', {
+            passer_ids: selectedPassers.value,
+        });
+
+        bulkEnrollResult.value = {
+            message:  response.data.message ?? 'Enrollment complete.',
+            enrolled: response.data.enrolled ?? [],
+            errors:   response.data.errors ?? [],
+        };
+
+        showBulkEnrollResult.value = true;
+
+        if (response.data.enrolled?.length > 0) {
+            show(`${response.data.enrolled.length} passer(s) successfully enrolled!`, 'success');
+        }
+    } catch (error) {
+        const msg = error.response?.data?.error
+            ?? error.response?.data?.message
+            ?? 'Enrollment failed. Please try again.';
+        show(msg, 'error');
+    } finally {
+        bulkEnrollRunning.value = false;
+    }
+};
 </script>
 
 <style>

@@ -207,6 +207,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::put('/test-passers/{test_passer}', [TestPasserController::class, 'update'])->name('test-passers.update');
     Route::post('/test-passers-store', [TestPasserController::class, 'store']);
+    Route::post('/test-passers/bulk-enroll', [TestPasserController::class, 'bulkEnroll'])->middleware('role:2,7')->name('test-passers.bulk-enroll');
 });
 
 Route::resource('schedules', ScheduleController::class)
