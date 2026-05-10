@@ -174,7 +174,6 @@ Route::get('/home', function () {
     return redirect('/');
 })->middleware(['auth'])->name('home');
 
-Route::middleware(['auth'])->post('/test-passers/upload', [Notify::class, 'handleUpload']);
 Route::middleware(['auth'])->get('/test-passers/form', [Notify::class, 'showUploadForm'])->name('upload.form');
 
 // Public SAR download with signed URL (expires in 30 days)
