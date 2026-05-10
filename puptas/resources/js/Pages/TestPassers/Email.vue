@@ -70,22 +70,15 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                     School Year
                                 </label>
-                                <div class="relative">
-                                    <select
-                                        v-model="filterSchoolYear"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition dark:border-gray-600 dark:bg-gray-800"
-                                    >
-                                        <option value="">All Years</option>
-                                        <option v-for="year in schoolYears" :key="year" :value="year">
-                                            {{ year }}
-                                        </option>
-                                    </select>
-                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                    </div>
-                                </div>
+                                <select
+                                    v-model="filterSchoolYear"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">All Years</option>
+                                    <option v-for="year in schoolYears" :key="year" :value="year">
+                                        {{ year }}
+                                    </option>
+                                </select>
                             </div>
 
                             <!-- Batch Filter -->
@@ -93,22 +86,15 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                     Batch
                                 </label>
-                                <div class="relative">
-                                    <select
-                                        v-model="filterBatchNumber"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition dark:border-gray-600 dark:bg-gray-800"
-                                    >
-                                        <option value="">All Batches</option>
-                                        <option v-for="batch in batchNumbers" :key="batch" :value="batch">
-                                            Batch {{ batch }}
-                                        </option>
-                                    </select>
-                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                        </svg>
-                                    </div>
-                                </div>
+                                <select
+                                    v-model="filterBatchNumber"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">All Batches</option>
+                                    <option v-for="batch in batchNumbers" :key="batch" :value="batch">
+                                        Batch {{ batch }}
+                                    </option>
+                                </select>
                             </div>
 
                             <!-- Sort By -->
@@ -116,23 +102,16 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                     Sort By
                                 </label>
-                                <div class="relative">
-                                    <select
-                                        v-model="sortKey"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition dark:border-gray-600 dark:bg-gray-800"
-                                    >
-                                        <option value="surname">Surname</option>
-                                        <option value="first_name">First Name</option>
-                                        <option value="email">Email</option>
-                                        <option value="schoolYear">School Year</option>
-                                        <option value="batchNumber">Batch</option>
-                                    </select>
-                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                                        </svg>
-                                    </div>
-                                </div>
+                                <select
+                                    v-model="sortKey"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="surname">Surname</option>
+                                    <option value="first_name">First Name</option>
+                                    <option value="email">Email</option>
+                                    <option value="schoolYear">School Year</option>
+                                    <option value="batchNumber">Batch</option>
+                                </select>
                             </div>
 
                             <!-- Sort Order -->
@@ -140,20 +119,13 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                     Order
                                 </label>
-                                <div class="relative">
-                                    <select
-                                        v-model="sortOrder"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] appearance-none transition dark:border-gray-600 dark:bg-gray-800"
-                                    >
-                                        <option value="asc">Ascending</option>
-                                        <option value="desc">Descending</option>
-                                    </select>
-                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
-                                        </svg>
-                                    </div>
-                                </div>
+                                <select
+                                    v-model="sortOrder"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="asc">Ascending</option>
+                                    <option value="desc">Descending</option>
+                                </select>
                             </div>
                         </div>
 
