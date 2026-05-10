@@ -200,7 +200,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::post('/test-passers/upload', [TestPasserController::class, 'upload'])->name('upload');
 });
 
