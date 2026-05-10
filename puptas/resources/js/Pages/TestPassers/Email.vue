@@ -92,7 +92,7 @@
                                 >
                                     <option value="">All Batches</option>
                                     <option v-for="batch in batchNumbers" :key="batch" :value="batch">
-                                        Batch {{ batch }}
+                                        {{ batch }}
                                     </option>
                                 </select>
                             </div>
