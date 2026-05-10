@@ -65,7 +65,9 @@ const handleSubmit = () => {
 const handleTermsAccept = () => {
     showTermsModal.value = false;
     form.post(route("register"), {
-        onFinish: () => form.reset(),
+        onError: () => {
+            // Re-open the modal is not needed; errors display inline on the form
+        },
     });
 };
 
