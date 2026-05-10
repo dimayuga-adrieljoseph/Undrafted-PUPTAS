@@ -145,7 +145,17 @@ const submitForm = async () => {
     showDialog.value = true;
   } catch (error) {
     console.error(error);
-    alert("Upload failed.");
+    const status = error.response?.status;
+    const message = error.response?.data?.message || error.response?.data?.error || null;
+    if (status === 403) {
+      alert("Upload failed: You do not have permission to upload passers.");
+    } else if (status === 422) {
+      const errors = error.response?.data?.errors;
+      const detail = errors ? Object.values(errors).flat().join("\n") : message;
+      alert("Upload failed: " + (detail || "Validation error."));
+    } else {
+      alert("Upload failed." + (message ? " " + message : ""));
+    }
   }
 };
 

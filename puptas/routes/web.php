@@ -186,18 +186,18 @@ Route::get('/applications', function () {
     return Inertia::render('Applications/Index');
 })->middleware(['auth', EnsureAdmin::class])->name('applications');
 
-Route::middleware('auth:sanctum')->group(function () {
+// NOTE: These are web (session-based) routes. auth:sanctum was incorrect here —
+// Auth::login() uses the 'web' guard, not the Sanctum stateless guard.
+Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
     Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
     Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
 
-    Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
-        Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
-        Route::get('/admin/sar/{id}/download', [TestPasserController::class, 'adminDownloadSar'])->name('admin.sar-download');
-        Route::get('/admin/sar/{id}/preview', [TestPasserController::class, 'adminPreviewSar'])->name('admin.sar-preview');
-        Route::post('/admin/sar/preview-email-template', [TestPasserController::class, 'previewSarEmailTemplate'])->name('admin.sar-preview-email');
-        Route::post('/admin/sar/preview-pdf-template', [TestPasserController::class, 'previewSarPdfTemplate'])->name('admin.sar-preview-pdf');
-        Route::post('/admin/waitlisted/preview-email-template', [TestPasserController::class, 'previewWaitlistedEmailTemplate'])->name('admin.waitlisted-preview-email');
-    });
+    Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
+    Route::get('/admin/sar/{id}/download', [TestPasserController::class, 'adminDownloadSar'])->name('admin.sar-download');
+    Route::get('/admin/sar/{id}/preview', [TestPasserController::class, 'adminPreviewSar'])->name('admin.sar-preview');
+    Route::post('/admin/sar/preview-email-template', [TestPasserController::class, 'previewSarEmailTemplate'])->name('admin.sar-preview-email');
+    Route::post('/admin/sar/preview-pdf-template', [TestPasserController::class, 'previewSarPdfTemplate'])->name('admin.sar-preview-pdf');
+    Route::post('/admin/waitlisted/preview-email-template', [TestPasserController::class, 'previewWaitlistedEmailTemplate'])->name('admin.waitlisted-preview-email');
 });
 
 Route::middleware(['auth', EnsureAdmin::class])->group(function () {
