@@ -1,453 +1,279 @@
 <template>
-    <!-- Modal -->
+    <!-- Modal Backdrop -->
     <div
         v-if="showModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 dark:bg-white"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
         @click.self="closeModal"
     >
-        <div
-            class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full overflow-y-auto max-h-[90vh] relative"
-        >
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+
             <!-- Header -->
-            <div
-                class="sticky top-0 bg-white dark:bg-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center"
-            >
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                    Applicant Information
-                </h2>
-                <button
-                    @click="closeModal"
-                    class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-2xl"
-                >
-                    &times;
-                </button>
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-[#9E122C] text-white flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">My Application</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Review your submitted information</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span
+                        v-if="applicationData"
+                        :class="`px-3 py-1 rounded-full text-xs font-semibold text-white ${getStatusClass(applicationData.status)}`"
+                    >
+                        {{ formatStatus(applicationData.status) }}
+                    </span>
+                    <button
+                        @click="closeModal"
+                        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                        aria-label="Close"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <!-- Body -->
-            <div class="p-6">
-                <!-- Loading State -->
-                <div v-if="loading" class="text-center py-8">
-                    <p class="text-gray-600 dark:text-gray-400">Loading...</p>
+            <div class="flex-1 overflow-y-auto px-6 py-5">
+
+                <!-- Loading -->
+                <div v-if="loading" class="flex items-center justify-center py-16">
+                    <svg class="animate-spin h-8 w-8 text-[#9E122C]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
                 </div>
 
-                <!-- Error State -->
-                <div v-else-if="error" class="text-center py-8">
-                    <p class="text-red-600 dark:text-red-400">{{ error }}</p>
+                <!-- Error -->
+                <div v-else-if="error" class="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
+                    <svg class="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="text-sm text-red-600 dark:text-red-400">{{ error }}</p>
                 </div>
 
                 <!-- Content -->
                 <div v-else-if="applicationData" class="space-y-6">
-                    <!-- Status Badge -->
-                    <div class="flex justify-end">
-                        <span
-                            :class="`px-3 py-1 rounded-full text-sm font-medium text-white ${getStatusClass(
-                                applicationData.status
-                            )}`"
-                        >
-                            {{ formatStatus(applicationData.status) }}
-                        </span>
-                    </div>
 
                     <!-- Personal Information -->
                     <div>
-                        <h3
-                            class="font-semibold text-gray-800 dark:text-gray-200 mb-3"
-                        >
-                            Personal Information
-                        </h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Full Name
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.firstname }}
-                                    {{ applicationData.middlename }}
-                                    {{ applicationData.lastname }}
+                        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Personal Information</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="col-span-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Full Name</p>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                                    {{ applicationData.firstname }} {{ applicationData.middlename }} {{ applicationData.lastname }}
                                 </p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Email
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.email }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Email</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ applicationData.email }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Birthday
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ formatDate(applicationData.birthday) }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Contact</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatContact(applicationData.contactnumber) }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Sex/Gender
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.sex }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Birthday</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(applicationData.birthday) }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Contact
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{
-                                        formatContact(
-                                            applicationData.contactnumber
-                                        )
-                                    }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Sex / Gender</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.sex }}</p>
                             </div>
-                            <div class="col-span-2">
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Street Address
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.street_address }}
-                                </p>
+                            <div class="col-span-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Street Address</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.street_address }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Barangay
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.barangay }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Barangay</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.barangay }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    City / Municipality
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.city }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">City / Municipality</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.city }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Province
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.province }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Province</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.province }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Postal Code
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.postal_code || "—" }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Postal Code</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.postal_code || '—' }}</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Educational Background -->
                     <div>
-                        <h3
-                            class="font-semibold text-gray-800 dark:text-gray-200 mb-3"
-                        >
-                            Educational Background
-                        </h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    School
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.school }}
-                                </p>
+                        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Educational Background</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="col-span-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.school }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    School Address
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.schoolAdd }}
-                                </p>
+                            <div class="col-span-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School Address</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.schoolAdd }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    School Year
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.schoolyear }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School Year</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.schoolyear }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Date Graduated
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ formatDate(applicationData.dateGrad) }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Date Graduated</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(applicationData.dateGrad) }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Strand
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.strand }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Strand</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.strand }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Track
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{ applicationData.track }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Track</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.track }}</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Program Choices - Show selection if not submitted, display if submitted -->
+                    <!-- Program Choices -->
                     <div>
-                        <h3
-                            class="font-semibold text-gray-800 dark:text-gray-200 mb-3"
-                        >
-                            Program Choices
-                        </h3>
+                        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Program Choices</h3>
 
-                        <!-- If application is draft and not yet submitted, show selection -->
-                        <div v-if="canSubmit" class="space-y-4">
+                        <!-- Draft: show selects -->
+                        <div v-if="canSubmit" class="space-y-3">
                             <div>
-                                <label
-                                    class="block text-sm text-gray-600 dark:text-gray-400 mb-1"
-                                    >First Choice
-                                    <span class="text-red-500 dark:text-red-300">*</span></label
-                                >
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                    First Choice <span class="text-red-500">*</span>
+                                </label>
                                 <select
                                     v-model="selectedProgramId"
-                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-maroon-500 focus:border-maroon-500"
+                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C]"
                                     :disabled="submitting"
                                 >
                                     <option value="">Select a program</option>
-                                    <option
-                                        v-for="program in eligiblePrograms"
-                                        :key="program.id"
-                                        :value="program.id"
-                                    >
+                                    <option v-for="program in eligiblePrograms" :key="program.id" :value="program.id">
                                         {{ program.name }}
                                     </option>
                                 </select>
                             </div>
                             <div>
-                                <label
-                                    class="block text-sm text-gray-600 dark:text-gray-400 mb-1"
-                                    >Second Choice (Optional)</label
-                                >
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                    Second Choice <span class="text-gray-400">(Optional)</span>
+                                </label>
                                 <select
                                     v-model="selectedSecondChoiceId"
-                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-maroon-500 focus:border-maroon-500"
+                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C]"
                                     :disabled="submitting"
                                 >
                                     <option value="">Select a program</option>
-                                    <option
-                                        v-for="program in filteredSecondChoicePrograms"
-                                        :key="program.id"
-                                        :value="program.id"
-                                    >
+                                    <option v-for="program in filteredSecondChoicePrograms" :key="program.id" :value="program.id">
                                         {{ program.name }}
                                     </option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- If already submitted, display the choices -->
-                        <div
-                            v-else-if="applicationData.program_id"
-                            class="grid grid-cols-2 gap-4"
-                        >
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    First Choice
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{
-                                        getProgramName(
-                                            applicationData.program_id
-                                        ) || "Not selected"
-                                    }}
-                                </p>
+                        <!-- Submitted: display choices -->
+                        <div v-else-if="applicationData.program_id" class="grid grid-cols-2 gap-3">
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">First Choice</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ getProgramName(applicationData.program_id) || 'Not selected' }}</p>
                             </div>
-                            <div>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-gray-400"
-                                >
-                                    Second Choice
-                                </p>
-                                <p class="font-medium dark:text-white">
-                                    {{
-                                        getProgramName(
-                                            applicationData.second_choice_id
-                                        ) || "Not selected"
-                                    }}
-                                </p>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Second Choice</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ getProgramName(applicationData.second_choice_id) || 'Not selected' }}</p>
                             </div>
                         </div>
 
-                        <!-- No program selected yet -->
-                        <div
-                            v-else
-                            class="text-gray-500 dark:text-gray-400 text-sm"
-                        >
-                            No program choices selected yet.
-                        </div>
+                        <p v-else class="text-sm text-gray-400 dark:text-gray-500 italic">No program choices selected yet.</p>
                     </div>
 
                     <!-- Documents -->
                     <div>
-                        <h3
-                            class="font-semibold text-gray-800 dark:text-gray-200 mb-3"
-                        >
-                            Uploaded Documents
-                        </h3>
-                        <div class="grid grid-cols-4 gap-3">
+                        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Uploaded Documents</h3>
+                        <div class="grid grid-cols-3 gap-3">
                             <div
-                                v-for="(
-                                    file, key
-                                ) in applicationData.uploadedFiles"
+                                v-for="(file, key) in applicationData.uploadedFiles"
                                 :key="key"
-                                class="text-center"
+                                class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700"
                             >
-                                <div class="mb-1">
-                                    <img
-                                        v-if="hasImagePreview(file)"
-                                        :src="getFileUrl(file)"
-                                        :alt="formatFileName(key)"
-                                        class="w-full h-16 object-cover rounded border cursor-pointer hover:opacity-75"
-                                        @click="openImageModal(file)"
-                                    />
-                                    <div
-                                        v-else
-                                        class="w-full h-16 bg-gray-100 dark:bg-gray-800 rounded border border-dashed flex items-center justify-center"
-                                    >
-                                        <span class="text-xs text-gray-400 dark:text-gray-200"
-                                            >No file</span
-                                        >
-                                    </div>
-                                </div>
-                                <p
-                                    class="text-xs text-gray-600 dark:text-gray-400 truncate"
+                                <img
+                                    v-if="hasImagePreview(file)"
+                                    :src="getFileUrl(file)"
+                                    :alt="formatFileName(key)"
+                                    class="w-full h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition mb-2"
+                                    @click="openImageModal(file)"
+                                />
+                                <div
+                                    v-else
+                                    class="w-full h-20 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-lg mb-2"
                                 >
-                                    {{ formatFileName(key) }}
-                                </p>
+                                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 text-center truncate">{{ formatFileName(key) }}</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Submit Error -->
-                    <div
-                        v-if="submitError"
-                        class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3"
-                    >
-                        <p class="text-red-600 dark:text-red-400 text-sm">
-                            {{ submitError }}
-                        </p>
+                    <!-- Alerts -->
+                    <div v-if="submitError" class="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
+                        <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p class="text-sm text-red-600 dark:text-red-400">{{ submitError }}</p>
+                    </div>
+                    <div v-if="submitSuccess" class="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl">
+                        <svg class="w-5 h-5 text-green-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p class="text-sm text-green-600 dark:text-green-400">{{ submitSuccess }}</p>
                     </div>
 
-                    <!-- Submit Success -->
-                    <div
-                        v-if="submitSuccess"
-                        class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3"
-                    >
-                        <p class="text-green-600 dark:text-green-400 text-sm">
-                            {{ submitSuccess }}
-                        </p>
-                    </div>
                 </div>
 
                 <!-- No Data -->
-                <div v-else class="text-center py-8">
-                    <p class="text-gray-600 dark:text-gray-400">
-                        No application data found.
-                    </p>
+                <div v-else class="flex flex-col items-center justify-center py-16 text-center">
+                    <svg class="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">No application data found.</p>
                 </div>
             </div>
 
             <!-- Footer -->
-            <div
-                class="sticky bottom-0 bg-white dark:bg-gray-900 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center"
-            >
+            <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
                 <button
                     @click="closeModal"
-                    class="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition"
                 >
                     Close
                 </button>
 
-                <!-- Submit Button - Only show if can submit -->
                 <button
                     v-if="canSubmit"
                     @click="submitApplication"
                     :disabled="!canSubmitApplication || submitting"
                     :class="[
-                        'px-6 py-2 rounded-lg font-medium transition-all',
+                        'px-5 py-2 rounded-lg text-sm font-semibold transition',
                         canSubmitApplication && !submitting
-                            ? 'bg-maroon-700 hover:bg-maroon-800 text-white shadow-md hover:shadow-lg'
-                            : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed',
+                            ? 'bg-[#9E122C] hover:bg-[#7a0e22] text-white shadow-sm'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed',
                     ]"
                 >
                     <span v-if="submitting" class="flex items-center gap-2">
-                        <svg
-                            class="animate-spin h-4 w-4"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                        >
-                            <circle
-                                class="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                stroke-width="4"
-                            ></circle>
-                            <path
-                                class="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
+                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Submitting...
+                        Submitting…
                     </span>
                     <span v-else>Submit Application</span>
                 </button>
@@ -458,21 +284,24 @@
     <!-- Image Preview Modal -->
     <div
         v-if="showImageModal"
-        class="fixed inset-0 z-[60] bg-black bg-opacity-90 flex items-center justify-center dark:bg-white"
+        class="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
         @click="closeImageModal"
     >
-        <div class="relative max-w-3xl max-h-[90vh]">
+        <div class="relative max-w-3xl w-full">
             <img
                 :src="previewImage"
                 alt="Preview"
-                class="max-w-full max-h-[90vh] object-contain"
+                class="w-full h-auto max-h-[85vh] object-contain rounded-xl shadow-2xl"
                 @click.stop
             />
             <button
                 @click.stop="closeImageModal"
-                class="absolute top-2 right-2 text-white text-3xl hover:text-gray-300 dark:text-gray-900"
+                class="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition"
+                aria-label="Close preview"
             >
-                &times;
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
             </button>
         </div>
     </div>
@@ -720,28 +549,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Custom maroon colors for PUP */
-.bg-maroon-700 {
-    background-color: #800000;
-}
-.hover\:bg-maroon-800:hover {
-    background-color: #660000;
-}
-.focus\:ring-maroon-500:focus {
-    --tw-ring-color: #800000;
-}
-.focus\:border-maroon-500:focus {
-    border-color: #800000;
-}
-
 /* Loading animation */
 @keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 .animate-spin {
     animation: spin 1s linear infinite;

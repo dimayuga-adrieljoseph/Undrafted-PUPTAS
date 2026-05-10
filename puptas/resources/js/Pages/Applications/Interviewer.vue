@@ -217,226 +217,188 @@
             </div>
         </div>
 
-        <!-- User Info Modal -->
-
-        <!-- User Info Modal -->
+        <!-- Applicant Details Panel -->
         <transition name="slide-fade">
             <div
                 v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-800 dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
+                class="fixed top-0 right-0 w-full md:w-[400px] h-full bg-white dark:bg-gray-900 z-50 shadow-2xl flex flex-col overflow-hidden"
             >
-                <button
-                    class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition dark:bg-gray-900 dark:text-gray-900"
-                    @click="closeUserCard"
-                >
-                    Close
-                </button>
-                
-                <!-- Evaluation Complete Badge -->
-                <div 
-                    v-if="isEvaluationCompleted"
-                    class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500 rounded-lg"
-                >
-                    <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                        ✓ Evaluation Completed
-                    </p>
-                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                        Evaluation for this stage has been processed. 
-                        Course management is still available below.
-                    </p>
-                </div>
-                
-                <h3
-                    class="text-xl font-semibold text-gray-900 dark:text-white mb-2"
-                >
-                    User Information
-                </h3>
-                <p class="text-gray-800 dark:text-gray-200 font-medium">
-                    Name: {{ selectedUser.lastname }},
-                    {{ selectedUser.firstname }}
-                </p>
-                <p class="text-gray-700 dark:text-gray-400">
-                    Student No: {{ selectedUser.student_number || 'N/A' }}
-                </p>
-                <p class="text-gray-700 dark:text-gray-400">
-                    Email: {{ selectedUser.email }}
-                </p>
-                <h4
-                    class="text-sm font-bold text-gray-700 dark:text-white mb-1"
-                >
-                    Grades
-                </h4>
-                <p class="text-sm text-gray-700 dark:text-gray-300">
-                    Math: {{ selectedUser?.grades?.mathematics ?? "—" }}
-                </p>
-                <p class="text-sm text-gray-700 dark:text-gray-300">
-                    Science: {{ selectedUser?.grades?.science ?? "—" }}
-                </p>
-                <p class="text-sm text-gray-700 dark:text-gray-300">
-                    English: {{ selectedUser?.grades?.english ?? "—" }}
-                </p>
-
-                <div
-                    class="mt-3 p-2 border rounded bg-gray-100 dark:bg-gray-800"
-                >
-                    <h4
-                        class="text-sm font-bold text-gray-700 dark:text-white mb-1"
-                    >
-                        Current Program for Acceptance:
-                    </h4>
-                    <p class="text-sm text-gray-800 dark:text-gray-300">
-                        {{ selectedUser?.application?.program?.code }} -
-                        {{ selectedUser?.application?.program?.name }}
-                        ({{ selectedUser?.application?.program?.slots }}
-                        slots left)
-                    </p>
-                </div>
-
-                <!-- Accept section — only if not yet completed and not enrolled -->
-                <div v-if="!isEvaluationCompleted && selectedUser?.application?.enrollment_status !== 'officially_enrolled'" class="mt-4 flex justify-end">
+                <!-- Panel Header -->
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Applicant Details</h3>
                     <button
-                        @click="acceptApplication"
-                        class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium transition dark:text-gray-900"
+                        @click="closeUserCard"
+                        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                        aria-label="Close panel"
                     >
-                        Accept Application
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                     </button>
                 </div>
 
-                <!-- Change Course Section -->
-                <div
-                    v-if="selectedUser?.application"
-                    class="mt-5 p-3 border border-yellow-300 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-700"
-                >
-                    <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                        ⚠️ Transfer to Different Program
-                    </h5>
-                    <p v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'" class="text-xs text-red-600 dark:text-red-400 mb-3 font-semibold">
-                        ⛔ Cannot transfer officially enrolled or accepted applicants. Only admins can change courses for these students.
-                    </p>
-                    <p v-else class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
-                        Transfer applicant to a different program. This action will be logged in the audit trail.
-                    </p>
-                    <select
-                        v-model="changeCourseSelectedId"
-                        id="change-course-select"
-                        :disabled="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent mb-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <option value="" disabled>Select new program…</option>
-                        <option
-                            v-for="prog in availablePrograms"
-                            :key="prog.id"
-                            :value="prog.id"
-                            :disabled="prog.id === selectedUser?.application?.program?.id"
-                        >
-                            {{ prog.code }} - {{ prog.name }} [Slots: {{ prog.slots }}]
-                            <template v-if="prog.id === selectedUser?.application?.program?.id"> (current)</template>
-                        </option>
-                    </select>
-                    <button
-                        @click="changeCourse"
-                        :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse || selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
-                        class="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium dark:text-gray-900"
-                    >
-                        <span v-if="isChangingCourse">Transferring…</span>
-                        <span v-else>Transfer Applicant</span>
-                    </button>
-                </div>
+                <!-- Scrollable Body -->
+                <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
-                <section class="mt-3 text-sm">
-                    <h4 class="font-semibold mb-1 text-base">
-                        Uploaded Documents
-                    </h4>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div
-                            v-for="(file, key) in selectedUserFiles"
-                            :key="key"
-                            class="flex flex-col items-start space-y-1"
-                        >
-                            <div class="flex items-center space-x-2 w-full">
-                                <input
-                                    v-if="isEvaluating"
-                                    type="checkbox"
-                                    :id="key"
-                                    v-model="filesToReturn[key]"
-                                    class="h-4 w-4 mt-1"
-                                />
-                                <label
-                                    :for="key"
-                                    class="text-xs font-medium truncate w-full"
-                                >
-                                    {{ formatFileKey(key) }}
-                                </label>
+                    <!-- Evaluation Completed Badge -->
+                    <div
+                        v-if="isEvaluationCompleted"
+                        class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl"
+                    >
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                            <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Evaluation Completed</p>
+                            <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">Evaluation for this stage has been processed. Course management is still available below.</p>
+                        </div>
+                    </div>
+
+                    <!-- Profile Card -->
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                        <div class="w-14 h-14 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-xl font-bold shrink-0">
+                            {{ (selectedUser.firstname || selectedUser.email || '?').charAt(0).toUpperCase() }}{{ (selectedUser.lastname || '').charAt(0).toUpperCase() }}
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="text-base font-semibold text-gray-900 dark:text-white truncate">
+                                {{ selectedUser.lastname ? `${selectedUser.lastname}, ${selectedUser.firstname}` : (selectedUser.email || '—') }}
+                            </h4>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedUser.student_number || 'No student number' }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ selectedUser.email }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Grades -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Academic Grades</h4>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center border border-gray-100 dark:border-gray-700">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Math</p>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics ?? '—' }}</p>
                             </div>
-                            <div class="w-full">
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center border border-gray-100 dark:border-gray-700">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Science</p>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ selectedUser?.grades?.science ?? '—' }}</p>
+                            </div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center border border-gray-100 dark:border-gray-700">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">English</p>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ selectedUser?.grades?.english ?? '—' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Program Info -->
+                    <div class="p-4 bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-xl border border-[#9E122C]/20">
+                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Program for Acceptance</h4>
+                        <p class="text-base font-semibold text-gray-900 dark:text-white">
+                            {{ selectedUser?.application?.program?.code }} – {{ selectedUser?.application?.program?.name }}
+                        </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ selectedUser?.application?.program?.slots }} slots remaining</p>
+                    </div>
+
+                    <!-- Accept Action -->
+                    <div v-if="!isEvaluationCompleted && selectedUser?.application?.enrollment_status !== 'officially_enrolled'" class="flex justify-end">
+                        <button
+                            @click="acceptApplication"
+                            class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition"
+                        >
+                            Accept Application
+                        </button>
+                    </div>
+
+                    <!-- Transfer Program -->
+                    <div v-if="selectedUser?.application" class="p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-700 rounded-xl space-y-3">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-yellow-600 dark:text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                            </svg>
+                            <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-300">Transfer to Different Program</h5>
+                        </div>
+                        <p v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'" class="text-xs text-red-600 dark:text-red-400 font-medium">
+                            Cannot transfer officially enrolled or accepted applicants. Only admins can change courses for these students.
+                        </p>
+                        <p v-else class="text-xs text-yellow-700 dark:text-yellow-300">
+                            Transfer applicant to a different program. This action will be logged in the audit trail.
+                        </p>
+                        <select
+                            v-model="changeCourseSelectedId"
+                            id="change-course-select"
+                            :disabled="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <option value="" disabled>Select new program…</option>
+                            <option
+                                v-for="prog in availablePrograms"
+                                :key="prog.id"
+                                :value="prog.id"
+                                :disabled="prog.id === selectedUser?.application?.program?.id"
+                            >
+                                {{ prog.code }} - {{ prog.name }} [Slots: {{ prog.slots }}]
+                                <template v-if="prog.id === selectedUser?.application?.program?.id"> (current)</template>
+                            </option>
+                        </select>
+                        <button
+                            @click="changeCourse"
+                            :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse || selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
+                            class="w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <span v-if="isChangingCourse">Transferring…</span>
+                            <span v-else>Transfer Applicant</span>
+                        </button>
+                    </div>
+
+                    <!-- Uploaded Documents -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div
+                                v-for="(file, key) in selectedUserFiles"
+                                :key="key"
+                                class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700"
+                            >
+                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate">{{ formatFileKey(key) }}</p>
                                 <img
                                     v-if="hasImagePreview(file)"
                                     :src="getFileUrl(file)"
                                     alt="Uploaded Document"
-                                    class="h-16 w-full object-contain border rounded cursor-pointer"
+                                    class="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
                                     @click="openImageModal(file)"
                                 />
                                 <div
                                     v-else
-                                    class="h-16 flex items-center justify-center text-[10px] italic text-gray-400 border rounded dark:text-gray-200"
+                                    class="w-full h-24 flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg"
                                 >
-                                    No Image
+                                    No file
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Application History -->
-                    <section
-                        v-if="selectedUser?.application?.processes?.length"
-                        class="mt-4"
-                    >
-                        <h4
-                            class="font-semibold mb-2 text-base text-gray-800 dark:text-gray-200"
-                        >
-                            Application History
-                        </h4>
-                        <ul class="border-l-2 border-red-400 pl-3 space-y-2 dark:border-red-500">
-                            <li
-                                v-for="(process, index) in selectedUser
-                                    .application.processes"
+                    <div v-if="selectedUser?.application?.processes?.length">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Application History</h4>
+                        <div class="space-y-3">
+                            <div
+                                v-for="(process, index) in selectedUser.application.processes"
                                 :key="index"
-                                class="relative"
+                                class="relative pl-6 pb-3 border-l-2 border-[#9E122C] last:border-0"
                             >
-                                <div
-                                    class="absolute -left-[10px] top-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"
-                                ></div>
-                                <p
-                                    class="text-sm font-semibold text-gray-900 dark:text-white"
-                                >
-                                    {{ capitalize(process.stage) }} -
-                                    <span
-                                        :class="{
-                                            'text-green-600':
-                                                process.status === 'completed',
-                                            'text-yellow-600':
-                                                process.status ===
-                                                'in_progress',
-                                            'text-red-600':
-                                                process.status === 'returned',
-                                        }"
-                                    >
-                                        {{ capitalize(process.status) }}
-                                    </span>
+                                <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#9E122C] border-2 border-white dark:border-gray-900"></div>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                                    {{ capitalize(process.stage) }}
+                                    <span :class="{
+                                        'text-green-600 dark:text-green-400': process.status === 'completed',
+                                        'text-yellow-600 dark:text-yellow-400': process.status === 'in_progress',
+                                        'text-red-600 dark:text-red-400': process.status === 'returned',
+                                    }">• {{ capitalize(process.status) }}</span>
                                 </p>
-                                <p
-                                    v-if="process.notes"
-                                    class="text-xs text-gray-500 italic dark:text-gray-300"
-                                >
-                                    Note: {{ process.notes }}
-                                </p>
-                                <p class="text-xs text-gray-400 dark:text-gray-200">
-                                    {{ formatDate(process.created_at) }}
-                                </p>
-                            </li>
-                        </ul>
-                    </section>
-                </section>
+                                <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.notes }}</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(process.created_at) }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </transition>
 

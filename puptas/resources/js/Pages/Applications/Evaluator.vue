@@ -217,202 +217,169 @@
             </div>
         </div>
 
-        <!-- User Info Modal -->
-
-        <!-- User Info Modal -->
+        <!-- Applicant Details Panel -->
         <transition name="slide-fade">
             <div
                 v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-800 dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
+                class="fixed top-0 right-0 w-full md:w-[400px] h-full bg-white dark:bg-gray-900 z-50 shadow-2xl flex flex-col overflow-hidden"
             >
-                <button
-                    class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition dark:bg-gray-900 dark:text-gray-900"
-                    @click="closeUserCard"
-                >
-                    Close
-                </button>
-                
-                <!-- Evaluation Complete Badge -->
-                <div 
-                    v-if="isEvaluationCompleted"
-                    class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500 rounded-lg"
-                >
-                    <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                        ✓ Evaluation Completed
-                    </p>
-                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                        You have already evaluated this application. Actions are no longer available.
-                    </p>
-                </div>
-                
-                <!-- Evaluate & Cancel buttons - Only show if not completed -->
-                <div v-if="!isEvaluationCompleted" class="mt-3 flex space-x-2 justify-end">
+                <!-- Panel Header -->
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Applicant Details</h3>
                     <button
-                        v-if="!isEvaluating"
-                        @click="startEvaluation"
-                        class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 dark:text-gray-900"
+                        @click="closeUserCard"
+                        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                        aria-label="Close panel"
                     >
-                        Return Documents
-                    </button>
-                    <button
-                        v-if="!isEvaluating"
-                        @click="submitPass"
-                        class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 dark:text-gray-900"
-                    >
-                        Pass Application
-                    </button>
-                    <button
-                        v-if="isEvaluating"
-                        @click="cancelEvaluation"
-                        class="px-3 py-1 bg-gray-400 text-black text-sm rounded hover:bg-gray-500 dark:bg-gray-500 dark:text-gray-100"
-                    >
-                        Cancel
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                     </button>
                 </div>
 
-                <!-- Return note textarea -->
-                <div v-if="isEvaluating && !isEvaluationCompleted" class="mt-2">
-                    <label
-                        for="returnNote"
-                        class="block text-xs font-semibold mb-1"
+                <!-- Scrollable Body -->
+                <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+                    <!-- Evaluation Completed Badge -->
+                    <div
+                        v-if="isEvaluationCompleted"
+                        class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl"
                     >
-                        Return Reason <span class="text-red-500 dark:text-red-300">*</span>
-                    </label>
-                    <textarea
-                        id="returnNote"
-                        v-model="returnNote"
-                        rows="2"
-                        class="w-full border rounded p-1 text-xs"
-                        placeholder="Explain what the applicant needs to fix or resubmit..."
-                    ></textarea>
-                </div>
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                            <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Evaluation Completed</p>
+                            <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">You have already evaluated this application. Actions are no longer available.</p>
+                        </div>
+                    </div>
 
-                <!-- Submit button -->
-                <div v-if="isEvaluating && !isEvaluationCompleted" class="mt-2 flex justify-end">
-                    <button
-                        @click="submitReturn"
-                        class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 dark:text-gray-900"
-                    >
-                        Confirm Return
-                    </button>
-                </div>
+                    <!-- Profile Card -->
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                        <div class="w-14 h-14 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-xl font-bold shrink-0">
+                            {{ (selectedUser.firstname || selectedUser.email || '?').charAt(0).toUpperCase() }}{{ (selectedUser.lastname || '').charAt(0).toUpperCase() }}
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="text-base font-semibold text-gray-900 dark:text-white truncate">
+                                {{ selectedUser.lastname ? `${selectedUser.lastname}, ${selectedUser.firstname}` : (selectedUser.email || '—') }}
+                            </h4>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedUser.student_number || 'No student number' }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ selectedUser.email }}</p>
+                        </div>
+                    </div>
 
-                <h3
-                    class="text-xl font-semibold text-gray-900 dark:text-white mb-2"
-                >
-                    User Information
-                </h3>
-                <p class="text-gray-800 dark:text-gray-200 font-medium">
-                    Name: {{ selectedUser.lastname }},
-                    {{ selectedUser.firstname }}
-                </p>
-                <p class="text-gray-700 dark:text-gray-400">
-                    Student No: {{ selectedUser.student_number || 'N/A' }}
-                </p>
-                <p class="text-gray-700 dark:text-gray-400">
-                    Email: {{ selectedUser.email }}
-                </p>
-                <!-- <p class="text-gray-700 dark:text-gray-400">
-                        Username: {{ selectedUser.username }}
-                    </p>
-                    <p class="text-gray-700 dark:text-gray-400">
-                        Phone: {{ selectedUser.phone }}
-                    </p> -->
+                    <!-- Evaluation Actions -->
+                    <div v-if="!isEvaluationCompleted" class="space-y-3">
+                        <div class="flex gap-2">
+                            <button
+                                v-if="!isEvaluating"
+                                @click="submitPass"
+                                class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition"
+                            >
+                                Pass Application
+                            </button>
+                            <button
+                                v-if="!isEvaluating"
+                                @click="startEvaluation"
+                                class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition"
+                            >
+                                Return Documents
+                            </button>
+                            <button
+                                v-if="isEvaluating"
+                                @click="cancelEvaluation"
+                                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition"
+                            >
+                                Cancel
+                            </button>
+                        </div>
 
-                <section class="mt-3 text-sm">
-                    <h4 class="font-semibold mb-1 text-base">
-                        Uploaded Documents
-                    </h4>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div
-                            v-for="(file, key) in selectedUserFiles"
-                            :key="key"
-                            class="flex flex-col items-start space-y-1"
-                        >
-                            <div class="flex items-center space-x-2 w-full">
-                                <input
-                                    v-if="isEvaluating"
-                                    type="checkbox"
-                                    :id="key"
-                                    v-model="filesToReturn[key]"
-                                    class="h-4 w-4 mt-1"
-                                />
-                                <label
-                                    :for="key"
-                                    class="text-xs font-medium truncate w-full"
+                        <!-- Return Reason Form -->
+                        <div v-if="isEvaluating" class="p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl space-y-3">
+                            <label for="returnNote" class="block text-sm font-semibold text-red-700 dark:text-red-400">
+                                Return Reason <span class="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                id="returnNote"
+                                v-model="returnNote"
+                                rows="3"
+                                class="w-full border border-red-200 dark:border-red-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                                placeholder="Explain what the applicant needs to fix or resubmit..."
+                            ></textarea>
+                            <div class="flex justify-end">
+                                <button
+                                    @click="submitReturn"
+                                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition"
                                 >
-                                    {{ formatFileKey(key) }}
-                                </label>
+                                    Confirm Return
+                                </button>
                             </div>
-                            <div class="w-full">
+                        </div>
+                    </div>
+
+                    <!-- Uploaded Documents -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div
+                                v-for="(file, key) in selectedUserFiles"
+                                :key="key"
+                                class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700"
+                            >
+                                <div class="flex items-center gap-2 mb-2">
+                                    <input
+                                        v-if="isEvaluating"
+                                        type="checkbox"
+                                        :id="key"
+                                        v-model="filesToReturn[key]"
+                                        class="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 shrink-0"
+                                    />
+                                    <label :for="key" class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
+                                        {{ formatFileKey(key) }}
+                                    </label>
+                                </div>
                                 <img
                                     v-if="hasImagePreview(file)"
                                     :src="getFileUrl(file)"
                                     alt="Uploaded Document"
-                                    class="h-16 w-full object-contain border rounded cursor-pointer"
+                                    class="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
                                     @click="openImageModal(file)"
                                 />
                                 <div
                                     v-else
-                                    class="h-16 flex items-center justify-center text-[10px] italic text-gray-400 border rounded dark:text-gray-200"
+                                    class="w-full h-24 flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg"
                                 >
-                                    No Image
+                                    No file
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Application History -->
-                    <section
-                        v-if="selectedUser?.application?.processes?.length"
-                        class="mt-4"
-                    >
-                        <h4
-                            class="font-semibold mb-2 text-base text-gray-800 dark:text-gray-200"
-                        >
-                            Application History
-                        </h4>
-                        <ul class="border-l-2 border-red-400 pl-3 space-y-2 dark:border-red-500">
-                            <li
-                                v-for="(process, index) in selectedUser
-                                    .application.processes"
+                    <div v-if="selectedUser?.application?.processes?.length">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Application History</h4>
+                        <div class="space-y-3">
+                            <div
+                                v-for="(process, index) in selectedUser.application.processes"
                                 :key="index"
-                                class="relative"
+                                class="relative pl-6 pb-3 border-l-2 border-[#9E122C] last:border-0"
                             >
-                                <div
-                                    class="absolute -left-[10px] top-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"
-                                ></div>
-                                <p
-                                    class="text-sm font-semibold text-gray-900 dark:text-white"
-                                >
-                                    {{ capitalize(process.stage) }} -
-                                    <span
-                                        :class="{
-                                            'text-green-600':
-                                                process.status === 'completed',
-                                            'text-yellow-600':
-                                                process.status ===
-                                                'in_progress',
-                                            'text-red-600':
-                                                process.status === 'returned',
-                                        }"
-                                    >
-                                        {{ capitalize(process.status) }}
-                                    </span>
+                                <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#9E122C] border-2 border-white dark:border-gray-900"></div>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                                    {{ capitalize(process.stage) }}
+                                    <span :class="{
+                                        'text-green-600 dark:text-green-400': process.status === 'completed',
+                                        'text-yellow-600 dark:text-yellow-400': process.status === 'in_progress',
+                                        'text-red-600 dark:text-red-400': process.status === 'returned',
+                                    }">• {{ capitalize(process.status) }}</span>
                                 </p>
-                                <p
-                                    v-if="process.notes"
-                                    class="text-xs text-gray-500 italic dark:text-gray-300"
-                                >
-                                    Note: {{ process.notes }}
-                                </p>
-                                <p class="text-xs text-gray-400 dark:text-gray-200">
-                                    {{ formatDate(process.created_at) }}
-                                </p>
-                            </li>
-                        </ul>
-                    </section>
-                </section>
+                                <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.notes }}</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(process.created_at) }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </transition>
 
