@@ -128,11 +128,26 @@ class CreateNewUser implements CreatesNewUsers
                 'privacy_consent_at' => now(),
             ]);
 
-            // Link TestPasser record to the user and update status
+            // Link TestPasser record to the user, update status, and sync
+            // the latest information the user provided during registration.
             if ($testPasser) {
                 $testPasser->update([
-                    'user_id' => $user->id,
-                    'status' => 'registered'
+                    'user_id'        => $user->id,
+                    'status'         => 'registered',
+                    'surname'        => $input['lastname'],
+                    'first_name'     => $input['firstname'],
+                    'middle_name'    => $input['middlename'] ?? $testPasser->middle_name,
+                    'date_of_birth'  => $input['birthday'],
+                    'address'        => implode(', ', array_filter([
+                                            $input['street_address'],
+                                            $input['barangay'],
+                                            $input['city'],
+                                            $input['province'],
+                                            $input['postal_code'] ?? null,
+                                        ])),
+                    'shs_school'     => $input['school'] ?? $testPasser->shs_school,
+                    'school_address' => $input['schoolAdd'] ?? $testPasser->school_address,
+                    'strand'         => $input['strand'] ?? $testPasser->strand,
                 ]);
             }
 
