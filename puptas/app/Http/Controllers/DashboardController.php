@@ -22,9 +22,22 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // Guard against null user and verify admin or superadmin role
-        if (!$user || !in_array($user->role_id, [2, 7])) {
-            return redirect()->back()->withInput()->with('error', 'Unauthorized access.');
+        // Guard: unauthenticated users get sent to login (not redirect()->back(),
+        // which throws a 500 when there is no previous URL — e.g. when the IDP
+        // redirects the browser directly to /dashboard instead of the callback).
+        if (! $user) {
+            return redirect()->route('login');
+        }
+
+        // Guard: authenticated users with the wrong role get routed correctly
+        if (! in_array($user->role_id, [2, 7])) {
+            return match ((int) $user->role_id) {
+                1 => redirect('/applicant-dashboard'),
+                3 => redirect('/evaluator-dashboard'),
+                4 => redirect('/interviewer-dashboard'),
+                6 => redirect('/record-dashboard'),
+                default => redirect()->route('login'),
+            };
         }
 
         $summary = [

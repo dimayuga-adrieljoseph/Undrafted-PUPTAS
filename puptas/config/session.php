@@ -213,6 +213,6 @@ return [
     */
 
     // Chrome requires Partitioned=true when SameSite=none for cross-site IDP redirects.
-    'partitioned' => env('SESSION_PARTITIONED_COOKIE', true),
+    'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
 
 ];
