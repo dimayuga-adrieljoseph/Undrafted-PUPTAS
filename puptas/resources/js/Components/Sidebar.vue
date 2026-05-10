@@ -114,7 +114,6 @@ const isApplicationsActive = isActiveRouteFor([
     "evaluator.applications",
 ]);
 
-const isScheduleActive = isActiveRouteFor(["schedules.index"]);
 const isUploadFormActive = isActiveRouteFor(["upload.form"]);
 const isListPassersActive = isActiveRouteFor(["lists"]);
 const isProgramsActive = isActiveRouteFor(["programs.index"]);
@@ -417,32 +416,6 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
                                 :class="{ active: isApplicationsActive }"
-                            ></div>
-                        </NavLink>
-                    </li>
-
-                    <!-- Schedules -->
-                    <li>
-                        <NavLink
-                            :href="route('schedules.index')"
-                            :active="isScheduleActive"
-                            class="nav-item group"
-                            :class="{ 'nav-item-active': isScheduleActive }"
-                            @click="emit('close')"
-                        >
-                            <div class="nav-icon">
-                                <FontAwesomeIcon
-                                    icon="calendar-check"
-                                    class="text-lg"
-                                />
-                            </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
-                                Schedules
-                            </span>
-                            <div
-                                v-if="isSidebarOpen"
-                                class="nav-indicator"
-                                :class="{ active: isScheduleActive }"
                             ></div>
                         </NavLink>
                     </li>

@@ -218,35 +218,6 @@ class ValidationRules
     }
 
     /**
-     * Schedule validation rules
-     */
-    public static function scheduleStore()
-    {
-        return [
-            'name' => 'required|string|max:255',
-            'start' => 'required|date',
-            'end' => 'required|date|after:start',
-            'type' => 'required|in:application,interview,medical,announcement,other',
-            'description' => 'nullable|string|max:1000',
-            'location' => 'nullable|string|max:255',
-            'affected_programs' => 'nullable|array',
-        ];
-    }
-
-    public static function scheduleUpdate($scheduleId)
-    {
-        return [
-            'name' => 'required|string|max:255',
-            'start' => 'required|date',
-            'end' => 'required|date|after:start',
-            'type' => 'required|in:application,interview,medical,announcement,other',
-            'description' => 'nullable|string|max:1000',
-            'location' => 'nullable|string|max:255',
-            'affected_programs' => 'nullable|array',
-        ];
-    }
-
-    /**
      * TestPasser validation rules
      */
     public static function testPasserStore()

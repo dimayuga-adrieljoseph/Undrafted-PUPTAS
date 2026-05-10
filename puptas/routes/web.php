@@ -10,7 +10,6 @@ use App\Http\Controllers\ApplicantDashboardController;
 use App\Http\Controllers\TestPasserController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ConfirmationController;
 use App\Http\Controllers\UserFileController;
 use App\Http\Controllers\EvaluatorDashboardController;
@@ -209,18 +208,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/test-passers-store', [TestPasserController::class, 'store']);
     Route::post('/test-passers/bulk-enroll', [TestPasserController::class, 'bulkEnroll'])->middleware('role:2,7')->name('test-passers.bulk-enroll');
 });
-
-Route::resource('schedules', ScheduleController::class)
-    ->middleware(['auth', 'role:2,4'])
-    ->names([
-        'index' => 'schedules.index',
-        'create' => 'schedules.create',
-        'store' => 'schedules.store',
-        'show' => 'schedules.show',
-        'edit' => 'schedules.edit',
-        'update' => 'schedules.update',
-        'destroy' => 'schedules.destroy',
-    ]);
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/user/application', [ConfirmationController::class, 'show']);
