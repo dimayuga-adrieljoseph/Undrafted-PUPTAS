@@ -70,7 +70,18 @@ class CreateNewUser implements CreatesNewUsers
                 ]);
             }
 
-            // First, create the local User record
+            // Validate reference number before writing anything to the database.
+            // Only test passers are allowed to register — reject early if not found.
+            $inputRefNumber = trim($input['reference_number']);
+            $testPasser = TestPasser::where('reference_number', $inputRefNumber)->first();
+
+            if (!$testPasser) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'reference_number' => 'The reference number you entered is not recognized. Only admitted test passers are allowed to create an account. Please verify your reference number and try again.',
+                ]);
+            }
+
+            // All checks passed — create the local User record
             $user = User::create([
                 'idp_user_id' => $pendingReg['user_id'] ?? (string) \Illuminate\Support\Str::uuid(),
                 'email' => $email,
@@ -90,17 +101,6 @@ class CreateNewUser implements CreatesNewUsers
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
             ]);
-
-            // Only test passers are allowed to register. Validate the reference number
-            // against the test_passers table — registration is rejected if not found.
-            $inputRefNumber = trim($input['reference_number']);
-            $testPasser = TestPasser::where('reference_number', $inputRefNumber)->first();
-
-            if (!$testPasser) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'reference_number' => 'The reference number you entered is not recognized. Only admitted test passers are allowed to create an account. Please verify your reference number and try again.',
-                ]);
-            }
 
             $studentNumber = $testPasser->reference_number;
 
