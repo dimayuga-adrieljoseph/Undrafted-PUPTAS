@@ -85,6 +85,12 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     return response()->json(['taken' => $exists]);
 })->middleware('auth');
 
+Route::post('/check-reference-number', function (\Illuminate\Http\Request $request) {
+    $request->validate(['reference_number' => 'required|string|max:100']);
+    $exists = \App\Models\TestPasser::where('reference_number', trim($request->reference_number))->exists();
+    return response()->json(['valid' => $exists]);
+})->middleware('guest');
+
 Route::middleware(['auth'])->group(function () {
     // Privacy Consent Routes - available to all authenticated users
     Route::post('/privacy-consent/accept', [PrivacyConsentController::class, 'accept'])->name('privacy.consent.accept');

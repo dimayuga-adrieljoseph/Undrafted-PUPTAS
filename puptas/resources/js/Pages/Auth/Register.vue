@@ -56,8 +56,35 @@ const onlyDigits = (e) => {
     }
 };
 
-// Handle form submission - show modal first
-const handleSubmit = () => {
+// Handle form submission - validate reference number first, then show modal
+const handleSubmit = async () => {
+    // Clear any previous reference number error
+    form.clearErrors('reference_number');
+
+    // Pre-validate the reference number before opening the modal
+    try {
+        const response = await fetch('/check-reference-number', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ reference_number: form.reference_number }),
+        });
+
+        const data = await response.json();
+
+        if (!data.valid) {
+            form.setError('reference_number', 'The reference number you entered is not recognized. Only admitted test passers are allowed to create an account. Please verify your reference number and try again.');
+            return;
+        }
+    } catch {
+        form.setError('reference_number', 'Unable to verify your reference number. Please check your connection and try again.');
+        return;
+    }
+
+    // Reference number is valid — show the terms modal
     showTermsModal.value = true;
 };
 
