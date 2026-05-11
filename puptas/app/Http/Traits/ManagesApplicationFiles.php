@@ -129,14 +129,19 @@ trait ManagesApplicationFiles
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             \Log::error('User not found in getUserFiles', [
                 'userId' => $id,
+                'role' => auth()->user()->role_id ?? 'unknown',
                 'error' => $e->getMessage(),
             ]);
 
             return response()->json(['message' => 'Applicant not found'], 404);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \Log::error('Failed to load user files', [
                 'userId' => $id,
+                'role' => auth()->user()->role_id ?? 'unknown',
+                'errorClass' => get_class($e),
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
