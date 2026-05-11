@@ -153,72 +153,91 @@ class DashboardController extends Controller
      */
     public function getUserFiles($id)
     {
-        // Defense in depth: Verify authentication and admin role
-        $authUser = Auth::user();
-        if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
-            return response()->json(['message' => 'Unauthorized access'], 403);
+        try {
+            // Defense in depth: Verify authentication and admin role
+            $authUser = Auth::user();
+            if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
+                return response()->json(['message' => 'Unauthorized access'], 403);
+            }
+
+            // OPTIMIZATION: Load only essential data, exclude heavy file relationships
+            $applicant = ApplicantProfile::with([
+                'currentApplication' => function ($query) {
+                    $query->select('id', 'user_id', 'status', 'created_at', 'program_id');
+                },
+                'currentApplication.program:id,code,name',
+                'currentApplication.processes' => function ($query) {
+                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'reviewer_notes', 'created_at')
+                        ->orderBy('created_at', 'desc')
+                        ->limit(10);
+                },
+                'graduateTypes:id,label',
+            ])
+            ->select('user_id', 'student_number', 'firstname', 'lastname', 'email', 'contactnumber', 'street_address', 'barangay', 'city', 'province', 'postal_code', 'birthday', 'sex', 'created_at')
+            ->where('user_id', $id)
+            ->firstOrFail();
+
+            // OPTIMIZATION: Get only file metadata (type, status, comment) without loading file paths
+            $fileMetadata = UserFile::where('user_id', $id)
+                ->select('type', 'status', 'comment', 'original_name')
+                ->get()
+                ->keyBy('type');
+
+            // Transform the response to use 'application' key for frontend compatibility
+            $userData = [
+                'id' => $applicant->user_id,
+                'student_number' => $applicant->student_number,
+                'firstname' => $applicant->firstname,
+                'lastname' => $applicant->lastname,
+                'email' => $applicant->email,
+                'contactnumber' => $applicant->contactnumber,
+                'street_address' => $applicant->street_address,
+                'barangay' => $applicant->barangay,
+                'city' => $applicant->city,
+                'province' => $applicant->province,
+                'postal_code' => $applicant->postal_code,
+                'birthday' => $applicant->birthday,
+                'sex' => $applicant->sex,
+                'created_at' => $applicant->created_at,
+                // Map currentApplication to application for frontend compatibility 
+                'application' => $applicant->currentApplication ? [
+                    'id' => $applicant->currentApplication->id,
+                    'status' => $applicant->currentApplication->status,
+                    'created_at' => $applicant->currentApplication->created_at,
+                    'program' => $applicant->currentApplication->program,
+                    'processes' => $applicant->currentApplication->processes,
+                ] : null,
+            ];
+
+            $graduateType = $applicant->graduateTypes->first()?->label ?? null;
+
+            // OPTIMIZATION: Return file metadata without URLs - frontend will lazy load them
+            $fileList = FileMapper::formatFilesForGraduateTypeMinimal($fileMetadata, $graduateType);
+
+            return response()->json([
+                'user' => $userData,
+                'uploadedFiles' => $fileList,
+                'graduateType' => $graduateType,
+                'lazyLoad' => true, // Signal to frontend to use lazy loading
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('Applicant not found in admin getUserFiles', [
+                'userId' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Applicant not found'], 404);
+        } catch (\Exception $e) {
+            \Log::error('Failed to load applicant data in admin dashboard', [
+                'userId' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to load applicant data. Please try again.',
+            ], 500);
         }
-
-        // OPTIMIZATION: Load only essential data, exclude heavy file relationships
-        $applicant = ApplicantProfile::with([
-            'currentApplication' => function ($query) {
-                $query->select('id', 'user_id', 'status', 'created_at', 'program_id');
-            },
-            'currentApplication.program:id,code,name',
-            'currentApplication.processes' => function ($query) {
-                $query->select('id', 'application_id', 'stage', 'status', 'action', 'reviewer_notes', 'created_at')
-                    ->orderBy('created_at', 'desc')
-                    ->limit(10);
-            },
-            'graduateTypes:id,label',
-        ])
-        ->select('user_id', 'student_number', 'firstname', 'lastname', 'email', 'contactnumber', 'street_address', 'barangay', 'city', 'province', 'postal_code', 'birthday', 'sex', 'created_at')
-        ->where('user_id', $id)
-        ->firstOrFail();
-
-        // OPTIMIZATION: Get only file metadata (type, status, comment) without loading file paths
-        $fileMetadata = UserFile::where('user_id', $id)
-            ->select('type', 'status', 'comment', 'original_name')
-            ->get()
-            ->keyBy('type');
-
-        // Transform the response to use 'application' key for frontend compatibility
-        $userData = [
-            'id' => $applicant->user_id,
-            'student_number' => $applicant->student_number,
-            'firstname' => $applicant->firstname,
-            'lastname' => $applicant->lastname,
-            'email' => $applicant->email,
-            'contactnumber' => $applicant->contactnumber,
-            'street_address' => $applicant->street_address,
-            'barangay' => $applicant->barangay,
-            'city' => $applicant->city,
-            'province' => $applicant->province,
-            'postal_code' => $applicant->postal_code,
-            'birthday' => $applicant->birthday,
-            'sex' => $applicant->sex,
-            'created_at' => $applicant->created_at,
-            // Map currentApplication to application for frontend compatibility 
-            'application' => $applicant->currentApplication ? [
-                'id' => $applicant->currentApplication->id,
-                'status' => $applicant->currentApplication->status,
-                'created_at' => $applicant->currentApplication->created_at,
-                'program' => $applicant->currentApplication->program,
-                'processes' => $applicant->currentApplication->processes,
-            ] : null,
-        ];
-
-        $graduateType = $applicant->graduateTypes->first()?->label ?? null;
-
-        // OPTIMIZATION: Return file metadata without URLs - frontend will lazy load them
-        $fileList = FileMapper::formatFilesForGraduateTypeMinimal($fileMetadata, $graduateType);
-
-        return response()->json([
-            'user' => $userData,
-            'uploadedFiles' => $fileList,
-            'graduateType' => $graduateType,
-            'lazyLoad' => true, // Signal to frontend to use lazy loading
-        ]);
     }
 
     /**
@@ -229,20 +248,42 @@ class DashboardController extends Controller
      */
     public function getUserGrades($id)
     {
-        // Defense in depth: Verify authentication and admin role
-        $authUser = Auth::user();
-        if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
-            return response()->json(['message' => 'Unauthorized access'], 403);
+        try {
+            // Defense in depth: Verify authentication and admin role
+            $authUser = Auth::user();
+            if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
+                return response()->json(['message' => 'Unauthorized access'], 403);
+            }
+
+            $applicant = ApplicantProfile::with('grades')
+                ->select('user_id')
+                ->where('user_id', $id)
+                ->firstOrFail();
+
+            return response()->json([
+                'grades' => $applicant->grades,
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('Applicant not found in admin getUserGrades', [
+                'userId' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Applicant not found',
+                'grades' => null,
+            ], 404);
+        } catch (\Exception $e) {
+            \Log::error('Failed to load grades in admin dashboard', [
+                'userId' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to load grades. Please try again.',
+                'grades' => null,
+            ], 500);
         }
-
-        $applicant = ApplicantProfile::with('grades')
-            ->select('user_id')
-            ->where('user_id', $id)
-            ->firstOrFail();
-
-        return response()->json([
-            'grades' => $applicant->grades,
-        ]);
     }
 
     public function getPrograms()

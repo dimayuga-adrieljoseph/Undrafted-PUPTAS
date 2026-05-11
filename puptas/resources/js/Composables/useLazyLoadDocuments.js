@@ -43,7 +43,10 @@ export function useLazyLoadDocuments(userId, initialFiles = {}) {
             }
         } catch (error) {
             console.error(`Failed to load document ${fileType}:`, error);
-            errors.value[fileType] = error.response?.data?.message || 'Failed to load document';
+            
+            // Provide user-friendly error message
+            const errorMessage = error.response?.data?.message || 'Failed to load document. Please try again.';
+            errors.value[fileType] = errorMessage;
             loadedFiles.value[fileType] = null;
         } finally {
             loadingFiles.value[fileType] = false;
@@ -90,8 +93,12 @@ export function useLazyLoadDocuments(userId, initialFiles = {}) {
             });
         } catch (error) {
             console.error('Failed to load documents batch:', error);
+            
+            // Provide user-friendly error message
+            const errorMessage = error.response?.data?.message || 'Failed to load documents. Please try again.';
+            
             typesToLoad.forEach(type => {
-                errors.value[type] = 'Failed to load document';
+                errors.value[type] = errorMessage;
                 loadedFiles.value[type] = null;
             });
         } finally {
@@ -228,7 +235,9 @@ export function useLazyLoadGrades(userId, endpoint) {
             grades.value = response.data.grades;
         } catch (err) {
             console.error('Failed to load grades:', err);
-            error.value = err.response?.data?.message || 'Failed to load grades';
+            
+            // Provide user-friendly error message
+            error.value = err.response?.data?.message || 'Failed to load grades. Please try again.';
         } finally {
             loading.value = false;
         }

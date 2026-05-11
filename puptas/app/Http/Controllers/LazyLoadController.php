@@ -27,38 +27,53 @@ class LazyLoadController extends Controller
      */
     public function loadDocument(int $userId, string $fileType): JsonResponse
     {
-        // Verify staff access
-        if (!in_array(auth()->user()->role_id, self::STAFF_ROLE_IDS)) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
+        try {
+            // Verify staff access
+            if (!auth()->check() || !in_array(auth()->user()->role_id, self::STAFF_ROLE_IDS)) {
+                return response()->json(['message' => 'Unauthorized access'], 403);
+            }
 
-        // Find the file
-        $file = UserFile::where('user_id', $userId)
-            ->where('type', $fileType)
-            ->first();
+            // Find the file
+            $file = UserFile::where('user_id', $userId)
+                ->where('type', $fileType)
+                ->first();
 
-        if (!$file) {
+            if (!$file) {
+                return response()->json([
+                    'fileType' => $fileType,
+                    'url' => null,
+                    'status' => 'not_found',
+                    'isImage' => false,
+                ]);
+            }
+
+            // Build preview URL using the UserFile object
+            $url = FileMapper::buildPreviewUrl($file);
+            $mimeType = FileMapper::detectMimeType($file);
+            $isImage = str_starts_with($mimeType, 'image/');
+
             return response()->json([
                 'fileType' => $fileType,
-                'url' => null,
-                'status' => 'not_found',
-                'isImage' => false,
+                'url' => $url,
+                'status' => $file->status ?? 'pending',
+                'comment' => $file->comment,
+                'isImage' => $isImage,
+                'originalName' => $file->original_name,
             ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to load document', [
+                'userId' => $userId,
+                'fileType' => $fileType,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to load document. Please try again.',
+                'fileType' => $fileType,
+                'url' => null,
+                'status' => 'error',
+            ], 500);
         }
-
-        // Build preview URL
-        $url = FileMapper::buildPreviewUrl($file->file_path);
-        $mimeType = FileMapper::detectMimeType($file->file_path);
-        $isImage = str_starts_with($mimeType, 'image/');
-
-        return response()->json([
-            'fileType' => $fileType,
-            'url' => $url,
-            'status' => $file->status ?? 'pending',
-            'comment' => $file->comment,
-            'isImage' => $isImage,
-            'originalName' => $file->original_name,
-        ]);
     }
 
     /**
@@ -70,57 +85,84 @@ class LazyLoadController extends Controller
      */
     public function loadDocumentsBatch(int $userId, Request $request): JsonResponse
     {
-        // Verify staff access
-        if (!in_array(auth()->user()->role_id, self::STAFF_ROLE_IDS)) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $fileTypes = $request->input('fileTypes', []);
-        
-        if (empty($fileTypes) || !is_array($fileTypes)) {
-            return response()->json(['message' => 'Invalid file types'], 400);
-        }
-
-        // Limit batch size to prevent abuse
-        if (count($fileTypes) > 20) {
-            return response()->json(['message' => 'Too many files requested'], 400);
-        }
-
-        // Fetch files
-        $files = UserFile::where('user_id', $userId)
-            ->whereIn('type', $fileTypes)
-            ->get()
-            ->keyBy('type');
-
-        $result = [];
-
-        foreach ($fileTypes as $fileType) {
-            if ($files->has($fileType)) {
-                $file = $files->get($fileType);
-                $url = FileMapper::buildPreviewUrl($file->file_path);
-                $mimeType = FileMapper::detectMimeType($file->file_path);
-                $isImage = str_starts_with($mimeType, 'image/');
-
-                $result[$fileType] = [
-                    'url' => $url,
-                    'status' => $file->status ?? 'pending',
-                    'comment' => $file->comment,
-                    'isImage' => $isImage,
-                    'originalName' => $file->original_name,
-                ];
-            } else {
-                $result[$fileType] = [
-                    'url' => null,
-                    'status' => 'not_found',
-                    'isImage' => false,
-                    'originalName' => null,
-                ];
+        try {
+            // Verify staff access
+            if (!auth()->check() || !in_array(auth()->user()->role_id, self::STAFF_ROLE_IDS)) {
+                return response()->json(['message' => 'Unauthorized access'], 403);
             }
-        }
 
-        return response()->json([
-            'files' => $result,
-        ]);
+            $fileTypes = $request->input('fileTypes', []);
+            
+            if (empty($fileTypes) || !is_array($fileTypes)) {
+                return response()->json(['message' => 'Invalid file types provided'], 400);
+            }
+
+            // Limit batch size to prevent abuse
+            if (count($fileTypes) > 20) {
+                return response()->json(['message' => 'Too many files requested. Maximum 20 files per batch.'], 400);
+            }
+
+            // Fetch files
+            $files = UserFile::where('user_id', $userId)
+                ->whereIn('type', $fileTypes)
+                ->get()
+                ->keyBy('type');
+
+            $result = [];
+
+            foreach ($fileTypes as $fileType) {
+                try {
+                    if ($files->has($fileType)) {
+                        $file = $files->get($fileType);
+                        // Use the UserFile object, not the file path
+                        $url = FileMapper::buildPreviewUrl($file);
+                        $mimeType = FileMapper::detectMimeType($file);
+                        $isImage = str_starts_with($mimeType, 'image/');
+
+                        $result[$fileType] = [
+                            'url' => $url,
+                            'status' => $file->status ?? 'pending',
+                            'comment' => $file->comment,
+                            'isImage' => $isImage,
+                            'originalName' => $file->original_name,
+                        ];
+                    } else {
+                        $result[$fileType] = [
+                            'url' => null,
+                            'status' => 'not_found',
+                            'isImage' => false,
+                            'originalName' => null,
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Failed to process file in batch', [
+                        'userId' => $userId,
+                        'fileType' => $fileType,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    $result[$fileType] = [
+                        'url' => null,
+                        'status' => 'error',
+                        'isImage' => false,
+                        'originalName' => null,
+                    ];
+                }
+            }
+
+            return response()->json([
+                'files' => $result,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to load documents batch', [
+                'userId' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to load documents. Please try again.',
+            ], 500);
+        }
     }
 
     /**
@@ -131,19 +173,31 @@ class LazyLoadController extends Controller
      */
     public function loadGrades(int $userId): JsonResponse
     {
-        // Verify staff access
-        if (!in_array(auth()->user()->role_id, self::STAFF_ROLE_IDS)) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        try {
+            // Verify staff access
+            if (!auth()->check() || !in_array(auth()->user()->role_id, self::STAFF_ROLE_IDS)) {
+                return response()->json(['message' => 'Unauthorized access'], 403);
+            }
+
+            $user = User::with('grades')->find($userId);
+
+            if (!$user) {
+                return response()->json(['message' => 'User not found'], 404);
+            }
+
+            return response()->json([
+                'grades' => $user->grades,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to load grades', [
+                'userId' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to load grades. Please try again.',
+                'grades' => null,
+            ], 500);
         }
-
-        $user = User::with('grades')->find($userId);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        return response()->json([
-            'grades' => $user->grades,
-        ]);
     }
 }
