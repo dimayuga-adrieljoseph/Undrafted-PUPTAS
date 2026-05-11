@@ -145,7 +145,9 @@ class FileMapper
 
     public static function buildFilePayload(UserFile $file, bool $includeStatus = false): array
     {
-        $mimeType = self::detectMimeType($file);
+        // Fast path: Use extension-based mime type detection only
+        $mimeType = self::guessMimeTypeFromPath($file->file_path);
+        
         $payload = [
             'url' => self::buildPreviewUrl($file),
             'mimeType' => $mimeType,
@@ -240,7 +242,7 @@ class FileMapper
         return $sanitized !== '' ? $sanitized : 'document';
     }
 
-    private static function guessMimeTypeFromPath(string $path): string
+    public static function guessMimeTypeFromPath(string $path): string
     {
         return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
             'jpg', 'jpeg' => 'image/jpeg',
