@@ -16,7 +16,7 @@ trait ManagesApplicationFiles
      * Get user files with formatted URLs
      * Only allows access if the application is at the appropriate stage
      * 
-     * TEMPORARY: Returns full data with URLs until frontend is updated for lazy loading
+     * OPTIMIZED: Loads only essential data first, files are loaded separately
      */
     public function getUserFiles($id)
     {
@@ -26,7 +26,7 @@ trait ManagesApplicationFiles
                 $this->ensureRole($this->getRoleId());
             }
 
-            // Load user with all necessary data
+            // Load user with ONLY essential data (no files relationship)
             $user = User::with([
                 'currentApplication' => function ($query) {
                     $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id');
@@ -39,7 +39,6 @@ trait ManagesApplicationFiles
                         ->limit(10)
                         ->with('performedBy:id,firstname,lastname');
                 },
-                'files', // Include files
                 'grades', // Include grades
                 'applicantProfile:user_id,student_number',
                 'applicantProfile.graduateTypes:id,label',
@@ -73,7 +72,8 @@ trait ManagesApplicationFiles
                 }
             }
 
-            $files = $user->files->keyBy('type');
+            // Load files separately (not through relationship) for better performance
+            $files = UserFile::where('user_id', $id)->get()->keyBy('type');
 
             // Transform the response to map currentApplication to application for frontend compatibility
             $userData = [
@@ -91,7 +91,6 @@ trait ManagesApplicationFiles
                 'birthday' => $user->birthday,
                 'sex' => $user->sex,
                 'created_at' => $user->created_at,
-                'files' => $user->files,
                 'grades' => $user->grades, // Include grades
                 // Map currentApplication to application for frontend compatibility
                 'application' => $user->currentApplication ? [
