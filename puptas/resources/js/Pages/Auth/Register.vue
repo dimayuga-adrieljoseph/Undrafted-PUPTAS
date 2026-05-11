@@ -702,7 +702,7 @@ const handleTermsCancel = () => {
                                 class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4"
                             >
                                 <Link
-                                    :href="route('login')"
+                                    :href="route('idp.redirect')"
                                     class="flex items-center text-gray-600 dark:text-gray-400 hover:text-red-700 dark:hover:text-red-400 font-medium transition-colors duration-200"
                                 >
                                     <svg
@@ -971,18 +971,7 @@ const handleTermsCancel = () => {
             @cancel="handleTermsCancel"
         />
 
-        <!-- Login Link at Bottom -->
-        <div class="mt-8 text-center">
-            <p class="text-gray-600 dark:text-gray-400">
-                Already have an account?
-                <Link
-                    :href="route('login')"
-                    class="font-semibold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 ml-1 underline"
-                >
-                    Sign in here
-                </Link>
-            </p>
-        </div>
+
     </div>
 </template>
 
