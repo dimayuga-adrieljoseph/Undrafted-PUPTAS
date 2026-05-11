@@ -29,7 +29,7 @@ trait ManagesApplicationFiles
             // OPTIMIZATION: Load only essential data, exclude heavy file relationships
             $user = User::with([
                 'currentApplication' => function ($query) {
-                    $query->select('id', 'user_id', 'status', 'created_at', 'program_id', 'second_choice_id');
+                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id');
                 },
                 'currentApplication.program:id,code,name',
                 'currentApplication.secondChoice:id,code,name',
@@ -108,13 +108,20 @@ trait ManagesApplicationFiles
             $graduateType = $user->applicantProfile?->graduateTypes->first()?->label ?? null;
 
             // OPTIMIZATION: Return file metadata without URLs - frontend will lazy load them
-            $fileList = FileMapper::formatFilesForGraduateTypeMinimal($fileMetadata, $graduateType);
+            // Use method_exists to check if the new method is available
+            if (method_exists(FileMapper::class, 'formatFilesForGraduateTypeMinimal')) {
+                $fileList = FileMapper::formatFilesForGraduateTypeMinimal($fileMetadata, $graduateType);
+            } else {
+                // Fallback to old method if new method doesn't exist
+                $files = UserFile::where('user_id', $id)->get()->keyBy('type');
+                $fileList = FileMapper::formatFilesForGraduateType($files, $graduateType, false);
+            }
 
             return response()->json([
                 'user' => $userData,
                 'uploadedFiles' => $fileList,
                 'graduateType' => $graduateType,
-                'lazyLoad' => true, // Signal to frontend to use lazy loading
+                'lazyLoad' => method_exists(FileMapper::class, 'formatFilesForGraduateTypeMinimal'), // Only enable if method exists
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             \Log::error('User not found in getUserFiles', [
