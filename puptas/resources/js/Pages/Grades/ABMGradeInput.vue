@@ -41,21 +41,21 @@
             </div>
 
             <form @submit.prevent="openReviewModal">
-                <!-- AI Autofill Banner -->
+                <!-- Docling Autofill Banner -->
                 <div v-if="extractionResult && !bannerDismissed" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-4">
                     <div class="flex items-center gap-2">
-                        <i class="fas fa-robot text-blue-600 dark:text-blue-400"></i>
+                        <i class="fas fa-file-alt text-blue-600 dark:text-blue-400"></i>
                         <p class="text-sm text-blue-700 dark:text-blue-300">
-                            Grades have been autofilled by AI. Please review and verify before submitting.
+                            Grades have been autofilled from your uploaded documents using Docling. Please review and verify before submitting.
                         </p>
                     </div>
                     <button @click="bannerDismissed = true" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-xl leading-none flex-shrink-0">&times;</button>
                 </div>
-                <!-- Manual Input Notice (shown when AI extraction was unavailable) -->
+                <!-- Manual Input Notice (shown when document extraction was unavailable) -->
                 <div v-if="!extractionResult" class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center gap-2">
                     <i class="fas fa-pencil-alt text-yellow-600 dark:text-yellow-400"></i>
                     <p class="text-sm text-yellow-700 dark:text-yellow-300">
-                        AI grade extraction was unavailable. Please enter your grades manually below.
+                        Document extraction was unavailable. Please enter your grades manually below.
                     </p>
                 </div>
                 <!-- Core Subjects Card -->
@@ -88,7 +88,7 @@
                                             placeholder="Enter grade (0-100)"
                                         />
                                         <p v-if="isLowConfidence('general mathematics')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                        <span v-if="getConfidence('general mathematics') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('general mathematics') * 100) }}%</span>
+                                        <span v-if="getConfidence('general mathematics') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('general mathematics') * 100) }}%</span>
                                     </div>
                                 </div>
                                 <div>
@@ -104,7 +104,7 @@
                                         placeholder="Enter grade (0-100)"
                                     />
                                     <p v-if="isLowConfidence('business mathematics')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('business mathematics') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('business mathematics') * 100) }}%</span>
+                                    <span v-if="getConfidence('business mathematics') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('business mathematics') * 100) }}%</span>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statistics and Probability</label>
@@ -119,7 +119,7 @@
                                         placeholder="Enter grade (0-100)"
                                     />
                                     <p v-if="isLowConfidence('statistics and probability')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('statistics and probability') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('statistics and probability') * 100) }}%</span>
+                                    <span v-if="getConfidence('statistics and probability') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('statistics and probability') * 100) }}%</span>
                                 </div>
                             </div>
                             <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
@@ -156,7 +156,7 @@
                                         placeholder="0-100"
                                     />
                                     <p v-if="isLowConfidence(form.g12_math_subject_1?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence(form.g12_math_subject_1?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g12_math_subject_1?.toLowerCase()?.trim() || '') * 100) }}%</span>
+                                    <span v-if="getConfidence(form.g12_math_subject_1?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence(form.g12_math_subject_1?.toLowerCase()?.trim() || '') * 100) }}%</span>
                                 </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 2</label>
@@ -179,7 +179,7 @@
                                         placeholder="0-100"
                                     />
                                     <p v-if="isLowConfidence(form.g12_math_subject_2?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence(form.g12_math_subject_2?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g12_math_subject_2?.toLowerCase()?.trim() || '') * 100) }}%</span>
+                                    <span v-if="getConfidence(form.g12_math_subject_2?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence(form.g12_math_subject_2?.toLowerCase()?.trim() || '') * 100) }}%</span>
                                 </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 3</label>
@@ -202,7 +202,7 @@
                                         placeholder="0-100"
                                     />
                                     <p v-if="isLowConfidence(form.g12_math_subject_3?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence(form.g12_math_subject_3?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g12_math_subject_3?.toLowerCase()?.trim() || '') * 100) }}%</span>
+                                    <span v-if="getConfidence(form.g12_math_subject_3?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence(form.g12_math_subject_3?.toLowerCase()?.trim() || '') * 100) }}%</span>
                                 </div>
                             </div>
                         </div>
@@ -229,7 +229,7 @@
                                         placeholder="Enter grade (0-100)"
                                     />
                                     <p v-if="isLowConfidence('oral communication')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('oral communication') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('oral communication') * 100) }}%</span>
+                                    <span v-if="getConfidence('oral communication') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('oral communication') * 100) }}%</span>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">English for Academic Purposes</label>
@@ -244,7 +244,7 @@
                                         placeholder="Enter grade (0-100)"
                                     />
                                     <p v-if="isLowConfidence('english for academic purposes')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('english for academic purposes') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('english for academic purposes') * 100) }}%</span>
+                                    <span v-if="getConfidence('english for academic purposes') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('english for academic purposes') * 100) }}%</span>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading and Writing</label>
@@ -259,7 +259,7 @@
                                         placeholder="Enter grade (0-100)"
                                     />
                                     <p v-if="isLowConfidence('reading and writing')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('reading and writing') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('reading and writing') * 100) }}%</span>
+                                    <span v-if="getConfidence('reading and writing') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('reading and writing') * 100) }}%</span>
                                 </div>
                             </div>
                             <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
@@ -298,7 +298,7 @@
                                         placeholder="0-100"
                                     />
                                     <p v-if="isLowConfidence(form[`g12_english_subject_${i}`]?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence(form[`g12_english_subject_${i}`]?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form[`g12_english_subject_${i}`]?.toLowerCase()?.trim() || '') * 100) }}%</span>
+                                    <span v-if="getConfidence(form[`g12_english_subject_${i}`]?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence(form[`g12_english_subject_${i}`]?.toLowerCase()?.trim() || '') * 100) }}%</span>
                                 </div>
                             </div>
                         </div>
@@ -325,7 +325,7 @@
                                         placeholder="Enter grade (0-100)"
                                     />
                                     <p v-if="isLowConfidence('earth and life science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('earth and life science') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('earth and life science') * 100) }}%</span>
+                                    <span v-if="getConfidence('earth and life science') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('earth and life science') * 100) }}%</span>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Science</label>
@@ -340,7 +340,7 @@
                                         placeholder="Enter grade (0-100)"
                                     />
                                     <p v-if="isLowConfidence('physical science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('physical science') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('physical science') * 100) }}%</span>
+                                    <span v-if="getConfidence('physical science') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('physical science') * 100) }}%</span>
                                 </div>
                             </div>
                             <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
@@ -377,7 +377,7 @@
                                         placeholder="0-100"
                                     />
                                     <p v-if="isLowConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '') * 100) }}%</span>
+                                    <span v-if="getConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '') * 100) }}%</span>
                                 </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject 2</label>
@@ -400,7 +400,7 @@
                                         placeholder="0-100"
                                     />
                                     <p v-if="isLowConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '') * 100) }}%</span>
+                                    <span v-if="getConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '') * 100) }}%</span>
                                 </div>
                             </div>
                         </div>
@@ -425,7 +425,7 @@
                                         placeholder="0-100"
                                     />
                                     <p v-if="isLowConfidence('1st semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('1st semester') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('1st semester') * 100) }}%</span>
+                                    <span v-if="getConfidence('1st semester') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('1st semester') * 100) }}%</span>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">2nd Semester</label>
@@ -440,7 +440,7 @@
                                         placeholder="0-100"
                                     />
                                     <p v-if="isLowConfidence('2nd semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('2nd semester') !== null" class="text-xs text-gray-500 mt-1 block">AI confidence: {{ Math.round(getConfidence('2nd semester') * 100) }}%</span>
+                                    <span v-if="getConfidence('2nd semester') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('2nd semester') * 100) }}%</span>
                                 </div>
                             </div>
                         </div>
