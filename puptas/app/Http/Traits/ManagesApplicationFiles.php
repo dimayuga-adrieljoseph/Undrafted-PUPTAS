@@ -25,7 +25,7 @@ trait ManagesApplicationFiles
 
         $user = User::with([
             'currentApplication' => function ($query) {
-                $query->select('id', 'user_id', 'status', 'enrollment_status', 'program_id', 'second_choice_id', 'created_at');
+                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.program_id', 'applications.second_choice_id', 'applications.created_at');
             },
             'currentApplication.program:id,code,name,slots',
             'currentApplication.secondChoice:id,code,name,slots',
