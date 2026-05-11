@@ -289,6 +289,10 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::get('/record-dashboard/user-grades/{id}', [RecordStaffDashboardController::class, 'getUserGrades']);
 });
 
+Route::middleware(['auth', 'role:2,7'])->group(function () {
+    Route::get('/admin-dashboard/user-grades/{id}', [DashboardController::class, 'getUserGrades']);
+});
+
 Route::middleware(['auth', 'role:2,3,4,7'])->group(function () {
     Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
 });

@@ -147,6 +147,10 @@ class DashboardController extends Controller
         );
     }
 
+    /**
+     * Get user files with formatted URLs
+     * OPTIMIZED: Returns minimal data without loading file URLs for faster initial load
+     */
     public function getUserFiles($id)
     {
         // Defense in depth: Verify authentication and admin role
@@ -155,11 +159,28 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 
-        $applicant = ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,reviewer_notes,created_at', 'grades', 'graduateTypes'])
-            ->where('user_id', $id)
-            ->firstOrFail();
+        // OPTIMIZATION: Load only essential data, exclude heavy file relationships
+        $applicant = ApplicantProfile::with([
+            'currentApplication' => function ($query) {
+                $query->select('id', 'user_id', 'status', 'created_at', 'program_id');
+            },
+            'currentApplication.program:id,code,name',
+            'currentApplication.processes' => function ($query) {
+                $query->select('id', 'application_id', 'stage', 'status', 'action', 'reviewer_notes', 'created_at')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(10);
+            },
+            'graduateTypes:id,label',
+        ])
+        ->select('user_id', 'student_number', 'firstname', 'lastname', 'email', 'contactnumber', 'street_address', 'barangay', 'city', 'province', 'postal_code', 'birthday', 'sex', 'created_at')
+        ->where('user_id', $id)
+        ->firstOrFail();
 
-        $files = UserFile::where('user_id', $id)->get()->keyBy('type');
+        // OPTIMIZATION: Get only file metadata (type, status, comment) without loading file paths
+        $fileMetadata = UserFile::where('user_id', $id)
+            ->select('type', 'status', 'comment', 'original_name')
+            ->get()
+            ->keyBy('type');
 
         // Transform the response to use 'application' key for frontend compatibility
         $userData = [
@@ -177,8 +198,6 @@ class DashboardController extends Controller
             'birthday' => $applicant->birthday,
             'sex' => $applicant->sex,
             'created_at' => $applicant->created_at,
-            'files' => $files->values(),
-            'grades' => $applicant->grades,
             // Map currentApplication to application for frontend compatibility 
             'application' => $applicant->currentApplication ? [
                 'id' => $applicant->currentApplication->id,
@@ -191,9 +210,38 @@ class DashboardController extends Controller
 
         $graduateType = $applicant->graduateTypes->first()?->label ?? null;
 
+        // OPTIMIZATION: Return file metadata without URLs - frontend will lazy load them
+        $fileList = FileMapper::formatFilesForGraduateTypeMinimal($fileMetadata, $graduateType);
+
         return response()->json([
             'user' => $userData,
-            'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false),
+            'uploadedFiles' => $fileList,
+            'graduateType' => $graduateType,
+            'lazyLoad' => true, // Signal to frontend to use lazy loading
+        ]);
+    }
+
+    /**
+     * Get user grades separately for lazy loading
+     * 
+     * @param int $id User ID
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getUserGrades($id)
+    {
+        // Defense in depth: Verify authentication and admin role
+        $authUser = Auth::user();
+        if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
+            return response()->json(['message' => 'Unauthorized access'], 403);
+        }
+
+        $applicant = ApplicantProfile::with('grades')
+            ->select('user_id')
+            ->where('user_id', $id)
+            ->firstOrFail();
+
+        return response()->json([
+            'grades' => $applicant->grades,
         ]);
     }
 
