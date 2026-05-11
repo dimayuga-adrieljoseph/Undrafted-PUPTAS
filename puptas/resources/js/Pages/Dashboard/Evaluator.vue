@@ -556,6 +556,7 @@ const submitPass = async () => {
                                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Course/Program</p>
                                             <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.program?.name || "—" }}</p>
                                             <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.program?.code || "" }}</p>
+                                            <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.program?.slots || 0 }} slots remaining</p>
                                         </div>
                                         <div>
                                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Status</p>

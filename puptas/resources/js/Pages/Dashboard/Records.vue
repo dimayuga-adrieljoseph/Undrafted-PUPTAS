@@ -432,6 +432,14 @@
                                                         ?.program?.code || ""
                                                 }}
                                             </p>
+                                            <p
+                                                class="text-gray-500 dark:text-gray-400 text-xs mt-1"
+                                            >
+                                                {{
+                                                    selectedUser.application
+                                                        ?.program?.slots || 0
+                                                }} slots remaining
+                                            </p>
                                         </div>
                                         <div>
                                             <p

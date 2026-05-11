@@ -219,7 +219,7 @@ class RecordStaffDashboardController extends Controller
                 'currentApplication' => function ($query) {
                     $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.enrollment_status');
                 },
-                'currentApplication.program:id,code,name',
+                'currentApplication.program:id,code,name,slots',
                 'currentApplication.processes' => function ($query) {
                     $query->select('id', 'application_id', 'stage', 'status', 'action', 'reviewer_notes', 'created_at')
                         ->orderBy('created_at', 'desc')
