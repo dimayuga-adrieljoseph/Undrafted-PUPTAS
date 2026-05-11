@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Grade;
 use App\Models\User;
 use App\Models\ApplicantProfile;
+use App\Models\Application;
+use App\Models\ApplicationProcess;
 use App\Models\Program;
 use App\Rules\ValidationRules;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +27,7 @@ class GradesController extends Controller
             'programs' => $programs,
             'strand' => $profile?->strand,
             'extractionResult' => session()->pull('extraction_result'),
+            'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
 
@@ -41,6 +44,7 @@ class GradesController extends Controller
             'programs' => $programs,
             'strand' => $profile?->strand,
             'extractionResult' => session()->pull('extraction_result'),
+            'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
 
@@ -57,6 +61,7 @@ class GradesController extends Controller
             'programs' => $programs,
             'strand' => $profile?->strand,
             'extractionResult' => session()->pull('extraction_result'),
+            'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
 
@@ -73,6 +78,7 @@ class GradesController extends Controller
             'programs' => $programs,
             'strand' => $profile?->strand,
             'extractionResult' => session()->pull('extraction_result'),
+            'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
 
@@ -89,6 +95,7 @@ class GradesController extends Controller
             'programs' => $programs,
             'strand' => $profile?->strand,
             'extractionResult' => session()->pull('extraction_result'),
+            'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
 
@@ -105,12 +112,16 @@ class GradesController extends Controller
             'programs' => $programs,
             'strand' => $profile?->strand,
             'extractionResult' => session()->pull('extraction_result'),
+            'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
 
     public function storeAbmGrades(Request $request)
     {
         $user = Auth::user();
+        if ($this->isEvaluatorLocked($user)) {
+            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+        }
 
         $validated = $request->validate([
             // Computed averages from frontend
@@ -172,6 +183,21 @@ class GradesController extends Controller
         return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
     }
 
+    private function isEvaluatorLocked(User $user): bool
+    {
+        $application = Application::where('user_id', $user->id)->first();
+
+        if (!$application) {
+            return false;
+        }
+
+        return ApplicationProcess::where('application_id', $application->id)
+            ->where('stage', 'evaluator')
+            ->where('status', 'completed')
+            ->where('action', 'passed')
+            ->exists();
+    }
+
     private function isUserQualified($program, $userStrand, $math, $english, $science, $gwa)
     {
         // Check Strand Eligibility
@@ -197,6 +223,10 @@ class GradesController extends Controller
     public function storeTvlGrades(Request $request)
     {
         $user = Auth::user();
+
+        if ($this->isEvaluatorLocked($user)) {
+            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+        }
 
         $validated = $request->validate([
             // Computed averages from frontend
@@ -242,6 +272,10 @@ class GradesController extends Controller
     {
         $user = Auth::user();
 
+        if ($this->isEvaluatorLocked($user)) {
+            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+        }
+
         $validated = $request->validate([
             // Computed averages from frontend
             'mathematics' => 'required|numeric|min:0|max:100',
@@ -285,6 +319,10 @@ class GradesController extends Controller
     public function storeGasGrades(Request $request)
     {
         $user = Auth::user();
+
+        if ($this->isEvaluatorLocked($user)) {
+            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+        }
 
         $validated = $request->validate([
             // Computed averages from frontend
@@ -330,6 +368,10 @@ class GradesController extends Controller
     {
         $user = Auth::user();
 
+        if ($this->isEvaluatorLocked($user)) {
+            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+        }
+
         $validated = $request->validate([
             // Computed averages from frontend
             'mathematics' => 'required|numeric|min:0|max:100',
@@ -372,6 +414,11 @@ class GradesController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+        if ($this->isEvaluatorLocked($user)) {
+            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+        }
+
         $request->validate(ValidationRules::gradeImport());
         $user = ApplicantProfile::where('email', $request->email)->first();
 

@@ -32,6 +32,14 @@
                 </div>
             </div>
 
+            <!-- Lock Notice Banner -->
+            <div v-if="isLocked" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg flex items-center gap-3">
+                <i class="fas fa-lock text-red-600 dark:text-red-400 text-lg flex-shrink-0"></i>
+                <p class="text-sm text-red-700 dark:text-red-300 font-medium">
+                    Grade submission is closed. Your application has been approved by the evaluator and grades can no longer be modified.
+                </p>
+            </div>
+
             <form @submit.prevent="openReviewModal">
                 <!-- AI Autofill Banner -->
                 <div v-if="extractionResult && !bannerDismissed" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-4">
@@ -77,6 +85,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general mathematics') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
@@ -91,6 +100,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('statistics and probability') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
@@ -105,6 +115,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('pre-calculus') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
@@ -119,6 +130,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('basic calculus') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
@@ -142,6 +154,7 @@
                                     <input
                                         v-model="form[`g12_math_subject_${i}`]"
                                         type="text"
+                                        :disabled="isLocked"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
                                         :placeholder="`Subject ${i} name`"
                                     />
@@ -152,6 +165,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form[`g12_math_subject_${i}`]?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
@@ -181,6 +195,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('earth science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
@@ -195,6 +210,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general chemistry 1') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
@@ -221,6 +237,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general physics 1') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
@@ -235,6 +252,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general biology 1') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
@@ -249,6 +267,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general physics 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
@@ -263,6 +282,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general biology 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
@@ -277,6 +297,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general chemistry 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
@@ -306,6 +327,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('oral communication in context') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
@@ -320,6 +342,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('reading and writing skills') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
@@ -346,6 +369,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('21st century literature') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
@@ -360,6 +384,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('komunikasyon') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
@@ -383,6 +408,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('1st semester') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
@@ -397,6 +423,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('2nd semester') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
@@ -427,6 +454,7 @@
                                 <input
                                     v-model="subject.name"
                                     type="text"
+                                    :disabled="isLocked"
                                     class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                                     placeholder="Subject name"
                                 />
@@ -440,6 +468,7 @@
                                         min="0"
                                         max="100"
                                         step="1"
+                                        :disabled="isLocked"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                                         placeholder="0-100"
                                     />
@@ -644,6 +673,7 @@
                 <!-- Form Actions -->
                 <div class="flex gap-4">
                     <button
+                        v-if="!isLocked"
                         type="submit"
                         :disabled="loading"
                         class="flex-1 px-6 py-3 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800 min-h-[44px]"
@@ -702,6 +732,7 @@ const props = defineProps({
     programs: Array,
     strand: String,
     extractionResult: { type: Object, default: null },
+    isLocked: { type: Boolean, default: false },
 });
 
 const loading = ref(false);
