@@ -119,15 +119,17 @@ class UserService
      */
     public function getAllApplicantsByStage(string $stage): Collection
     {
-        return ApplicantProfile::with(['currentApplication' => function ($query) {
-            $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id');
-        }, 'currentApplication.program' => function ($query) {
-            $query->select('id', 'code', 'name');
-        }, 'currentApplication.processes' => function ($query) use ($stage) {
-            $query->where('stage', $stage)
-                ->orderBy('created_at', 'desc')
-                ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
-        }])
+        return ApplicantProfile::select('user_id', 'firstname', 'lastname', 'course', 'email', 'contactnumber', 'company')
+            ->with(['currentApplication' => function ($query) {
+                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id');
+            }, 'currentApplication.program' => function ($query) {
+                $query->select('id', 'code', 'name');
+            }, 'currentApplication.processes' => function ($query) use ($stage) {
+                $query->where('stage', $stage)
+                    ->orderBy('created_at', 'desc')
+                    ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at')
+                    ->limit(1); // Only get the latest process for this stage
+            }])
             ->whereHas('currentApplication', function ($query) use ($stage) {
                 $query->whereHas('processes', function ($q) use ($stage) {
                     $q->where('stage', $stage)

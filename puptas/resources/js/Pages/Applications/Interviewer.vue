@@ -288,12 +288,24 @@
                     </div>
 
                     <!-- Program Info -->
-                    <div class="p-4 bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-xl border border-[#9E122C]/20">
-                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Program for Acceptance</h4>
-                        <p class="text-base font-semibold text-gray-900 dark:text-white">
-                            {{ selectedUser?.application?.program?.code }} – {{ selectedUser?.application?.program?.name }}
-                        </p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ selectedUser?.application?.program?.slots }} slots remaining</p>
+                    <div class="space-y-3">
+                        <!-- First Choice Program -->
+                        <div class="p-4 bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-xl border border-[#9E122C]/20">
+                            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Program for Acceptance (1st Choice)</h4>
+                            <p class="text-base font-semibold text-gray-900 dark:text-white">
+                                {{ selectedUser?.application?.program?.code }} – {{ selectedUser?.application?.program?.name }}
+                            </p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ selectedUser?.application?.program?.slots }} slots remaining</p>
+                        </div>
+
+                        <!-- Second Choice Program -->
+                        <div v-if="selectedUser?.application?.second_choice" class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Second Choice Program</h4>
+                            <p class="text-base font-semibold text-gray-900 dark:text-white">
+                                {{ selectedUser?.application?.second_choice?.code }} – {{ selectedUser?.application?.second_choice?.name }}
+                            </p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ selectedUser?.application?.second_choice?.slots }} slots remaining</p>
+                        </div>
                     </div>
 
                     <!-- Accept Action -->

@@ -550,9 +550,14 @@ const fetchPrograms = async () => {
                                             <p class="text-gray-900 dark:text-white">{{ selectedUser.email }}</p>
                                         </div>
                                         <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Program</p>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Program (1st Choice)</p>
                                             <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.program?.name || "—" }}</p>
                                             <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.program?.code || "" }}</p>
+                                        </div>
+                                        <div v-if="selectedUser.application?.second_choice">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Second Choice Program</p>
+                                            <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.second_choice?.name || "—" }}</p>
+                                            <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.second_choice?.code || "" }}</p>
                                         </div>
                                         <div>
                                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
