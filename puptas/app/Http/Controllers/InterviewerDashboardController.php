@@ -87,9 +87,15 @@ class InterviewerDashboardController extends Controller
         // Ensure user has interviewer role
         $this->ensureRole($this->getRoleId());
 
-        // Return all applicants filtered by interviewer stage (including completed)
+        // Resolve this interviewer's assigned program IDs from the pivot table
+        $programIds = Auth::user()
+            ->programs()
+            ->pluck('programs.id')
+            ->toArray();
+
+        // Return applicants at interviewer stage, scoped to assigned courses only
         return response()->json(
-            $this->userService->getAllApplicantsByStage('interviewer')
+            $this->userService->getAllApplicantsByStage('interviewer', $programIds)
         );
     }
 

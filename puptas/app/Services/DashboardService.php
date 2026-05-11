@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Program;
 use App\Models\Application;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -229,15 +230,21 @@ class DashboardService
 
     /**
      * Get dashboard data for interviewer with pending applications
+     * Filters applicants to only those in the interviewer's assigned programs.
      *
      * @return array
      */
     public function getInterviewerDashboardData(): array
     {
+        $programIds = Auth::user()
+            ->programs()
+            ->pluck('programs.id')
+            ->toArray();
+
         return [
-            'pendingUsers' => $this->userService->getApplicantsByStage('interviewer'),
-            'summary' => $this->applicationService->getApplicationSummary(),
-            'chartData' => $this->getDailyApplicationChartData(),
+            'pendingUsers' => $this->userService->getApplicantsByStage('interviewer', $programIds),
+            'summary'      => $this->applicationService->getApplicationSummary(),
+            'chartData'    => $this->getDailyApplicationChartData(),
         ];
     }
 

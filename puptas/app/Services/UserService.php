@@ -46,9 +46,10 @@ class UserService
      * Get applicants pending for a specified stage
      *
      * @param string $stage The application stage (evaluator, interviewer, medical)
+     * @param array|null $programIds Optional list of program IDs to filter by (e.g. for interviewers)
      * @return Collection
      */
-    public function getApplicantsByStage(string $stage): Collection
+    public function getApplicantsByStage(string $stage, ?array $programIds = null): Collection
     {
         return ApplicantProfile::with(['currentApplication' => function ($query) {
             $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
@@ -59,7 +60,7 @@ class UserService
                 ->orderBy('created_at', 'desc')
                 ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
         }])
-            ->whereHas('applications', function ($query) use ($stage) {
+            ->whereHas('applications', function ($query) use ($stage, $programIds) {
                 $query->whereNotIn('status', ['accepted', 'cleared_for_enrollment'])
                     ->whereHas('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
@@ -71,6 +72,10 @@ class UserService
                             ->whereIn('action', ['passed', 'transferred']);
                     })
                     ->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)');
+
+                if (!empty($programIds)) {
+                    $query->whereIn('program_id', $programIds);
+                }
             })
             ->get()
             ->map(function ($profile) use ($stage) {
@@ -115,9 +120,10 @@ class UserService
      * Returns all applicants who have reached the specified stage (in_progress, returned, or completed)
      *
      * @param string $stage The application stage (evaluator, interviewer, medical, records)
+     * @param array|null $programIds Optional list of program IDs to filter by (e.g. for interviewers)
      * @return Collection
      */
-    public function getAllApplicantsByStage(string $stage): Collection
+    public function getAllApplicantsByStage(string $stage, ?array $programIds = null): Collection
     {
         return ApplicantProfile::with(['currentApplication' => function ($query) {
             $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id');
@@ -128,11 +134,15 @@ class UserService
                 ->orderBy('created_at', 'desc')
                 ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
         }])
-            ->whereHas('currentApplication', function ($query) use ($stage) {
+            ->whereHas('currentApplication', function ($query) use ($stage, $programIds) {
                 $query->whereHas('processes', function ($q) use ($stage) {
                     $q->where('stage', $stage)
                         ->whereIn('status', ['in_progress', 'returned', 'completed']);
                 });
+
+                if (!empty($programIds)) {
+                    $query->whereIn('program_id', $programIds);
+                }
             })
             ->get()
             ->map(function ($profile) use ($stage) {
