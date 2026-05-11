@@ -119,8 +119,7 @@ class UserService
      */
     public function getAllApplicantsByStage(string $stage): Collection
     {
-        return ApplicantProfile::select('user_id', 'firstname', 'lastname', 'course', 'email', 'contactnumber', 'company')
-            ->with(['currentApplication' => function ($query) {
+        return ApplicantProfile::with(['currentApplication' => function ($query) {
                 $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id');
             }, 'currentApplication.program' => function ($query) {
                 $query->select('id', 'code', 'name');
