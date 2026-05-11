@@ -362,7 +362,17 @@
                     <!-- Uploaded Documents -->
                     <div>
                         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
-                        <div class="grid grid-cols-2 gap-3">
+                        
+                        <!-- Loading State -->
+                        <div v-if="selectedUserFiles.loading" class="grid grid-cols-2 gap-3">
+                            <div v-for="i in 6" :key="i" class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 animate-pulse">
+                                <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
+                                <div class="w-full h-24 bg-gray-300 dark:bg-gray-600 rounded-lg"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Actual Documents -->
+                        <div v-else class="grid grid-cols-2 gap-3">
                             <div
                                 v-for="(file, key) in selectedUserFiles"
                                 :key="key"
@@ -629,10 +639,22 @@ const displayedUsers = computed(() => {
 
 const selectUser = async (user) => {
     try {
+        // Open panel immediately with basic user data
+        selectedUser.value = {
+            ...user,
+            grades: null,
+            application: user.application || null,
+        };
+        
+        // Show loading state for files
+        selectedUserFiles.value = { loading: true };
+
+        // Fetch full data in background
         const response = await axios.get(
             `/interviewer-dashboard/application/${user.id}`
         );
 
+        // Update with full data
         selectedUser.value = {
             ...user,
             ...response.data.user,
@@ -640,6 +662,7 @@ const selectUser = async (user) => {
                 ...response.data.user.application,
                 processes: response.data.user.application?.processes || [],
                 program: response.data.user.application?.program || null,
+                second_choice: response.data.user.application?.second_choice || null,
             },
             grades: response.data.user.grades || null,
         };

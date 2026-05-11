@@ -27,11 +27,12 @@ trait ManagesApplicationFiles
             'currentApplication.program',
             'currentApplication.secondChoice',
             'currentApplication.processes' => function ($query) {
-                $query->orderBy('created_at', 'desc')
-                    ->limit(10)
-                    ->with('performedBy:id,firstname,lastname');
+                $query->select('id', 'application_id', 'stage', 'status', 'action', 'reviewer_notes', 'performed_by', 'created_at')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(10);
             },
-            'files',
+            'currentApplication.processes.performedBy:id,firstname,lastname',
+            'files:id,user_id,type,path,status,comment',
             'grades',
             'applicantProfile.graduateTypes',
         ])->findOrFail($id);
