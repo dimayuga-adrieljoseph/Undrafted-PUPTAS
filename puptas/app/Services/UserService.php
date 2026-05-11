@@ -134,11 +134,16 @@ class UserService
                     ->orderBy('created_at', 'desc')
                     ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
             }])
-            ->whereHas('currentApplication', function ($query) use ($stage, $programIds) {
-                $query->whereHas('processes', function ($q) use ($stage) {
-                    $q->where('stage', $stage)
-                        ->whereIn('status', ['in_progress', 'returned', 'completed']);
-                });
+            ->whereHas('applications', function ($query) use ($stage, $programIds) {
+                // Pin to the latest application only — prevents matching old applications
+                // for students who have since been enrolled or moved past this stage
+                $query->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)')
+                    ->whereNotIn('status', ['accepted', 'cleared_for_enrollment'])
+                    ->whereNull('applications.deleted_at')
+                    ->whereHas('processes', function ($q) use ($stage) {
+                        $q->where('stage', $stage)
+                            ->whereIn('status', ['in_progress', 'returned', 'completed']);
+                    });
 
                 if (!empty($programIds)) {
                     $query->whereIn('program_id', $programIds);
