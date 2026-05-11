@@ -37,6 +37,11 @@ class ProcessGradeOcr implements ShouldQueue, ShouldBeUnique
             return;
         }
 
+        // Skip if OCR data already exists for this file
+        if (!empty($userFile->docling_json)) {
+            return;
+        }
+
         $disk = FileMapper::resolveDiskForPath($userFile->file_path);
         $fileData = Storage::disk($disk)->get($userFile->file_path);
 
