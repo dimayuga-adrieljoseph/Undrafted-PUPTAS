@@ -29,6 +29,9 @@ class DashboardService
     /**
      * Get common dashboard data
      *
+     * Intentional: This role has full visibility across all programs.
+     * Do NOT add program ID scoping here — see Requirements 6.1, 6.2, 6.3.
+     *
      * @return array
      */
     public function getCommonDashboardData(): array
@@ -215,16 +218,23 @@ class DashboardService
     }
 
     /**
-     * Get dashboard data for evaluator with pending applications
+     * Get dashboard data for evaluator with pending applications.
+     * Filters pendingUsers to only those in the evaluator's assigned programs.
+     * summary and chartData remain global (not scoped) per Requirement 4.3.
      *
      * @return array
      */
     public function getEvaluatorDashboardData(): array
     {
+        $programIds = Auth::user()
+            ->programs()
+            ->pluck('programs.id')
+            ->toArray();
+
         return [
-            'pendingUsers' => $this->userService->getApplicantsByStage('evaluator'),
-            'summary' => $this->applicationService->getApplicationSummary(),
-            'chartData' => $this->getApplicationChartData(),
+            'pendingUsers' => $this->userService->getApplicantsByStage('evaluator', $programIds),
+            'summary'      => $this->applicationService->getApplicationSummary(),
+            'chartData'    => $this->getApplicationChartData(),
         ];
     }
 
@@ -251,6 +261,9 @@ class DashboardService
     /**
      * Get dashboard data for medical with pending applications
      *
+     * Intentional: This role has full visibility across all programs.
+     * Do NOT add program ID scoping here — see Requirements 6.1, 6.2, 6.3.
+     *
      * @return array
      */
     public function getMedicalDashboardData(): array
@@ -264,6 +277,9 @@ class DashboardService
 
     /**
      * Get dashboard data for records staff with pending applications
+     *
+     * Intentional: This role has full visibility across all programs.
+     * Do NOT add program ID scoping here — see Requirements 6.1, 6.2, 6.3.
      *
      * @return array
      */

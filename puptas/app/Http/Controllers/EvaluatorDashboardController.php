@@ -78,9 +78,15 @@ class EvaluatorDashboardController extends Controller
         // Ensure user has evaluator role
         $this->ensureRole($this->getRoleId());
 
-        // Return all applicants filtered by evaluator stage (including completed)
+        // Resolve this evaluator's assigned program IDs from the pivot table
+        $programIds = Auth::user()
+            ->programs()
+            ->pluck('programs.id')
+            ->toArray();
+
+        // Return applicants at evaluator stage, scoped to assigned courses only
         return response()->json(
-            $this->userService->getAllApplicantsByStage('evaluator')
+            $this->userService->getAllApplicantsByStage('evaluator', $programIds)
         );
     }
 
