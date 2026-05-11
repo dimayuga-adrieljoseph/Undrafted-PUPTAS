@@ -48,46 +48,30 @@
                                 d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
                             />
                         </svg>
-                        <span>{{ statusFilter ? statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) : 'All Status' }}</span>
+                        <span>{{ statusFilter ? getStatusText({ pipeline_status: statusFilter }) : 'All Status' }}</span>
                     </button>
                     <div
                         v-if="showStatusDropdown"
-                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[150px] dark:border-gray-700"
+                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[200px] dark:border-gray-700"
                     >
-                        <button
-                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                statusFilter = '';
-                                showStatusDropdown = false;
-                            "
-                        >
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = ''; showStatusDropdown = false;">
                             All
                         </button>
-                        <button
-                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                statusFilter = 'accepted';
-                                showStatusDropdown = false;
-                            "
-                        >
-                            Accepted
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'medical_cleared'; showStatusDropdown = false;">
+                            Medical Cleared
                         </button>
-                        <button
-                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                statusFilter = 'submitted';
-                                showStatusDropdown = false;
-                            "
-                        >
-                            Pending
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'for_records'; showStatusDropdown = false;">
+                            For Records
                         </button>
-                        <button
-                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                statusFilter = 'rejected';
-                                showStatusDropdown = false;
-                            "
-                        >
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'officially_enrolled'; showStatusDropdown = false;">
+                            Officially Enrolled
+                        </button>
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'rejected'; showStatusDropdown = false;">
                             Rejected
                         </button>
                     </div>
@@ -551,7 +535,7 @@ const filteredUsers = computed(() => {
             const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
             const matchesSearch = fullName.includes(q);
             const matchesStatus = statusFilter.value
-                ? u.status?.toLowerCase() === statusFilter.value
+                ? u.pipeline_status === statusFilter.value
                 : true;
             return matchesSearch && matchesStatus;
         })

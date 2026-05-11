@@ -48,38 +48,40 @@
                                 d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
                             />
                         </svg>
-                        <span>{{ evaluationStatusFilter ? evaluationStatusFilter.charAt(0).toUpperCase() + evaluationStatusFilter.slice(1) : 'All Status' }}</span>
+                        <span>{{ evaluationStatusFilter ? getEvaluationStatusText({ pipeline_status: evaluationStatusFilter }) : 'All Status' }}</span>
                     </button>
                     <div
                         v-if="showStatusDropdown"
-                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[150px] dark:border-gray-700"
+                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[200px] dark:border-gray-700"
                     >
                         <button
                             class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                evaluationStatusFilter = '';
-                                showStatusDropdown = false;
-                            "
-                        >
+                            @click="evaluationStatusFilter = ''; showStatusDropdown = false;">
                             All
                         </button>
-                        <button
-                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                evaluationStatusFilter = 'pending';
-                                showStatusDropdown = false;
-                            "
-                        >
-                            Pending Review
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="evaluationStatusFilter = 'for_interview'; showStatusDropdown = false;">
+                            For Interview
                         </button>
-                        <button
-                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                evaluationStatusFilter = 'completed';
-                                showStatusDropdown = false;
-                            "
-                        >
-                            Already Evaluated
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="evaluationStatusFilter = 'interview_returned'; showStatusDropdown = false;">
+                            Returned for Revision
+                        </button>
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="evaluationStatusFilter = 'interview_passed'; showStatusDropdown = false;">
+                            Interview Passed
+                        </button>
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="evaluationStatusFilter = 'interview_transferred'; showStatusDropdown = false;">
+                            Course Transferred
+                        </button>
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="evaluationStatusFilter = 'for_medical'; showStatusDropdown = false;">
+                            For Medical
+                        </button>
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="evaluationStatusFilter = 'officially_enrolled'; showStatusDropdown = false;">
+                            Officially Enrolled
                         </button>
                     </div>
                 </div>
@@ -614,7 +616,7 @@ const filteredUsers = computed(() => {
             const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
             const matchesSearch = fullName.includes(q);
             const matchesEvaluationStatus = evaluationStatusFilter.value
-                ? (evaluationStatusFilter.value === 'completed' ? u.is_evaluation_completed : !u.is_evaluation_completed)
+                ? u.pipeline_status === evaluationStatusFilter.value
                 : true;
             return matchesSearch && matchesEvaluationStatus;
         })
