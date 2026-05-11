@@ -84,16 +84,23 @@ class EvaluatorDashboardController extends Controller
             ->pluck('programs.id')
             ->toArray();
 
+        \Log::info('EvaluatorDashboard::getUsers', [
+            'user_id'     => Auth::user()->id,
+            'program_ids' => $programIds,
+        ]);
+
         // If the evaluator has no assigned programs, return an empty list.
         // Evaluators must be explicitly assigned to programs to see applicants.
         if (empty($programIds)) {
             return response()->json([]);
         }
 
+        $results = $this->userService->getAllApplicantsByStage('evaluator', $programIds);
+
+        \Log::info('EvaluatorDashboard::getUsers results', ['count' => count($results)]);
+
         // Return applicants at evaluator stage, scoped to assigned courses only
-        return response()->json(
-            $this->userService->getAllApplicantsByStage('evaluator', $programIds)
-        );
+        return response()->json($results);
     }
 
     public function passApplication(Request $request, $userId)

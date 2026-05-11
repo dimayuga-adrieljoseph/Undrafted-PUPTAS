@@ -536,39 +536,42 @@ const getStatusClass = (status) => {
 
 // Get evaluation-specific status text
 const getEvaluationStatusText = (user) => {
-    if (user.is_evaluation_completed) {
-        // Check application status first - show if officially enrolled or accepted
-        if (user.application?.enrollment_status === 'officially_enrolled') {
-            return "Officially Enrolled";
-        }
-        if (user.application?.status === 'accepted') {
-            return "Accepted";
-        }
-        // Show what action was taken during interview stage
-        if (user.process_action === 'passed') return "Completed - Passed";
-        if (user.process_action === 'transferred') return "Completed - Transferred";
-        return "Completed";
+    switch (user.pipeline_status) {
+        case 'for_evaluation':       return 'For Evaluation';
+        case 'evaluation_returned':  return 'Returned for Revision';
+        case 'evaluation_passed':    return 'Evaluation Passed';
+        case 'for_interview':        return 'For Interview';
+        case 'interview_returned':   return 'Returned for Revision';
+        case 'interview_passed':     return 'Interview Passed';
+        case 'interview_transferred':return 'Course Transferred';
+        case 'for_medical':          return 'For Medical';
+        case 'medical_cleared':      return 'Medical Cleared';
+        case 'medical_rejected':     return 'Medical Rejected';
+        case 'for_records':          return 'For Records';
+        case 'officially_enrolled':  return 'Officially Enrolled';
+        case 'rejected':             return 'Rejected';
+        default:                     return 'Unknown';
     }
-    if (user.process_status === 'in_progress') return "Pending Review";
-    return "Unknown";
 };
 
 // Get evaluation-specific status styling
 const getEvaluationStatusClass = (user) => {
-    if (user.is_evaluation_completed) {
-        // Check application status first - show special styling for enrolled/accepted
-        if (user.application?.enrollment_status === 'officially_enrolled') {
-            return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 font-semibold";
-        }
-        if (user.application?.status === 'accepted') {
-            return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold";
-        }
-        if (user.process_action === 'passed') return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
-        if (user.process_action === 'transferred') return "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300";
-        return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
+    switch (user.pipeline_status) {
+        case 'for_evaluation':        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'evaluation_returned':   return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'evaluation_passed':     return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'for_interview':         return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'interview_returned':    return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'interview_passed':      return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+        case 'for_medical':           return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+        case 'medical_cleared':       return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
+        case 'medical_rejected':      return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'for_records':           return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
+        case 'officially_enrolled':   return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold';
+        case 'rejected':              return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        default:                      return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
     }
-    if (user.process_status === 'in_progress') return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300";
-    return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
 };
 
 const fetchUsers = async () => {

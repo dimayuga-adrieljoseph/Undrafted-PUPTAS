@@ -170,10 +170,10 @@
                             </td>
                             <td class="py-3">
                                 <span
-                                    :class="getStatusClass(user.enrollment_status === 'officially_enrolled' ? 'officially_enrolled' : user.status)"
+                                    :class="getStatusClass(user)"
                                     class="px-2.5 py-1 rounded-full text-xs font-medium"
                                 >
-                                    {{ user.enrollment_status === 'officially_enrolled' ? 'Officially Enrolled' : (user.status || 'Unknown') }}
+                                    {{ getStatusText(user) }}
                                 </span>
                             </td>
                         </tr>
@@ -454,14 +454,43 @@ const chartData = {
     ],
 };
 
-const getStatusClass = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "officially_enrolled") return "bg-blue-100 text-blue-700";
-    if (s === "cleared_for_enrollment") return "bg-teal-100 text-teal-700";
-    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700";
-    if (s === "rejected") return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-600";
+const getStatusText = (user) => {
+    switch (user.pipeline_status) {
+        case 'for_evaluation':       return 'For Evaluation';
+        case 'evaluation_returned':  return 'Returned for Revision';
+        case 'evaluation_passed':    return 'Evaluation Passed';
+        case 'for_interview':        return 'For Interview';
+        case 'interview_returned':   return 'Returned for Revision';
+        case 'interview_passed':     return 'Interview Passed';
+        case 'interview_transferred':return 'Course Transferred';
+        case 'for_medical':          return 'For Medical';
+        case 'medical_cleared':      return 'Medical Cleared';
+        case 'medical_rejected':     return 'Medical Rejected';
+        case 'for_records':          return 'For Records';
+        case 'officially_enrolled':  return 'Officially Enrolled';
+        case 'rejected':             return 'Rejected';
+        default:                     return 'Unknown';
+    }
+};
+
+const getStatusClass = (user) => {
+    const ps = typeof user === 'object' && user.pipeline_status ? user.pipeline_status : user;
+    switch (ps) {
+        case 'for_evaluation':        return 'bg-yellow-100 text-yellow-700';
+        case 'evaluation_returned':   return 'bg-red-100 text-red-700';
+        case 'evaluation_passed':     return 'bg-green-100 text-green-700';
+        case 'for_interview':         return 'bg-yellow-100 text-yellow-700';
+        case 'interview_returned':    return 'bg-red-100 text-red-700';
+        case 'interview_passed':      return 'bg-green-100 text-green-700';
+        case 'interview_transferred': return 'bg-purple-100 text-purple-700';
+        case 'for_medical':           return 'bg-blue-100 text-blue-700';
+        case 'medical_cleared':       return 'bg-teal-100 text-teal-700';
+        case 'medical_rejected':      return 'bg-red-100 text-red-700';
+        case 'for_records':           return 'bg-indigo-100 text-indigo-700';
+        case 'officially_enrolled':   return 'bg-green-100 text-green-700 font-semibold';
+        case 'rejected':              return 'bg-red-100 text-red-700';
+        default:                      return 'bg-gray-100 text-gray-600';
+    }
 };
 
 const fetchUsers = async () => {

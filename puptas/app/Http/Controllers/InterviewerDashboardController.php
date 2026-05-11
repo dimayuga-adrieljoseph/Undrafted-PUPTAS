@@ -93,16 +93,23 @@ class InterviewerDashboardController extends Controller
             ->pluck('programs.id')
             ->toArray();
 
+        \Log::info('InterviewerDashboard::getUsers', [
+            'user_id'     => Auth::user()->id,
+            'program_ids' => $programIds,
+        ]);
+
         // If the interviewer has no assigned programs, return an empty list.
         // Interviewers must be explicitly assigned to programs to see applicants.
         if (empty($programIds)) {
             return response()->json([]);
         }
 
+        $results = $this->userService->getAllApplicantsByStage('interviewer', $programIds);
+
+        \Log::info('InterviewerDashboard::getUsers results', ['count' => count($results)]);
+
         // Return applicants at interviewer stage, scoped to assigned courses only
-        return response()->json(
-            $this->userService->getAllApplicantsByStage('interviewer', $programIds)
-        );
+        return response()->json($results);
     }
 
     public function accept($userId)

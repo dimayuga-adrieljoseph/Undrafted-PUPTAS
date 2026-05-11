@@ -129,16 +129,16 @@ class UserService
                 $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id');
             }, 'currentApplication.program' => function ($query) {
                 $query->select('id', 'code', 'name');
-            }, 'currentApplication.processes' => function ($query) use ($stage) {
-                $query->where('stage', $stage)
-                    ->orderBy('created_at', 'desc')
+            }, 'currentApplication.processes' => function ($query) {
+                // Load ALL stages so derivePipelineStatus() has full context
+                $query->orderBy('created_at', 'desc')
                     ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
             }])
             ->whereHas('applications', function ($query) use ($stage, $programIds) {
-                // Pin to the latest application only — prevents matching old applications
-                // for students who have since been enrolled or moved past this stage
+                // Pin to the latest non-deleted application only.
+                // This prevents matching old applications for students who have since
+                // been enrolled or moved past this stage on a newer application.
                 $query->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)')
-                    ->whereNotIn('status', ['accepted', 'cleared_for_enrollment'])
                     ->whereNull('applications.deleted_at')
                     ->whereHas('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
@@ -165,6 +165,7 @@ class UserService
                     'username' => $profile->email,
                     'phone' => $profile->contactnumber,
                     'company' => $profile->company ?? null,
+                    'pipeline_status' => $this->derivePipelineStatus($application),
                     'program' => $application && $application->program ? [
                         'id' => $application->program->id,
                         'code' => $application->program->code,
@@ -186,6 +187,84 @@ class UserService
                     'is_evaluation_completed' => $stageProcess && $stageProcess->status === 'completed',
                 ];
             });
+    }
+
+    /**
+     * Derive a single pipeline_status string from an application and its processes.
+     * This is the canonical status label used across all role views.
+     *
+     * Priority order (most terminal / most recent wins):
+     *   officially_enrolled → for_records → medical_cleared → medical_rejected
+     *   → for_medical → interview_transferred → interview_passed → interview_returned
+     *   → for_interview → evaluation_passed → evaluation_returned → for_evaluation
+     *
+     * @param \App\Models\Application|null $application
+     * @return string
+     */
+    private function derivePipelineStatus($application): string
+    {
+        if (!$application) {
+            return 'unknown';
+        }
+
+        // Enrollment / final states (check application-level fields first)
+        if ($application->enrollment_status === 'officially_enrolled') {
+            return 'officially_enrolled';
+        }
+
+        if ($application->status === 'rejected') {
+            return 'rejected';
+        }
+
+        if ($application->status === 'cleared_for_enrollment') {
+            // Medical cleared — check if records process exists
+            $recordsProcess = $application->processes
+                ->where('stage', 'records')
+                ->first();
+            if ($recordsProcess) {
+                return 'for_records';
+            }
+            return 'medical_cleared';
+        }
+
+        // Walk the processes collection (already eager-loaded with ALL stages)
+        $processes = $application->processes->keyBy('stage');
+
+        // Medical stage
+        $medical = $processes->get('medical');
+        if ($medical) {
+            if ($medical->status === 'completed') {
+                if ($medical->action === 'passed') return 'medical_cleared';
+                if ($medical->action === 'failed')  return 'medical_rejected';
+                return 'for_records';
+            }
+            return 'for_medical';
+        }
+
+        // Interviewer stage
+        $interviewer = $processes->get('interviewer');
+        if ($interviewer) {
+            if ($interviewer->status === 'completed') {
+                if ($interviewer->action === 'transferred') return 'interview_transferred';
+                if ($interviewer->action === 'passed')      return 'interview_passed';
+                return 'interview_passed';
+            }
+            if ($interviewer->status === 'returned') return 'interview_returned';
+            return 'for_interview';
+        }
+
+        // Evaluator stage
+        $evaluator = $processes->get('evaluator');
+        if ($evaluator) {
+            if ($evaluator->status === 'completed') {
+                if ($evaluator->action === 'passed') return 'evaluation_passed';
+                return 'evaluation_passed';
+            }
+            if ($evaluator->status === 'returned') return 'evaluation_returned';
+            return 'for_evaluation';
+        }
+
+        return 'for_evaluation';
     }
 
     /**
@@ -249,6 +328,7 @@ class UserService
                 'company'           => null,
                 'status'            => $app?->status ?? null,
                 'enrollment_status' => $app?->enrollment_status ?? null,
+                'pipeline_status'   => $this->derivePipelineStatus($app),
                 'program'           => $program ? [
                     'id'   => $program->id,
                     'code' => $program->code,
