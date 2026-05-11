@@ -120,17 +120,11 @@ class UserService
      * Returns all applicants who have reached the specified stage (in_progress, returned, or completed)
      *
      * @param string $stage The application stage (evaluator, interviewer, medical, records)
-     * @param array|null $programIds Optional list of program IDs to filter by (e.g. for interviewers)
      * @return Collection
      */
-    public function getAllApplicantsByStage(string $stage, ?array $programIds = null): Collection
+    public function getAllApplicantsByStage(string $stage): Collection
     {
-        // NOTE: ApplicantProfile::select() lists only needed columns (performance optimization)
-        // NOTE: ->limit(1) is intentionally NOT used inside with() eager loads — in Laravel,
-        //       limit() inside a with() callback applies globally (not 1 per applicant).
-        //       The ->first() in the map() below already handles picking the latest process.
-        return ApplicantProfile::select('user_id', 'firstname', 'lastname', 'course', 'email', 'contactnumber', 'company')
-            ->with(['currentApplication' => function ($query) {
+        return ApplicantProfile::with(['currentApplication' => function ($query) {
                 $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id');
             }, 'currentApplication.program' => function ($query) {
                 $query->select('id', 'code', 'name');
@@ -139,15 +133,11 @@ class UserService
                     ->orderBy('created_at', 'desc')
                     ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
             }])
-            ->whereHas('currentApplication', function ($query) use ($stage, $programIds) {
+            ->whereHas('currentApplication', function ($query) use ($stage) {
                 $query->whereHas('processes', function ($q) use ($stage) {
                     $q->where('stage', $stage)
                         ->whereIn('status', ['in_progress', 'returned', 'completed']);
                 });
-
-                if (!empty($programIds)) {
-                    $query->whereIn('program_id', $programIds);
-                }
             })
             ->get()
             ->map(function ($profile) use ($stage) {

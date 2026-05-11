@@ -24,25 +24,13 @@ trait ManagesApplicationFiles
         }
 
         $user = User::with([
-            'currentApplication' => function ($query) {
-                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.program_id', 'applications.second_choice_id', 'applications.created_at');
-            },
-            'currentApplication.program:id,code,name,slots',
-            'currentApplication.secondChoice:id,code,name,slots',
-            'currentApplication.processes' => function ($query) {
-                $query->select('id', 'application_id', 'stage', 'status', 'action', 'reviewer_notes', 'performed_by', 'created_at')
-                    ->orderBy('created_at', 'desc')
-                    ->limit(10); // Limit to last 10 processes for performance
-            },
+            'currentApplication.program',
+            'currentApplication.secondChoice',
             'currentApplication.processes.performedBy:id,firstname,lastname',
-            'files:id,user_id,type,path,status,comment',
-            'grades:id,user_id,mathematics,science,english',
-            'applicantProfile' => function ($query) {
-                $query->select('user_id', 'student_number');
-            },
-            'applicantProfile.graduateTypes:id,label',
-        ])->select('id', 'firstname', 'lastname', 'email', 'contactnumber', 'street_address', 'barangay', 'city', 'province', 'postal_code', 'birthday', 'sex', 'created_at')
-        ->findOrFail($id);
+            'files',
+            'grades',
+            'applicantProfile.graduateTypes',
+        ])->findOrFail($id);
 
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
