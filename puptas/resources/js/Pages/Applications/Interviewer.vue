@@ -646,8 +646,10 @@ const selectUser = async (user) => {
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
 
-        // ✅ Add this line to load programs into the dropdown
-        await fetchPrograms();
+        // Load programs only if not already loaded
+        if (availablePrograms.value.length === 0) {
+            fetchPrograms();
+        }
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         

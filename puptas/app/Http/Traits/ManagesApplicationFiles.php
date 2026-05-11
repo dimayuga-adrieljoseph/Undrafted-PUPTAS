@@ -23,18 +23,24 @@ trait ManagesApplicationFiles
             $this->ensureRole($this->getRoleId());
         }
 
-        $user = User::with([
-            'currentApplication.program',
-            'currentApplication.secondChoice',
-            'currentApplication.processes' => function ($query) {
-                $query->orderBy('created_at', 'desc')
-                    ->limit(10)
-                    ->with('performedBy:id,firstname,lastname');
-            },
-            'files',
-            'grades',
-            'applicantProfile.graduateTypes',
-        ])->findOrFail($id);
+        // Optimize: Load only what's needed for the UI
+        $user = User::select('id', 'firstname', 'lastname', 'email', 'contactnumber', 'street_address', 'barangay', 'city', 'province', 'postal_code', 'birthday', 'sex', 'created_at')
+            ->with([
+                'currentApplication:id,user_id,status,enrollment_status,program_id,second_choice_id,created_at',
+                'currentApplication.program:id,code,name,slots',
+                'currentApplication.secondChoice:id,code,name,slots',
+                'currentApplication.processes' => function ($query) {
+                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'reviewer_notes', 'performed_by', 'created_at')
+                        ->orderBy('created_at', 'desc')
+                        ->limit(10);
+                },
+                'currentApplication.processes.performedBy:id,firstname,lastname',
+                'files:id,user_id,type,path,status,comment',
+                'grades:id,user_id,mathematics,science,english',
+                'applicantProfile:user_id,student_number',
+                'applicantProfile.graduateTypes:id,label',
+            ])
+            ->findOrFail($id);
 
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
