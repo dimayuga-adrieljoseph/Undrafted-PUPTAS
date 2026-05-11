@@ -26,7 +26,11 @@ trait ManagesApplicationFiles
         $user = User::with([
             'currentApplication.program',
             'currentApplication.secondChoice',
-            'currentApplication.processes.performedBy:id,firstname,lastname',
+            'currentApplication.processes' => function ($query) {
+                $query->orderBy('created_at', 'desc')
+                    ->limit(10)
+                    ->with('performedBy:id,firstname,lastname');
+            },
             'files',
             'grades',
             'applicantProfile.graduateTypes',
