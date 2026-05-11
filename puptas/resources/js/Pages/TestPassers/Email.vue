@@ -152,7 +152,8 @@
                                 {{ areAllSelected ? 'Deselect All' : 'Select All' }} ({{ selectedPassers.length }})
                             </button>
 
-                            <!-- Auto-Enroll Button -->
+                            <!-- Auto-Enroll Button (hidden) -->
+                            <!--
                             <button
                                 id="bulk-enroll-btn"
                                 @click.prevent="runBulkEnroll"
@@ -172,6 +173,7 @@
                                 </svg>
                                 {{ bulkEnrollRunning ? 'Enrolling…' : `Auto-Enroll Selected (${selectedPassers.length})` }}
                             </button>
+                            -->
                         </div>
                     </div>
 
