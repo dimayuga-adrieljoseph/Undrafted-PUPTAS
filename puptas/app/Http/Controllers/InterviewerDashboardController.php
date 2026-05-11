@@ -93,6 +93,12 @@ class InterviewerDashboardController extends Controller
             ->pluck('programs.id')
             ->toArray();
 
+        // If the interviewer has no assigned programs, return an empty list.
+        // Interviewers must be explicitly assigned to programs to see applicants.
+        if (empty($programIds)) {
+            return response()->json([]);
+        }
+
         // Return applicants at interviewer stage, scoped to assigned courses only
         return response()->json(
             $this->userService->getAllApplicantsByStage('interviewer', $programIds)

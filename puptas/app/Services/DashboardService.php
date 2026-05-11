@@ -231,8 +231,14 @@ class DashboardService
             ->pluck('programs.id')
             ->toArray();
 
+        // If the evaluator has no assigned programs, pendingUsers is empty.
+        // Evaluators must be explicitly assigned to programs to see applicants.
+        $pendingUsers = empty($programIds)
+            ? collect()
+            : $this->userService->getApplicantsByStage('evaluator', $programIds);
+
         return [
-            'pendingUsers' => $this->userService->getApplicantsByStage('evaluator', $programIds),
+            'pendingUsers' => $pendingUsers,
             'summary'      => $this->applicationService->getApplicationSummary(),
             'chartData'    => $this->getApplicationChartData(),
         ];
@@ -251,8 +257,14 @@ class DashboardService
             ->pluck('programs.id')
             ->toArray();
 
+        // If the interviewer has no assigned programs, pendingUsers is empty.
+        // Interviewers must be explicitly assigned to programs to see applicants.
+        $pendingUsers = empty($programIds)
+            ? collect()
+            : $this->userService->getApplicantsByStage('interviewer', $programIds);
+
         return [
-            'pendingUsers' => $this->userService->getApplicantsByStage('interviewer', $programIds),
+            'pendingUsers' => $pendingUsers,
             'summary'      => $this->applicationService->getApplicationSummary(),
             'chartData'    => $this->getDailyApplicationChartData(),
         ];
