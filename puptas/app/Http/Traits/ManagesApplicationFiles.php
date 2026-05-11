@@ -15,6 +15,8 @@ trait ManagesApplicationFiles
     /**
      * Get user files with formatted URLs
      * Only allows access if the application is at the appropriate stage
+     * 
+     * OPTIMIZED: Returns minimal data without loading file URLs for faster initial load
      */
     public function getUserFiles($id)
     {
@@ -23,18 +25,24 @@ trait ManagesApplicationFiles
             $this->ensureRole($this->getRoleId());
         }
 
+        // OPTIMIZATION: Load only essential data, exclude heavy file relationships
         $user = User::with([
-            'currentApplication.program',
-            'currentApplication.secondChoice',
+            'currentApplication' => function ($query) {
+                $query->select('id', 'user_id', 'status', 'created_at', 'program_id', 'second_choice_id');
+            },
+            'currentApplication.program:id,code,name',
+            'currentApplication.secondChoice:id,code,name',
             'currentApplication.processes' => function ($query) {
-                $query->orderBy('created_at', 'desc')
+                $query->select('id', 'application_id', 'stage', 'status', 'action', 'created_at', 'performed_by')
+                    ->orderBy('created_at', 'desc')
                     ->limit(10)
                     ->with('performedBy:id,firstname,lastname');
             },
-            'files',
-            'grades',
-            'applicantProfile.graduateTypes',
-        ])->findOrFail($id);
+            'applicantProfile:user_id,student_number',
+            'applicantProfile.graduateTypes:id,label',
+        ])
+        ->select('id', 'firstname', 'lastname', 'email', 'contactnumber', 'street_address', 'barangay', 'city', 'province', 'postal_code', 'birthday', 'sex', 'created_at')
+        ->findOrFail($id);
 
         if (!$user) {
             return response()->json(['message' => 'User not found'], 404);
@@ -63,7 +71,11 @@ trait ManagesApplicationFiles
             }
         }
 
-        $files = $user->files->keyBy('type');
+        // OPTIMIZATION: Get only file metadata (type, status, comment) without loading file paths
+        $fileMetadata = UserFile::where('user_id', $id)
+            ->select('type', 'status', 'comment', 'original_name')
+            ->get()
+            ->keyBy('type');
 
         // Transform the response to map currentApplication to application for frontend compatibility
         $userData = [
@@ -81,8 +93,6 @@ trait ManagesApplicationFiles
             'birthday' => $user->birthday,
             'sex' => $user->sex,
             'created_at' => $user->created_at,
-            'files' => $user->files,
-            'grades' => $user->grades,
             // Map currentApplication to application for frontend compatibility
             'application' => $user->currentApplication ? [
                 'id' => $user->currentApplication->id,
@@ -96,9 +106,34 @@ trait ManagesApplicationFiles
 
         $graduateType = $user->applicantProfile?->graduateTypes->first()?->label ?? null;
 
+        // OPTIMIZATION: Return file metadata without URLs - frontend will lazy load them
+        $fileList = FileMapper::formatFilesForGraduateTypeMinimal($fileMetadata, $graduateType);
+
         return response()->json([
             'user' => $userData,
-            'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false),
+            'uploadedFiles' => $fileList,
+            'graduateType' => $graduateType,
+            'lazyLoad' => true, // Signal to frontend to use lazy loading
+        ]);
+    }
+
+    /**
+     * Get user grades separately for lazy loading
+     * 
+     * @param int $id User ID
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getUserGrades($id)
+    {
+        // Ensure user has the correct role (admin bypass allowed in stage check)
+        if (auth()->user()->role_id !== 2) {
+            $this->ensureRole($this->getRoleId());
+        }
+
+        $user = User::with('grades')->select('id')->findOrFail($id);
+
+        return response()->json([
+            'grades' => $user->grades,
         ]);
     }
 

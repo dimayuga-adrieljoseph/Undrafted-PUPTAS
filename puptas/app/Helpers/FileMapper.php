@@ -91,6 +91,46 @@ class FileMapper
     }
 
     /**
+     * Format only the required files for a given graduate type with minimal metadata.
+     * OPTIMIZED: Returns only file metadata without URLs for lazy loading.
+     * 
+     * @param Collection $files Files collection keyBy('type')
+     * @param string|null $graduateType
+     * @return array
+     */
+    public static function formatFilesForGraduateTypeMinimal(Collection $files, ?string $graduateType): array
+    {
+        $requiredKeys = self::REQUIRED_BY_GRADUATE_TYPE[$graduateType] ?? null;
+
+        // Unknown/unsupported graduate type — no documents are required yet, return empty array.
+        if ($requiredKeys === null) {
+            return [];
+        }
+
+        $uploadedFiles = [];
+        foreach ($requiredKeys as $apiKey) {
+            $databaseType = self::MAPPING[$apiKey];
+            if (isset($files[$databaseType])) {
+                $file = $files[$databaseType];
+                $uploadedFiles[$apiKey] = [
+                    'status' => $file->status ?? 'pending',
+                    'comment' => $file->comment,
+                    'originalName' => self::sanitizeFilename($file->original_name),
+                    'hasFile' => true,
+                    // URL will be loaded lazily by frontend
+                ];
+            } else {
+                $uploadedFiles[$apiKey] = [
+                    'status' => 'not_uploaded',
+                    'hasFile' => false,
+                ];
+            }
+        }
+
+        return $uploadedFiles;
+    }
+
+    /**
      * Get all valid file field keys for validation
      * Used in ConfirmationController validation rules
      */

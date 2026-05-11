@@ -269,6 +269,26 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
 });
 
+// Lazy Loading Routes for Staff (Evaluator, Interviewer, Record Staff, Admin)
+Route::middleware(['auth', 'role:2,3,4,6'])->group(function () {
+    Route::get('/api/lazy-load/document/{userId}/{fileType}', [\App\Http\Controllers\LazyLoadController::class, 'loadDocument']);
+    Route::post('/api/lazy-load/documents-batch/{userId}', [\App\Http\Controllers\LazyLoadController::class, 'loadDocumentsBatch']);
+    Route::get('/api/lazy-load/grades/{userId}', [\App\Http\Controllers\LazyLoadController::class, 'loadGrades']);
+});
+
+// Add grades endpoint to each role's trait-based controllers
+Route::middleware(['auth', 'role:3'])->group(function () {
+    Route::get('/dashboard/user-grades/{id}', [EvaluatorDashboardController::class, 'getUserGrades']);
+});
+
+Route::middleware(['auth', 'role:4'])->group(function () {
+    Route::get('/interviewer-dashboard/user-grades/{id}', [InterviewerDashboardController::class, 'getUserGrades']);
+});
+
+Route::middleware(['auth', 'role:6'])->group(function () {
+    Route::get('/record-dashboard/user-grades/{id}', [RecordStaffDashboardController::class, 'getUserGrades']);
+});
+
 Route::middleware(['auth', 'role:2,3,4,7'])->group(function () {
     Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
 });
