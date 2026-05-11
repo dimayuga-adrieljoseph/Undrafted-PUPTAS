@@ -11,11 +11,13 @@ class PublicStatusCheckerController extends Controller
 {
     public function check(CheckStatusRequest $request): JsonResponse
     {
-        $normalizedEmail = strtolower(trim($request->validated('email')));
         $referenceNumber = $request->validated('referenceNumber');
+        $firstName       = strtolower(trim($request->validated('firstName')));
+        $lastName        = strtolower(trim($request->validated('lastName')));
 
         $passer = TestPasser::where('reference_number', $referenceNumber)
-            ->where('email', $normalizedEmail)
+            ->whereRaw('LOWER(TRIM(first_name)) = ?', [$firstName])
+            ->whereRaw('LOWER(TRIM(surname)) = ?', [$lastName])
             ->first();
 
         $matched = $passer !== null;
@@ -23,7 +25,8 @@ class PublicStatusCheckerController extends Controller
         Log::info('status_check_attempt', [
             'ip'               => $request->ip(),
             'reference_number' => $referenceNumber,
-            'email_hash'       => hash('sha256', $normalizedEmail),
+            'first_name_hash'  => hash('sha256', $firstName),
+            'last_name_hash'   => hash('sha256', $lastName),
             'outcome'          => $matched ? 'matched' : 'not_matched',
         ]);
 

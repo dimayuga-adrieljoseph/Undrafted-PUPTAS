@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * Form Request for checking public admission status
  *
- * Validates the reference number and email submitted by an applicant
+ * Validates the reference number, first name, and last name submitted by an applicant
  * on the public status checker endpoint.
  */
 class CheckStatusRequest extends FormRequest
@@ -31,7 +31,8 @@ class CheckStatusRequest extends FormRequest
     {
         return [
             'referenceNumber' => ['required', 'string', 'max:255'],
-            'email'           => ['required', 'string', 'email', 'max:255'],
+            'firstName'       => ['required', 'string', 'max:255'],
+            'lastName'        => ['required', 'string', 'max:255'],
         ];
     }
 
@@ -44,8 +45,8 @@ class CheckStatusRequest extends FormRequest
     {
         return [
             'referenceNumber.required' => 'Reference number is required.',
-            'email.required'           => 'Email address is required.',
-            'email.email'              => 'Please enter a valid email address.',
+            'firstName.required'       => 'First name is required.',
+            'lastName.required'        => 'Last name is required.',
         ];
     }
 }

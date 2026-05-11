@@ -29,5 +29,10 @@
             @include('partials.chatwoot-widget')
         @endif
     @endauth
+    @guest
+        @if(isset($page['component']) && $page['component'] === 'Public/CheckStatus')
+            @include('partials.chatwoot-widget-public')
+        @endif
+    @endguest
 </body>
 </html>

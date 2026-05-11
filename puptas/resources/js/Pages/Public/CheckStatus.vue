@@ -7,8 +7,11 @@ import { Head } from "@inertiajs/vue3";
 /** Reference number input value */
 const referenceNumber = ref("");
 
-/** Email input value */
-const email = ref("");
+/** First name input value */
+const firstName = ref("");
+
+/** Last name input value */
+const lastName = ref("");
 
 /** True while the API request is in-flight */
 const loading = ref(false);
@@ -56,7 +59,8 @@ async function submit() {
             },
             body: JSON.stringify({
                 referenceNumber: referenceNumber.value,
-                email: email.value,
+                firstName: firstName.value,
+                lastName: lastName.value,
             }),
         });
 
@@ -98,7 +102,8 @@ function reset() {
     result.value = null;
     errors.value = {};
     referenceNumber.value = "";
-    email.value = "";
+    firstName.value = "";
+    lastName.value = "";
     genericError.value = "";
 }
 </script>
@@ -127,7 +132,7 @@ function reset() {
                         </div>
                         <h1 class="text-2xl font-bold text-gray-900">Check Exam Result</h1>
                         <p class="text-sm text-gray-600 mt-1">
-                            Enter your reference number and email to check if you passed the entrance exam.
+                            Enter your reference number and name to check if you passed the entrance exam.
                         </p>
                     </div>
 
@@ -180,38 +185,73 @@ function reset() {
                                 </p>
                             </div>
 
-                            <!-- Email Address -->
+                            <!-- First Name -->
                             <div>
                                 <label
-                                    for="email"
+                                    for="firstName"
                                     class="block text-sm font-medium text-gray-700 mb-1"
                                 >
-                                    Email Address
+                                    First Name
                                 </label>
                                 <input
-                                    id="email"
-                                    v-model="email"
-                                    type="email"
-                                    autocomplete="email"
-                                    placeholder="you@example.com"
+                                    id="firstName"
+                                    v-model="firstName"
+                                    type="text"
+                                    autocomplete="given-name"
+                                    placeholder="e.g. Juan"
                                     :disabled="loading || rateLimited"
                                     :class="[
                                         'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors',
                                         'focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]',
                                         'disabled:bg-gray-100 disabled:cursor-not-allowed',
-                                        errors.email
+                                        errors.firstName
                                             ? 'border-red-500 bg-red-50'
                                             : 'border-gray-300 bg-white/80',
                                     ]"
-                                    aria-describedby="email-error"
+                                    aria-describedby="firstName-error"
                                 />
                                 <p
-                                    v-if="errors.email"
-                                    id="email-error"
+                                    v-if="errors.firstName"
+                                    id="firstName-error"
                                     class="mt-1 text-xs text-red-600"
                                     role="alert"
                                 >
-                                    {{ errors.email[0] }}
+                                    {{ errors.firstName[0] }}
+                                </p>
+                            </div>
+
+                            <!-- Last Name -->
+                            <div>
+                                <label
+                                    for="lastName"
+                                    class="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Last Name
+                                </label>
+                                <input
+                                    id="lastName"
+                                    v-model="lastName"
+                                    type="text"
+                                    autocomplete="family-name"
+                                    placeholder="e.g. Dela Cruz"
+                                    :disabled="loading || rateLimited"
+                                    :class="[
+                                        'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors',
+                                        'focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]',
+                                        'disabled:bg-gray-100 disabled:cursor-not-allowed',
+                                        errors.lastName
+                                            ? 'border-red-500 bg-red-50'
+                                            : 'border-gray-300 bg-white/80',
+                                    ]"
+                                    aria-describedby="lastName-error"
+                                />
+                                <p
+                                    v-if="errors.lastName"
+                                    id="lastName-error"
+                                    class="mt-1 text-xs text-red-600"
+                                    role="alert"
+                                >
+                                    {{ errors.lastName[0] }}
                                 </p>
                             </div>
 
