@@ -16,7 +16,7 @@ trait ManagesApplicationFiles
      * Get user files with formatted URLs
      * Only allows access if the application is at the appropriate stage
      * 
-     * OPTIMIZED: Returns minimal data without loading file URLs for faster initial load
+     * TEMPORARY: Returns full data with URLs until frontend is updated for lazy loading
      */
     public function getUserFiles($id)
     {
@@ -26,7 +26,7 @@ trait ManagesApplicationFiles
                 $this->ensureRole($this->getRoleId());
             }
 
-            // OPTIMIZATION: Load only essential data, exclude heavy file relationships
+            // Load user with all necessary data
             $user = User::with([
                 'currentApplication' => function ($query) {
                     $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id');
@@ -39,10 +39,11 @@ trait ManagesApplicationFiles
                         ->limit(10)
                         ->with('performedBy:id,firstname,lastname');
                 },
+                'files', // Include files
+                'grades', // Include grades
                 'applicantProfile:user_id,student_number',
                 'applicantProfile.graduateTypes:id,label',
             ])
-            ->select('id', 'firstname', 'lastname', 'email', 'contactnumber', 'street_address', 'barangay', 'city', 'province', 'postal_code', 'birthday', 'sex', 'created_at')
             ->findOrFail($id);
 
             if (!$user) {
@@ -72,11 +73,7 @@ trait ManagesApplicationFiles
                 }
             }
 
-            // OPTIMIZATION: Get only file metadata (type, status, comment) without loading file paths
-            $fileMetadata = UserFile::where('user_id', $id)
-                ->select('type', 'status', 'comment', 'original_name')
-                ->get()
-                ->keyBy('type');
+            $files = $user->files->keyBy('type');
 
             // Transform the response to map currentApplication to application for frontend compatibility
             $userData = [
@@ -94,6 +91,8 @@ trait ManagesApplicationFiles
                 'birthday' => $user->birthday,
                 'sex' => $user->sex,
                 'created_at' => $user->created_at,
+                'files' => $user->files,
+                'grades' => $user->grades, // Include grades
                 // Map currentApplication to application for frontend compatibility
                 'application' => $user->currentApplication ? [
                     'id' => $user->currentApplication->id,
@@ -107,21 +106,26 @@ trait ManagesApplicationFiles
 
             $graduateType = $user->applicantProfile?->graduateTypes->first()?->label ?? null;
 
-            // OPTIMIZATION: Return file metadata without URLs - frontend will lazy load them
-            // Use method_exists to check if the new method is available
-            if (method_exists(FileMapper::class, 'formatFilesForGraduateTypeMinimal')) {
-                $fileList = FileMapper::formatFilesForGraduateTypeMinimal($fileMetadata, $graduateType);
-            } else {
-                // Fallback to old method if new method doesn't exist
-                $files = UserFile::where('user_id', $id)->get()->keyBy('type');
-                $fileList = FileMapper::formatFilesForGraduateType($files, $graduateType, false);
-            }
+            // Format files for graduate type
+            $fileList = FileMapper::formatFilesForGraduateType($files, $graduateType, false);
 
+            // Debug logging
+            \Log::info('Staff getUserFiles response', [
+                'userId' => $id,
+                'role' => auth()->user()->role_id,
+                'graduateType' => $graduateType,
+                'hasGrades' => $user->grades !== null,
+                'gradesData' => $user->grades,
+                'rawFileCount' => $files->count(),
+                'formattedFileCount' => count($fileList),
+                'fileKeys' => array_keys($fileList),
+            ]);
+
+            // Return full file data with URLs (not lazy loading)
             return response()->json([
                 'user' => $userData,
                 'uploadedFiles' => $fileList,
-                'graduateType' => $graduateType,
-                'lazyLoad' => method_exists(FileMapper::class, 'formatFilesForGraduateTypeMinimal'), // Only enable if method exists
+                'lazyLoad' => false, // Disabled until frontend is updated
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             \Log::error('User not found in getUserFiles', [

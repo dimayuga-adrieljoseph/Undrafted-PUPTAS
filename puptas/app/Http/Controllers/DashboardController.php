@@ -149,7 +149,7 @@ class DashboardController extends Controller
 
     /**
      * Get user files with formatted URLs
-     * OPTIMIZED: Returns minimal data without loading file URLs for faster initial load
+     * TEMPORARY: Returns full data with URLs until frontend is updated for lazy loading
      */
     public function getUserFiles($id)
     {
@@ -160,7 +160,7 @@ class DashboardController extends Controller
                 return response()->json(['message' => 'Unauthorized access'], 403);
             }
 
-            // OPTIMIZATION: Load only essential data, exclude heavy file relationships
+            // Load applicant with all necessary data
             $applicant = ApplicantProfile::with([
                 'currentApplication' => function ($query) {
                     $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
@@ -172,16 +172,13 @@ class DashboardController extends Controller
                         ->limit(10);
                 },
                 'graduateTypes:id,label',
+                'grades', // Include grades
             ])
-            ->select('user_id', 'student_number', 'firstname', 'lastname', 'email', 'contactnumber', 'street_address', 'barangay', 'city', 'province', 'postal_code', 'birthday', 'sex', 'created_at')
             ->where('user_id', $id)
             ->firstOrFail();
 
-            // OPTIMIZATION: Get only file metadata (type, status, comment) without loading file paths
-            $fileMetadata = UserFile::where('user_id', $id)
-                ->select('type', 'status', 'comment', 'original_name')
-                ->get()
-                ->keyBy('type');
+            // Get files with full data
+            $files = UserFile::where('user_id', $id)->get()->keyBy('type');
 
             // Transform the response to use 'application' key for frontend compatibility
             $userData = [
@@ -199,6 +196,7 @@ class DashboardController extends Controller
                 'birthday' => $applicant->birthday,
                 'sex' => $applicant->sex,
                 'created_at' => $applicant->created_at,
+                'grades' => $applicant->grades, // Include grades in response
                 // Map currentApplication to application for frontend compatibility 
                 'application' => $applicant->currentApplication ? [
                     'id' => $applicant->currentApplication->id,
@@ -211,21 +209,25 @@ class DashboardController extends Controller
 
             $graduateType = $applicant->graduateTypes->first()?->label ?? null;
 
-            // OPTIMIZATION: Return file metadata without URLs - frontend will lazy load them
-            // Use method_exists to check if the new method is available
-            if (method_exists(FileMapper::class, 'formatFilesForGraduateTypeMinimal')) {
-                $fileList = FileMapper::formatFilesForGraduateTypeMinimal($fileMetadata, $graduateType);
-            } else {
-                // Fallback to old method if new method doesn't exist
-                $files = UserFile::where('user_id', $id)->get()->keyBy('type');
-                $fileList = FileMapper::formatFilesForGraduateType($files, $graduateType, false);
-            }
+            // Return full file data with URLs (not lazy loading)
+            $fileList = FileMapper::formatFilesForGraduateType($files, $graduateType, false);
+
+            // Debug logging
+            \Log::info('Admin getUserFiles response', [
+                'userId' => $id,
+                'graduateType' => $graduateType,
+                'hasGrades' => $applicant->grades !== null,
+                'gradesData' => $applicant->grades,
+                'rawFileCount' => $files->count(),
+                'formattedFileCount' => count($fileList),
+                'fileKeys' => array_keys($fileList),
+            ]);
 
             return response()->json([
                 'user' => $userData,
                 'uploadedFiles' => $fileList,
                 'graduateType' => $graduateType,
-                'lazyLoad' => method_exists(FileMapper::class, 'formatFilesForGraduateTypeMinimal'), // Only enable if method exists
+                'lazyLoad' => false, // Disabled until frontend is updated
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             \Log::error('Applicant not found in admin getUserFiles', [

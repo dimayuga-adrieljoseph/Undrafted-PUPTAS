@@ -234,6 +234,12 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
+        
+        // Debug logging to verify data
+        console.log('Interviewer - Selected user grades:', selectedUser.value.grades);
+        console.log('Interviewer - Selected user files:', selectedUserFiles.value);
+        console.log('Interviewer - Full response:', response.data);
+        
         await fetchPrograms();
     } catch (error) {
         console.error("Failed to fetch user data:", error);

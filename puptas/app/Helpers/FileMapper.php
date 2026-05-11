@@ -74,9 +74,21 @@ class FileMapper
     {
         $requiredKeys = self::REQUIRED_BY_GRADUATE_TYPE[$graduateType] ?? null;
 
-        // Unknown/unsupported graduate type — no documents are required yet, return empty array.
+        // Unknown/unsupported graduate type — return ALL uploaded files instead of empty array
         if ($requiredKeys === null) {
-            return [];
+            \Log::warning('Unknown graduate type, returning all files', [
+                'graduateType' => $graduateType,
+                'fileCount' => $files->count(),
+            ]);
+            
+            // Return all files that exist, using all possible keys from MAPPING
+            $uploadedFiles = [];
+            foreach (self::MAPPING as $apiKey => $databaseType) {
+                if (isset($files[$databaseType])) {
+                    $uploadedFiles[$apiKey] = self::buildFilePayload($files[$databaseType], $includeStatus);
+                }
+            }
+            return $uploadedFiles;
         }
 
         $uploadedFiles = [];
