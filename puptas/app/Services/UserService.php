@@ -127,8 +127,8 @@ class UserService
     {
         // NOTE: ApplicantProfile::select() lists only needed columns (performance optimization)
         // NOTE: ->limit(1) is intentionally NOT used inside with() eager loads — in Laravel,
-        //       limit() inside a with() callback applies globally (e.g. 1 process total across
-        //       ALL applicants), not 1 per applicant. The ->first() in the map() handles this.
+        //       limit() inside a with() callback applies globally (not 1 per applicant).
+        //       The ->first() in the map() below already handles picking the latest process.
         return ApplicantProfile::select('user_id', 'firstname', 'lastname', 'course', 'email', 'contactnumber', 'company')
             ->with(['currentApplication' => function ($query) {
                 $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id');
