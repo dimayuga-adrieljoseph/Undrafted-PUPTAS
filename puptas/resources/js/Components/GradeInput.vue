@@ -11,13 +11,13 @@
                 <input
                     v-model.number="grades.mathematics"
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     max="100"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
-                    placeholder="0.00"
+                    placeholder="0"
                 />
-                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">0.00 - 100.00</p>
+                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">0 - 100</p>
             </div>
             <div>
                 <label
@@ -28,13 +28,13 @@
                 <input
                     v-model.number="grades.science"
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     max="100"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
-                    placeholder="0.00"
+                    placeholder="0"
                 />
-                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">0.00 - 100.00</p>
+                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">0 - 100</p>
             </div>
             <div>
                 <label
@@ -45,13 +45,13 @@
                 <input
                     v-model.number="grades.english"
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     max="100"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
-                    placeholder="0.00"
+                    placeholder="0"
                 />
-                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">0.00 - 100.00</p>
+                <p class="text-xs text-gray-500 mt-1 dark:text-gray-300">0 - 100</p>
             </div>
         </div>
 
@@ -70,11 +70,11 @@
                     <input
                         v-model.number="grades.g11_first_sem"
                         type="number"
-                        step="0.01"
+                        step="1"
                         min="0"
                         max="100"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
-                        placeholder="0.00"
+                        placeholder="0"
                     />
                 </div>
                 <div>
@@ -86,11 +86,11 @@
                     <input
                         v-model.number="grades.g11_second_sem"
                         type="number"
-                        step="0.01"
+                        step="1"
                         min="0"
                         max="100"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
-                        placeholder="0.00"
+                        placeholder="0"
                     />
                 </div>
                 <div>
@@ -102,11 +102,11 @@
                     <input
                         v-model.number="grades.g12_first_sem"
                         type="number"
-                        step="0.01"
+                        step="1"
                         min="0"
                         max="100"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
-                        placeholder="0.00"
+                        placeholder="0"
                     />
                 </div>
                 <div>
@@ -118,11 +118,11 @@
                     <input
                         v-model.number="grades.g12_second_sem"
                         type="number"
-                        step="0.01"
+                        step="1"
                         min="0"
                         max="100"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600"
-                        placeholder="0.00"
+                        placeholder="0"
                     />
                 </div>
             </div>
