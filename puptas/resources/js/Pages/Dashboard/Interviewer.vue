@@ -628,11 +628,12 @@ const fetchPrograms = async () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Grades Section -->
-                            <div class="mb-8">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Academic Grades</h4>
-                                <div class="grid grid-cols-3 gap-4">
+                        <!-- Grades Section -->
+                        <div class="mb-8">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Academic Grades</h4>
+                            <div class="grid grid-cols-3 gap-4">
                                     <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                                         <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
                                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics || "—" }}</p>
@@ -648,15 +649,15 @@ const fetchPrograms = async () => {
                                 </div>
                             </div>
 
-                            <!-- Uploaded Documents -->
-                            <div class="mb-8">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
-                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                                    <div
-                                        v-for="(file, key) in selectedUserFiles"
-                                        :key="key"
-                                        class="group relative"
-                                        @click="testClick(key, file)"
+                        <!-- Uploaded Documents -->
+                        <div class="mb-8">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                                <div
+                                    v-for="(file, key) in selectedUserFiles"
+                                    :key="key"
+                                    class="group relative"
+                                    @click="testClick(key, file)"
                                     >
                                         <!-- Document Card -->
                                         <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
@@ -691,12 +692,12 @@ const fetchPrograms = async () => {
                                 </div>
                             </div>
 
-                            <!-- Application History -->
-                            <div v-if="selectedUser?.application?.processes?.length">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Timeline</h4>
-                                <div class="space-y-3">
-                                    <div
-                                        v-for="(process, index) in selectedUser.application.processes"
+                        <!-- Application History -->
+                        <div v-if="selectedUser?.application?.processes?.length">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Timeline</h4>
+                            <div class="space-y-3">
+                                <div
+                                    v-for="(process, index) in selectedUser.application.processes"
                                         :key="index"
                                         class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
                                     >
@@ -732,9 +733,6 @@ const fetchPrograms = async () => {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </transition>
 
