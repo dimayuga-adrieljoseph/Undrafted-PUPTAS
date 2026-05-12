@@ -543,10 +543,10 @@ const fetchPrograms = async () => {
         <!-- Applicant Detail Modal -->
         <transition name="fade">
             <div v-if="selectedUser" class="fixed inset-0 z-50">
-                <div class="fixed inset-0 bg-black/50" @click="closeUserCard"></div>
+                <div class="fixed inset-0 bg-black/50 -z-10" @click="closeUserCard"></div>
                 
-                <div class="relative min-h-screen flex items-center justify-center p-4">
-                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                <div class="relative min-h-screen flex items-center justify-center p-4 pointer-events-none">
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto">
                         <!-- Modal Header -->
                         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                             <div class="flex items-center justify-between">
