@@ -559,20 +559,18 @@ const fetchPrograms = async () => {
                     </button>
                 </div>
 
-                <!-- Modal Content -->
-                        <div class="p-6 overflow-y-auto flex-1">
-                            <!-- Applicant Info Grid -->
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                                <!-- Personal Info -->
-                                <div class="lg:col-span-2">
-                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Applicant Information</h4>
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Full Name</p>
-                                            <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Email Address</p>
+                <!-- Applicant Info Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Personal Info -->
+                    <div class="lg:col-span-2">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Applicant Information</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Full Name</p>
+                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Email Address</p>
                                             <p class="text-gray-900 dark:text-white">{{ selectedUser.email }}</p>
                                         </div>
                                         <div>
@@ -734,6 +732,9 @@ const fetchPrograms = async () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </transition>
 
