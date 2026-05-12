@@ -254,6 +254,16 @@ const closeUserCard = () => {
     selectedProgramId.value = "";
 };
 
+const testClick = (key, file) => {
+    console.log('Card clicked!', key, file);
+    alert('Card clicked: ' + key);
+};
+
+const testNoImageClick = () => {
+    console.log('No image div clicked');
+    alert('No image placeholder clicked');
+};
+
 const formatFileKey = (key) => {
     const map = {
         file10Front: 'Grade 10 Report Front',
@@ -651,16 +661,19 @@ const fetchPrograms = async () => {
                                         v-for="(file, key) in selectedUserFiles"
                                         :key="key"
                                         class="group relative"
+                                        @click="testClick(key, file)"
                                     >
                                         <!-- Document Card -->
                                         <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-                                            <div class="relative">
+                                            <div 
+                                                class="relative cursor-pointer"
+                                                @click="hasImagePreview(file) ? openImageModal(file) : null"
+                                            >
                                                 <img
                                                     v-if="hasImagePreview(file)"
                                                     :src="getFileUrl(file)"
                                                     :alt="formatFileKey(key)"
-                                                    class="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition"
-                                                    @click="openImageModal(file)"
+                                                    class="w-full h-32 object-cover hover:opacity-90 transition pointer-events-none"
                                                 />
                                                 <div
                                                     v-else
