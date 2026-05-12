@@ -235,11 +235,6 @@ const selectUser = async (user) => {
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
         
-        // Debug logging to verify data
-        console.log('Interviewer - Selected user grades:', selectedUser.value.grades);
-        console.log('Interviewer - Selected user files:', selectedUserFiles.value);
-        console.log('Interviewer - Full response:', response.data);
-        
         await fetchPrograms();
     } catch (error) {
         console.error("Failed to fetch user data:", error);
@@ -252,16 +247,6 @@ const selectUser = async (user) => {
 const closeUserCard = () => {
     selectedUser.value = null;
     selectedProgramId.value = "";
-};
-
-const testClick = (key, file) => {
-    console.log('Card clicked!', key, file);
-    alert('Card clicked: ' + key);
-};
-
-const testNoImageClick = () => {
-    console.log('No image div clicked');
-    alert('No image placeholder clicked');
 };
 
 const formatFileKey = (key) => {
@@ -283,17 +268,13 @@ const formatFileKey = (key) => {
 };
 
 const getFileUrl = (file) => {
-    const url = typeof file === "string" ? file : file?.url || "";
-    console.log('getFileUrl called', { file, url });
-    return url;
+    return typeof file === "string" ? file : file?.url || "";
 };
 
 const hasImagePreview = (file) => {
     const url = getFileUrl(file);
     const isImage = typeof file === "string" || file?.isImage !== false;
-    const result = Boolean(url) && isImage;
-    console.log('hasImagePreview called', { file, url, isImage, result });
-    return result;
+    return Boolean(url) && isImage;
 };
 
 const previewImage = ref(null);
@@ -301,16 +282,13 @@ const showImageModal = ref(false);
 
 const openImageModal = (file) => {
     const src = getFileUrl(file);
-    console.log('openImageModal called', { file, src, hasPreview: hasImagePreview(file) });
     
     if (!src || !hasImagePreview(file)) {
-        console.log('No src or not an image, returning');
         return;
     }
 
     previewImage.value = src;
     showImageModal.value = true;
-    console.log('Modal should be open now', { previewImage: previewImage.value, showImageModal: showImageModal.value });
 };
 
 const closeImageModal = () => {
@@ -571,168 +549,166 @@ const fetchPrograms = async () => {
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Email Address</p>
-                                            <p class="text-gray-900 dark:text-white">{{ selectedUser.email }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Program (1st Choice)</p>
-                                            <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.program?.name || "—" }}</p>
-                                            <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.program?.code || "" }}</p>
-                                            <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.program?.slots || 0 }} slots remaining</p>
-                                        </div>
-                                        <div v-if="selectedUser.application?.second_choice">
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Second Choice Program</p>
-                                            <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.second_choice?.name || "—" }}</p>
-                                            <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.second_choice?.code || "" }}</p>
-                                            <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.second_choice?.slots || 0 }} slots remaining</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
-                                            <span :class="getStatusClass(selectedUser.status)" 
-                                                  class="px-3 py-1 rounded-full text-sm font-semibold inline-block">
-                                                {{ selectedUser.status || "Pending" }}
-                                            </span>
-                                        </div>
+                                <p class="text-gray-900 dark:text-white">{{ selectedUser.email }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Program (1st Choice)</p>
+                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.program?.name || "—" }}</p>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.program?.code || "" }}</p>
+                                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.program?.slots || 0 }} slots remaining</p>
+                            </div>
+                            <div v-if="selectedUser.application?.second_choice">
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Second Choice Program</p>
+                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.second_choice?.name || "—" }}</p>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.second_choice?.code || "" }}</p>
+                                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.second_choice?.slots || 0 }} slots remaining</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
+                                <span :class="getStatusClass(selectedUser.status)" 
+                                      class="px-3 py-1 rounded-full text-sm font-semibold inline-block">
+                                    {{ selectedUser.status || "Pending" }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Program Transfer -->
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Transfer Program</h4>
+                        <select
+                            v-model="selectedProgramId"
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                        >
+                            <option disabled value="">Select Program</option>
+                            <option
+                                v-for="p in availablePrograms"
+                                :key="p.id"
+                                :value="p.id"
+                            >
+                                {{ p.code }} - {{ p.name }} ({{ p.slots }} slots)
+                            </option>
+                        </select>
+
+                        <div class="flex space-x-2">
+                            <button
+                                @click="acceptApplication"
+                                :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                            >
+                                Accept
+                            </button>
+                            <button
+                                @click="transferApplication"
+                                :class="[getButtonClass('primary'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                            >
+                                Transfer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grades Section -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Academic Grades</h4>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics || "—" }}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Science</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.science || "—" }}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">English</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.english || "—" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Uploaded Documents -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div
+                            v-for="(file, key) in selectedUserFiles"
+                            :key="key"
+                            class="group relative"
+                        >
+                            <!-- Document Card -->
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                                <div 
+                                    class="relative cursor-pointer"
+                                    @click="hasImagePreview(file) ? openImageModal(file) : null"
+                                >
+                                    <img
+                                        v-if="hasImagePreview(file)"
+                                        :src="getFileUrl(file)"
+                                        :alt="formatFileKey(key)"
+                                        class="w-full h-32 object-cover hover:opacity-90 transition pointer-events-none"
+                                    />
+                                    <div
+                                        v-else
+                                        class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
+                                    >
+                                        <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        </svg>
                                     </div>
                                 </div>
-
-                                <!-- Program Transfer -->
-                                <div>
-                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Transfer Program</h4>
-                                    <select
-                                        v-model="selectedProgramId"
-                                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                    >
-                                        <option disabled value="">Select Program</option>
-                                        <option
-                                            v-for="p in availablePrograms"
-                                            :key="p.id"
-                                            :value="p.id"
-                                        >
-                                            {{ p.code }} - {{ p.name }} ({{ p.slots }} slots)
-                                        </option>
-                                    </select>
-
-                                    <div class="flex space-x-2">
-                                        <button
-                                            @click="acceptApplication"
-                                            :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                        >
-                                            Accept
-                                        </button>
-                                        <button
-                                            @click="transferApplication"
-                                            :class="[getButtonClass('primary'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                        >
-                                            Transfer
-                                        </button>
-                                    </div>
+                                
+                                <!-- Document Label -->
+                                <div class="p-2 border-t border-gray-200 dark:border-gray-700">
+                                    <p class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate" :title="formatFileKey(key)">
+                                        {{ formatFileKey(key) }}
+                                    </p>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Grades Section -->
-                        <div class="mb-8">
-                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Academic Grades</h4>
-                            <div class="grid grid-cols-3 gap-4">
-                                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
-                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics || "—" }}</p>
+                <!-- Application History -->
+                <div v-if="selectedUser?.application?.processes?.length">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Timeline</h4>
+                    <div class="space-y-3">
+                        <div
+                            v-for="(process, index) in selectedUser.application.processes"
+                            :key="index"
+                            class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                        >
+                            <div :class="[
+                                'w-3 h-3 rounded-full mt-1.5 flex-shrink-0',
+                                process.status === 'completed' ? 'bg-green-500' :
+                                process.status === 'in_progress' ? 'bg-yellow-500' :
+                                'bg-red-500'
+                            ]"></div>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">
+                                            {{ capitalize(process.stage) }}
+                                        </p>
+                                        <p v-if="process.notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            {{ process.notes }}
+                                        </p>
                                     </div>
-                                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Science</p>
-                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.science || "—" }}</p>
-                                    </div>
-                                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">English</p>
-                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.english || "—" }}</p>
-                                    </div>
+                                    <span :class="[
+                                        'px-2 py-1 rounded-full text-xs font-semibold',
+                                        process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                                        process.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                    ]">
+                                        {{ capitalize(process.status) }}
+                                    </span>
                                 </div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                    {{ formatDate(process.created_at) }}
+                                </p>
                             </div>
-
-                        <!-- Uploaded Documents -->
-                        <div class="mb-8">
-                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                                <div
-                                    v-for="(file, key) in selectedUserFiles"
-                                    :key="key"
-                                    class="group relative"
-                                    @click="testClick(key, file)"
-                                    >
-                                        <!-- Document Card -->
-                                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-                                            <div 
-                                                class="relative cursor-pointer"
-                                                @click="hasImagePreview(file) ? openImageModal(file) : null"
-                                            >
-                                                <img
-                                                    v-if="hasImagePreview(file)"
-                                                    :src="getFileUrl(file)"
-                                                    :alt="formatFileKey(key)"
-                                                    class="w-full h-32 object-cover hover:opacity-90 transition pointer-events-none"
-                                                />
-                                                <div
-                                                    v-else
-                                                    class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
-                                                >
-                                                    <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Document Label -->
-                                            <div class="p-2 border-t border-gray-200 dark:border-gray-700">
-                                                <p class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate" :title="formatFileKey(key)">
-                                                    {{ formatFileKey(key) }}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        <!-- Application History -->
-                        <div v-if="selectedUser?.application?.processes?.length">
-                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Timeline</h4>
-                            <div class="space-y-3">
-                                <div
-                                    v-for="(process, index) in selectedUser.application.processes"
-                                        :key="index"
-                                        class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-                                    >
-                                        <div :class="[
-                                            'w-3 h-3 rounded-full mt-1.5 flex-shrink-0',
-                                            process.status === 'completed' ? 'bg-green-500' :
-                                            process.status === 'in_progress' ? 'bg-yellow-500' :
-                                            'bg-red-500'
-                                        ]"></div>
-                                        <div class="flex-1">
-                                            <div class="flex justify-between items-start">
-                                                <div>
-                                                    <p class="font-semibold text-gray-900 dark:text-white">
-                                                        {{ capitalize(process.stage) }}
-                                                    </p>
-                                                    <p v-if="process.notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                        {{ process.notes }}
-                                                    </p>
-                                                </div>
-                                                <span :class="[
-                                                    'px-2 py-1 rounded-full text-xs font-semibold',
-                                                    process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
-                                                    process.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                                                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                                ]">
-                                                    {{ capitalize(process.status) }}
-                                                </span>
-                                            </div>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                                {{ formatDate(process.created_at) }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </transition>
 
