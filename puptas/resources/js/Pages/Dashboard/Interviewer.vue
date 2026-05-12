@@ -272,10 +272,19 @@ const formatFileKey = (key) => {
     return map[key] || key;
 };
 
-const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+const getFileUrl = (file) => {
+    const url = typeof file === "string" ? file : file?.url || "";
+    console.log('getFileUrl called', { file, url });
+    return url;
+};
 
-const hasImagePreview = (file) =>
-    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
+const hasImagePreview = (file) => {
+    const url = getFileUrl(file);
+    const isImage = typeof file === "string" || file?.isImage !== false;
+    const result = Boolean(url) && isImage;
+    console.log('hasImagePreview called', { file, url, isImage, result });
+    return result;
+};
 
 const previewImage = ref(null);
 const showImageModal = ref(false);
