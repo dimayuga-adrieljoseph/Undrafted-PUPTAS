@@ -540,29 +540,26 @@ const fetchPrograms = async () => {
             </div>
         </div>
 
-        <!-- Applicant Detail Modal -->
+        <!-- Applicant Detail Modal (Side Panel like Admin) -->
         <transition name="fade">
-            <div v-if="selectedUser" class="fixed inset-0 z-50">
-                <div class="fixed inset-0 bg-black/50 -z-10" @click="closeUserCard"></div>
-                
-                <div class="relative min-h-screen flex items-center justify-center p-4 pointer-events-none">
-                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto">
-                        <!-- Modal Header -->
-                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Interview Details</h3>
-                                    <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
-                                </div>
-                                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
-                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
+            <div
+                v-if="selectedUser"
+                class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl transition duration-300 ease-in-out overflow-y-auto"
+            >
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Interview Details</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
+                    </div>
+                    <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
+                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
 
-                        <!-- Modal Content -->
+                <!-- Modal Content -->
                         <div class="p-6 overflow-y-auto flex-1">
                             <!-- Applicant Info Grid -->
                             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -737,9 +734,6 @@ const fetchPrograms = async () => {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </transition>
 
