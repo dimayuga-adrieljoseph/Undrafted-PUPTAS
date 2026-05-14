@@ -107,6 +107,7 @@
                                     v-model="sortKey"
                                     class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
                                 >
+                                    <option value="pupcet_total_score">PUPCET Score (Ranking)</option>
                                     <option value="surname">Surname</option>
                                     <option value="first_name">First Name</option>
                                     <option value="email">Email</option>
@@ -174,6 +175,18 @@
                                 {{ bulkEnrollRunning ? 'Enrolling…' : `Auto-Enroll Selected (${selectedPassers.length})` }}
                             </button>
                             -->
+
+                            <!-- Bulk Delete Button (testing only) -->
+                            <button
+                                v-if="selectedPassers.length > 0"
+                                @click.prevent="confirmBulkDelete"
+                                class="inline-flex items-center px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 transition"
+                            >
+                                <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete Selected ({{ selectedPassers.length }})
+                            </button>
                         </div>
                     </div>
 
@@ -204,11 +217,17 @@
                                                 class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
                                             />
                                         </th>
+                                        <th class="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-16">
+                                            Rank
+                                        </th>
                                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
                                             Name
                                         </th>
                                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
                                             Contact
+                                        </th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
+                                            PUPCET Score
                                         </th>
                                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
                                             Details
@@ -220,7 +239,7 @@
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                                     <tr 
-                                        v-for="passer in paginatedPassers" 
+                                        v-for="(passer, pageIndex) in paginatedPassers" 
                                         :key="passer.test_passer_id"
                                         class="hover:bg-gray-50 transition dark:hover:bg-gray-900"
                                     >
@@ -231,6 +250,10 @@
                                                 v-model="selectedPassers"
                                                 class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
                                             />
+                                        </td>
+                                        <!-- Rank cell: global rank across all filtered passers -->
+                                        <td class="px-3 py-4 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-400">
+                                            {{ getGlobalRank(passer, pageIndex) }}
                                         </td>
                                         <td class="px-6 py-4">
                                             <div>
@@ -248,6 +271,13 @@
                                                 Ref: {{ passer.reference_number }}
                                             </div>
                                         </td>
+                                        <!-- PUPCET Score cell -->
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                                            <span v-if="passer.pupcet_total_score !== null && passer.pupcet_total_score !== undefined">
+                                                {{ Number(passer.pupcet_total_score).toFixed(2) }}
+                                            </span>
+                                            <span v-else class="text-gray-400 dark:text-gray-500">—</span>
+                                        </td>
                                         <td class="px-6 py-4">
                                             <div class="flex flex-wrap gap-2">
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-300">
@@ -259,15 +289,26 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <button
-                                                @click.prevent="openEditModal(passer)"
-                                                class="inline-flex items-center p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
-                                                title="Edit Passer"
-                                            >
-                                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                            </button>
+                                            <div class="flex items-center gap-2">
+                                                <button
+                                                    @click.prevent="openEditModal(passer)"
+                                                    class="inline-flex items-center p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                                                    title="Edit Passer"
+                                                >
+                                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    @click.prevent="confirmDelete(passer)"
+                                                    class="inline-flex items-center p-2 border border-red-300 rounded-lg text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200 transition dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                                                    title="Delete Passer"
+                                                >
+                                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1029,6 +1070,21 @@
                             </div>
                         </div>
 
+                        <!-- PUPCET Total Score -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="999.99"
+                                v-model="editingPasser.pupcet_total_score"
+                                placeholder="e.g., 75.50"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                            />
+                            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                        </div>
+
                         <!-- Modal Actions -->
                         <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                             <button
@@ -1209,6 +1265,21 @@
                             </div>
                         </div>
 
+                        <!-- PUPCET Total Score -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="999.99"
+                                v-model="newPasserData.pupcet_total_score"
+                                placeholder="e.g., 75.50"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                            />
+                            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                        </div>
+
                         <!-- Modal Actions -->
                         <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                             <button
@@ -1228,6 +1299,48 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- Delete Confirmation Modal -->
+            <div
+                v-if="showDeleteConfirm"
+                class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50"
+                @click.self="showDeleteConfirm = false"
+            >
+                <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
+                            <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Confirm Delete</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400" v-if="deleteTarget">
+                                Delete <strong>{{ deleteTarget.first_name }} {{ deleteTarget.surname }}</strong>?
+                            </p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400" v-else>
+                                Delete <strong>{{ selectedPassers.length }}</strong> selected passer(s)?
+                            </p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">This action cannot be undone. Associated SAR records will also be removed.</p>
+                    <div class="flex justify-end gap-3">
+                        <button
+                            @click="showDeleteConfirm = false"
+                            class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 transition"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            @click="executeDelete"
+                            :disabled="deleting"
+                            class="px-5 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                            {{ deleting ? 'Deleting...' : 'Yes, Delete' }}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1434,8 +1547,8 @@ const searchTerm = ref("");
 const debouncedSearchTerm = ref("");
 const filterSchoolYear = ref("");
 const filterBatchNumber = ref("");
-const sortKey = ref("surname");
-const sortOrder = ref("asc");
+const sortKey = ref("pupcet_total_score");
+const sortOrder = ref("desc");
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
@@ -1481,14 +1594,33 @@ const filteredPassers = computed(() => {
 const sortedPassers = computed(() => {
     return filteredPassers.value.slice().sort((a, b) => {
         const key = sortKey.value;
-        let valA = a[key]?.toString().toLowerCase() || "";
-        let valB = b[key]?.toString().toLowerCase() || "";
+        const valA = a[key];
+        const valB = b[key];
 
-        if (valA < valB) return sortOrder.value === "asc" ? -1 : 1;
-        if (valA > valB) return sortOrder.value === "asc" ? 1 : -1;
+        // Numeric sort for pupcet_total_score (nulls always last)
+        if (key === 'pupcet_total_score') {
+            const numA = valA === null || valA === undefined ? -Infinity : parseFloat(valA);
+            const numB = valB === null || valB === undefined ? -Infinity : parseFloat(valB);
+            return sortOrder.value === 'desc' ? numB - numA : numA - numB;
+        }
+
+        // String sort for everything else
+        const strA = (valA ?? '').toString().toLowerCase();
+        const strB = (valB ?? '').toString().toLowerCase();
+        if (strA < strB) return sortOrder.value === 'asc' ? -1 : 1;
+        if (strA > strB) return sortOrder.value === 'asc' ? 1 : -1;
         return 0;
     });
 });
+
+/**
+ * Returns the 1-based global rank of a passer within the sortedPassers list.
+ * Relies on sortedPassers being ordered by score DESC so rank 1 = highest score.
+ */
+function getGlobalRank(passer, pageIndex) {
+    const globalIndex = (currentPage.value - 1) * itemsPerPage + pageIndex;
+    return globalIndex + 1;
+}
 
 const totalPages = computed(() =>
     Math.ceil(sortedPassers.value.length / itemsPerPage)
@@ -1597,6 +1729,51 @@ const showEditModal = ref(false);
 const editingPasser = ref(null);
 const saving = ref(false);
 
+// Delete state
+const showDeleteConfirm = ref(false);
+const deleteTarget = ref(null);   // null = bulk, passer object = single
+const deleting = ref(false);
+
+function confirmDelete(passer) {
+    deleteTarget.value = passer;
+    showDeleteConfirm.value = true;
+}
+
+function confirmBulkDelete() {
+    deleteTarget.value = null;
+    showDeleteConfirm.value = true;
+}
+
+async function executeDelete() {
+    deleting.value = true;
+    start();
+    try {
+        if (deleteTarget.value) {
+            // Single delete
+            const id = deleteTarget.value.test_passer_id;
+            await axios.delete(`/test-passers/${id}`);
+            flatPassers.value = flatPassers.value.filter(p => p.test_passer_id !== id);
+            selectedPassers.value = selectedPassers.value.filter(sid => sid !== id);
+            show('Passer deleted successfully.', 'success');
+        } else {
+            // Bulk delete
+            await axios.post('/test-passers/bulk-destroy', { passer_ids: selectedPassers.value });
+            const deletedSet = new Set(selectedPassers.value);
+            flatPassers.value = flatPassers.value.filter(p => !deletedSet.has(p.test_passer_id));
+            show(`${selectedPassers.value.length} passer(s) deleted.`, 'success');
+            selectedPassers.value = [];
+        }
+        showDeleteConfirm.value = false;
+        deleteTarget.value = null;
+    } catch (error) {
+        show('Failed to delete passer(s).', 'error');
+        console.error(error);
+    } finally {
+        finish();
+        deleting.value = false;
+    }
+}
+
 function openEditModal(passer) {
     editingPasser.value = { ...passer };
     showEditModal.value = true;
@@ -1652,6 +1829,7 @@ function openAddModal() {
         reference_number: "",
         batch_number: "",
         school_year: "",
+        pupcet_total_score: "",
     };
     showAddModal.value = true;
 }

@@ -29,11 +29,14 @@ class TestPasserController extends Controller
 
     public function index()
     {
-        $passers = TestPasser::all()
+        // Order by pupcet_total_score DESC at the DB level so ranking is
+        // consistent regardless of how the frontend sorts or paginates.
+        $passers = TestPasser::orderByRaw('pupcet_total_score DESC NULLS LAST')
+            ->get()
             ->groupBy(['school_year', 'batch_number'])
             ->map(function ($batches) {
                 return $batches->map(function ($passers) {
-                    return $passers->values(); // reset keys, convert collection to array-like
+                    return $passers->values();
                 });
             });
 
@@ -286,6 +289,7 @@ class TestPasserController extends Controller
             'reference_number' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
             'school_year' => 'nullable|string|max:255',
+            'pupcet_total_score' => 'nullable|numeric|min:0|max:999.99',
         ]);
 
         // Update passer with validated data
@@ -316,6 +320,7 @@ class TestPasserController extends Controller
             'reference_number' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
             'school_year' => 'nullable|string|max:255',
+            'pupcet_total_score' => 'nullable|numeric|min:0|max:999.99',
         ]);
 
         // Create new passer record
@@ -940,5 +945,54 @@ class TestPasserController extends Controller
             'enrolled' => $results['enrolled'],
             'errors'   => $results['errors'],
         ]);
+    }
+
+    /**
+     * Delete a single test passer.
+     *
+     * DELETE /test-passers/{test_passer}
+     */
+    public function destroy(TestPasser $test_passer): \Illuminate\Http\JsonResponse
+    {
+        $name = "{$test_passer->first_name} {$test_passer->surname}";
+        $id   = $test_passer->test_passer_id;
+
+        $test_passer->delete();
+
+        $this->auditLogService->logActivity(
+            'DELETE',
+            'Test Passers',
+            "Deleted passer: {$name} (ID: {$id}).",
+            null,
+            'ADMISSION_DATA'
+        );
+
+        return response()->json(['message' => "Passer \"{$name}\" deleted successfully."]);
+    }
+
+    /**
+     * Bulk-delete multiple test passers.
+     *
+     * POST /test-passers/bulk-destroy
+     * Body: { passer_ids: [1, 2, 3] }
+     */
+    public function bulkDestroy(\Illuminate\Http\Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'passer_ids'   => 'required|array|min:1',
+            'passer_ids.*' => 'integer',
+        ]);
+
+        $count = TestPasser::whereIn('test_passer_id', $request->passer_ids)->delete();
+
+        $this->auditLogService->logActivity(
+            'DELETE',
+            'Test Passers',
+            "Bulk-deleted {$count} passer(s).",
+            null,
+            'ADMISSION_DATA'
+        );
+
+        return response()->json(['message' => "{$count} passer(s) deleted successfully."]);
     }
 }

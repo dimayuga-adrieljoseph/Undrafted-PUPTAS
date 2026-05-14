@@ -22,12 +22,14 @@ class TestPasser extends Model
         'reference_number',
         'batch_number',
         'school_year',
+        'pupcet_total_score',
         'user_id',
         'status'
     ];
 
     protected $casts = [
-        'status' => 'string',
+        'status'            => 'string',
+        'pupcet_total_score' => 'float',
     ];
 
     public $timestamps = true;
