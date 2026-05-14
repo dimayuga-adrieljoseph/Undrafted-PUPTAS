@@ -76,9 +76,11 @@ class TestPasserController extends Controller
 
             foreach ($passers as $passer) {
                 // Replace placeholders in template for personalization
+                $confirmationUrl = 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad';
+                $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
                 $personalizedMessage = str_replace(
-                    ['{{firstname}}', '{{surname}}', '{{reference_no}}'],
-                    [$passer->first_name, $passer->surname, $passer->reference_number],
+                    ['{{firstname}} {{surname}}', '{{firstname}}', '{{surname}}', '{{reference_no}}', '{{confirmationUrl}}'],
+                    [$redName, $passer->first_name, $passer->surname, $passer->reference_number, $confirmationUrl],
                     $messageTemplate
                 );
 
@@ -97,9 +99,10 @@ class TestPasserController extends Controller
 
         foreach ($passers as $passer) {
             // Replace placeholders in template for personalization
+            $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
             $personalizedMessage = str_replace(
-                ['{{firstname}}', '{{surname}}'],
-                [$passer->first_name, $passer->surname],
+                ['{{firstname}} {{surname}}', '{{firstname}}', '{{surname}}'],
+                [$redName, $passer->first_name, $passer->surname],
                 $messageTemplate
             );
 

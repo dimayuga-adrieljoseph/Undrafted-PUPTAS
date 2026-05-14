@@ -29,13 +29,6 @@ class WaitlistedEmail extends Mailable implements ShouldQueue
     public function build()
     {
         return $this->subject('PUP Taguig - Waitlist Status Update')
-                    ->view('emails.waitlisted')
-                    ->with([
-                        'passerName' => trim($this->passer->first_name . ' ' . $this->passer->surname),
-                        'firstName' => $this->passer->first_name,
-                        'surname' => $this->passer->surname,
-                        'referenceNumber' => $this->passer->reference_number,
-                        'customMessage' => $this->messageTemplate,
-                    ]);
+                    ->html($this->messageTemplate);
     }
 }
