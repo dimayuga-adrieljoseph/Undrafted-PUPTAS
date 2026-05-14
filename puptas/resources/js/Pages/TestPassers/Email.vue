@@ -473,28 +473,15 @@
 
                         <!-- Waitlisted Template Editor -->
                         <div v-else-if="templateType === 'waitlisted'" class="mt-4">
-                            <div class="p-4 rounded-xl bg-yellow-50 border border-yellow-200 mb-4 dark:bg-yellow-900 dark:border-yellow-700">
-                                <div class="flex items-start gap-3">
-                                    <div class="p-2 bg-yellow-100 rounded-lg dark:bg-yellow-800">
-                                        <svg class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-semibold text-yellow-900 mb-1 dark:text-yellow-200">
-                                            Waitlisted Applicant Template
-                                        </h4>
-                                        <p class="text-sm text-yellow-800 dark:text-yellow-300">
-                                            This template will notify applicants about their waitlist status
-                                        </p>
-                                        <p class="text-xs text-yellow-700 mt-2 dark:text-yellow-400">
-                                            <span v-pre>Available placeholders: {{firstname}}, {{surname}}, {{reference_no}}</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            
+                            <!-- Waitlisted Template Preview -->
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
+                                Waitlisted Template Preview
+                            </label>
+                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
+                                <div v-html="waitlistedTemplatePreview"></div>
+                            </div>
+
+                            <label class="block text-sm font-medium text-gray-700 mt-4 mb-3 dark:text-gray-400">
                                 Custom Message (Optional)
                             </label>
                             <div class="border border-gray-300 rounded-xl overflow-hidden dark:border-gray-600">
@@ -505,24 +492,6 @@
                                     toolbar="full"
                                     placeholder="Enter additional message for waitlisted applicants (content will be provided by Ma'am Dianne)..."
                                 />
-                            </div>
-                            
-                            <!-- Preview Waitlisted Email Template Button -->
-                            <div class="mt-4">
-                                <button
-                                    @click="previewWaitlistedEmailTemplate"
-                                    :disabled="selectedPassers.length === 0"
-                                    class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                                >
-                                    <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                    Preview Email Template
-                                </button>
-                                <p class="text-xs text-gray-600 text-center mt-2 dark:text-gray-400">
-                                    Preview the waitlisted email before sending
-                                </p>
                             </div>
                         </div>
 
@@ -1476,14 +1445,14 @@ const emailTemplate = ref(
     `
   <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
     <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-      <h1 style="color: #800000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
+      <h1 style="color: #cc0000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
       <p style="font-size: 16px; color: #333; text-align: center;">
         You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
         <a href="${props.registrationUrl}" 
-           style="background-color: #800000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
+           style="background-color: #cc0000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
            Complete Your Registration
         </a>
       </div>
@@ -1500,24 +1469,72 @@ const templateType = ref("default");
 const sarEnrollmentDate = ref(new Date().toISOString().split('T')[0]);
 const sarEnrollmentTime = ref('09:00');
 const defaultTemplatePreview = `
-    <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
-        <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-            <h1 style="color: #800000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
-            <p style="font-size: 16px; color: #333; text-align: center;">
-                You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
-            </p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="${props.registrationUrl}" 
-                style="background-color: #800000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
-                Complete Your Registration
-                </a>
-            </div>
-            <p style="font-size: 14px; color: #555; text-align: center;">
-                If you have any questions or need help, please contact our admissions office.
-            </p>
-        </div>
-    </div>
-`.trim();
+<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>    
+    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="#" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 10, 2026 (Wednesday)</strong>. You will receive an email within three working days containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long bond paper, sign, and bring them on the day of the interview. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
+    <div style="text-align:center;margin:24px 0;">
+    <a 
+        href="${props.registrationUrl}" 
+        style="
+        display:inline-block;
+        padding:12px 24px;
+        background:#9E122C;
+        color:#ffffff;
+        text-decoration:none;
+        border-radius:6px;
+        font-weight:bold;
+        font-size:14px;
+        "
+    >
+        CLICK TO CONFIRM YOUR INTERVIEW SLOT
+    </a>
+    </div>    
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="#" style="color:#1155cc;">PUP – Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2025 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
+    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
+    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
+    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Admission and Registration Office</p>
+  </div>
+</div>`.trim();
+
+const waitlistedTemplatePreview = `
+<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>    
+    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="#" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 10, 2026 (Wednesday)</strong>. You will receive an email within three working days containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long bond paper, sign, and bring them on the day of the interview. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
+    <div style="text-align:center;margin:24px 0;">
+    <a 
+        href="${props.registrationUrl}" 
+        style="
+        display:inline-block;
+        padding:12px 24px;
+        background:#9E122C;
+        color:#ffffff;
+        text-decoration:none;
+        border-radius:6px;
+        font-weight:bold;
+        font-size:14px;
+        "
+    >
+        CLICK TO CONFIRM YOUR INTERVIEW SLOT
+    </a>
+    </div>    
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="#" style="color:#1155cc;">PUP – Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2025 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
+    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
+    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
+    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Admission and Registration Office</p>
+  </div>
+</div>`.trim();
 
 const flatPassers = ref([]);
 
@@ -1690,10 +1707,18 @@ const toggleSelectAll = (isSelected) => {
 };
 
 const sendEmails = async () => {
-    const quillContainer = document.querySelector(".ql-editor");
-    const messageHtml = quillContainer
-        ? quillContainer.innerHTML
-        : emailTemplate.value;
+    let messageHtml;
+
+    if (templateType.value === 'default') {
+        messageHtml = defaultTemplatePreview;
+    } else if (templateType.value === 'waitlisted') {
+        messageHtml = waitlistedTemplatePreview;
+    } else {
+        const quillContainer = document.querySelector(".ql-editor");
+        messageHtml = quillContainer
+            ? quillContainer.innerHTML
+            : emailTemplate.value;
+    }
 
     if (templateType.value === 'sar') {
         if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
