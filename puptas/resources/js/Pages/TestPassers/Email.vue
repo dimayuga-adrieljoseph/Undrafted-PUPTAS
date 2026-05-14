@@ -240,18 +240,8 @@
                                             />
                                         </td>
                                         <!-- Rank cell: global rank across all filtered passers -->
-                                        <td class="px-3 py-4 whitespace-nowrap text-center">
-                                            <span
-                                                :class="[
-                                                    'inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold',
-                                                    getGlobalRank(passer, pageIndex) === 1 ? 'bg-yellow-400 text-yellow-900' :
-                                                    getGlobalRank(passer, pageIndex) === 2 ? 'bg-gray-300 text-gray-800' :
-                                                    getGlobalRank(passer, pageIndex) === 3 ? 'bg-amber-600 text-white' :
-                                                    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                                                ]"
-                                            >
-                                                {{ getGlobalRank(passer, pageIndex) }}
-                                            </span>
+                                        <td class="px-3 py-4 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-400">
+                                            {{ getGlobalRank(passer, pageIndex) }}
                                         </td>
                                         <td class="px-6 py-4">
                                             <div>
@@ -270,14 +260,11 @@
                                             </div>
                                         </td>
                                         <!-- PUPCET Score cell -->
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span
-                                                v-if="passer.pupcet_total_score !== null && passer.pupcet_total_score !== undefined"
-                                                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-[#9E122C]/10 text-[#9E122C] dark:bg-[#9E122C]/30 dark:text-red-300"
-                                            >
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                                            <span v-if="passer.pupcet_total_score !== null && passer.pupcet_total_score !== undefined">
                                                 {{ Number(passer.pupcet_total_score).toFixed(2) }}
                                             </span>
-                                            <span v-else class="text-gray-400 text-sm dark:text-gray-500">—</span>
+                                            <span v-else class="text-gray-400 dark:text-gray-500">—</span>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex flex-wrap gap-2">
