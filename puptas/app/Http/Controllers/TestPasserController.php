@@ -31,7 +31,7 @@ class TestPasserController extends Controller
     {
         // Order by pupcet_total_score DESC at the DB level so ranking is
         // consistent regardless of how the frontend sorts or paginates.
-        $passers = TestPasser::orderByRaw('pupcet_total_score DESC NULLS LAST')
+        $passers = TestPasser::orderByRaw('pupcet_total_score DESC')
             ->get()
             ->groupBy(['school_year', 'batch_number'])
             ->map(function ($batches) {
