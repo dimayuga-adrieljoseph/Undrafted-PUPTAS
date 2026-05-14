@@ -107,6 +107,7 @@
                                     v-model="sortKey"
                                     class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
                                 >
+                                    <option value="pupcet_total_score">PUPCET Score (Ranking)</option>
                                     <option value="surname">Surname</option>
                                     <option value="first_name">First Name</option>
                                     <option value="email">Email</option>
@@ -204,11 +205,17 @@
                                                 class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
                                             />
                                         </th>
+                                        <th class="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-16">
+                                            Rank
+                                        </th>
                                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
                                             Name
                                         </th>
                                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
                                             Contact
+                                        </th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
+                                            PUPCET Score
                                         </th>
                                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
                                             Details
@@ -220,7 +227,7 @@
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
                                     <tr 
-                                        v-for="passer in paginatedPassers" 
+                                        v-for="(passer, pageIndex) in paginatedPassers" 
                                         :key="passer.test_passer_id"
                                         class="hover:bg-gray-50 transition dark:hover:bg-gray-900"
                                     >
@@ -231,6 +238,20 @@
                                                 v-model="selectedPassers"
                                                 class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
                                             />
+                                        </td>
+                                        <!-- Rank cell: global rank across all filtered passers -->
+                                        <td class="px-3 py-4 whitespace-nowrap text-center">
+                                            <span
+                                                :class="[
+                                                    'inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold',
+                                                    getGlobalRank(passer, pageIndex) === 1 ? 'bg-yellow-400 text-yellow-900' :
+                                                    getGlobalRank(passer, pageIndex) === 2 ? 'bg-gray-300 text-gray-800' :
+                                                    getGlobalRank(passer, pageIndex) === 3 ? 'bg-amber-600 text-white' :
+                                                    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                                                ]"
+                                            >
+                                                {{ getGlobalRank(passer, pageIndex) }}
+                                            </span>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div>
@@ -247,6 +268,16 @@
                                             <div v-if="passer.reference_number" class="text-sm text-gray-500 dark:text-gray-300">
                                                 Ref: {{ passer.reference_number }}
                                             </div>
+                                        </td>
+                                        <!-- PUPCET Score cell -->
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span
+                                                v-if="passer.pupcet_total_score !== null && passer.pupcet_total_score !== undefined"
+                                                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-[#9E122C]/10 text-[#9E122C] dark:bg-[#9E122C]/30 dark:text-red-300"
+                                            >
+                                                {{ Number(passer.pupcet_total_score).toFixed(2) }}
+                                            </span>
+                                            <span v-else class="text-gray-400 text-sm dark:text-gray-500">—</span>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex flex-wrap gap-2">
@@ -1029,6 +1060,21 @@
                             </div>
                         </div>
 
+                        <!-- PUPCET Total Score -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="999.99"
+                                v-model="editingPasser.pupcet_total_score"
+                                placeholder="e.g., 75.50"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                            />
+                            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                        </div>
+
                         <!-- Modal Actions -->
                         <div class="col-span-2 flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                             <button
@@ -1207,6 +1253,21 @@
                                     class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
+                        </div>
+
+                        <!-- PUPCET Total Score -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="999.99"
+                                v-model="newPasserData.pupcet_total_score"
+                                placeholder="e.g., 75.50"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                            />
+                            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
                         </div>
 
                         <!-- Modal Actions -->
@@ -1434,8 +1495,8 @@ const searchTerm = ref("");
 const debouncedSearchTerm = ref("");
 const filterSchoolYear = ref("");
 const filterBatchNumber = ref("");
-const sortKey = ref("surname");
-const sortOrder = ref("asc");
+const sortKey = ref("pupcet_total_score");
+const sortOrder = ref("desc");
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
@@ -1481,14 +1542,33 @@ const filteredPassers = computed(() => {
 const sortedPassers = computed(() => {
     return filteredPassers.value.slice().sort((a, b) => {
         const key = sortKey.value;
-        let valA = a[key]?.toString().toLowerCase() || "";
-        let valB = b[key]?.toString().toLowerCase() || "";
+        const valA = a[key];
+        const valB = b[key];
 
-        if (valA < valB) return sortOrder.value === "asc" ? -1 : 1;
-        if (valA > valB) return sortOrder.value === "asc" ? 1 : -1;
+        // Numeric sort for pupcet_total_score (nulls always last)
+        if (key === 'pupcet_total_score') {
+            const numA = valA === null || valA === undefined ? -Infinity : parseFloat(valA);
+            const numB = valB === null || valB === undefined ? -Infinity : parseFloat(valB);
+            return sortOrder.value === 'desc' ? numB - numA : numA - numB;
+        }
+
+        // String sort for everything else
+        const strA = (valA ?? '').toString().toLowerCase();
+        const strB = (valB ?? '').toString().toLowerCase();
+        if (strA < strB) return sortOrder.value === 'asc' ? -1 : 1;
+        if (strA > strB) return sortOrder.value === 'asc' ? 1 : -1;
         return 0;
     });
 });
+
+/**
+ * Returns the 1-based global rank of a passer within the sortedPassers list.
+ * Relies on sortedPassers being ordered by score DESC so rank 1 = highest score.
+ */
+function getGlobalRank(passer, pageIndex) {
+    const globalIndex = (currentPage.value - 1) * itemsPerPage + pageIndex;
+    return globalIndex + 1;
+}
 
 const totalPages = computed(() =>
     Math.ceil(sortedPassers.value.length / itemsPerPage)
@@ -1652,6 +1732,7 @@ function openAddModal() {
         reference_number: "",
         batch_number: "",
         school_year: "",
+        pupcet_total_score: "",
     };
     showAddModal.value = true;
 }
