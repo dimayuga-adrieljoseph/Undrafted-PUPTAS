@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { router, usePage } from "@inertiajs/vue3";
+import { router, usePage, Link } from "@inertiajs/vue3";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -360,7 +360,7 @@ watch(isSidebarOpen, (val) => {
                                 v-show="isPasserDropdownOpen && isSidebarOpen"
                                 class="dropdown-content ml-10 mt-1 space-y-1"
                             >
-                                <NavLink
+                                <Link
                                     :href="route('upload.form')"
                                     class="dropdown-item"
                                     :class="{
@@ -374,8 +374,8 @@ watch(isSidebarOpen, (val) => {
                                         class="text-xs mr-2"
                                     />
                                     Upload Passer
-                                </NavLink>
-                                <NavLink
+                                </Link>
+                                <Link
                                     :href="route('lists')"
                                     class="dropdown-item"
                                     :class="{
@@ -389,7 +389,7 @@ watch(isSidebarOpen, (val) => {
                                         class="text-xs mr-2"
                                     />
                                     List Passers
-                                </NavLink>
+                                </Link>
                             </div>
                         </transition>
                     </li>
