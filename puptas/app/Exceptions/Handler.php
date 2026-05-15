@@ -107,10 +107,11 @@ class Handler extends ExceptionHandler
 
             if ($e instanceof ThrottleRequestsException) {
                 return response()->json([
-                    'success'   => false,
-                    'message'   => 'Too many requests. Please slow down.',
-                    'errorCode' => 'RATE_LIMITED',
-                ], 429, ['Content-Type' => 'application/json']);
+                    'success'     => false,
+                    'message'     => 'Too many attempts. Please wait before trying again.',
+                    'errorCode'   => 'RATE_LIMITED',
+                    'retry_after' => (int) $e->getHeaders()['Retry-After'] ?? 60,
+                ], 429, $e->getHeaders());
             }
 
             return response()->json([
