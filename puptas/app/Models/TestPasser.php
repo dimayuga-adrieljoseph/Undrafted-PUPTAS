@@ -24,7 +24,8 @@ class TestPasser extends Model
         'school_year',
         'pupcet_total_score',
         'user_id',
-        'status'
+        'status',
+        'admission_type'
     ];
 
     protected $casts = [

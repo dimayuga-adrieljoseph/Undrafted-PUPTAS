@@ -65,6 +65,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
         //   "pupcet_total_score", "pupcet total score",
         //   "pupcet_score",       "total_score"
         $pupcetScore = $this->resolveScore($row);
+        $admissionType = $this->resolveAdmissionType($row);
 
         // Skip rows with no email to avoid collisions on null key
         if (empty($email)) {
@@ -84,6 +85,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
                 'pupcet_total_score' => $pupcetScore,
                 'user_id'            => null,
                 'status'             => 'pending',
+                'admission_type'     => $admissionType,
             ]);
         }
 
@@ -105,6 +107,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
                 'pupcet_total_score' => $pupcetScore,
                 'user_id'            => $user?->id,
                 'status'             => $user ? 'registered' : 'pending',
+                'admission_type'     => $admissionType,
             ]
         );
     }
@@ -132,5 +135,24 @@ class TestPassersImport implements ToModel, WithHeadingRow
         }
 
         return null;
+    }
+
+    private function resolveAdmissionType(array $row): string
+    {
+        $candidates = ['type', 'remarks', 'status', 'admission_type', 'admission type'];
+
+        foreach ($candidates as $key) {
+            if (array_key_exists($key, $row) && !empty($row[$key])) {
+                $val = strtolower(trim($row[$key]));
+                if (str_contains($val, 'waitlist') || str_contains($val, 'wait-list') || str_contains($val, 'waiting list') || str_contains($val, 'waiting')) {
+                    return 'waitlisted';
+                }
+                if (str_contains($val, 'pass')) {
+                    return 'passer';
+                }
+            }
+        }
+
+        return 'passer';
     }
 }
