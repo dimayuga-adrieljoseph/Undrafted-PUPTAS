@@ -285,48 +285,107 @@ function reset() {
                         <!-- ── Result card ─────────────────────────────────────── -->
                         <div v-if="result" class="space-y-4">
 
-                            <!-- Qualified -->
+                            <!-- ✅ Qualified -->
                             <div
                                 v-if="result.qualified === true"
-                                class="rounded-xl border border-green-200 bg-green-50 p-6 text-center"
+                                class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
                                 role="status"
                                 aria-live="polite"
                             >
-                                <!-- Success icon -->
-                                <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                    </svg>
+                                <!-- Logo -->
+                                <div class="pt-7 pb-2 flex justify-center">
+                                    <img
+                                        src="/assets/images/pup_taguig_logo.png"
+                                        alt="PUP Taguig Logo"
+                                        class="w-16 h-16 object-contain"
+                                    />
                                 </div>
 
-                                <p class="text-lg font-semibold text-green-800 mb-2">
-                                    {{ result.message }}
-                                </p>
+                                <!-- Body -->
+                                <div class="px-8 pb-7 pt-4 space-y-4">
+                                    <p class="text-sm text-gray-800 leading-relaxed">
+                                        Dear <strong class="text-[#800000]">{{ result.full_name }}</strong>,
+                                    </p>
 
-                                <div class="inline-block mt-1 px-4 py-1.5 rounded-full bg-green-100 border border-green-300">
-                                    <span class="text-sm font-medium text-green-700">
-                                        {{ result.batch_number }}
-                                    </span>
+                                    <p class="text-sm text-gray-800 leading-relaxed font-semibold">
+                                         <span class="text-[#800000]">CONGRATULATIONS!</span> 🎉
+                                    </p>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2025-2026.
+                                    </p>
+
+                                    <!-- Details box -->
+                                    <div class="rounded-xl bg-gray-50 border border-gray-200 overflow-hidden text-sm divide-y divide-gray-200">
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Applicant Name</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.full_name }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Reference No.</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.reference_number }}</span>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!
+                                    </p>
+                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
+                                        PUP-Taguig Campus Admission and Registration Office
+                                    </p>
+
+                                    <!-- CTA -->
+                                    <a
+                                        :href="result.confirmation_url"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg font-semibold text-sm text-white shadow-md
+                                               bg-gradient-to-r from-[#800000] to-[#9d0000]
+                                               hover:from-[#600000] hover:to-[#800000] transition-all duration-200
+                                               focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        Click to Confirm Interview Slot
+                                    </a>
                                 </div>
                             </div>
 
-                            <!-- Not qualified / no match -->
+                            <!-- ❌ Not qualified -->
                             <div
                                 v-else
-                                class="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center"
+                                class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
                                 role="status"
                                 aria-live="polite"
                             >
-                                <!-- Neutral icon -->
-                                <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg class="w-7 h-7 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
-                                    </svg>
+                                <!-- Logo -->
+                                <div class="pt-7 pb-2 flex justify-center">
+                                    <img
+                                        src="/assets/images/pup_taguig_logo.png"
+                                        alt="PUP Taguig Logo"
+                                        class="w-16 h-16 object-contain"
+                                    />
                                 </div>
 
-                                <p class="text-base font-medium text-gray-700">
-                                    {{ result.message }}
-                                </p>
+                                <!-- Body -->
+                                <div class="px-8 pb-7 pt-4 space-y-4">
+                                    <p class="text-sm text-gray-800 leading-relaxed">
+                                        Dear <strong class="text-[#800000]">{{ result.first_name }} {{ result.last_name }}</strong>,
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Thank you for considering Polytechnic University of the Philippines for your higher education.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We regret to inform you that your score in the PUP College Entrance Test for Taguig Campus did not place you in the top 500 requirement of the Campus. We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
+                                    </p>
+                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
+                                        PUP-Taguig Campus Admission and Registration Office
+                                    </p>
+                                </div>
                             </div>
 
                             <!-- Check another button -->
