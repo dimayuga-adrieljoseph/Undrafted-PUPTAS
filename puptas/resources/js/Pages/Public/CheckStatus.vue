@@ -18,7 +18,7 @@ function closeIdpModal() {
 /** Proceed to IDP registration after the user acknowledges the reminder */
 function proceedToIdp() {
     showIdpModal.value = false;
-    window.open(result.value.confirmation_url, "_blank", "noopener,noreferrer");
+    window.open(result.value.confirmation_url, '_blank', 'noopener,noreferrer');
 }
 
 // ── Reactive state ────────────────────────────────────────────────────────────
@@ -89,8 +89,14 @@ async function submit() {
             const body = await response.json();
             errors.value = body.errors ?? {};
         } else if (response.status === 429) {
+            const body = await response.json().catch(() => ({}));
+            // Use retry_after from the response body, fall back to the Retry-After header, then 60s
+            const retryAfterHeader = parseInt(response.headers.get("Retry-After") ?? "60", 10);
+            const retryAfter = body.retry_after ?? retryAfterHeader;
+
             rateLimited.value = true;
-            rateLimitCountdown.value = 60;
+            rateLimitCountdown.value = retryAfter;
+            genericError.value = body.message ?? "Too many attempts. Please wait before trying again.";
 
             // Clear any existing interval before starting a new one
             if (countdownInterval) clearInterval(countdownInterval);
@@ -102,6 +108,7 @@ async function submit() {
                     countdownInterval = null;
                     rateLimited.value = false;
                     rateLimitCountdown.value = 0;
+                    genericError.value = "";
                 }
             }, 1000);
         } else {
@@ -281,7 +288,7 @@ function reset() {
                                 role="status"
                                 aria-live="polite"
                             >
-                                Too many attempts. Please try again later.
+                                Too many attempts. Please try again in {{ rateLimitCountdown }}s.
                             </p>
 
                             <!-- Submit button -->
@@ -366,7 +373,7 @@ function reset() {
                                                focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2"
                                     >
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"/>
                                         </svg>
                                         Click to Confirm Interview Slot
                                     </button>

@@ -78,15 +78,38 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(30)->by($request->user()?->id);
         });
 
+        // Public: status check — three stacked limits for abuse/security protection:
+        //
+        //   1. Per reference number, per minute (5/min)
+        //      Stops enumeration: a real student never needs more than 2 checks.
+        //      Even across distributed IPs, each reference number has its own counter.
+        //
+        //   2. Per reference number, per day (20/day)
+        //      Hard daily ceiling per record. Prevents slow, patient enumeration
+        //      that stays under the per-minute limit by spacing out requests.
+        //
+        //   3. Per IP, per minute (30/min)
+        //      Backstop against flooding with random/garbage reference numbers.
+        //      30/min is enough for ~30 students on the same school WiFi checking
+        //      simultaneously, while still limiting a single attacker meaningfully.
         RateLimiter::for('status-checker', function (Request $request) {
-            return Limit::perMinute(10)
-                ->by($request->ip())
-                ->response(function () {
-                    return response()->json(
-                        ['message' => 'Too many attempts. Please try again later.'],
-                        429
-                    );
-                });
+            $refNumber = (string) $request->input('referenceNumber', '');
+            $refKey    = 'ref:' . hash('sha256', $refNumber);
+            $ipKey     = 'ip:' . $request->ip();
+
+            return [
+                // Layer 1: 10 checks/min per reference number
+                Limit::perMinute(10)
+                    ->by($refKey),
+
+                // Layer 2: 60 checks/day per reference number (slow enumeration prevention)
+                Limit::perDay(60)
+                    ->by($refKey . ':daily'),
+
+                // Layer 3: 60 requests/min per IP (flood backstop, safe for shared WiFi)
+                Limit::perMinute(60)
+                    ->by($ipKey),
+            ];
         });
 
         Passport::setClientUuids(true);
