@@ -2,6 +2,25 @@
 import { ref } from "vue";
 import { Head } from "@inertiajs/vue3";
 
+/** Controls visibility of the IDP redirect reminder modal */
+const showIdpModal = ref(false);
+
+/** Open the reminder modal */
+function openIdpModal() {
+    showIdpModal.value = true;
+}
+
+/** Close the reminder modal without redirecting */
+function closeIdpModal() {
+    showIdpModal.value = false;
+}
+
+/** Proceed to IDP registration after the user acknowledges the reminder */
+function proceedToIdp() {
+    showIdpModal.value = false;
+    window.open(result.value.confirmation_url, "_blank", "noopener,noreferrer");
+}
+
 // ── Reactive state ────────────────────────────────────────────────────────────
 
 /** Reference number input value */
@@ -337,11 +356,10 @@ function reset() {
                                         PUP-Taguig Campus Admission and Registration Office
                                     </p>
 
-                                    <!-- CTA -->
-                                    <a
-                                        :href="result.confirmation_url"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <!-- CTA — opens reminder modal before redirecting to IDP -->
+                                    <button
+                                        type="button"
+                                        @click="openIdpModal"
                                         class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg font-semibold text-sm text-white shadow-md
                                                bg-gradient-to-r from-[#800000] to-[#9d0000]
                                                hover:from-[#600000] hover:to-[#800000] transition-all duration-200
@@ -351,7 +369,7 @@ function reset() {
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                         </svg>
                                         Click to Confirm Interview Slot
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
 
@@ -410,5 +428,87 @@ function reset() {
 
             </div>
         </div>
+
+        <!-- ── IDP Redirect Reminder Modal ──────────────────────────────────── -->
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showIdpModal"
+                class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="idp-modal-title"
+                aria-describedby="idp-modal-desc"
+                @keydown.esc="closeIdpModal"
+            >
+                <!-- Backdrop -->
+                <div
+                    class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                    @click="closeIdpModal"
+                    aria-hidden="true"
+                ></div>
+
+                <!-- Panel -->
+                <div class="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+                    <!-- Accent bar -->
+                    <div class="h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000]"></div>
+
+                    <div class="px-6 pt-6 pb-7 space-y-5">
+
+                        <!-- Icon + title -->
+                        <div class="flex flex-col items-center text-center gap-3">
+                            <div class="w-14 h-14 rounded-full bg-yellow-50 border border-yellow-200 flex items-center justify-center">
+                                <!-- Warning / info icon -->
+                                <svg class="w-7 h-7 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                </svg>
+                            </div>
+                            <h2 id="idp-modal-title" class="text-lg font-bold text-gray-900">
+                                Before You Proceed
+                            </h2>
+                        </div>
+
+                        <!-- Reminder message -->
+                        <p id="idp-modal-desc" class="text-sm text-gray-700 leading-relaxed text-center">
+                            Make sure that you will be using the
+                            <strong class="text-[#800000]">same email on iApply</strong>
+                            when logging in to IDP.
+                        </p>
+
+                        <!-- Actions -->
+                        <div class="flex flex-col gap-3 pt-1">
+                            <button
+                                type="button"
+                                @click="proceedToIdp"
+                                class="w-full py-2.5 rounded-lg font-semibold text-sm text-white shadow-md
+                                       bg-gradient-to-r from-[#800000] to-[#9d0000]
+                                       hover:from-[#600000] hover:to-[#800000] transition-all duration-200
+                                       focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2"
+                            >
+                                I Understand, Proceed to IDP
+                            </button>
+                            <button
+                                type="button"
+                                @click="closeIdpModal"
+                                class="w-full py-2.5 rounded-lg font-semibold text-sm text-gray-600 border border-gray-300
+                                       hover:bg-gray-50 transition-all duration-200
+                                       focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
     </div>
 </template>
