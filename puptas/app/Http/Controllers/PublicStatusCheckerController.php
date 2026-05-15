@@ -32,15 +32,25 @@ class PublicStatusCheckerController extends Controller
 
         if ($matched) {
             return response()->json([
-                'qualified'    => true,
-                'batch_number' => $passer->batch_number,
-                'message'      => 'Congratulations! You have passed the entrance exam.',
+                'qualified'        => true,
+                'first_name'       => ucwords(strtolower(trim($passer->first_name))),
+                'last_name'        => ucwords(strtolower(trim($passer->surname))),
+                'full_name'        => ucwords(strtolower(trim($passer->first_name))) . ' ' . ucwords(strtolower(trim($passer->surname))),
+                'reference_number' => $passer->reference_number,
+                'batch_number'     => $passer->batch_number,
+                'confirmation_url' => 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad',
             ]);
         }
 
+        // Format submitted name for display (title-case)
+        $displayFirst = ucwords(strtolower(trim($request->validated('firstName'))));
+        $displayLast  = ucwords(strtolower(trim($request->validated('lastName'))));
+
         return response()->json([
-            'qualified' => false,
-            'message'   => 'No matching record found. Please verify your details.',
+            'qualified'    => false,
+            'first_name'   => $displayFirst,
+            'last_name'    => $displayLast,
+            'message'      => 'failed',
         ]);
     }
 }
