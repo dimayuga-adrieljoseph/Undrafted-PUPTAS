@@ -28,6 +28,10 @@ const activeUploadUploading = ref(false);
 const activeUploadProgress = ref(0);
 const activeUploadError = ref("");
 const activeUploadSuccess = ref(false);
+const showQualifiedProgramsModal = ref(false);
+const qualifiedPrograms = ref([]);
+const disqualifiedPrograms = ref([]);
+const loadingPrograms = ref(false);
 
 // Task 4.1: allDocumentsUploaded — true when every fileStatuses slot has a non-null url
 const allDocumentsUploaded = computed(() => {
@@ -335,6 +339,25 @@ const triggerExtraction = async () => {
   } finally {
     extracting.value = false;
   }
+};
+
+const fetchQualifiedPrograms = async () => {
+  loadingPrograms.value = true;
+  try {
+    const { data } = await axios.get('/applicant-dashboard/qualified-programs');
+    qualifiedPrograms.value = data.qualified || [];
+    disqualifiedPrograms.value = data.disqualified || [];
+    showQualifiedProgramsModal.value = true;
+  } catch (error) {
+    console.error('Failed to fetch qualified programs:', error);
+    alert(error.response?.data?.message || 'Failed to load programs');
+  } finally {
+    loadingPrograms.value = false;
+  }
+};
+
+const closeQualifiedProgramsModal = () => {
+  showQualifiedProgramsModal.value = false;
 };
 
 onMounted(() => { 

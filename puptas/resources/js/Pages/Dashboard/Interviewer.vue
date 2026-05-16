@@ -33,6 +33,7 @@ const page = usePage();
 const props = defineProps({
     user: Object,
     pendingUsers: Array,
+    assignedPrograms: Array,
     summary: {
         type: Object,
         default: () => ({
@@ -310,12 +311,21 @@ const formatDate = (date) => {
 };
 
 const acceptApplication = async () => {
+    if (!selectedProgramId.value) {
+        showSnackbar("Please select a program to accept the applicant into", "error");
+        return;
+    }
+
     try {
         await axios.post(
-            `/interviewer-dashboard/accept/${selectedUser.value.id}`
+            `/interviewer-dashboard/accept/${selectedUser.value.id}`,
+            {
+                program_id: selectedProgramId.value,
+            }
         );
         showSnackbar("Application accepted successfully", "success");
         selectedUser.value = null;
+        selectedProgramId.value = "";
         router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
         console.error("Accept failed:", e);
@@ -324,26 +334,26 @@ const acceptApplication = async () => {
     }
 };
 
-const transferApplication = async () => {
+const rejectApplication = async () => {
     if (!selectedProgramId.value) {
-        showSnackbar("Please select a program to transfer to", "error");
+        showSnackbar("Please select a program to reject the applicant from", "error");
         return;
     }
 
     try {
         await axios.post(
-            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
+            `/interviewer-dashboard/reject/${selectedUser.value.id}`,
             {
                 program_id: selectedProgramId.value,
             }
         );
-        showSnackbar("Applicant transferred successfully", "success");
+        showSnackbar("Application rejected successfully", "success");
         selectedUser.value = null;
         selectedProgramId.value = "";
         router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
-        console.error("Transfer failed", e);
-        const msg = e.response?.data?.message || "Transfer failed";
+        console.error("Reject failed:", e);
+        const msg = e.response?.data?.message || "Failed to reject application";
         showSnackbar(msg, "error");
     }
 };
@@ -351,12 +361,8 @@ const transferApplication = async () => {
 const availablePrograms = ref([]);
 
 const fetchPrograms = async () => {
-    try {
-        const response = await axios.get("/interviewer-dashboard/programs");
-        availablePrograms.value = response.data.programs;
-    } catch (e) {
-        console.error("Failed to load programs", e);
-    }
+    // Programs are passed as props (assignedPrograms)
+    // No need to fetch
 };
 </script>
 
@@ -573,20 +579,23 @@ const fetchPrograms = async () => {
                         </div>
                     </div>
 
-                    <!-- Program Transfer -->
+                    <!-- Program Selection for Accept/Reject -->
                     <div>
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Transfer Program</h4>
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Your Program</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                            Choose the program you are interviewing for:
+                        </p>
                         <select
                             v-model="selectedProgramId"
                             class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                         >
                             <option disabled value="">Select Program</option>
                             <option
-                                v-for="p in availablePrograms"
+                                v-for="p in props.assignedPrograms"
                                 :key="p.id"
                                 :value="p.id"
                             >
-                                {{ p.code }} - {{ p.name }} ({{ p.slots }} slots)
+                                {{ p.code }} - {{ p.name }}
                             </option>
                         </select>
 
@@ -594,14 +603,16 @@ const fetchPrograms = async () => {
                             <button
                                 @click="acceptApplication"
                                 :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                :disabled="!selectedProgramId"
                             >
-                                Accept
+                                ✓ Accept
                             </button>
                             <button
-                                @click="transferApplication"
-                                :class="[getButtonClass('primary'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                @click="rejectApplication"
+                                :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                :disabled="!selectedProgramId"
                             >
-                                Transfer
+                                ✗ Reject
                             </button>
                         </div>
                     </div>
