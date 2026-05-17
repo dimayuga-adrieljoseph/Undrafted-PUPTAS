@@ -449,6 +449,11 @@ import {
     Legend,
 } from "chart.js";
 
+const props = defineProps({
+    user: Object,
+    assignedPrograms: Array,
+});
+
 ChartJS.register(
     LineController,
     LineElement,
@@ -659,11 +664,6 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-
-        // Load programs only if not already loaded
-        if (availablePrograms.value.length === 0) {
-            fetchPrograms();
-        }
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         
@@ -871,17 +871,6 @@ const rejectApplication = async () => {
 };
 
 
-
-const availablePrograms = ref([]);
-
-const fetchPrograms = async () => {
-    try {
-        const response = await axios.get("/interviewer-dashboard/programs");
-        availablePrograms.value = response.data.programs;
-    } catch (e) {
-        console.error("Failed to load programs", e);
-    }
-};
 
 const totalPages = computed(() =>
     Math.ceil(filteredUsers.value.length / itemsPerPage)
