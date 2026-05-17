@@ -529,6 +529,16 @@ const getStatusClass = (status) => {
     return "bg-gray-100 text-gray-600";
 };
 
+const getButtonClass = (type) => {
+    const classes = {
+        primary: 'bg-[#9E122C] text-white hover:bg-[#b51834]',
+        success: 'bg-green-600 text-white hover:bg-green-700',
+        danger: 'bg-red-600 text-white hover:bg-red-700',
+        secondary: 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+    };
+    return classes[type] || classes.secondary;
+};
+
 // Get evaluation-specific status text
 const getEvaluationStatusText = (user) => {
     switch (user.pipeline_status) {
