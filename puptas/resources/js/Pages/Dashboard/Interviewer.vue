@@ -303,13 +303,29 @@ const capitalize = (str) =>
 const getInterviewerName = () => {
     // Find the completed interviewer process
     const interviewerProcess = selectedUser.value?.application?.processes?.find(
-        p => p.stage === 'interviewer' && p.status === 'completed'
+        p => p.stage === 'interviewer' && p.status === 'completed' && p.action === 'passed'
     );
     
-    // Return the performer's name or fallback
-    return interviewerProcess?.performer?.firstname && interviewerProcess?.performer?.lastname
-        ? `${interviewerProcess.performer.firstname} ${interviewerProcess.performer.lastname}`
-        : 'N/A';
+    if (!interviewerProcess) {
+        return '—';
+    }
+    
+    // Check if we have the performedBy relationship loaded (note: it's performedBy, not performer)
+    if (interviewerProcess.performed_by_user?.firstname && interviewerProcess.performed_by_user?.lastname) {
+        return `${interviewerProcess.performed_by_user.firstname} ${interviewerProcess.performed_by_user.lastname}`;
+    }
+    
+    // Also check performedBy (camelCase from Laravel)
+    if (interviewerProcess.performedBy?.firstname && interviewerProcess.performedBy?.lastname) {
+        return `${interviewerProcess.performedBy.firstname} ${interviewerProcess.performedBy.lastname}`;
+    }
+    
+    // Fallback: check if we have performed_by ID
+    if (interviewerProcess.performed_by) {
+        return `User ID: ${interviewerProcess.performed_by}`;
+    }
+    
+    return '—';
 };
 
 const formatDate = (date) => {
@@ -661,7 +677,7 @@ const fetchPrograms = async () => {
                             <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Interview Completed</h4>
                             
                             <p class="text-sm text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
-                                This interview has been completed and locked.
+                                This interview has been completed.
                             </p>
                             
                             <div class="border-t border-gray-300 dark:border-gray-600 my-8"></div>
@@ -685,12 +701,6 @@ const fetchPrograms = async () => {
                                 <div class="flex items-center justify-center gap-2 text-orange-700 dark:text-orange-300">
                                     <span class="text-sm font-medium">Promissory Note: Required</span>
                                 </div>
-                            </div>
-                            
-                            <div class="mt-8 pt-8 border-t border-gray-300 dark:border-gray-600">
-                                <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    No further action required.
-                                </p>
                             </div>
                         </div>
                     </div>
