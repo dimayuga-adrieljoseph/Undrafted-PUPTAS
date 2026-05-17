@@ -27,10 +27,12 @@ class TestPasserReportController extends Controller
 
     private function buildReportQuery(Request $request)
     {
-        $query = TestPasser::query();
+        $query = TestPasser::query()->with('passerStatus');
 
         if ($request->filled('status')) {
-            $query->where('admission_type', $request->status);
+            // "qualified" is id 1, "waitlisted" is id 2 based on the migration
+            $statusId = $request->status === 'waitlisted' ? 2 : 1;
+            $query->where('passer_status_id', $statusId);
         }
 
         if ($request->filled('batch')) {
@@ -64,6 +66,7 @@ class TestPasserReportController extends Controller
         $paginator->getCollection()->transform(function ($passer, $key) use ($currentPage, $perPage) {
             $passer->rank = ($currentPage - 1) * $perPage + $key + 1;
             $passer->full_name = trim($passer->first_name . ' ' . $passer->middle_name . ' ' . $passer->surname);
+            $passer->passer_status_name = $passer->passerStatus ? $passer->passerStatus->status : 'Unknown';
             return $passer;
         });
 
@@ -84,7 +87,7 @@ class TestPasserReportController extends Controller
 
         $pdf = Pdf::loadView('reports.test_passers', [
             'passers' => $passers,
-            'reportType' => $request->input('status') === 'waitlisted' ? 'Waitlisted Applicants' : 'Test Passers',
+            'reportType' => $request->input('status') === 'waitlisted' ? 'Waitlisted Applicants' : 'Qualified Applicants',
             'date' => now()->format('F d, Y')
         ])->setPaper('a4', 'landscape');
 

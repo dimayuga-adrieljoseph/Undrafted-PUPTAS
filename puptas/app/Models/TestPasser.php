@@ -25,7 +25,7 @@ class TestPasser extends Model
         'pupcet_total_score',
         'user_id',
         'status',
-        'admission_type'
+        'passer_status_id'
     ];
 
     protected $casts = [
@@ -51,5 +51,10 @@ class TestPasser extends Model
     public function sarGenerations()
     {
         return $this->hasMany(SarGeneration::class, 'test_passer_id', 'test_passer_id');
+    }
+
+    public function passerStatus()
+    {
+        return $this->belongsTo(PasserStatus::class, 'passer_status_id');
     }
 }

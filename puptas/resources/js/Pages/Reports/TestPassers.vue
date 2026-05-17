@@ -16,7 +16,7 @@ const currentPage = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
 
-const filterStatus = ref("passer");
+const filterStatus = ref("qualified");
 const filterBatch = ref("");
 const filterSchoolYear = ref("");
 const filterStrand = ref("");
@@ -82,7 +82,7 @@ const downloadExcel = () => {
 };
 
 const clearFilters = () => {
-    filterStatus.value = "passer";
+    filterStatus.value = "qualified";
     filterBatch.value = "";
     filterSchoolYear.value = "";
     filterStrand.value = "";
@@ -91,7 +91,7 @@ const clearFilters = () => {
 
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
-    if (s === "passer") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "qualified") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
     if (s === "waitlisted") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400";
 };
@@ -108,7 +108,7 @@ const getStatusClass = (status) => {
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
                     <select v-model="filterStatus" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-[#9E122C]">
-                        <option value="passer">Passers</option>
+                        <option value="qualified">Qualified</option>
                         <option value="waitlisted">Waitlisted</option>
                     </select>
                 </div>
@@ -179,8 +179,8 @@ const getStatusClass = (status) => {
                             <td class="py-3 text-gray-700 dark:text-gray-300">{{ passer.strand || 'N/A' }}</td>
                             <td class="py-3 text-gray-700 dark:text-gray-300 font-semibold">{{ passer.pupcet_total_score }}</td>
                             <td class="py-3">
-                                <span :class="getStatusClass(passer.admission_type)" class="px-2.5 py-1 rounded-full text-xs font-medium capitalize">
-                                    {{ passer.admission_type }}
+                                <span :class="getStatusClass(passer.passer_status_name)" class="px-2.5 py-1 rounded-full text-xs font-medium capitalize">
+                                    {{ passer.passer_status_name }}
                                 </span>
                             </td>
                         </tr>
