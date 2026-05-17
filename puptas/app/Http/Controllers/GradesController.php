@@ -26,7 +26,8 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
-            'extractionResult' => session()->pull('extraction_result'),
+            'profile' => $profile, // Pass full profile for program choices
+            'extractionResult' => session()->get('extraction_result'),
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -43,7 +44,8 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
-            'extractionResult' => session()->pull('extraction_result'),
+            'profile' => $profile,
+            'extractionResult' => session()->get('extraction_result'),
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -60,7 +62,8 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
-            'extractionResult' => session()->pull('extraction_result'),
+            'profile' => $profile,
+            'extractionResult' => session()->get('extraction_result'),
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -77,7 +80,8 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
-            'extractionResult' => session()->pull('extraction_result'),
+            'profile' => $profile,
+            'extractionResult' => session()->get('extraction_result'),
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -94,7 +98,8 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
-            'extractionResult' => session()->pull('extraction_result'),
+            'profile' => $profile,
+            'extractionResult' => session()->get('extraction_result'),
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -111,7 +116,8 @@ class GradesController extends Controller
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
-            'extractionResult' => session()->pull('extraction_result'),
+            'profile' => $profile,
+            'extractionResult' => session()->get('extraction_result'),
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -191,11 +197,8 @@ class GradesController extends Controller
             return false;
         }
 
-        return ApplicationProcess::where('application_id', $application->id)
-            ->where('stage', 'evaluator')
-            ->where('status', 'completed')
-            ->where('action', 'passed')
-            ->exists();
+        // Lock grades once application is submitted (status is not 'draft')
+        return $application->status !== 'draft';
     }
 
     private function isUserQualified($program, $userStrand, $math, $english, $science, $gwa)

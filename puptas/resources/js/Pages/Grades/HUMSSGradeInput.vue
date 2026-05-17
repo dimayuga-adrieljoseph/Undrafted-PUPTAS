@@ -37,7 +37,7 @@
                 <div v-if="isLocked" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg flex items-center gap-3">
                     <i class="fas fa-lock text-red-600 dark:text-red-400 text-lg flex-shrink-0"></i>
                     <p class="text-sm text-red-700 dark:text-red-300 font-medium">
-                        Grade submission is closed. Your application has been approved by the evaluator and grades can no longer be modified.
+                        Grade submission is closed. Your application has been submitted and grades can no longer be modified.
                     </p>
                 </div>
 
@@ -708,6 +708,7 @@ const props = defineProps({
     user: Object,
     programs: Array,
     strand: String,
+    profile: Object,
     extractionResult: { type: Object, default: null },
     isLocked: { type: Boolean, default: false },
 });
@@ -987,6 +988,27 @@ const applyAutofill = (result) => {
 };
 
 onMounted(() => {
+    // Load saved program choices from profile
+    if (props.profile) {
+        if (props.profile.first_choice_program) {
+            form.first_choice_program = props.profile.first_choice_program;
+        }
+        if (props.profile.second_choice_program) {
+            form.second_choice_program = props.profile.second_choice_program;
+        }
+    }
+    
+    // Load saved semester GWAs from grade
+    if (props.grade && props.grade.id) {
+        if (props.grade.g12_first_sem) {
+            form.g12_first_sem_gwa = props.grade.g12_first_sem;
+        }
+        if (props.grade.g12_second_sem) {
+            form.g12_second_sem_gwa = props.grade.g12_second_sem;
+        }
+    }
+    
+    // Apply autofill from extraction if available (takes precedence)
     if (props.extractionResult) {
         applyAutofill(props.extractionResult);
     }
