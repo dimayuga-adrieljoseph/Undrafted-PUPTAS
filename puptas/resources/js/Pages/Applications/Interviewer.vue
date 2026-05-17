@@ -323,9 +323,6 @@
                         </div>
                     </div>
                 </div>
-                        </p>
-                    </div>
-                </div>
 
                 <!-- Grades Section -->
                 <div class="mb-8">
