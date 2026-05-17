@@ -798,12 +798,15 @@ const scienceAverage = computed(() => {
 
 const g12GWA = computed(() => {
     const semGrades = [form.g12_first_sem_gwa, form.g12_second_sem_gwa].filter(
-        (g) => g !== null && g !== ""
+        (g) => g !== null && g !== "" && !isNaN(g) && isFinite(g)
     );
 
-    return semGrades.length > 0
-        ? (semGrades.reduce((a, b) => a + b, 0) / semGrades.length).toFixed(2)
-        : null;
+    if (semGrades.length === 0) {
+        return null;
+    }
+
+    const average = semGrades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / semGrades.length;
+    return isNaN(average) || !isFinite(average) ? null : average.toFixed(2);
 });
 
 const meetsRequirement = (studentValue, requiredValue) => {

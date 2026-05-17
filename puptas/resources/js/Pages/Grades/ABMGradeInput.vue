@@ -975,7 +975,8 @@ const g12GWA = computed(() => {
         return null;
     }
 
-    return (requiredGrades.reduce((a, b) => a + parseFloat(b), 0) / requiredGrades.length).toFixed(2);
+    const average = requiredGrades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / requiredGrades.length;
+    return isNaN(average) || !isFinite(average) ? null : average.toFixed(2);
 });
 
 const meetsRequirement = (studentValue, requiredValue) => {
