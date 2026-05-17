@@ -118,6 +118,7 @@ const isUploadFormActive = isActiveRouteFor(["upload.form"]);
 const isListPassersActive = isActiveRouteFor(["lists"]);
 const isProgramsActive = isActiveRouteFor(["programs.index"]);
 const isReportsActive = isActiveRouteFor(["reports.index"]);
+const isTestPasserReportsActive = isActiveRouteFor(["reports.test-passers.index"]);
 const isManageActive = isActiveRouteFor(["users.index"]);
 const isUserSettingsActive = isActiveRouteFor([
     "api-tokens.index",
@@ -468,6 +469,32 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
                                 :class="{ active: isReportsActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Test Passers Reports -->
+                    <li>
+                        <NavLink
+                            :href="route('reports.test-passers.index')"
+                            :active="isTestPasserReportsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isTestPasserReportsActive }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="file-alt"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Test Passers Reports
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ active: isTestPasserReportsActive }"
                             ></div>
                         </NavLink>
                     </li>
