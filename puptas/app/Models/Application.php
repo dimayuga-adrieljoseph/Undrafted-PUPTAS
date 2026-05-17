@@ -21,6 +21,7 @@ class Application extends Model
         'second_choice_id',
         'enrollment_status',
         'enrollment_position',
+        'requires_promissory_note',
     ];
 
     protected $casts = [

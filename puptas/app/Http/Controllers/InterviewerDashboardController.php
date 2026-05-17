@@ -106,12 +106,14 @@ class InterviewerDashboardController extends Controller
     {
         $this->ensureRole(4);
 
-        // Validate that program_id is provided
+        // Validate that program_id is provided and optional requires_promissory_note
         $validated = $request->validate([
             'program_id' => 'required|exists:programs,id',
+            'requires_promissory_note' => 'nullable|boolean',
         ]);
 
         $programId = $validated['program_id'];
+        $requiresPromissoryNote = $validated['requires_promissory_note'] ?? false;
 
         // Check if interviewer is assigned to this program
         $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
@@ -158,7 +160,7 @@ class InterviewerDashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress, $programId) {
+            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress, $programId, $requiresPromissoryNote) {
                 $program = Program::lockForUpdate()->findOrFail($programId);
 
                 if ($program->slots <= 0) {
@@ -178,6 +180,7 @@ class InterviewerDashboardController extends Controller
                 // Update application to the interviewer's assigned program
                 $oldProgramId = $application->program_id;
                 $application->program_id = $programId;
+                $application->requires_promissory_note = $requiresPromissoryNote;
                 $application->save();
 
                 // Decrement new program slots

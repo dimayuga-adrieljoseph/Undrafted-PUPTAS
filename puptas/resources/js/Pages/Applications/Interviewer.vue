@@ -267,6 +267,12 @@
                                     {{ selectedUser.status || "Pending" }}
                                 </span>
                             </div>
+                            <div v-if="selectedUser.application?.requires_promissory_note">
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Special Requirements</p>
+                                <span class="px-3 py-1 rounded-full text-sm font-semibold inline-block bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                                    📝 Promissory Note Required
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -289,6 +295,23 @@
                                 {{ p.code }} - {{ p.name }}
                             </option>
                         </select>
+
+                        <!-- Promissory Note Checkbox -->
+                        <div class="mb-4">
+                            <label class="flex items-start space-x-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    v-model="requiresPromissoryNote"
+                                    class="mt-1 w-4 h-4 text-[#9E122C] border-gray-300 dark:border-gray-600 rounded focus:ring-[#9E122C] focus:ring-2"
+                                />
+                                <div>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">Requires Promissory Note</span>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        Check if applicant is approved but lacks optional documents
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
 
                         <div class="flex space-x-2">
                             <button
@@ -822,6 +845,7 @@ const formatDate = (date) => {
 };
 
 const selectedProgramId = ref("");
+const requiresPromissoryNote = ref(false);
 
 const acceptApplication = async () => {
     if (!selectedProgramId.value) {
@@ -836,10 +860,12 @@ const acceptApplication = async () => {
             `/interviewer-dashboard/accept/${currentUserId}`,
             {
                 program_id: selectedProgramId.value,
+                requires_promissory_note: requiresPromissoryNote.value,
             }
         );
         showSnackbar("Application accepted successfully", "success");
         selectedProgramId.value = "";
+        requiresPromissoryNote.value = false;
         
         await fetchUsers();
         
