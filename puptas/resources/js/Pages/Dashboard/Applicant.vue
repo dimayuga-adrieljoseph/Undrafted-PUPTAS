@@ -28,6 +28,10 @@ const activeUploadUploading = ref(false);
 const activeUploadProgress = ref(0);
 const activeUploadError = ref("");
 const activeUploadSuccess = ref(false);
+const showQualifiedProgramsModal = ref(false);
+const qualifiedPrograms = ref([]);
+const disqualifiedPrograms = ref([]);
+const loadingPrograms = ref(false);
 
 // Task 4.1: allDocumentsUploaded — true when every fileStatuses slot has a non-null url
 const allDocumentsUploaded = computed(() => {
@@ -337,6 +341,25 @@ const triggerExtraction = async () => {
   }
 };
 
+const fetchQualifiedPrograms = async () => {
+  loadingPrograms.value = true;
+  try {
+    const { data } = await axios.get('/applicant-dashboard/qualified-programs');
+    qualifiedPrograms.value = data.qualified || [];
+    disqualifiedPrograms.value = data.disqualified || [];
+    showQualifiedProgramsModal.value = true;
+  } catch (error) {
+    console.error('Failed to fetch qualified programs:', error);
+    alert(error.response?.data?.message || 'Failed to load programs');
+  } finally {
+    loadingPrograms.value = false;
+  }
+};
+
+const closeQualifiedProgramsModal = () => {
+  showQualifiedProgramsModal.value = false;
+};
+
 onMounted(() => { 
   fetchData(); 
 });
@@ -385,6 +408,23 @@ onMounted(() => {
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             <span class="font-medium">{{ extracting ? 'Extracting...' : 'Review Grades' }}</span>
+          </button>
+
+          <!-- View Qualified Programs Button - Only shown after application is submitted -->
+          <button
+            v-if="applicationStatus && applicationStatus !== 'draft'"
+            @click="fetchQualifiedPrograms"
+            :disabled="loadingPrograms"
+            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg min-h-[44px] w-full sm:w-auto disabled:opacity-70"
+          >
+            <svg v-if="loadingPrograms" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            <span class="font-medium">{{ loadingPrograms ? 'Loading...' : 'View Qualified Programs' }}</span>
           </button>
           </div>
         </div>
@@ -715,6 +755,178 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <!-- Qualified Programs Modal -->
+    <transition name="fade">
+      <div
+        v-if="showQualifiedProgramsModal"
+        class="fixed inset-0 z-50 overflow-y-auto"
+        @click.self="closeQualifiedProgramsModal"
+      >
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+          <!-- Background overlay -->
+          <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" @click="closeQualifiedProgramsModal"></div>
+
+          <!-- Modal panel -->
+          <div class="inline-block w-full max-w-4xl my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-gray-800 shadow-xl rounded-2xl">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <div class="flex items-center justify-between">
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Program Eligibility</h3>
+                <button
+                  @click="closeQualifiedProgramsModal"
+                  class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition min-h-[44px] min-w-[44px]"
+                >
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Based on your grades, here are the programs you qualify for. Slots are updated in real-time.
+              </p>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-6 max-h-[70vh] overflow-y-auto">
+              <!-- Qualified Programs -->
+              <div v-if="qualifiedPrograms.length > 0" class="mb-8">
+                <h4 class="text-lg font-semibold text-green-700 dark:text-green-300 mb-4 flex items-center">
+                  <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Qualified Programs ({{ qualifiedPrograms.length }})
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div
+                    v-for="program in qualifiedPrograms"
+                    :key="program.id"
+                    class="p-5 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl hover:shadow-lg transition"
+                  >
+                    <div class="flex items-start justify-between mb-3">
+                      <div class="flex-1">
+                        <h5 class="text-lg font-bold text-gray-900 dark:text-white">{{ program.code }}</h5>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">{{ program.name }}</p>
+                      </div>
+                      <svg class="w-8 h-8 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    
+                    <div class="mb-3">
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Slots</span>
+                        <span class="text-lg font-bold text-green-600 dark:text-green-400">{{ program.slots }}</span>
+                      </div>
+                      <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div class="bg-green-600 h-2 rounded-full" :style="{ width: Math.min(program.slots * 2, 100) + '%' }"></div>
+                      </div>
+                    </div>
+
+                    <div class="space-y-2">
+                      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Requirements vs Your Grades:</p>
+                      <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <p class="text-gray-500 dark:text-gray-400">Math</p>
+                          <p class="font-bold text-green-600 dark:text-green-400">{{ program.your_grades.math }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.math }}</p>
+                        </div>
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <p class="text-gray-500 dark:text-gray-400">Science</p>
+                          <p class="font-bold text-green-600 dark:text-green-400">{{ program.your_grades.science }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.science }}</p>
+                        </div>
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <p class="text-gray-500 dark:text-gray-400">English</p>
+                          <p class="font-bold text-green-600 dark:text-green-400">{{ program.your_grades.english }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.english }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Disqualified Programs -->
+              <div v-if="disqualifiedPrograms.length > 0">
+                <h4 class="text-lg font-semibold text-red-700 dark:text-red-300 mb-4 flex items-center">
+                  <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Programs Not Qualified ({{ disqualifiedPrograms.length }})
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div
+                    v-for="program in disqualifiedPrograms"
+                    :key="program.id"
+                    class="p-5 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl opacity-75"
+                  >
+                    <div class="flex items-start justify-between mb-3">
+                      <div class="flex-1">
+                        <h5 class="text-lg font-bold text-gray-900 dark:text-white">{{ program.code }}</h5>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">{{ program.name }}</p>
+                      </div>
+                      <svg class="w-8 h-8 text-red-600 dark:text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                    
+                    <div class="mb-3">
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Slots</span>
+                        <span class="text-lg font-bold text-gray-600 dark:text-gray-400">{{ program.slots }}</span>
+                      </div>
+                    </div>
+
+                    <div class="space-y-2">
+                      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Requirements vs Your Grades:</p>
+                      <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded" :class="program.your_grades.math >= program.requirements.math ? 'border border-green-300' : 'border border-red-300'">
+                          <p class="text-gray-500 dark:text-gray-400">Math</p>
+                          <p class="font-bold" :class="program.your_grades.math >= program.requirements.math ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ program.your_grades.math }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.math }}</p>
+                        </div>
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded" :class="program.your_grades.science >= program.requirements.science ? 'border border-green-300' : 'border border-red-300'">
+                          <p class="text-gray-500 dark:text-gray-400">Science</p>
+                          <p class="font-bold" :class="program.your_grades.science >= program.requirements.science ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ program.your_grades.science }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.science }}</p>
+                        </div>
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded" :class="program.your_grades.english >= program.requirements.english ? 'border border-green-300' : 'border border-red-300'">
+                          <p class="text-gray-500 dark:text-gray-400">English</p>
+                          <p class="font-bold" :class="program.your_grades.english >= program.requirements.english ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ program.your_grades.english }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.english }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- No Programs Message -->
+              <div v-if="qualifiedPrograms.length === 0 && disqualifiedPrograms.length === 0" class="text-center py-12">
+                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p class="text-gray-500 dark:text-gray-400 text-lg">No program data available</p>
+                <p class="text-gray-400 dark:text-gray-500 text-sm mt-2">Please make sure you have submitted your grades</p>
+              </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+              <div class="flex justify-end">
+                <button
+                  @click="closeQualifiedProgramsModal"
+                  class="px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition font-medium min-h-[44px]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </ApplicantLayout>
 </template>
 

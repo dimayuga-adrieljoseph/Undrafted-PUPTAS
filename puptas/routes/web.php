@@ -114,6 +114,8 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/applicant-dashboard', [ApplicantDashboardController::class, 'index'])
         ->name('applicant.dashboard');
+    Route::get('/applicant-dashboard/qualified-programs', [ApplicantDashboardController::class, 'getQualifiedPrograms'])
+        ->name('applicant.qualified-programs');
 
     Route::middleware(['throttle:grade-extraction'])
         ->post('/api/grades/extract', [GradeExtractionController::class, 'extract']);
@@ -248,13 +250,17 @@ Route::middleware(['auth', 'role:3'])->group(function () {
 Route::middleware(['auth', 'role:4'])->group(function () {
     Route::get('/interviewer-dashboard', [InterviewerDashboardController::class, 'index'])->name('interviewer.dashboard');
     Route::get('/interviewer-applications', function () {
-        return Inertia::render('Applications/Interviewer', ['user' => Auth::user()]);
+        $user = Auth::user();
+        $assignedPrograms = $user->programs()->get(['id', 'code', 'name']);
+        return Inertia::render('Applications/Interviewer', [
+            'user' => $user,
+            'assignedPrograms' => $assignedPrograms,
+        ]);
     })->name('interviewer.applications');
     Route::get('/interviewer-dashboard/applicants', [InterviewerDashboardController::class, 'getUsers']);
     Route::get('/interviewer-dashboard/application/{id}', [InterviewerDashboardController::class, 'getUserFiles']);
     Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
-    Route::post('/interviewer-dashboard/transfer/{id}', [InterviewerDashboardController::class, 'transferToProgram']);
-    Route::get('/interviewer-dashboard/programs', [InterviewerDashboardController::class, 'getPrograms']);
+    Route::post('/interviewer-dashboard/reject/{id}', [InterviewerDashboardController::class, 'reject']);
 });
 
 // Record Staff Routes

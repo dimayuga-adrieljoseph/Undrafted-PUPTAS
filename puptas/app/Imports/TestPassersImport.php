@@ -59,6 +59,18 @@ class TestPassersImport implements ToModel, WithHeadingRow
             }
         }
 
+        // Handle passer status from Excel (qualified/waitlisted)
+        $passerStatusId = null;
+        if (!empty($row['status'])) {
+            $statusValue = strtolower(trim($row['status']));
+            if ($statusValue === 'qualified') {
+                $passerStatusId = 1; // qualified
+            } elseif ($statusValue === 'waitlisted') {
+                $passerStatusId = 2; // waitlisted
+            }
+            // Default to null if invalid status provided
+        }
+
         // Resolve PUPCET score from multiple possible column name variants.
         // WithHeadingRow normalises headers: lowercased + spaces→underscores.
         // Accepted column names in the sheet:
@@ -86,6 +98,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
                 'user_id'            => null,
                 'status'             => 'pending',
                 'admission_type'     => $admissionType,
+                'passer_status_id'   => $passerStatusId,
             ]);
         }
 
@@ -108,6 +121,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
                 'user_id'            => $user?->id,
                 'status'             => $user ? 'registered' : 'pending',
                 'admission_type'     => $admissionType,
+                'passer_status_id'   => $passerStatusId,
             ]
         );
     }
