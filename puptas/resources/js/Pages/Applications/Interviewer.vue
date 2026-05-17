@@ -246,7 +246,7 @@
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Email Address</p>
-                                <p class="text-gray-900 dark:text-white">{{ selectedUser.email }}</p>
+                                <p class="text-gray-900 dark:text-white break-words">{{ selectedUser.email }}</p>
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Program (1st Choice)</p>
@@ -307,17 +307,22 @@
                             </button>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Interview Completed Notice -->
-                    <div v-else class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                <!-- Interview Completed Notice (Outside Grid) -->
+                <div v-if="isEvaluationCompleted" class="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
                             <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Interview Completed</p>
+                            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                This applicant has already been processed at the interview stage.
+                            </p>
                         </div>
-                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                            This applicant has already been processed at the interview stage.
+                    </div>
+                </div>
                         </p>
                     </div>
                 </div>
