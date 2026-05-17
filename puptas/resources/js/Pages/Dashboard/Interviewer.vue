@@ -301,7 +301,7 @@ const capitalize = (str) =>
     typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ') : "";
 
 const getInterviewerName = () => {
-    // Find the completed interviewer process
+    // Find the completed interviewer process with passed action
     const interviewerProcess = selectedUser.value?.application?.processes?.find(
         p => p.stage === 'interviewer' && p.status === 'completed' && p.action === 'passed'
     );
@@ -310,18 +310,25 @@ const getInterviewerName = () => {
         return '—';
     }
     
-    // Check if we have the performedBy relationship loaded (note: it's performedBy, not performer)
-    if (interviewerProcess.performed_by_user?.firstname && interviewerProcess.performed_by_user?.lastname) {
-        return `${interviewerProcess.performed_by_user.firstname} ${interviewerProcess.performed_by_user.lastname}`;
+    // Check if performed_by is an object with user data
+    if (typeof interviewerProcess.performed_by === 'object' && interviewerProcess.performed_by !== null) {
+        if (interviewerProcess.performed_by.firstname && interviewerProcess.performed_by.lastname) {
+            return `${interviewerProcess.performed_by.firstname} ${interviewerProcess.performed_by.lastname}`;
+        }
     }
     
-    // Also check performedBy (camelCase from Laravel)
+    // Check if we have the performedBy relationship loaded (camelCase from Laravel)
     if (interviewerProcess.performedBy?.firstname && interviewerProcess.performedBy?.lastname) {
         return `${interviewerProcess.performedBy.firstname} ${interviewerProcess.performedBy.lastname}`;
     }
     
-    // Fallback: check if we have performed_by ID
-    if (interviewerProcess.performed_by) {
+    // Check performed_by_user
+    if (interviewerProcess.performed_by_user?.firstname && interviewerProcess.performed_by_user?.lastname) {
+        return `${interviewerProcess.performed_by_user.firstname} ${interviewerProcess.performed_by_user.lastname}`;
+    }
+    
+    // If performed_by is just a number (ID)
+    if (typeof interviewerProcess.performed_by === 'number') {
         return `User ID: ${interviewerProcess.performed_by}`;
     }
     
@@ -682,14 +689,14 @@ const fetchPrograms = async () => {
                             
                             <div class="border-t border-gray-300 dark:border-gray-600 my-8"></div>
                             
-                            <div class="space-y-4 text-left">
-                                <div class="flex justify-between items-center py-2">
+                            <div class="space-y-2 text-left">
+                                <div class="flex justify-between items-center">
                                     <span class="text-sm text-gray-600 dark:text-gray-400">Program:</span>
                                     <span class="text-sm font-medium text-gray-900 dark:text-white">
                                         {{ selectedUser.application?.program?.code || "—" }}
                                     </span>
                                 </div>
-                                <div class="flex justify-between items-center py-2">
+                                <div class="flex justify-between items-center">
                                     <span class="text-sm text-gray-600 dark:text-gray-400">Interviewer:</span>
                                     <span class="text-sm font-medium text-gray-900 dark:text-white">
                                         {{ getInterviewerName() }}
