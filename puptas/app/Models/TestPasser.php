@@ -39,6 +39,11 @@ class TestPasser extends Model
         return $this->belongsTo(ApplicantProfile::class, 'user_id', 'user_id');
     }
 
+    public function passerStatus()
+    {
+        return $this->belongsTo(PasserStatus::class);
+    }
+
     /**
      * Get the SAR generations for this test passer
      */

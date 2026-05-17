@@ -154,7 +154,7 @@
                     </div>
                 </div>
 
-                <!-- Batch Information -->
+                 <!-- Batch Information -->
                 <div class="col-span-2 grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
@@ -180,6 +180,21 @@
                             placeholder="e.g., 1"
                         />
                     </div>
+                </div>
+
+                <!-- Passer Status -->
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                        Status *
+                    </label>
+                    <select
+                        v-model="passer.passer_status_id"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                    >
+                        <option value="">Select Status</option>
+                        <option value="1">Qualified</option>
+                        <option value="2">Waitlisted</option>
+                    </select>
                 </div>
 
                 <!-- Modal Actions -->
