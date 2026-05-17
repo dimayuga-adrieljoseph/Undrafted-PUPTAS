@@ -39,7 +39,7 @@
                 <td>{{ $passer->email ?? 'N/A' }}</td>
                 <td>{{ $passer->strand ?? 'N/A' }}</td>
                 <td>{{ $passer->pupcet_total_score }}</td>
-                <td>{{ ucfirst($passer->admission_type) }}</td>
+                <td>{{ ucfirst($passer->passerStatus ? $passer->passerStatus->status : 'Unknown') }}</td>
             </tr>
             @endforeach
             @if(count($passers) == 0)

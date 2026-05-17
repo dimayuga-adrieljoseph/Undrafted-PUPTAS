@@ -47,7 +47,7 @@ class TestPassersExport implements FromQuery, WithMapping, WithHeadings
             $this->sanitizeExcelValue($passer->email ?? 'N/A'),
             $this->sanitizeExcelValue($passer->strand ?? 'N/A'),
             $passer->pupcet_total_score,
-            ucfirst($passer->admission_type),
+            ucfirst($passer->passerStatus ? $passer->passerStatus->status : 'Unknown'),
         ];
     }
 

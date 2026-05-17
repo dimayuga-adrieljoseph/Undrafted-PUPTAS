@@ -80,6 +80,7 @@ const sidebarRef = ref(null);
 
 const isUserMenuOpen = ref(false);
 const isPasserDropdownOpen = ref(false);
+const isReportsDropdownOpen = ref(false);
 const isDarkMode = ref(false);
 
 /* ---------------- HELPERS ---------------- */
@@ -88,7 +89,8 @@ const isActiveRoute = (name) => route().current(name);
 const isAnyDropdownOpen = computed(
     () =>
         isUserMenuOpen.value ||
-        isPasserDropdownOpen.value
+        isPasserDropdownOpen.value ||
+        isReportsDropdownOpen.value
 );
 
 const sidebarWidthClass = computed(() =>
@@ -150,6 +152,11 @@ const togglePasserMenu = () => {
     isSidebarOpen.value = true;
 };
 
+const toggleReportsMenu = () => {
+    isReportsDropdownOpen.value = !isReportsDropdownOpen.value;
+    isSidebarOpen.value = true;
+};
+
 const toggleUserMenu = () => {
     isUserMenuOpen.value = !isUserMenuOpen.value;
     isSidebarOpen.value = true;
@@ -172,6 +179,7 @@ const onClickOutside = (event) => {
         isSidebarOpen.value = false;
         isUserMenuOpen.value = false;
         isPasserDropdownOpen.value = false;
+        isReportsDropdownOpen.value = false;
     }
 };
 
@@ -181,6 +189,8 @@ watch(
     () => {
         isPasserDropdownOpen.value =
             isUploadFormActive.value || isListPassersActive.value;
+        isReportsDropdownOpen.value = 
+            isReportsActive.value || isTestPasserReportsActive.value;
         isUserMenuOpen.value = isUserSettingsActive.value;
     },
     { immediate: true }
@@ -447,56 +457,85 @@ watch(isSidebarOpen, (val) => {
                         </NavLink>
                     </li>
 
-                    <!-- Reports -->
+                    <!-- Reports Dropdown -->
                     <li>
-                        <NavLink
-                            :href="route('reports.index')"
-                            :active="isReportsActive"
-                            class="nav-item group"
-                            :class="{ 'nav-item-active': isReportsActive }"
-                            @click="emit('close')"
+                        <div
+                            class="nav-item group cursor-pointer"
+                            @click="toggleReportsMenu"
+                            :class="{
+                                'nav-item-active':
+                                    isReportsDropdownOpen ||
+                                    isReportsActive ||
+                                    isTestPasserReportsActive,
+                            }"
                         >
                             <div class="nav-icon">
-                                <FontAwesomeIcon
-                                    icon="chart-pie"
-                                    class="text-lg"
-                                />
+                                <FontAwesomeIcon icon="chart-pie" class="text-lg" />
                             </div>
                             <span v-if="isSidebarOpen" class="nav-label">
                                 Reports
                             </span>
-                            <div
-                                v-if="isSidebarOpen"
-                                class="nav-indicator"
-                                :class="{ active: isReportsActive }"
-                            ></div>
-                        </NavLink>
-                    </li>
-
-                    <!-- Test Passers Reports -->
-                    <li>
-                        <NavLink
-                            :href="route('reports.test-passers.index')"
-                            :active="isTestPasserReportsActive"
-                            class="nav-item group"
-                            :class="{ 'nav-item-active': isTestPasserReportsActive }"
-                            @click="emit('close')"
-                        >
-                            <div class="nav-icon">
+                            <div class="flex items-center gap-2">
                                 <FontAwesomeIcon
-                                    icon="file-alt"
-                                    class="text-lg"
+                                    v-if="isSidebarOpen"
+                                    :icon="
+                                        isReportsDropdownOpen
+                                            ? 'caret-down'
+                                            : 'caret-right'
+                                    "
+                                    class="text-xs text-gray-400 transition-transform duration-200 dark:text-gray-200"
+                                    :class="{
+                                        'rotate-90': isReportsDropdownOpen,
+                                    }"
                                 />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
-                                Test Passers Reports
-                            </span>
+                        </div>
+
+                        <!-- Dropdown Content -->
+                        <transition
+                            enter-active-class="transition-all duration-200 ease-out"
+                            leave-active-class="transition-all duration-150 ease-in"
+                            enter-from-class="opacity-0 max-h-0"
+                            enter-to-class="opacity-100 max-h-40"
+                            leave-from-class="opacity-100 max-h-40"
+                            leave-to-class="opacity-0 max-h-0"
+                        >
                             <div
-                                v-if="isSidebarOpen"
-                                class="nav-indicator"
-                                :class="{ active: isTestPasserReportsActive }"
-                            ></div>
-                        </NavLink>
+                                v-show="isReportsDropdownOpen && isSidebarOpen"
+                                class="dropdown-content ml-10 mt-1 space-y-1"
+                            >
+                                <Link
+                                    :href="route('reports.index')"
+                                    class="dropdown-item"
+                                    :class="{
+                                        'dropdown-item-active':
+                                            isReportsActive,
+                                    }"
+                                    @click="emit('close')"
+                                >
+                                    <FontAwesomeIcon
+                                        icon="chart-line"
+                                        class="text-xs mr-2"
+                                    />
+                                    Applicant Reports
+                                </Link>
+                                <Link
+                                    :href="route('reports.test-passers.index')"
+                                    class="dropdown-item"
+                                    :class="{
+                                        'dropdown-item-active':
+                                            isTestPasserReportsActive,
+                                    }"
+                                    @click="emit('close')"
+                                >
+                                    <FontAwesomeIcon
+                                        icon="file-alt"
+                                        class="text-xs mr-2"
+                                    />
+                                    Passers Reports
+                                </Link>
+                            </div>
+                        </transition>
                     </li>
 
                     <!-- Manage Users -->
