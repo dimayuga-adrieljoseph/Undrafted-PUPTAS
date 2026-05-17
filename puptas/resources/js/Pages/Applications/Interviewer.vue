@@ -234,21 +234,6 @@
                     </button>
                 </div>
 
-                <!-- Interview Completed Notice (Top) -->
-                <div v-if="isEvaluationCompleted" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
-                    <div class="flex items-center gap-2">
-                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                            <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Interview Completed</p>
-                            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                This applicant has already been processed at the interview stage.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Applicant Info Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     <!-- Personal Info -->
@@ -348,22 +333,23 @@
 
                     <!-- Interview Completed Summary -->
                     <div v-else>
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Interview Completed</h4>
-                        <div class="p-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                        <div class="p-8 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Interview Completed</h4>
+                            
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
                                 This interview has been completed and locked.
                             </p>
                             
-                            <div class="border-t border-gray-300 dark:border-gray-600 mb-6"></div>
+                            <div class="border-t border-gray-300 dark:border-gray-600 my-8"></div>
                             
-                            <div class="space-y-3 text-left">
-                                <div class="flex justify-between items-center">
+                            <div class="space-y-4 text-left">
+                                <div class="flex justify-between items-center py-2">
                                     <span class="text-sm text-gray-600 dark:text-gray-400">Program:</span>
                                     <span class="text-sm font-medium text-gray-900 dark:text-white">
                                         {{ selectedUser.application?.program?.code || "—" }}
                                     </span>
                                 </div>
-                                <div class="flex justify-between items-center">
+                                <div class="flex justify-between items-center py-2">
                                     <span class="text-sm text-gray-600 dark:text-gray-400">Interviewer:</span>
                                     <span class="text-sm font-medium text-gray-900 dark:text-white">
                                         {{ getInterviewerName() }}
@@ -371,13 +357,13 @@
                                 </div>
                             </div>
                             
-                            <div v-if="selectedUser.application?.requires_promissory_note" class="mt-6 pt-6 border-t border-gray-300 dark:border-gray-600">
+                            <div v-if="selectedUser.application?.requires_promissory_note" class="mt-8 pt-8 border-t border-gray-300 dark:border-gray-600">
                                 <div class="flex items-center justify-center gap-2 text-orange-700 dark:text-orange-300">
                                     <span class="text-sm font-medium">Promissory Note: Required</span>
                                 </div>
                             </div>
                             
-                            <div class="mt-6 pt-6 border-t border-gray-300 dark:border-gray-600">
+                            <div class="mt-8 pt-8 border-t border-gray-300 dark:border-gray-600">
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
                                     No further action required.
                                 </p>
