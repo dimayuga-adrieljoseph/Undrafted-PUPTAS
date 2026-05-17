@@ -26,8 +26,7 @@ use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
 use App\Http\Controllers\ReportController;
-
-
+use App\Http\Controllers\TestPasserReportController;
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
 Route::get('/', function () {
@@ -329,6 +328,11 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/admin/reports/data', [ReportController::class, 'getReportData'])->name('reports.data');
     Route::get('/admin/reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export.pdf');
     Route::get('/admin/reports/export/excel', [ReportController::class, 'exportExcel'])->name('reports.export.excel');
+
+    Route::get('/admin/reports/test-passers', [TestPasserReportController::class, 'index'])->name('reports.test-passers.index');
+    Route::get('/admin/reports/test-passers/data', [TestPasserReportController::class, 'getReportData'])->name('reports.test-passers.data');
+    Route::get('/admin/reports/test-passers/export/pdf', [TestPasserReportController::class, 'exportPdf'])->name('reports.test-passers.export.pdf');
+    Route::get('/admin/reports/test-passers/export/excel', [TestPasserReportController::class, 'exportExcel'])->name('reports.test-passers.export.excel');
 });
 
 // Audit log routes - Protected by Superadmin middleware
