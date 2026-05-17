@@ -52,9 +52,4 @@ class TestPasser extends Model
     {
         return $this->hasMany(SarGeneration::class, 'test_passer_id', 'test_passer_id');
     }
-
-    public function passerStatus()
-    {
-        return $this->belongsTo(PasserStatus::class, 'passer_status_id');
-    }
 }
