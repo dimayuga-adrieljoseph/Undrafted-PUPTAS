@@ -72,10 +72,6 @@
                             Interview Passed
                         </button>
                         <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="evaluationStatusFilter = 'interview_transferred'; showStatusDropdown = false;">
-                            Course Transferred
-                        </button>
-                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
                             @click="evaluationStatusFilter = 'for_medical'; showStatusDropdown = false;">
                             For Medical
                         </button>
@@ -321,46 +317,6 @@
                     </div>
 
                     <!-- Transfer Program -->
-                    <div v-if="selectedUser?.application" class="p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-700 rounded-xl space-y-3">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-yellow-600 dark:text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                            </svg>
-                            <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-300">Transfer to Different Program</h5>
-                        </div>
-                        <p v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'" class="text-xs text-red-600 dark:text-red-400 font-medium">
-                            Cannot transfer officially enrolled or accepted applicants. Only admins can change courses for these students.
-                        </p>
-                        <p v-else class="text-xs text-yellow-700 dark:text-yellow-300">
-                            Transfer applicant to a different program. This action will be logged in the audit trail.
-                        </p>
-                        <select
-                            v-model="changeCourseSelectedId"
-                            id="change-course-select"
-                            :disabled="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <option value="" disabled>Select new program…</option>
-                            <option
-                                v-for="prog in availablePrograms"
-                                :key="prog.id"
-                                :value="prog.id"
-                                :disabled="prog.id === selectedUser?.application?.program?.id"
-                            >
-                                {{ prog.code }} - {{ prog.name }} [Slots: {{ prog.slots }}]
-                                <template v-if="prog.id === selectedUser?.application?.program?.id"> (current)</template>
-                            </option>
-                        </select>
-                        <button
-                            @click="changeCourse"
-                            :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse || selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
-                            class="w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <span v-if="isChangingCourse">Transferring…</span>
-                            <span v-else>Transfer Applicant</span>
-                        </button>
-                    </div>
-
                     <!-- Uploaded Documents -->
                     <div>
                         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
@@ -545,7 +501,6 @@ const getEvaluationStatusText = (user) => {
         case 'for_interview':        return 'For Interview';
         case 'interview_returned':   return 'Returned for Revision';
         case 'interview_passed':     return 'Interview Passed';
-        case 'interview_transferred':return 'Course Transferred';
         case 'for_medical':          return 'For Medical';
         case 'medical_cleared':      return 'Medical Cleared';
         case 'medical_rejected':     return 'Medical Rejected';
@@ -565,7 +520,6 @@ const getEvaluationStatusClass = (user) => {
         case 'for_interview':         return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
         case 'interview_returned':    return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
         case 'interview_passed':      return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
         case 'for_medical':           return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
         case 'medical_cleared':       return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
         case 'medical_rejected':      return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
@@ -849,77 +803,6 @@ const fetchPrograms = async () => {
         console.error("Failed to load programs", e);
     }
 };
-
-// ─── Change Course ───────────────────────────────────────────────────────────
-const changeCourseSelectedId = ref("");
-const isChangingCourse = ref(false);
-
-const changeCourse = async () => {
-    if (!changeCourseSelectedId.value) {
-        showSnackbar("Please select a program first.");
-        return;
-    }
-
-    // Check if applicant is officially enrolled - interviewers cannot change course for officially enrolled applicants
-    const isOfficiallyEnrolled = selectedUser.value?.application?.enrollment_status === 'officially_enrolled';
-    if (isOfficiallyEnrolled) {
-        showSnackbar("Cannot change course for officially enrolled applicants. Only admins can perform this action.");
-        return;
-    }
-
-    const selectedProg = availablePrograms.value.find(
-        (p) => p.id === changeCourseSelectedId.value
-    );
-    const confirmMsg = selectedProg
-        ? `Transfer applicant to "${selectedProg.code} - ${selectedProg.name}"? This action will be logged.`
-        : "Transfer applicant? This action will be logged.";
-
-    if (!confirm(confirmMsg)) return;
-
-    isChangingCourse.value = true;
-    try {
-        // Interviewers always use the transfer endpoint
-        const res = await axios.post(
-            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
-            { program_id: changeCourseSelectedId.value }
-        );
-        
-        showSnackbar(res.data?.message ?? "Applicant transferred successfully!");
-        changeCourseSelectedId.value = "";
-
-        await fetchUsers();
-        await fetchPrograms(); // Refresh slot counters
-        const refreshedUser = users.value.find((u) => u.id === selectedUser.value.id);
-        if (refreshedUser) {
-            await selectUser(refreshedUser);
-        } else {
-            selectedUser.value = null;
-        }
-    } catch (e) {
-        console.error("Course change failed:", e);
-        
-        // Handle 403 Forbidden specifically
-        if (e.response?.status === 403) {
-            showSnackbar("You do not have permission to transfer this applicant. Only admins can change courses for officially enrolled or accepted students.", "error");
-        } else {
-            const msg =
-                e.response?.data?.message ??
-                e.response?.data?.errors?.program_id?.[0] ??
-                "Failed to transfer applicant.";
-            showSnackbar(msg, "error");
-        }
-    } finally {
-        isChangingCourse.value = false;
-    }
-};
-
-// Reset when switching applicants
-watch(
-    () => selectedUser.value?.id,
-    () => {
-        changeCourseSelectedId.value = "";
-    }
-);
 
 const totalPages = computed(() =>
     Math.ceil(filteredUsers.value.length / itemsPerPage)
