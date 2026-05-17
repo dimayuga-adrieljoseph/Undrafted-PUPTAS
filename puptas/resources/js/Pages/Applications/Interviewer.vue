@@ -342,18 +342,18 @@
                             
                             <div class="border-t border-gray-300 dark:border-gray-600 my-8"></div>
                             
-                            <div class="space-y-2 text-left">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">Program:</span>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white">
+                            <div class="space-y-3 text-left">
+                                <div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Program:</p>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
                                         {{ selectedUser.application?.program?.code || "—" }}
-                                    </span>
+                                    </p>
                                 </div>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">Interviewer:</span>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white">
+                                <div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Interviewer:</p>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
                                         {{ getInterviewerName() }}
-                                    </span>
+                                    </p>
                                 </div>
                             </div>
                             
