@@ -33,6 +33,7 @@ const page = usePage();
 const props = defineProps({
     user: Object,
     pendingUsers: Array,
+    assignedPrograms: Array,
     summary: {
         type: Object,
         default: () => ({
@@ -54,6 +55,7 @@ const errorMessage = ref("");
 const searchQuery = ref("");
 const selectedUserFiles = ref({});
 const selectedProgramId = ref("");
+const requiresPromissoryNote = ref(false);
 const snackbar = ref({
     visible: false,
     message: "",
@@ -298,6 +300,41 @@ const closeImageModal = () => {
 const capitalize = (str) =>
     typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ') : "";
 
+const getInterviewerName = () => {
+    // Find the completed interviewer process with passed action
+    const interviewerProcess = selectedUser.value?.application?.processes?.find(
+        p => p.stage === 'interviewer' && p.status === 'completed' && p.action === 'passed'
+    );
+    
+    if (!interviewerProcess) {
+        return '—';
+    }
+    
+    // Check if performed_by is an object with user data
+    if (typeof interviewerProcess.performed_by === 'object' && interviewerProcess.performed_by !== null) {
+        if (interviewerProcess.performed_by.firstname && interviewerProcess.performed_by.lastname) {
+            return `${interviewerProcess.performed_by.firstname} ${interviewerProcess.performed_by.lastname}`;
+        }
+    }
+    
+    // Check if we have the performedBy relationship loaded (camelCase from Laravel)
+    if (interviewerProcess.performedBy?.firstname && interviewerProcess.performedBy?.lastname) {
+        return `${interviewerProcess.performedBy.firstname} ${interviewerProcess.performedBy.lastname}`;
+    }
+    
+    // Check performed_by_user
+    if (interviewerProcess.performed_by_user?.firstname && interviewerProcess.performed_by_user?.lastname) {
+        return `${interviewerProcess.performed_by_user.firstname} ${interviewerProcess.performed_by_user.lastname}`;
+    }
+    
+    // If performed_by is just a number (ID)
+    if (typeof interviewerProcess.performed_by === 'number') {
+        return `User ID: ${interviewerProcess.performed_by}`;
+    }
+    
+    return '—';
+};
+
 const formatDate = (date) => {
     if (!date) return "—";
     return new Date(date).toLocaleDateString('en-US', { 
@@ -310,12 +347,23 @@ const formatDate = (date) => {
 };
 
 const acceptApplication = async () => {
+    if (!selectedProgramId.value) {
+        showSnackbar("Please select a program to accept the applicant into", "error");
+        return;
+    }
+
     try {
         await axios.post(
-            `/interviewer-dashboard/accept/${selectedUser.value.id}`
+            `/interviewer-dashboard/accept/${selectedUser.value.id}`,
+            {
+                program_id: selectedProgramId.value,
+                requires_promissory_note: requiresPromissoryNote.value,
+            }
         );
         showSnackbar("Application accepted successfully", "success");
         selectedUser.value = null;
+        selectedProgramId.value = "";
+        requiresPromissoryNote.value = false;
         router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
         console.error("Accept failed:", e);
@@ -324,26 +372,26 @@ const acceptApplication = async () => {
     }
 };
 
-const transferApplication = async () => {
+const rejectApplication = async () => {
     if (!selectedProgramId.value) {
-        showSnackbar("Please select a program to transfer to", "error");
+        showSnackbar("Please select a program to reject the applicant from", "error");
         return;
     }
 
     try {
         await axios.post(
-            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
+            `/interviewer-dashboard/reject/${selectedUser.value.id}`,
             {
                 program_id: selectedProgramId.value,
             }
         );
-        showSnackbar("Applicant transferred successfully", "success");
+        showSnackbar("Application rejected successfully", "success");
         selectedUser.value = null;
         selectedProgramId.value = "";
         router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
-        console.error("Transfer failed", e);
-        const msg = e.response?.data?.message || "Transfer failed";
+        console.error("Reject failed:", e);
+        const msg = e.response?.data?.message || "Failed to reject application";
         showSnackbar(msg, "error");
     }
 };
@@ -351,12 +399,8 @@ const transferApplication = async () => {
 const availablePrograms = ref([]);
 
 const fetchPrograms = async () => {
-    try {
-        const response = await axios.get("/interviewer-dashboard/programs");
-        availablePrograms.value = response.data.programs;
-    } catch (e) {
-        console.error("Failed to load programs", e);
-    }
+    // Programs are passed as props (assignedPrograms)
+    // No need to fetch
 };
 </script>
 
@@ -570,39 +614,101 @@ const fetchPrograms = async () => {
                                     {{ selectedUser.status || "Pending" }}
                                 </span>
                             </div>
+                            <div v-if="selectedUser.application?.requires_promissory_note">
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Special Requirements</p>
+                                <span class="px-3 py-1 rounded-full text-sm font-semibold inline-block bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                                    📝 Promissory Note Required
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Program Transfer -->
-                    <div>
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Transfer Program</h4>
+                    <!-- Program Selection for Accept/Reject -->
+                    <div v-if="!selectedUser.is_evaluation_completed">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Your Program</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                            Choose the program you are interviewing for:
+                        </p>
                         <select
                             v-model="selectedProgramId"
                             class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                         >
                             <option disabled value="">Select Program</option>
                             <option
-                                v-for="p in availablePrograms"
+                                v-for="p in props.assignedPrograms"
                                 :key="p.id"
                                 :value="p.id"
                             >
-                                {{ p.code }} - {{ p.name }} ({{ p.slots }} slots)
+                                {{ p.code }} - {{ p.name }}
                             </option>
                         </select>
+
+                        <!-- Promissory Note Checkbox -->
+                        <div class="mb-4">
+                            <label class="flex items-start space-x-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    v-model="requiresPromissoryNote"
+                                    class="mt-1 w-4 h-4 text-[#9E122C] border-gray-300 dark:border-gray-600 rounded focus:ring-[#9E122C] focus:ring-2"
+                                />
+                                <div>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">Requires Promissory Note</span>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        Check if applicant is approved but lacks optional documents
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
 
                         <div class="flex space-x-2">
                             <button
                                 @click="acceptApplication"
                                 :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                :disabled="!selectedProgramId"
                             >
-                                Accept
+                                ✓ Accept
                             </button>
                             <button
-                                @click="transferApplication"
-                                :class="[getButtonClass('primary'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                @click="rejectApplication"
+                                :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                :disabled="!selectedProgramId"
                             >
-                                Transfer
+                                ✗ Reject
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Interview Completed Summary -->
+                    <div v-else>
+                        <div class="p-8 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Interview Completed</h4>
+                            
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+                                This interview has been completed.
+                            </p>
+                            
+                            <div class="border-t border-gray-300 dark:border-gray-600 my-8"></div>
+                            
+                            <div class="space-y-3 text-left">
+                                <div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Program:</p>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ selectedUser.application?.program?.code || "—" }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Interviewer:</p>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ getInterviewerName() }}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div v-if="selectedUser.application?.requires_promissory_note" class="mt-8 pt-8 border-t border-gray-300 dark:border-gray-600">
+                                <div class="flex items-center justify-center gap-2 text-orange-700 dark:text-orange-300">
+                                    <span class="text-sm font-medium">Promissory Note: Required</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

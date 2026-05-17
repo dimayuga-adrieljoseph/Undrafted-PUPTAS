@@ -31,7 +31,7 @@ class TestPasserController extends Controller
     {
         // Order by pupcet_total_score DESC at the DB level so ranking is
         // consistent regardless of how the frontend sorts or paginates.
-        $passers = TestPasser::orderByRaw('pupcet_total_score DESC')
+        $passers = TestPasser::with('passerStatus')->orderByRaw('pupcet_total_score DESC')
             ->get()
             ->groupBy(['school_year', 'batch_number'])
             ->map(function ($batches) {
@@ -272,7 +272,7 @@ class TestPasserController extends Controller
         // Find the passer or fail
         $passer = TestPasser::findOrFail($id);
 
-        // Validate input
+         // Validate input
         $validatedData = $request->validate([
             'surname' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
@@ -293,6 +293,7 @@ class TestPasserController extends Controller
             'batch_number' => 'nullable|string|max:255',
             'school_year' => 'nullable|string|max:255',
             'pupcet_total_score' => 'nullable|numeric|min:0|max:999.99',
+            'passer_status_id' => 'nullable|exists:passer_statuses,id',
         ]);
 
         // Update passer with validated data
@@ -308,7 +309,7 @@ class TestPasserController extends Controller
 
     public function store(Request $request)
     {
-        // Validate input
+         // Validate input
         $validated = $request->validate([
             'surname' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
@@ -324,6 +325,7 @@ class TestPasserController extends Controller
             'batch_number' => 'nullable|string|max:255',
             'school_year' => 'nullable|string|max:255',
             'pupcet_total_score' => 'nullable|numeric|min:0|max:999.99',
+            'passer_status_id' => 'nullable|exists:passer_statuses,id',
         ]);
 
         // Create new passer record

@@ -246,22 +246,14 @@ class DashboardService
 
     /**
      * Get dashboard data for interviewer with pending applications
-     * Filters applicants to only those in the interviewer's assigned programs.
+     * Interviewers have global access to see all applicants.
      *
      * @return array
      */
     public function getInterviewerDashboardData(): array
     {
-        $programIds = Auth::user()
-            ->programs()
-            ->pluck('programs.id')
-            ->toArray();
-
-        // If the interviewer has no assigned programs, pendingUsers is empty.
-        // Interviewers must be explicitly assigned to programs to see applicants.
-        $pendingUsers = empty($programIds)
-            ? collect()
-            : $this->userService->getApplicantsByStage('interviewer', $programIds);
+        // Interviewers see all applicants (global access)
+        $pendingUsers = $this->userService->getApplicantsByStage('interviewer');
 
         return [
             'pendingUsers' => $pendingUsers,

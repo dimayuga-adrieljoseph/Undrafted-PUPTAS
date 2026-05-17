@@ -72,10 +72,6 @@
                             Interview Passed
                         </button>
                         <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="evaluationStatusFilter = 'interview_transferred'; showStatusDropdown = false;">
-                            Course Transferred
-                        </button>
-                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
                             @click="evaluationStatusFilter = 'for_medical'; showStatusDropdown = false;">
                             For Medical
                         </button>
@@ -223,205 +219,254 @@
         <transition name="slide-fade">
             <div
                 v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-[400px] h-full bg-white dark:bg-gray-900 z-50 shadow-2xl flex flex-col overflow-hidden"
+                class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl transition duration-300 ease-in-out overflow-y-auto"
             >
-                <!-- Panel Header -->
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Applicant Details</h3>
-                    <button
-                        @click="closeUserCard"
-                        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                        aria-label="Close panel"
-                    >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Interview Details</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
+                    </div>
+                    <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
+                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <!-- Scrollable Body -->
-                <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-                    <!-- Evaluation Completed Badge -->
-                    <div
-                        v-if="isEvaluationCompleted"
-                        class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl"
-                    >
-                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                            <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Evaluation Completed</p>
-                            <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">Evaluation for this stage has been processed. Course management is still available below.</p>
-                        </div>
-                    </div>
-
-                    <!-- Profile Card -->
-                    <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                        <div class="w-14 h-14 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-xl font-bold shrink-0">
-                            {{ (selectedUser.firstname || selectedUser.email || '?').charAt(0).toUpperCase() }}{{ (selectedUser.lastname || '').charAt(0).toUpperCase() }}
-                        </div>
-                        <div class="min-w-0">
-                            <h4 class="text-base font-semibold text-gray-900 dark:text-white truncate">
-                                {{ selectedUser.lastname ? `${selectedUser.lastname}, ${selectedUser.firstname}` : (selectedUser.email || '—') }}
-                            </h4>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedUser.student_number || 'No student number' }}</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ selectedUser.email }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Grades -->
-                    <div>
-                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Academic Grades</h4>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center border border-gray-100 dark:border-gray-700">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Math</p>
-                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics ?? '—' }}</p>
+                <!-- Applicant Info Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Personal Info -->
+                    <div class="lg:col-span-2">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Applicant Information</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Full Name</p>
+                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
                             </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center border border-gray-100 dark:border-gray-700">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Science</p>
-                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ selectedUser?.grades?.science ?? '—' }}</p>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Email Address</p>
+                                <p class="text-gray-900 dark:text-white break-words">{{ selectedUser.email }}</p>
                             </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center border border-gray-100 dark:border-gray-700">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">English</p>
-                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ selectedUser?.grades?.english ?? '—' }}</p>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Program (1st Choice)</p>
+                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.program?.name || "—" }}</p>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.program?.code || "" }}</p>
+                                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.program?.slots || 0 }} slots remaining</p>
+                            </div>
+                            <div v-if="selectedUser.application?.second_choice">
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Second Choice Program</p>
+                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.second_choice?.name || "—" }}</p>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.second_choice?.code || "" }}</p>
+                                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.second_choice?.slots || 0 }} slots remaining</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
+                                <span :class="getStatusClass(selectedUser.status)" 
+                                      class="px-3 py-1 rounded-full text-sm font-semibold inline-block">
+                                    {{ selectedUser.status || "Pending" }}
+                                </span>
+                            </div>
+                            <div v-if="selectedUser.application?.requires_promissory_note">
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Special Requirements</p>
+                                <span class="px-3 py-1 rounded-full text-sm font-semibold inline-block bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                                    📝 Promissory Note Required
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Program Info -->
-                    <div class="space-y-3">
-                        <!-- First Choice Program -->
-                        <div class="p-4 bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-xl border border-[#9E122C]/20">
-                            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Program for Acceptance (1st Choice)</h4>
-                            <p class="text-base font-semibold text-gray-900 dark:text-white">
-                                {{ selectedUser?.application?.program?.code }} – {{ selectedUser?.application?.program?.name }}
-                            </p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ selectedUser?.application?.program?.slots }} slots remaining</p>
-                        </div>
-
-                        <!-- Second Choice Program -->
-                        <div v-if="selectedUser?.application?.second_choice" class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Second Choice Program</h4>
-                            <p class="text-base font-semibold text-gray-900 dark:text-white">
-                                {{ selectedUser?.application?.second_choice?.code }} – {{ selectedUser?.application?.second_choice?.name }}
-                            </p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ selectedUser?.application?.second_choice?.slots }} slots remaining</p>
-                        </div>
-                    </div>
-
-                    <!-- Accept Action -->
-                    <div v-if="!isEvaluationCompleted && selectedUser?.application?.enrollment_status !== 'officially_enrolled'" class="flex justify-end">
-                        <button
-                            @click="acceptApplication"
-                            class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition"
-                        >
-                            Accept Application
-                        </button>
-                    </div>
-
-                    <!-- Transfer Program -->
-                    <div v-if="selectedUser?.application" class="p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-700 rounded-xl space-y-3">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-yellow-600 dark:text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                            </svg>
-                            <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-300">Transfer to Different Program</h5>
-                        </div>
-                        <p v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'" class="text-xs text-red-600 dark:text-red-400 font-medium">
-                            Cannot transfer officially enrolled or accepted applicants. Only admins can change courses for these students.
-                        </p>
-                        <p v-else class="text-xs text-yellow-700 dark:text-yellow-300">
-                            Transfer applicant to a different program. This action will be logged in the audit trail.
+                    <!-- Program Selection for Accept/Reject -->
+                    <div v-if="!isEvaluationCompleted">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Your Program</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                            Choose the program you are interviewing for:
                         </p>
                         <select
-                            v-model="changeCourseSelectedId"
-                            id="change-course-select"
-                            :disabled="selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                            v-model="selectedProgramId"
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                         >
-                            <option value="" disabled>Select new program…</option>
+                            <option disabled value="">Select Program</option>
                             <option
-                                v-for="prog in availablePrograms"
-                                :key="prog.id"
-                                :value="prog.id"
-                                :disabled="prog.id === selectedUser?.application?.program?.id"
+                                v-for="p in props.assignedPrograms"
+                                :key="p.id"
+                                :value="p.id"
                             >
-                                {{ prog.code }} - {{ prog.name }} [Slots: {{ prog.slots }}]
-                                <template v-if="prog.id === selectedUser?.application?.program?.id"> (current)</template>
+                                {{ p.code }} - {{ p.name }}
                             </option>
                         </select>
-                        <button
-                            @click="changeCourse"
-                            :disabled="!changeCourseSelectedId || changeCourseSelectedId === selectedUser?.application?.program?.id || isChangingCourse || selectedUser?.application?.enrollment_status === 'officially_enrolled' || selectedUser?.application?.status === 'accepted'"
-                            class="w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <span v-if="isChangingCourse">Transferring…</span>
-                            <span v-else>Transfer Applicant</span>
-                        </button>
+
+                        <!-- Promissory Note Checkbox -->
+                        <div class="mb-4">
+                            <label class="flex items-start space-x-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    v-model="requiresPromissoryNote"
+                                    class="mt-1 w-4 h-4 text-[#9E122C] border-gray-300 dark:border-gray-600 rounded focus:ring-[#9E122C] focus:ring-2"
+                                />
+                                <div>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">Requires Promissory Note</span>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        Check if applicant is approved but lacks optional documents
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="flex space-x-2">
+                            <button
+                                @click="acceptApplication"
+                                :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                :disabled="!selectedProgramId"
+                            >
+                                ✓ Accept
+                            </button>
+                            <button
+                                @click="rejectApplication"
+                                :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                :disabled="!selectedProgramId"
+                            >
+                                ✗ Reject
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Uploaded Documents -->
-                    <div>
-                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
-                        
-                        <!-- Loading State -->
-                        <div v-if="selectedUserFiles.loading" class="grid grid-cols-2 gap-3">
-                            <div v-for="i in 6" :key="i" class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 animate-pulse">
-                                <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
-                                <div class="w-full h-24 bg-gray-300 dark:bg-gray-600 rounded-lg"></div>
+                    <!-- Interview Completed Summary -->
+                    <div v-else>
+                        <div class="p-8 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Interview Completed</h4>
+                            
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+                                This interview has been completed.
+                            </p>
+                            
+                            <div class="border-t border-gray-300 dark:border-gray-600 my-8"></div>
+                            
+                            <div class="space-y-3 text-left">
+                                <div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Program:</p>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ selectedUser.application?.program?.code || "—" }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Interviewer:</p>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ getInterviewerName() }}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <!-- Actual Documents -->
-                        <div v-else class="grid grid-cols-2 gap-3">
-                            <div
-                                v-for="(file, key) in selectedUserFiles"
-                                :key="key"
-                                class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700"
-                            >
-                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate">{{ formatFileKey(key) }}</p>
-                                <img
-                                    v-if="hasImagePreview(file)"
-                                    :src="getFileUrl(file)"
-                                    alt="Uploaded Document"
-                                    class="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
-                                    @click="openImageModal(file)"
-                                />
-                                <div
-                                    v-else
-                                    class="w-full h-24 flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg"
-                                >
-                                    No file
+                            
+                            <div v-if="selectedUser.application?.requires_promissory_note" class="mt-8 pt-8 border-t border-gray-300 dark:border-gray-600">
+                                <div class="flex items-center justify-center gap-2 text-orange-700 dark:text-orange-300">
+                                    <span class="text-sm font-medium">Promissory Note: Required</span>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Application History -->
-                    <div v-if="selectedUser?.application?.processes?.length">
-                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Application History</h4>
-                        <div class="space-y-3">
-                            <div
-                                v-for="(process, index) in selectedUser.application.processes"
-                                :key="index"
-                                class="relative pl-6 pb-3 border-l-2 border-[#9E122C] last:border-0"
-                            >
-                                <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#9E122C] border-2 border-white dark:border-gray-900"></div>
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                                    {{ capitalize(process.stage) }}
-                                    <span :class="{
-                                        'text-green-600 dark:text-green-400': process.status === 'completed',
-                                        'text-yellow-600 dark:text-yellow-400': process.status === 'in_progress',
-                                        'text-red-600 dark:text-red-400': process.status === 'returned',
-                                    }">• {{ capitalize(process.status) }}</span>
-                                </p>
-                                <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.notes }}</p>
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(process.created_at) }}</p>
+                <!-- Grades Section -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Academic Grades</h4>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics || "—" }}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Science</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.science || "—" }}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">English</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.english || "—" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Uploaded Documents -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div
+                            v-for="(file, key) in selectedUserFiles"
+                            :key="key"
+                            class="group relative"
+                        >
+                            <!-- Document Card -->
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                                <div 
+                                    class="relative cursor-pointer"
+                                    @click="hasImagePreview(file) ? openImageModal(file) : null"
+                                >
+                                    <img
+                                        v-if="hasImagePreview(file)"
+                                        :src="getFileUrl(file)"
+                                        :alt="formatFileKey(key)"
+                                        class="w-full h-32 object-cover hover:opacity-90 transition pointer-events-none"
+                                    />
+                                    <div
+                                        v-else
+                                        class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
+                                    >
+                                        <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                
+                                <!-- Document Label -->
+                                <div class="p-2 border-t border-gray-200 dark:border-gray-700">
+                                    <p class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate" :title="formatFileKey(key)">
+                                        {{ formatFileKey(key) }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
+                <!-- Application History -->
+                <div v-if="selectedUser?.application?.processes?.length">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Timeline</h4>
+                    <div class="space-y-3">
+                        <div
+                            v-for="(process, index) in selectedUser.application.processes"
+                            :key="index"
+                            class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                        >
+                            <div :class="[
+                                'w-3 h-3 rounded-full mt-1.5 flex-shrink-0',
+                                process.status === 'completed' ? 'bg-green-500' :
+                                process.status === 'in_progress' ? 'bg-yellow-500' :
+                                'bg-red-500'
+                            ]"></div>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">
+                                            {{ capitalize(process.stage) }}
+                                        </p>
+                                        <p v-if="process.notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            {{ process.notes }}
+                                        </p>
+                                    </div>
+                                    <span :class="[
+                                        'px-2 py-1 rounded-full text-xs font-semibold',
+                                        process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                                        process.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                    ]">
+                                        {{ capitalize(process.status) }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                    {{ formatDate(process.created_at) }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </transition>
@@ -460,6 +505,11 @@ import {
     Title,
     Legend,
 } from "chart.js";
+
+const props = defineProps({
+    user: Object,
+    assignedPrograms: Array,
+});
 
 ChartJS.register(
     LineController,
@@ -536,6 +586,16 @@ const getStatusClass = (status) => {
     return "bg-gray-100 text-gray-600";
 };
 
+const getButtonClass = (type) => {
+    const classes = {
+        primary: 'bg-[#9E122C] text-white hover:bg-[#b51834]',
+        success: 'bg-green-600 text-white hover:bg-green-700',
+        danger: 'bg-red-600 text-white hover:bg-red-700',
+        secondary: 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+    };
+    return classes[type] || classes.secondary;
+};
+
 // Get evaluation-specific status text
 const getEvaluationStatusText = (user) => {
     switch (user.pipeline_status) {
@@ -545,7 +605,6 @@ const getEvaluationStatusText = (user) => {
         case 'for_interview':        return 'For Interview';
         case 'interview_returned':   return 'Returned for Revision';
         case 'interview_passed':     return 'Interview Passed';
-        case 'interview_transferred':return 'Course Transferred';
         case 'for_medical':          return 'For Medical';
         case 'medical_cleared':      return 'Medical Cleared';
         case 'medical_rejected':     return 'Medical Rejected';
@@ -565,7 +624,6 @@ const getEvaluationStatusClass = (user) => {
         case 'for_interview':         return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
         case 'interview_returned':    return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
         case 'interview_passed':      return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
         case 'for_medical':           return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
         case 'medical_cleared':       return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
         case 'medical_rejected':      return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
@@ -673,11 +731,6 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-
-        // Load programs only if not already loaded
-        if (availablePrograms.value.length === 0) {
-            fetchPrograms();
-        }
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         
@@ -805,19 +858,68 @@ const submitReturn = async () => {
 const capitalize = (str) =>
     typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
 
+const getInterviewerName = () => {
+    // Find the completed interviewer process with passed action
+    const interviewerProcess = selectedUser.value?.application?.processes?.find(
+        p => p.stage === 'interviewer' && p.status === 'completed' && p.action === 'passed'
+    );
+    
+    if (!interviewerProcess) {
+        return '—';
+    }
+    
+    // Check if performed_by is an object with user data
+    if (typeof interviewerProcess.performed_by === 'object' && interviewerProcess.performed_by !== null) {
+        if (interviewerProcess.performed_by.firstname && interviewerProcess.performed_by.lastname) {
+            return `${interviewerProcess.performed_by.firstname} ${interviewerProcess.performed_by.lastname}`;
+        }
+    }
+    
+    // Check if we have the performedBy relationship loaded (camelCase from Laravel)
+    if (interviewerProcess.performedBy?.firstname && interviewerProcess.performedBy?.lastname) {
+        return `${interviewerProcess.performedBy.firstname} ${interviewerProcess.performedBy.lastname}`;
+    }
+    
+    // Check performed_by_user
+    if (interviewerProcess.performed_by_user?.firstname && interviewerProcess.performed_by_user?.lastname) {
+        return `${interviewerProcess.performed_by_user.firstname} ${interviewerProcess.performed_by_user.lastname}`;
+    }
+    
+    // If performed_by is just a number (ID)
+    if (typeof interviewerProcess.performed_by === 'number') {
+        return `User ID: ${interviewerProcess.performed_by}`;
+    }
+    
+    return '—';
+};
+
 const formatDate = (date) => {
     const d = new Date(date);
     return d.toLocaleString(); // or .toLocaleDateString() if you prefer
 };
 
+const selectedProgramId = ref("");
+const requiresPromissoryNote = ref(false);
+
 const acceptApplication = async () => {
+    if (!selectedProgramId.value) {
+        showSnackbar("Please select a program to accept the applicant into", "error");
+        return;
+    }
+
     try {
         const currentUserId = selectedUser.value.id;
         
         await axios.post(
-            `/interviewer-dashboard/accept/${currentUserId}`
+            `/interviewer-dashboard/accept/${currentUserId}`,
+            {
+                program_id: selectedProgramId.value,
+                requires_promissory_note: requiresPromissoryNote.value,
+            }
         );
-        showSnackbar("Application accepted.");
+        showSnackbar("Application accepted successfully", "success");
+        selectedProgramId.value = "";
+        requiresPromissoryNote.value = false;
         
         await fetchUsers();
         
@@ -833,93 +935,47 @@ const acceptApplication = async () => {
         const msg =
             e.response?.data?.message ||
             "Failed to accept application due to an unexpected error.";
-        showSnackbar(msg);
+        showSnackbar(msg, "error");
     }
 };
 
-
-
-const availablePrograms = ref([]);
-
-const fetchPrograms = async () => {
-    try {
-        const response = await axios.get("/interviewer-dashboard/programs");
-        availablePrograms.value = response.data.programs;
-    } catch (e) {
-        console.error("Failed to load programs", e);
-    }
-};
-
-// ─── Change Course ───────────────────────────────────────────────────────────
-const changeCourseSelectedId = ref("");
-const isChangingCourse = ref(false);
-
-const changeCourse = async () => {
-    if (!changeCourseSelectedId.value) {
-        showSnackbar("Please select a program first.");
+const rejectApplication = async () => {
+    if (!selectedProgramId.value) {
+        showSnackbar("Please select a program to reject the applicant from", "error");
         return;
     }
 
-    // Check if applicant is officially enrolled - interviewers cannot change course for officially enrolled applicants
-    const isOfficiallyEnrolled = selectedUser.value?.application?.enrollment_status === 'officially_enrolled';
-    if (isOfficiallyEnrolled) {
-        showSnackbar("Cannot change course for officially enrolled applicants. Only admins can perform this action.");
-        return;
-    }
-
-    const selectedProg = availablePrograms.value.find(
-        (p) => p.id === changeCourseSelectedId.value
-    );
-    const confirmMsg = selectedProg
-        ? `Transfer applicant to "${selectedProg.code} - ${selectedProg.name}"? This action will be logged.`
-        : "Transfer applicant? This action will be logged.";
-
-    if (!confirm(confirmMsg)) return;
-
-    isChangingCourse.value = true;
     try {
-        // Interviewers always use the transfer endpoint
-        const res = await axios.post(
-            `/interviewer-dashboard/transfer/${selectedUser.value.id}`,
-            { program_id: changeCourseSelectedId.value }
-        );
+        const currentUserId = selectedUser.value.id;
         
-        showSnackbar(res.data?.message ?? "Applicant transferred successfully!");
-        changeCourseSelectedId.value = "";
-
+        await axios.post(
+            `/interviewer-dashboard/reject/${currentUserId}`,
+            {
+                program_id: selectedProgramId.value,
+            }
+        );
+        showSnackbar("Application rejected successfully", "success");
+        selectedProgramId.value = "";
+        
         await fetchUsers();
-        await fetchPrograms(); // Refresh slot counters
-        const refreshedUser = users.value.find((u) => u.id === selectedUser.value.id);
-        if (refreshedUser) {
-            await selectUser(refreshedUser);
+        
+        // Find and select the updated user from the fresh list
+        const updatedUser = users.value.find(u => u.id === currentUserId);
+        if (updatedUser) {
+            await selectUser(updatedUser);
         } else {
             selectedUser.value = null;
         }
     } catch (e) {
-        console.error("Course change failed:", e);
-        
-        // Handle 403 Forbidden specifically
-        if (e.response?.status === 403) {
-            showSnackbar("You do not have permission to transfer this applicant. Only admins can change courses for officially enrolled or accepted students.", "error");
-        } else {
-            const msg =
-                e.response?.data?.message ??
-                e.response?.data?.errors?.program_id?.[0] ??
-                "Failed to transfer applicant.";
-            showSnackbar(msg, "error");
-        }
-    } finally {
-        isChangingCourse.value = false;
+        console.error("Reject failed:", e);
+        const msg =
+            e.response?.data?.message ||
+            "Failed to reject application due to an unexpected error.";
+        showSnackbar(msg, "error");
     }
 };
 
-// Reset when switching applicants
-watch(
-    () => selectedUser.value?.id,
-    () => {
-        changeCourseSelectedId.value = "";
-    }
-);
+
 
 const totalPages = computed(() =>
     Math.ceil(filteredUsers.value.length / itemsPerPage)

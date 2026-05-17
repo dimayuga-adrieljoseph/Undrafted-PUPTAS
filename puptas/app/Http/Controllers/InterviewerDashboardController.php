@@ -52,11 +52,15 @@ class InterviewerDashboardController extends Controller
 
         $dashboardData = $this->dashboardService->getInterviewerDashboardData();
 
+        // Get interviewer's assigned programs
+        $assignedPrograms = $user->programs()->get(['id', 'code', 'name']);
+
         return Inertia::render('Dashboard/Interviewer', [
             'user' => $user,
             'pendingUsers' => $dashboardData['pendingUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
+            'assignedPrograms' => $assignedPrograms,
         ]);
     }
 
@@ -87,34 +91,38 @@ class InterviewerDashboardController extends Controller
         // Ensure user has interviewer role
         $this->ensureRole($this->getRoleId());
 
-        // Resolve this interviewer's assigned program IDs from the pivot table
-        $programIds = Auth::user()
-            ->programs()
-            ->pluck('programs.id')
-            ->toArray();
+        // Interviewers see ALL applicants at interviewer stage (global access)
+        $results = $this->userService->getAllApplicantsByStage('interviewer');
 
-        \Log::info('InterviewerDashboard::getUsers', [
-            'user_id'     => Auth::user()->id,
-            'program_ids' => $programIds,
+        \Log::info('InterviewerDashboard::getUsers (global)', [
+            'user_id' => Auth::user()->id,
+            'count' => count($results),
         ]);
 
-        // If the interviewer has no assigned programs, return an empty list.
-        // Interviewers must be explicitly assigned to programs to see applicants.
-        if (empty($programIds)) {
-            return response()->json([]);
-        }
-
-        $results = $this->userService->getAllApplicantsByStage('interviewer', $programIds);
-
-        \Log::info('InterviewerDashboard::getUsers results', ['count' => count($results)]);
-
-        // Return applicants at interviewer stage, scoped to assigned courses only
         return response()->json($results);
     }
 
-    public function accept($userId)
+    public function accept(Request $request, $userId)
     {
         $this->ensureRole(4);
+
+        // Validate that program_id is provided and optional requires_promissory_note
+        $validated = $request->validate([
+            'program_id' => 'required|exists:programs,id',
+            'requires_promissory_note' => 'nullable|boolean',
+        ]);
+
+        $programId = $validated['program_id'];
+        $requiresPromissoryNote = $validated['requires_promissory_note'] ?? false;
+
+        // Check if interviewer is assigned to this program
+        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        
+        if (!in_array($programId, $assignedProgramIds)) {
+            return response()->json([
+                'message' => 'You are not authorized to accept applicants for this program.',
+            ], 403);
+        }
 
         $application = $this->applicationService->getApplicationByUserId($userId);
 
@@ -152,8 +160,8 @@ class InterviewerDashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress) {
-                $program = Program::lockForUpdate()->findOrFail($application->program_id);
+            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress, $programId, $requiresPromissoryNote) {
+                $program = Program::lockForUpdate()->findOrFail($programId);
 
                 if ($program->slots <= 0) {
                     \Log::warning("❌ No slots left in program {$program->id}");
@@ -169,17 +177,30 @@ class InterviewerDashboardController extends Controller
                     abort(400, 'User does not meet the grade requirements for this program.');
                 }
 
-                // Keep application status as 'submitted' - it will be 'accepted' only after all stages complete
-                // $application->status remains 'submitted' or 'transferred' as it was
+                // Update application to the interviewer's assigned program
+                $oldProgramId = $application->program_id;
+                $application->program_id = $programId;
+                $application->requires_promissory_note = $requiresPromissoryNote;
+                $application->save();
 
+                // Decrement new program slots
                 $program->slots -= 1;
                 $program->save();
+
+                // Increment old program slots if different
+                if ($oldProgramId && $oldProgramId != $programId) {
+                    $oldProgram = Program::find($oldProgramId);
+                    if ($oldProgram) {
+                        $oldProgram->slots += 1;
+                        $oldProgram->save();
+                    }
+                }
 
                 // Close current interviewer in-progress process
                 $interviewerInProgress->update([
                     'status' => 'completed',
                     'action' => 'passed',
-                    'reviewer_notes' => 'Accepted by interviewer',
+                    'reviewer_notes' => "Accepted by interviewer for program: {$program->code}",
                     'performed_by' => auth()->id(),
                 ]);
 
@@ -192,184 +213,87 @@ class InterviewerDashboardController extends Controller
                 ]);
             });
 
-            $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer accepted application for applicant ID {$userId}.", null, 'ADMISSION_DATA');
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer accepted application for applicant ID {$userId} into program ID {$programId}.", null, 'ADMISSION_DATA');
 
             return response()->json(['message' => 'Application accepted.']);
         } catch (\Throwable $e) {
             \Log::error("❌ Accept failed: " . $e->getMessage());
-            return response()->json(['message' => 'An error occurred while accepting the application.'], 400);
+            return response()->json(['message' => $e->getMessage()], 400);
         }
     }
 
-
-    public function getPrograms()
+    public function reject(Request $request, $userId)
     {
-        $programs = Program::where('slots', '>', 0)->get();
+        $this->ensureRole(4);
 
-        return response()->json([
-            'programs' => $programs
+        // Validate that program_id is provided
+        $validated = $request->validate([
+            'program_id' => 'required|exists:programs,id',
         ]);
-    }
 
+        $programId = $validated['program_id'];
 
-    public function transferToProgram(Request $request, $userId)
-    {
+        // Check if interviewer is assigned to this program
+        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        
+        if (!in_array($programId, $assignedProgramIds)) {
+            return response()->json([
+                'message' => 'You are not authorized to reject applicants for this program.',
+            ], 403);
+        }
+
+        $application = $this->applicationService->getApplicationByUserId($userId);
+
+        // Check if evaluator stage is completed
+        $this->applicationService->ensureStageCompleted(
+            $application,
+            'evaluator',
+            "Cannot reject - evaluator stage not completed."
+        );
+
+        // Block repeat actions or already-finalized applications
+        if (!in_array($application->status, ['submitted', 'returned', 'transferred'], true)) {
+            return response()->json([
+                'message' => 'Application is no longer available for interviewer action.',
+            ], 409);
+        }
+
+        // Ensure there is an interviewer in-progress record to close
+        $interviewerInProgress = $application->processes()
+            ->where('stage', 'interviewer')
+            ->where('status', 'in_progress')
+            ->latest()
+            ->first();
+
+        if (!$interviewerInProgress) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
         try {
-            \Log::info("🚀 Transfer START for user {$userId}");
-            
-            $validated = $request->validate([
-                'program_id' => 'required|exists:programs,id',
-            ]);
-            
-            \Log::info("✅ Validation passed", ['program_id' => $validated['program_id']]);
+            DB::transaction(function () use ($application, $interviewerInProgress, $userId, $programId) {
+                $program = Program::findOrFail($programId);
 
-            $this->ensureRole(4);
-            \Log::info("✅ Role check passed");
-
-            $application = $this->applicationService->getApplicationByUserId($userId);
-            \Log::info("✅ Application found", [
-                'application_id' => $application->id,
-                'status' => $application->status,
-                'enrollment_status' => $application->enrollment_status,
-            ]);
-
-            // Check authorization using ApplicationPolicy
-            $this->authorize('changeCourse', $application);
-            \Log::info("✅ Authorization passed");
-
-            // Check if evaluator stage is completed
-            $this->applicationService->ensureStageCompleted(
-                $application,
-                'evaluator',
-                "Cannot transfer - evaluator stage not completed."
-            );
-            \Log::info("✅ Evaluator stage check passed");
-
-            $grades = Grade::where('user_id', $userId)->first();
-
-            if (!$grades) {
-                \Log::warning("⚠️ No grades found for user {$userId}");
-                return response()->json(['message' => 'User has no grades recorded.'], 400);
-            }
-            
-            \Log::info("✅ Grades found");
-
-            DB::transaction(function () use ($application, $validated, $grades, $userId) {
-                \Log::info("🔄 Starting transaction");
-                
-                $program = Program::lockForUpdate()->findOrFail($validated['program_id']);
-
-                \Log::info("📦 Fetched program: {$program->id}, current slots: {$program->slots}");
-
-                if ($program->slots <= 0) {
-                    \Log::warning("❌ No slots left in program {$program->id}");
-                    throw new \Exception("No available slots in the selected program.");
-                }
-
-                if (
-                    $grades->mathematics < $program->math ||
-                    $grades->science < $program->science ||
-                    $grades->english < $program->english
-                ) {
-                    \Log::warning("📉 User {$userId} does not meet grade requirements for program {$program->id}");
-                    throw new \Exception("User does not meet the grade requirements for this program.");
-                }
-
-                $oldProgramId = $application->program_id;
-                $application->program_id = $program->id;
-                $application->status = 'transferred';
+                // Update application status to rejected
+                $application->status = 'rejected';
                 $application->save();
-                \Log::info("✅ Application updated with program_id {$program->id}");
 
-                // Decrement new program slots
-                $program->slots -= 1;
-                $program->save();
-
-                // Increment old program slots
-                if ($oldProgramId) {
-                    $oldProgram = Program::find($oldProgramId);
-                    if ($oldProgram) {
-                        $oldProgram->slots += 1;
-                        $oldProgram->save();
-                    }
-                }
-                \Log::info("📉 Program slots updated. New slots: {$program->slots}");
-
-                // Handle interviewer process - could be in_progress or already completed
-                $interviewerProcess = $application->processes()
-                    ->where('stage', 'interviewer')
-                    ->whereIn('status', ['in_progress', 'completed'])
-                    ->latest()
-                    ->first();
-
-                \Log::info("🔍 Interviewer process search", [
-                    'found' => $interviewerProcess ? 'yes' : 'no',
-                    'process_id' => $interviewerProcess?->id,
+                // Close current interviewer in-progress process
+                $interviewerInProgress->update([
+                    'status' => 'completed',
+                    'action' => 'rejected',
+                    'reviewer_notes' => "Rejected by interviewer for program: {$program->code}",
+                    'performed_by' => auth()->id(),
                 ]);
-
-                if ($interviewerProcess) {
-                    // Update existing process to reflect the transfer
-                    $interviewerProcess->update([
-                        'status' => 'completed',
-                        'action' => 'transferred',
-                        'reviewer_notes' => 'Transferred to program ID ' . $program->id,
-                        'performed_by' => auth()->id(),
-                    ]);
-                    \Log::info("✅ Updated existing interviewer process");
-                } else {
-                    // No interviewer process exists - create one
-                    ApplicationProcess::create([
-                        'application_id' => $application->id,
-                        'stage' => 'interviewer',
-                        'status' => 'completed',
-                        'action' => 'transferred',
-                        'reviewer_notes' => 'Transferred to program ID ' . $program->id,
-                        'performed_by' => auth()->id(),
-                    ]);
-                    \Log::info("✅ Created new interviewer process");
-                }
-
-                // Ensure medical stage exists if not already present
-                $medicalProcess = $application->processes()
-                    ->where('stage', 'medical')
-                    ->latest()
-                    ->first();
-
-                \Log::info("🔍 Medical process search", [
-                    'found' => $medicalProcess ? 'yes' : 'no',
-                    'process_id' => $medicalProcess?->id,
-                ]);
-
-                if (!$medicalProcess) {
-                    ApplicationProcess::create([
-                        'application_id' => $application->id,
-                        'stage' => 'medical',
-                        'status' => 'in_progress',
-                        'performed_by' => null,
-                    ]);
-                    \Log::info("✅ Created medical process");
-                }
-
-                \Log::info("📝 ApplicationProcess logged for application {$application->id}");
             });
 
-            \Log::info("🎉 Transfer completed for user {$userId}");
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer rejected application for applicant ID {$userId} for program ID {$programId}.", null, 'ADMISSION_DATA');
 
-            $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer transferred applicant ID {$userId} to program ID {$validated['program_id']}.", null, 'ADMISSION_DATA');
-
-            return response()->json(['message' => 'Transferred successfully.']);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            \Log::warning("🚫 Authorization failed for user {$userId}: " . $e->getMessage());
-            return response()->json(['message' => 'You do not have permission to transfer this applicant.'], 403);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::warning("⚠️ Validation failed for user {$userId}: " . $e->getMessage());
-            throw $e; // Re-throw validation exceptions
+            return response()->json(['message' => 'Application rejected.']);
         } catch (\Throwable $e) {
-            \Log::error("❌ Transfer failed for user {$userId}");
-            \Log::error("Error message: " . $e->getMessage());
-            \Log::error("Error file: " . $e->getFile() . " line " . $e->getLine());
-            \Log::error("Stack trace: " . $e->getTraceAsString());
-            return response()->json(['message' => $e->getMessage()], 400);
+            \Log::error("❌ Reject failed: " . $e->getMessage());
+            return response()->json(['message' => 'An error occurred while rejecting the application.'], 400);
         }
     }
 
