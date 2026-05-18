@@ -29,13 +29,17 @@ class GradesController extends Controller
             $program->append('strand_names');
         });
 
+        // Only pass extraction result if grades haven't been saved yet
+        // This prevents overwriting user's manual edits with extraction data
+        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
+
         return inertia('Grades/ABMGradeInput', [
             'grade' => $grade,
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile, // Pass full profile for program choices
-            'extractionResult' => session()->get('extraction_result'),
+            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -55,13 +59,17 @@ class GradesController extends Controller
             $program->append('strand_names');
         });
 
+        // Only pass extraction result if grades haven't been saved yet
+        // This prevents overwriting user's manual edits with extraction data
+        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
+
         return inertia('Grades/ICTGradeInput', [
             'grade' => $grade,
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
-            'extractionResult' => session()->get('extraction_result'),
+            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -154,13 +162,17 @@ class GradesController extends Controller
             $program->append('strand_names');
         });
 
+        // Only pass extraction result if grades haven't been saved yet
+        // This prevents overwriting user's manual edits with extraction data
+        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
+
         return inertia('Grades/HUMSSGradeInput', [
             'grade' => $grade,
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
-            'extractionResult' => session()->get('extraction_result'),
+            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -180,13 +192,17 @@ class GradesController extends Controller
             $program->append('strand_names');
         });
 
+        // Only pass extraction result if grades haven't been saved yet
+        // This prevents overwriting user's manual edits with extraction data
+        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
+
         return inertia('Grades/GASGradeInput', [
             'grade' => $grade,
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
-            'extractionResult' => session()->get('extraction_result'),
+            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -206,13 +222,17 @@ class GradesController extends Controller
             $program->append('strand_names');
         });
 
+        // Only pass extraction result if grades haven't been saved yet
+        // This prevents overwriting user's manual edits with extraction data
+        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
+
         return inertia('Grades/STEMGradeInput', [
             'grade' => $grade,
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
-            'extractionResult' => session()->get('extraction_result'),
+            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
@@ -232,13 +252,17 @@ class GradesController extends Controller
             $program->append('strand_names');
         });
 
+        // Only pass extraction result if grades haven't been saved yet
+        // This prevents overwriting user's manual edits with extraction data
+        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
+
         return inertia('Grades/TVLGradeInput', [
             'grade' => $grade,
             'user' => $user,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
-            'extractionResult' => session()->get('extraction_result'),
+            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
         ]);
     }
