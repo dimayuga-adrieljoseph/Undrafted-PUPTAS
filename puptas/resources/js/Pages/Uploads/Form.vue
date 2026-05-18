@@ -10,10 +10,22 @@
 
       <!-- Upload Form Card -->
       <div class="bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-8 space-y-6">
+        <!-- Assignment Mode Selector -->
+        <div class="space-y-2">
+          <label class="block text-gray-700 dark:text-gray-200 font-medium">Assignment Mode</label>
+          <select
+            v-model="assignmentMode"
+            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm"
+          >
+            <option value="manual">Manual</option>
+            <option value="auto">Auto</option>
+          </select>
+        </div>
+
         <!-- Batch & Year Selection -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Batch -->
-          <div class="space-y-2">
+          <!-- Batch (hidden in auto mode) -->
+          <div v-if="assignmentMode === 'manual'" class="space-y-2">
             <label class="block text-gray-700 dark:text-gray-200 font-medium">Batch Number</label>
             <div class="flex gap-2">
               <select
@@ -59,8 +71,8 @@
           </div>
         </div>
 
-        <!-- Passer Status -->
-        <div class="space-y-2">
+        <!-- Passer Status (hidden in auto mode) -->
+        <div v-if="assignmentMode === 'manual'" class="space-y-2">
           <label class="block text-gray-700 dark:text-gray-200 font-medium">Passer Status</label>
           <select
             v-model="passerStatus"
@@ -104,6 +116,10 @@
           <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-96 text-center shadow-xl">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Success!</h2>
             <p class="text-gray-600 dark:text-gray-300 mb-4">Your records have been uploaded successfully.</p>
+            <div v-if="assignmentMode === 'auto'" class="text-left bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4 space-y-1">
+              <p class="text-gray-700 dark:text-gray-200"><span class="font-medium">Imported:</span> {{ importedCount }} records</p>
+              <p class="text-gray-700 dark:text-gray-200"><span class="font-medium">Skipped:</span> {{ skippedCount }} records</p>
+            </div>
             <button
               @click="redirectToEmails"
               class="px-6 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800"
@@ -123,6 +139,7 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import { Head } from "@inertiajs/vue3";
 const axios = window.axios;
 
+const assignmentMode = ref("manual");
 const batch = ref("Batch 1");
 const customBatch = ref("");
 const year = ref("");
@@ -131,6 +148,8 @@ const file = ref(null);
 const showDialog = ref(false);
 const yearOptions = ref([]);
 const passerStatus = ref("");
+const importedCount = ref(0);
+const skippedCount = ref(0);
 
 onMounted(() => {
   const currentYear = new Date().getFullYear();
@@ -149,32 +168,66 @@ const onFileChange = (e) => {
 };
 
 const submitForm = async () => {
-  if (!passerStatus.value) return alert("Please select a passer status.");
-  if (!file.value) return alert("Please select a file to upload.");
-  const formData = new FormData();
-  formData.append("batch_number", batch.value === "--Custom--" ? customBatch.value : batch.value);
-  formData.append("school_year", year.value === "--Custom--" ? customYear.value : year.value);
-  formData.append("passer_status_id", passerStatus.value);
-  formData.append("file", file.value);
+  const resolvedYear = year.value === "--Custom--" ? customYear.value : String(year.value);
 
-  try {
-    await axios.post("/test-passers/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    showDialog.value = true;
-  } catch (error) {
-    console.error(error);
-    const status = error.response?.status;
-    const message = error.response?.data?.message || error.response?.data?.error || null;
-    if (status === 403) {
-      alert("Upload failed: You do not have permission to upload passers.");
-    } else if (status === 422) {
-      const errors = error.response?.data?.errors;
-      const detail = errors ? Object.values(errors).flat().join("\n") : message;
-      alert("Upload failed: " + (detail || "Validation error."));
-    } else {
-      alert("Upload failed." + (message ? " " + message : ""));
+  // Client-side validation based on mode
+  if (assignmentMode.value === "manual") {
+    if (!passerStatus.value) return alert("Please select a passer status.");
+    const resolvedBatch = batch.value === "--Custom--" ? customBatch.value : batch.value;
+    if (!resolvedBatch) return alert("Please enter a batch number.");
+    if (!resolvedYear) return alert("Please select a school year.");
+    if (!file.value) return alert("Please select a file to upload.");
+
+    const formData = new FormData();
+    formData.append("assignment_mode", "manual");
+    formData.append("batch_number", resolvedBatch);
+    formData.append("school_year", resolvedYear);
+    formData.append("passer_status_id", passerStatus.value);
+    formData.append("file", file.value);
+
+    try {
+      await axios.post("/test-passers/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      showDialog.value = true;
+    } catch (error) {
+      handleUploadError(error);
     }
+  } else {
+    // Auto mode
+    if (!resolvedYear) return alert("Please select a school year.");
+    if (!file.value) return alert("Please select a file to upload.");
+
+    const formData = new FormData();
+    formData.append("assignment_mode", "auto");
+    formData.append("school_year", resolvedYear);
+    formData.append("file", file.value);
+
+    try {
+      const response = await axios.post("/test-passers/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      importedCount.value = response.data?.imported_count ?? 0;
+      skippedCount.value = response.data?.skipped_count ?? 0;
+      showDialog.value = true;
+    } catch (error) {
+      handleUploadError(error);
+    }
+  }
+};
+
+const handleUploadError = (error) => {
+  console.error(error);
+  const status = error.response?.status;
+  const message = error.response?.data?.message || error.response?.data?.error || null;
+  if (status === 403) {
+    alert("Upload failed: You do not have permission to upload passers.");
+  } else if (status === 422) {
+    const errors = error.response?.data?.errors;
+    const detail = errors ? Object.values(errors).flat().join("\n") : message;
+    alert("Upload failed: " + (detail || "Validation error."));
+  } else {
+    alert("Upload failed." + (message ? " " + message : ""));
   }
 };
 

@@ -287,24 +287,57 @@ class TestPasserController extends Controller
 
     public function upload(Request $request)
     {
+        $mode = $request->input('assignment_mode', 'manual');
+
+        // Validate common fields and assignment_mode
         $request->validate([
-            'batch_number' => 'required|string',
+            'assignment_mode' => 'sometimes|string|in:manual,auto',
             'school_year' => 'required|string',
             'file' => 'required|file|mimes:xlsx,xls,csv',
-            'passer_status_id' => 'required|integer|in:1,2,3',
         ]);
 
-        $batch = $request->input('batch_number');
+        if ($mode === 'manual') {
+            // Manual mode requires batch_number and passer_status_id
+            $request->validate([
+                'batch_number' => 'required|string',
+                'passer_status_id' => 'required|integer|in:1,2,3',
+            ]);
+
+            $batch = $request->input('batch_number');
+            $schoolYear = $request->input('school_year');
+            $passerStatusId = $request->input('passer_status_id');
+
+            Excel::import(new TestPassersImport($batch, $schoolYear, $passerStatusId), $request->file('file'));
+
+            $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified'];
+            $statusName = $statusNames[$passerStatusId] ?? 'Unknown';
+            $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}, status: {$statusName}.", null, 'ADMISSION_DATA');
+
+            return response()->json(['message' => 'Excel file uploaded and data imported successfully']);
+        }
+
+        // Auto mode - only requires school_year and file
         $schoolYear = $request->input('school_year');
-        $passerStatusId = $request->input('passer_status_id');
 
-        Excel::import(new TestPassersImport($batch, $schoolYear, $passerStatusId), $request->file('file'));
+        $import = new TestPassersImport(
+            batch: null,
+            schoolYear: $schoolYear,
+            passerStatusId: null,
+            assignmentMode: 'auto'
+        );
 
-        $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified'];
-        $statusName = $statusNames[$passerStatusId] ?? 'Unknown';
-        $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}, status: {$statusName}.", null, 'ADMISSION_DATA');
+        Excel::import($import, $request->file('file'));
 
-        return response()->json(['message' => 'Excel file uploaded and data imported successfully']);
+        $importedCount = $import->getImportedCount();
+        $skippedCount = $import->getSkippedCount();
+
+        $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file in auto mode for school year {$schoolYear}. Imported: {$importedCount}, Skipped: {$skippedCount}.", null, 'ADMISSION_DATA');
+
+        return response()->json([
+            'message' => 'Excel file uploaded and data imported successfully',
+            'imported_count' => $importedCount,
+            'skipped_count' => $skippedCount,
+        ]);
     }
 
     public function update(Request $request, $id)
