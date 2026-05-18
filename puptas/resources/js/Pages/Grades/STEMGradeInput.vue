@@ -185,7 +185,7 @@
 
                             <!-- G12 Science -->
                             <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 mt-6 flex items-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-600 text-white mr-2">G12</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#9E122C] text-white mr-2">G12</span>
                                 Grade 12
                             </h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -311,7 +311,7 @@
 
                             <!-- G12 English -->
                             <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 mt-6 flex items-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-600 text-white mr-2">G12</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#9E122C] text-white mr-2">G12</span>
                                 Grade 12
                             </h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
