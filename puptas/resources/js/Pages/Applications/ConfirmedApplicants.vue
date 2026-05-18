@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 const axios = window.axios;
 import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
@@ -88,6 +88,73 @@ const toggle = (id) => {
     const idx = selectedIds.value.indexOf(id);
     if (idx === -1) selectedIds.value.push(id);
     else selectedIds.value.splice(idx, 1);
+};
+
+// ── Pagination ─────────────────────────────────────────────────────────────────
+const currentPage = ref(1);
+const itemsPerPage = 10;
+
+watch([searchQuery, filterProgram, filterSarStatus], () => {
+    currentPage.value = 1;
+});
+
+const totalPages = computed(() =>
+    Math.ceil(filtered.value.length / itemsPerPage) || 1
+);
+
+const visiblePages = computed(() => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    if (totalPages.value <= maxVisible) {
+        for (let i = 1; i <= totalPages.value; i++) {
+            pages.push(i);
+        }
+    } else {
+        let start = Math.max(1, currentPage.value - 2);
+        let end = Math.min(totalPages.value, start + maxVisible - 1);
+        
+        if (end - start + 1 < maxVisible) {
+            start = Math.max(1, end - maxVisible + 1);
+        }
+        
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+    }
+    return pages;
+});
+
+const paginatedApplicants = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return filtered.value.slice(start, start + itemsPerPage);
+});
+
+function getGlobalRank(pageIndex) {
+    const globalIndex = (currentPage.value - 1) * itemsPerPage + pageIndex;
+    return globalIndex + 1;
+}
+
+const areAllSelectedOnCurrentPage = computed(() => {
+    if (!paginatedApplicants.value.length) return false;
+    return paginatedApplicants.value.every((a) =>
+        selectedIds.value.includes(a.id)
+    );
+});
+
+const toggleSelectAll = (checked) => {
+    if (checked) {
+        paginatedApplicants.value.forEach((a) => {
+            if (!selectedIds.value.includes(a.id)) {
+                selectedIds.value.push(a.id);
+            }
+        });
+    } else {
+        const idsToRemove = paginatedApplicants.value.map((a) => a.id);
+        selectedIds.value = selectedIds.value.filter(
+            (id) => !idsToRemove.includes(id)
+        );
+    }
 };
 
 // ── Send ───────────────────────────────────────────────────────────────────────
@@ -258,13 +325,13 @@ const fmt = (v) => (v === null || v === undefined ? '—' : parseFloat(v).toFixe
             <!-- ── LEFT: Applicant List ─────────────────────────────── -->
             <div class="flex-1 min-w-0">
                 <!-- Filters & Controls card -->
-                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                <div class="bg-white rounded-2xl shadow-lg p-6 mb-6 dark:bg-gray-800">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
                             Filters &amp; Controls
                         </h2>
-                        <span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                            {{ applicants.length }} applicants
+                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium dark:bg-gray-700 dark:text-gray-300">
+                            {{ filtered.length }} applicants
                         </span>
                     </div>
 
@@ -313,54 +380,168 @@ const fmt = (v) => (v === null || v === undefined ? '—' : parseFloat(v).toFixe
                 <!-- Loading / Error -->
                 <div v-if="loading" class="py-12 text-center text-gray-500 dark:text-gray-400">Loading…</div>
                 <div v-else-if="fetchError" class="py-8 text-center text-red-600 dark:text-red-400">{{ fetchError }}</div>
-                <div v-else-if="!filtered.length" class="py-12 text-center text-gray-500 dark:text-gray-400">
-                    No confirmed applicants found.
-                </div>
 
-                <!-- Applicant rows -->
-                <div v-else class="space-y-2">
-                    <div
-                        v-for="a in filtered"
-                        :key="a.id"
-                        @click="toggle(a.id)"
-                        :class="[
-                            'flex items-center gap-4 bg-white dark:bg-gray-800 rounded-xl border px-4 py-3 cursor-pointer transition-all',
-                            selectedIds.includes(a.id)
-                                ? 'border-[#9E122C] ring-1 ring-[#9E122C]/30'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                        ]"
-                    >
-                        <input type="checkbox" :checked="selectedIds.includes(a.id)"
-                            class="h-4 w-4 rounded text-[#9E122C] border-gray-300 focus:ring-[#9E122C] pointer-events-none flex-shrink-0" />
-
-                        <!-- Name & email -->
-                        <div class="flex-1 min-w-0">
-                            <div class="font-medium text-gray-900 dark:text-white text-sm truncate">
-                                {{ a.lastname }}, {{ a.firstname }}
-                            </div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ a.email }}</div>
-                            <div v-if="a.reference_number" class="text-xs font-mono text-gray-500 dark:text-gray-400">
-                                Ref: {{ a.reference_number }}
+                <!-- Passers Table Card -->
+                <div v-else class="bg-white rounded-2xl shadow-lg overflow-hidden dark:bg-gray-800">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
+                                Selected Passers
+                            </h2>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                                Page {{ currentPage }} of {{ totalPages }}
+                                • Showing {{ paginatedApplicants.length }} items
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Program -->
-                        <div class="hidden sm:block text-xs text-gray-600 dark:text-gray-400 text-center flex-shrink-0 w-16">
-                            <span class="font-semibold">{{ a.program?.code || '—' }}</span>
+                    <!-- Table -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-900">
+                                 <tr>
+                                     <th class="px-6 py-4 text-left">
+                                         <input
+                                             type="checkbox"
+                                             :checked="areAllSelectedOnCurrentPage"
+                                             @change="toggleSelectAll($event.target.checked)"
+                                             class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
+                                         />
+                                     </th>
+                                     <th class="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-16">
+                                         Rank
+                                     </th>
+                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
+                                         Name
+                                     </th>
+                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
+                                         Contact
+                                     </th>
+                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
+                                         Program
+                                     </th>
+                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">
+                                         Status
+                                     </th>
+                                 </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                                 <!-- Empty State Row -->
+                                 <tr v-if="filtered.length === 0" class="bg-gray-50 dark:bg-gray-900">
+                                     <td colspan="6" class="px-6 py-12 text-center">
+                                         <div class="flex flex-col items-center justify-center space-y-3">
+                                             <svg class="h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                             </svg>
+                                             <div class="text-lg font-medium text-gray-900 dark:text-gray-200">
+                                                 No applicants match your current filters
+                                             </div>
+                                         </div>
+                                     </td>
+                                 </tr>
+                                 <!-- Regular Rows -->
+                                 <tr 
+                                     v-for="(a, pageIndex) in paginatedApplicants" 
+                                     :key="a.id"
+                                     class="hover:bg-gray-50 transition dark:hover:bg-gray-900 cursor-pointer"
+                                     @click="toggle(a.id)"
+                                     v-else
+                                 >
+                                     <td class="px-6 py-4 whitespace-nowrap">
+                                         <input
+                                             type="checkbox"
+                                             :checked="selectedIds.includes(a.id)"
+                                             class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600 pointer-events-none"
+                                         />
+                                     </td>
+                                     <td class="px-3 py-4 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-400">
+                                         {{ getGlobalRank(pageIndex) }}
+                                     </td>
+                                     <td class="px-6 py-4">
+                                         <div>
+                                             <div class="font-medium text-gray-900 dark:text-gray-200">
+                                                 {{ a.lastname }}, {{ a.firstname }}
+                                             </div>
+                                         </div>
+                                     </td>
+                                     <td class="px-6 py-4">
+                                         <div class="text-gray-900 dark:text-gray-200 text-sm">{{ a.email }}</div>
+                                         <div v-if="a.reference_number" class="text-sm text-gray-500 dark:text-gray-300">
+                                             Ref: {{ a.reference_number }}
+                                         </div>
+                                     </td>
+                                     <td class="px-6 py-4 whitespace-nowrap">
+                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-300">
+                                             {{ a.program?.code || '—' }}
+                                         </span>
+                                     </td>
+                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                         <span v-if="a.sar_sent" class="px-3 py-1 bg-green-100 text-green-800 rounded-full dark:bg-green-900 dark:text-green-200 text-xs">
+                                             SAR Sent
+                                         </span>
+                                         <span v-else class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full dark:bg-yellow-900 dark:text-yellow-200 text-xs">
+                                             Pending
+                                         </span>
+                                     </td>
+                                 </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-700 dark:text-gray-400">
+                                <span v-if="filtered.length === 0">
+                                    Showing 0 to 0 of 0 results
+                                </span>
+                                <span v-else>
+                                    Showing {{ Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length) }} 
+                                    to {{ Math.min(currentPage * itemsPerPage, filtered.length) }} 
+                                    of {{ filtered.length }} results
+                                </span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button
+                                    :disabled="currentPage === 1"
+                                    @click.prevent="currentPage--"
+                                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                                >
+                                    <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                    Previous
+                                </button>
+                                <div class="flex items-center space-x-1">
+                                    <button
+                                        v-for="page in visiblePages"
+                                        :key="page"
+                                        @click.prevent="currentPage = page"
+                                        :class="[
+                                            'px-3 py-1 rounded-lg text-sm font-medium transition',
+                                            currentPage === page 
+                                                ? 'bg-[#9E122C] text-white' 
+                                                : 'text-gray-700 hover:bg-gray-100'
+                                        ]"
+                                    >
+                                        {{ page }}
+                                    </button>
+                                    <span v-if="totalPages > 5 && currentPage < totalPages - 2" class="px-2 text-gray-500 dark:text-gray-300">
+                                        ...
+                                    </span>
+                                </div>
+                                <button
+                                    :disabled="currentPage === totalPages"
+                                    @click.prevent="currentPage++"
+                                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                                >
+                                    Next
+                                    <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-
-                        <!-- SAR badge -->
-                        <div class="flex-shrink-0">
-                            <span v-if="a.sar_sent"
-                                class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-full font-medium">
-                                SAR Sent
-                            </span>
-                            <span v-else
-                                class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs rounded-full font-medium">
-                                Pending
-                            </span>
-                        </div>
-
                     </div>
                 </div>
             </div>
