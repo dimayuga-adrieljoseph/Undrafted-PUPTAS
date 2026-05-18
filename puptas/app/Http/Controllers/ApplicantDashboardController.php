@@ -49,6 +49,7 @@ class ApplicantDashboardController extends Controller
         }
 
         $grades = Grade::where('user_id', $user->id)->first();
+        $profile = $user->applicantProfile;
 
         if (!$grades) {
             return response()->json([
@@ -58,32 +59,48 @@ class ApplicantDashboardController extends Controller
             ]);
         }
 
-        // Get all programs with available slots
-        $programs = Program::where('slots', '>', 0)->get();
+        // Calculate GWA
+        $gwa = ($grades->g12_first_sem + $grades->g12_second_sem) / 2;
+        $userStrand = strtoupper($profile?->strand ?? '');
+
+        // Get all programs (including those with 0 slots for tracking purposes)
+        $programs = Program::with('strands')->get();
 
         $qualified = [];
         $disqualified = [];
 
         foreach ($programs as $program) {
-            $isQualified = $grades->mathematics >= $program->math &&
-                           $grades->science >= $program->science &&
-                           $grades->english >= $program->english;
+            // Check grade requirements
+            $meetsGrades = $grades->mathematics >= ($program->math ?? 0) &&
+                          $grades->science >= ($program->science ?? 0) &&
+                          $grades->english >= ($program->english ?? 0) &&
+                          $gwa >= ($program->gwa ?? 0);
+
+            // Check strand requirements
+            $meetsStrand = $this->checkStrandRequirement($program, $userStrand);
+
+            $isQualified = $meetsGrades && $meetsStrand;
 
             $programData = [
                 'id' => $program->id,
                 'code' => $program->code,
                 'name' => $program->name,
                 'slots' => $program->slots,
+                'strand_names' => $program->strand_names,
                 'requirements' => [
                     'math' => $program->math,
                     'science' => $program->science,
                     'english' => $program->english,
+                    'gwa' => $program->gwa,
                 ],
                 'your_grades' => [
                     'math' => $grades->mathematics,
                     'science' => $grades->science,
                     'english' => $grades->english,
+                    'gwa' => round($gwa, 2),
                 ],
+                'meets_grades' => $meetsGrades,
+                'meets_strand' => $meetsStrand,
             ];
 
             if ($isQualified) {
@@ -97,5 +114,52 @@ class ApplicantDashboardController extends Controller
             'qualified' => $qualified,
             'disqualified' => $disqualified,
         ]);
+    }
+
+    /**
+     * Check if user's strand meets program requirements
+     *
+     * @param Program $program
+     * @param string $userStrand
+     * @return bool
+     */
+    private function checkStrandRequirement($program, $userStrand)
+    {
+        if (!$userStrand) {
+            return true; // If no strand info, allow all
+        }
+
+        $strandNames = strtoupper($program->strand_names ?? '');
+        
+        // If no strand requirement, allow all
+        if (empty($strandNames)) {
+            return true;
+        }
+        
+        // If explicitly open to all strands
+        if (str_contains($strandNames, 'OPEN TO ALL')) {
+            return true;
+        }
+
+        // Check if user's strand is in the allowed list
+        $allowedStrands = array_map('trim', preg_split('/[,\/]/', $strandNames));
+        
+        foreach ($allowedStrands as $allowed) {
+            // Normalize strand names
+            if (str_contains($allowed, 'TECH-VOC') || str_contains($allowed, 'TVL')) {
+                $allowed = 'TVL';
+            }
+            
+            if ($allowed === $userStrand) {
+                return true;
+            }
+        }
+        
+        // Check if "other with bridging" is mentioned
+        if (str_contains($strandNames, 'OTHER') && str_contains($strandNames, 'BRIDGING')) {
+            return true;
+        }
+        
+        return false;
     }
 }
