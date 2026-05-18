@@ -41,9 +41,10 @@
                     </p>
                 </div>
 
-                <!-- Success Toast Notification -->
-                <Transition name="slide-down">
-                    <div v-if="successMessage" class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-400 rounded-lg shadow-lg flex items-center gap-3 animate-pulse">
+            <!-- Success Toast Notification - Fixed Position -->
+            <Transition name="slide-down">
+                <div v-if="successMessage" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
+                    <div class="p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-400 rounded-lg shadow-2xl flex items-center gap-3">
                         <div class="flex-shrink-0">
                             <svg class="w-6 h-6 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -57,7 +58,8 @@
                             <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-green-500 dark:border-green-400"></div>
                         </div>
                     </div>
-                </Transition>
+                </div>
+            </Transition>
 
                 <!-- Docling Autofill Banner -->
                 <div v-if="extractionResult && !bannerDismissed" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-4">
@@ -1163,18 +1165,21 @@ const submitForm = async () => {
     };
 
     router.post("/grades/humss", payload, {
-        preserveState: false,
-        preserveScroll: false,
+        preserveState: true,
+        preserveScroll: true,
         onSuccess: (response) => {
+            // Show success message
+            successMessage.value = "Grades saved successfully! Redirecting to dashboard...";
+            
             // Scroll to top to ensure notification is visible
             window.scrollTo({ top: 0, behavior: 'smooth' });
             
-            // Show success message immediately
-            successMessage.value = "Grades saved successfully! Redirecting to dashboard...";
-            
-            // Force a small delay to ensure the notification renders
+            // Redirect after showing notification
             setTimeout(() => {
-                router.visit("/applicant-dashboard");
+                router.visit("/applicant-dashboard", {
+                    preserveState: false,
+                    preserveScroll: false,
+                });
             }, 2000);
             
             loading.value = false;

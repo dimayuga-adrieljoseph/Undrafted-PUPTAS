@@ -269,6 +269,40 @@
                         </div>
                     </div>
 
+                    <!-- Program Choices -->
+                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Program Choices</h4>
+                        <div class="space-y-2">
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">First Choice Program (1st Choice)</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                    {{ selectedUser.application?.program?.name || "—" }}
+                                </p>
+                                <p class="text-xs text-gray-600 dark:text-gray-400">
+                                    {{ selectedUser.application?.program?.code || "" }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Second Choice Program</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                    {{ selectedUser.application?.second_choice?.name || "—" }}
+                                </p>
+                                <p class="text-xs text-gray-600 dark:text-gray-400">
+                                    {{ selectedUser.application?.second_choice?.code || "" }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Third Choice Program</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                    {{ selectedUser.application?.third_choice?.name || "—" }}
+                                </p>
+                                <p class="text-xs text-gray-600 dark:text-gray-400">
+                                    {{ selectedUser.application?.third_choice?.code || "" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Evaluation Actions -->
                     <div v-if="!isEvaluationCompleted" class="space-y-3">
                         <div class="flex gap-2">
