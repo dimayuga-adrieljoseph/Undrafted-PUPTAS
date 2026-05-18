@@ -132,7 +132,7 @@
                                         type="text"
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        placeholder="Subject name (e.g., Earth and Life Science)"
+                                        placeholder="Enter subject name"
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
                                     <input
@@ -155,7 +155,7 @@
                                         type="text"
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        placeholder="Subject name (e.g., Physical Science)"
+                                        placeholder="Enter subject name"
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
                                     <input
@@ -560,9 +560,9 @@ const form = reactive({
     g11_general_mathematics: null,
     g11_statistics_probability: null,
     // G12 science (two customizable fields)
-    g12_science_subject_1: "",
+    g12_science_subject_1: "Earth and Life Science",
     g12_science_grade_1: null,
-    g12_science_subject_2: "",
+    g12_science_subject_2: "Physical Science",
     g12_science_grade_2: null,
     // Grade 11 English
     g11_oral_communication: null,
