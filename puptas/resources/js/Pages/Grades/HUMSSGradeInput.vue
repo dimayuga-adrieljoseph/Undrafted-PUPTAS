@@ -211,6 +211,28 @@
                                     />
                                     <p v-if="isLowConfidence('earth and life science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
+
+                            <!-- G12 Science -->
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 mt-6 flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-600 text-white mr-2">G12</span>
+                                Grade 12
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Science</label>
+                                    <input
+                                        v-model.number="form.g12_physical_science"
+                                        type="number"
+                        @input="validateGrade"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        :disabled="isLocked"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('physical science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('physical science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                            </div>
                             <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
                                     Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
@@ -540,6 +562,7 @@ const form = reactive({
     g11_academic_professional: null,
     g11_reading_writing: null,
     g11_earth_life_science: null,
+    g12_physical_science: null,
     // Grade 12 Semester GWA
     g12_first_sem_gwa: null,
     g12_second_sem_gwa: null,
@@ -574,6 +597,7 @@ const englishAverage = computed(() => {
 const scienceAverage = computed(() => {
     const grades = [
         form.g11_earth_life_science,
+        form.g12_physical_science,
                     ].filter((g) => g !== null && g !== "");
     return grades.length > 0
         ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)

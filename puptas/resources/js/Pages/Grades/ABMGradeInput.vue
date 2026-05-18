@@ -180,6 +180,28 @@
                                     />
                                     <p v-if="isLowConfidence('reading and writing')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
+
+                            <!-- G12 English -->
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 mt-6 flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-600 text-white mr-2">G12</span>
+                                Grade 12
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">21st Century Literature</label>
+                                    <input required
+                                        v-model.number="form.g12_21st_century_lit"
+                                        type="number"
+                        @input="validateGrade"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        :disabled="isLocked"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('21st century literature') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('21st century literature')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                            </div>
                             <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
                                     English Average: <span class="font-bold">{{ englishAverage || "—" }}</span>
@@ -556,6 +578,7 @@ const form = reactive({
     g11_oral_communication: null,
     g11_academic_professional: null,
     g11_reading_writing: null,
+    g12_21st_century_lit: null,
     g11_earth_life_science: null,
     g11_physical_science: null,
     // Grade 12 Semester GWA
@@ -590,8 +613,10 @@ const reviewData = computed(() => ({
     g11_oral_communication: form.g11_oral_communication,
     g11_academic_professional: form.g11_academic_professional,
     g11_reading_writing: form.g11_reading_writing,
+    g12_21st_century_lit: form.g12_21st_century_lit,
     g11_earth_life_science: form.g11_earth_life_science,
     g11_physical_science: form.g11_physical_science,
+    g12_first_sem_gwa: form.g12_first_sem_gwa,
     g12_second_sem_gwa: form.g12_second_sem_gwa,
     first_choice_program: getSelectedProgramName(form.first_choice_program),
     second_choice_program: getSelectedProgramName(form.second_choice_program),
@@ -656,6 +681,7 @@ const englishAverage = computed(() => {
         form.g11_oral_communication,
         form.g11_academic_professional,
         form.g11_reading_writing,
+        form.g12_21st_century_lit,
                                     ];
 
     if (requiredGrades.some((g) => !isValidGrade(g))) {

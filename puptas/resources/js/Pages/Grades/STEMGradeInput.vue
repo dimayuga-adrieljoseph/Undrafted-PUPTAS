@@ -182,6 +182,84 @@
                                     />
                                     <p v-if="isLowConfidence('general chemistry 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
+
+                            <!-- G12 Science -->
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 mt-6 flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-600 text-white mr-2">G12</span>
+                                Grade 12
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Physics 1</label>
+                                    <input
+                                        v-model.number="form.g12_general_physics_1"
+                                        type="number"
+                        @input="validateGrade"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        :disabled="isLocked"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general physics 1') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('general physics 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Biology 1</label>
+                                    <input
+                                        v-model.number="form.g12_general_biology_1"
+                                        type="number"
+                        @input="validateGrade"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        :disabled="isLocked"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general biology 1') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('general biology 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Physics 2</label>
+                                    <input
+                                        v-model.number="form.g12_general_physics_2"
+                                        type="number"
+                        @input="validateGrade"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        :disabled="isLocked"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general physics 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('general physics 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Biology 2</label>
+                                    <input
+                                        v-model.number="form.g12_general_biology_2"
+                                        type="number"
+                        @input="validateGrade"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        :disabled="isLocked"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general biology 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('general biology 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Chemistry 2</label>
+                                    <input
+                                        v-model.number="form.g12_general_chemistry_2"
+                                        type="number"
+                        @input="validateGrade"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        :disabled="isLocked"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general chemistry 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('general chemistry 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                            </div>
                             <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
                                     Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
@@ -229,6 +307,42 @@
                                         placeholder="Enter grade (0-100)"
                                     />
                                     <p v-if="isLowConfidence('reading and writing skills')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                            </div>
+
+                            <!-- G12 English -->
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 mt-6 flex items-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-600 text-white mr-2">G12</span>
+                                Grade 12
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">21st Century Literature</label>
+                                    <input
+                                        v-model.number="form.g12_21st_century_lit"
+                                        type="number"
+                        @input="validateGrade"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        :disabled="isLocked"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('21st century literature') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('21st century literature')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">English for Academic and Professional Purposes</label>
+                                    <input
+                                        v-model.number="form.g12_academic_professional"
+                                        type="number"
+                        @input="validateGrade"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        :disabled="isLocked"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('english for academic and professional purposes') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
+                                    />
+                                    <p v-if="isLowConfidence('english for academic and professional purposes')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
                             <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
@@ -557,9 +671,18 @@ const form = reactive({
     // Grade 11 Science subjects
     g11_earth_science: null,
     g11_general_chemistry_1: null,
+    // Grade 12 Science subjects
+    g12_general_physics_1: null,
+    g12_general_biology_1: null,
+    g12_general_physics_2: null,
+    g12_general_biology_2: null,
+    g12_general_chemistry_2: null,
     // Grade 11 English subjects
     g11_oral_communication: null,
     g11_reading_writing: null,
+    // Grade 12 English subjects
+    g12_21st_century_lit: null,
+    g12_academic_professional: null,
     // Grade 12 Semester GWA
     g12_first_sem_gwa: null,
     g12_second_sem_gwa: null,
@@ -585,6 +708,11 @@ const scienceAverage = computed(() => {
     const grades = [
         form.g11_earth_science,
         form.g11_general_chemistry_1,
+        form.g12_general_physics_1,
+        form.g12_general_biology_1,
+        form.g12_general_physics_2,
+        form.g12_general_biology_2,
+        form.g12_general_chemistry_2,
                                             ].filter((g) => g !== null && g !== "");
     return grades.length > 0
         ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
@@ -595,6 +723,8 @@ const englishAverage = computed(() => {
     const grades = [
         form.g11_oral_communication,
         form.g11_reading_writing,
+        form.g12_21st_century_lit,
+        form.g12_academic_professional,
                     ].filter((g) => g !== null && g !== "");
     return grades.length > 0
         ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
