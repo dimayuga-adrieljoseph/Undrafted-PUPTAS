@@ -1043,13 +1043,64 @@ onMounted(() => {
         }
     }
     
-    // Load saved semester GWAs from grade
+    // Load saved grades from database
     if (props.grade && props.grade.id) {
+        // Load G12 GWA semesters
         if (props.grade.g12_first_sem) {
             form.g12_first_sem_gwa = props.grade.g12_first_sem;
         }
         if (props.grade.g12_second_sem) {
             form.g12_second_sem_gwa = props.grade.g12_second_sem;
+        }
+        // Load individual G11 Math grades
+        if (props.grade.g11_general_mathematics) {
+            form.g11_general_mathematics = props.grade.g11_general_mathematics;
+        }
+        if (props.grade.g11_statistics_probability) {
+            form.g11_statistics_probability = props.grade.g11_statistics_probability;
+        }
+        if (props.grade.g11_pre_calculus) {
+            form.g11_pre_calculus = props.grade.g11_pre_calculus;
+        }
+        if (props.grade.g11_basic_calculus) {
+            form.g11_basic_calculus = props.grade.g11_basic_calculus;
+        }
+        // Load individual G11 Science grades
+        if (props.grade.g11_earth_science) {
+            form.g11_earth_science = props.grade.g11_earth_science;
+        }
+        if (props.grade.g11_general_chemistry_1) {
+            form.g11_general_chemistry_1 = props.grade.g11_general_chemistry_1;
+        }
+        // Load individual G12 Science grades
+        if (props.grade.g12_general_physics_1) {
+            form.g12_general_physics_1 = props.grade.g12_general_physics_1;
+        }
+        if (props.grade.g12_general_biology_1) {
+            form.g12_general_biology_1 = props.grade.g12_general_biology_1;
+        }
+        if (props.grade.g12_general_physics_2) {
+            form.g12_general_physics_2 = props.grade.g12_general_physics_2;
+        }
+        if (props.grade.g12_general_biology_2) {
+            form.g12_general_biology_2 = props.grade.g12_general_biology_2;
+        }
+        if (props.grade.g12_general_chemistry_2) {
+            form.g12_general_chemistry_2 = props.grade.g12_general_chemistry_2;
+        }
+        // Load individual G11 English grades
+        if (props.grade.g11_oral_communication) {
+            form.g11_oral_communication = props.grade.g11_oral_communication;
+        }
+        if (props.grade.g11_reading_writing) {
+            form.g11_reading_writing = props.grade.g11_reading_writing;
+        }
+        // Load individual G12 English grades
+        if (props.grade.g12_21st_century_lit) {
+            form.g12_21st_century_lit = props.grade.g12_21st_century_lit;
+        }
+        if (props.grade.g12_academic_professional) {
+            form.g12_academic_professional = props.grade.g12_academic_professional;
         }
     }
     
@@ -1234,13 +1285,34 @@ const submitForm = async () => {
         return;
     }
 
-    // Prepare data with only computed averages
+    // Prepare data with computed averages AND individual grades
     const payload = {
         mathematics: parseFloat(mathAverage.value),
         science: parseFloat(scienceAverage.value),
         english: parseFloat(englishAverage.value),
         g12_first_sem: parseFloat(form.g12_first_sem_gwa),
         g12_second_sem: parseFloat(form.g12_second_sem_gwa),
+        // Individual G11 Math grades
+        g11_general_mathematics: parseFloat(form.g11_general_mathematics),
+        g11_statistics_probability: parseFloat(form.g11_statistics_probability),
+        g11_pre_calculus: parseFloat(form.g11_pre_calculus),
+        g11_basic_calculus: parseFloat(form.g11_basic_calculus),
+        // Individual G11 Science grades
+        g11_earth_science: parseFloat(form.g11_earth_science),
+        g11_general_chemistry_1: parseFloat(form.g11_general_chemistry_1),
+        // Individual G12 Science grades
+        g12_general_physics_1: parseFloat(form.g12_general_physics_1),
+        g12_general_biology_1: parseFloat(form.g12_general_biology_1),
+        g12_general_physics_2: parseFloat(form.g12_general_physics_2),
+        g12_general_biology_2: parseFloat(form.g12_general_biology_2),
+        g12_general_chemistry_2: parseFloat(form.g12_general_chemistry_2),
+        // Individual G11 English grades
+        g11_oral_communication: parseFloat(form.g11_oral_communication),
+        g11_reading_writing: parseFloat(form.g11_reading_writing),
+        // Individual G12 English grades
+        g12_21st_century_lit: parseFloat(form.g12_21st_century_lit),
+        g12_academic_professional: parseFloat(form.g12_academic_professional),
+        // Program choices
         first_choice_program: form.first_choice_program,
         second_choice_program: form.second_choice_program || null,
         third_choice_program: form.third_choice_program || null,

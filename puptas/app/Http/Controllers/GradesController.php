@@ -87,6 +87,17 @@ class GradesController extends Controller
             'science' => 'required|numeric|min:0|max:100',
             'g12_first_sem' => 'required|numeric|min:0|max:100',
             'g12_second_sem' => 'required|numeric|min:0|max:100',
+            // Individual G11 Math grades
+            'g11_general_mathematics' => 'required|numeric|min:0|max:100',
+            'g11_statistics_probability' => 'required|numeric|min:0|max:100',
+            // Individual G11 English grades
+            'g11_oral_communication' => 'required|numeric|min:0|max:100',
+            'g11_21st_century_lit' => 'required|numeric|min:0|max:100',
+            'g11_academic_professional' => 'required|numeric|min:0|max:100',
+            'g11_reading_writing' => 'required|numeric|min:0|max:100',
+            // Individual G11 Science grades
+            'g11_earth_life_science' => 'required|numeric|min:0|max:100',
+            'g11_physical_science' => 'required|numeric|min:0|max:100',
             // Program choices
             'first_choice_program' => 'required|exists:programs,id',
             'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
@@ -105,6 +116,17 @@ class GradesController extends Controller
                 'science' => $validated['science'],
                 'g12_first_sem' => $validated['g12_first_sem'],
                 'g12_second_sem' => $validated['g12_second_sem'],
+                // Individual G11 Math grades
+                'g11_general_mathematics' => $validated['g11_general_mathematics'],
+                'g11_statistics_probability' => $validated['g11_statistics_probability'],
+                // Individual G11 English grades
+                'g11_oral_communication' => $validated['g11_oral_communication'],
+                'g11_21st_century_lit' => $validated['g11_21st_century_lit'],
+                'g11_academic_professional' => $validated['g11_academic_professional'],
+                'g11_reading_writing' => $validated['g11_reading_writing'],
+                // Individual G11 Science grades
+                'g11_earth_life_science' => $validated['g11_earth_life_science'],
+                'g11_physical_science' => $validated['g11_physical_science'],
             ]
         );
 
@@ -248,6 +270,19 @@ class GradesController extends Controller
             'science' => 'required|numeric|min:0|max:100',
             'g12_first_sem' => 'required|numeric|min:0|max:100',
             'g12_second_sem' => 'required|numeric|min:0|max:100',
+            // Individual G11 Math grades
+            'g11_general_mathematics' => 'required|numeric|min:0|max:100',
+            'g11_business_mathematics' => 'required|numeric|min:0|max:100',
+            'g11_statistics_probability' => 'required|numeric|min:0|max:100',
+            // Individual G11 English grades
+            'g11_oral_communication' => 'required|numeric|min:0|max:100',
+            'g11_academic_professional' => 'required|numeric|min:0|max:100',
+            'g11_reading_writing' => 'required|numeric|min:0|max:100',
+            // Individual G12 English grades
+            'g12_21st_century_lit' => 'required|numeric|min:0|max:100',
+            // Individual G11 Science grades
+            'g11_earth_life_science' => 'required|numeric|min:0|max:100',
+            'g11_physical_science' => 'required|numeric|min:0|max:100',
             // Program choices - dynamic based on qualified programs count
             'first_choice_program' => 'required|exists:programs,id',
             'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
@@ -291,6 +326,19 @@ class GradesController extends Controller
                 'science' => $validated['science'],
                 'g12_first_sem' => $validated['g12_first_sem'],
                 'g12_second_sem' => $validated['g12_second_sem'],
+                // Individual G11 Math grades
+                'g11_general_mathematics' => $validated['g11_general_mathematics'],
+                'g11_business_mathematics' => $validated['g11_business_mathematics'],
+                'g11_statistics_probability' => $validated['g11_statistics_probability'],
+                // Individual G11 English grades
+                'g11_oral_communication' => $validated['g11_oral_communication'],
+                'g11_academic_professional' => $validated['g11_academic_professional'],
+                'g11_reading_writing' => $validated['g11_reading_writing'],
+                // Individual G12 English grades
+                'g12_21st_century_lit' => $validated['g12_21st_century_lit'],
+                // Individual G11 Science grades
+                'g11_earth_life_science' => $validated['g11_earth_life_science'],
+                'g11_physical_science' => $validated['g11_physical_science'],
             ]
         );
 
@@ -364,6 +412,16 @@ class GradesController extends Controller
             'english' => 'required|numeric|min:0|max:100',
             'g12_first_sem' => 'required|numeric|min:0|max:100',
             'g12_second_sem' => 'required|numeric|min:0|max:100',
+            // Individual G11 Math grades
+            'g11_general_mathematics' => 'required|numeric|min:0|max:100',
+            'g11_statistics_probability' => 'required|numeric|min:0|max:100',
+            // Individual G11 English grades
+            'g11_oral_communication' => 'required|numeric|min:0|max:100',
+            'g11_21st_century_lit' => 'required|numeric|min:0|max:100',
+            'g11_academic_professional' => 'required|numeric|min:0|max:100',
+            // Individual G12 Science grades
+            'g12_earth_life_science' => 'required|numeric|min:0|max:100',
+            'g12_physical_science' => 'required|numeric|min:0|max:100',
             // Program choices
             'first_choice_program' => 'required|exists:programs,id',
             'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
@@ -382,6 +440,16 @@ class GradesController extends Controller
                 'english' => $validated['english'],
                 'g12_first_sem' => $validated['g12_first_sem'],
                 'g12_second_sem' => $validated['g12_second_sem'],
+                // Individual G11 Math grades
+                'g11_general_mathematics' => $validated['g11_general_mathematics'],
+                'g11_statistics_probability' => $validated['g11_statistics_probability'],
+                // Individual G11 English grades
+                'g11_oral_communication' => $validated['g11_oral_communication'],
+                'g11_21st_century_lit' => $validated['g11_21st_century_lit'],
+                'g11_academic_professional' => $validated['g11_academic_professional'],
+                // Individual G12 Science grades
+                'g12_earth_life_science' => $validated['g12_earth_life_science'],
+                'g12_physical_science' => $validated['g12_physical_science'],
             ]
         );
 
@@ -421,6 +489,19 @@ class GradesController extends Controller
             'science' => 'required|numeric|min:0|max:100',
             'g12_first_sem' => 'required|numeric|min:0|max:100',
             'g12_second_sem' => 'required|numeric|min:0|max:100',
+            // Individual G11 Math grades
+            'g11_general_mathematics' => 'required|numeric|min:0|max:100',
+            'g11_statistics_probability' => 'required|numeric|min:0|max:100',
+            // Individual G11 English grades
+            'g11_oral_communication' => 'required|numeric|min:0|max:100',
+            'g11_21st_century_lit' => 'required|numeric|min:0|max:100',
+            'g11_academic_professional' => 'required|numeric|min:0|max:100',
+            'g11_reading_writing' => 'required|numeric|min:0|max:100',
+            // Individual G11 Science grades
+            'g11_earth_life_science' => 'required|numeric|min:0|max:100',
+            'g11_physical_science' => 'required|numeric|min:0|max:100',
+            // Individual G12 Science grades
+            'g12_earth_life_science' => 'required|numeric|min:0|max:100',
             // Program choices
             'first_choice_program' => 'required|exists:programs,id',
             'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
@@ -439,6 +520,19 @@ class GradesController extends Controller
                 'science' => $validated['science'],
                 'g12_first_sem' => $validated['g12_first_sem'],
                 'g12_second_sem' => $validated['g12_second_sem'],
+                // Individual G11 Math grades
+                'g11_general_mathematics' => $validated['g11_general_mathematics'],
+                'g11_statistics_probability' => $validated['g11_statistics_probability'],
+                // Individual G11 English grades
+                'g11_oral_communication' => $validated['g11_oral_communication'],
+                'g11_21st_century_lit' => $validated['g11_21st_century_lit'],
+                'g11_academic_professional' => $validated['g11_academic_professional'],
+                'g11_reading_writing' => $validated['g11_reading_writing'],
+                // Individual G11 Science grades
+                'g11_earth_life_science' => $validated['g11_earth_life_science'],
+                'g11_physical_science' => $validated['g11_physical_science'],
+                // Individual G12 Science grades
+                'g12_earth_life_science' => $validated['g12_earth_life_science'],
             ]
         );
 
@@ -478,6 +572,17 @@ class GradesController extends Controller
             'science' => 'required|numeric|min:0|max:100',
             'g12_first_sem' => 'required|numeric|min:0|max:100',
             'g12_second_sem' => 'required|numeric|min:0|max:100',
+            // Individual G11 Math grades
+            'g11_general_mathematics' => 'required|numeric|min:0|max:100',
+            'g11_statistics_probability' => 'required|numeric|min:0|max:100',
+            // Individual G11 English grades
+            'g11_oral_communication' => 'required|numeric|min:0|max:100',
+            'g11_21st_century_lit' => 'required|numeric|min:0|max:100',
+            'g11_academic_professional' => 'required|numeric|min:0|max:100',
+            'g11_reading_writing' => 'required|numeric|min:0|max:100',
+            // Individual G11 Science grades
+            'g11_earth_life_science' => 'required|numeric|min:0|max:100',
+            'g11_physical_science' => 'required|numeric|min:0|max:100',
             // Program choices
             'first_choice_program' => 'required|exists:programs,id',
             'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
@@ -496,6 +601,17 @@ class GradesController extends Controller
                 'science' => $validated['science'],
                 'g12_first_sem' => $validated['g12_first_sem'],
                 'g12_second_sem' => $validated['g12_second_sem'],
+                // Individual G11 Math grades
+                'g11_general_mathematics' => $validated['g11_general_mathematics'],
+                'g11_statistics_probability' => $validated['g11_statistics_probability'],
+                // Individual G11 English grades
+                'g11_oral_communication' => $validated['g11_oral_communication'],
+                'g11_21st_century_lit' => $validated['g11_21st_century_lit'],
+                'g11_academic_professional' => $validated['g11_academic_professional'],
+                'g11_reading_writing' => $validated['g11_reading_writing'],
+                // Individual G11 Science grades
+                'g11_earth_life_science' => $validated['g11_earth_life_science'],
+                'g11_physical_science' => $validated['g11_physical_science'],
             ]
         );
 
@@ -535,6 +651,26 @@ class GradesController extends Controller
             'english' => 'required|numeric|min:0|max:100',
             'g12_first_sem' => 'required|numeric|min:0|max:100',
             'g12_second_sem' => 'required|numeric|min:0|max:100',
+            // Individual G11 Math grades
+            'g11_general_mathematics' => 'required|numeric|min:0|max:100',
+            'g11_statistics_probability' => 'required|numeric|min:0|max:100',
+            'g11_pre_calculus' => 'required|numeric|min:0|max:100',
+            'g11_basic_calculus' => 'required|numeric|min:0|max:100',
+            // Individual G11 Science grades
+            'g11_earth_science' => 'required|numeric|min:0|max:100',
+            'g11_general_chemistry_1' => 'required|numeric|min:0|max:100',
+            // Individual G12 Science grades
+            'g12_general_physics_1' => 'required|numeric|min:0|max:100',
+            'g12_general_biology_1' => 'required|numeric|min:0|max:100',
+            'g12_general_physics_2' => 'required|numeric|min:0|max:100',
+            'g12_general_biology_2' => 'required|numeric|min:0|max:100',
+            'g12_general_chemistry_2' => 'required|numeric|min:0|max:100',
+            // Individual G11 English grades
+            'g11_oral_communication' => 'required|numeric|min:0|max:100',
+            'g11_reading_writing' => 'required|numeric|min:0|max:100',
+            // Individual G12 English grades
+            'g12_21st_century_lit' => 'required|numeric|min:0|max:100',
+            'g12_academic_professional' => 'required|numeric|min:0|max:100',
             // Program choices
             'first_choice_program' => 'required|exists:programs,id',
             'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
@@ -553,6 +689,26 @@ class GradesController extends Controller
                 'english' => $validated['english'],
                 'g12_first_sem' => $validated['g12_first_sem'],
                 'g12_second_sem' => $validated['g12_second_sem'],
+                // Individual G11 Math grades
+                'g11_general_mathematics' => $validated['g11_general_mathematics'],
+                'g11_statistics_probability' => $validated['g11_statistics_probability'],
+                'g11_pre_calculus' => $validated['g11_pre_calculus'],
+                'g11_basic_calculus' => $validated['g11_basic_calculus'],
+                // Individual G11 Science grades
+                'g11_earth_science' => $validated['g11_earth_science'],
+                'g11_general_chemistry_1' => $validated['g11_general_chemistry_1'],
+                // Individual G12 Science grades
+                'g12_general_physics_1' => $validated['g12_general_physics_1'],
+                'g12_general_biology_1' => $validated['g12_general_biology_1'],
+                'g12_general_physics_2' => $validated['g12_general_physics_2'],
+                'g12_general_biology_2' => $validated['g12_general_biology_2'],
+                'g12_general_chemistry_2' => $validated['g12_general_chemistry_2'],
+                // Individual G11 English grades
+                'g11_oral_communication' => $validated['g11_oral_communication'],
+                'g11_reading_writing' => $validated['g11_reading_writing'],
+                // Individual G12 English grades
+                'g12_21st_century_lit' => $validated['g12_21st_century_lit'],
+                'g12_academic_professional' => $validated['g12_academic_professional'],
             ]
         );
 
