@@ -120,7 +120,6 @@
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Math Subject 1</label>
                                     <input
-                                        v-model="form.g12_math_subject_1"
                                         type="text"
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
@@ -128,22 +127,18 @@
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
                                     <input
-                                        v-model.number="form.g12_math_grade_1"
                                         type="number"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g12_math_subject_1?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence(form.g12_math_subject_1?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Math Subject 2</label>
                                     <input
-                                        v-model="form.g12_math_subject_2"
                                         type="text"
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
@@ -151,17 +146,14 @@
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
                                     <input
-                                        v-model.number="form.g12_math_grade_2"
                                         type="number"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g12_math_subject_2?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence(form.g12_math_subject_2?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                             </div>
                         </div>
@@ -239,7 +231,6 @@
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 1</label>
                                     <input
-                                        v-model="form.g12_science_subject_1"
                                         type="text"
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
@@ -247,22 +238,18 @@
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
                                     <input
-                                        v-model.number="form.g12_science_grade_1"
                                         type="number"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 2</label>
                                     <input
-                                        v-model="form.g12_science_subject_2"
                                         type="text"
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
@@ -270,17 +257,14 @@
                                     />
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
                                     <input
-                                        v-model.number="form.g12_science_grade_2"
                                         type="number"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                             </div>
                         </div>
@@ -705,22 +689,8 @@ const form = reactive({
     g11_reading_writing: null,
     g11_21st_century_lit: null,
     // Grade 12 Math (names + grades)
-    g12_math_subject_1: "",
-    g12_math_grade_1: null,
-    g12_math_subject_2: "",
-    g12_math_grade_2: null,
     // Grade 12 Science (2 customizable subjects)
-    g12_science_subject_1: "",
-    g12_science_grade_1: null,
-    g12_science_subject_2: "",
-    g12_science_grade_2: null,
     // Grade 12 English (3 customizable subjects)
-    g12_english_subject_1: "",
-    g12_english_grade_1: null,
-    g12_english_subject_2: "",
-    g12_english_grade_2: null,
-    g12_english_subject_3: "",
-    g12_english_grade_3: null,
     // Semester GWA
     g12_first_sem_gwa: null,
     g12_second_sem_gwa: null,
@@ -734,9 +704,7 @@ const mathAverage = computed(() => {
     const grades = [
         form.g11_general_mathematics,
         form.g11_statistics_probability,
-        form.g12_math_grade_1,
-        form.g12_math_grade_2,
-    ].filter((g) => g !== null && g !== "");
+                    ].filter((g) => g !== null && g !== "");
     return grades.length > 0
         ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
         : null;
@@ -746,9 +714,7 @@ const scienceAverage = computed(() => {
     const grades = [
         form.g11_science_grade_1,
         form.g11_science_grade_2,
-        form.g12_science_grade_1,
-        form.g12_science_grade_2,
-    ].filter((g) => g !== null && g !== "");
+                    ].filter((g) => g !== null && g !== "");
     return grades.length > 0
         ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
         : null;
@@ -759,10 +725,7 @@ const englishAverage = computed(() => {
         form.g11_oral_communication,
         form.g11_reading_writing,
         form.g11_21st_century_lit,
-        form.g12_english_grade_1,
-        form.g12_english_grade_2,
-        form.g12_english_grade_3,
-    ].filter((g) => g !== null && g !== "");
+                            ].filter((g) => g !== null && g !== "");
     return grades.length > 0
         ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
         : null;
@@ -914,43 +877,7 @@ const applyAutofill = (result) => {
                 form[`g11_science_grade_${g11ScienceIdx}`] = numericGrade;
                 g11ScienceIdx++;
                 matched = true;
-            }
-            
-            if (!matched) {
-                if (group === 'math') {
-                    while(`g12_math_subject_${mathIdx}` in form && form[`g12_math_subject_${mathIdx}`] && form[`g12_math_subject_${mathIdx}`].toLowerCase() !== subjectKey.toLowerCase()) {
-                        mathIdx++;
-                    }
-                    if (`g12_math_subject_${mathIdx}` in form) {
-                        form[`g12_math_subject_${mathIdx}`] = subjectKey;
-                        form[`g12_math_grade_${mathIdx}`] = numericGrade;
-                        mathIdx++;
-                    }
-                } else if (group === 'science') {
-                    while(`g12_science_subject_${scienceIdx}` in form && form[`g12_science_subject_${scienceIdx}`] && form[`g12_science_subject_${scienceIdx}`].toLowerCase() !== subjectKey.toLowerCase()) {
-                        scienceIdx++;
-                    }
-                    if (`g12_science_subject_${scienceIdx}` in form) {
-                        form[`g12_science_subject_${scienceIdx}`] = subjectKey;
-                        form[`g12_science_grade_${scienceIdx}`] = numericGrade;
-                        scienceIdx++;
-                    }
-                } else if (group === 'english') {
-                    if (normalizedKey.includes('21st century') && 'g12_english_grade_1' in form) {
-                         form['g12_english_grade_1'] = numericGrade;
-                    } else {
-                        while(`g12_english_subject_${englishIdx}` in form && (`g12_english_subject_${englishIdx}` === 'g12_english_subject_1' || (form[`g12_english_subject_${englishIdx}`] && form[`g12_english_subject_${englishIdx}`].toLowerCase() !== subjectKey.toLowerCase()))) {
-                            englishIdx++;
-                        }
-                        if (`g12_english_subject_${englishIdx}` in form) {
-                            form[`g12_english_subject_${englishIdx}`] = subjectKey;
-                            form[`g12_english_grade_${englishIdx}`] = numericGrade;
-                            englishIdx++;
-                        }
-                    }
-                }
-            }
-        }
+            }        }
     }
     confidenceMap.value = newConfidenceMap;
 };
