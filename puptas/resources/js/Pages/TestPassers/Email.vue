@@ -373,6 +373,16 @@
                             </div>
                         </div>
 
+                        <!-- Waitlisted Cut-off Template Preview -->
+                        <div v-else-if="templateType === 'waitlisted-cutoff'" class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
+                                Waitlisted (Below Cut-off) Template Preview
+                            </label>
+                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
+                                <div v-html="waitlistedCutoffTemplatePreview"></div>
+                            </div>
+                        </div>
+
                         <!-- Custom Template Editor -->
                         <div v-else-if="templateType === 'custom'" class="mt-4">
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
@@ -1191,7 +1201,8 @@ onMounted(() => {
 const templateTypes = [
     { label: 'Default', value: 'default' },
     { label: 'Custom', value: 'custom' },
-    { label: 'Waitlisted', value: 'waitlisted' }
+    { label: 'Waitlisted', value: 'waitlisted' },
+    { label: 'Waitlisted (Below Cut-off)', value: 'waitlisted-cutoff' }
 ];
 
 // All existing functionality remains exactly the same
@@ -1247,7 +1258,7 @@ const defaultTemplatePreview = `
     <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="#" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 10, 2026 (Wednesday)</strong>. You will receive an email within three working days containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long bond paper, sign, and bring them on the day of the interview. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
     <div style="text-align:center;margin:24px 0;">
     <a 
@@ -1266,8 +1277,8 @@ const defaultTemplatePreview = `
         CLICK TO CONFIRM YOUR INTERVIEW SLOT
     </a>
     </div>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="#" style="color:#1155cc;">PUP – Taguig Facebook page</a>).</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2025 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP – Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
     <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
     <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
     <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Admission and Registration Office</p>
@@ -1281,7 +1292,7 @@ const waitlistedTemplatePreview = `
     <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="#" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 10, 2026 (Wednesday)</strong>. You will receive an email within three working days containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long bond paper, sign, and bring them on the day of the interview. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
     <div style="text-align:center;margin:24px 0;">
     <a 
@@ -1300,11 +1311,25 @@ const waitlistedTemplatePreview = `
         CLICK TO CONFIRM YOUR INTERVIEW SLOT
     </a>
     </div>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="#" style="color:#1155cc;">PUP – Taguig Facebook page</a>).</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2025 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP – Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
     <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
     <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
     <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Admission and Registration Office</p>
+  </div>
+</div>`.trim();
+
+const waitlistedCutoffTemplatePreview = `
+<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#9E122C;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Thank you for considering <strong>PUP-Taguig Campus</strong> for your higher education.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Based on evaluation, we regret to inform you that your score in the PUP College Entrance Test did not place you in the Top 500 requirement of the Campus.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Nevertheless, you might still be notified (via email) of the possible remaining slots, based on your evaluated rank. Admission to these slots, however, shall be on a first-come, first-served basis, and subject to specific academic program admission requirements.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Since we cannot give you an assurance that a slot will be made available to you, we recommend you to still consider your admission options in other higher education institutions.</p>
+    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.</p>
+    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
+    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Campus Admission and Registration Office</p>
   </div>
 </div>`.trim();
 
@@ -1500,6 +1525,8 @@ const sendEmails = async () => {
         messageHtml = defaultTemplatePreview;
     } else if (templateType.value === 'waitlisted') {
         messageHtml = waitlistedTemplatePreview;
+    } else if (templateType.value === 'waitlisted-cutoff') {
+        messageHtml = waitlistedCutoffTemplatePreview;
     } else {
         const quillContainer = document.querySelector(".ql-editor");
         messageHtml = quillContainer

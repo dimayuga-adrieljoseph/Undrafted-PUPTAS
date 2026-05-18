@@ -30,9 +30,24 @@ class CheckStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'referenceNumber' => ['required', 'string', 'max:255'],
-            'firstName'       => ['required', 'string', 'max:255'],
-            'lastName'        => ['required', 'string', 'max:255'],
+            'referenceNumber' => [
+                'required',
+                'string',
+                'max:55',
+                'regex:/^[\d\-]+$/',
+            ],
+            'firstName' => [
+                'required',
+                'string',
+                'max:55',
+                'regex:/^[a-zA-ZÀ-ÖØ-öø-ÿ\s\-\']+$/',
+            ],
+            'lastName' => [
+                'required',
+                'string',
+                'max:55',
+                'regex:/^[a-zA-ZÀ-ÖØ-öø-ÿ\s\-\']+$/',
+            ],
         ];
     }
 
@@ -45,8 +60,14 @@ class CheckStatusRequest extends FormRequest
     {
         return [
             'referenceNumber.required' => 'Reference number is required.',
+            'referenceNumber.max'      => 'Reference number must not exceed 55 characters.',
+            'referenceNumber.regex'    => 'Reference number may only contain digits and hyphens.',
             'firstName.required'       => 'First name is required.',
+            'firstName.max'            => 'First name must not exceed 55 characters.',
+            'firstName.regex'          => 'First name may only contain letters, spaces, hyphens, and apostrophes.',
             'lastName.required'        => 'Last name is required.',
+            'lastName.max'             => 'Last name must not exceed 55 characters.',
+            'lastName.regex'           => 'Last name may only contain letters, spaces, hyphens, and apostrophes.',
         ];
     }
 }

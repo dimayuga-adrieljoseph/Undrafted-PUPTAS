@@ -33,6 +33,7 @@ class PublicStatusCheckerController extends Controller
         if ($matched) {
             return response()->json([
                 'qualified'        => true,
+                'passer_status_id' => $passer->passer_status_id,
                 'first_name'       => ucwords(strtolower(trim($passer->first_name))),
                 'last_name'        => ucwords(strtolower(trim($passer->surname))),
                 'full_name'        => ucwords(strtolower(trim($passer->first_name))) . ' ' . ucwords(strtolower(trim($passer->surname))),

@@ -171,7 +171,7 @@ function reset() {
                             <span class="text-3xl font-bold text-red-800">P</span>
                         </div>
                         <h1 class="text-2xl font-bold text-gray-900">Check Exam Result</h1>
-                        <p class="text-sm text-gray-600 mt-1">
+                        <p v-if="!result" class="text-sm text-gray-600 mt-1">
                             Enter your reference number and name to check if you passed the entrance exam.
                         </p>
                     </div>
@@ -204,6 +204,9 @@ function reset() {
                                     type="text"
                                     autocomplete="off"
                                     placeholder="e.g. 2026-000123"
+                                    maxlength="55"
+                                    @keypress="(e) => { if (!/[\d\-]/.test(e.key)) e.preventDefault() }"
+                                    @input="referenceNumber = referenceNumber.replace(/[^\d\-]/g, '')"
                                     :disabled="loading || rateLimited"
                                     :class="[
                                         'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors',
@@ -239,6 +242,9 @@ function reset() {
                                     type="text"
                                     autocomplete="given-name"
                                     placeholder="e.g. Juan"
+                                    maxlength="55"
+                                    @keypress="(e) => { if (!/[a-zA-ZÀ-ÖØ-öø-ÿ\s\-']/.test(e.key)) e.preventDefault() }"
+                                    @input="firstName = firstName.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s\-']/g, '')"
                                     :disabled="loading || rateLimited"
                                     :class="[
                                         'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors',
@@ -274,6 +280,9 @@ function reset() {
                                     type="text"
                                     autocomplete="family-name"
                                     placeholder="e.g. Dela Cruz"
+                                    maxlength="55"
+                                    @keypress="(e) => { if (!/[a-zA-ZÀ-ÖØ-öø-ÿ\s\-']/.test(e.key)) e.preventDefault() }"
+                                    @input="lastName = lastName.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s\-']/g, '')"
                                     :disabled="loading || rateLimited"
                                     :class="[
                                         'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors',
@@ -325,9 +334,9 @@ function reset() {
                         <!-- ── Result card ─────────────────────────────────────── -->
                         <div v-if="result" class="space-y-4">
 
-                            <!-- ✅ Qualified -->
+                            <!-- ✅ Qualified (status 1 or legacy null) -->
                             <div
-                                v-if="result.qualified === true"
+                                v-if="result.qualified === true && result.passer_status_id !== 2"
                                 class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
                                 role="status"
                                 aria-live="polite"
@@ -352,7 +361,7 @@ function reset() {
                                     </p>
 
                                     <p class="text-sm text-gray-700 leading-relaxed">
-                                        We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2025-2026.
+                                        We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.
                                     </p>
 
                                     <!-- Details box -->
@@ -397,6 +406,48 @@ function reset() {
                                         </svg>
                                         {{ confirmingSlot ? 'Confirming...' : 'Click to Confirm Interview Slot' }}
                                     </button>
+                                </div>
+                            </div>
+
+                            <!-- ⏳ Waitlisted Below Cut-off (status 2) -->
+                            <div
+                                v-else-if="result.qualified === true && result.passer_status_id === 2"
+                                class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <!-- Logo -->
+                                <div class="pt-7 pb-2 flex justify-center">
+                                    <img
+                                        src="/assets/images/pup_taguig_logo.png"
+                                        alt="PUP Taguig Logo"
+                                        class="w-16 h-16 object-contain"
+                                    />
+                                </div>
+
+                                <!-- Body -->
+                                <div class="px-8 pb-7 pt-4 space-y-4">
+                                    <p class="text-sm text-gray-800 leading-relaxed">
+                                        Dear <strong class="text-[#800000]">{{ result.full_name }}</strong>,
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Thank you for considering <strong>PUP-Taguig Campus</strong> for your higher education.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Based on evaluation, we regret to inform you that your score in the PUP College Entrance Test did not place you in the Top 500 requirement of the Campus.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Nevertheless, you might still be notified (via email) of the possible remaining slots, based on your evaluated rank. Admission to these slots, however, shall be on a first-come, first-served basis, and subject to specific academic program admission requirements.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Since we cannot give you an assurance that a slot will be made available to you, we recommend you to still consider your admission options in other higher education institutions.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
+                                    </p>
+                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
+                                        PUP-Taguig Campus Admission and Registration Office
+                                    </p>
                                 </div>
                             </div>
 
