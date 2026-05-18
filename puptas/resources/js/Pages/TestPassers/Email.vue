@@ -1098,19 +1098,35 @@
                             </div>
                         </div>
 
-                        <!-- PUPCET Total Score -->
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="999.99"
-                                v-model="editingPasser.pupcet_total_score"
-                                placeholder="e.g., 75.50"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                            />
-                            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                        <!-- PUPCET Total Score and Status -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    max="999.99"
+                                    v-model="editingPasser.pupcet_total_score"
+                                    placeholder="e.g., 75.50"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                />
+                                <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Status *</label>
+                                <select
+                                    v-model="editingPasser.passer_status_id"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">Select Status</option>
+                                    <option value="1">Qualified</option>
+                                    <option value="2">Waitlisted</option>
+                                    <option value="3">Unqualified</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Current qualification status of the applicant.</p>
+                            </div>
                         </div>
 
                         <!-- Modal Actions -->
@@ -1293,19 +1309,35 @@
                             </div>
                         </div>
 
-                        <!-- PUPCET Total Score -->
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="999.99"
-                                v-model="newPasserData.pupcet_total_score"
-                                placeholder="e.g., 75.50"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                            />
-                            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                        <!-- PUPCET Total Score and Status -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    max="999.99"
+                                    v-model="newPasserData.pupcet_total_score"
+                                    placeholder="e.g., 75.50"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                />
+                                <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Status *</label>
+                                <select
+                                    v-model="newPasserData.passer_status_id"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">Select Status</option>
+                                    <option value="1">Qualified</option>
+                                    <option value="2">Waitlisted</option>
+                                    <option value="3">Unqualified</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Current qualification status of the applicant.</p>
+                            </div>
                         </div>
 
                         <!-- Modal Actions -->
@@ -1919,6 +1951,7 @@ function openAddModal() {
         batch_number: "",
         school_year: "",
         pupcet_total_score: "",
+        passer_status_id: "",
     };
     showAddModal.value = true;
 }
