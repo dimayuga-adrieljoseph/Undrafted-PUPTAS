@@ -124,52 +124,36 @@
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#9E122C] text-white mr-2">G12</span>
                                 Grade 12
                             </h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 1</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Earth and Life Science</label>
                                     <input
-                                        v-model="form.g12_science_subject_1"
-                                        type="text"
-                                        :disabled="isLocked"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        placeholder="Enter subject name"
-                                    />
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
-                                        v-model.number="form.g12_science_grade_1"
+                                        v-model.number="form.g12_earth_life_science"
                                         type="number"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('earth and life science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence(form.g12_science_subject_1?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                    <p v-if="isLowConfidence('earth and life science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 2</label>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Science</label>
                                     <input
-                                        v-model="form.g12_science_subject_2"
-                                        type="text"
-                                        :disabled="isLocked"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        placeholder="Enter subject name"
-                                    />
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
-                                        v-model.number="form.g12_science_grade_2"
+                                        v-model.number="form.g12_physical_science"
                                         type="number"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
+                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('physical science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence(form.g12_science_subject_2?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                    <p v-if="isLowConfidence('physical science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                             </div>
                             <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
@@ -559,11 +543,9 @@ const form = reactive({
     // Grade 11
     g11_general_mathematics: null,
     g11_statistics_probability: null,
-    // G12 science (two customizable fields)
-    g12_science_subject_1: "Earth and Life Science",
-    g12_science_grade_1: null,
-    g12_science_subject_2: "Physical Science",
-    g12_science_grade_2: null,
+    // G12 science
+    g12_earth_life_science: null,
+    g12_physical_science: null,
     // Grade 11 English
     g11_oral_communication: null,
     g11_reading_writing: null,
@@ -589,8 +571,8 @@ const mathAverage = computed(() => {
 
 const scienceAverage = computed(() => {
     const grades = [
-        form.g12_science_grade_1,
-        form.g12_science_grade_2,
+        form.g12_earth_life_science,
+        form.g12_physical_science,
                     ].filter((g) => g !== null && g !== "");
     return grades.length > 0
         ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
