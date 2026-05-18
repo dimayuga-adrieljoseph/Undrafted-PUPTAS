@@ -835,7 +835,8 @@
                                     max="999.99"
                                     v-model="editingPasser.pupcet_total_score"
                                     placeholder="e.g., 75.50"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    readonly
+                                    class="w-full px-4 py-3 bg-gray-100 text-gray-600 border border-gray-300 rounded-xl cursor-not-allowed focus:outline-none transition dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400"
                                 />
                                 <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
                             </div>
@@ -1720,6 +1721,26 @@ function closeAddModal() {
 }
 
 async function saveNewPasser() {
+    // Check for duplicate email
+    const duplicateEmail = flatPassers.value.find(
+        (p) => p.email && p.email.toLowerCase() === newPasserData.value.email?.toLowerCase()
+    );
+    if (duplicateEmail) {
+        show("A passer with this email already exists.", "error");
+        return;
+    }
+
+    // Check for duplicate reference number
+    if (newPasserData.value.reference_number) {
+        const duplicateRef = flatPassers.value.find(
+            (p) => p.reference_number && p.reference_number === newPasserData.value.reference_number
+        );
+        if (duplicateRef) {
+            show("A passer with this reference number already exists.", "error");
+            return;
+        }
+    }
+
     saving.value = true;
     start();
     try {
@@ -1742,7 +1763,18 @@ async function saveNewPasser() {
         // Ensure the UI updates immediately
         await nextTick();
     } catch (error) {
-        show("Failed to add passer.", "error");
+        if (error.response?.status === 422) {
+            const errors = error.response.data?.errors;
+            if (errors?.email) {
+                show(errors.email[0], "error");
+            } else if (errors?.reference_number) {
+                show(errors.reference_number[0], "error");
+            } else {
+                show("Validation failed. Please check your input.", "error");
+            }
+        } else {
+            show("Failed to add passer.", "error");
+        }
         console.error(error);
     } finally {
         finish();

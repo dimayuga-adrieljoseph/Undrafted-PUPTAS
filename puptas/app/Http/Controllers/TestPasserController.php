@@ -307,13 +307,29 @@ class TestPasserController extends Controller
             $schoolYear = $request->input('school_year');
             $passerStatusId = $request->input('passer_status_id');
 
-            Excel::import(new TestPassersImport($batch, $schoolYear, $passerStatusId), $request->file('file'));
+            $import = new TestPassersImport($batch, $schoolYear, $passerStatusId, 'manual');
+            Excel::import($import, $request->file('file'));
+
+            $importedCount = $import->getImportedCount();
+            $skippedCount = $import->getSkippedCount();
 
             $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified'];
             $statusName = $statusNames[$passerStatusId] ?? 'Unknown';
-            $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}, status: {$statusName}.", null, 'ADMISSION_DATA');
+            $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}, status: {$statusName}. Imported: {$importedCount}, Skipped: {$skippedCount}.", null, 'ADMISSION_DATA');
 
-            return response()->json(['message' => 'Excel file uploaded and data imported successfully']);
+            if ($importedCount === 0 && $skippedCount > 0) {
+                return response()->json([
+                    'message' => 'No new records were imported. All entries already exist in the system.',
+                    'imported_count' => $importedCount,
+                    'skipped_count' => $skippedCount,
+                ], 422);
+            }
+
+            return response()->json([
+                'message' => 'Excel file uploaded and data imported successfully.',
+                'imported_count' => $importedCount,
+                'skipped_count' => $skippedCount,
+            ]);
         }
 
         // Auto mode - only requires school_year and file
@@ -333,8 +349,16 @@ class TestPasserController extends Controller
 
         $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file in auto mode for school year {$schoolYear}. Imported: {$importedCount}, Skipped: {$skippedCount}.", null, 'ADMISSION_DATA');
 
+        if ($importedCount === 0 && $skippedCount > 0) {
+            return response()->json([
+                'message' => 'No new records were imported. All entries already exist in the system.',
+                'imported_count' => $importedCount,
+                'skipped_count' => $skippedCount,
+            ], 422);
+        }
+
         return response()->json([
-            'message' => 'Excel file uploaded and data imported successfully',
+            'message' => 'Excel file uploaded and data imported successfully.',
             'imported_count' => $importedCount,
             'skipped_count' => $skippedCount,
         ]);

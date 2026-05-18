@@ -334,9 +334,9 @@ function reset() {
                         <!-- ── Result card ─────────────────────────────────────── -->
                         <div v-if="result" class="space-y-4">
 
-                            <!-- ✅ Qualified (status 1 or legacy null) -->
+                            <!-- ✅ Qualified (status 1) -->
                             <div
-                                v-if="result.qualified === true && result.passer_status_id !== 2"
+                                v-if="result.qualified === true"
                                 class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
                                 role="status"
                                 aria-live="polite"
@@ -374,6 +374,10 @@ function reset() {
                                             <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Reference No.</span>
                                             <span class="text-gray-900 font-semibold">{{ result.reference_number }}</span>
                                         </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Status</span>
+                                            <span class="text-green-700 font-semibold">Qualified</span>
+                                        </div>
                                     </div>
 
                                     <p class="text-sm text-gray-700 leading-relaxed">
@@ -409,9 +413,9 @@ function reset() {
                                 </div>
                             </div>
 
-                            <!-- ⏳ Waitlisted Below Cut-off (status 2) -->
+                            <!-- ⏳ Waitlisted (status 2) -->
                             <div
-                                v-else-if="result.qualified === true && result.passer_status_id === 2"
+                                v-else-if="result.waitlisted === true"
                                 class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
                                 role="status"
                                 aria-live="polite"
@@ -451,7 +455,57 @@ function reset() {
                                 </div>
                             </div>
 
-                            <!-- ❌ Not qualified -->
+                            <!-- ❌ Not Qualified (status 3) -->
+                            <div
+                                v-else-if="result.not_qualified === true"
+                                class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <!-- Logo -->
+                                <div class="pt-7 pb-2 flex justify-center">
+                                    <img
+                                        src="/assets/images/pup_taguig_logo.png"
+                                        alt="PUP Taguig Logo"
+                                        class="w-16 h-16 object-contain"
+                                    />
+                                </div>
+
+                                <!-- Body -->
+                                <div class="px-8 pb-7 pt-4 space-y-4">
+                                    <p class="text-sm text-gray-800 leading-relaxed">
+                                        Dear <strong class="text-[#800000]">{{ result.full_name }}</strong>,
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Thank you for considering Polytechnic University of the Philippines for your higher education.
+                                    </p>
+
+                                    <!-- Details box -->
+                                    <div class="rounded-xl bg-gray-50 border border-gray-200 overflow-hidden text-sm divide-y divide-gray-200">
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Applicant Name</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.full_name }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Reference No.</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.reference_number }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Status</span>
+                                            <span class="text-red-600 font-semibold">Not Qualified</span>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We regret to inform you that your score in the PUP College Entrance Test for Taguig Campus did not meet the qualifying threshold. We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
+                                    </p>
+                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
+                                        PUP-Taguig Campus Admission and Registration Office
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- 🔍 No Record Found -->
                             <div
                                 v-else
                                 class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
@@ -469,14 +523,29 @@ function reset() {
 
                                 <!-- Body -->
                                 <div class="px-8 pb-7 pt-4 space-y-4">
-                                    <p class="text-sm text-gray-800 leading-relaxed">
-                                        Dear <strong class="text-[#800000]">{{ result.first_name }} {{ result.last_name }}</strong>,
+                                    <div class="flex justify-center">
+                                        <div class="w-12 h-12 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-gray-800 leading-relaxed font-semibold text-center">
+                                        No Record Found
                                     </p>
+
                                     <p class="text-sm text-gray-700 leading-relaxed">
-                                        Thank you for considering Polytechnic University of the Philippines for your higher education.
+                                        We could not find any record matching the information you provided. This may be because:
                                     </p>
+                                    <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
+                                        <li>The reference number or name was entered incorrectly</li>
+                                        <li>Your results have not yet been uploaded to the system</li>
+                                        <li>The reference number does not exist in our records</li>
+                                    </ul>
+
                                     <p class="text-sm text-gray-700 leading-relaxed">
-                                        We regret to inform you that your score in the PUP College Entrance Test for Taguig Campus did not place you in the top 500 requirement of the Campus. We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
+                                        Please double-check your reference number and name, then try again. If the issue persists, contact the <strong>Admission and Registration Office</strong> for assistance.
                                     </p>
                                     <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
                                         PUP-Taguig Campus Admission and Registration Office

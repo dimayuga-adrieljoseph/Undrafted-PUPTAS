@@ -17,6 +17,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
     protected string $assignmentMode;
     protected int $importedCount = 0;
     protected int $skippedCount = 0;
+    protected array $skippedReasons = [];
 
     public function __construct(
         ?string $batch = null,
@@ -49,6 +50,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
 
         if (empty($firstName)) {
             $this->skippedCount++;
+            $this->skippedReasons[] = 'Missing first name';
             return null;
         }
 
@@ -57,6 +59,24 @@ class TestPassersImport implements ToModel, WithHeadingRow
 
         if ($pupcetScore === null) {
             $this->skippedCount++;
+            $this->skippedReasons[] = 'Missing or invalid PUPCET score';
+            return null;
+        }
+
+        $email           = $row['email'] ?? null;
+        $referenceNumber = $row['reference_number'] ?? null;
+
+        // Skip if email already exists in the database
+        if (!empty($email) && TestPasser::where('email', $email)->exists()) {
+            $this->skippedCount++;
+            $this->skippedReasons[] = "Duplicate email: {$email}";
+            return null;
+        }
+
+        // Skip if reference number already exists in the database
+        if (!empty($referenceNumber) && TestPasser::where('reference_number', $referenceNumber)->exists()) {
+            $this->skippedCount++;
+            $this->skippedReasons[] = "Duplicate reference number: {$referenceNumber}";
             return null;
         }
 
@@ -67,9 +87,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
         $batchNumber = $assignment['batch_number'];
         $passerStatusId = $assignment['passer_status_id'];
 
-        $email           = $row['email'] ?? null;
-        $referenceNumber = $row['reference_number'] ?? null;
-        $user            = null;
+        $user = null;
 
         // If a user with this email already exists, automatically link them and assign student number
         if ($email) {
@@ -82,49 +100,27 @@ class TestPassersImport implements ToModel, WithHeadingRow
         // Use request-level schoolYear for all records regardless of Excel column
         $schoolYear = $this->schoolYear;
 
-        $result = null;
-
-        // Skip rows with no email to avoid collisions on null key
-        if (empty($email)) {
-            $result = TestPasser::create([
-                'surname'            => $row['surname'] ?? null,
-                'first_name'         => $firstName,
-                'middle_name'        => $row['middlename'] ?? null,
-                'strand'             => $row['strand'] ?? null,
-                'reference_number'   => $referenceNumber,
-                'batch_number'       => $batchNumber,
-                'school_year'        => $schoolYear,
-                'pupcet_total_score' => $pupcetScore,
-                'user_id'            => null,
-                'status'             => 'pending',
-                'passer_status_id'   => $passerStatusId,
-            ]);
-        } else {
-            $result = TestPasser::updateOrCreate(
-                ['email' => $email],
-                [
-                    'surname'            => $row['surname'] ?? null,
-                    'first_name'         => $firstName,
-                    'middle_name'        => $row['middlename'] ?? null,
-                    'strand'             => $row['strand'] ?? null,
-                    'email'              => $email,
-                    'reference_number'   => $referenceNumber,
-                    'batch_number'       => $batchNumber,
-                    'school_year'        => $schoolYear,
-                    'pupcet_total_score' => $pupcetScore,
-                    'user_id'            => $user?->id,
-                    'status'             => $user ? 'registered' : 'pending',
-                    'passer_status_id'   => $passerStatusId,
-                ]
-            );
-        }
+        $result = TestPasser::create([
+            'surname'            => $row['surname'] ?? null,
+            'first_name'         => $firstName,
+            'middle_name'        => $row['middlename'] ?? null,
+            'strand'             => $row['strand'] ?? null,
+            'email'              => $email,
+            'reference_number'   => $referenceNumber,
+            'batch_number'       => $batchNumber,
+            'school_year'        => $schoolYear,
+            'pupcet_total_score' => $pupcetScore,
+            'user_id'            => $user?->id,
+            'status'             => $user ? 'registered' : 'pending',
+            'passer_status_id'   => $passerStatusId,
+        ]);
 
         $this->importedCount++;
         return $result;
     }
 
     /**
-     * Process a row in manual mode (existing behavior refactored into its own method).
+     * Process a row in manual mode.
      */
     private function processManualMode(array $row): ?TestPasser
     {
@@ -132,12 +128,29 @@ class TestPassersImport implements ToModel, WithHeadingRow
         $firstName = isset($row['firstname']) ? trim($row['firstname']) : null;
 
         if (empty($firstName)) {
+            $this->skippedCount++;
+            $this->skippedReasons[] = 'Missing first name';
             return null;
         }
 
         $email           = $row['email'] ?? null;
         $referenceNumber = $row['reference_number'] ?? null;
-        $user            = null;
+
+        // Skip if email already exists in the database
+        if (!empty($email) && TestPasser::where('email', $email)->exists()) {
+            $this->skippedCount++;
+            $this->skippedReasons[] = "Duplicate email: {$email}";
+            return null;
+        }
+
+        // Skip if reference number already exists in the database
+        if (!empty($referenceNumber) && TestPasser::where('reference_number', $referenceNumber)->exists()) {
+            $this->skippedCount++;
+            $this->skippedReasons[] = "Duplicate reference number: {$referenceNumber}";
+            return null;
+        }
+
+        $user = null;
 
         // If a user with this email already exists, automatically link them and assign student number
         if ($email) {
@@ -149,40 +162,23 @@ class TestPassersImport implements ToModel, WithHeadingRow
 
         $pupcetScore = $this->resolvePupcetScore($row);
 
-        // Skip rows with no email to avoid collisions on null key
-        if (empty($email)) {
-            return TestPasser::create([
-                'surname'            => $row['surname'] ?? null,
-                'first_name'         => $firstName,
-                'middle_name'        => $row['middlename'] ?? null,
-                'strand'             => $row['strand'] ?? null,
-                'reference_number'   => $referenceNumber,
-                'batch_number'       => $this->batch,
-                'school_year'        => $this->schoolYear,
-                'pupcet_total_score' => $pupcetScore,
-                'user_id'            => null,
-                'status'             => 'pending',
-                'passer_status_id'   => $this->passerStatusId,
-            ]);
-        }
+        $result = TestPasser::create([
+            'surname'            => $row['surname'] ?? null,
+            'first_name'         => $firstName,
+            'middle_name'        => $row['middlename'] ?? null,
+            'strand'             => $row['strand'] ?? null,
+            'email'              => $email,
+            'reference_number'   => $referenceNumber,
+            'batch_number'       => $this->batch,
+            'school_year'        => $this->schoolYear,
+            'pupcet_total_score' => $pupcetScore,
+            'user_id'            => $user?->id,
+            'status'             => $user ? 'registered' : 'pending',
+            'passer_status_id'   => $this->passerStatusId,
+        ]);
 
-        return TestPasser::updateOrCreate(
-            ['email' => $email],
-            [
-                'surname'            => $row['surname'] ?? null,
-                'first_name'         => $firstName,
-                'middle_name'        => $row['middlename'] ?? null,
-                'strand'             => $row['strand'] ?? null,
-                'email'              => $email,
-                'reference_number'   => $referenceNumber,
-                'batch_number'       => $this->batch,
-                'school_year'        => $this->schoolYear,
-                'pupcet_total_score' => $pupcetScore,
-                'user_id'            => $user?->id,
-                'status'             => $user ? 'registered' : 'pending',
-                'passer_status_id'   => $this->passerStatusId,
-            ]
-        );
+        $this->importedCount++;
+        return $result;
     }
 
     /**
@@ -199,6 +195,14 @@ class TestPassersImport implements ToModel, WithHeadingRow
     public function getSkippedCount(): int
     {
         return $this->skippedCount;
+    }
+
+    /**
+     * Get the reasons for skipped rows.
+     */
+    public function getSkippedReasons(): array
+    {
+        return $this->skippedReasons;
     }
 
     private function resolvePupcetScore(array $row): ?float

@@ -31,9 +31,17 @@ class PublicStatusCheckerController extends Controller
         ]);
 
         if ($matched) {
+            $statusId = $passer->passer_status_id;
+            $statusLabels = [1 => 'qualified', 2 => 'waitlisted', 3 => 'not_qualified'];
+            $statusLabel = $statusLabels[$statusId] ?? 'pending';
+
             return response()->json([
-                'qualified'        => true,
-                'passer_status_id' => $passer->passer_status_id,
+                'found'            => true,
+                'qualified'        => $statusId === 1,
+                'waitlisted'       => $statusId === 2,
+                'not_qualified'    => $statusId === 3,
+                'status'           => $statusLabel,
+                'passer_status_id' => $statusId,
                 'first_name'       => ucwords(strtolower(trim($passer->first_name))),
                 'last_name'        => ucwords(strtolower(trim($passer->surname))),
                 'full_name'        => ucwords(strtolower(trim($passer->first_name))) . ' ' . ucwords(strtolower(trim($passer->surname))),
@@ -48,10 +56,11 @@ class PublicStatusCheckerController extends Controller
         $displayLast  = ucwords(strtolower(trim($request->validated('lastName'))));
 
         return response()->json([
+            'found'        => false,
             'qualified'    => false,
             'first_name'   => $displayFirst,
             'last_name'    => $displayLast,
-            'message'      => 'failed',
+            'message'      => 'no_record',
         ]);
     }
 }

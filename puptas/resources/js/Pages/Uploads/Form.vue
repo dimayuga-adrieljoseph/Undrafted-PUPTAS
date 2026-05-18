@@ -101,9 +101,22 @@
         <!-- Submit Button -->
         <button
           @click="submitForm"
-          class="w-full py-3 bg-[#9E122C] text-white font-semibold rounded-xl hover:bg-[#b51834] transition dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800"
+          :disabled="uploading"
+          :class="[
+            'w-full py-3 font-semibold rounded-xl transition',
+            uploading
+              ? 'bg-gray-400 text-white cursor-not-allowed'
+              : 'bg-[#9E122C] text-white hover:bg-[#b51834] dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800'
+          ]"
         >
-          <i class="fa fa-upload mr-2"></i> Upload
+          <span v-if="uploading" class="flex items-center justify-center gap-2">
+            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Uploading...
+          </span>
+          <span v-else><i class="fa fa-upload mr-2"></i> Upload</span>
         </button>
       </div>
 
@@ -116,9 +129,9 @@
           <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-96 text-center shadow-xl">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Success!</h2>
             <p class="text-gray-600 dark:text-gray-300 mb-4">Your records have been uploaded successfully.</p>
-            <div v-if="assignmentMode === 'auto'" class="text-left bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4 space-y-1">
+            <div class="text-left bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4 space-y-1">
               <p class="text-gray-700 dark:text-gray-200"><span class="font-medium">Imported:</span> {{ importedCount }} records</p>
-              <p class="text-gray-700 dark:text-gray-200"><span class="font-medium">Skipped:</span> {{ skippedCount }} records</p>
+              <p class="text-gray-700 dark:text-gray-200"><span class="font-medium">Skipped (duplicates):</span> {{ skippedCount }} records</p>
             </div>
             <button
               @click="redirectToEmails"
@@ -137,7 +150,9 @@
 import { ref, onMounted } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { Head } from "@inertiajs/vue3";
+import { useGlobalLoading } from "@/Composables/useGlobalLoading";
 const axios = window.axios;
+const { start, finish } = useGlobalLoading();
 
 const assignmentMode = ref("manual");
 const batch = ref("Batch 1");
@@ -150,6 +165,7 @@ const yearOptions = ref([]);
 const passerStatus = ref("");
 const importedCount = ref(0);
 const skippedCount = ref(0);
+const uploading = ref(false);
 
 onMounted(() => {
   const currentYear = new Date().getFullYear();
@@ -190,13 +206,20 @@ const submitForm = async () => {
     formData.append("passer_status_id", passerStatus.value);
     formData.append("file", file.value);
 
+    uploading.value = true;
+    start();
     try {
-      await axios.post("/test-passers/upload", formData, {
+      const response = await axios.post("/test-passers/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      importedCount.value = response.data?.imported_count ?? 0;
+      skippedCount.value = response.data?.skipped_count ?? 0;
       showDialog.value = true;
     } catch (error) {
       handleUploadError(error);
+    } finally {
+      uploading.value = false;
+      finish();
     }
   } else {
     // Auto mode
@@ -208,6 +231,8 @@ const submitForm = async () => {
     formData.append("school_year", resolvedYear);
     formData.append("file", file.value);
 
+    uploading.value = true;
+    start();
     try {
       const response = await axios.post("/test-passers/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -217,6 +242,9 @@ const submitForm = async () => {
       showDialog.value = true;
     } catch (error) {
       handleUploadError(error);
+    } finally {
+      uploading.value = false;
+      finish();
     }
   }
 };
@@ -224,13 +252,19 @@ const submitForm = async () => {
 const handleUploadError = (error) => {
   console.error(error);
   const status = error.response?.status;
-  const message = error.response?.data?.message || error.response?.data?.error || null;
+  const data = error.response?.data;
+  const message = data?.message || data?.error || null;
   if (status === 403) {
     alert("Upload failed: You do not have permission to upload passers.");
   } else if (status === 422) {
-    const errors = error.response?.data?.errors;
-    const detail = errors ? Object.values(errors).flat().join("\n") : message;
-    alert("Upload failed: " + (detail || "Validation error."));
+    // Check if it's a "all duplicates" response
+    if (data?.imported_count !== undefined && data?.skipped_count !== undefined) {
+      alert(`Upload complete but no new records were added.\n\nSkipped: ${data.skipped_count} duplicate(s).\n\nAll entries in this file already exist in the system.`);
+    } else {
+      const errors = data?.errors;
+      const detail = errors ? Object.values(errors).flat().join("\n") : message;
+      alert("Upload failed: " + (detail || "Validation error."));
+    }
   } else {
     alert("Upload failed." + (message ? " " + message : ""));
   }
