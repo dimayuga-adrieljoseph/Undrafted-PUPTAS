@@ -71,17 +71,9 @@
                                     {{ applicationData.firstname }} {{ applicationData.middlename }} {{ applicationData.lastname }}
                                 </p>
                             </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                            <div class="col-span-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Email</p>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ applicationData.email }}</p>
-                            </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Contact</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatContact(applicationData.contactnumber) }}</p>
-                            </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Sex / Gender</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.sex }}</p>
                             </div>
                         </div>
                     </div>
