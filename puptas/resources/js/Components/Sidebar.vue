@@ -8,28 +8,22 @@ import {
     faUsers,
     faCaretDown,
     faCaretRight,
-    faCog,
     faGraduationCap,
-    faPencilAlt,
     faEnvelopeOpenText,
     faCalendarCheck,
-    faUserGroup,
-    faMoon,
-    faSun,
     faSignOutAlt,
     faUpload,
     faList,
-    faWrench,
     faUserShield,
     faHome,
-    faUserCircle,
     faHistory,
     faNetworkWired,
     faChartPie,
+    faChartLine,
+    faFileAlt,
 } from "@fortawesome/free-solid-svg-icons";
 
 import NavLink from "@/Components/NavLink.vue";
-import DropdownLink from "@/Components/DropdownLink.vue";
 import ApplicationMark from "@/Components/ApplicationMark.vue";
 
 library.add(
@@ -37,24 +31,19 @@ library.add(
     faUsers,
     faCaretDown,
     faCaretRight,
-    faCog,
     faGraduationCap,
-    faPencilAlt,
     faEnvelopeOpenText,
     faCalendarCheck,
-    faUserGroup,
-    faMoon,
-    faSun,
     faSignOutAlt,
     faUpload,
     faList,
-    faWrench,
     faUserShield,
     faHome,
-    faUserCircle,
     faHistory,
     faNetworkWired,
-    faChartPie
+    faChartPie,
+    faChartLine,
+    faFileAlt
 );
 
 const page = usePage();
@@ -78,17 +67,14 @@ const isSidebarOpen = ref(false);
 const isSidebarPinned = ref(false);
 const sidebarRef = ref(null);
 
-const isUserMenuOpen = ref(false);
 const isPasserDropdownOpen = ref(false);
 const isReportsDropdownOpen = ref(false);
-const isDarkMode = ref(false);
 
 /* ---------------- HELPERS ---------------- */
 const isActiveRoute = (name) => route().current(name);
 
 const isAnyDropdownOpen = computed(
     () =>
-        isUserMenuOpen.value ||
         isPasserDropdownOpen.value ||
         isReportsDropdownOpen.value
 );
@@ -123,9 +109,6 @@ const isReportsActive = isActiveRouteFor(["reports.index"]);
 const isTestPasserReportsActive = isActiveRouteFor(["reports.test-passers.index"]);
 const isConfirmedApplicantsActive = isActiveRouteFor(["confirmed-applicants.index"]);
 const isManageActive = isActiveRouteFor(["users.index"]);
-const isUserSettingsActive = isActiveRouteFor([
-    "api-tokens.index",
-]);
 
 const isSuperAdmin = computed(() => {
     return user.value && user.value.role_id === 7;
@@ -158,17 +141,6 @@ const toggleReportsMenu = () => {
     isSidebarOpen.value = true;
 };
 
-const toggleUserMenu = () => {
-    isUserMenuOpen.value = !isUserMenuOpen.value;
-    isSidebarOpen.value = true;
-};
-
-const toggleDarkMode = () => {
-    isDarkMode.value = !isDarkMode.value;
-    document.documentElement.classList.toggle("dark", isDarkMode.value);
-    localStorage.setItem("darkMode", isDarkMode.value);
-};
-
 const logout = () => {
     router.post(route("idp.logout"));
 };
@@ -178,7 +150,6 @@ const onClickOutside = (event) => {
     if (!sidebarRef.value || isSidebarPinned.value) return;
     if (!sidebarRef.value.contains(event.target)) {
         isSidebarOpen.value = false;
-        isUserMenuOpen.value = false;
         isPasserDropdownOpen.value = false;
         isReportsDropdownOpen.value = false;
     }
@@ -192,7 +163,6 @@ watch(
             isUploadFormActive.value || isListPassersActive.value || isConfirmedApplicantsActive.value;
         isReportsDropdownOpen.value = 
             isReportsActive.value || isTestPasserReportsActive.value;
-        isUserMenuOpen.value = isUserSettingsActive.value;
     },
     { immediate: true }
 );
@@ -202,7 +172,6 @@ onMounted(() => {
     document.addEventListener("pointerdown", onClickOutside);
 
     const savedDark = localStorage.getItem("darkMode") === "true";
-    isDarkMode.value = savedDark;
     document.documentElement.classList.toggle("dark", savedDark);
 
     document.documentElement.style.setProperty(
@@ -274,7 +243,7 @@ watch(isSidebarOpen, (val) => {
                     </NavLink>
                 </div>
                 <div v-if="isSidebarOpen" class="flex-1">
-                    <h1 class="text-lg font-bold text-white dark:text-gray-900">PUP Portal</h1>
+                    <h1 class="text-lg font-bold text-white">PUP Portal</h1>
                     <p class="text-xs text-gray-300 mt-0.5">
                         Management System
                     </p>
@@ -755,7 +724,7 @@ watch(isSidebarOpen, (val) => {
     </div>
 </template>
 
-<style scoped>
+<style scoped lang="postcss">
 .sidebar {
     background: linear-gradient(180deg, #9e122c 0%, #800000 100%);
     display: flex;

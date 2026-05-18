@@ -419,7 +419,7 @@ onMounted(() => {
           <div class="flex flex-wrap gap-2 items-center">
           <button
             @click="showModal = true"
-            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg dark:text-gray-900 min-h-[44px] w-full sm:w-auto"
+            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg min-h-[44px] w-full sm:w-auto"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -649,7 +649,7 @@ onMounted(() => {
                           :alt="formatKey(key)"
                           class="w-full h-20 object-cover rounded-md"
                         />
-                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md transition-all dark:bg-white pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md transition-all pointer-events-none"></div>
                       </div>
                       <div v-else class="w-full h-20 bg-gray-200 dark:bg-gray-600 rounded-md flex items-center justify-center">
                         <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">

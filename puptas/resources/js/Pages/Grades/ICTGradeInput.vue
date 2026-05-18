@@ -15,12 +15,12 @@
                 <div class="flex items-center justify-between">
                     <div class="flex flex-wrap items-center w-full">
                         <div class="flex items-center relative">
-                            <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm dark:bg-gray-900 dark:text-gray-900">1</div>
+                            <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm">1</div>
                             <div class="ml-2 text-sm font-medium text-gray-900 dark:text-white">Grade 11</div>
                         </div>
-                        <div class="flex-1 h-0.5 mx-4 bg-[#9E122C] dark:bg-gray-900"></div>
+                        <div class="flex-1 h-0.5 mx-4 bg-[#9E122C]"></div>
                         <div class="flex items-center relative">
-                            <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm dark:bg-gray-900 dark:text-gray-900">2</div>
+                            <div class="w-8 h-8 bg-[#9E122C] text-white rounded-full flex items-center justify-center font-semibold text-sm">2</div>
                             <div class="ml-2 text-sm font-medium text-gray-900 dark:text-white">Grade 12</div>
                         </div>
                         <div class="flex-1 h-0.5 mx-4 bg-gray-300 dark:bg-gray-600"></div>
