@@ -99,7 +99,7 @@ const handleTermsAccept = () => {
 
 // Handle modal cancellation
 const handleTermsCancel = () => {
-    router.visit(route('idp.redirect'));
+    router.visit('/login');
 };
 </script>
 
@@ -701,7 +701,7 @@ const handleTermsCancel = () => {
                                 class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4"
                             >
                                 <Link
-                                    :href="route('idp.redirect')"
+                                    href="/login"
                                     class="flex items-center text-gray-600 dark:text-gray-400 hover:text-red-700 dark:hover:text-red-400 font-medium transition-colors duration-200"
                                 >
                                     <svg
