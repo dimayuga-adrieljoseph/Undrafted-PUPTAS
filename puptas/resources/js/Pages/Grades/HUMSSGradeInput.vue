@@ -1163,13 +1163,20 @@ const submitForm = async () => {
     };
 
     router.post("/grades/humss", payload, {
-        preserveState: true,
-        preserveScroll: true,
+        preserveState: false,
+        preserveScroll: false,
         onSuccess: (response) => {
+            // Scroll to top to ensure notification is visible
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Show success message immediately
             successMessage.value = "Grades saved successfully! Redirecting to dashboard...";
+            
+            // Force a small delay to ensure the notification renders
             setTimeout(() => {
                 router.visit("/applicant-dashboard");
-            }, 1500);
+            }, 2000);
+            
             loading.value = false;
         },
         onError: (errorResponse) => {
