@@ -42,6 +42,9 @@ Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
 Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
     ->name('idp.callback.alias');
 
+Route::get('/auth/idp/cancel-registration', [IdpAuthController::class, 'cancelRegistration'])
+    ->name('idp.cancel-registration');
+
 Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
     ->middleware('auth')
     ->name('idp.logout');

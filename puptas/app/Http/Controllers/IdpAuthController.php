@@ -409,4 +409,46 @@ class IdpAuthController extends Controller
         
         return \Inertia\Inertia::location($authorizeUrl);
     }
+
+    public function cancelRegistration(Request $request)
+    {
+        $idpConfig = config('services.idp');
+        $accessToken = null;
+
+        if (session()->has('pending_registration')) {
+            $accessToken = session('pending_registration.access_token');
+            session()->forget('pending_registration');
+        }
+
+        // Send request to IDP logout endpoint
+        if ($accessToken && !empty($idpConfig['base_url'])) {
+            $logoutPath = $idpConfig['logout_path'] ?? '/api/v1/auth/logout';
+            $logoutUrl = rtrim($idpConfig['base_url'], '/') . $logoutPath;
+
+            try {
+                \Log::info('Sending logout request to IDP (Cancel Registration)', ['url' => $logoutUrl]);
+
+                Http::withToken($accessToken)
+                    ->acceptJson()
+                    ->timeout(15)
+                    ->post($logoutUrl, [
+                        'client_id'    => $idpConfig['client_id'],
+                        'base_url'     => config('app.url')
+                    ]);
+            } catch (\Exception $e) {
+                \Log::error('IDP Logout API failed during registration cancel', ['error' => $e->getMessage()]);
+            }
+        }
+
+        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
+        $authorizeQuery = [
+            'client_id'     => $idpConfig['client_id'],
+            'response_type' => 'code',
+            'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
+        ];
+        
+        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
+        
+        return redirect()->away($authorizeUrl);
+    }
 }

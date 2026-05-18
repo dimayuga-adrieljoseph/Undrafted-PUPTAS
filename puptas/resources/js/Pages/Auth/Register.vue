@@ -110,7 +110,7 @@ const handleTermsAccept = () => {
 
 // Handle modal cancellation
 const handleTermsCancel = () => {
-    router.visit('/login');
+    window.location.href = '/auth/idp/cancel-registration';
 };
 </script>
 
@@ -545,8 +545,8 @@ const handleTermsCancel = () => {
                             <div
                                 class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4"
                             >
-                                <Link
-                                    href="/login"
+                                <a
+                                    href="/auth/idp/cancel-registration"
                                     class="flex items-center text-gray-600 dark:text-gray-400 hover:text-red-700 dark:hover:text-red-400 font-medium transition-colors duration-200"
                                 >
                                     <svg
@@ -563,7 +563,7 @@ const handleTermsCancel = () => {
                                         ></path>
                                     </svg>
                                     Back to Login
-                                </Link>
+                                </a>
 
                                 <button
                                     type="submit"
