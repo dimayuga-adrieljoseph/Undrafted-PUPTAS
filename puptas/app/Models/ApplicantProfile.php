@@ -20,18 +20,10 @@ class ApplicantProfile extends Model
         'middlename',
         'extension_name',
         'lastname',
-        'birthday',
         'sex',
         'contactnumber',
-        'street_address',
-        'barangay',
-        'city',
-        'province',
-        'postal_code',
         'privacy_consent',
         'privacy_consent_at',
-        'school',
-        'school_address',
         'date_graduated',
         'strand',
         'track',
@@ -47,7 +39,6 @@ class ApplicantProfile extends Model
      * @var array<int, string>
      */
     protected $hidden = [
-        'school_address',
     ];
 
     protected $casts = [

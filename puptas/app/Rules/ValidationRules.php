@@ -27,15 +27,8 @@ class ValidationRules
             'program' => 'nullable|array', // Allow multiple programs assigned to staff
             'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
-            // These fields might not be in your form anymore, but keeping for compatibility
-            'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
             'contactnumber' => 'nullable|string|regex:/^\d{10}$/', // Changed to 10-digit validation
-            'street_address' => 'nullable|string|max:255',
-            'barangay' => 'nullable|string|max:100',
-            'city' => 'nullable|string|max:100',
-            'province' => 'nullable|string|max:100',
-            'postal_code' => 'nullable|string|max:10',
             'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
@@ -61,14 +54,8 @@ class ValidationRules
             'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
 
-            'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
             'contactnumber' => 'required|string|regex:/^\d{10}$/', // Changed to 10-digit validation
-            'street_address' => 'nullable|string|max:255',
-            'barangay' => 'nullable|string|max:100',
-            'city' => 'nullable|string|max:100',
-            'province' => 'nullable|string|max:100',
-            'postal_code' => 'nullable|string|max:10',
             'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
@@ -226,10 +213,6 @@ class ValidationRules
             'surname' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
-            'date_of_birth' => 'nullable|date',
-            'address' => 'nullable|string|max:500',
-            'school_address' => 'nullable|string|max:500',
-            'shs_school' => 'required|string|max:255',
             'strand' => 'required|string|max:100',
             'year_graduated' => 'required|digits:4|integer|min:1900|max:' . (date('Y') + 1),
             'email' => 'required|email|unique:test_passers,email',
@@ -247,10 +230,6 @@ class ValidationRules
             'surname' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
-            'date_of_birth' => 'nullable|date',
-            'address' => 'nullable|string|max:500',
-            'school_address' => 'nullable|string|max:500',
-            'shs_school' => 'required|string|max:255',
             'strand' => 'required|string|max:100',
             'year_graduated' => 'required|digits:4|integer|min:1900|max:' . date('Y'),
             'email' => "required|email|unique:test_passers,email,{$testPasserId},test_passer_id",

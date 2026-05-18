@@ -127,22 +127,13 @@ class ExternalMedicalApiController extends Controller
             'middlename'             => $profile->middlename,
             'extension_name'         => $profile->extension_name,
             'lastname'               => $profile->lastname,
-            'birthday'               => $profile->birthday,
             'sex'                    => $profile->sex,
             
             // Contact Information
             'email'                  => $profile->email,
             'contactnumber'          => $profile->contactnumber,
             
-            // Address Information
-            'street_address'         => $profile->street_address,
-            'barangay'               => $profile->barangay,
-            'city'                   => $profile->city,
-            'province'               => $profile->province,
-            'postal_code'            => $profile->postal_code,
-            
             // Educational Background
-            'school'                 => $profile->school,
             'date_graduated'         => $profile->date_graduated,
             'strand'                 => $profile->strand,
             'track'                  => $profile->track,

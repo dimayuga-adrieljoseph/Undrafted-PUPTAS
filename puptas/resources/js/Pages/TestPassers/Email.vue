@@ -745,7 +745,7 @@
                         </div>
 
                         <!-- Contact Information -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                        <div class="col-span-2">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Email *</label>
                                 <input
@@ -754,44 +754,6 @@
                                     required
                                     readonly
                                     class="w-full px-4 py-3 bg-gray-100 text-gray-600 border border-gray-300 rounded-xl cursor-not-allowed focus:outline-none transition dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Date of Birth</label>
-                                <input
-                                    type="date"
-                                    v-model="editingPasser.date_of_birth"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Address -->
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Address</label>
-                            <input
-                                type="text"
-                                v-model="editingPasser.address"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                            />
-                        </div>
-
-                        <!-- School Information -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">SHS School</label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.shs_school"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">School Address</label>
-                                <input
-                                    type="text"
-                                    v-model="editingPasser.school_address"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
                         </div>
@@ -958,51 +920,13 @@
                         </div>
 
                         <!-- Contact Information -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                        <div class="col-span-2">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Email *</label>
                                 <input
                                     type="email"
                                     v-model="newPasserData.email"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Date of Birth</label>
-                                <input
-                                    type="date"
-                                    v-model="newPasserData.date_of_birth"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Address -->
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Address</label>
-                            <input
-                                type="text"
-                                v-model="newPasserData.address"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                            />
-                        </div>
-
-                        <!-- School Information -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">SHS School</label>
-                                <input
-                                    type="text"
-                                    v-model="newPasserData.shs_school"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">School Address</label>
-                                <input
-                                    type="text"
-                                    v-model="newPasserData.school_address"
                                     class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
                                 />
                             </div>
@@ -1734,10 +1658,6 @@ function openAddModal() {
         surname: "",
         first_name: "",
         middle_name: "",
-        date_of_birth: "",
-        address: "",
-        school_address: "",
-        shs_school: "",
         strand: "",
         year_graduated: "",
         email: "",

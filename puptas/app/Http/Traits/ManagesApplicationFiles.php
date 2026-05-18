@@ -83,12 +83,6 @@ trait ManagesApplicationFiles
                 'lastname' => $user->lastname,
                 'email' => $user->email,
                 'contactnumber' => $user->contactnumber,
-                'street_address' => $user->street_address,
-                'barangay' => $user->barangay,
-                'city' => $user->city,
-                'province' => $user->province,
-                'postal_code' => $user->postal_code,
-                'birthday' => $user->birthday,
                 'sex' => $user->sex,
                 'created_at' => $user->created_at,
                 'grades' => $user->grades, // Include grades

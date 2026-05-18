@@ -80,32 +80,8 @@
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatContact(applicationData.contactnumber) }}</p>
                             </div>
                             <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Birthday</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(applicationData.birthday) }}</p>
-                            </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Sex / Gender</p>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.sex }}</p>
-                            </div>
-                            <div class="col-span-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Street Address</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.street_address }}</p>
-                            </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Barangay</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.barangay }}</p>
-                            </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">City / Municipality</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.city }}</p>
-                            </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Province</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.province }}</p>
-                            </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Postal Code</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.postal_code || '—' }}</p>
                             </div>
                         </div>
                     </div>
@@ -114,14 +90,6 @@
                     <div>
                         <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Educational Background</h3>
                         <div class="grid grid-cols-2 gap-3">
-                            <div class="col-span-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.school }}</p>
-                            </div>
-                            <div class="col-span-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School Address</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.schoolAdd }}</p>
-                            </div>
                             <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School Year</p>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.schoolyear }}</p>

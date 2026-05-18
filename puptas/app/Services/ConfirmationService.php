@@ -49,17 +49,9 @@ class ConfirmationService
             'firstname' => $user->firstname,
             'middlename' => $user->middlename,
             'lastname' => $user->lastname,
-            'birthday' => $user->birthday,
             'sex' => $user->sex,
             'contactnumber' => $user->contactnumber,
-            'street_address' => $user->street_address,
-            'barangay' => $user->barangay,
-            'city' => $user->city,
-            'province' => $user->province,
-            'postal_code' => $user->postal_code,
             'email' => $user->email,
-            'school' => $profile->school ?? null,
-            'schoolAdd' => $profile->school_address ?? null,
             'schoolyear' => $graduateType,
             'dateGrad' => $profile?->date_graduated
                 ? date('Y-m-d', strtotime((string) $profile->date_graduated))

@@ -188,12 +188,6 @@ class DashboardController extends Controller
                 'lastname' => $applicant->lastname,
                 'email' => $applicant->email,
                 'contactnumber' => $applicant->contactnumber,
-                'street_address' => $applicant->street_address,
-                'barangay' => $applicant->barangay,
-                'city' => $applicant->city,
-                'province' => $applicant->province,
-                'postal_code' => $applicant->postal_code,
-                'birthday' => $applicant->birthday,
                 'sex' => $applicant->sex,
                 'created_at' => $applicant->created_at,
                 'grades' => $applicant->grades, // Include grades in response

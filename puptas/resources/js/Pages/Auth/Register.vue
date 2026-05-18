@@ -24,8 +24,7 @@ onMounted(() => {
         form.firstname = testPasser.first_name || '';
         form.lastname = testPasser.surname || '';
         form.middlename = testPasser.middle_name || '';
-        form.birthday = testPasser.date_of_birth || '';
-        form.schoolAdd = testPasser.school_address || '';
+
     }
 });
 
@@ -36,17 +35,9 @@ const form = useForm({
     lastname: "",
     firstname: "",
     middlename: "",
-    birthday: "",
     sex: "",
     contactnumber: "",
-    street_address: "",
-    barangay: "",
-    city: "",
-    province: "",
-    postal_code: "",
     reference_number: "",
-    school: "",
-    schoolAdd: "",
     schoolyear: "",
     dateGrad: "",
     strand: "",
@@ -420,25 +411,6 @@ const handleTermsCancel = () => {
                                 <div
                                     class="grid grid-cols-1 md:grid-cols-2 gap-6"
                                 >
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            School Name
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.school"
-                                            type="text"
-                                            required
-                                            autocomplete="organization-title"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="Name of your senior high school"
-                                        />
-                                    </div>
-
-
-
                                     <div class="space-y-2">
                                         <label
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
