@@ -1451,7 +1451,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch} from "vue";
+import { ref, computed, watch, nextTick} from "vue";
 const axios = window.axios;
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { Head } from "@inertiajs/vue3";
@@ -1896,7 +1896,12 @@ async function executeDelete() {
 }
 
 function openEditModal(passer) {
-    editingPasser.value = { ...passer };
+    editingPasser.value = { 
+        ...passer,
+        // Ensure passer_status_id is a string for the <select> v-model binding
+        passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
+        pupcet_total_score: passer.pupcet_total_score != null ? passer.pupcet_total_score : '',
+    };
     showEditModal.value = true;
 }
 
@@ -1909,20 +1914,60 @@ async function savePasser() {
     saving.value = true;
     start();
     try {
-        await axios.put(
+        const response = await axios.put(
             `/test-passers/${editingPasser.value.test_passer_id}`,
             editingPasser.value
         );
         show("Passer updated successfully!", "success");
 
+        // Normalize passer_status_id to integer for consistent comparisons
+        const updatedData = {
+            ...editingPasser.value,
+            passer_status_id: editingPasser.value.passer_status_id 
+                ? parseInt(editingPasser.value.passer_status_id) 
+                : null,
+            pupcet_total_score: editingPasser.value.pupcet_total_score !== '' && editingPasser.value.pupcet_total_score !== null
+                ? parseFloat(editingPasser.value.pupcet_total_score)
+                : null,
+        };
+
+        // Update the local data to reflect changes immediately
         const index = flatPassers.value.findIndex(
             (p) => p.test_passer_id === editingPasser.value.test_passer_id
         );
         if (index !== -1) {
-            flatPassers.value[index] = { ...editingPasser.value };
+            // Use Vue's reactivity by replacing the entire object
+            flatPassers.value.splice(index, 1, { 
+                ...flatPassers.value[index], 
+                ...updatedData,
+                // Ensure computed properties are updated
+                schoolYear: updatedData.school_year,
+                batchNumber: updatedData.batch_number
+            });
+        }
+
+        // Clear selected passers if the updated passer no longer matches current filters
+        // This ensures the UI stays consistent
+        const updatedPasser = flatPassers.value[index];
+        if (updatedPasser) {
+            const matchesCurrentFilters = (
+                (!filterSchoolYear.value || updatedPasser.schoolYear === filterSchoolYear.value) &&
+                (!filterBatchNumber.value || updatedPasser.batchNumber === filterBatchNumber.value) &&
+                (!filterPasserStatus.value || updatedPasser.passer_status_id === parseInt(filterPasserStatus.value))
+            );
+            
+            if (!matchesCurrentFilters) {
+                // Remove from selected if it no longer matches filters
+                selectedPassers.value = selectedPassers.value.filter(
+                    id => id !== editingPasser.value.test_passer_id
+                );
+            }
         }
 
         closeEditModal();
+        
+        // Ensure the UI updates immediately
+        await nextTick();
     } catch (error) {
         show("Failed to update passer.", "error");
         console.error(error);
@@ -1970,9 +2015,18 @@ async function saveNewPasser() {
         );
         show("Passer added successfully!", "success");
 
-        flatPassers.value.unshift(response.data);
+        // Add the new passer with computed properties
+        const newPasser = {
+            ...response.data,
+            schoolYear: response.data.school_year,
+            batchNumber: response.data.batch_number
+        };
+        flatPassers.value.unshift(newPasser);
 
         closeAddModal();
+        
+        // Ensure the UI updates immediately
+        await nextTick();
     } catch (error) {
         show("Failed to add passer.", "error");
         console.error(error);
