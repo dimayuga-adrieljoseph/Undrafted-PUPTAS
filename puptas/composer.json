@@ -24,7 +24,7 @@
         "resend/resend-laravel": "^1.3",
         "setasign/fpdi": "^2.6",
         "tecnickcom/tcpdf": "^6.10",
-        "thiagoalessio/tesseract_ocr": "^2.13",
+
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
