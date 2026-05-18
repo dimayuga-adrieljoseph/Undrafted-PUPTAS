@@ -70,16 +70,8 @@ class GradesController extends Controller
     {
         $user = Auth::user();
 
-        // Validate that user's strand matches
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        $userStrand = strtoupper(trim($profile->strand ?? ''));
-        
-        if (!$profile || $userStrand !== 'ICT') {
-            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
-        }
-
         if ($this->isEvaluatorLocked($user)) {
-            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+            return back()->withErrors(['locked' => 'Grade submission is no longer allowed. Your application has been submitted.']);
         }
 
         $validated = $request->validate([
@@ -255,16 +247,8 @@ class GradesController extends Controller
     {
         $user = Auth::user();
         
-        // Validate that user's strand matches
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        $userStrand = strtoupper(trim($profile->strand ?? ''));
-        
-        if (!$profile || $userStrand !== 'ABM') {
-            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
-        }
-        
         if ($this->isEvaluatorLocked($user)) {
-            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+            return back()->withErrors(['locked' => 'Grade submission is no longer allowed. Your application has been submitted.']);
         }
 
         $validated = $request->validate([
@@ -399,16 +383,8 @@ class GradesController extends Controller
     {
         $user = Auth::user();
 
-        // Validate that user's strand matches
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        $userStrand = strtoupper(trim($profile->strand ?? ''));
-        
-        if (!$profile || $userStrand !== 'TVL') {
-            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
-        }
-
         if ($this->isEvaluatorLocked($user)) {
-            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+            return back()->withErrors(['locked' => 'Grade submission is no longer allowed. Your application has been submitted.']);
         }
 
         $validated = $request->validate([
@@ -478,16 +454,8 @@ class GradesController extends Controller
     {
         $user = Auth::user();
 
-        // Validate that user's strand matches
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        $userStrand = strtoupper(trim($profile->strand ?? ''));
-        
-        if (!$profile || $userStrand !== 'HUMSS') {
-            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
-        }
-
         if ($this->isEvaluatorLocked($user)) {
-            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+            return back()->withErrors(['locked' => 'Grade submission is no longer allowed. Your application has been submitted.']);
         }
 
         $validated = $request->validate([
@@ -563,16 +531,8 @@ class GradesController extends Controller
     {
         $user = Auth::user();
 
-        // Validate that user's strand matches
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        $userStrand = strtoupper(trim($profile->strand ?? ''));
-        
-        if (!$profile || $userStrand !== 'GAS') {
-            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
-        }
-
         if ($this->isEvaluatorLocked($user)) {
-            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+            return back()->withErrors(['locked' => 'Grade submission is no longer allowed. Your application has been submitted.']);
         }
 
         $validated = $request->validate([
@@ -644,16 +604,8 @@ class GradesController extends Controller
     {
         $user = Auth::user();
 
-        // Validate that user's strand matches
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        $userStrand = strtoupper(trim($profile->strand ?? ''));
-        
-        if (!$profile || $userStrand !== 'STEM') {
-            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
-        }
-
         if ($this->isEvaluatorLocked($user)) {
-            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+            return back()->withErrors(['locked' => 'Grade submission is no longer allowed. Your application has been submitted.']);
         }
 
         $validated = $request->validate([
