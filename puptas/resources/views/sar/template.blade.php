@@ -206,12 +206,12 @@
         <h3>Enrollment Details</h3>
         <div class="field-group">
             <span class="field-label">Date of Enrollment:</span>
-            <span class="field-value">{{ $enrollment_date }}</span>
+            <span class="field-value">{{ \Carbon\Carbon::parse($enrollment_date)->format('F j, Y') }}</span>
         </div>
         
         <div class="field-group">
             <span class="field-label">Time:</span>
-            <span class="field-value">{{ $enrollment_time }}</span>
+            <span class="field-value">{{ \Carbon\Carbon::parse($enrollment_time)->format('h:i A') }}</span>
         </div>
 
         <div class="signature-section">
@@ -247,12 +247,12 @@
         
         <div class="field-group">
             <span class="field-label">Date of Enrollment:</span>
-            <span class="field-value">{{ $enrollment_date }}</span>
+            <span class="field-value">{{ \Carbon\Carbon::parse($enrollment_date)->format('F j, Y') }}</span>
         </div>
         
         <div class="field-group">
             <span class="field-label">Time:</span>
-            <span class="field-value">{{ $enrollment_time }}</span>
+            <span class="field-value">{{ \Carbon\Carbon::parse($enrollment_time)->format('h:i A') }}</span>
         </div>
 
         {{-- SECTION 3: ADMISSION REQUIREMENTS CHECKLIST --}}

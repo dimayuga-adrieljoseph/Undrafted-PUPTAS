@@ -145,6 +145,7 @@ class MeasureSarCoordinates extends Command
         $testData = [
             'reference_number' => '2026-TEST-001',
             'full_name' => 'DELA CRUZ, JUAN PABLO',
+            'full_name_natural' => 'JUAN PABLO DELA CRUZ',
             'graduation_year' => '2026',
             'school_attended' => 'MANILA HIGH SCHOOL',
             'shs_strand' => 'STEM',
@@ -152,6 +153,7 @@ class MeasureSarCoordinates extends Command
             'enrollment_time' => '10:30',
             'student_number' => '2026-00012',
             'admission_status' => 'Admitted',
+            'campus' => 'Taguig Campus',
         ];
         
         try {
