@@ -7,24 +7,13 @@
         @scroll="handleScroll"
     >
         <AppLayout>
-            <!-- Header Section -->
-            <div class="mb-8">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-3">
-                        <div class="p-3 bg-[#9E122C]/10 rounded-2xl">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#9E122C] dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-200">
-                                PUPCET Passers Email System
-                            </h1>
-                            <p class="text-gray-600 mt-1 dark:text-gray-400">
-                                Send personalized emails to successful PUPCET applicants
-                            </p>
-                        </div>
-                    </div>
+            <!-- Header -->
+            <div class="mb-5 flex items-center justify-between">
+                <div>
+                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">PUPCET Passers Email System</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        Send personalized emails to successful PUPCET applicants
+                    </p>
                 </div>
             </div>
 
@@ -32,176 +21,81 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Left Panel: Controls & Filters -->
                 <div class="lg:col-span-2 space-y-6">
-                    <!-- Control Cards -->
-                    <div class="bg-white rounded-2xl shadow-lg p-6 dark:bg-gray-800">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
-                                Filters & Controls
-                            </h2>
-                            <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full dark:text-gray-300 dark:bg-gray-800">
+                    <!-- Filters card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filters &amp; Controls</span>
+                            <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full">
                                 {{ filteredPassers.length }} passers
                             </span>
                         </div>
 
-                        <!-- Search Bar -->
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
-                                Search Passers
+                        <!-- Search -->
+                        <div class="relative mb-3">
+                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <input
+                                type="text"
+                                v-model="searchTerm"
+                                @input="onSearchInput"
+                                placeholder="Search by name, surname, or email…"
+                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                            />
+                        </div>
+
+                        <!-- Dropdowns -->
+                        <div class="flex gap-3 flex-wrap">
+                            <select v-model="filterSchoolYear"
+                                class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
+                                <option value="">All Years</option>
+                                <option v-for="year in schoolYears" :key="year" :value="year">{{ year }}</option>
+                            </select>
+                            <select v-model="filterBatchNumber"
+                                class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
+                                <option value="">All Batches</option>
+                                <option v-for="batch in batchNumbers" :key="batch" :value="batch">{{ batch }}</option>
+                            </select>
+                            <select v-model="filterPasserStatus"
+                                class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
+                                <option value="">All Statuses</option>
+                                <option value="1">Qualified</option>
+                                <option value="2">Waitlisted</option>
+                                <option value="3">Unqualified</option>
+                            </select>
+                            <select v-model="sortKey"
+                                class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
+                                <option value="pupcet_total_score">Sort: PUPCET Score</option>
+                                <option value="surname">Sort: Surname</option>
+                                <option value="first_name">Sort: First Name</option>
+                                <option value="email">Sort: Email</option>
+                                <option value="schoolYear">Sort: School Year</option>
+                                <option value="batchNumber">Sort: Batch</option>
+                            </select>
+                            <select v-model="sortOrder"
+                                class="flex-1 min-w-[100px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
+                                <option value="asc">Ascending</option>
+                                <option value="desc">Descending</option>
+                            </select>
+                        </div>
+
+                        <!-- Select All & Actions -->
+                        <div class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                            <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
+                                <input type="checkbox" :checked="areAllSelected" @change="toggleSelectAll($event.target.checked)"
+                                    class="h-4 w-4 rounded text-[#9E122C] border-gray-300 focus:ring-[#9E122C]" />
+                                Select All ({{ selectedPassers.length }})
                             </label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg class="h-5 w-5 text-gray-400 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                </div>
-                                <input
-                                    type="text"
-                                    v-model="searchTerm"
-                                    @input="onSearchInput"
-                                    placeholder="Search by name, surname, or email..."
-                                    class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-900"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Filter Grid -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                            <!-- School Year Filter -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
-                                    School Year
-                                </label>
-                                <select
-                                    v-model="filterSchoolYear"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="">All Years</option>
-                                    <option v-for="year in schoolYears" :key="year" :value="year">
-                                        {{ year }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- Batch Filter -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
-                                    Batch
-                                </label>
-                                <select
-                                    v-model="filterBatchNumber"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="">All Batches</option>
-                                    <option v-for="batch in batchNumbers" :key="batch" :value="batch">
-                                        {{ batch }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- Status Filter -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
-                                    Status
-                                </label>
-                                <select
-                                    v-model="filterPasserStatus"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="">All Statuses</option>
-                                    <option value="1">Qualified</option>
-                                    <option value="2">Waitlisted</option>
-                                    <option value="3">Unqualified</option>
-                                </select>
-                            </div>
-
-                            <!-- Sort By -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
-                                    Sort By
-                                </label>
-                                <select
-                                    v-model="sortKey"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="pupcet_total_score">PUPCET Score (Ranking)</option>
-                                    <option value="surname">Surname</option>
-                                    <option value="first_name">First Name</option>
-                                    <option value="email">Email</option>
-                                    <option value="schoolYear">School Year</option>
-                                    <option value="batchNumber">Batch</option>
-                                </select>
-                            </div>
-
-                            <!-- Sort Order -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
-                                    Order
-                                </label>
-                                <select
-                                    v-model="sortOrder"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="asc">Ascending</option>
-                                    <option value="desc">Descending</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="flex flex-wrap gap-3">
                             <button
                                 @click.prevent="openAddModal"
-                                class="inline-flex items-center px-4 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition dark:bg-gray-900 dark:text-gray-900"
-                            >
-                                <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                Add New Passer
+                                class="px-4 py-2 bg-[#9E122C] text-white rounded-xl text-sm hover:bg-[#800918] transition">
+                                + Add Passer
                             </button>
-                            
-                            <button
-                                @click.prevent="toggleSelectAll(!areAllSelected)"
-                                class="inline-flex items-center px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
-                            >
-                                <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                {{ areAllSelected ? 'Deselect All' : 'Select All' }} ({{ selectedPassers.length }})
-                            </button>
-
-                            <!-- Auto-Enroll Button (hidden) -->
-                            <!--
-                            <button
-                                id="bulk-enroll-btn"
-                                @click.prevent="runBulkEnroll"
-                                :disabled="selectedPassers.length === 0 || bulkEnrollRunning"
-                                class="inline-flex items-center px-4 py-3 rounded-xl font-medium text-sm transition focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                                :class="selectedPassers.length > 0 && !bulkEnrollRunning
-                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'"
-                                title="Auto-enroll selected passers as officially_enrolled"
-                            >
-                                <svg v-if="bulkEnrollRunning" class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                </svg>
-                                <svg v-else class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {{ bulkEnrollRunning ? 'Enrolling…' : `Auto-Enroll Selected (${selectedPassers.length})` }}
-                            </button>
-                            -->
-
-                            <!-- Bulk Delete Button (testing only) -->
                             <button
                                 v-if="selectedPassers.length > 0"
                                 @click.prevent="confirmBulkDelete"
-                                class="inline-flex items-center px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 transition"
-                            >
-                                <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Delete Selected ({{ selectedPassers.length }})
+                                class="px-4 py-2 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700 transition">
+                                Delete ({{ selectedPassers.length }})
                             </button>
                         </div>
                     </div>
