@@ -111,51 +111,6 @@
                                     Math Average: <span class="font-bold">{{ mathAverage || "—" }}</span>
                                 </p>
                             </div>
-                            <!-- G12 Math -->
-                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-500 text-white mr-2">G12</span>
-                                Grade 12
-                            </h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Math Subject 1</label>
-                                    <input
-                                        type="text"
-                                        :disabled="isLocked"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        placeholder="Subject name"
-                                    />
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        placeholder="0-100"
-                                    />
-                                </div>
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Math Subject 2</label>
-                                    <input
-                                        type="text"
-                                        :disabled="isLocked"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        placeholder="Subject name"
-                                    />
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        placeholder="0-100"
-                                    />
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Science Subjects -->
@@ -222,51 +177,6 @@
                                     Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
                                 </p>
                             </div>
-                            <!-- G12 Science -->
-                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-500 text-white mr-2">G12</span>
-                                Grade 12
-                            </h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 1</label>
-                                    <input
-                                        type="text"
-                                        :disabled="isLocked"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        placeholder="Subject name"
-                                    />
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        placeholder="0-100"
-                                    />
-                                </div>
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Science Subject 2</label>
-                                    <input
-                                        type="text"
-                                        :disabled="isLocked"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        placeholder="Subject name"
-                                    />
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        placeholder="0-100"
-                                    />
-                                </div>
-                            </div>
                         </div>
 
                         <!-- English Subjects -->
@@ -328,36 +238,6 @@
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
                                     English Average: <span class="font-bold">{{ englishAverage || "—" }}</span>
                                 </p>
-                            </div>
-                            <!-- G12 English -->
-                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-500 text-white mr-2">G12</span>
-                                Grade 12
-                            </h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div v-for="i in 3" :key="'english'+i" class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">English Subject {{ i }}</label>
-                                    <input
-                                        v-model="form[`g12_english_subject_${i}`]"
-                                        type="text"
-                                        :disabled="isLocked"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent mb-3"
-                                        :placeholder="`Subject ${i} name`"
-                                    />
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grade</label>
-                                    <input
-                                        v-model.number="form[`g12_english_grade_${i}`]"
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence(form[`g12_english_subject_${i}`]?.toLowerCase()?.trim() || '') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
-                                    />
-                                    <p v-if="isLowConfidence(form[`g12_english_subject_${i}`]?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                </div>
                             </div>
                         </div>
                         <div class="mb-4">

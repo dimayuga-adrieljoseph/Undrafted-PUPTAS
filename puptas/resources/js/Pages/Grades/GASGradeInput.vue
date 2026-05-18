@@ -182,8 +182,6 @@
                                     English Average: <span class="font-bold">{{ englishAverage || "—" }}</span>
                                 </p>
                             </div>
-
-                            </div>
                         </div>
 
                         <!-- Science Sub-section -->
@@ -228,8 +226,6 @@
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
                                     Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
                                 </p>
-                            </div>
-
                             </div>
                         </div>
 

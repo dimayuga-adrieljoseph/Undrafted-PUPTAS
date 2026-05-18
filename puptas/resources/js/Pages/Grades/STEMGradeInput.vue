@@ -139,7 +139,6 @@
                                     Math Average: <span class="font-bold">{{ mathAverage || "—" }}</span>
                                 </p>
                             </div>
-                            </div>
                         </div>
 
                         <!-- Science Subjects -->
@@ -188,78 +187,6 @@
                                     Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
                                 </p>
                             </div>
-                            <!-- G12 Science -->
-                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-6 mb-3 flex items-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-500 text-white mr-2">G12</span>
-                                Grade 12
-                            </h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">General Physics 1</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general physics 1') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
-                                    />
-                                    <p v-if="isLowConfidence('general physics 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">General Biology 1</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general biology 1') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
-                                    />
-                                    <p v-if="isLowConfidence('general biology 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">General Physics 2</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general physics 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
-                                    />
-                                    <p v-if="isLowConfidence('general physics 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">General Biology 2</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general biology 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
-                                    />
-                                    <p v-if="isLowConfidence('general biology 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg md:col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">General Chemistry 2</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general chemistry 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
-                                    />
-                                    <p v-if="isLowConfidence('general chemistry 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
-                            </div>
                         </div>
 
                         <!-- English Subjects -->
@@ -307,39 +234,6 @@
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
                                     English Average: <span class="font-bold">{{ englishAverage || "—" }}</span>
                                 </p>
-                            </div>
-                            <!-- G12 English -->
-                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-6 mb-3 flex items-center">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-500 text-white mr-2">G12</span>
-                                Grade 12
-                            </h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">21st Century Literature</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('21st century literature') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
-                                    />
-                                    <p v-if="isLowConfidence('21st century literature')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
-                                <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Komunikasyon</label>
-                                    <input
-                                        type="number"
-                        @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('komunikasyon') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                                        placeholder="0-100"
-                                    />
-                                    <p v-if="isLowConfidence('komunikasyon')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
 
                             <!-- Semester GWA -->
