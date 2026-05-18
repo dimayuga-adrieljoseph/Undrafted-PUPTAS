@@ -350,11 +350,11 @@
                                 </p>
                             </div>
 
-                            <!-- Semester GWA -->
+                            <!-- Grade 12 Semester GWA -->
                             <div class="mt-8">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                Semester GWA
+                                Grade 12 Semester GWA
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -698,10 +698,13 @@ const mathAverage = computed(() => {
         form.g11_statistics_probability,
         form.g11_pre_calculus,
         form.g11_basic_calculus,
-                                    ].filter((g) => g !== null && g !== "");
-    return grades.length > 0
-        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
-        : null;
+    ];
+    // Check if all required fields have valid values
+    if (grades.some((g) => g === null || g === "" || isNaN(g) || !isFinite(g))) {
+        return null;
+    }
+    const average = grades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / grades.length;
+    return isNaN(average) || !isFinite(average) ? null : average.toFixed(2);
 });
 
 const scienceAverage = computed(() => {
@@ -713,10 +716,13 @@ const scienceAverage = computed(() => {
         form.g12_general_physics_2,
         form.g12_general_biology_2,
         form.g12_general_chemistry_2,
-                                            ].filter((g) => g !== null && g !== "");
-    return grades.length > 0
-        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
-        : null;
+    ];
+    // Check if all required fields have valid values
+    if (grades.some((g) => g === null || g === "" || isNaN(g) || !isFinite(g))) {
+        return null;
+    }
+    const average = grades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / grades.length;
+    return isNaN(average) || !isFinite(average) ? null : average.toFixed(2);
 });
 
 const englishAverage = computed(() => {
@@ -725,22 +731,24 @@ const englishAverage = computed(() => {
         form.g11_reading_writing,
         form.g12_21st_century_lit,
         form.g12_academic_professional,
-                    ].filter((g) => g !== null && g !== "");
-    return grades.length > 0
-        ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
-        : null;
+    ];
+    // Check if all required fields have valid values
+    if (grades.some((g) => g === null || g === "" || isNaN(g) || !isFinite(g))) {
+        return null;
+    }
+    const average = grades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / grades.length;
+    return isNaN(average) || !isFinite(average) ? null : average.toFixed(2);
 });
 
 const g12GWA = computed(() => {
-    const semGrades = [form.g12_first_sem_gwa, form.g12_second_sem_gwa].filter(
-        (g) => g !== null && g !== "" && !isNaN(g) && isFinite(g)
-    );
-
-    if (semGrades.length === 0) {
+    const requiredGrades = [form.g12_first_sem_gwa, form.g12_second_sem_gwa];
+    
+    // Check if all required fields have valid values
+    if (requiredGrades.some((g) => g === null || g === "" || isNaN(g) || !isFinite(g))) {
         return null;
     }
 
-    const average = semGrades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / semGrades.length;
+    const average = requiredGrades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / requiredGrades.length;
     return isNaN(average) || !isFinite(average) ? null : average.toFixed(2);
 });
 

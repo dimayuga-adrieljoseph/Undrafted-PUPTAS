@@ -258,11 +258,11 @@
                             
                         </div>
 
-                        <!-- Semester GWA -->
+                        <!-- Grade 12 Semester GWA -->
                         <div class="mb-4">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                Semester GWA
+                                Grade 12 Semester GWA
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
