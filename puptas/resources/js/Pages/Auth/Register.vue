@@ -426,7 +426,6 @@ const handleTermsCancel = () => {
                                             <option value="" disabled>Select an option</option>
                                             <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
                                             <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
-                                            <option value="Alternative Learning System">Alternative Learning System</option>
                                         </select>
                                     </div>
 

@@ -769,11 +769,14 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
-                                <input
-                                    type="text"
+                                <select
                                     v-model="editingPasser.year_graduated"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="" disabled>Select an option</option>
+                                    <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
+                                    <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Reference Number</label>
@@ -790,13 +793,14 @@
                         <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">School Year *</label>
-                                <input
-                                    type="text"
+                                <select
                                     v-model="editingPasser.school_year"
                                     required
-                                    placeholder="e.g., 2023-2024"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="" disabled>Select School Year</option>
+                                    <option v-for="sy in academicYearOptions" :key="sy" :value="sy">{{ sy }}</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Batch Number *</label>
@@ -943,11 +947,14 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
-                                <input
-                                    type="text"
+                                <select
                                     v-model="newPasserData.year_graduated"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="" disabled>Select an option</option>
+                                    <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
+                                    <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Reference Number</label>
@@ -963,13 +970,14 @@
                         <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">School Year *</label>
-                                <input
-                                    type="text"
+                                <select
                                     v-model="newPasserData.school_year"
                                     required
-                                    placeholder="e.g., 2023-2024"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="" disabled>Select School Year</option>
+                                    <option v-for="sy in academicYearOptions" :key="sy" :value="sy">{{ sy }}</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Batch Number *</label>
@@ -1346,6 +1354,16 @@ watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, sortKey, sortOrd
 const schoolYears = computed(() => {
     const years = new Set(flatPassers.value.map((p) => p.schoolYear));
     return Array.from(years).sort();
+});
+
+const academicYearOptions = computed(() => {
+    const currentYear = new Date().getFullYear();
+    return [
+        `${currentYear}-${currentYear + 1}`,
+        `${currentYear - 1}-${currentYear}`,
+        `${currentYear - 2}-${currentYear - 1}`,
+        `${currentYear - 3}-${currentYear - 2}`,
+    ];
 });
 
 const batchNumbers = computed(() => {

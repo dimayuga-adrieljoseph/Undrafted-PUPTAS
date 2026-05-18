@@ -153,8 +153,13 @@ const skippedCount = ref(0);
 
 onMounted(() => {
   const currentYear = new Date().getFullYear();
-  yearOptions.value = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
-  year.value = currentYear;
+  yearOptions.value = [
+    `${currentYear}-${currentYear + 1}`,
+    `${currentYear - 1}-${currentYear}`,
+    `${currentYear - 2}-${currentYear - 1}`,
+    `${currentYear - 3}-${currentYear - 2}`,
+  ];
+  year.value = `${currentYear}-${currentYear + 1}`;
 });
 
 const onBatchChange = () => {

@@ -360,7 +360,7 @@ class TestPasserController extends Controller
             ],
             'reference_number' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
-            'school_year' => 'nullable|string|max:255',
+            'school_year' => 'nullable|string|max:9|regex:/^\d{4}-\d{4}$/',
             'pupcet_total_score' => 'nullable|numeric|min:0|max:999.99',
             'passer_status_id' => 'nullable|exists:passer_statuses,id',
         ]);
@@ -388,7 +388,7 @@ class TestPasserController extends Controller
             'email' => 'required|email|unique:test_passers,email',
             'reference_number' => 'nullable|string|max:255',
             'batch_number' => 'nullable|string|max:255',
-            'school_year' => 'nullable|string|max:255',
+            'school_year' => 'nullable|string|max:9|regex:/^\d{4}-\d{4}$/',
             'pupcet_total_score' => 'nullable|numeric|min:0|max:999.99',
             'passer_status_id' => 'nullable|exists:passer_statuses,id',
         ]);
