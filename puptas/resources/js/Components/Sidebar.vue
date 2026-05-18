@@ -121,6 +121,7 @@ const isListPassersActive = isActiveRouteFor(["lists"]);
 const isProgramsActive = isActiveRouteFor(["programs.index"]);
 const isReportsActive = isActiveRouteFor(["reports.index"]);
 const isTestPasserReportsActive = isActiveRouteFor(["reports.test-passers.index"]);
+const isConfirmedApplicantsActive = isActiveRouteFor(["confirmed-applicants.index"]);
 const isManageActive = isActiveRouteFor(["users.index"]);
 const isUserSettingsActive = isActiveRouteFor([
     "api-tokens.index",
@@ -427,6 +428,32 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
                                 :class="{ active: isApplicationsActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Confirmed Applicants -->
+                    <li>
+                        <NavLink
+                            :href="route('confirmed-applicants.index')"
+                            :active="isConfirmedApplicantsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isConfirmedApplicantsActive }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="calendar-check"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Confirmed Applicants
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ active: isConfirmedApplicantsActive }"
                             ></div>
                         </NavLink>
                     </li>

@@ -27,6 +27,7 @@ use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TestPasserReportController;
+use App\Http\Controllers\ConfirmedApplicantsController;
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
 Route::get('/', function () {
@@ -194,6 +195,15 @@ Route::get('/sar/download/{reference}/{filename}', [TestPasserController::class,
 Route::get('/applications', function () {
     return Inertia::render('Applications/Index');
 })->middleware(['auth', EnsureAdmin::class])->name('applications');
+
+// Confirmed Applicants Routes (Admin/Registrar only)
+Route::middleware(['auth', EnsureAdmin::class])->group(function () {
+    Route::get('/confirmed-applicants', [ConfirmedApplicantsController::class, 'index'])->name('confirmed-applicants.index');
+    Route::get('/confirmed-applicants/list', [ConfirmedApplicantsController::class, 'getApplicants'])->name('confirmed-applicants.list');
+    Route::post('/confirmed-applicants/send-sar', [ConfirmedApplicantsController::class, 'sendSar'])->name('confirmed-applicants.send-sar');
+    Route::post('/confirmed-applicants/send-email', [ConfirmedApplicantsController::class, 'sendCustomEmail'])->name('confirmed-applicants.send-email');
+    Route::post('/confirmed-applicants/{userId}/sync-grades', [ConfirmedApplicantsController::class, 'syncGrades'])->name('confirmed-applicants.sync-grades');
+});
 
 // NOTE: These are web (session-based) routes. auth:sanctum was incorrect here —
 // Auth::login() uses the 'web' guard, not the Sanctum stateless guard.

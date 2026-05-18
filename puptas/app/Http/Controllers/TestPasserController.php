@@ -118,7 +118,8 @@ class TestPasserController extends Controller
     }
 
     /**
-     * Send SAR form emails with PDF download links
+     * Send SAR form emails with PDF download links.
+     * SAR Forms can only be sent to confirmed applicants (for_evaluation status).
      */
     private function sendSarEmails($passers, $enrollmentDate, $enrollmentTime)
     {
@@ -127,9 +128,30 @@ class TestPasserController extends Controller
         $failedCount = 0;
         $errors = [];
 
+        // Pre-filter: only passers with a linked confirmed applicant (for_evaluation)
+        $confirmedPasserIds = \App\Models\ApplicantProfile::whereHas('currentApplication', function ($q) {
+                $q->where('status', 'for_evaluation');
+            })
+            ->whereHas('testPasser')
+            ->with('testPasser:test_passer_id,user_id')
+            ->get()
+            ->pluck('testPasser.test_passer_id')
+            ->toArray();
+
         foreach ($passers as $passer) {
             $sarGeneration = null;
             $emailSuccess = false;
+
+            // Enforce: SAR can only be sent to confirmed applicants (for_evaluation)
+            if (!in_array($passer->test_passer_id, $confirmedPasserIds)) {
+                $failedCount++;
+                $errors[] = [
+                    'passer' => $passer->first_name . ' ' . $passer->surname,
+                    'email'  => $passer->email,
+                    'error'  => 'Not a confirmed applicant. SAR Forms can only be sent to applicants with "For Evaluation" status.',
+                ];
+                continue;
+            }
 
             try {
                 // Prepare SAR data from test passer
