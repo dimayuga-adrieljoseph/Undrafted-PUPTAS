@@ -24,15 +24,16 @@
     @inertia
 
     @include('partials.sienna-widget')
-    @auth
-        @if(auth()->user()->role_id === 1)
-            @include('partials.chatwoot-widget')
-        @endif
-    @endauth
-    @guest
-        @if(isset($page['component']) && $page['component'] === 'Public/CheckStatus')
-            @include('partials.chatwoot-widget-public')
-        @endif
-    @endguest
+
+    @if(isset($page['component']) && $page['component'] === 'Public/CheckStatus')
+        {{-- Always show Chatwoot on the check-status page --}}
+        @include('partials.chatwoot-widget-public')
+    @else
+        @auth
+            @if(auth()->user()->role_id === 1)
+                @include('partials.chatwoot-widget')
+            @endif
+        @endauth
+    @endif
 </body>
 </html>
