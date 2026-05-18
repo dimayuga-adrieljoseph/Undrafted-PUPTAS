@@ -439,7 +439,7 @@
                                             v-for="program in qualifiedPrograms"
                                             :key="program.id"
                                             :value="program.id"
-                                            :disabled="program.id === form.second_choice_program"
+                                            :disabled="program.id === form.second_choice_program || program.id === form.third_choice_program"
                                         >
                                             {{ program.code }} - {{ program.name }}
                                         </option>
@@ -449,21 +449,21 @@
                                     </p>
                                 </div>
 
-                                <div>
+                                <div v-if="qualifiedPrograms.length >= 2">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Second Choice Program <span class="text-red-500 dark:text-red-300">*</span>
+                                        Second Choice Program <span v-if="qualifiedPrograms.length >= 2" class="text-red-500 dark:text-red-300">*</span>
                                     </label>
                                     <select
                                         v-model="form.second_choice_program"
                                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                        required
+                                        :required="qualifiedPrograms.length >= 2"
                                     >
                                         <option value="">-- Select Second Choice --</option>
                                         <option
                                             v-for="program in qualifiedPrograms"
                                             :key="program.id"
                                             :value="program.id"
-                                            :disabled="program.id === form.first_choice_program"
+                                            :disabled="program.id === form.first_choice_program || program.id === form.third_choice_program"
                                         >
                                             {{ program.code }} - {{ program.name }}
                                         </option>
@@ -472,10 +472,34 @@
                                         {{ errors.second_choice_program }}
                                     </p>
                                 </div>
+
+                                <div v-if="qualifiedPrograms.length >= 3">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Third Choice Program <span v-if="qualifiedPrograms.length >= 3" class="text-red-500 dark:text-red-300">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.third_choice_program"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        :required="qualifiedPrograms.length >= 3"
+                                    >
+                                        <option value="">-- Select Third Choice --</option>
+                                        <option
+                                            v-for="program in qualifiedPrograms"
+                                            :key="program.id"
+                                            :value="program.id"
+                                            :disabled="program.id === form.first_choice_program || program.id === form.second_choice_program"
+                                        >
+                                            {{ program.code }} - {{ program.name }}
+                                        </option>
+                                    </select>
+                                    <p v-if="errors.third_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300 break-words">
+                                        {{ errors.third_choice_program }}
+                                    </p>
+                                </div>
                             </div>
 
                             <!-- Selected Programs Display -->
-                            <div v-if="form.first_choice_program || form.second_choice_program" 
+                            <div v-if="form.first_choice_program || form.second_choice_program || form.third_choice_program" 
                                  class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                                 <p class="font-semibold text-sm text-gray-900 dark:text-white mb-2">Your Selected Programs:</p>
                                 <p v-if="form.first_choice_program" class="text-sm text-gray-700 dark:text-gray-300">
@@ -483,6 +507,9 @@
                                 </p>
                                 <p v-if="form.second_choice_program" class="text-sm text-gray-700 dark:text-gray-300">
                                     2nd Choice: <strong>{{ getSelectedProgramName(form.second_choice_program) }}</strong>
+                                </p>
+                                <p v-if="form.third_choice_program" class="text-sm text-gray-700 dark:text-gray-300">
+                                    3rd Choice: <strong>{{ getSelectedProgramName(form.third_choice_program) }}</strong>
                                 </p>
                             </div>
                         </div>
@@ -593,6 +620,7 @@ const form = reactive({
     // Program choices
     first_choice_program: "",
     second_choice_program: "",
+    third_choice_program: "",
 });
 
 // Computed properties for averages
@@ -972,6 +1000,9 @@ onMounted(() => {
         if (props.profile.second_choice_program) {
             form.second_choice_program = props.profile.second_choice_program;
         }
+        if (props.profile.third_choice_program) {
+            form.third_choice_program = props.profile.third_choice_program;
+        }
     }
     
     // Load saved semester GWAs from grade
@@ -1009,31 +1040,42 @@ const submitForm = async () => {
         return;
     }
 
-    // Validate that program choices are selected
-    if (!form.first_choice_program || !form.second_choice_program) {
+    // Dynamic validation based on qualified programs count
+    const qualifiedCount = qualifiedPrograms.value.length;
+    
+    // Validate first choice (always required)
+    if (!form.first_choice_program) {
         errors.value = {
-            programs: "Please select both first and second choice programs",
+            programs: "Please select your first choice program",
+        };
+        loading.value = false;
+        return;
+    }
+
+    // Validate second choice (required if 2+ qualified programs)
+    if (qualifiedCount >= 2 && !form.second_choice_program) {
+        errors.value = {
+            programs: "Please select your second choice program",
+        };
+        loading.value = false;
+        return;
+    }
+
+    // Validate third choice (required if 3+ qualified programs)
+    if (qualifiedCount >= 3 && !form.third_choice_program) {
+        errors.value = {
+            programs: "Please select your third choice program",
         };
         loading.value = false;
         return;
     }
 
     // Validate that choices are different
-    if (form.first_choice_program === form.second_choice_program) {
+    const choices = [form.first_choice_program, form.second_choice_program, form.third_choice_program].filter(Boolean);
+    const uniqueChoices = new Set(choices);
+    if (choices.length !== uniqueChoices.size) {
         errors.value = {
-            programs: "First and second choice programs must be different",
-        };
-        loading.value = false;
-        return;
-    }
-
-    // Double check that selected programs are still in qualifiedPrograms list (client-side validation)
-    const isFirstChoiceQualified = qualifiedPrograms.value.some(p => p.id === form.first_choice_program);
-    const isSecondChoiceQualified = qualifiedPrograms.value.some(p => p.id === form.second_choice_program);
-
-    if (!isFirstChoiceQualified || !isSecondChoiceQualified) {
-        errors.value = {
-            programs: "One or more selected programs are no longer qualified based on your updated grades. Please review your choices.",
+            programs: "All program choices must be different",
         };
         loading.value = false;
         return;
@@ -1047,7 +1089,9 @@ const submitForm = async () => {
         g12_first_sem: parseFloat(form.g12_first_sem_gwa),
         g12_second_sem: parseFloat(form.g12_second_sem_gwa),
         first_choice_program: form.first_choice_program,
-        second_choice_program: form.second_choice_program,
+        second_choice_program: form.second_choice_program || null,
+        third_choice_program: form.third_choice_program || null,
+        qualified_programs_count: qualifiedCount,
     };
 
     router.post("/grades/abm", payload, {

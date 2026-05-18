@@ -37,6 +37,7 @@ class ApplicantProfile extends Model
         'track',
         'first_choice_program',
         'second_choice_program',
+        'third_choice_program',
     ];
 
     /**
@@ -98,6 +99,11 @@ class ApplicantProfile extends Model
     public function secondChoiceProgram()
     {
         return $this->belongsTo(Program::class, 'second_choice_program');
+    }
+
+    public function thirdChoiceProgram()
+    {
+        return $this->belongsTo(Program::class, 'third_choice_program');
     }
 
     public function documentStatuses()

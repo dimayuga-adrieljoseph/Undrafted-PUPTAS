@@ -126,9 +126,13 @@ class UserService
     public function getAllApplicantsByStage(string $stage, ?array $programIds = null): Collection
     {
         return ApplicantProfile::with(['currentApplication' => function ($query) {
-                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id');
+                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.requires_promissory_note');
             }, 'currentApplication.program' => function ($query) {
-                $query->select('id', 'code', 'name');
+                $query->select('id', 'code', 'name', 'slots');
+            }, 'currentApplication.secondChoice' => function ($query) {
+                $query->select('id', 'code', 'name', 'slots');
+            }, 'currentApplication.thirdChoice' => function ($query) {
+                $query->select('id', 'code', 'name', 'slots');
             }, 'currentApplication.processes' => function ($query) {
                 // Load ALL stages so derivePipelineStatus() has full context
                 $query->orderBy('created_at', 'desc')
@@ -176,10 +180,24 @@ class UserService
                         'status' => $application->status,
                         'enrollment_status' => $application->enrollment_status,
                         'created_at' => $application->created_at,
+                        'requires_promissory_note' => $application->requires_promissory_note ?? false,
                         'program' => $application->program ? [
                             'id' => $application->program->id,
                             'code' => $application->program->code,
                             'name' => $application->program->name,
+                            'slots' => $application->program->slots ?? 0,
+                        ] : null,
+                        'second_choice' => $application->secondChoice ? [
+                            'id' => $application->secondChoice->id,
+                            'code' => $application->secondChoice->code,
+                            'name' => $application->secondChoice->name,
+                            'slots' => $application->secondChoice->slots ?? 0,
+                        ] : null,
+                        'third_choice' => $application->thirdChoice ? [
+                            'id' => $application->thirdChoice->id,
+                            'code' => $application->thirdChoice->code,
+                            'name' => $application->thirdChoice->name,
+                            'slots' => $application->thirdChoice->slots ?? 0,
                         ] : null,
                     ] : null,
                     'process_status' => $stageProcess ? $stageProcess->status : 'in_progress',
