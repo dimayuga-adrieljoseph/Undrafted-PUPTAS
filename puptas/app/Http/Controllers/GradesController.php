@@ -18,7 +18,9 @@ class GradesController extends Controller
     {
         $user = Auth::user();
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get();
+        $programs = Program::with('strands')->get()->each(function ($program) {
+            $program->append('strand_names');
+        });
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/ABMGradeInput', [
@@ -36,7 +38,9 @@ class GradesController extends Controller
     {
         $user = Auth::user();
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get();
+        $programs = Program::with('strands')->get()->each(function ($program) {
+            $program->append('strand_names');
+        });
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/ICTGradeInput', [
@@ -54,7 +58,9 @@ class GradesController extends Controller
     {
         $user = Auth::user();
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get();
+        $programs = Program::with('strands')->get()->each(function ($program) {
+            $program->append('strand_names');
+        });
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/HUMSSGradeInput', [
@@ -72,7 +78,9 @@ class GradesController extends Controller
     {
         $user = Auth::user();
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get();
+        $programs = Program::with('strands')->get()->each(function ($program) {
+            $program->append('strand_names');
+        });
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/GASGradeInput', [
@@ -90,7 +98,9 @@ class GradesController extends Controller
     {
         $user = Auth::user();
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get();
+        $programs = Program::with('strands')->get()->each(function ($program) {
+            $program->append('strand_names');
+        });
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/STEMGradeInput', [
@@ -108,7 +118,9 @@ class GradesController extends Controller
     {
         $user = Auth::user();
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get();
+        $programs = Program::with('strands')->get()->each(function ($program) {
+            $program->append('strand_names');
+        });
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/TVLGradeInput', [

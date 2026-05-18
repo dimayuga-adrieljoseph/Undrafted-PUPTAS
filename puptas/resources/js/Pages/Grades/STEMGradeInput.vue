@@ -818,19 +818,42 @@ const currentStrand = computed(() => (props.strand || "STEM").toUpperCase());
 
 const isStrandAllowed = (program) => {
     const strandValue = (program.strand_names || "").toString().toUpperCase();
-    if (!strandValue || strandValue.includes("OPEN TO ALL")) {
+    
+    // If no strand requirement specified, allow all
+    if (!strandValue) {
+        return true;
+    }
+    
+    // If explicitly open to all strands
+    if (strandValue.includes("OPEN TO ALL")) {
         return true;
     }
 
-    if (strandValue.includes("OTHER WITH BRIDGING")) {
-        return true;
-    }
-
+    // Parse the allowed strands
     const allowed = strandValue
-        .split(",")
+        .split(/[,/]/) // Split by comma or slash
         .map((s) => s.trim())
-        .filter(Boolean);
-    return allowed.includes(currentStrand.value);
+        .filter(Boolean)
+        .map((s) => {
+            // Normalize strand names
+            if (s.includes("TECH-VOC") || s.includes("TVL")) return "TVL";
+            if (s.includes("STEM")) return "STEM";
+            if (s.includes("ABM")) return "ABM";
+            if (s.includes("HUMSS")) return "HUMSS";
+            if (s.includes("GAS")) return "GAS";
+            if (s.includes("ICT")) return "ICT";
+            return s;
+        });
+    
+    // Check if current strand is in the allowed list
+    const isAllowed = allowed.includes(currentStrand.value);
+    
+    // If not directly allowed, check if "other with bridging" is mentioned
+    if (!isAllowed && strandValue.includes("OTHER") && strandValue.includes("BRIDGING")) {
+        return true;
+    }
+    
+    return isAllowed;
 };
 
 // Helper function to get selected program name
