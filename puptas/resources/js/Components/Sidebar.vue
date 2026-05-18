@@ -189,7 +189,7 @@ watch(
     () => page.props.url,
     () => {
         isPasserDropdownOpen.value =
-            isUploadFormActive.value || isListPassersActive.value;
+            isUploadFormActive.value || isListPassersActive.value || isConfirmedApplicantsActive.value;
         isReportsDropdownOpen.value = 
             isReportsActive.value || isTestPasserReportsActive.value;
         isUserMenuOpen.value = isUserSettingsActive.value;
@@ -331,7 +331,8 @@ watch(isSidebarOpen, (val) => {
                                 'nav-item-active':
                                     isPasserDropdownOpen ||
                                     isUploadFormActive ||
-                                    isListPassersActive,
+                                    isListPassersActive ||
+                                    isConfirmedApplicantsActive,
                             }"
                         >
                             <div class="nav-icon">
@@ -402,6 +403,21 @@ watch(isSidebarOpen, (val) => {
                                     />
                                     List Passers
                                 </Link>
+                                <Link
+                                    :href="route('confirmed-applicants.index')"
+                                    class="dropdown-item"
+                                    :class="{
+                                        'dropdown-item-active':
+                                            isConfirmedApplicantsActive,
+                                    }"
+                                    @click="emit('close')"
+                                >
+                                    <FontAwesomeIcon
+                                        icon="calendar-check"
+                                        class="text-xs mr-2"
+                                    />
+                                    Confirmed Applicants
+                                </Link>
                             </div>
                         </transition>
                     </li>
@@ -428,32 +444,6 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
                                 :class="{ active: isApplicationsActive }"
-                            ></div>
-                        </NavLink>
-                    </li>
-
-                    <!-- Confirmed Applicants -->
-                    <li>
-                        <NavLink
-                            :href="route('confirmed-applicants.index')"
-                            :active="isConfirmedApplicantsActive"
-                            class="nav-item group"
-                            :class="{ 'nav-item-active': isConfirmedApplicantsActive }"
-                            @click="emit('close')"
-                        >
-                            <div class="nav-icon">
-                                <FontAwesomeIcon
-                                    icon="calendar-check"
-                                    class="text-lg"
-                                />
-                            </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
-                                Confirmed Applicants
-                            </span>
-                            <div
-                                v-if="isSidebarOpen"
-                                class="nav-indicator"
-                                :class="{ active: isConfirmedApplicantsActive }"
                             ></div>
                         </NavLink>
                     </li>
