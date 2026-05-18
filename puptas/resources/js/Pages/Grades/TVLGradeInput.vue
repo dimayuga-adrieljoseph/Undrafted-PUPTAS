@@ -40,6 +40,24 @@
                 </p>
             </div>
 
+            <!-- Success Toast Notification -->
+            <Transition name="slide-down">
+                <div v-if="successMessage" class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-400 rounded-lg shadow-lg flex items-center gap-3 animate-pulse">
+                    <div class="flex-shrink-0">
+                        <svg class="w-6 h-6 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-green-800 dark:text-green-200">Success!</p>
+                        <p class="text-sm text-green-700 dark:text-green-300">{{ successMessage }}</p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-green-500 dark:border-green-400"></div>
+                    </div>
+                </div>
+            </Transition>
+
             <form @submit.prevent="openReviewModal">
                 <!-- Docling Autofill Banner -->
                 <div v-if="extractionResult && !bannerDismissed" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-4">
@@ -1105,12 +1123,10 @@ const submitForm = async () => {
         preserveState: true,
         preserveScroll: true,
         onSuccess: (response) => {
-            successMessage.value =
-                "Grades and program choices saved successfully!";
-            alert("✅ Grades saved successfully! Redirecting to dashboard...");
+            successMessage.value = "Grades saved successfully! Redirecting to dashboard...";
             setTimeout(() => {
                 router.visit("/applicant-dashboard");
-            }, 1000);
+            }, 1500);
             loading.value = false;
         },
         onError: (errorResponse) => {
@@ -1137,6 +1153,24 @@ const submitForm = async () => {
 }
 .fade-enter-from,
 .fade-leave-to {
+    opacity: 0;
+}
+
+.slide-down-enter-active {
+    transition: all 0.4s ease-out;
+}
+
+.slide-down-leave-active {
+    transition: all 0.3s ease-in;
+}
+
+.slide-down-enter-from {
+    transform: translateY(-20px);
+    opacity: 0;
+}
+
+.slide-down-leave-to {
+    transform: translateY(-10px);
     opacity: 0;
 }
 
