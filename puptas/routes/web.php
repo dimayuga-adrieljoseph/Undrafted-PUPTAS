@@ -126,7 +126,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/grades/abm', [GradesController::class, 'showAbmGradeForm'])->name('grades.abm.form');
     Route::post('/grades/abm', [GradesController::class, 'storeAbmGrades'])->name('grades.abm.store');
     Route::get('/grades/ict', [GradesController::class, 'showIctGradeForm'])->name('grades.ict.form');
-    Route::post('/grades/ict', [GradesController::class, 'storeAbmGrades'])->name('grades.ict.store');
+    Route::post('/grades/ict', [GradesController::class, 'storeIctGrades'])->name('grades.ict.store');
     Route::get('/grades/humss', [GradesController::class, 'showHumssGradeForm'])->name('grades.humss.form');
     Route::post('/grades/humss', [GradesController::class, 'storeHumssGrades'])->name('grades.humss.store');
     Route::get('/grades/gas', [GradesController::class, 'showGasGradeForm'])->name('grades.gas.form');
