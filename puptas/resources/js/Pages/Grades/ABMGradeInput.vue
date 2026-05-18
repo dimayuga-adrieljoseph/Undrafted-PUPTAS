@@ -79,7 +79,7 @@
                                     <div class="relative">
                                         <input required
                                             v-model.number="form.g11_general_mathematics"
-                                            type="number"
+                                            type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                             min="0"
                                             max="100"
@@ -94,7 +94,7 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Business Mathematics</label>
                                     <input required
                                         v-model.number="form.g11_business_mathematics"
-                                        type="number"
+                                        type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
@@ -108,7 +108,7 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statistics and Probability</label>
                                     <input required
                                         v-model.number="form.g11_statistics_probability"
-                                        type="number"
+                                        type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
@@ -141,7 +141,7 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Oral Communication</label>
                                     <input required
                                         v-model.number="form.g11_oral_communication"
-                                        type="number"
+                                        type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
@@ -155,7 +155,7 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">English for Academic Purposes</label>
                                     <input required
                                         v-model.number="form.g11_academic_professional"
-                                        type="number"
+                                        type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
@@ -169,7 +169,7 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading and Writing</label>
                                     <input required
                                         v-model.number="form.g11_reading_writing"
-                                        type="number"
+                                        type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
@@ -191,7 +191,7 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">21st Century Literature</label>
                                     <input required
                                         v-model.number="form.g12_21st_century_lit"
-                                        type="number"
+                                        type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
@@ -224,7 +224,7 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Earth and Life Science</label>
                                     <input required
                                         v-model.number="form.g11_earth_life_science"
-                                        type="number"
+                                        type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
@@ -238,7 +238,7 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Science</label>
                                     <input required
                                         v-model.number="form.g11_physical_science"
-                                        type="number"
+                                        type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
@@ -258,18 +258,18 @@
                             
                         </div>
 
-                        <!-- Grade 12 Semester GWA -->
+                        <!-- Grade 12 GWA -->
                         <div class="mb-4">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                Grade 12 Semester GWA
+                                Grade 12 GWA
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">1st Semester</label>
                                     <input required
                                         v-model.number="form.g12_first_sem_gwa"
-                                        type="number"
+                                        type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
@@ -283,7 +283,7 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">2nd Semester</label>
                                     <input required
                                         v-model.number="form.g12_second_sem_gwa"
-                                        type="number"
+                                        type="number" @keydown="preventInvalidInput"
                         @input="validateGrade"
                                         min="0"
                                         max="100"
@@ -581,7 +581,7 @@ const form = reactive({
     g12_21st_century_lit: null,
     g11_earth_life_science: null,
     g11_physical_science: null,
-    // Grade 12 Semester GWA
+    // Grade 12 GWA
     g12_first_sem_gwa: null,
     g12_second_sem_gwa: null,
     // Program choices
@@ -641,7 +641,7 @@ const reviewSections = computed(() => [
         ],
     },
     {
-        title: 'Grade 12 Semester GWA',
+        title: 'Grade 12 GWA',
         items: [
             { label: 'First Semester GWA', value: reviewData.value.g12_first_sem_gwa },
             { label: 'Second Semester GWA', value: reviewData.value.g12_second_sem_gwa },
@@ -814,13 +814,81 @@ const isLowConfidence = (fieldKey) => {
 
 // Validate grade input to ensure it's between 0 and 100
 const validateGrade = (event) => {
-    const value = parseFloat(event.target.value);
-    if (!isNaN(value)) {
-        if (value > 100) {
-            event.target.value = 100;
-        } else if (value < 0) {
-            event.target.value = 0;
-        }
+    const input = event.target;
+    const value = input.value;
+    
+    // Remove any negative signs
+    if (value.includes('-')) {
+        input.value = value.replace(/-/g, '');
+        return;
+    }
+    
+    // Parse the current value
+    const numValue = parseFloat(value);
+    
+    // If value exceeds 100, cap it at 100
+    if (!isNaN(numValue) && numValue > 100) {
+        input.value = '100';
+    }
+    
+    // If value is less than 0, set to empty
+    if (!isNaN(numValue) && numValue < 0) {
+        input.value = '';
+    }
+};
+
+const preventInvalidInput = (event) => {
+    const input = event.target;
+    const key = event.key;
+    const currentValue = input.value;
+    
+    // Prevent minus sign
+    if (key === '-') {
+        event.preventDefault();
+        return;
+    }
+    
+    // Allow control keys (backspace, delete, arrow keys, tab, etc.)
+    if (
+        key === 'Backspace' || 
+        key === 'Delete' || 
+        key === 'Tab' || 
+        key === 'ArrowLeft' || 
+        key === 'ArrowRight' ||
+        key === 'ArrowUp' ||
+        key === 'ArrowDown' ||
+        key === 'Home' ||
+        key === 'End' ||
+        (event.ctrlKey && (key === 'a' || key === 'c' || key === 'v' || key === 'x'))
+    ) {
+        return;
+    }
+    
+    // Only allow numbers and decimal point
+    if (!/^\d$/.test(key) && key !== '.') {
+        event.preventDefault();
+        return;
+    }
+    
+    // Prevent multiple decimal points
+    if (key === '.' && currentValue.includes('.')) {
+        event.preventDefault();
+        return;
+    }
+    
+    // Get the future value after this key press
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
+    const futureValue = 
+        currentValue.substring(0, selectionStart) + 
+        key + 
+        currentValue.substring(selectionEnd);
+    
+    // Check if future value would exceed 100
+    const futureNum = parseFloat(futureValue);
+    if (!isNaN(futureNum) && futureNum > 100) {
+        event.preventDefault();
+        return;
     }
 };
 
