@@ -318,6 +318,9 @@
                                                 English {{ parseFloat(program.english).toFixed(2) }}, 
                                                 GWA {{ parseFloat(program.gwa).toFixed(2) }}
                                             </p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                <span class="font-medium">Strand:</span> {{ program.strand_names || 'Open to All' }}
+                                            </p>
                                         </div>
                                     </div>
                                     <p v-else class="text-sm text-gray-500 dark:text-gray-400 italic">
@@ -349,6 +352,9 @@
                                                 Science {{ parseFloat(program.science).toFixed(2) }}, 
                                                 English {{ parseFloat(program.english).toFixed(2) }}, 
                                                 GWA {{ parseFloat(program.gwa).toFixed(2) }}
+                                            </p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                <span class="font-medium">Strand:</span> {{ program.strand_names || 'Open to All' }}
                                             </p>
                                         </div>
                                     </div>

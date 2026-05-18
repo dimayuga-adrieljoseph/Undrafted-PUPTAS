@@ -447,6 +447,9 @@
                                                 Requirements: Math {{ program.math }}, Science {{ program.science }}, 
                                                 English {{ program.english }}, GWA {{ program.gwa }}
                                             </p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                <span class="font-medium">Strand:</span> {{ program.strand_names || 'Open to All' }}
+                                            </p>
                                         </div>
                                     </div>
                                     <p v-else class="text-sm text-gray-500 dark:text-gray-400 italic">
@@ -476,6 +479,9 @@
                                             <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
                                                 Requirements: Math {{ program.math }}, Science {{ program.science }}, 
                                                 English {{ program.english }}, GWA {{ program.gwa }}
+                                            </p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                <span class="font-medium">Strand:</span> {{ program.strand_names || 'Open to All' }}
                                             </p>
                                         </div>
                                     </div>
