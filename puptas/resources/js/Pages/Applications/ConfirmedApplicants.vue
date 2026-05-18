@@ -602,7 +602,7 @@ onMounted(() => {
                     <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-200 mb-4">Email Template</h2>
 
                     <!-- Template Type Selector -->
-                    <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Select Template Type</p>
+                    <p class="text-xs font-medium text-gray-700 dark:text-gray-400 mb-2">Select Template Type</p>
                     <div class="grid grid-cols-2 gap-2 mb-5">
                         <button
                             @click="templateMode = 'sar'"
