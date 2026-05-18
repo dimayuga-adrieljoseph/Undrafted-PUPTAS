@@ -110,12 +110,11 @@ class ConfirmedApplicantsController extends Controller
             'applicant_ids'   => 'required|array|min:1',
             'applicant_ids.*' => 'integer',
             'enrollment_date' => 'required|string',
-            'enrollment_time' => 'required|string',
+            // enrollment_time is determined automatically by score/batch
         ]);
 
-        $applicantIds    = $request->input('applicant_ids');
-        $enrollmentDate  = $request->input('enrollment_date');
-        $enrollmentTime  = $request->input('enrollment_time');
+        $applicantIds   = $request->input('applicant_ids');
+        $enrollmentDate = $request->input('enrollment_date');
 
         // Verify all applicants are confirmed (for_evaluation)
         $applicants = ApplicantProfile::with(['currentApplication', 'testPasser'])
