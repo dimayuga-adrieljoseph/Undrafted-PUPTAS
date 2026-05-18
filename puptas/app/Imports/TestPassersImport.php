@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Models\ApplicantProfile;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class TestPassersImport implements ToModel, WithHeadingRow
 {
@@ -44,29 +43,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
             }
         }
 
-        // Handle Excel numeric date serials and string dates
-        $dateOfBirth = null;
-        if (!empty($row['date_of_birth'])) {
-            $rawDate = $row['date_of_birth'];
-            if (is_numeric($rawDate)) {
-                // Excel stores dates as numeric serials — convert properly
-                try {
-                    $dateOfBirth = ExcelDate::excelToDateTimeObject($rawDate)->format('Y-m-d');
-                } catch (\Exception $e) {
-                    $dateOfBirth = null;
-                }
-            } else {
-                $parsed = strtotime($rawDate);
-                $dateOfBirth = $parsed !== false ? date('Y-m-d', $parsed) : null;
-            }
-        }
-
-        // Resolve PUPCET score from multiple possible column name variants.
-        // WithHeadingRow normalises headers: lowercased + spaces→underscores.
-        // Accepted column names in the sheet:
-        //   "pupcet_total_score", "pupcet total score",
-        //   "pupcet_score",       "total_score"
-        $pupcetScore = $this->resolveScore($row);
+        $pupcetScore = $this->resolvePupcetScore($row);
 
         // Skip rows with no email to avoid collisions on null key
         if (empty($email)) {
@@ -74,12 +51,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
                 'surname'            => $row['surname'] ?? null,
                 'first_name'         => $firstName,
                 'middle_name'        => $row['middlename'] ?? null,
-                'date_of_birth'      => $dateOfBirth,
-                'address'            => $row['address'] ?? null,
-                'school_address'     => $row['school_address'] ?? null,
-                'shs_school'         => $row['school'] ?? null,
                 'strand'             => $row['strand'] ?? null,
-                'year_graduated'     => $row['year_graduated'] ?? null,
                 'reference_number'   => $referenceNumber,
                 'batch_number'       => $this->batch,
                 'school_year'        => $this->schoolYear,
@@ -96,12 +68,8 @@ class TestPassersImport implements ToModel, WithHeadingRow
                 'surname'            => $row['surname'] ?? null,
                 'first_name'         => $firstName,
                 'middle_name'        => $row['middlename'] ?? null,
-                'date_of_birth'      => $dateOfBirth,
-                'address'            => $row['address'] ?? null,
-                'school_address'     => $row['school_address'] ?? null,
-                'shs_school'         => $row['school'] ?? null,
                 'strand'             => $row['strand'] ?? null,
-                'year_graduated'     => $row['year_graduated'] ?? null,
+                'email'              => $email,
                 'reference_number'   => $referenceNumber,
                 'batch_number'       => $this->batch,
                 'school_year'        => $this->schoolYear,
@@ -113,28 +81,24 @@ class TestPassersImport implements ToModel, WithHeadingRow
         );
     }
 
-    /**
-     * Resolve the PUPCET total score from the row, accepting several column
-     * name variants that Excel users might use.
-     *
-     * WithHeadingRow normalises headers to lowercase_with_underscores, so:
-     *   "PUPCET Total Score" → pupcet_total_score  ✓
-     *   "pupcet total score" → pupcet_total_score  ✓
-     *   "PUPCET Score"       → pupcet_score        ✓
-     *   "Total Score"        → total_score         ✓
-     */
-    private function resolveScore(array $row): ?float
+    private function resolvePupcetScore(array $row): ?float
     {
-        $candidates = ['pupcet_total_score', 'pupcet_score', 'total_score'];
+        $value = $row['pupcet_score'] ?? null;
 
-        foreach ($candidates as $key) {
-            if (array_key_exists($key, $row) && $row[$key] !== null && $row[$key] !== '') {
-                if (is_numeric($row[$key])) {
-                    return (float) $row[$key];
-                }
-            }
+        if ($value === null || trim((string) $value) === '') {
+            return null;
         }
 
-        return null;
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $score = round((float) $value, 2);
+
+        if ($score < 0.00 || $score > 9999.99) {
+            return null;
+        }
+
+        return $score;
     }
 }
