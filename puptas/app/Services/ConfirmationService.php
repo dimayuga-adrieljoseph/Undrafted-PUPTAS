@@ -64,6 +64,7 @@ class ConfirmationService
             'enrollment_status' => $application?->enrollment_status ?? null,
             'program_id' => $application?->program_id ?? $profile?->first_choice_program,
             'second_choice_id' => $application?->second_choice_id ?? $profile?->second_choice_program,
+            'third_choice_id' => $application?->third_choice_id ?? $profile?->third_choice_program,
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
         ];
     }
@@ -176,6 +177,7 @@ class ConfirmationService
                     'status' => 'draft',
                     'program_id' => $profile?->first_choice_program,
                     'second_choice_id' => $profile?->second_choice_program,
+                    'third_choice_id' => $profile?->third_choice_program,
                 ]
             );
 
@@ -191,6 +193,7 @@ class ConfirmationService
                 'submitted_at' => now(),
                 'program_id' => $validated['program_id'],
                 'second_choice_id' => $validated['second_choice_id'] ?? null,
+                'third_choice_id' => $validated['third_choice_id'] ?? null,
             ]);
 
             // Create the next in-flight process (evaluator)
@@ -300,6 +303,7 @@ class ConfirmationService
     public function getEligiblePrograms(User $user): array
     {
         $grades = $user->grades;
+        $profile = $user->applicantProfile;
 
         if (!$this->hasCompleteGrades($grades)) {
             return [
@@ -311,18 +315,65 @@ class ConfirmationService
         $english = $grades->english;
         $math = $grades->mathematics;
         $science = $grades->science;
+        $gwa = ($grades->g12_first_sem + $grades->g12_second_sem) / 2;
+        $userStrand = strtoupper($profile?->strand ?? '');
 
-        $programs = Program::where(function ($query) use ($english, $math, $science) {
-            $query->where(function ($q) use ($english) {
-                $q->whereNull('english')->orWhereRaw('? >= english', [$english]);
-            })
-                ->where(function ($q) use ($math) {
-                    $q->whereNull('math')->orWhereRaw('? >= math', [$math]);
+        $programs = Program::with('strands')
+            ->where(function ($query) use ($english, $math, $science, $gwa) {
+                $query->where(function ($q) use ($english) {
+                    $q->whereNull('english')->orWhereRaw('? >= english', [$english]);
                 })
-                ->where(function ($q) use ($science) {
-                    $q->whereNull('science')->orWhereRaw('? >= science', [$science]);
-                });
-        })->get();
+                    ->where(function ($q) use ($math) {
+                        $q->whereNull('math')->orWhereRaw('? >= math', [$math]);
+                    })
+                    ->where(function ($q) use ($science) {
+                        $q->whereNull('science')->orWhereRaw('? >= science', [$science]);
+                    })
+                    ->where(function ($q) use ($gwa) {
+                        $q->whereNull('gwa')->orWhereRaw('? >= gwa', [$gwa]);
+                    });
+            })
+            ->get()
+            ->filter(function ($program) use ($userStrand) {
+                // Check strand requirements
+                if (!$userStrand) {
+                    return true; // If no strand info, allow all
+                }
+
+                $strandNames = strtoupper($program->strand_names ?? '');
+                
+                // If no strand requirement, allow all
+                if (empty($strandNames)) {
+                    return true;
+                }
+                
+                // If explicitly open to all strands
+                if (str_contains($strandNames, 'OPEN TO ALL')) {
+                    return true;
+                }
+
+                // Check if user's strand is in the allowed list
+                $allowedStrands = array_map('trim', preg_split('/[,\/]/', $strandNames));
+                
+                foreach ($allowedStrands as $allowed) {
+                    // Normalize strand names
+                    if (str_contains($allowed, 'TECH-VOC') || str_contains($allowed, 'TVL')) {
+                        $allowed = 'TVL';
+                    }
+                    
+                    if ($allowed === $userStrand) {
+                        return true;
+                    }
+                }
+                
+                // Check if "other with bridging" is mentioned
+                if (str_contains($strandNames, 'OTHER') && str_contains($strandNames, 'BRIDGING')) {
+                    return true;
+                }
+                
+                return false;
+            })
+            ->values();
 
         return [
             'programs' => $programs
