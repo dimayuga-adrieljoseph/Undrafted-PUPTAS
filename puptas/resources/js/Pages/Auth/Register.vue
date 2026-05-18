@@ -19,7 +19,7 @@ onMounted(() => {
 });
 
 // Modal control variables
-const showTermsModal = ref(false);
+const showTermsModal = ref(true);
 
 const form = useForm({
     lastname: "",
@@ -84,23 +84,22 @@ const handleSubmit = async () => {
         return;
     }
 
-    // Reference number is valid — show the terms modal
-    showTermsModal.value = true;
+    // Reference number is valid — submit form directly since they already agreed
+    form.post(route("register"), {
+        onError: () => {
+            // Errors display inline on the form
+        },
+    });
 };
 
 // Handle modal acceptance
 const handleTermsAccept = () => {
     showTermsModal.value = false;
-    form.post(route("register"), {
-        onError: () => {
-            // Re-open the modal is not needed; errors display inline on the form
-        },
-    });
 };
 
 // Handle modal cancellation
 const handleTermsCancel = () => {
-    showTermsModal.value = false;
+    router.visit(route('idp.redirect'));
 };
 </script>
 
