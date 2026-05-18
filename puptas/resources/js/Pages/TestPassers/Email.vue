@@ -960,7 +960,8 @@
                                     type="email"
                                     v-model="editingPasser.email"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    readonly
+                                    class="w-full px-4 py-3 bg-gray-100 text-gray-600 border border-gray-300 rounded-xl cursor-not-allowed focus:outline-none transition dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400"
                                 />
                             </div>
                             <div>
@@ -1025,7 +1026,8 @@
                                 <input
                                     type="text"
                                     v-model="editingPasser.reference_number"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    readonly
+                                    class="w-full px-4 py-3 bg-gray-100 text-gray-600 border border-gray-300 rounded-xl cursor-not-allowed focus:outline-none transition dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400"
                                 />
                             </div>
                         </div>
