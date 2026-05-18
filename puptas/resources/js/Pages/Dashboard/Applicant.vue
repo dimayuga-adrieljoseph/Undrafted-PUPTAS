@@ -643,14 +643,13 @@ onMounted(() => {
                   <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600 hover:border-maroon-500 transition-all">
                     <!-- Document Icon/Preview -->
                     <div class="relative mb-2">
-                      <div v-if="hasImagePreview(fileStatuses[key])" class="relative">
+                      <div v-if="hasImagePreview(fileStatuses[key])" class="relative cursor-pointer" @click="openImageModal(fileStatuses[key])">
                         <img
                           :src="getFileUrl(fileStatuses[key])"
                           :alt="formatKey(key)"
-                          class="w-full h-20 object-cover rounded-md cursor-pointer"
-                          @click="openImageModal(fileStatuses[key])"
+                          class="w-full h-20 object-cover rounded-md"
                         />
-                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md transition-all dark:bg-white"></div>
+                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md transition-all dark:bg-white pointer-events-none"></div>
                       </div>
                       <div v-else class="w-full h-20 bg-gray-200 dark:bg-gray-600 rounded-md flex items-center justify-center">
                         <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
