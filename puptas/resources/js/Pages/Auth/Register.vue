@@ -15,6 +15,17 @@ const idpEmail = computed(() => pendingReg.value?.email ?? null);
 onMounted(() => {
     if (!pendingReg.value) {
         router.visit('/auth/idp/redirect');
+        return;
+    }
+
+    const testPasser = page.props.test_passer_data;
+    if (testPasser) {
+        form.reference_number = testPasser.reference_number || '';
+        form.firstname = testPasser.first_name || '';
+        form.lastname = testPasser.surname || '';
+        form.middlename = testPasser.middle_name || '';
+        form.birthday = testPasser.date_of_birth || '';
+        form.schoolAdd = testPasser.school_address || '';
     }
 });
 
@@ -245,8 +256,9 @@ const handleTermsCancel = () => {
                                             v-model="form.reference_number"
                                             type="text"
                                             required
+                                            readonly
                                             autocomplete="off"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 cursor-not-allowed focus:outline-none transition-all duration-200"
                                             placeholder="e.g., 2026-XXXX-001"
                                         />
                                         <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -274,9 +286,9 @@ const handleTermsCancel = () => {
                                             v-model="form.lastname"
                                             type="text"
                                             required
+                                            readonly
                                             autocomplete="family-name"
-                                            @keydown="onlyLetters"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 cursor-not-allowed focus:outline-none transition-all duration-200"
                                             placeholder="Enter your last name"
                                         />
                                         <div
@@ -309,9 +321,9 @@ const handleTermsCancel = () => {
                                             v-model="form.firstname"
                                             type="text"
                                             required
+                                            readonly
                                             autocomplete="given-name"
-                                            @keydown="onlyLetters"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 cursor-not-allowed focus:outline-none transition-all duration-200"
                                             placeholder="Enter your first name"
                                         />
                                         <div
@@ -341,81 +353,15 @@ const handleTermsCancel = () => {
                                         <input
                                             v-model="form.middlename"
                                             type="text"
+                                            readonly
                                             autocomplete="additional-name"
-                                            @keydown="onlyLetters"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 cursor-not-allowed focus:outline-none transition-all duration-200"
                                             placeholder="Enter your middle name"
                                         />
                                     </div>
 
                                     <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Birthday
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.birthday"
-                                            type="date"
-                                            required
-                                            autocomplete="bday"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                        />
-                                    </div>
 
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Gender
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <select
-                                            v-model="form.sex"
-                                            required
-                                            autocomplete="sex"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                        >
-                                            <option value="" disabled>
-                                                Select Gender
-                                            </option>
-                                            <option value="male">Male</option>
-                                            <option value="female">
-                                                Female
-                                            </option>
-                                            <option value="other">Other</option>
-                                            <option value="prefer-not-to-say">
-                                                Prefer not to say
-                                            </option>
-                                        </select>
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Contact Number
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <div class="flex">
-                                            <span
-                                                class="inline-flex items-center px-4 bg-gray-100 dark:bg-gray-700 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg text-gray-700 dark:text-gray-300"
-                                            >
-                                                +63
-                                            </span>
-                                            <input
-                                                v-model="form.contactnumber"
-                                                type="tel"
-                                                required
-                                                autocomplete="tel"
-                                                inputmode="numeric"
-                                                maxlength="10"
-                                                @keydown="onlyDigits"
-                                                placeholder="912 345 6789"
-                                                class="flex-1 rounded-r-lg border border-gray-300 dark:border-gray-600 px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            />
-                                        </div>
                                     </div>
 
                                     <div class="md:col-span-2 space-y-2">
@@ -577,22 +523,7 @@ const handleTermsCancel = () => {
                                         />
                                     </div>
 
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            School Address
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.schoolAdd"
-                                            type="text"
-                                            required
-                                            autocomplete="organization"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="Complete school address"
-                                        />
-                                    </div>
+
 
                                     <div class="space-y-2">
                                         <label
