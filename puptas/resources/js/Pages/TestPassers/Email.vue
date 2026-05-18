@@ -65,7 +65,7 @@
                         </div>
 
                         <!-- Filter Grid -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                             <!-- School Year Filter -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
@@ -95,6 +95,22 @@
                                     <option v-for="batch in batchNumbers" :key="batch" :value="batch">
                                         {{ batch }}
                                     </option>
+                                </select>
+                            </div>
+
+                            <!-- Status Filter -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                    Status
+                                </label>
+                                <select
+                                    v-model="filterPasserStatus"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">All Statuses</option>
+                                    <option value="1">Qualified</option>
+                                    <option value="2">Waitlisted</option>
+                                    <option value="3">Unqualified</option>
                                 </select>
                             </div>
 
@@ -241,10 +257,28 @@
                                      </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                                     <!-- Empty State Row -->
+                                     <tr v-if="filteredPassers.length === 0" class="bg-gray-50 dark:bg-gray-900">
+                                         <td colspan="8" class="px-6 py-12 text-center">
+                                             <div class="flex flex-col items-center justify-center space-y-3">
+                                                 <svg class="h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                 </svg>
+                                                 <div class="text-lg font-medium text-gray-900 dark:text-gray-200">
+                                                     No passers match your current filters
+                                                 </div>
+                                                 <div class="text-sm text-gray-500 dark:text-gray-400">
+                                                     Try adjusting your search term, school year, batch, or status filter to see more results.
+                                                 </div>
+                                             </div>
+                                         </td>
+                                     </tr>
+                                     <!-- Regular Passer Rows -->
                                      <tr 
                                          v-for="(passer, pageIndex) in paginatedPassers" 
                                          :key="passer.test_passer_id"
                                          class="hover:bg-gray-50 transition dark:hover:bg-gray-900"
+                                         v-else
                                      >
                                          <td class="px-6 py-4 whitespace-nowrap">
                                              <input
@@ -299,6 +333,9 @@
                                              <span v-else-if="passer.passer_status_id === 2" class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full dark:bg-yellow-900 dark:text-yellow-200">
                                                  Waitlisted
                                              </span>
+                                             <span v-else-if="passer.passer_status_id === 3" class="px-3 py-1 bg-red-100 text-red-800 rounded-full dark:bg-red-900 dark:text-red-200">
+                                                 Unqualified
+                                             </span>
                                              <span v-else class="px-3 py-1 bg-gray-200 text-gray-500 rounded-full dark:bg-gray-700 dark:text-gray-400">
                                                  Pending
                                              </span>
@@ -334,9 +371,14 @@
                         <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
                             <div class="flex items-center justify-between">
                                 <div class="text-sm text-gray-700 dark:text-gray-400">
-                                    Showing {{ Math.min((currentPage - 1) * itemsPerPage + 1, filteredPassers.length) }} 
-                                    to {{ Math.min(currentPage * itemsPerPage, filteredPassers.length) }} 
-                                    of {{ filteredPassers.length }} results
+                                    <span v-if="filteredPassers.length === 0">
+                                        Showing 0 to 0 of 0 results
+                                    </span>
+                                    <span v-else>
+                                        Showing {{ Math.min((currentPage - 1) * itemsPerPage + 1, filteredPassers.length) }} 
+                                        to {{ Math.min(currentPage * itemsPerPage, filteredPassers.length) }} 
+                                        of {{ filteredPassers.length }} results
+                                    </span>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <button
@@ -1056,19 +1098,35 @@
                             </div>
                         </div>
 
-                        <!-- PUPCET Total Score -->
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="999.99"
-                                v-model="editingPasser.pupcet_total_score"
-                                placeholder="e.g., 75.50"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                            />
-                            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                        <!-- PUPCET Total Score and Status -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    max="999.99"
+                                    v-model="editingPasser.pupcet_total_score"
+                                    placeholder="e.g., 75.50"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                />
+                                <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Status *</label>
+                                <select
+                                    v-model="editingPasser.passer_status_id"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">Select Status</option>
+                                    <option value="1">Qualified</option>
+                                    <option value="2">Waitlisted</option>
+                                    <option value="3">Unqualified</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Current qualification status of the applicant.</p>
+                            </div>
                         </div>
 
                         <!-- Modal Actions -->
@@ -1251,19 +1309,35 @@
                             </div>
                         </div>
 
-                        <!-- PUPCET Total Score -->
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="999.99"
-                                v-model="newPasserData.pupcet_total_score"
-                                placeholder="e.g., 75.50"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                            />
-                            <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                        <!-- PUPCET Total Score and Status -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">PUPCET Total Score</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    max="999.99"
+                                    v-model="newPasserData.pupcet_total_score"
+                                    placeholder="e.g., 75.50"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                />
+                                <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Status *</label>
+                                <select
+                                    v-model="newPasserData.passer_status_id"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">Select Status</option>
+                                    <option value="1">Qualified</option>
+                                    <option value="2">Waitlisted</option>
+                                    <option value="3">Unqualified</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Current qualification status of the applicant.</p>
+                            </div>
                         </div>
 
                         <!-- Modal Actions -->
@@ -1581,6 +1655,7 @@ const searchTerm = ref("");
 const debouncedSearchTerm = ref("");
 const filterSchoolYear = ref("");
 const filterBatchNumber = ref("");
+const filterPasserStatus = ref("");
 const sortKey = ref("pupcet_total_score");
 const sortOrder = ref("desc");
 const currentPage = ref(1);
@@ -1591,7 +1666,7 @@ const onSearchInput = debounce(() => {
     currentPage.value = 1;
 }, 300);
 
-watch([filterSchoolYear, filterBatchNumber, sortKey, sortOrder], () => {
+watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, sortKey, sortOrder], () => {
     currentPage.value = 1;
 });
 
@@ -1621,7 +1696,11 @@ const filteredPassers = computed(() => {
             ? passer.batchNumber === filterBatchNumber.value
             : true;
 
-        return matchesSearch && matchesSchoolYear && matchesBatch;
+        const matchesStatus = filterPasserStatus.value
+            ? passer.passer_status_id === parseInt(filterPasserStatus.value)
+            : true;
+
+        return matchesSearch && matchesSchoolYear && matchesBatch && matchesStatus;
     });
 });
 
@@ -1872,6 +1951,7 @@ function openAddModal() {
         batch_number: "",
         school_year: "",
         pupcet_total_score: "",
+        passer_status_id: "",
     };
     showAddModal.value = true;
 }
@@ -2079,8 +2159,8 @@ const closeWaitlistedEmailPreview = () => {
 };
 
 // Watch filters to reload SAR history
-watch([filterSchoolYear, filterBatchNumber, debouncedSearchTerm], () => {
-    if (sarHistory.value.length > 0 || filterSchoolYear.value || filterBatchNumber.value || debouncedSearchTerm.value) {
+watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, debouncedSearchTerm], () => {
+    if (sarHistory.value.length > 0 || filterSchoolYear.value || filterBatchNumber.value || filterPasserStatus.value || debouncedSearchTerm.value) {
         loadSarHistory();
     }
 });

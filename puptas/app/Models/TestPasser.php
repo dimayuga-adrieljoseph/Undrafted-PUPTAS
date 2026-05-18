@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class TestPasser extends Model
 {
+    use HasFactory;
+    
     protected $primaryKey = 'test_passer_id';
 
     protected $fillable = [
