@@ -82,6 +82,7 @@
                                     <input
                                         v-model.number="form.g11_general_mathematics"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -89,14 +90,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general mathematics') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('general mathematics')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('general mathematics') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('general mathematics') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('general mathematics')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statistics and Probability</label>
                                     <input
                                         v-model.number="form.g11_statistics_probability"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -104,14 +104,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('statistics and probability') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('statistics and probability')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('statistics and probability') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('statistics and probability') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('statistics and probability')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pre-Calculus</label>
                                     <input
                                         v-model.number="form.g11_pre_calculus"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -119,14 +118,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('pre-calculus') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('pre-calculus')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('pre-calculus') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('pre-calculus') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('pre-calculus')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Basic Calculus</label>
                                     <input
                                         v-model.number="form.g11_basic_calculus"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -134,9 +132,7 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('basic calculus') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('basic calculus')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('basic calculus') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('basic calculus') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('basic calculus')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
                             <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
@@ -162,6 +158,7 @@
                                     <input
                                         v-model.number="form[`g12_math_grade_${i}`]"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -170,7 +167,6 @@
                                         placeholder="0-100"
                                     />
                                     <p v-if="isLowConfidence(form[`g12_math_subject_${i}`]?.toLowerCase()?.trim() || '')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence(form[`g12_math_subject_${i}`]?.toLowerCase()?.trim() || '') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence(form[`g12_math_subject_${i}`]?.toLowerCase()?.trim() || '') * 100) }}%</span>
                                 </div>
                             </div>
                         </div>
@@ -192,6 +188,7 @@
                                     <input
                                         v-model.number="form.g11_earth_science"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -199,14 +196,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('earth science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('earth science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('earth science') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('earth science') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('earth science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Chemistry 1</label>
                                     <input
                                         v-model.number="form.g11_general_chemistry_1"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -214,9 +210,7 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general chemistry 1') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('general chemistry 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('general chemistry 1') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('general chemistry 1') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('general chemistry 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
                             <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
@@ -234,6 +228,7 @@
                                     <input
                                         v-model.number="form.g12_science_grade_1"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -241,14 +236,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general physics 1') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('general physics 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('general physics 1') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('general physics 1') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('general physics 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">General Biology 1</label>
                                     <input
                                         v-model.number="form.g12_science_grade_2"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -256,14 +250,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general biology 1') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('general biology 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('general biology 1') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('general biology 1') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('general biology 1')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">General Physics 2</label>
                                     <input
                                         v-model.number="form.g12_science_grade_3"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -271,14 +264,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general physics 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('general physics 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('general physics 2') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('general physics 2') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('general physics 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">General Biology 2</label>
                                     <input
                                         v-model.number="form.g12_science_grade_4"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -286,14 +278,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general biology 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('general biology 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('general biology 2') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('general biology 2') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('general biology 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">General Chemistry 2</label>
                                     <input
                                         v-model.number="form.g12_science_grade_5"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -301,9 +292,7 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general chemistry 2') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('general chemistry 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('general chemistry 2') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('general chemistry 2') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('general chemistry 2')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
                         </div>
 
@@ -324,6 +313,7 @@
                                     <input
                                         v-model.number="form.g11_oral_communication"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -331,14 +321,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('oral communication in context') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('oral communication in context')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('oral communication in context') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('oral communication in context') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('oral communication in context')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading and Writing Skills</label>
                                     <input
                                         v-model.number="form.g11_reading_writing"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -346,9 +335,7 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('reading and writing skills') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('reading and writing skills')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('reading and writing skills') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('reading and writing skills') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('reading and writing skills')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
                             <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
                                 <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
@@ -366,6 +353,7 @@
                                     <input
                                         v-model.number="form.g12_english_grade_1"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -373,14 +361,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('21st century literature') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('21st century literature')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('21st century literature') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('21st century literature') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('21st century literature')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Komunikasyon</label>
                                     <input
                                         v-model.number="form.g12_english_grade_2"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -388,16 +375,14 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('komunikasyon') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('komunikasyon')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('komunikasyon') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('komunikasyon') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('komunikasyon')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
 
                             <!-- Semester GWA -->
                             <div class="mt-8">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                Semester GWA (Optional - at least one required)
+                                Semester GWA
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -405,6 +390,7 @@
                                     <input
                                         v-model.number="form.g12_first_sem_gwa"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -412,14 +398,13 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('1st semester') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('1st semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('1st semester') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('1st semester') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('1st semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">2nd Semester</label>
                                     <input
                                         v-model.number="form.g12_second_sem_gwa"
                                         type="number"
+                        @input="validateGrade"
                                         min="0"
                                         max="100"
                                         step="1"
@@ -427,9 +412,7 @@
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('2nd semester') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('2nd semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
-                                    <span v-if="getConfidence('2nd semester') !== null" class="text-xs text-gray-500 mt-1 block">Extraction confidence: {{ Math.round(getConfidence('2nd semester') * 100) }}%</span>
-                                </div>
+                                    <p v-if="isLowConfidence('2nd semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
                             </div>
                             <!-- Grade 12 GWA Display -->
                             <div class="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
@@ -897,6 +880,18 @@ const getConfidence = (fieldKey) => {
 const isLowConfidence = (fieldKey) => {
     const c = getConfidence(fieldKey);
     return c !== null && c < 0.80;
+};
+
+// Validate grade input to ensure it's between 0 and 100
+const validateGrade = (event) => {
+    const value = parseFloat(event.target.value);
+    if (!isNaN(value)) {
+        if (value > 100) {
+            event.target.value = 100;
+        } else if (value < 0) {
+            event.target.value = 0;
+        }
+    }
 };
 
 const G11_MAP = {
