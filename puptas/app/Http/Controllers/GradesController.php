@@ -72,8 +72,10 @@ class GradesController extends Controller
 
         // Validate that user's strand matches
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        if (!$profile || strtoupper($profile->strand) !== 'ICT') {
-            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        $userStrand = strtoupper(trim($profile->strand ?? ''));
+        
+        if (!$profile || $userStrand !== 'ICT') {
+            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
         }
 
         if ($this->isEvaluatorLocked($user)) {
@@ -255,8 +257,10 @@ class GradesController extends Controller
         
         // Validate that user's strand matches
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        if (!$profile || strtoupper($profile->strand) !== 'ABM') {
-            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        $userStrand = strtoupper(trim($profile->strand ?? ''));
+        
+        if (!$profile || $userStrand !== 'ABM') {
+            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
         }
         
         if ($this->isEvaluatorLocked($user)) {
@@ -397,8 +401,10 @@ class GradesController extends Controller
 
         // Validate that user's strand matches
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        if (!$profile || strtoupper($profile->strand) !== 'TVL') {
-            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        $userStrand = strtoupper(trim($profile->strand ?? ''));
+        
+        if (!$profile || $userStrand !== 'TVL') {
+            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
         }
 
         if ($this->isEvaluatorLocked($user)) {
@@ -474,8 +480,10 @@ class GradesController extends Controller
 
         // Validate that user's strand matches
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        if (!$profile || strtoupper($profile->strand) !== 'HUMSS') {
-            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        $userStrand = strtoupper(trim($profile->strand ?? ''));
+        
+        if (!$profile || $userStrand !== 'HUMSS') {
+            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
         }
 
         if ($this->isEvaluatorLocked($user)) {
@@ -557,8 +565,10 @@ class GradesController extends Controller
 
         // Validate that user's strand matches
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        if (!$profile || strtoupper($profile->strand) !== 'GAS') {
-            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        $userStrand = strtoupper(trim($profile->strand ?? ''));
+        
+        if (!$profile || $userStrand !== 'GAS') {
+            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
         }
 
         if ($this->isEvaluatorLocked($user)) {
@@ -636,8 +646,10 @@ class GradesController extends Controller
 
         // Validate that user's strand matches
         $profile = ApplicantProfile::where('user_id', $user->id)->first();
-        if (!$profile || strtoupper($profile->strand) !== 'STEM') {
-            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        $userStrand = strtoupper(trim($profile->strand ?? ''));
+        
+        if (!$profile || $userStrand !== 'STEM') {
+            return back()->withErrors(['strand' => 'You are not authorized to submit grades for this strand. Your strand: ' . ($profile->strand ?? 'Unknown')]);
         }
 
         if ($this->isEvaluatorLocked($user)) {
