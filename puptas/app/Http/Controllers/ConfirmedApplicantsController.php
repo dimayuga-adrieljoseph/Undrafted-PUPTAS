@@ -49,8 +49,9 @@ class ConfirmedApplicantsController extends Controller
             'grades',
             'testPasser',
         ])
-            ->whereHas('currentApplication', function ($q) {
-                $q->where('status', 'for_evaluation');
+            ->whereHas('currentApplication.processes', function ($q) {
+                $q->where('stage', 'evaluator')
+                  ->whereIn('status', ['in_progress', 'returned']);
             })
             ->orderBy('lastname')
             ->get()
@@ -110,7 +111,7 @@ class ConfirmedApplicantsController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $applicant = ApplicantProfile::with(['testPasser', 'grades', 'currentApplication'])
+        $applicant = ApplicantProfile::with(['testPasser', 'grades', 'currentApplication.processes'])
             ->where('user_id', $userId)
             ->first();
 
@@ -118,7 +119,12 @@ class ConfirmedApplicantsController extends Controller
             return response()->json(['message' => 'Applicant not found'], 404);
         }
 
-        if ($applicant->currentApplication?->status !== 'for_evaluation') {
+        $app = $applicant->currentApplication;
+        $isForEvaluation = $app && $app->processes->contains(function ($p) {
+            return $p->stage === 'evaluator' && in_array($p->status, ['in_progress', 'returned']);
+        });
+
+        if (!$isForEvaluation) {
             return response()->json([
                 'message' => 'Grade sync is only available for confirmed applicants (For Evaluation status).',
             ], 422);
@@ -219,8 +225,9 @@ class ConfirmedApplicantsController extends Controller
         // Verify all applicants are confirmed (for_evaluation)
         $applicants = ApplicantProfile::with(['currentApplication', 'testPasser'])
             ->whereIn('user_id', $applicantIds)
-            ->whereHas('currentApplication', function ($q) {
-                $q->where('status', 'for_evaluation');
+            ->whereHas('currentApplication.processes', function ($q) {
+                $q->where('stage', 'evaluator')
+                  ->whereIn('status', ['in_progress', 'returned']);
             })
             ->get();
 
@@ -353,8 +360,9 @@ class ConfirmedApplicantsController extends Controller
         // Verify all applicants are confirmed
         $applicants = ApplicantProfile::with(['currentApplication', 'testPasser'])
             ->whereIn('user_id', $applicantIds)
-            ->whereHas('currentApplication', function ($q) {
-                $q->where('status', 'for_evaluation');
+            ->whereHas('currentApplication.processes', function ($q) {
+                $q->where('stage', 'evaluator')
+                  ->whereIn('status', ['in_progress', 'returned']);
             })
             ->get();
 
