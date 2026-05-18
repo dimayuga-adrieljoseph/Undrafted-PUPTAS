@@ -1034,14 +1034,14 @@ const reviewSections = computed(() => [
     {
         title: 'Program Choices and Averages',
         items: [
-            { label: 'First Choice Program', value: reviewData.value.first_choice_program },
-            { label: 'Second Choice Program', value: reviewData.value.second_choice_program },
-            { label: 'Third Choice Program', value: reviewData.value.third_choice_program },
+            { label: 'First Choice Program *', value: reviewData.value.first_choice_program || '—' },
+            { label: 'Second Choice Program *', value: reviewData.value.second_choice_program || '—' },
+            { label: 'Third Choice Program *', value: reviewData.value.third_choice_program || '—' },
             { label: 'Math Average', value: reviewData.value.math_average },
             { label: 'English Average', value: reviewData.value.english_average },
             { label: 'Science Average', value: reviewData.value.science_average },
             { label: 'G12 GWA', value: reviewData.value.g12_gwa },
-        ].filter(item => item.value !== '' && item.value !== null && item.value !== undefined),
+        ],
     },
 ]);
 
@@ -1147,16 +1147,16 @@ const submitForm = async () => {
         qualified_programs_count: qualifiedCount,
     };
 
+    // Show success message FIRST
+    successMessage.value = "Grades saved successfully! Redirecting to dashboard...";
+    
+    // Scroll to top to ensure notification is visible
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     router.post("/grades/ict", payload, {
         preserveState: true,
         preserveScroll: true,
         onSuccess: (response) => {
-            // Show success message
-            successMessage.value = "Grades saved successfully! Redirecting to dashboard...";
-            
-            // Scroll to top to ensure notification is visible
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            
             // Redirect after showing notification
             setTimeout(() => {
                 router.visit("/applicant-dashboard", {
@@ -1164,10 +1164,9 @@ const submitForm = async () => {
                     preserveScroll: false,
                 });
             }, 2000);
-            
-            loading.value = false;
         },
         onError: (errorResponse) => {
+            successMessage.value = ""; // Clear success message on error
             errors.value = errorResponse;
             const firstError = Object.values(errorResponse)[0];
             alert(
@@ -1175,9 +1174,6 @@ const submitForm = async () => {
                     (firstError ||
                         "Failed to save grades. Please check the form.")
             );
-            loading.value = false;
-        },
-        onFinish: () => {
             loading.value = false;
         },
     });
