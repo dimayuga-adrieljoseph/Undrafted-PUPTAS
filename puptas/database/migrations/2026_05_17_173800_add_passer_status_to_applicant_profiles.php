@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('test_passers', function (Blueprint $table) {
-            $table->foreignId('passer_status_id')->nullable()->constrained('passer_statuses');
+            if (!Schema::hasColumn('test_passers', 'passer_status_id')) {
+                $table->foreignId('passer_status_id')->nullable()->constrained('passer_statuses');
+            }
         });
     }
 
