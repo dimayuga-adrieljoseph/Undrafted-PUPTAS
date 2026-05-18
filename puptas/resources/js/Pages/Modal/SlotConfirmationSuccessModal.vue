@@ -13,7 +13,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Slot confirmation submitted</h2>
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Slot confirmation</h2>
             </div>
 
             <!-- Body -->
@@ -31,34 +31,46 @@
 
                 <!-- Next Steps List -->
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">To complete official enrollment, you must:</h3>
-                    <ul class="space-y-2.5">
-                        <li class="flex items-start gap-2.5">
-                            <svg class="w-5 h-5 text-gray-400 dark:text-gray-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z" />
-                            </svg>
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Attend your scheduled interview at PUP-Taguig Campus</span>
-                        </li>
-                        <li class="flex items-start gap-2.5">
-                            <svg class="w-5 h-5 text-gray-400 dark:text-gray-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Submit all original documents with two photocopies on enrollment day</span>
-                        </li>
-                        <li class="flex items-start gap-2.5">
-                            <svg class="w-5 h-5 text-gray-400 dark:text-gray-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Pass the interview — incomplete requirements will not be entertained</span>
-                        </li>
-                    </ul>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Your Journey to Official Enrollment:</h3>
+                    <div class="max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                        <ol class="space-y-3 relative border-l border-gray-200 dark:border-gray-700 ml-2">
+                            <li class="pl-4 relative">
+                                <div class="absolute w-2.5 h-2.5 bg-gray-300 dark:bg-gray-600 rounded-full -left-[5.5px] top-1.5 border-2 border-gray-50 dark:border-gray-800"></div>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">1. Register an account in IDP</p>
+                            </li>
+                            <li class="pl-4 relative">
+                                <div class="absolute w-2.5 h-2.5 bg-gray-300 dark:bg-gray-600 rounded-full -left-[5.5px] top-1.5 border-2 border-gray-50 dark:border-gray-800"></div>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">2. Submit grades and required documents</p>
+                            </li>
+                            <li class="pl-4 relative">
+                                <div class="absolute w-2.5 h-2.5 bg-gray-300 dark:bg-gray-600 rounded-full -left-[5.5px] top-1.5 border-2 border-gray-50 dark:border-gray-800"></div>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">3. Choose your preferred program</p>
+                            </li>
+                            <li class="pl-4 relative">
+                                <div class="absolute w-2.5 h-2.5 bg-gray-300 dark:bg-gray-600 rounded-full -left-[5.5px] top-1.5 border-2 border-gray-50 dark:border-gray-800"></div>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">4. Submit application for evaluation</p>
+                            </li>
+                            <li class="pl-4 relative">
+                                <div class="absolute w-2.5 h-2.5 bg-gray-300 dark:bg-gray-600 rounded-full -left-[5.5px] top-1.5 border-2 border-gray-50 dark:border-gray-800"></div>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">5. Attend and pass the interview</p>
+                            </li>
+                            <li class="pl-4 relative">
+                                <div class="absolute w-2.5 h-2.5 bg-gray-300 dark:bg-gray-600 rounded-full -left-[5.5px] top-1.5 border-2 border-gray-50 dark:border-gray-800"></div>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">6. Undergo medical assessment</p>
+                            </li>
+                            <li class="pl-4 relative">
+                                <div class="absolute w-2.5 h-2.5 bg-[#9E122C] rounded-full -left-[5.5px] top-1.5 border-2 border-gray-50 dark:border-gray-800 shadow-sm"></div>
+                                <p class="text-sm font-semibold text-[#9E122C] dark:text-[#E84E69]">7. Finalize official enrollment</p>
+                            </li>
+                        </ol>
+                    </div>
                 </div>
             </div>
 
             <!-- Footer area with subtle note and CTA -->
             <div class="px-6 py-5 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 space-y-4">
                 <p class="text-xs text-center text-gray-500 dark:text-gray-400 leading-relaxed italic">
-                    A confirmation email with your SAR-Form 1, interview schedule, and enrollment documents will be sent within three working days.
+                    A confirmation email with your SAR-Form 1, interview schedule, and enrollment documents will be sent on the first week of June 2026.
                 </p>
                 <button
                     @click="closeModal"
@@ -85,3 +97,19 @@ const closeModal = () => {
     emit("close");
 };
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+:deep(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+</style>
