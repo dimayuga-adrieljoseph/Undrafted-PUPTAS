@@ -278,14 +278,18 @@ class TestPasserController extends Controller
             'batch_number' => 'required|string',
             'school_year' => 'required|string',
             'file' => 'required|file|mimes:xlsx,xls,csv',
+            'passer_status_id' => 'required|integer|in:1,2,3',
         ]);
 
         $batch = $request->input('batch_number');
         $schoolYear = $request->input('school_year');
+        $passerStatusId = $request->input('passer_status_id');
 
-        Excel::import(new TestPassersImport($batch, $schoolYear), $request->file('file'));
+        Excel::import(new TestPassersImport($batch, $schoolYear, $passerStatusId), $request->file('file'));
 
-        $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}.", null, 'ADMISSION_DATA');
+        $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified'];
+        $statusName = $statusNames[$passerStatusId] ?? 'Unknown';
+        $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}, status: {$statusName}.", null, 'ADMISSION_DATA');
 
         return response()->json(['message' => 'Excel file uploaded and data imported successfully']);
     }

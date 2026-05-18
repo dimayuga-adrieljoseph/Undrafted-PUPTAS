@@ -59,6 +59,20 @@
           </div>
         </div>
 
+        <!-- Passer Status -->
+        <div class="space-y-2">
+          <label class="block text-gray-700 dark:text-gray-200 font-medium">Passer Status</label>
+          <select
+            v-model="passerStatus"
+            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm"
+          >
+            <option value="" disabled>Select Passer Status</option>
+            <option value="1">Qualified</option>
+            <option value="2">Waitlisted</option>
+            <option value="3">Unqualified</option>
+          </select>
+        </div>
+
         <!-- File Upload -->
         <div class="space-y-2">
           <label class="block text-gray-700 dark:text-gray-200 font-medium">Excel File</label>
@@ -116,6 +130,7 @@ const customYear = ref("");
 const file = ref(null);
 const showDialog = ref(false);
 const yearOptions = ref([]);
+const passerStatus = ref("");
 
 onMounted(() => {
   const currentYear = new Date().getFullYear();
@@ -134,10 +149,12 @@ const onFileChange = (e) => {
 };
 
 const submitForm = async () => {
+  if (!passerStatus.value) return alert("Please select a passer status.");
   if (!file.value) return alert("Please select a file to upload.");
   const formData = new FormData();
   formData.append("batch_number", batch.value === "--Custom--" ? customBatch.value : batch.value);
   formData.append("school_year", year.value === "--Custom--" ? customYear.value : year.value);
+  formData.append("passer_status_id", passerStatus.value);
   formData.append("file", file.value);
 
   try {

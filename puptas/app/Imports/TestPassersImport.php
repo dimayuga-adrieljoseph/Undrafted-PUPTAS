@@ -13,11 +13,13 @@ class TestPassersImport implements ToModel, WithHeadingRow
 {
     protected $batch;
     protected $schoolYear;
+    protected $passerStatusId;
 
-    public function __construct($batch, $schoolYear)
+    public function __construct($batch, $schoolYear, $passerStatusId)
     {
         $this->batch = $batch;
         $this->schoolYear = $schoolYear;
+        $this->passerStatusId = $passerStatusId;
     }
 
     public function model(array $row)
@@ -59,18 +61,6 @@ class TestPassersImport implements ToModel, WithHeadingRow
             }
         }
 
-        // Handle passer status from Excel (qualified/waitlisted)
-        $passerStatusId = null;
-        if (!empty($row['status'])) {
-            $statusValue = strtolower(trim($row['status']));
-            if ($statusValue === 'qualified') {
-                $passerStatusId = 1; // qualified
-            } elseif ($statusValue === 'waitlisted') {
-                $passerStatusId = 2; // waitlisted
-            }
-            // Default to null if invalid status provided
-        }
-
         // Resolve PUPCET score from multiple possible column name variants.
         // WithHeadingRow normalises headers: lowercased + spaces→underscores.
         // Accepted column names in the sheet:
@@ -96,7 +86,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
                 'pupcet_total_score' => $pupcetScore,
                 'user_id'            => null,
                 'status'             => 'pending',
-                'passer_status_id'   => $passerStatusId,
+                'passer_status_id'   => $this->passerStatusId,
             ]);
         }
 
@@ -118,7 +108,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
                 'pupcet_total_score' => $pupcetScore,
                 'user_id'            => $user?->id,
                 'status'             => $user ? 'registered' : 'pending',
-                'passer_status_id'   => $passerStatusId,
+                'passer_status_id'   => $this->passerStatusId,
             ]
         );
     }
