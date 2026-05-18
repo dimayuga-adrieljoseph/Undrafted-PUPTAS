@@ -246,17 +246,30 @@ class TestPasserController extends Controller
         // Build full name in SAR format: "Surname, Firstname Middlename"
         $fullName = trim($passer->surname . ', ' . $passer->first_name . ' ' . ($passer->middle_name ?? ''));
 
+        // Natural name format for affidavit: "Firstname Middlename Surname"
+        $fullNameNatural = trim($passer->first_name . ' ' . ($passer->middle_name ?? '') . ' ' . $passer->surname);
+
+        // Format enrollment date as "Month Day, Year" (e.g. May 18, 2026)
+        $formattedDate = $enrollmentDate
+            ? \Carbon\Carbon::parse($enrollmentDate)->format('F j, Y')
+            : \Carbon\Carbon::now()->format('F j, Y');
+
+        // Format enrollment time with AM/PM (e.g. 08:30 AM)
+        $formattedTime = $enrollmentTime
+            ? \Carbon\Carbon::parse($enrollmentTime)->format('h:i A')
+            : \Carbon\Carbon::now()->format('h:i A');
+
         return [
             'id' => 'tp_' . $passer->test_passer_id,
             'reference_number' => $passer->reference_number ?? 'N/A',
             'full_name' => $fullName,
-            'surname' => $passer->surname,
-            'firstname_middle' => trim($passer->first_name . ' ' . ($passer->middle_name ?? '')),
+            'full_name_natural' => $fullNameNatural,
             'shs_strand' => $passer->strand ?? 'N/A',
             'graduation_year' => $passer->year_graduated ?? date('Y'),
             'school_attended' => $passer->shs_school ?? 'N/A',
-            'enrollment_date' => $enrollmentDate,
-            'enrollment_time' => $enrollmentTime,
+            'enrollment_date' => $formattedDate,
+            'enrollment_time' => $formattedTime,
+            'campus' => 'Taguig Campus',
         ];
     }
 
