@@ -202,7 +202,6 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/confirmed-applicants/list', [ConfirmedApplicantsController::class, 'getApplicants'])->name('confirmed-applicants.list');
     Route::post('/confirmed-applicants/send-sar', [ConfirmedApplicantsController::class, 'sendSar'])->name('confirmed-applicants.send-sar');
     Route::post('/confirmed-applicants/send-email', [ConfirmedApplicantsController::class, 'sendCustomEmail'])->name('confirmed-applicants.send-email');
-    Route::post('/confirmed-applicants/{userId}/sync-grades', [ConfirmedApplicantsController::class, 'syncGrades'])->name('confirmed-applicants.sync-grades');
 });
 
 // NOTE: These are web (session-based) routes. auth:sanctum was incorrect here —

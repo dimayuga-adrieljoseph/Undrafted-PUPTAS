@@ -413,81 +413,8 @@
                             </div>
                         </div>
 
-                        <!-- SAR Form Settings -->
-                        <div v-if="templateType === 'sar'" class="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-200 dark:bg-blue-900 dark:border-blue-700">
-                            <div class="flex items-start gap-3 mb-4">
-                                <div class="p-2 bg-blue-100 rounded-lg dark:bg-blue-800">
-                                    <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-blue-900 mb-1 dark:text-blue-200">
-                                        SAR Form Settings
-                                    </h4>
-                                    <p class="text-sm text-blue-800 dark:text-blue-300">
-                                        Personalized PDF will be generated for each selected passer
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
-                                        Enrollment Date
-                                    </label>
-                                    <input 
-                                        type="date" 
-                                        v-model="sarEnrollmentDate"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition dark:border-gray-600"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
-                                        Enrollment Time
-                                    </label>
-                                    <input 
-                                        type="time" 
-                                        v-model="sarEnrollmentTime"
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition dark:border-gray-600"
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            
-                            <!-- Preview Email Template Button -->
-                            <div class="mt-4 space-y-2">
-                                <button
-                                    @click="previewSarEmailTemplate"
-                                    :disabled="selectedPassers.length === 0"
-                                    class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition dark:text-gray-900"
-                                >
-                                    <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                    Preview Email Template
-                                </button>
-                                
-                                <button
-                                    @click="previewSarPdfForm"
-                                    :disabled="selectedPassers.length === 0 || !sarEnrollmentDate || !sarEnrollmentTime"
-                                    class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition dark:text-gray-900"
-                                >
-                                    <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    Preview SAR PDF Form
-                                </button>
-                                
-                                <p class="text-xs text-gray-600 text-center dark:text-gray-400">
-                                    Preview the actual SAR form and email before sending
-                                </p>
-                            </div>
-                        </div>
-
                         <!-- Waitlisted Template Editor -->
-                        <div v-else-if="templateType === 'waitlisted'" class="mt-4">
+                        <div v-if="templateType === 'waitlisted'" class="mt-4">
                             <!-- Waitlisted Template Preview -->
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 Waitlisted Template Preview
@@ -539,10 +466,10 @@
                         <button
                             type="button"
                             @click="sendEmails"
-                            :disabled="!selectedPassers.length || !emailTemplate || (templateType === 'sar' && (!sarEnrollmentDate || !sarEnrollmentTime))"
+                            :disabled="!selectedPassers.length || !emailTemplate"
                             :class="[
                                 'w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-all duration-200',
-                                selectedPassers.length && emailTemplate && (templateType !== 'sar' || (sarEnrollmentDate && sarEnrollmentTime))
+                                selectedPassers.length && emailTemplate
                                     ? 'bg-[#9E122C] hover:bg-[#800918] text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                                     : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                             ]"
@@ -711,78 +638,7 @@
                 </div>
             </div>
 
-            <!-- SAR PDF Form Preview Modal -->
-            <div
-                v-if="showSarPdfPreview"
-                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50 dark:bg-white"
-                @click.self="closeSarPdfPreview"
-            >
-                <div class="bg-white rounded-2xl max-w-6xl w-full h-[90vh] flex flex-col shadow-2xl dark:bg-gray-800">
-                    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-200">
-                            SAR PDF Form Preview
-                        </h2>
-                        <button
-                            @click="closeSarPdfPreview"
-                            class="p-2 hover:bg-gray-100 rounded-lg transition dark:hover:bg-gray-800"
-                        >
-                            <svg class="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="flex-1 overflow-hidden">
-                        <div v-if="loadingPdfPreview" class="flex items-center justify-center h-full">
-                            <div class="text-center">
-                                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#9E122C]"></div>
-                                <p class="text-gray-600 mt-4 dark:text-gray-400">Generating SAR PDF preview...</p>
-                            </div>
-                        </div>
-                        <iframe
-                            v-else-if="sarPdfPreviewUrl"
-                            :src="sarPdfPreviewUrl"
-                            class="w-full h-full border-0"
-                        ></iframe>
-                    </div>
-                </div>
-            </div>
 
-            <!-- SAR Email Template Preview Modal -->
-            <div
-                v-if="showSarEmailPreview"
-                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50 dark:bg-white"
-                @click.self="closeSarEmailPreview"
-            >
-                <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl dark:bg-gray-800">
-                    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-200">
-                            SAR Email Template Preview
-                        </h2>
-                        <button
-                            @click="closeSarEmailPreview"
-                            class="p-2 hover:bg-gray-100 rounded-lg transition dark:hover:bg-gray-800"
-                        >
-                            <svg class="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-900">
-                        <div v-if="loadingEmailPreview" class="flex items-center justify-center h-full">
-                            <div class="text-center">
-                                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#9E122C]"></div>
-                                <p class="text-gray-600 mt-4 dark:text-gray-400">Loading preview...</p>
-                            </div>
-                        </div>
-                        <iframe
-                            v-else-if="sarEmailPreviewHtml"
-                            :srcdoc="sarEmailPreviewHtml"
-                            class="w-full h-full border-0 bg-white rounded-lg shadow-sm dark:bg-gray-800"
-                            style="min-height: 600px;"
-                        ></iframe>
-                    </div>
-                </div>
-            </div>
 
             <!-- Bulk Enroll Result Modal -->
             <div
@@ -1435,7 +1291,6 @@ onMounted(() => {
 const templateTypes = [
     { label: 'Default', value: 'default' },
     { label: 'Custom', value: 'custom' },
-    { label: 'SAR Form', value: 'sar' },
     { label: 'Waitlisted', value: 'waitlisted' }
 ];
 
@@ -1955,94 +1810,7 @@ const formatDate = (dateString) => {
     });
 };
 
-// SAR Email Template Preview
-const showSarEmailPreview = ref(false);
-const sarEmailPreviewHtml = ref('');
-const loadingEmailPreview = ref(false);
 
-const previewSarEmailTemplate = async () => {
-    if (selectedPassers.value.length === 0) {
-        show('Please select at least one passer to preview', 'error');
-        return;
-    }
-
-    loadingEmailPreview.value = true;
-    showSarEmailPreview.value = true;
-    
-    try {
-        const response = await axios.post('/admin/sar/preview-email-template', {
-            passer_id: selectedPassers.value[0]
-        });
-        sarEmailPreviewHtml.value = response.data;
-    } catch (error) {
-        console.error('Failed to preview email template:', error);
-        show('Failed to load email preview', 'error');
-        closeSarEmailPreview();
-    } finally {
-        loadingEmailPreview.value = false;
-    }
-};
-
-const closeSarEmailPreview = () => {
-    showSarEmailPreview.value = false;
-    sarEmailPreviewHtml.value = '';
-};
-
-// SAR PDF Form Preview
-const showSarPdfPreview = ref(false);
-const sarPdfPreviewUrl = ref('');
-const loadingPdfPreview = ref(false);
-
-const previewSarPdfForm = async () => {
-    if (selectedPassers.value.length === 0) {
-        show('Please select at least one passer to preview', 'error');
-        return;
-    }
-
-    if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
-        show('Please set enrollment date and time', 'error');
-        return;
-    }
-
-    loadingPdfPreview.value = true;
-    showSarPdfPreview.value = true;
-    
-    try {
-        // Revoke previous blob URL to prevent memory leak
-        if (sarPdfPreviewUrl.value) {
-            URL.revokeObjectURL(sarPdfPreviewUrl.value);
-            sarPdfPreviewUrl.value = '';
-        }
-        
-        // Create a FormData object for the POST request
-        const formData = new FormData();
-        formData.append('passer_id', selectedPassers.value[0]);
-        formData.append('enrollment_date', sarEnrollmentDate.value);
-        formData.append('enrollment_time', sarEnrollmentTime.value);
-
-        const response = await axios.post('/admin/sar/preview-pdf-template', formData, {
-            responseType: 'blob'
-        });
-
-        // Create blob URL for the PDF
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        sarPdfPreviewUrl.value = URL.createObjectURL(blob);
-    } catch (error) {
-        console.error('Failed to preview SAR PDF:', error);
-        show('Failed to generate SAR PDF preview', 'error');
-        closeSarPdfPreview();
-    } finally {
-        loadingPdfPreview.value = false;
-    }
-};
-
-const closeSarPdfPreview = () => {
-    if (sarPdfPreviewUrl.value) {
-        URL.revokeObjectURL(sarPdfPreviewUrl.value);
-    }
-    showSarPdfPreview.value = false;
-    sarPdfPreviewUrl.value = '';
-};
 
 // Waitlisted Email Template Preview
 const showWaitlistedEmailPreview = ref(false);
