@@ -132,7 +132,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                                    Second Choice <span class="text-gray-400">(Optional)</span>
+                                    Second Choice <span class="text-red-500">*</span>
                                 </label>
                                 <select
                                     v-model="selectedSecondChoiceId"
@@ -145,10 +145,25 @@
                                     </option>
                                 </select>
                             </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                    Third Choice <span class="text-red-500">*</span>
+                                </label>
+                                <select
+                                    v-model="selectedThirdChoiceId"
+                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C]"
+                                    :disabled="submitting"
+                                >
+                                    <option value="">Select a program</option>
+                                    <option v-for="program in filteredThirdChoicePrograms" :key="program.id" :value="program.id">
+                                        {{ program.name }}
+                                    </option>
+                                </select>
+                            </div>
                         </div>
 
                         <!-- Submitted: display choices -->
-                        <div v-else-if="applicationData.program_id" class="grid grid-cols-2 gap-3">
+                        <div v-else-if="applicationData.program_id" class="grid grid-cols-3 gap-3">
                             <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">First Choice</p>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ getProgramName(applicationData.program_id) || 'Not selected' }}</p>
@@ -156,6 +171,10 @@
                             <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Second Choice</p>
                                 <p class="text-sm font-medium text-gray-900 dark:text-white">{{ getProgramName(applicationData.second_choice_id) || 'Not selected' }}</p>
+                            </div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Third Choice</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ getProgramName(applicationData.third_choice_id) || 'Not selected' }}</p>
                             </div>
                         </div>
 
@@ -299,6 +318,7 @@ const hasImagePreview = (file) => Boolean(getFileUrl(file)) && (typeof file === 
 // Submit state
 const selectedProgramId = ref("");
 const selectedSecondChoiceId = ref("");
+const selectedThirdChoiceId = ref("");
 const submitting = ref(false);
 const submitError = ref("");
 const submitSuccess = ref("");
@@ -324,6 +344,8 @@ const canSubmitApplication = computed(() => {
         canSubmit.value &&
         allDocumentsUploaded.value &&
         selectedProgramId.value &&
+        selectedSecondChoiceId.value &&
+        selectedThirdChoiceId.value &&
         eligiblePrograms.value.length > 0
     );
 });
@@ -333,6 +355,14 @@ const filteredSecondChoicePrograms = computed(() => {
     if (!selectedProgramId.value) return eligiblePrograms.value;
     return eligiblePrograms.value.filter(
         (p) => p.id !== selectedProgramId.value
+    );
+});
+
+// Computed: Filter out first and second choice from third choice options
+const filteredThirdChoicePrograms = computed(() => {
+    const excludedIds = [selectedProgramId.value, selectedSecondChoiceId.value].filter(Boolean);
+    return eligiblePrograms.value.filter(
+        (p) => !excludedIds.includes(p.id)
     );
 });
 
@@ -422,6 +452,9 @@ const fetchApplicationData = async () => {
         if (response.data.second_choice_id) {
             selectedSecondChoiceId.value = response.data.second_choice_id;
         }
+        if (response.data.third_choice_id) {
+            selectedThirdChoiceId.value = response.data.third_choice_id;
+        }
     } catch (e) {
         error.value = "Failed to load application data.";
     } finally {
@@ -444,6 +477,16 @@ const submitApplication = async () => {
         submitError.value = "Please select a first choice program.";
         return;
     }
+    
+    if (!selectedSecondChoiceId.value) {
+        submitError.value = "Please select a second choice program.";
+        return;
+    }
+    
+    if (!selectedThirdChoiceId.value) {
+        submitError.value = "Please select a third choice program.";
+        return;
+    }
 
     submitting.value = true;
     submitError.value = "";
@@ -452,7 +495,8 @@ const submitApplication = async () => {
     try {
         const payload = {
             program_id: selectedProgramId.value,
-            second_choice_id: selectedSecondChoiceId.value || null,
+            second_choice_id: selectedSecondChoiceId.value,
+            third_choice_id: selectedThirdChoiceId.value,
         };
 
         const response = await window.axios.post(
@@ -467,8 +511,8 @@ const submitApplication = async () => {
         if (applicationData.value) {
             applicationData.value.status = response.data.status;
             applicationData.value.program_id = selectedProgramId.value;
-            applicationData.value.second_choice_id =
-                selectedSecondChoiceId.value || null;
+            applicationData.value.second_choice_id = selectedSecondChoiceId.value;
+            applicationData.value.third_choice_id = selectedThirdChoiceId.value;
         }
 
         // Emit refresh event to parent

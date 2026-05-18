@@ -9,6 +9,7 @@ import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
 const props = defineProps({ user: Object, gradeUrl: String });
 
 const showModal = ref(false);
+const showSuccessNotification = ref(false);
 const loading = ref(false);
 const error = ref("");
 const fileStatuses = ref({});
@@ -361,7 +362,21 @@ const closeQualifiedProgramsModal = () => {
 };
 
 onMounted(() => { 
-  fetchData(); 
+  fetchData();
+  
+  // Check for success query parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('success') === 'grades_saved') {
+    showSuccessNotification.value = true;
+    
+    // Remove query parameter from URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      showSuccessNotification.value = false;
+    }, 5000);
+  }
 });
 </script>
 
@@ -376,6 +391,23 @@ onMounted(() => {
 
     <div class="py-8">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        
+        <!-- Success Notification -->
+        <Transition name="slide-down">
+          <div v-if="showSuccessNotification" class="p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-400 rounded-lg shadow-lg flex items-center gap-3">
+            <div class="flex-shrink-0">
+              <svg class="w-6 h-6 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-semibold text-green-800 dark:text-green-200">Success!</p>
+              <p class="text-sm text-green-700 dark:text-green-300">Grades saved successfully!</p>
+            </div>
+            <button @click="showSuccessNotification = false" class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 text-xl leading-none">&times;</button>
+          </div>
+        </Transition>
+        
         <!-- Welcome Header -->
         <div class="flex justify-between items-center">
           <div>
@@ -960,5 +992,24 @@ onMounted(() => {
 }
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* Slide down animation for notification */
+.slide-down-enter-active {
+  transition: all 0.4s ease-out;
+}
+
+.slide-down-leave-active {
+  transition: all 0.3s ease-in;
+}
+
+.slide-down-enter-from {
+  transform: translateY(-20px);
+  opacity: 0;
+}
+
+.slide-down-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
 }
 </style>

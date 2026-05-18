@@ -1147,23 +1147,13 @@ const submitForm = async () => {
         qualified_programs_count: qualifiedCount,
     };
 
-    // Show success message FIRST
-    successMessage.value = "Grades saved successfully! Redirecting to dashboard...";
-    
-    // Scroll to top to ensure notification is visible
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
     router.post("/grades/ict", payload, {
-        preserveState: true,
-        preserveScroll: true,
         onSuccess: (response) => {
-            // Redirect after showing notification
-            setTimeout(() => {
-                router.visit("/applicant-dashboard", {
-                    preserveState: false,
-                    preserveScroll: false,
-                });
-            }, 2000);
+            // Redirect to dashboard with success message as query parameter
+            router.visit("/applicant-dashboard?success=grades_saved", {
+                preserveState: false,
+                preserveScroll: false,
+            });
         },
         onError: (errorResponse) => {
             successMessage.value = ""; // Clear success message on error
