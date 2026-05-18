@@ -260,6 +260,12 @@
                                 <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.second_choice?.code || "" }}</p>
                                 <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.second_choice?.slots || 0 }} slots remaining</p>
                             </div>
+                            <div v-if="selectedUser.application?.third_choice">
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Third Choice Program</p>
+                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.third_choice?.name || "—" }}</p>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.third_choice?.code || "" }}</p>
+                                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.third_choice?.slots || 0 }} slots remaining</p>
+                            </div>
                             <div>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
                                 <span :class="getStatusClass(selectedUser.status)" 

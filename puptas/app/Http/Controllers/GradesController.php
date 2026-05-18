@@ -54,6 +54,57 @@ class GradesController extends Controller
         ]);
     }
 
+    public function storeIctGrades(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($this->isEvaluatorLocked($user)) {
+            return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
+        }
+
+        $validated = $request->validate([
+            // Computed averages from frontend
+            'mathematics' => 'required|numeric|min:0|max:100',
+            'english' => 'required|numeric|min:0|max:100',
+            'science' => 'required|numeric|min:0|max:100',
+            'g12_first_sem' => 'required|numeric|min:0|max:100',
+            'g12_second_sem' => 'required|numeric|min:0|max:100',
+            // Program choices
+            'first_choice_program' => 'required|exists:programs,id',
+            'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
+            'third_choice_program' => 'nullable|exists:programs,id|different:first_choice_program,second_choice_program',
+            'qualified_programs_count' => 'required|integer|min:0',
+        ]);
+
+        // Calculate GWA from semester grades
+        $g12_gwa = ($validated['g12_first_sem'] + $validated['g12_second_sem']) / 2;
+
+        $grade = Grade::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'mathematics' => $validated['mathematics'],
+                'english' => $validated['english'],
+                'science' => $validated['science'],
+                'g12_first_sem' => $validated['g12_first_sem'],
+                'g12_second_sem' => $validated['g12_second_sem'],
+            ]
+        );
+
+        // Save program choices to applicant profile
+        ApplicantProfile::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'first_choice_program' => $validated['first_choice_program'],
+                'second_choice_program' => $validated['second_choice_program'],
+                'third_choice_program' => $validated['third_choice_program'],
+            ]
+        );
+
+        app(\App\Services\AuditLogService::class)->logActivity('CREATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} submitted grades and program choices.", $user, 'ADMISSION_DATA');
+
+        return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
+    }
+
     public function showHumssGradeForm()
     {
         $user = Auth::user();
@@ -148,9 +199,11 @@ class GradesController extends Controller
             'science' => 'required|numeric|min:0|max:100',
             'g12_first_sem' => 'required|numeric|min:0|max:100',
             'g12_second_sem' => 'required|numeric|min:0|max:100',
-            // Program choices
+            // Program choices - dynamic based on qualified programs count
             'first_choice_program' => 'required|exists:programs,id',
-            'second_choice_program' => 'required|exists:programs,id|different:first_choice_program',
+            'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
+            'third_choice_program' => 'nullable|exists:programs,id|different:first_choice_program,second_choice_program',
+            'qualified_programs_count' => 'required|integer|min:0',
         ]);
 
         // Calculate GWA from semester grades
@@ -161,15 +214,20 @@ class GradesController extends Controller
         $userStrand = strtoupper($profile?->strand ?? 'ABM');
 
         $firstProgram = Program::with('strands')->find($validated['first_choice_program']);
-        $secondProgram = Program::with('strands')->find($validated['second_choice_program']);
+        $secondProgram = $validated['second_choice_program'] ? Program::with('strands')->find($validated['second_choice_program']) : null;
+        $thirdProgram = $validated['third_choice_program'] ? Program::with('strands')->find($validated['third_choice_program']) : null;
 
         $errors = [];
         if (!$this->isUserQualified($firstProgram, $userStrand, $validated['mathematics'], $validated['english'], $validated['science'], $g12_gwa)) {
             $errors['first_choice_program'] = "You are not qualified for your first choice program ({$firstProgram->code}) based on the submitted grades.";
         }
 
-        if (!$this->isUserQualified($secondProgram, $userStrand, $validated['mathematics'], $validated['english'], $validated['science'], $g12_gwa)) {
+        if ($secondProgram && !$this->isUserQualified($secondProgram, $userStrand, $validated['mathematics'], $validated['english'], $validated['science'], $g12_gwa)) {
             $errors['second_choice_program'] = "You are not qualified for your second choice program ({$secondProgram->code}) based on the submitted grades.";
+        }
+
+        if ($thirdProgram && !$this->isUserQualified($thirdProgram, $userStrand, $validated['mathematics'], $validated['english'], $validated['science'], $g12_gwa)) {
+            $errors['third_choice_program'] = "You are not qualified for your third choice program ({$thirdProgram->code}) based on the submitted grades.";
         }
 
         if (!empty($errors)) {
@@ -193,6 +251,7 @@ class GradesController extends Controller
             [
                 'first_choice_program' => $validated['first_choice_program'],
                 'second_choice_program' => $validated['second_choice_program'],
+                'third_choice_program' => $validated['third_choice_program'],
             ]
         );
 
@@ -252,7 +311,9 @@ class GradesController extends Controller
             'g12_second_sem' => 'required|numeric|min:0|max:100',
             // Program choices
             'first_choice_program' => 'required|exists:programs,id',
-            'second_choice_program' => 'required|exists:programs,id|different:first_choice_program',
+            'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
+            'third_choice_program' => 'nullable|exists:programs,id|different:first_choice_program,second_choice_program',
+            'qualified_programs_count' => 'required|integer|min:0',
         ]);
 
         // Calculate GWA from semester grades
@@ -275,6 +336,7 @@ class GradesController extends Controller
             [
                 'first_choice_program' => $validated['first_choice_program'],
                 'second_choice_program' => $validated['second_choice_program'],
+                'third_choice_program' => $validated['third_choice_program'],
             ]
         );
 
@@ -300,7 +362,9 @@ class GradesController extends Controller
             'g12_second_sem' => 'required|numeric|min:0|max:100',
             // Program choices
             'first_choice_program' => 'required|exists:programs,id',
-            'second_choice_program' => 'required|exists:programs,id|different:first_choice_program',
+            'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
+            'third_choice_program' => 'nullable|exists:programs,id|different:first_choice_program,second_choice_program',
+            'qualified_programs_count' => 'required|integer|min:0',
         ]);
 
         // Calculate GWA from semester grades
@@ -323,6 +387,7 @@ class GradesController extends Controller
             [
                 'first_choice_program' => $validated['first_choice_program'],
                 'second_choice_program' => $validated['second_choice_program'],
+                'third_choice_program' => $validated['third_choice_program'],
             ]
         );
 
@@ -348,7 +413,9 @@ class GradesController extends Controller
             'g12_second_sem' => 'required|numeric|min:0|max:100',
             // Program choices
             'first_choice_program' => 'required|exists:programs,id',
-            'second_choice_program' => 'required|exists:programs,id|different:first_choice_program',
+            'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
+            'third_choice_program' => 'nullable|exists:programs,id|different:first_choice_program,second_choice_program',
+            'qualified_programs_count' => 'required|integer|min:0',
         ]);
 
         // Calculate GWA from semester grades
@@ -371,6 +438,7 @@ class GradesController extends Controller
             [
                 'first_choice_program' => $validated['first_choice_program'],
                 'second_choice_program' => $validated['second_choice_program'],
+                'third_choice_program' => $validated['third_choice_program'],
             ]
         );
 
@@ -396,7 +464,9 @@ class GradesController extends Controller
             'g12_second_sem' => 'required|numeric|min:0|max:100',
             // Program choices
             'first_choice_program' => 'required|exists:programs,id',
-            'second_choice_program' => 'required|exists:programs,id|different:first_choice_program',
+            'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
+            'third_choice_program' => 'nullable|exists:programs,id|different:first_choice_program,second_choice_program',
+            'qualified_programs_count' => 'required|integer|min:0',
         ]);
 
         // Calculate GWA from semester grades
@@ -419,6 +489,7 @@ class GradesController extends Controller
             [
                 'first_choice_program' => $validated['first_choice_program'],
                 'second_choice_program' => $validated['second_choice_program'],
+                'third_choice_program' => $validated['third_choice_program'],
             ]
         );
 
