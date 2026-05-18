@@ -17,11 +17,17 @@ class GradesController extends Controller
     public function showAbmGradeForm()
     {
         $user = Auth::user();
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        
+        // Validate that user's strand matches the route
+        if (!$profile || strtoupper($profile->strand) !== 'ABM') {
+            abort(403, 'You are not authorized to access this grade input form.');
+        }
+        
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/ABMGradeInput', [
             'grade' => $grade,
@@ -37,11 +43,17 @@ class GradesController extends Controller
     public function showIctGradeForm()
     {
         $user = Auth::user();
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        
+        // Validate that user's strand matches the route
+        if (!$profile || strtoupper($profile->strand) !== 'ICT') {
+            abort(403, 'You are not authorized to access this grade input form.');
+        }
+        
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/ICTGradeInput', [
             'grade' => $grade,
@@ -57,6 +69,12 @@ class GradesController extends Controller
     public function storeIctGrades(Request $request)
     {
         $user = Auth::user();
+
+        // Validate that user's strand matches
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        if (!$profile || strtoupper($profile->strand) !== 'ICT') {
+            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        }
 
         if ($this->isEvaluatorLocked($user)) {
             return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
@@ -108,11 +126,17 @@ class GradesController extends Controller
     public function showHumssGradeForm()
     {
         $user = Auth::user();
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        
+        // Validate that user's strand matches the route
+        if (!$profile || strtoupper($profile->strand) !== 'HUMSS') {
+            abort(403, 'You are not authorized to access this grade input form.');
+        }
+        
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/HUMSSGradeInput', [
             'grade' => $grade,
@@ -128,11 +152,17 @@ class GradesController extends Controller
     public function showGasGradeForm()
     {
         $user = Auth::user();
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        
+        // Validate that user's strand matches the route
+        if (!$profile || strtoupper($profile->strand) !== 'GAS') {
+            abort(403, 'You are not authorized to access this grade input form.');
+        }
+        
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/GASGradeInput', [
             'grade' => $grade,
@@ -148,11 +178,17 @@ class GradesController extends Controller
     public function showStemGradeForm()
     {
         $user = Auth::user();
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        
+        // Validate that user's strand matches the route
+        if (!$profile || strtoupper($profile->strand) !== 'STEM') {
+            abort(403, 'You are not authorized to access this grade input form.');
+        }
+        
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/STEMGradeInput', [
             'grade' => $grade,
@@ -168,11 +204,17 @@ class GradesController extends Controller
     public function showTvlGradeForm()
     {
         $user = Auth::user();
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        
+        // Validate that user's strand matches the route
+        if (!$profile || strtoupper($profile->strand) !== 'TVL') {
+            abort(403, 'You are not authorized to access this grade input form.');
+        }
+        
         $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
 
         return inertia('Grades/TVLGradeInput', [
             'grade' => $grade,
@@ -188,6 +230,13 @@ class GradesController extends Controller
     public function storeAbmGrades(Request $request)
     {
         $user = Auth::user();
+        
+        // Validate that user's strand matches
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        if (!$profile || strtoupper($profile->strand) !== 'ABM') {
+            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        }
+        
         if ($this->isEvaluatorLocked($user)) {
             return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
         }
@@ -298,6 +347,12 @@ class GradesController extends Controller
     {
         $user = Auth::user();
 
+        // Validate that user's strand matches
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        if (!$profile || strtoupper($profile->strand) !== 'TVL') {
+            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        }
+
         if ($this->isEvaluatorLocked($user)) {
             return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
         }
@@ -348,6 +403,12 @@ class GradesController extends Controller
     public function storeHumssGrades(Request $request)
     {
         $user = Auth::user();
+
+        // Validate that user's strand matches
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        if (!$profile || strtoupper($profile->strand) !== 'HUMSS') {
+            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        }
 
         if ($this->isEvaluatorLocked($user)) {
             return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
@@ -400,6 +461,12 @@ class GradesController extends Controller
     {
         $user = Auth::user();
 
+        // Validate that user's strand matches
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        if (!$profile || strtoupper($profile->strand) !== 'GAS') {
+            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        }
+
         if ($this->isEvaluatorLocked($user)) {
             return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
         }
@@ -450,6 +517,12 @@ class GradesController extends Controller
     public function storeStemGrades(Request $request)
     {
         $user = Auth::user();
+
+        // Validate that user's strand matches
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        if (!$profile || strtoupper($profile->strand) !== 'STEM') {
+            return response()->json(['message' => 'You are not authorized to submit grades for this strand.'], 403);
+        }
 
         if ($this->isEvaluatorLocked($user)) {
             return response()->json(['message' => 'Grade submission is no longer allowed.'], 403);
