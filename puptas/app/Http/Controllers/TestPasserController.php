@@ -129,8 +129,9 @@ class TestPasserController extends Controller
         $errors = [];
 
         // Pre-filter: only passers with a linked confirmed applicant (for_evaluation)
-        $confirmedPasserIds = \App\Models\ApplicantProfile::whereHas('currentApplication', function ($q) {
-                $q->where('status', 'for_evaluation');
+        $confirmedPasserIds = \App\Models\ApplicantProfile::whereHas('currentApplication.processes', function ($q) {
+                $q->where('stage', 'evaluator')
+                  ->whereIn('status', ['in_progress', 'returned']);
             })
             ->whereHas('testPasser')
             ->with('testPasser:test_passer_id,user_id')
