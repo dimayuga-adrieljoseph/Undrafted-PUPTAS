@@ -546,7 +546,7 @@
             <GradesReviewModal
                 :show="showReviewModal"
                 :loading="loading"
-                :form-data="form"
+                :sections="reviewSections"
                 @close="closeReviewModal"
                 @confirm="confirmSaveGrades"
             />
@@ -923,6 +923,79 @@ onMounted(() => {
         applyAutofill(props.extractionResult);
     }
 });
+
+// Computed property for review data
+const reviewData = computed(() => ({
+    // G11 Math
+    g11_general_mathematics: form.g11_general_mathematics,
+    g11_statistics_probability: form.g11_statistics_probability,
+    // G11 English
+    g11_oral_communication: form.g11_oral_communication,
+    g11_21st_century_lit: form.g11_21st_century_lit,
+    g11_academic_professional: form.g11_academic_professional,
+    g11_reading_writing: form.g11_reading_writing,
+    // G11 Science
+    g11_earth_life_science: form.g11_earth_life_science,
+    g11_physical_science: form.g11_physical_science,
+    // Grade 12 GWA
+    g12_first_sem_gwa: form.g12_first_sem_gwa,
+    g12_second_sem_gwa: form.g12_second_sem_gwa,
+    // Program choices
+    first_choice_program: getSelectedProgramName(form.first_choice_program),
+    second_choice_program: getSelectedProgramName(form.second_choice_program),
+    third_choice_program: getSelectedProgramName(form.third_choice_program),
+    // Averages
+    math_average: mathAverage.value,
+    english_average: englishAverage.value,
+    science_average: scienceAverage.value,
+    g12_gwa: g12GWA.value,
+}));
+
+// Computed property for review modal sections
+const reviewSections = computed(() => [
+    {
+        title: 'Grade 11 Math Subjects',
+        items: [
+            { label: 'General Mathematics', value: reviewData.value.g11_general_mathematics },
+            { label: 'Statistics and Probability', value: reviewData.value.g11_statistics_probability },
+        ],
+    },
+    {
+        title: 'Grade 11 English Subjects',
+        items: [
+            { label: 'Oral Communication', value: reviewData.value.g11_oral_communication },
+            { label: '21st Century Literature', value: reviewData.value.g11_21st_century_lit },
+            { label: 'English for Academic Purposes', value: reviewData.value.g11_academic_professional },
+            { label: 'Reading and Writing', value: reviewData.value.g11_reading_writing },
+        ],
+    },
+    {
+        title: 'Grade 11 Science Subjects',
+        items: [
+            { label: 'Earth and Life Science', value: reviewData.value.g11_earth_life_science },
+            { label: 'Physical Science', value: reviewData.value.g11_physical_science },
+        ],
+    },
+    {
+        title: 'Grade 12 GWA',
+        items: [
+            { label: '1st Semester', value: reviewData.value.g12_first_sem_gwa },
+            { label: '2nd Semester', value: reviewData.value.g12_second_sem_gwa },
+        ],
+    },
+    {
+        title: 'Program Choices and Averages',
+        items: [
+            { label: 'First Choice Program', value: reviewData.value.first_choice_program },
+            { label: 'Second Choice Program', value: reviewData.value.second_choice_program },
+            { label: 'Third Choice Program', value: reviewData.value.third_choice_program },
+            { label: 'Math Average', value: reviewData.value.math_average },
+            { label: 'English Average', value: reviewData.value.english_average },
+            { label: 'Science Average', value: reviewData.value.science_average },
+            { label: 'G12 GWA', value: reviewData.value.g12_gwa },
+        ].filter(item => item.value !== '' && item.value !== null && item.value !== undefined),
+    },
+]);
 
 const openReviewModal = () => {
     errors.value = {};

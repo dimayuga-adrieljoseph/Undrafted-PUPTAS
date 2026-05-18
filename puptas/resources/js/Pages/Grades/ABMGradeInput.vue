@@ -654,6 +654,7 @@ const reviewData = computed(() => ({
     g12_second_sem_gwa: form.g12_second_sem_gwa,
     first_choice_program: getSelectedProgramName(form.first_choice_program),
     second_choice_program: getSelectedProgramName(form.second_choice_program),
+    third_choice_program: getSelectedProgramName(form.third_choice_program),
     math_average: mathAverage.value,
     english_average: englishAverage.value,
     science_average: scienceAverage.value,
@@ -686,11 +687,12 @@ const reviewSections = computed(() => [
         items: [
             { label: 'First Choice Program', value: reviewData.value.first_choice_program },
             { label: 'Second Choice Program', value: reviewData.value.second_choice_program },
+            { label: 'Third Choice Program', value: reviewData.value.third_choice_program },
             { label: 'Math Average', value: reviewData.value.math_average },
             { label: 'English Average', value: reviewData.value.english_average },
             { label: 'Science Average', value: reviewData.value.science_average },
             { label: 'G12 GWA', value: reviewData.value.g12_gwa },
-        ],
+        ].filter(item => item.value !== '' && item.value !== null && item.value !== undefined),
     },
 ]);
 

@@ -662,7 +662,7 @@
             <GradesReviewModal
                 :show="showReviewModal"
                 :loading="loading"
-                :form-data="form"
+                :sections="reviewSections"
                 @close="closeReviewModal"
                 @confirm="confirmSaveGrades"
             />
@@ -1058,6 +1058,105 @@ onMounted(() => {
         applyAutofill(props.extractionResult);
     }
 });
+
+// Computed property for review data
+const reviewData = computed(() => ({
+    // G11 Math
+    g11_general_mathematics: form.g11_general_mathematics,
+    g11_statistics_probability: form.g11_statistics_probability,
+    g11_pre_calculus: form.g11_pre_calculus,
+    g11_basic_calculus: form.g11_basic_calculus,
+    // G11 Science
+    g11_earth_science: form.g11_earth_science,
+    g11_general_chemistry_1: form.g11_general_chemistry_1,
+    // G12 Science
+    g12_general_physics_1: form.g12_general_physics_1,
+    g12_general_biology_1: form.g12_general_biology_1,
+    g12_general_physics_2: form.g12_general_physics_2,
+    g12_general_biology_2: form.g12_general_biology_2,
+    g12_general_chemistry_2: form.g12_general_chemistry_2,
+    // G11 English
+    g11_oral_communication: form.g11_oral_communication,
+    g11_reading_writing: form.g11_reading_writing,
+    // G12 English
+    g12_21st_century_lit: form.g12_21st_century_lit,
+    g12_academic_professional: form.g12_academic_professional,
+    // Grade 12 GWA
+    g12_first_sem_gwa: form.g12_first_sem_gwa,
+    g12_second_sem_gwa: form.g12_second_sem_gwa,
+    // Program choices
+    first_choice_program: getSelectedProgramName(form.first_choice_program),
+    second_choice_program: getSelectedProgramName(form.second_choice_program),
+    third_choice_program: getSelectedProgramName(form.third_choice_program),
+    // Averages
+    math_average: mathAverage.value,
+    science_average: scienceAverage.value,
+    english_average: englishAverage.value,
+    g12_gwa: g12GWA.value,
+}));
+
+// Computed property for review modal sections
+const reviewSections = computed(() => [
+    {
+        title: 'Grade 11 Math Subjects',
+        items: [
+            { label: 'General Mathematics', value: reviewData.value.g11_general_mathematics },
+            { label: 'Statistics and Probability', value: reviewData.value.g11_statistics_probability },
+            { label: 'Pre-Calculus', value: reviewData.value.g11_pre_calculus },
+            { label: 'Basic Calculus', value: reviewData.value.g11_basic_calculus },
+        ],
+    },
+    {
+        title: 'Grade 11 Science Subjects',
+        items: [
+            { label: 'Earth Science', value: reviewData.value.g11_earth_science },
+            { label: 'General Chemistry 1', value: reviewData.value.g11_general_chemistry_1 },
+        ],
+    },
+    {
+        title: 'Grade 12 Science Subjects',
+        items: [
+            { label: 'General Physics 1', value: reviewData.value.g12_general_physics_1 },
+            { label: 'General Biology 1', value: reviewData.value.g12_general_biology_1 },
+            { label: 'General Physics 2', value: reviewData.value.g12_general_physics_2 },
+            { label: 'General Biology 2', value: reviewData.value.g12_general_biology_2 },
+            { label: 'General Chemistry 2', value: reviewData.value.g12_general_chemistry_2 },
+        ],
+    },
+    {
+        title: 'Grade 11 English Subjects',
+        items: [
+            { label: 'Oral Communication in Context', value: reviewData.value.g11_oral_communication },
+            { label: 'Reading and Writing Skills', value: reviewData.value.g11_reading_writing },
+        ],
+    },
+    {
+        title: 'Grade 12 English Subjects',
+        items: [
+            { label: '21st Century Literature', value: reviewData.value.g12_21st_century_lit },
+            { label: 'English for Academic and Professional Purposes', value: reviewData.value.g12_academic_professional },
+        ],
+    },
+    {
+        title: 'Grade 12 GWA',
+        items: [
+            { label: '1st Semester', value: reviewData.value.g12_first_sem_gwa },
+            { label: '2nd Semester', value: reviewData.value.g12_second_sem_gwa },
+        ],
+    },
+    {
+        title: 'Program Choices and Averages',
+        items: [
+            { label: 'First Choice Program', value: reviewData.value.first_choice_program },
+            { label: 'Second Choice Program', value: reviewData.value.second_choice_program },
+            { label: 'Third Choice Program', value: reviewData.value.third_choice_program },
+            { label: 'Math Average', value: reviewData.value.math_average },
+            { label: 'Science Average', value: reviewData.value.science_average },
+            { label: 'English Average', value: reviewData.value.english_average },
+            { label: 'G12 GWA', value: reviewData.value.g12_gwa },
+        ].filter(item => item.value !== '' && item.value !== null && item.value !== undefined),
+    },
+]);
 
 const openReviewModal = () => {
     errors.value = {};
