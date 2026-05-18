@@ -382,7 +382,7 @@
                         <div class="mb-4">
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
-                                Semester GWA
+                                Semester GWA (Optional - at least one required)
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -427,48 +427,7 @@
                     </div>
                 </div>
 
-                <!-- Other Subjects Card -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
-                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Other Subjects</h2>
-                    </div>
-                    <div class="p-6">
-                        <div v-for="(subject, index) in otherSubjects" :key="index" class="flex gap-3 mb-3 items-start">
-                            <input
-                                v-model="subject.name"
-                                type="text"
-                                :disabled="isLocked"
-                                class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                placeholder="Subject name"
-                            />
-                            <input
-                                v-model.number="subject.grade"
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="1"
-                                :disabled="isLocked"
-                                class="w-32 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                placeholder="0-100"
-                            />
-                            <button
-                                v-if="otherSubjects.length > 1"
-                                type="button"
-                                @click="otherSubjects.splice(index, 1)"
-                                class="px-3 py-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"
-                            >
-                                Remove
-                            </button>
-                        </div>
-                        <button
-                            type="button"
-                            @click="otherSubjects.push({ name: '', grade: null })"
-                            class="mt-2 px-4 py-2 text-sm text-[#9E122C] dark:text-gray-300 border border-[#9E122C] dark:border-gray-500 rounded-lg hover:bg-red-50 dark:hover:bg-gray-700 transition"
-                        >
-                            + Add Subject
-                        </button>
-                    </div>
-                </div>
+
 
                 <!-- Grade Summary Cards -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -733,7 +692,6 @@ const successMessage = ref("");
 const errors = ref({});
 const confidenceMap = ref({});
 const bannerDismissed = ref(false);
-const otherSubjects = ref([{ name: '', grade: null }]);
 const showReviewModal = ref(false);
 
 const form = reactive({
@@ -995,15 +953,9 @@ const applyAutofill = (result) => {
                             englishIdx++;
                         }
                     }
-                } else if (group === 'others') {
-                    otherSubjects.value.push({ name: subjectKey, grade: numericGrade });
                 }
             }
         }
-    }
-    // Remove the initial blank placeholder if any real others were autofilled
-    if (otherSubjects.value.length > 1 && otherSubjects.value[0].name === '' && otherSubjects.value[0].grade === null) {
-        otherSubjects.value.shift();
     }
     confidenceMap.value = newConfidenceMap;
 };
