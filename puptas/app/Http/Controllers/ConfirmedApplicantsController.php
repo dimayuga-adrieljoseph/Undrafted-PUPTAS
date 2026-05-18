@@ -51,7 +51,7 @@ class ConfirmedApplicantsController extends Controller
         ])
             ->whereHas('currentApplication.processes', function ($q) {
                 $q->where('stage', 'evaluator')
-                  ->whereIn('status', ['in_progress', 'returned']);
+                    ->whereIn('status', ['in_progress', 'returned']);
             })
             ->orderBy('lastname')
             ->get()
@@ -86,8 +86,8 @@ class ConfirmedApplicantsController extends Controller
                     'reference_number' => $testPasser?->reference_number,
                     'sar_sent'     => $testPasser
                         ? SarGeneration::where('test_passer_id', $testPasser->test_passer_id)
-                            ->where('email_sent_successfully', true)
-                            ->exists()
+                        ->where('email_sent_successfully', true)
+                        ->exists()
                         : false,
                 ];
             });
@@ -122,15 +122,68 @@ class ConfirmedApplicantsController extends Controller
             ->whereIn('user_id', $applicantIds)
             ->whereHas('currentApplication.processes', function ($q) {
                 $q->where('stage', 'evaluator')
-                  ->whereIn('status', ['in_progress', 'returned']);
+                    ->whereIn('status', ['in_progress', 'returned']);
             })
-            ->get();
+            ->get()
+            ->sortByDesc(function ($applicant) {
+                return $applicant->testPasser->pupcet_total_score ?? 0;
+            });
 
         if ($applicants->isEmpty()) {
             return response()->json([
                 'message' => 'No confirmed applicants found. SAR Forms can only be sent to applicants with "For Evaluation" status.',
             ], 422);
         }
+
+        // Automate schedule based on Score & Batch, and restrict per batch
+        $selectedBatch = null;
+        $batchTime     = null;
+        $canSendSar    = true;
+
+        foreach ($applicants as $app) {
+            $score = $app->testPasser->pupcet_total_score ?? 0;
+
+            if ($score >= 85) {
+                $batchType = 'Qualifiers Batch 1';
+                $time      = '08:00'; // 8:00 AM
+                $canSend   = true;
+            } elseif ($score >= 79) {
+                $batchType = 'Qualifiers Batch 2';
+                $time      = '13:00'; // 1:00 PM
+                $canSend   = true;
+            } elseif ($score >= 75) {
+                $batchType = 'Waitlisted';
+                $time      = null;
+                $canSend   = false;
+            } elseif ($score >= 55) {
+                $batchType = 'Waitlisted'; // 74-55
+                $time      = null;
+                $canSend   = false;
+            } else {
+                $batchType = 'Non-Qualifiers';
+                $time      = null;
+                $canSend   = false;
+            }
+
+            if ($selectedBatch === null) {
+                $selectedBatch = $batchType;
+                $batchTime     = $time;
+                $canSendSar    = $canSend;
+            } elseif ($selectedBatch !== $batchType) {
+                return response()->json([
+                    'message' => 'Restriction: You must select applicants from the same batch. Your selection contains both ' . $selectedBatch . ' and ' . $batchType . '.',
+                ], 422);
+            }
+        }
+
+        if (!$canSendSar) {
+            return response()->json([
+                'message' => "Cannot compute interview schedule or email SAR Forms to {$selectedBatch} applicants.",
+            ], 422);
+        }
+
+        // Override the time from frontend with the automated batch time
+        $enrollmentTime = $batchTime;
 
         $sarService   = app(SarFormService::class);
         $successCount = 0;
@@ -257,7 +310,7 @@ class ConfirmedApplicantsController extends Controller
             ->whereIn('user_id', $applicantIds)
             ->whereHas('currentApplication.processes', function ($q) {
                 $q->where('stage', 'evaluator')
-                  ->whereIn('status', ['in_progress', 'returned']);
+                    ->whereIn('status', ['in_progress', 'returned']);
             })
             ->get();
 

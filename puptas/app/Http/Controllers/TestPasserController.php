@@ -130,9 +130,9 @@ class TestPasserController extends Controller
 
         // Pre-filter: only passers with a linked confirmed applicant (for_evaluation)
         $confirmedPasserIds = \App\Models\ApplicantProfile::whereHas('currentApplication.processes', function ($q) {
-                $q->where('stage', 'evaluator')
-                  ->whereIn('status', ['in_progress', 'returned']);
-            })
+            $q->where('stage', 'evaluator')
+                ->whereIn('status', ['in_progress', 'returned']);
+        })
             ->whereHas('testPasser')
             ->with('testPasser:test_passer_id,user_id')
             ->get()
@@ -299,7 +299,7 @@ class TestPasserController extends Controller
         // Find the passer or fail
         $passer = TestPasser::findOrFail($id);
 
-         // Validate input
+        // Validate input
         $validatedData = $request->validate([
             'surname' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
@@ -336,7 +336,7 @@ class TestPasserController extends Controller
 
     public function store(Request $request)
     {
-         // Validate input
+        // Validate input
         $validated = $request->validate([
             'surname' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
@@ -428,17 +428,17 @@ class TestPasserController extends Controller
 
                 // Regenerate the SAR file
                 $sarService = app(\App\Services\SarFormService::class);
-                
+
                 $fullName = trim("{$passer->surname}, {$passer->first_name} " . ($passer->middle_name ?? ''));
-                
+
                 $rowData = [
                     'reference_number' => $passer->reference_number,
                     'full_name' => $fullName,
                     'graduation_year' => $passer->year_graduated ?? date('Y'),
                     'school_attended' => $passer->shs_school ?? 'N/A',
                     'shs_strand' => $passer->strand ?? 'N/A',
-                    'enrollment_date' => $sarGeneration->enrollment_date ? 
-                        \Carbon\Carbon::parse($sarGeneration->enrollment_date)->format('F d, Y') : 
+                    'enrollment_date' => $sarGeneration->enrollment_date ?
+                        \Carbon\Carbon::parse($sarGeneration->enrollment_date)->format('F d, Y') :
                         date('F d, Y'),
                     'enrollment_time' => $sarGeneration->enrollment_time ?? date('h:i A'),
                     'student_number' => $passer->student_number ?? '',
@@ -457,12 +457,11 @@ class TestPasserController extends Controller
 
                 // Update the filename in case it changed
                 $filename = $result['filename'];
-                
+
                 \Log::info('SAR file regenerated successfully', [
                     'filename' => $filename,
                     'reference' => $reference,
                 ]);
-
             } catch (\Exception $e) {
                 \Log::error('SAR regeneration exception', [
                     'filename' => $filename,
@@ -475,7 +474,7 @@ class TestPasserController extends Controller
 
         // Return file download response
         $disk = Storage::disk('sar_tmp');
-        
+
         // Check if using S3 by checking if path() method throws exception
         try {
             $localPath = $disk->path($filename);
@@ -575,17 +574,17 @@ class TestPasserController extends Controller
 
                 // Regenerate the SAR file
                 $sarService = app(\App\Services\SarFormService::class);
-                
+
                 $fullName = trim("{$passer->surname}, {$passer->first_name} " . ($passer->middle_name ?? ''));
-                
+
                 $rowData = [
                     'reference_number' => $passer->reference_number,
                     'full_name' => $fullName,
                     'graduation_year' => $passer->year_graduated ?? date('Y'),
                     'school_attended' => $passer->shs_school ?? 'N/A',
                     'shs_strand' => $passer->strand ?? 'N/A',
-                    'enrollment_date' => $sarGeneration->enrollment_date ? 
-                        \Carbon\Carbon::parse($sarGeneration->enrollment_date)->format('F d, Y') : 
+                    'enrollment_date' => $sarGeneration->enrollment_date ?
+                        \Carbon\Carbon::parse($sarGeneration->enrollment_date)->format('F d, Y') :
                         date('F d, Y'),
                     'enrollment_time' => $sarGeneration->enrollment_time ?? date('h:i A'),
                     'student_number' => $passer->student_number ?? '',
@@ -607,12 +606,11 @@ class TestPasserController extends Controller
                     $sarGeneration->filename = $result['filename'];
                     $sarGeneration->save();
                 }
-                
+
                 \Log::info('SAR file regenerated successfully for admin', [
                     'id' => $id,
                     'filename' => $result['filename'],
                 ]);
-
             } catch (\Exception $e) {
                 \Log::error('SAR regeneration exception for admin', [
                     'id' => $id,
@@ -624,7 +622,7 @@ class TestPasserController extends Controller
 
         // Return file download response
         $disk = Storage::disk('sar_tmp');
-        
+
         // Check if using S3 by checking if path() method throws exception
         try {
             $localPath = $disk->path($sarGeneration->filename);
@@ -723,12 +721,19 @@ class TestPasserController extends Controller
         $request->validate([
             'passer_id' => 'required|exists:test_passers,test_passer_id',
             'enrollment_date' => 'required|string',
-            'enrollment_time' => 'required|string',
         ]);
 
         $passer = TestPasser::findOrFail($request->passer_id);
         $enrollmentDate = $request->enrollment_date;
-        $enrollmentTime = $request->enrollment_time;
+
+        $score = $passer->pupcet_total_score ?? 0;
+        if ($score >= 85) {
+            $enrollmentTime = '08:00';
+        } elseif ($score >= 79) {
+            $enrollmentTime = '13:00';
+        } else {
+            $enrollmentTime = 'TBD';
+        }
 
         try {
             // Prepare SAR data from test passer
@@ -842,7 +847,10 @@ class TestPasserController extends Controller
         foreach ($passers as $passer) {
             try {
                 \Illuminate\Support\Facades\DB::transaction(function () use (
-                    $passer, $program, $stages, &$results
+                    $passer,
+                    $program,
+                    $stages,
+                    &$results
                 ) {
                     // ── 1. User ───────────────────────────────────────────
                     $user = \App\Models\User::updateOrCreate(
