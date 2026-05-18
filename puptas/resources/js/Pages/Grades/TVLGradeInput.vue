@@ -992,13 +992,6 @@ const submitForm = async () => {
         third_choice_program: form.third_choice_program || null,
         qualified_programs_count: qualifiedCount,
     };
-        science: parseFloat(scienceAverage.value),
-        english: parseFloat(englishAverage.value),
-        g12_first_sem: parseFloat(form.g12_first_sem_gwa),
-        g12_second_sem: parseFloat(form.g12_second_sem_gwa),
-        first_choice_program: form.first_choice_program,
-        second_choice_program: form.second_choice_program,
-    };
 
     router.post("/grades/tvl", payload, {
         preserveState: true,
