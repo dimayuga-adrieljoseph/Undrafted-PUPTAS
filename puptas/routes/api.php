@@ -4,10 +4,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ExternalStudentApiController;
-use App\Http\Controllers\GradesController;
-
-
-
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
@@ -15,7 +11,6 @@ Route::get('/user', function (Request $request) {
 Route::middleware('auth:sanctum')->group(function () {
     Route::put('/programs/update/{id}', [ProgramController::class, 'update'])->name('programs.update');
     Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->name('programs.delete');
-    Route::post('/store-grades', [GradesController::class, 'store']);
 });
 
 use App\Http\Controllers\ExternalProgramApiController;
