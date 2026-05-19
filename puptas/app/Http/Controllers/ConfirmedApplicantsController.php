@@ -49,6 +49,7 @@ class ConfirmedApplicantsController extends Controller
             'currentApplication.program:id,code,name',
             'grades',
             'testPasser.passerStatus',
+            'testPasser.sarGenerations',
         ])
             ->whereHas('currentApplication.processes', function ($q) {
                 $q->where('stage', 'evaluator')
@@ -89,9 +90,9 @@ class ConfirmedApplicantsController extends Controller
                     'passer_status_id' => $testPasser?->passer_status_id,
                     'passer_status_name' => $testPasser?->passerStatus?->status,
                     'sar_sent'     => $testPasser
-                        ? SarGeneration::where('test_passer_id', $testPasser->test_passer_id)
-                        ->where('email_sent_successfully', true)
-                        ->exists()
+                        ? $testPasser->sarGenerations
+                            ->where('email_sent_successfully', true)
+                            ->isNotEmpty()
                         : false,
                 ];
             });
