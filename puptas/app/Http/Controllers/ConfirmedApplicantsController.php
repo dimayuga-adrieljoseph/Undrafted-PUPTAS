@@ -84,6 +84,7 @@ class ConfirmedApplicantsController extends Controller
                     'grades_synced'   => $gradesSynced,
                     'test_passer_id'  => $testPasser?->test_passer_id,
                     'reference_number' => $testPasser?->reference_number,
+                    'batch_number' => $testPasser?->batch_number,
                     'sar_sent'     => $testPasser
                         ? SarGeneration::where('test_passer_id', $testPasser->test_passer_id)
                         ->where('email_sent_successfully', true)

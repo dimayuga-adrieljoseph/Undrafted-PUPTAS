@@ -12,6 +12,7 @@ const loading = ref(false);
 const fetchError = ref(null);
 const searchQuery = ref("");
 const filterProgram = ref("");
+const filterBatch = ref("");
 const filterSarStatus = ref("");
 const selectedIds = ref([]);
 
@@ -57,6 +58,13 @@ const programs = computed(() => {
     return Array.from(codes).sort();
 });
 
+const batches = computed(() => {
+    const batchSet = new Set(
+        applicants.value.map((a) => a.batch_number).filter(Boolean),
+    );
+    return Array.from(batchSet).sort();
+});
+
 const filtered = computed(() => {
     let list = applicants.value;
     const q = searchQuery.value.trim().toLowerCase();
@@ -69,6 +77,8 @@ const filtered = computed(() => {
         );
     if (filterProgram.value)
         list = list.filter((a) => a.program?.code === filterProgram.value);
+    if (filterBatch.value)
+        list = list.filter((a) => a.batch_number === filterBatch.value);
     if (filterSarStatus.value === "sent") list = list.filter((a) => a.sar_sent);
     if (filterSarStatus.value === "pending")
         list = list.filter((a) => !a.sar_sent);
@@ -101,7 +111,7 @@ const toggle = (id) => {
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-watch([searchQuery, filterProgram, filterSarStatus], () => {
+watch([searchQuery, filterProgram, filterBatch, filterSarStatus], () => {
     currentPage.value = 1;
 });
 
@@ -455,6 +465,15 @@ onMounted(() => {
                             <option value="">All Programs</option>
                             <option v-for="p in programs" :key="p" :value="p">
                                 {{ p }}
+                            </option>
+                        </select>
+                        <select
+                            v-model="filterBatch"
+                            class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                        >
+                            <option value="">All Batches</option>
+                            <option v-for="b in batches" :key="b" :value="b">
+                                {{ b }}
                             </option>
                         </select>
                         <select
