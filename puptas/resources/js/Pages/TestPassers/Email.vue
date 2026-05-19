@@ -720,14 +720,20 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Batch Number *</label>
-                                <input
-                                    type="text"
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                    Batch Number<span v-if="editingPasser.passer_status_id !== '3' && editingPasser.passer_status_id !== '4' && editingPasser.passer_status_id !== 3 && editingPasser.passer_status_id !== 4"> *</span>
+                                </label>
+                                <select
                                     v-model="editingPasser.batch_number"
-                                    required
-                                    placeholder="e.g., 1"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    :required="editingPasser.passer_status_id !== '3' && editingPasser.passer_status_id !== '4' && editingPasser.passer_status_id !== 3 && editingPasser.passer_status_id !== 4"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">Select Batch</option>
+                                    <option value="Batch 1">Batch 1</option>
+                                    <option value="Batch 2">Batch 2</option>
+                                    <option value="Batch 3">Batch 3</option>
+                                    <option value="Batch 4">Batch 4</option>
+                                </select>
                             </div>
                         </div>
 
@@ -906,14 +912,20 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Batch Number *</label>
-                                <input
-                                    type="text"
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                    Batch Number<span v-if="newPasserData.passer_status_id !== '3' && newPasserData.passer_status_id !== '4' && newPasserData.passer_status_id !== 3 && newPasserData.passer_status_id !== 4"> *</span>
+                                </label>
+                                <select
                                     v-model="newPasserData.batch_number"
-                                    required
-                                    placeholder="e.g., 1"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    :required="newPasserData.passer_status_id !== '3' && newPasserData.passer_status_id !== '4' && newPasserData.passer_status_id !== 3 && newPasserData.passer_status_id !== 4"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">Select Batch</option>
+                                    <option value="Batch 1">Batch 1</option>
+                                    <option value="Batch 2">Batch 2</option>
+                                    <option value="Batch 3">Batch 3</option>
+                                    <option value="Batch 4">Batch 4</option>
+                                </select>
                             </div>
                         </div>
 
