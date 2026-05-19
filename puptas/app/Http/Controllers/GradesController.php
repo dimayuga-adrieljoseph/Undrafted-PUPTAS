@@ -497,11 +497,10 @@ class GradesController extends Controller
             'g11_21st_century_lit' => 'required|numeric|min:0|max:100',
             'g11_academic_professional' => 'required|numeric|min:0|max:100',
             'g11_reading_writing' => 'required|numeric|min:0|max:100',
-            // Individual G11 Science grades
+            // Individual G11 Science grade (HUMSS: Earth and Life Science in G11)
             'g11_earth_life_science' => 'required|numeric|min:0|max:100',
-            'g11_physical_science' => 'required|numeric|min:0|max:100',
-            // Individual G12 Science grades
-            'g12_earth_life_science' => 'required|numeric|min:0|max:100',
+            // Individual G12 Science grade (HUMSS: Physical Science in G12)
+            'g12_physical_science' => 'required|numeric|min:0|max:100',
             // Program choices
             'first_choice_program' => 'required|exists:programs,id',
             'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
@@ -528,11 +527,10 @@ class GradesController extends Controller
                 'g11_21st_century_lit' => $validated['g11_21st_century_lit'],
                 'g11_academic_professional' => $validated['g11_academic_professional'],
                 'g11_reading_writing' => $validated['g11_reading_writing'],
-                // Individual G11 Science grades
+                // Individual G11 Science grade (HUMSS: Earth and Life Science in G11)
                 'g11_earth_life_science' => $validated['g11_earth_life_science'],
-                'g11_physical_science' => $validated['g11_physical_science'],
-                // Individual G12 Science grades
-                'g12_earth_life_science' => $validated['g12_earth_life_science'],
+                // Individual G12 Science grade (HUMSS: Physical Science in G12)
+                'g12_physical_science' => $validated['g12_physical_science'],
             ]
         );
 
