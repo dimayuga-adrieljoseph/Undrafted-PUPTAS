@@ -992,9 +992,8 @@ const reviewData = computed(() => ({
     g11_reading_writing: form.g11_reading_writing,
     // G11 Science
     g11_earth_life_science: form.g11_earth_life_science,
-    g11_physical_science: form.g11_physical_science,
     // G12 Science
-    g12_earth_life_science: form.g12_earth_life_science,
+    g12_physical_science: form.g12_physical_science,
     // Grade 12 GWA
     g12_first_sem_gwa: form.g12_first_sem_gwa,
     g12_second_sem_gwa: form.g12_second_sem_gwa,
@@ -1028,16 +1027,15 @@ const reviewSections = computed(() => [
         ],
     },
     {
-        title: 'Grade 11 Science Subjects',
+        title: 'Grade 11 Science Subject',
         items: [
             { label: 'Earth and Life Science', value: reviewData.value.g11_earth_life_science },
-            { label: 'Physical Science', value: reviewData.value.g11_physical_science },
         ],
     },
     {
         title: 'Grade 12 Science Subject',
         items: [
-            { label: 'Earth and Life Science', value: reviewData.value.g12_earth_life_science },
+            { label: 'Physical Science', value: reviewData.value.g12_physical_science },
         ],
     },
     {
