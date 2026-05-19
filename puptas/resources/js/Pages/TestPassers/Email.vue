@@ -39,7 +39,7 @@
                                 type="text"
                                 v-model="searchTerm"
                                 @input="onSearchInput"
-                                placeholder="Search by name, surname, or emailâ€¦"
+                                placeholder="Search by name, surname, or email..."
                                 class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                             />
                         </div>
@@ -92,7 +92,6 @@
                                 <option value="first_name">Sort: First Name</option>
                                 <option value="email">Sort: Email</option>
                                 <option value="schoolYear">Sort: School Year</option>
-                                <option value="batchNumber">Sort: Batch</option>
                             </select>
                             <select v-model="sortOrder"
                                 class="flex-1 min-w-[100px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
@@ -131,7 +130,7 @@
                                 </h2>
                                 <div class="text-sm text-gray-600 dark:text-gray-400">
                                     Page {{ currentPage }} of {{ totalPages }}
-                                    â€¢ Showing {{ paginatedPassers.length }} items
+                                    &bull; Showing {{ paginatedPassers.length }} items
                                 </div>
                             </div>
                         </div>
@@ -231,7 +230,7 @@
                                              <span v-if="passer.pupcet_total_score !== null && passer.pupcet_total_score !== undefined">
                                                  {{ Number(passer.pupcet_total_score).toFixed(2) }}
                                              </span>
-                                             <span v-else class="text-gray-400 dark:text-gray-500">â€”</span>
+                                             <span v-else class="text-gray-400 dark:text-gray-500">-</span>
                                          </td>
                                          <td class="px-3 py-3">
                                              <div class="flex flex-wrap gap-1">
