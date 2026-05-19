@@ -484,12 +484,6 @@ const handleTermsCancel = () => {
                                             <option value="GAS">
                                                 GAS (General Academic Strand)
                                             </option>
-                                            <option value="SPORTS">
-                                                Sports Track
-                                            </option>
-                                            <option value="ARTS">
-                                                Arts & Design Track
-                                            </option>
                                         </select>
                                     </div>
 
