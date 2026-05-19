@@ -959,7 +959,7 @@ const reviewData = computed(() => ({
     // G11 English
     g11_oral_communication: form.g11_oral_communication,
     g11_21st_century_lit: form.g11_21st_century_lit,
-    g11_academic_professional: form.g11_academic_professional,
+    g11_reading_writing: form.g11_reading_writing,
     // G12 Science
     g12_earth_life_science: form.g12_earth_life_science,
     g12_physical_science: form.g12_physical_science,
@@ -991,7 +991,7 @@ const reviewSections = computed(() => [
         items: [
             { label: 'Oral Communication', value: reviewData.value.g11_oral_communication },
             { label: '21st Century Literature', value: reviewData.value.g11_21st_century_lit },
-            { label: 'English for Academic Purposes', value: reviewData.value.g11_academic_professional },
+            { label: 'Reading and Writing Skills', value: reviewData.value.g11_reading_writing },
         ],
     },
     {

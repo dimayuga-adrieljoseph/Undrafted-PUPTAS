@@ -424,7 +424,7 @@ class GradesController extends Controller
             // Individual G11 English grades
             'g11_oral_communication' => 'required|numeric|min:0|max:100',
             'g11_21st_century_lit' => 'required|numeric|min:0|max:100',
-            'g11_academic_professional' => 'required|numeric|min:0|max:100',
+            'g11_reading_writing' => 'required|numeric|min:0|max:100',
             // Individual G12 Science grades
             'g12_earth_life_science' => 'required|numeric|min:0|max:100',
             'g12_physical_science' => 'required|numeric|min:0|max:100',
@@ -452,7 +452,7 @@ class GradesController extends Controller
                 // Individual G11 English grades
                 'g11_oral_communication' => $validated['g11_oral_communication'],
                 'g11_21st_century_lit' => $validated['g11_21st_century_lit'],
-                'g11_academic_professional' => $validated['g11_academic_professional'],
+                'g11_reading_writing' => $validated['g11_reading_writing'],
                 // Individual G12 Science grades
                 'g12_earth_life_science' => $validated['g12_earth_life_science'],
                 'g12_physical_science' => $validated['g12_physical_science'],
