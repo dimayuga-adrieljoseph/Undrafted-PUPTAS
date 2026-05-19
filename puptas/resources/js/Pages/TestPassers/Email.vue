@@ -1184,6 +1184,9 @@ const { start, finish } = useGlobalLoading();
 
 const props = defineProps({
     groupedPassers: Object,
+    passers: Object,
+    filterOptions: Object,
+    filters: Object,
     registrationUrl: String,
 });
 
@@ -1323,13 +1326,25 @@ const formattedWaitlistedCutoffTemplatePreview = computed(() => {
 const flatPassers = ref([]);
 
 watch(
-    () => props.groupedPassers,
-    (newVal) => {
+    () => [props.groupedPassers, props.passers],
+    ([groupedVal, paginatedVal]) => {
         const result = [];
-        if (newVal) {
-            for (const schoolYear in newVal) {
-                for (const batchNumber in newVal[schoolYear]) {
-                    newVal[schoolYear][batchNumber].forEach((passer) => {
+
+        // New paginated format: passers is a Laravel LengthAwarePaginator object
+        if (paginatedVal && paginatedVal.data) {
+            paginatedVal.data.forEach((passer) => {
+                result.push({
+                    ...passer,
+                    schoolYear: passer.school_year,
+                    batchNumber: passer.batch_number,
+                });
+            });
+        }
+        // Legacy grouped format: groupedPassers is { school_year: { batch_number: [...] } }
+        else if (groupedVal) {
+            for (const schoolYear in groupedVal) {
+                for (const batchNumber in groupedVal[schoolYear]) {
+                    groupedVal[schoolYear][batchNumber].forEach((passer) => {
                         result.push({
                             ...passer,
                             schoolYear,
@@ -1339,6 +1354,7 @@ watch(
                 }
             }
         }
+
         flatPassers.value = result;
     },
     { immediate: true }
@@ -1346,9 +1362,9 @@ watch(
 
 const searchTerm = ref("");
 const debouncedSearchTerm = ref("");
-const filterSchoolYear = ref("");
-const filterBatchNumber = ref("");
-const filterPasserStatus = ref([]);
+const filterSchoolYear = ref(props.filters?.school_year || "");
+const filterBatchNumber = ref(props.filters?.batch_number || "");
+const filterPasserStatus = ref(props.filters?.status ? [props.filters.status] : []);
 const showStatusDropdown = ref(false);
 const sortKey = ref("pupcet_total_score");
 const sortOrder = ref("desc");
@@ -1365,6 +1381,11 @@ watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, sortKey, sortOrd
 }, { deep: true });
 
 const schoolYears = computed(() => {
+    // Use server-provided filter options if available
+    if (props.filterOptions && props.filterOptions.schoolYears && props.filterOptions.schoolYears.length > 0) {
+        return props.filterOptions.schoolYears;
+    }
+    // Fallback to client-side derivation
     const years = new Set(flatPassers.value.map((p) => p.schoolYear));
     return Array.from(years).sort();
 });
@@ -1380,6 +1401,11 @@ const academicYearOptions = computed(() => {
 });
 
 const batchNumbers = computed(() => {
+    // Use server-provided filter options if available
+    if (props.filterOptions && props.filterOptions.batchNumbers && props.filterOptions.batchNumbers.length > 0) {
+        return props.filterOptions.batchNumbers;
+    }
+    // Fallback to client-side derivation
     const batches = new Set(
         flatPassers.value
             .map((p) => p.batchNumber)
