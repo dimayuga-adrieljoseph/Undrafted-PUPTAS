@@ -47,7 +47,7 @@ class ConfirmedApplicantsController extends Controller
         $applicants = ApplicantProfile::with([
             'currentApplication.program:id,code,name',
             'grades',
-            'testPasser',
+            'testPasser.passerStatus',
         ])
             ->whereHas('currentApplication.processes', function ($q) {
                 $q->where('stage', 'evaluator')
@@ -85,6 +85,8 @@ class ConfirmedApplicantsController extends Controller
                     'test_passer_id'  => $testPasser?->test_passer_id,
                     'reference_number' => $testPasser?->reference_number,
                     'batch_number' => $testPasser?->batch_number,
+                    'passer_status_id' => $testPasser?->passer_status_id,
+                    'passer_status_name' => $testPasser?->passerStatus?->status,
                     'sar_sent'     => $testPasser
                         ? SarGeneration::where('test_passer_id', $testPasser->test_passer_id)
                         ->where('email_sent_successfully', true)

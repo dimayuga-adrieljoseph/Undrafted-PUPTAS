@@ -88,7 +88,9 @@ const filtered = computed(() => {
     if (filterBatch.value)
         list = list.filter((a) => a.batch_number === filterBatch.value);
     if (filterPasserStatus.value)
-        list = list.filter((a) => a.passer_status_name === filterPasserStatus.value);
+        list = list.filter(
+            (a) => a.passer_status_name === filterPasserStatus.value,
+        );
     if (filterSarStatus.value === "sent") list = list.filter((a) => a.sar_sent);
     if (filterSarStatus.value === "pending")
         list = list.filter((a) => !a.sar_sent);
@@ -119,8 +121,10 @@ const toggle = (id) => {
 
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
-    if (s === "qualified") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "waitlisted") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "qualified")
+        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "waitlisted")
+        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400";
 };
 
@@ -128,9 +132,18 @@ const getStatusClass = (status) => {
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-watch([searchQuery, filterProgram, filterBatch, filterPasserStatus, filterSarStatus], () => {
-    currentPage.value = 1;
-});
+watch(
+    [
+        searchQuery,
+        filterProgram,
+        filterBatch,
+        filterPasserStatus,
+        filterSarStatus,
+    ],
+    () => {
+        currentPage.value = 1;
+    },
+);
 
 const totalPages = computed(
     () => Math.ceil(filtered.value.length / itemsPerPage) || 1,
@@ -498,7 +511,11 @@ onMounted(() => {
                             class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Statuses</option>
-                            <option v-for="s in passerStatuses" :key="s" :value="s">
+                            <option
+                                v-for="s in passerStatuses"
+                                :key="s"
+                                :value="s"
+                            >
                                 {{ s }}
                             </option>
                         </select>
@@ -725,7 +742,11 @@ onMounted(() => {
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span
-                                            :class="getStatusClass(a.passer_status_name)"
+                                            :class="
+                                                getStatusClass(
+                                                    a.passer_status_name,
+                                                )
+                                            "
                                             class="px-2.5 py-1 rounded-full text-xs font-medium capitalize"
                                         >
                                             {{ a.passer_status_name }}
