@@ -9,7 +9,7 @@
     @media (max-width: 480px) {
         .woot-widget-bubble,
         .woot--bubble-holder {
-            bottom: 100px !important;
+            bottom: 140px !important;
         }
     }
 </style>
