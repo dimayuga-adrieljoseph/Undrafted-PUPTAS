@@ -407,6 +407,9 @@ const sarTotalResults = ref(0);
 const sarItemsPerPage = 10;
 
 const loadSarHistory = async (page = 1) => {
+    if (typeof page !== "number") {
+        page = 1;
+    }
     loadingSarHistory.value = true;
     sarCurrentPage.value = page;
     try {
@@ -1211,7 +1214,7 @@ onMounted(() => {
                             SAR History
                         </h2>
                         <button
-                            @click="loadSarHistory"
+                            @click="loadSarHistory(sarCurrentPage)"
                             class="text-gray-500 hover:text-[#9E122C] transition dark:text-gray-400 dark:hover:text-red-400"
                             title="Refresh History"
                         >
