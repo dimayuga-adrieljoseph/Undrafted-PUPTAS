@@ -138,10 +138,9 @@
         </div>
         
         <div class="message">
-            <p>If you have any questions or need assistance, please contact the Admission Office at:</p>
+            <p>If you have any questions or need assistance, please contact the Admission and Registration Office at:</p>
             <p style="margin-left: 20px;">
-                📧 Email: admission@pup.edu.ph<br>
-                📞 Phone: (02) 8123-4567
+                📧 Email: <a href="mailto:taguig@pup.edu.ph">taguig@pup.edu.ph</a> / <a href="mailto:puptadmission@gmail.com">puptadmission@gmail.com</a>
             </p>
         </div>
         
