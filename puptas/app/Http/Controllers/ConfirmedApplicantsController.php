@@ -136,53 +136,29 @@ class ConfirmedApplicantsController extends Controller
 
         // Automate schedule based on Score & Batch, and restrict per batch
         $selectedBatch = null;
-        $batchTime     = null;
-        $canSendSar    = true;
 
         foreach ($applicants as $app) {
-            $score = $app->testPasser->pupcet_total_score ?? 0;
+            $passer = $app->testPasser;
+            $batch_number = $passer->batch_number ?? '?';
+            $status_id = $passer->passer_status_id ?? 3;
 
-            if ($score >= 85) {
-                $batchType = 'Qualifiers Batch 1';
-                $time      = '08:00'; // 8:00 AM
-                $canSend   = true;
-            } elseif ($score >= 79) {
-                $batchType = 'Qualifiers Batch 2';
-                $time      = '13:00'; // 1:00 PM
-                $canSend   = true;
-            } elseif ($score >= 75) {
-                $batchType = 'Waitlisted';
-                $time      = null;
-                $canSend   = false;
-            } elseif ($score >= 55) {
-                $batchType = 'Waitlisted'; // 74-55
-                $time      = null;
-                $canSend   = false;
-            } else {
-                $batchType = 'Non-Qualifiers';
-                $time      = null;
-                $canSend   = false;
+            // Restrict SAR to Qualifiers only (status 1)
+            if ($status_id != 1) {
+                return response()->json([
+                    'message' => "Cannot send SAR Forms to Non-Qualifiers or Waitlisted applicants.",
+                ], 422);
             }
 
+            // Ensure all selected applicants belong to the exact same batch 
+            // (e.g. "Batch 1" cannot be mixed with "Batch 2")
             if ($selectedBatch === null) {
-                $selectedBatch = $batchType;
-                $batchTime     = $time;
-                $canSendSar    = $canSend;
-            } elseif ($selectedBatch !== $batchType) {
+                $selectedBatch = $batch_number;
+            } elseif ($selectedBatch !== $batch_number) {
                 return response()->json([
-                    'message' => 'Restriction: You must select applicants from the same batch. Your selection contains both ' . $selectedBatch . ' and ' . $batchType . '.',
+                    'message' => 'Restriction: You must select applicants from the same batch. Your selection contains both ' . $selectedBatch . ' and ' . $batch_number . '.',
                 ], 422);
             }
         }
-
-        if (!$canSendSar) {
-            return response()->json([
-                'message' => "Cannot compute interview schedule or email SAR Forms to {$selectedBatch} applicants.",
-            ], 422);
-        }
-
-        // Override the time from frontend with the automated batch time
-        $enrollmentTime = $batchTime;
 
         $sarService   = app(SarFormService::class);
         $successCount = 0;
@@ -201,6 +177,20 @@ class ConfirmedApplicantsController extends Controller
                     'error'     => 'No test passer record linked. Cannot generate SAR without reference number.',
                 ];
                 continue;
+            }
+
+            // Automate interview time explicitly based on the updated cutoff rules
+            $score = $testPasser->pupcet_total_score ?? 0;
+            if ($score >= 85) {
+                $enrollmentTime = '08:00'; // 8:00 AM
+            } elseif ($score >= 79) {
+                $enrollmentTime = '10:00'; // 10:00 AM
+            } elseif ($score >= 77) {
+                $enrollmentTime = '13:00'; // 1:00 PM
+            } elseif ($score >= 75) {
+                $enrollmentTime = '14:00'; // 2:00 PM
+            } else {
+                $enrollmentTime = 'TBD';
             }
 
             try {
