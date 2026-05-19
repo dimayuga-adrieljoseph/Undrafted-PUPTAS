@@ -203,7 +203,7 @@ function reset() {
                                     v-model="referenceNumber"
                                     type="text"
                                     autocomplete="off"
-                                    placeholder="e.g. 2026-000123"
+                                    placeholder="e.g. 2026-XXX-XXX"
                                     maxlength="55"
                                     @keypress="(e) => { if (!/[\d\-]/.test(e.key)) e.preventDefault() }"
                                     @input="referenceNumber = referenceNumber.replace(/[^\d\-]/g, '')"
