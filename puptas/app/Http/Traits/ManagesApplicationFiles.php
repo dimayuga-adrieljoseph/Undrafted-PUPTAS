@@ -29,10 +29,11 @@ trait ManagesApplicationFiles
             // Load user with ONLY essential data (no files relationship)
             $user = User::with([
                 'currentApplication' => function ($query) {
-                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id');
+                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id');
                 },
                 'currentApplication.program:id,code,name,slots',
                 'currentApplication.secondChoice:id,code,name,slots',
+                'currentApplication.thirdChoice:id,code,name,slots',
                 'currentApplication.processes' => function ($query) {
                     $query->select('id', 'application_id', 'stage', 'status', 'action', 'created_at', 'performed_by')
                         ->orderBy('created_at', 'desc')
@@ -93,6 +94,7 @@ trait ManagesApplicationFiles
                     'created_at' => $user->currentApplication->created_at,
                     'program' => $user->currentApplication->program,
                     'second_choice' => $user->currentApplication->secondChoice,
+                    'third_choice' => $user->currentApplication->thirdChoice,
                     'processes' => $user->currentApplication->processes,
                 ] : null,
             ];

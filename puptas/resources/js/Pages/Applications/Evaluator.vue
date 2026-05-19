@@ -668,6 +668,8 @@ const selectUser = async (user) => {
                 ...response.data.user.application,
                 processes: response.data.user.application?.processes || [],
                 program: response.data.user.application?.program || null,
+                second_choice: response.data.user.application?.second_choice || null,
+                third_choice: response.data.user.application?.third_choice || null,
             },
             grades: response.data.user.grades || null,
         };
