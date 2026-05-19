@@ -1666,61 +1666,6 @@ async function saveNewPasser() {
     }
 }
 
-// SAR History Management
-const sarHistory = ref([]);
-const loadingSarHistory = ref(false);
-const showSarPreview = ref(false);
-const sarPreviewUrl = ref('');
-
-const loadSarHistory = async () => {
-    loadingSarHistory.value = true;
-    try {
-        const params = {};
-        if (filterSchoolYear.value) params.school_year = filterSchoolYear.value;
-        if (filterBatchNumber.value) params.batch_number = filterBatchNumber.value;
-        if (debouncedSearchTerm.value) params.search = debouncedSearchTerm.value;
-
-        const response = await axios.get('/admin/sar-generations', { params });
-        sarHistory.value = response.data.data || [];
-    } catch (error) {
-        console.error('Failed to load SAR history:', error);
-        // Don't show error on initial load if no data yet
-        if (error.response && error.response.status !== 404) {
-            show('Failed to load SAR history', 'error');
-        }
-    } finally {
-        loadingSarHistory.value = false;
-    }
-};
-
-const previewSar = (id) => {
-    sarPreviewUrl.value = `/admin/sar/${id}/preview`;
-    showSarPreview.value = true;
-};
-
-const closeSarPreview = () => {
-    showSarPreview.value = false;
-    sarPreviewUrl.value = '';
-};
-
-const downloadSar = (id) => {
-    window.open(`/admin/sar/${id}/download`, '_blank');
-};
-
-const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-};
-
-
-
 // Waitlisted Email Template Preview
 const showWaitlistedEmailPreview = ref(false);
 const waitlistedEmailPreviewHtml = ref('');
@@ -1754,18 +1699,6 @@ const closeWaitlistedEmailPreview = () => {
     showWaitlistedEmailPreview.value = false;
     waitlistedEmailPreviewHtml.value = '';
 };
-
-// Watch filters to reload SAR history
-watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, debouncedSearchTerm], () => {
-    if (sarHistory.value.length > 0 || filterSchoolYear.value || filterBatchNumber.value || filterPasserStatus.value || debouncedSearchTerm.value) {
-        loadSarHistory();
-    }
-});
-
-// Load SAR history on mount
-onMounted(() => {
-    loadSarHistory();
-});
 
 // ── Bulk Enroll ───────────────────────────────────────────────────────────────
 const bulkEnrollRunning    = ref(false);
