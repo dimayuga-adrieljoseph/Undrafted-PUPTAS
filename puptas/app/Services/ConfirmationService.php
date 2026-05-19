@@ -109,10 +109,11 @@ class ConfirmationService
             ->where('status', 'completed')
             ->exists();
 
-        // Check if interviewer stage is completed
+        // Check if interviewer stage is completed (with a passing action, not rejected)
         $interviewerCompleted = $application->processes()
             ->where('stage', 'interviewer')
             ->where('status', 'completed')
+            ->whereIn('action', ['passed', 'transferred'])
             ->exists();
 
         // Check if medical stage is completed
