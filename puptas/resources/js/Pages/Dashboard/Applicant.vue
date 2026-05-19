@@ -838,6 +838,7 @@ onMounted(() => {
                       <div class="flex-1">
                         <h5 class="text-lg font-bold text-gray-900 dark:text-white">{{ program.code }}</h5>
                         <p class="text-sm text-gray-700 dark:text-gray-300">{{ program.name }}</p>
+                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1"><span class="font-semibold">Strands:</span> {{ program.strand_names || 'Open to All' }}</p>
                       </div>
                       <svg class="w-8 h-8 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -896,6 +897,14 @@ onMounted(() => {
                       <div class="flex-1">
                         <h5 class="text-lg font-bold text-gray-900 dark:text-white">{{ program.code }}</h5>
                         <p class="text-sm text-gray-700 dark:text-gray-300">{{ program.name }}</p>
+                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1"><span class="font-semibold">Strands:</span> {{ program.strand_names || 'Open to All' }}</p>
+                        
+                        <div class="mt-2 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded inline-block">
+                          <span v-if="!program.meets_strand && !program.meets_grades">Reason: Strand mismatch & Grades too low</span>
+                          <span v-else-if="!program.meets_strand">Reason: Strand mismatch</span>
+                          <span v-else-if="!program.meets_grades">Reason: Did not meet grade requirements</span>
+                          <span v-else>Reason: Not qualified</span>
+                        </div>
                       </div>
                       <svg class="w-8 h-8 text-red-600 dark:text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
