@@ -367,6 +367,28 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/api-clients/{id}/regenerate', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'regenerate'])->name('api-clients.regenerate');
 });
 
+// Temporary debug route for SAR PDF generation
+Route::get('/debug-sar-error', function () {
+    try {
+        $sarService = app(\App\Services\SarFormService::class);
+        $result = $sarService->generateSarPdf([
+            'reference_number' => 'DEBUG-TEST-001',
+            'full_name' => 'DOE, JOHN SMITH',
+            'graduation_year' => '2026',
+            'school_attended' => 'Test High School',
+            'shs_strand' => 'STEM',
+            'enrollment_date' => date('Y-m-d'),
+            'enrollment_time' => date('H:i'),
+        ]);
+        return response()->json($result);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 // Callback Routes - Public access for loading screen
 Route::get('/callback-loading', [CallbackController::class, 'index']);
 

@@ -33,7 +33,25 @@ class SarFormService
     
     public function __construct()
     {
-        $this->templatePath = storage_path('app/templates/SAR-FORM_TEMPLATE-2.pdf');
+        $filename = env('SAR_TEMPLATE_FILENAME', 'SAR-FORM_TEMPLATE-2.pdf');
+        
+        // Resolve the best available path for the template, prioritizing the docs/ folder which is immune to storage volume mounts.
+        $paths = [
+            base_path('docs/' . $filename),
+            storage_path('app/templates/' . $filename),
+            base_path('docs/SAR-FORM_TEMPLATE-2.pdf'),
+            storage_path('app/templates/SAR-FORM_TEMPLATE-2.pdf'),
+        ];
+
+        $resolvedPath = null;
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                $resolvedPath = $path;
+                break;
+            }
+        }
+
+        $this->templatePath = $resolvedPath ?? storage_path('app/templates/SAR-FORM_TEMPLATE-2.pdf');
         $this->fieldPositions = config('sar_fields', []);
     }
     
