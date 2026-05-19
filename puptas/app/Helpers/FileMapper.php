@@ -28,13 +28,6 @@ class FileMapper
         'file11' => 'file11_back',
         'file12Front' => 'file12_front',
         'file12' => 'file12_back',
-        'nof137a' => 'f137a',
-        'schoolId' => 'school_id',
-        'nonEnrollCert' => 'non_enroll_cert',
-        'psa' => 'psa',
-        'goodMoral' => 'good_moral',
-        'underOath' => 'under_oath',
-        'photo2x2' => 'photo_2x2',
     ];
 
     /**
@@ -51,13 +44,11 @@ class FileMapper
             'file10Front', 'file10',
             'file11Front', 'file11',
             'file12Front', 'file12',
-            'nof137a',
         ],
         'Alternative Learning System' => [
-            'psa',
-            'goodMoral',
-            'underOath',
-            'photo2x2',
+            'file10Front', 'file10',
+            'file11Front', 'file11',
+            'file12Front', 'file12',
         ],
     ];
 

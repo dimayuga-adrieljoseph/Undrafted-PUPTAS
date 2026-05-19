@@ -64,13 +64,6 @@ const formatKey = (key) => {
     file11: "Grade 11 Report Card (Back)",
     file12Front: "Grade 12 Report Card (Front)",
     file12: "Grade 12 Report Card (Back)",
-    nof137a: "No F137-A Forwarding Certification",
-    schoolId: "School ID",
-    nonEnrollCert: "Certificate of Non-Enrollment",
-    psa: "PSA Birth Certificate",
-    goodMoral: "Good Moral Certificate",
-    underOath: "Under Oath Document",
-    photo2x2: "2x2 Photo",
   };
 
   return labels[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
