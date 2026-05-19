@@ -105,7 +105,7 @@
                             <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
                                 <input type="checkbox" :checked="areAllSelected" @change="toggleSelectAll($event.target.checked)"
                                     class="h-4 w-4 rounded text-[#9E122C] border-gray-300 focus:ring-[#9E122C]" />
-                                Select All ({{ selectedPassers.length }})
+                                Select All ({{ selectedPassers.length }}/{{ totalFilteredCount }})
                             </label>
                             <button
                                 @click.prevent="openAddModal"
@@ -1534,16 +1534,13 @@ const paginatedPassers = computed(() => {
 });
 
 const selectedPassers = ref([]);
+const allFilteredSelected = ref(false);
+const totalFilteredCount = computed(() => props.passers?.total || 0);
 
-// Fix: Check if ALL filtered passers are selected (not just current page)
+// Check if all filtered passers are selected (uses the allFilteredSelected flag)
 const areAllSelected = computed(() => {
-    if (!filteredPassers.value.length) return false;
-    
-    // Get all IDs from filtered passers
-    const allFilteredIds = filteredPassers.value.map(p => p.test_passer_id);
-    
-    // Check if ALL filtered IDs are in selectedPassers
-    return allFilteredIds.every(id => selectedPassers.value.includes(id));
+    if (totalFilteredCount.value === 0) return false;
+    return allFilteredSelected.value;
 });
 
 const areAllSelectedOnCurrentPage = computed(() => {
@@ -1553,18 +1550,42 @@ const areAllSelectedOnCurrentPage = computed(() => {
     );
 });
 
-const toggleSelectAll = (isSelected) => {
+const toggleSelectAll = async (isSelected) => {
     if (isSelected) {
-        // Select ALL filtered passers (not just current page)
-        const allFilteredIds = filteredPassers.value.map(p => p.test_passer_id);
-        const newIds = allFilteredIds.filter(id => !selectedPassers.value.includes(id));
-        selectedPassers.value.push(...newIds);
+        // Fetch ALL IDs matching current filters from the server
+        try {
+            const params = {};
+            if (filterSchoolYear.value) params.school_year = filterSchoolYear.value;
+            if (filterBatchNumber.value) params.batch_number = filterBatchNumber.value;
+            if (filterPasserStatus.value.length === 1) params.status = filterPasserStatus.value[0];
+
+            const response = await axios.get('/test-passers/select-all-ids', { params });
+            const allIds = response.data.ids;
+
+            // Merge all IDs into selectedPassers (avoid duplicates)
+            const currentSet = new Set(selectedPassers.value);
+            allIds.forEach(id => currentSet.add(id));
+            selectedPassers.value = Array.from(currentSet);
+            allFilteredSelected.value = true;
+        } catch (error) {
+            console.error('Failed to fetch all IDs:', error);
+            // Fallback: select only current page
+            const pageIds = paginatedPassers.value.map(p => p.test_passer_id);
+            const currentSet = new Set(selectedPassers.value);
+            pageIds.forEach(id => currentSet.add(id));
+            selectedPassers.value = Array.from(currentSet);
+        }
     } else {
-        // Deselect ALL filtered passers
-        const filteredIdsSet = new Set(filteredPassers.value.map(p => p.test_passer_id));
-        selectedPassers.value = selectedPassers.value.filter(id => !filteredIdsSet.has(id));
+        // Deselect all — clear everything
+        selectedPassers.value = [];
+        allFilteredSelected.value = false;
     }
 };
+
+// Reset allFilteredSelected when filters change
+watch([filterSchoolYear, filterBatchNumber, filterPasserStatus], () => {
+    allFilteredSelected.value = false;
+}, { deep: true });
 
 const sendEmails = async () => {
     let messageHtml;

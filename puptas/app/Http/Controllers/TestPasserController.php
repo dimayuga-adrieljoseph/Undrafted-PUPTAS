@@ -147,6 +147,35 @@ class TestPasserController extends Controller
         return $query;
     }
 
+    /**
+     * Return all test_passer_id values matching the current filters.
+     * Used by the frontend "Select All" feature to select across all pages.
+     */
+    public function selectAllIds(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = TestPasser::query();
+
+        if ($request->filled('school_year')) {
+            $query->where('school_year', $request->input('school_year'));
+        }
+
+        if ($request->filled('batch_number')) {
+            $query->where('batch_number', $request->input('batch_number'));
+        }
+
+        if ($request->filled('strand')) {
+            $query->where('strand', $request->input('strand'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('passer_status_id', $request->input('status'));
+        }
+
+        $ids = $query->pluck('test_passer_id')->all();
+
+        return response()->json(['ids' => $ids]);
+    }
+
     public function sendEmails(Request $request)
     {
         $passerIds = $request->input('passer_ids');

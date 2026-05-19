@@ -216,6 +216,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
 // Auth::login() uses the 'web' guard, not the Sanctum stateless guard.
 Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
     Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
+    Route::get('/test-passers/select-all-ids', [TestPasserController::class, 'selectAllIds'])->name('test-passers.select-all-ids');
     Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
 
     Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
