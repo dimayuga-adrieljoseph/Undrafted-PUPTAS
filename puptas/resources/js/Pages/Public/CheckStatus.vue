@@ -660,7 +660,10 @@ function reset() {
 
                 <!-- Footer note -->
                 <p class="mt-4 text-center text-xs text-gray-500">
-                    PUP-T Admission System &mdash; For inquiries, contact the Registrar's Office.
+                    PUP-Taguig Admission System &mdash; For inquiries, please contact the Admission and Registration Office at
+                    <a href="mailto:taguig@pup.edu.ph" class="underline hover:text-gray-700">taguig@pup.edu.ph</a>
+                    /
+                    <a href="mailto:puptadmission@gmail.com" class="underline hover:text-gray-700">puptadmission@gmail.com</a>
                 </p>
 
             </div>
