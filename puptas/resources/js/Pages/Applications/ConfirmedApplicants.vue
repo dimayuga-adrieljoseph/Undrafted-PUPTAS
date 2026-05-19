@@ -13,6 +13,7 @@ const fetchError = ref(null);
 const searchQuery = ref("");
 const filterProgram = ref("");
 const filterBatch = ref("");
+const filterPasserStatus = ref("");
 const filterSarStatus = ref("");
 const selectedIds = ref([]);
 
@@ -65,6 +66,13 @@ const batches = computed(() => {
     return Array.from(batchSet).sort();
 });
 
+const passerStatuses = computed(() => {
+    const statusSet = new Set(
+        applicants.value.map((a) => a.passer_status_name).filter(Boolean),
+    );
+    return Array.from(statusSet).sort();
+});
+
 const filtered = computed(() => {
     let list = applicants.value;
     const q = searchQuery.value.trim().toLowerCase();
@@ -79,6 +87,8 @@ const filtered = computed(() => {
         list = list.filter((a) => a.program?.code === filterProgram.value);
     if (filterBatch.value)
         list = list.filter((a) => a.batch_number === filterBatch.value);
+    if (filterPasserStatus.value)
+        list = list.filter((a) => a.passer_status_name === filterPasserStatus.value);
     if (filterSarStatus.value === "sent") list = list.filter((a) => a.sar_sent);
     if (filterSarStatus.value === "pending")
         list = list.filter((a) => !a.sar_sent);
@@ -107,11 +117,18 @@ const toggle = (id) => {
     else selectedIds.value.splice(idx, 1);
 };
 
+const getStatusClass = (status) => {
+    const s = (status || "").toLowerCase();
+    if (s === "qualified") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "waitlisted") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400";
+};
+
 // ── Pagination ─────────────────────────────────────────────────────────────────
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-watch([searchQuery, filterProgram, filterBatch, filterSarStatus], () => {
+watch([searchQuery, filterProgram, filterBatch, filterPasserStatus, filterSarStatus], () => {
     currentPage.value = 1;
 });
 
@@ -477,10 +494,19 @@ onMounted(() => {
                             </option>
                         </select>
                         <select
+                            v-model="filterPasserStatus"
+                            class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                        >
+                            <option value="">All Statuses</option>
+                            <option v-for="s in passerStatuses" :key="s" :value="s">
+                                {{ s }}
+                            </option>
+                        </select>
+                        <select
                             v-model="filterSarStatus"
                             class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
-                            <option value="">All SAR Statuses</option>
+                            <option value="">All SAR STATUS</option>
                             <option value="sent">SAR Sent</option>
                             <option value="pending">SAR Pending</option>
                         </select>
@@ -597,7 +623,12 @@ onMounted(() => {
                                     <th
                                         class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
-                                        Status
+                                        Passer Status
+                                    </th>
+                                    <th
+                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                    >
+                                        SAR STATUS
                                     </th>
                                 </tr>
                             </thead>
@@ -692,6 +723,14 @@ onMounted(() => {
                                             {{ a.program?.code || "—" }}
                                         </span>
                                     </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span
+                                            :class="getStatusClass(a.passer_status_name)"
+                                            class="px-2.5 py-1 rounded-full text-xs font-medium capitalize"
+                                        >
+                                            {{ a.passer_status_name }}
+                                        </span>
+                                    </td>
                                     <td
                                         class="px-6 py-4 whitespace-nowrap text-sm font-medium"
                                     >
@@ -699,7 +738,7 @@ onMounted(() => {
                                             v-if="a.sar_sent"
                                             class="px-3 py-1 bg-green-100 text-green-800 rounded-full dark:bg-green-900 dark:text-green-200 text-xs"
                                         >
-                                            SAR Sent
+                                            Sent
                                         </span>
                                         <span
                                             v-else
