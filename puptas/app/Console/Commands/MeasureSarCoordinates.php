@@ -54,7 +54,7 @@ class MeasureSarCoordinates extends Command
         // Process each page
         $pageCount = $pdf->setSourceFile($templatePath);
         
-        for ($pageNo = 1; $pageNo <= min($pageCount, 8); $pageNo++) {
+        for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
             $pdf->AddPage();
             $templateId = $pdf->importPage($pageNo);
             $pdf->useTemplate($templateId, 0, 0);

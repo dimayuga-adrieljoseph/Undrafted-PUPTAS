@@ -59,6 +59,13 @@ return [
             'token' => '<<TIME>>',
         ],
 
+        // Printed name above "Signature over Printed Name of Applicant" — top copy
+        'printed_name_signature' => [
+            'x' => 13, 'y' => 115, 'w' => 80, 'h' => 5,
+            'font' => 'helvetica', 'font_size' => 9,
+            'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink',
+        ],
+
         // --- Duplicate copy (lower half of page 1) ---
         'reference_number_duplicate' => [
             'x' => 132, 'y' => 142, 'w' => 60, 'h' => 6,
@@ -92,6 +99,13 @@ return [
             'x' => 152, 'y' => 250, 'w' => 25, 'h' => 6,
             'font' => 'helvetica', 'font_size' => 10,
             'align' => 'L', 'uppercase' => false, 'fit_mode' => 'shrink',
+        ],
+
+        // Printed name above "Signature over Printed Name of Applicant" — bottom copy
+        'printed_name_signature_duplicate' => [
+            'x' => 13, 'y' => 258, 'w' => 80, 'h' => 5,
+            'font' => 'helvetica', 'font_size' => 9,
+            'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink',
         ],
     ],
 
@@ -170,8 +184,10 @@ return [
             'x' => 115, 'y' => 160, 'w' => 58, 'h' => 7,
             'font' => 'helvetica', 'font_size' => 8,
             'align' => 'R', 'uppercase' => true, 'fit_mode' => 'shrink',
-            'blank' => ['x' => 120, 'y' => 160, 'w' => 65, 'h' => 5.8],
-            'blank' => ['x' => 30, 'y' => 240, 'w' => 150.8, 'h' => 20],
+            'blank'       => ['x' => 113, 'y' => 158, 'w' => 75, 'h' => 8],
+            'blank2'      => ['x' => 30,  'y' => 240, 'w' => 150.8, 'h' => 20],
+            'blank3'      => ['x' => 117,  'y' => 167, 'w' => 150.8, 'h' => 20],
+            'redraw_line' => ['x1' => 117, 'y1' => 166, 'x2' => 180, 'y2' => 166],
         ],
         'previous_school' => [
             'x' => 120, 'y' => 58, 'w' => 100, 'h' => 5,
@@ -188,6 +204,7 @@ return [
     // -------------------------------------------------------------------------
     // Page 8: Admission Criteria page (QR code + clickable link)
     // Covers the original static link text and replaces it with a clickable one
+    // Template updated: 2026-SAR-FORM 1_TEMPLATE(Latest).pdf (AY 2026-2027)
     // -------------------------------------------------------------------------
     8 => [
         'criteria_link' => [
@@ -197,6 +214,44 @@ return [
             'link_url' => 'https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view',
             // Also erase the small original text below
             'blank' => ['x' => 25, 'y' => 170, 'w' => 165, 'h' => 15],
+        ],
+    ],
+
+    // -------------------------------------------------------------------------
+    // Page 9: Consent Form for Access and Use of Student Records
+    // -------------------------------------------------------------------------
+    9 => [
+        // "I, ___________" — the blank after "I," on the first line of the consent body
+        'full_name_consent' => [
+            'x' => 40, 'y' => 68, 'w' => 120, 'h' => 5,
+            'font' => 'helvetica', 'font_size' => 10,
+            'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink',
+        ],
+
+        // Printed name above "Student/Applicant's Signature over Printed Name"
+        'printed_name_consent' => [
+            'x' => 2, 'y' => 220, 'w' => 120, 'h' => 5,
+            'font' => 'helvetica', 'font_size' => 9,
+            'align' => 'C', 'uppercase' => true, 'fit_mode' => 'shrink',
+        ],
+
+        // "PUP iApply Reference Number: ___"
+        'reference_number_consent' => [
+            'x' => 82, 'y' => 273, 'w' => 80, 'h' => 5,
+            'font' => 'helvetica', 'font_size' => 9,
+            'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink',
+        ],
+    ],
+
+    // -------------------------------------------------------------------------
+    // Page 10: Declaration of Medical Information and Data Subject Consent Form
+    // -------------------------------------------------------------------------
+    10 => [
+        // Printed name above "Student's Signature Over Printed Name/ Date"
+        'printed_name_medical' => [
+            'x' => 85, 'y' => 152, 'w' => 100, 'h' => 5,
+            'font' => 'helvetica', 'font_size' => 9,
+            'align' => 'C', 'uppercase' => true, 'fit_mode' => 'shrink',
         ],
     ],
 
