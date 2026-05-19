@@ -81,11 +81,41 @@ class TestPasserController extends Controller
                 // Replace placeholders in template for personalization
                 $confirmationUrl = 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad';
                 $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
-                $personalizedMessage = str_replace(
-                    ['{{firstname}} {{surname}}', '{{firstname}}', '{{surname}}', '{{reference_no}}', '{{confirmationUrl}}'],
-                    [$redName, $passer->first_name, $passer->surname, $passer->reference_number, $confirmationUrl],
-                    $messageTemplate
-                );
+                // Support highly robust and case-insensitive replacements for all name/ref variations
+                $searchTags = [
+                    '{{firstname}} {{surname}}',
+                    '{{first_name}} {{surname}}',
+                    '{{firstname}} {{lastname}}',
+                    '{{first_name}} {{lastname}}',
+                    '{{first_name}} {{last_name}}',
+                    '{{firstname}}',
+                    '{{first_name}}',
+                    '{{surname}}',
+                    '{{lastname}}',
+                    '{{last_name}}',
+                    '{{reference_no}}',
+                    '{{reference_number}}',
+                    '{{ref_no}}',
+                    '{{confirmationUrl}}'
+                ];
+                $replaceValues = [
+                    $redName,
+                    $redName,
+                    $redName,
+                    $redName,
+                    $redName,
+                    $passer->first_name,
+                    $passer->first_name,
+                    $passer->surname,
+                    $passer->surname,
+                    $passer->surname,
+                    $passer->reference_number,
+                    $passer->reference_number,
+                    $passer->reference_number,
+                    $confirmationUrl
+                ];
+
+                $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
 
                 SendWaitlistedEmail::dispatch($passer, $personalizedMessage);
             }
@@ -103,11 +133,33 @@ class TestPasserController extends Controller
         foreach ($passers as $passer) {
             // Replace placeholders in template for personalization
             $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
-            $personalizedMessage = str_replace(
-                ['{{firstname}} {{surname}}', '{{firstname}}', '{{surname}}'],
-                [$redName, $passer->first_name, $passer->surname],
-                $messageTemplate
-            );
+            // Support highly robust and case-insensitive replacements for all name/ref variations
+            $searchTags = [
+                '{{firstname}} {{surname}}',
+                '{{first_name}} {{surname}}',
+                '{{firstname}} {{lastname}}',
+                '{{first_name}} {{lastname}}',
+                '{{first_name}} {{last_name}}',
+                '{{firstname}}',
+                '{{first_name}}',
+                '{{surname}}',
+                '{{lastname}}',
+                '{{last_name}}'
+            ];
+            $replaceValues = [
+                $redName,
+                $redName,
+                $redName,
+                $redName,
+                $redName,
+                $passer->first_name,
+                $passer->first_name,
+                $passer->surname,
+                $passer->surname,
+                $passer->surname
+            ];
+
+            $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
 
             SendPasserEmail::dispatch($passer, $personalizedMessage);
         }
@@ -278,11 +330,21 @@ class TestPasserController extends Controller
     // Helper function to replace placeholders
     private function replacePlaceholders($template, $passer)
     {
-        return str_replace(
-            ['{{firstname}}', '{{surname}}'],
-            [$passer->first_name, $passer->surname],
-            $template
-        );
+        $searchTags = [
+            '{{firstname}}',
+            '{{first_name}}',
+            '{{surname}}',
+            '{{lastname}}',
+            '{{last_name}}'
+        ];
+        $replaceValues = [
+            $passer->first_name,
+            $passer->first_name,
+            $passer->surname,
+            $passer->surname,
+            $passer->surname
+        ];
+        return str_ireplace($searchTags, $replaceValues, $template);
     }
 
     public function upload(Request $request)
@@ -806,11 +868,27 @@ class TestPasserController extends Controller
         $messageTemplate = $request->message_template ?? '';
 
         // Replace placeholders in template for preview
-        $personalizedMessage = str_replace(
-            ['{{firstname}}', '{{surname}}', '{{reference_no}}'],
-            [$passer->first_name, $passer->surname, $passer->reference_number],
-            $messageTemplate
-        );
+        $searchTags = [
+            '{{firstname}}',
+            '{{first_name}}',
+            '{{surname}}',
+            '{{lastname}}',
+            '{{last_name}}',
+            '{{reference_no}}',
+            '{{reference_number}}',
+            '{{ref_no}}'
+        ];
+        $replaceValues = [
+            $passer->first_name,
+            $passer->first_name,
+            $passer->surname,
+            $passer->surname,
+            $passer->surname,
+            $passer->reference_number,
+            $passer->reference_number,
+            $passer->reference_number
+        ];
+        $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
 
         // Return the email view directly
         return view('emails.waitlisted', [
