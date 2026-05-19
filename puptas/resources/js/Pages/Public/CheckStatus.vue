@@ -534,7 +534,10 @@ function reset() {
                                     </div>
 
                                     <p class="text-sm text-gray-700 leading-relaxed">
-                                        We regret to inform you that your score in the PUP College Entrance Test for Taguig Campus did not meet the qualifying threshold. We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
+                                        We regret to inform you that your score in the PUP College Entrance Test for Taguig Campus did not meet the qualifying threshold.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
                                     </p>
                                     <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
                                         PUP-Taguig Campus Admission and Registration Office
@@ -564,7 +567,7 @@ function reset() {
                                         Dear <strong class="text-[#800000]">{{ result.full_name }}</strong>,
                                     </p>
                                     <p class="text-sm text-gray-700 leading-relaxed">
-                                        Thank you for considering <strong>PUP-Taguig Campus</strong> for your higher education.
+                                        Thank you for considering PUP for your higher education.
                                     </p>
 
                                     <!-- Details box -->
@@ -584,10 +587,16 @@ function reset() {
                                     </div>
 
                                     <p class="text-sm text-gray-700 leading-relaxed">
-                                        We regret to inform you that your score in the PUP College Entrance Test did not meet the cut-off threshold for admission to PUP-Taguig Campus. The available slots for qualified and waitlisted applicants have been filled.
+                                        Based on evaluation, we regret to inform you that your score in the PUP College Entrance Test did not place you in the Top 500 requirement of the Campus.
                                     </p>
                                     <p class="text-sm text-gray-700 leading-relaxed">
-                                        We encourage you to explore other academic opportunities and wish you success in your future endeavors.
+                                        Nevertheless, you might still be notified (via email) of the possible remaining slots, based on your evaluated rank. Admission to these slots, however, shall be on a first-come, first-served basis, and subject to specific academic program admission requirements.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Since we cannot give you an assurance that a slot will be made available to you, we recommend you to still consider your admission options in other higher education institutions.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
                                     </p>
                                     <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
                                         PUP-Taguig Campus Admission and Registration Office
