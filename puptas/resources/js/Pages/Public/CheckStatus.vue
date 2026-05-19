@@ -545,7 +545,7 @@ function reset() {
                                 </div>
                             </div>
 
-                            <!-- 🟠 Waitlisted Below Cut Off (status 4) -->
+                            <!-- 🟠 Waitlisted (status 4) -->
                             <div
                                 v-else-if="result.waitlisted_below_cutoff === true"
                                 class="rounded-2xl overflow-hidden shadow-md border border-orange-300 bg-white"
@@ -582,7 +582,7 @@ function reset() {
                                         </div>
                                         <div class="flex items-center justify-between px-4 py-3">
                                             <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Status</span>
-                                            <span class="text-orange-700 font-semibold">Waitlisted Below Cut Off</span>
+                                            <span class="text-orange-700 font-semibold">Waitlisted</span>
                                         </div>
                                     </div>
 
