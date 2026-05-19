@@ -260,6 +260,17 @@ const send = async () => {
                 await loadSarHistory(1);
             }
             await fetchApplicants();
+
+            // Update the local state for successfully processed applicants
+            if (res.data.success_ids && res.data.success_ids.length > 0) {
+                const successIdsSet = new Set(res.data.success_ids);
+                applicants.value = applicants.value.map((a) => {
+                    if (successIdsSet.has(a.id)) {
+                        return { ...a, sar_sent: true };
+                    }
+                    return a;
+                });
+            }
         } else {
             const quill = document.querySelector(".ql-editor");
             const html = quill ? quill.innerHTML : emailTemplate.value;

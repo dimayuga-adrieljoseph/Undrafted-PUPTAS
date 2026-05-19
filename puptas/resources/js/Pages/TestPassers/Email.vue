@@ -1886,17 +1886,7 @@ const closeWaitlistedEmailPreview = () => {
     waitlistedEmailPreviewHtml.value = '';
 };
 
-// Watch filters to reload SAR history
-watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, debouncedSearchTerm], () => {
-    if (sarHistory.value.length > 0 || filterSchoolYear.value || filterBatchNumber.value || filterPasserStatus.value.length > 0 || debouncedSearchTerm.value) {
-        loadSarHistory();
-    }
-}, { deep: true });
 
-// Load SAR history on mount
-onMounted(() => {
-    loadSarHistory();
-});
 // â”€â”€ Bulk Enroll â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const bulkEnrollRunning    = ref(false);
 const showBulkEnrollResult = ref(false);

@@ -143,6 +143,7 @@ class ConfirmedApplicantsController extends Controller
         $successCount = 0;
         $failedCount  = 0;
         $errors       = [];
+        $successIds   = [];
 
         foreach ($applicants as $applicant) {
             $testPasser    = $applicant->testPasser;
@@ -198,6 +199,7 @@ class ConfirmedApplicantsController extends Controller
                     SendSarFormEmail::dispatch($testPasser, $downloadUrl, $sarGeneration->id);
 
                     $successCount++;
+                    $successIds[] = $applicant->user_id;
                 } else {
                     $failedCount++;
                     $errors[] = [
@@ -237,6 +239,7 @@ class ConfirmedApplicantsController extends Controller
             'success_count' => $successCount,
             'failed_count'  => $failedCount,
             'errors'        => $errors,
+            'success_ids'   => $successIds,
         ], $failedCount > 0 ? 207 : 200);
     }
 
