@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { Head, usePage } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import axios from 'axios';
@@ -16,7 +16,8 @@ const currentPage = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
 
-const filterStatus = ref("qualified");
+const filterStatus = ref(["qualified"]);
+const showStatusDropdown = ref(false);
 const filterBatch = ref("");
 const filterSchoolYear = ref("");
 const filterStrand = ref("");
@@ -32,7 +33,7 @@ const fetchReportData = async (page = 1) => {
     loading.value = true;
     try {
         const params = {
-            status: filterStatus.value,
+            status: filterStatus.value.join(','),
             page: page,
         };
         if (filterBatch.value) params.batch = filterBatch.value;
@@ -61,12 +62,24 @@ const fetchReportData = async (page = 1) => {
     }
 };
 
+// Close status dropdown on click outside
+const handleClickOutside = (e) => {
+    if (showStatusDropdown.value && !e.target.closest('.relative')) {
+        showStatusDropdown.value = false;
+    }
+};
+
 onMounted(() => {
     fetchReportData(1);
+    document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside);
 });
 
 const downloadPdf = () => {
-    let url = route('reports.test-passers.export.pdf') + `?status=${filterStatus.value}`;
+    let url = route('reports.test-passers.export.pdf') + `?status=${filterStatus.value.join(',')}`;
     if (filterBatch.value) url += `&batch=${filterBatch.value}`;
     if (filterSchoolYear.value) url += `&school_year=${filterSchoolYear.value}`;
     if (filterStrand.value) url += `&strand=${filterStrand.value}`;
@@ -74,7 +87,7 @@ const downloadPdf = () => {
 };
 
 const downloadExcel = () => {
-    let url = route('reports.test-passers.export.excel') + `?status=${filterStatus.value}`;
+    let url = route('reports.test-passers.export.excel') + `?status=${filterStatus.value.join(',')}`;
     if (filterBatch.value) url += `&batch=${filterBatch.value}`;
     if (filterSchoolYear.value) url += `&school_year=${filterSchoolYear.value}`;
     if (filterStrand.value) url += `&strand=${filterStrand.value}`;
@@ -82,7 +95,7 @@ const downloadExcel = () => {
 };
 
 const clearFilters = () => {
-    filterStatus.value = "qualified";
+    filterStatus.value = ["qualified"];
     filterBatch.value = "";
     filterSchoolYear.value = "";
     filterStrand.value = "";
@@ -108,11 +121,27 @@ const getStatusClass = (status) => {
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                    <select v-model="filterStatus" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-[#9E122C]">
-                        <option value="qualified">Qualified</option>
-                        <option value="waitlisted">Waitlisted</option>
-                        <option value="waitlisted_below_cutoff">Waitlisted Below Cut Off</option>
-                    </select>
+                    <div class="relative">
+                        <button @click="showStatusDropdown = !showStatusDropdown" type="button"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-[#9E122C] text-left flex items-center justify-between text-sm">
+                            <span>{{ filterStatus.length === 0 ? 'All Statuses' : filterStatus.length + ' selected' }}</span>
+                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div v-if="showStatusDropdown" class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg py-1">
+                            <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm text-gray-900 dark:text-white">
+                                <input type="checkbox" value="qualified" v-model="filterStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                Qualified
+                            </label>
+                            <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm text-gray-900 dark:text-white">
+                                <input type="checkbox" value="waitlisted" v-model="filterStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                Waitlisted
+                            </label>
+                            <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm text-gray-900 dark:text-white">
+                                <input type="checkbox" value="waitlisted_below_cutoff" v-model="filterStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                Waitlisted Below Cut Off
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Batch</label>

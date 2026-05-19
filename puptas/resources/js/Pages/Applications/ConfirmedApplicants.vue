@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 const axios = window.axios;
 import { Head } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
@@ -13,7 +13,8 @@ const fetchError = ref(null);
 const searchQuery = ref("");
 const filterProgram = ref("");
 const filterBatch = ref("");
-const filterPasserStatus = ref("");
+const filterPasserStatus = ref([]);
+const showStatusDropdown = ref(false);
 const filterSarStatus = ref("");
 const selectedIds = ref([]);
 
@@ -50,7 +51,20 @@ const fetchApplicants = async () => {
     }
 };
 
-onMounted(fetchApplicants);
+onMounted(() => {
+    fetchApplicants();
+    document.addEventListener('click', handleStatusClickOutside);
+});
+onUnmounted(() => {
+    document.removeEventListener('click', handleStatusClickOutside);
+});
+
+// Close status dropdown on click outside
+const handleStatusClickOutside = (e) => {
+    if (showStatusDropdown.value && !e.target.closest('.relative.flex-1')) {
+        showStatusDropdown.value = false;
+    }
+};
 
 // ── Computed ───────────────────────────────────────────────────────────────────
 const programs = computed(() => {
@@ -88,9 +102,9 @@ const filtered = computed(() => {
         list = list.filter((a) => a.program?.code === filterProgram.value);
     if (filterBatch.value)
         list = list.filter((a) => a.batch_number === filterBatch.value);
-    if (filterPasserStatus.value)
+    if (filterPasserStatus.value.length > 0)
         list = list.filter(
-            (a) => a.passer_status_name === filterPasserStatus.value,
+            (a) => filterPasserStatus.value.includes(a.passer_status_name),
         );
     if (filterSarStatus.value === "sent") list = list.filter((a) => a.sar_sent);
     if (filterSarStatus.value === "pending")
@@ -144,6 +158,7 @@ watch(
     () => {
         currentPage.value = 1;
     },
+    { deep: true },
 );
 
 const totalPages = computed(
@@ -547,19 +562,23 @@ onMounted(() => {
                                 {{ b }}
                             </option>
                         </select>
-                        <select
-                            v-model="filterPasserStatus"
-                            class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
-                        >
-                            <option value="">All Statuses</option>
-                            <option
-                                v-for="s in passerStatuses"
-                                :key="s"
-                                :value="s"
-                            >
-                                {{ s }}
-                            </option>
-                        </select>
+                        <div class="relative flex-1 min-w-[140px]">
+                            <button @click="showStatusDropdown = !showStatusDropdown" type="button"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C] text-left flex items-center justify-between">
+                                <span>{{ filterPasserStatus.length === 0 ? 'All Statuses' : filterPasserStatus.length + ' selected' }}</span>
+                                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            <div v-if="showStatusDropdown" class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg py-1">
+                                <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                    <input type="checkbox" :checked="filterPasserStatus.length === 0" @change="filterPasserStatus = []" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                    All Statuses
+                                </label>
+                                <label v-for="s in passerStatuses" :key="s" class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                    <input type="checkbox" :value="s" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                    {{ s }}
+                                </label>
+                            </div>
+                        </div>
                         <select
                             v-model="filterSarStatus"
                             class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"

@@ -56,14 +56,35 @@
                                 <option value="">All Batches</option>
                                 <option v-for="batch in batchNumbers" :key="batch" :value="batch">{{ batch }}</option>
                             </select>
-                            <select v-model="filterPasserStatus"
-                                class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
-                                <option value="">All Statuses</option>
-                                <option value="1">Qualified</option>
-                                <option value="2">Waitlisted</option>
-                                <option value="4">Waitlisted Below Cut Off</option>
-                                <option value="3">Unqualified</option>
-                            </select>
+                            <div class="relative flex-1 min-w-[130px]">
+                                <button @click="showStatusDropdown = !showStatusDropdown" type="button"
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C] text-left flex items-center justify-between">
+                                    <span>{{ filterPasserStatus.length === 0 ? 'All Statuses' : filterPasserStatus.length + ' selected' }}</span>
+                                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </button>
+                                <div v-if="showStatusDropdown" class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg py-1">
+                                    <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                        <input type="checkbox" :checked="filterPasserStatus.length === 0" @change="filterPasserStatus = []" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                        All Statuses
+                                    </label>
+                                    <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                        <input type="checkbox" :value="1" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                        Qualified
+                                    </label>
+                                    <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                        <input type="checkbox" :value="2" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                        Waitlisted
+                                    </label>
+                                    <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                        <input type="checkbox" :value="4" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                        Waitlisted Below Cut Off
+                                    </label>
+                                    <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                        <input type="checkbox" :value="3" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                        Unqualified
+                                    </label>
+                                </div>
+                            </div>
                             <select v-model="sortKey"
                                 class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
                                 <option value="pupcet_total_score">Sort: PUPCET Score</option>
@@ -1074,9 +1095,20 @@ const handleScroll = () => {
     }
 };
 
-import { onMounted } from "vue";
+import { onMounted, onUnmounted } from "vue";
+
+// Close status dropdown on click outside
+const handleClickOutside = (e) => {
+    if (showStatusDropdown.value && !e.target.closest('.relative.flex-1.min-w-\\[130px\\]')) {
+        showStatusDropdown.value = false;
+    }
+};
 onMounted(() => {
     handleScroll();
+    document.addEventListener('click', handleClickOutside);
+});
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside);
 });
 
 // Template types for selection
@@ -1242,7 +1274,8 @@ const searchTerm = ref("");
 const debouncedSearchTerm = ref("");
 const filterSchoolYear = ref("");
 const filterBatchNumber = ref("");
-const filterPasserStatus = ref("");
+const filterPasserStatus = ref([]);
+const showStatusDropdown = ref(false);
 const sortKey = ref("pupcet_total_score");
 const sortOrder = ref("desc");
 const currentPage = ref(1);
@@ -1255,7 +1288,7 @@ const onSearchInput = debounce(() => {
 
 watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, sortKey, sortOrder], () => {
     currentPage.value = 1;
-});
+}, { deep: true });
 
 const schoolYears = computed(() => {
     const years = new Set(flatPassers.value.map((p) => p.schoolYear));
@@ -1297,8 +1330,8 @@ const filteredPassers = computed(() => {
             ? passer.batchNumber === filterBatchNumber.value
             : true;
 
-        const matchesStatus = filterPasserStatus.value
-            ? passer.passer_status_id === parseInt(filterPasserStatus.value)
+        const matchesStatus = filterPasserStatus.value.length > 0
+            ? filterPasserStatus.value.includes(passer.passer_status_id)
             : true;
 
         return matchesSearch && matchesSchoolYear && matchesBatch && matchesStatus;
@@ -1700,6 +1733,21 @@ const closeWaitlistedEmailPreview = () => {
     waitlistedEmailPreviewHtml.value = '';
 };
 
+<<<<<<< Updated upstream
+=======
+// Watch filters to reload SAR history
+watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, debouncedSearchTerm], () => {
+    if (sarHistory.value.length > 0 || filterSchoolYear.value || filterBatchNumber.value || filterPasserStatus.value.length > 0 || debouncedSearchTerm.value) {
+        loadSarHistory();
+    }
+}, { deep: true });
+
+// Load SAR history on mount
+onMounted(() => {
+    loadSarHistory();
+});
+
+>>>>>>> Stashed changes
 // ── Bulk Enroll ───────────────────────────────────────────────────────────────
 const bulkEnrollRunning    = ref(false);
 const showBulkEnrollResult = ref(false);

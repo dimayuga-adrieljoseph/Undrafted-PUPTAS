@@ -30,22 +30,20 @@ class TestPasserReportController extends Controller
         $query = TestPasser::query()->with('passerStatus');
 
         if ($request->filled('status')) {
-            // Map status string to passer_status_id
-            switch ($request->status) {
-                case 'waitlisted':
-                    $statusId = 2;
-                    break;
-                case 'unqualified':
-                    $statusId = 3;
-                    break;
-                case 'waitlisted_below_cutoff':
-                    $statusId = 4;
-                    break;
-                default:
-                    $statusId = 1; // qualified
-                    break;
-            }
-            $query->where('passer_status_id', $statusId);
+            $statuses = explode(',', $request->status);
+            $statusIds = array_map(function ($status) {
+                switch (trim($status)) {
+                    case 'waitlisted':
+                        return 2;
+                    case 'unqualified':
+                        return 3;
+                    case 'waitlisted_below_cutoff':
+                        return 4;
+                    default:
+                        return 1; // qualified
+                }
+            }, $statuses);
+            $query->whereIn('passer_status_id', $statusIds);
         }
 
         if ($request->filled('batch')) {
