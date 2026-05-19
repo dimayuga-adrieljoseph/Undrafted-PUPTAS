@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <Head title="PUPCET Passers Email" />
     <div
         ref="scrollWrapper"
@@ -1532,11 +1532,22 @@ async function executeDelete() {
 }
 
 function openEditModal(passer) {
+    let yearGradVal = '';
+    if (passer.year_graduated != null) {
+        const yearInt = parseInt(passer.year_graduated, 10);
+        if (yearInt >= 2026) {
+            yearGradVal = 'Senior High School of A.Y. 2025-2026';
+        } else {
+            yearGradVal = 'Senior High School of Past School Years';
+        }
+    }
+
     editingPasser.value = { 
         ...passer,
         // Ensure passer_status_id is a string for the <select> v-model binding
         passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
         pupcet_total_score: passer.pupcet_total_score != null ? passer.pupcet_total_score : '',
+        year_graduated: yearGradVal,
     };
     showEditModal.value = true;
 }
@@ -1550,9 +1561,20 @@ async function savePasser() {
     saving.value = true;
     start();
     try {
+        const dataToSend = { ...editingPasser.value };
+        if (dataToSend.year_graduated === 'Senior High School of A.Y. 2025-2026') {
+            dataToSend.year_graduated = 2026;
+        } else if (dataToSend.year_graduated === 'Senior High School of Past School Years') {
+            dataToSend.year_graduated = 2025;
+        } else if (dataToSend.year_graduated === "" || dataToSend.year_graduated === null || dataToSend.year_graduated === undefined) {
+            dataToSend.year_graduated = null;
+        } else {
+            dataToSend.year_graduated = parseInt(dataToSend.year_graduated, 10);
+        }
+
         const response = await axios.put(
             `/test-passers/${editingPasser.value.test_passer_id}`,
-            editingPasser.value
+            dataToSend
         );
         show("Passer updated successfully!", "success");
 
@@ -1661,9 +1683,20 @@ async function saveNewPasser() {
     saving.value = true;
     start();
     try {
+        const dataToSend = { ...newPasserData.value };
+        if (dataToSend.year_graduated === 'Senior High School of A.Y. 2025-2026') {
+            dataToSend.year_graduated = 2026;
+        } else if (dataToSend.year_graduated === 'Senior High School of Past School Years') {
+            dataToSend.year_graduated = 2025;
+        } else if (dataToSend.year_graduated === "" || dataToSend.year_graduated === null || dataToSend.year_graduated === undefined) {
+            dataToSend.year_graduated = null;
+        } else {
+            dataToSend.year_graduated = parseInt(dataToSend.year_graduated, 10);
+        }
+
         const response = await axios.post(
             "/test-passers-store",
-            newPasserData.value
+            dataToSend
         );
         show("Passer added successfully!", "success");
 
