@@ -48,43 +48,14 @@
                         <div class="flex gap-3 flex-wrap">
                             <select v-model="filterSchoolYear"
                                 class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
-                                <option value="">All Years</option>
+                                <option value="all">All Years</option>
                                 <option v-for="year in schoolYears" :key="year" :value="year">{{ year }}</option>
                             </select>
                             <select v-model="filterBatchNumber"
                                 class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
-                                <option value="">All Batches</option>
+                                <option value="all">All Batches</option>
                                 <option v-for="batch in batchNumbers" :key="batch" :value="batch">{{ batch }}</option>
                             </select>
-                            <div class="relative flex-1 min-w-[130px]">
-                                <button @click="showStatusDropdown = !showStatusDropdown" type="button"
-                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C] text-left flex items-center justify-between">
-                                    <span>{{ filterPasserStatus.length === 0 ? 'All Statuses' : filterPasserStatus.length + ' selected' }}</span>
-                                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                                </button>
-                                <div v-if="showStatusDropdown" class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg py-1">
-                                    <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
-                                        <input type="checkbox" :checked="filterPasserStatus.length === 0" @change="filterPasserStatus = []" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
-                                        All Statuses
-                                    </label>
-                                    <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
-                                        <input type="checkbox" :value="1" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
-                                        Qualified
-                                    </label>
-                                    <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
-                                        <input type="checkbox" :value="2" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
-                                        Waitlisted
-                                    </label>
-                                    <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
-                                        <input type="checkbox" :value="4" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
-                                        Waitlisted Below Cut Off
-                                    </label>
-                                    <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
-                                        <input type="checkbox" :value="3" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
-                                        Unqualified
-                                    </label>
-                                </div>
-                            </div>
                             <select v-model="sortKey"
                                 class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
                                 <option value="pupcet_total_score">Sort: PUPCET Score</option>
@@ -1148,18 +1119,8 @@ const handleScroll = () => {
 
 import { onMounted, onUnmounted } from "vue";
 
-// Close status dropdown on click outside
-const handleClickOutside = (e) => {
-    if (showStatusDropdown.value && !e.target.closest('.relative.flex-1.min-w-\\[130px\\]')) {
-        showStatusDropdown.value = false;
-    }
-};
 onMounted(() => {
     handleScroll();
-    document.addEventListener('click', handleClickOutside);
-});
-onUnmounted(() => {
-    document.removeEventListener('click', handleClickOutside);
 });
 
 // Template types for selection
@@ -1362,10 +1323,8 @@ watch(
 
 const searchTerm = ref(props.filters?.search || "");
 const debouncedSearchTerm = ref(props.filters?.search || "");
-const filterSchoolYear = ref(props.filters?.school_year || "");
-const filterBatchNumber = ref(props.filters?.batch_number || "");
-const filterPasserStatus = ref(props.filters?.status ? [props.filters.status] : []);
-const showStatusDropdown = ref(false);
+const filterSchoolYear = ref(props.filters?.school_year || "all");
+const filterBatchNumber = ref(props.filters?.batch_number || "all");
 const sortKey = ref(props.filters?.sort_key || "pupcet_total_score");
 const sortOrder = ref(props.filters?.sort_order || "desc");
 
@@ -1377,9 +1336,8 @@ const itemsPerPage = computed(() => props.passers?.per_page || 15);
 // Central function to make server requests with all current params
 function buildServerParams(overrides = {}) {
     const params = {
-        school_year: filterSchoolYear.value || undefined,
-        batch_number: filterBatchNumber.value || undefined,
-        status: filterPasserStatus.value.length === 1 ? filterPasserStatus.value[0] : undefined,
+        school_year: filterSchoolYear.value || 'all',
+        batch_number: filterBatchNumber.value || 'all',
         search: debouncedSearchTerm.value || undefined,
         sort_key: sortKey.value || undefined,
         sort_order: sortOrder.value || undefined,
@@ -1415,7 +1373,7 @@ const onSearchInput = debounce(() => {
 }, 300);
 
 // When server-side filters change, reload from server
-watch([filterSchoolYear, filterBatchNumber, filterPasserStatus], () => {
+watch([filterSchoolYear, filterBatchNumber], () => {
     applyServerFilters();
 }, { deep: true });
 
@@ -1533,7 +1491,6 @@ const toggleSelectAll = async (isSelected) => {
             const params = {};
             if (filterSchoolYear.value) params.school_year = filterSchoolYear.value;
             if (filterBatchNumber.value) params.batch_number = filterBatchNumber.value;
-            if (filterPasserStatus.value.length === 1) params.status = filterPasserStatus.value[0];
             if (debouncedSearchTerm.value) params.search = debouncedSearchTerm.value;
 
             const response = await axios.get('/test-passers/select-all-ids', { params });
@@ -1560,7 +1517,7 @@ const toggleSelectAll = async (isSelected) => {
 };
 
 // Reset allFilteredSelected when filters change
-watch([filterSchoolYear, filterBatchNumber, filterPasserStatus], () => {
+watch([filterSchoolYear, filterBatchNumber], () => {
     allFilteredSelected.value = false;
 }, { deep: true });
 

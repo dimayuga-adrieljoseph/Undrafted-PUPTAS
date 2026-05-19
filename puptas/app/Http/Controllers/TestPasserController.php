@@ -58,7 +58,7 @@ class TestPasserController extends Controller
 
         // Default school_year: most recent when not provided
         $schoolYear = $request->input('school_year');
-        if (!$request->filled('school_year')) {
+        if (!$request->has('school_year')) {
             $schoolYear = TestPasser::max('school_year');
             if ($schoolYear) {
                 $request->merge(['school_year' => $schoolYear]);
@@ -67,7 +67,7 @@ class TestPasserController extends Controller
 
         // Default batch_number: first available for selected school_year when not provided
         $batchNumber = $request->input('batch_number');
-        if (!$request->filled('batch_number') && $schoolYear) {
+        if (!$request->has('batch_number') && $schoolYear && $schoolYear !== 'all') {
             $batchNumber = TestPasser::where('school_year', $schoolYear)
                 ->whereNotNull('batch_number')
                 ->orderBy('batch_number')
@@ -133,11 +133,11 @@ class TestPasserController extends Controller
     {
         $query = TestPasser::query()->with('passerStatus');
 
-        if ($request->filled('school_year')) {
+        if ($request->filled('school_year') && $request->input('school_year') !== 'all') {
             $query->where('school_year', $request->input('school_year'));
         }
 
-        if ($request->filled('batch_number')) {
+        if ($request->filled('batch_number') && $request->input('batch_number') !== 'all') {
             $query->where('batch_number', $request->input('batch_number'));
         }
 
@@ -184,11 +184,11 @@ class TestPasserController extends Controller
     {
         $query = TestPasser::query();
 
-        if ($request->filled('school_year')) {
+        if ($request->filled('school_year') && $request->input('school_year') !== 'all') {
             $query->where('school_year', $request->input('school_year'));
         }
 
-        if ($request->filled('batch_number')) {
+        if ($request->filled('batch_number') && $request->input('batch_number') !== 'all') {
             $query->where('batch_number', $request->input('batch_number'));
         }
 
