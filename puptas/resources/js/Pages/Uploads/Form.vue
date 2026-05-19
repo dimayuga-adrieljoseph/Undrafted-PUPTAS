@@ -81,8 +81,20 @@
             <option value="" disabled>Select Passer Status</option>
             <option value="1">Qualified</option>
             <option value="2">Waitlisted</option>
+            <option value="4">Waitlisted Below Cut Off</option>
             <option value="3">Unqualified</option>
           </select>
+        </div>
+
+        <!-- Auto Mode Summary -->
+        <div v-if="assignmentMode === 'auto'" class="space-y-2">
+          <label class="block text-gray-700 dark:text-gray-200 font-medium">Auto Assignment Rules</label>
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-sm text-gray-600 dark:text-gray-300 space-y-2">
+            <p class="font-medium text-gray-700 dark:text-gray-200">Score threshold rules apply automatically based on PUPCET scores.</p>
+            <p class="text-orange-700 dark:text-orange-300">
+              <span class="font-medium">Capacity Note:</span> Applicants who would be waitlisted beyond the 550-slot capacity (combined Qualified + Waitlisted) will receive a status of "Waitlisted Below Cut Off" (passer_status_id=4).
+            </p>
+          </div>
         </div>
 
         <!-- File Upload -->

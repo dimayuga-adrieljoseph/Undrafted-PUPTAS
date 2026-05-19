@@ -505,6 +505,59 @@ function reset() {
                                 </div>
                             </div>
 
+                            <!-- 🟠 Waitlisted Below Cut Off (status 4) -->
+                            <div
+                                v-else-if="result.waitlisted_below_cutoff === true"
+                                class="rounded-2xl overflow-hidden shadow-md border border-orange-300 bg-white"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <!-- Logo -->
+                                <div class="pt-7 pb-2 flex justify-center">
+                                    <img
+                                        src="/assets/images/pup_taguig_logo.png"
+                                        alt="PUP Taguig Logo"
+                                        class="w-16 h-16 object-contain"
+                                    />
+                                </div>
+
+                                <!-- Body -->
+                                <div class="px-8 pb-7 pt-4 space-y-4">
+                                    <p class="text-sm text-gray-800 leading-relaxed">
+                                        Dear <strong class="text-[#800000]">{{ result.full_name }}</strong>,
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Thank you for considering <strong>PUP-Taguig Campus</strong> for your higher education.
+                                    </p>
+
+                                    <!-- Details box -->
+                                    <div class="rounded-xl bg-orange-50 border border-orange-200 overflow-hidden text-sm divide-y divide-orange-200">
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Applicant Name</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.full_name }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Reference No.</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.reference_number }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Status</span>
+                                            <span class="text-orange-700 font-semibold">Waitlisted Below Cut Off</span>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We regret to inform you that your score in the PUP College Entrance Test did not meet the cut-off threshold for admission to PUP-Taguig Campus. The available slots for qualified and waitlisted applicants have been filled.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We encourage you to explore other academic opportunities and wish you success in your future endeavors.
+                                    </p>
+                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
+                                        PUP-Taguig Campus Admission and Registration Office
+                                    </p>
+                                </div>
+                            </div>
+
                             <!-- 🔍 No Record Found -->
                             <div
                                 v-else

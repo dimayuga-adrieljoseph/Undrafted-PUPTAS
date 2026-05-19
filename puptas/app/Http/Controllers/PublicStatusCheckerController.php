@@ -32,22 +32,23 @@ class PublicStatusCheckerController extends Controller
 
         if ($matched) {
             $statusId = $passer->passer_status_id;
-            $statusLabels = [1 => 'qualified', 2 => 'waitlisted', 3 => 'not_qualified'];
+            $statusLabels = [1 => 'qualified', 2 => 'waitlisted', 3 => 'not_qualified', 4 => 'waitlisted_below_cutoff'];
             $statusLabel = $statusLabels[$statusId] ?? 'pending';
 
             return response()->json([
-                'found'            => true,
-                'qualified'        => $statusId === 1,
-                'waitlisted'       => $statusId === 2,
-                'not_qualified'    => $statusId === 3,
-                'status'           => $statusLabel,
-                'passer_status_id' => $statusId,
-                'first_name'       => ucwords(strtolower(trim($passer->first_name))),
-                'last_name'        => ucwords(strtolower(trim($passer->surname))),
-                'full_name'        => ucwords(strtolower(trim($passer->first_name))) . ' ' . ucwords(strtolower(trim($passer->surname))),
-                'reference_number' => $passer->reference_number,
-                'batch_number'     => $passer->batch_number,
-                'confirmation_url' => 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad',
+                'found'                    => true,
+                'qualified'                => $statusId === 1,
+                'waitlisted'               => $statusId === 2,
+                'not_qualified'            => $statusId === 3,
+                'waitlisted_below_cutoff'  => $statusId === 4,
+                'status'                   => $statusLabel,
+                'passer_status_id'         => $statusId,
+                'first_name'               => ucwords(strtolower(trim($passer->first_name))),
+                'last_name'                => ucwords(strtolower(trim($passer->surname))),
+                'full_name'                => ucwords(strtolower(trim($passer->first_name))) . ' ' . ucwords(strtolower(trim($passer->surname))),
+                'reference_number'         => $passer->reference_number,
+                'batch_number'             => $statusId === 4 ? null : $passer->batch_number,
+                'confirmation_url'         => 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad',
             ]);
         }
 

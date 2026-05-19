@@ -61,6 +61,7 @@
                                 <option value="">All Statuses</option>
                                 <option value="1">Qualified</option>
                                 <option value="2">Waitlisted</option>
+                                <option value="4">Waitlisted Below Cut Off</option>
                                 <option value="3">Unqualified</option>
                             </select>
                             <select v-model="sortKey"
@@ -228,6 +229,9 @@
                                              </span>
                                              <span v-else-if="passer.passer_status_id === 2" class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full dark:bg-yellow-900 dark:text-yellow-200">
                                                  Waitlisted
+                                             </span>
+                                             <span v-else-if="passer.passer_status_id === 4" class="px-2 py-1 bg-orange-100 text-orange-800 rounded-full dark:bg-orange-900 dark:text-orange-200">
+                                                 Waitlisted Below Cut Off
                                              </span>
                                              <span v-else-if="passer.passer_status_id === 3" class="px-2 py-1 bg-red-100 text-red-800 rounded-full dark:bg-red-900 dark:text-red-200">
                                                  Unqualified
@@ -853,6 +857,7 @@
                                     <option value="1">Qualified</option>
                                     <option value="2">Waitlisted</option>
                                     <option value="3">Unqualified</option>
+                                    <option value="4">Waitlisted Below Cut Off</option>
                                 </select>
                                 <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Current qualification status of the applicant.</p>
                             </div>
@@ -1030,6 +1035,7 @@
                                     <option value="1">Qualified</option>
                                     <option value="2">Waitlisted</option>
                                     <option value="3">Unqualified</option>
+                                    <option value="4">Waitlisted Below Cut Off</option>
                                 </select>
                                 <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Current qualification status of the applicant.</p>
                             </div>
