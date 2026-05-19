@@ -8,15 +8,15 @@ use Illuminate\Support\Facades\DB;
 class CapacityEnforcementService
 {
     /**
-     * Re-rank all qualified+waitlisted records for a school year
-     * and reassign status 4 (waitlisted_below_cutoff) to those beyond position 550.
+     * Re-rank all eligible records (statuses 1, 2, 4) for a school year,
+     * apply ScoreThresholdService::resolve() to the top 550 by score,
+     * and demote records beyond position 550 to status 4 with null batch.
      *
      * Sorting priority:
-     * 1. passer_status_id ASC (qualified=1 first, then waitlisted=2)
-     * 2. pupcet_total_score DESC (highest scores first)
-     * 3. created_at ASC (earlier records retained as tiebreaker)
+     * 1. pupcet_total_score DESC (highest scores first)
+     * 2. created_at ASC (earlier records retained as tiebreaker)
      *
-     * Records beyond position 550 are updated to passer_status_id=4 with batch_number=null.
+     * Status 3 (Unqualified) records are excluded from capacity enforcement.
      *
      * @param string $schoolYear The school year to enforce capacity for
      * @return int Count of reassigned records
@@ -24,31 +24,46 @@ class CapacityEnforcementService
     public function enforce(string $schoolYear): int
     {
         return DB::transaction(function () use ($schoolYear) {
-            // Query all qualified (1) and waitlisted (2) records for the school year
-            // sorted by priority: status ASC (1 before 2), score DESC, created_at ASC
+            $scoreThresholdService = new ScoreThresholdService();
+
+            // Query all eligible records (statuses 1, 2, 4) for the school year
+            // sorted purely by score DESC with created_at ASC as tiebreaker
             $records = TestPasser::where('school_year', $schoolYear)
-                ->whereIn('passer_status_id', [1, 2])
-                ->orderBy('passer_status_id', 'asc')
+                ->whereIn('passer_status_id', [1, 2, 4])
                 ->orderBy('pupcet_total_score', 'desc')
                 ->orderBy('created_at', 'asc')
                 ->get();
 
-            // If total count is within capacity, no reassignment needed
-            if ($records->count() <= ScoreThresholdService::CAPACITY_LIMIT) {
-                return 0;
+            $reassignedCount = 0;
+
+            // Apply ScoreThresholdService::resolve() to top 550 (or all if ≤ 550)
+            $top = $records->take(ScoreThresholdService::CAPACITY_LIMIT);
+
+            foreach ($top as $record) {
+                $resolved = $scoreThresholdService->resolve($record->pupcet_total_score);
+
+                if (
+                    $record->passer_status_id !== $resolved['passer_status_id']
+                    || $record->batch_number !== $resolved['batch_number']
+                ) {
+                    $record->passer_status_id = $resolved['passer_status_id'];
+                    $record->batch_number = $resolved['batch_number'];
+                    $record->save();
+                    $reassignedCount++;
+                }
             }
 
-            // Records beyond position 550 need to be reassigned
-            $recordsToReassign = $records->slice(ScoreThresholdService::CAPACITY_LIMIT);
+            // Demote records beyond position 550 to status 4 with null batch
+            $beyond = $records->slice(ScoreThresholdService::CAPACITY_LIMIT);
 
-            $idsToReassign = $recordsToReassign->pluck('test_passer_id')->toArray();
-
-            // Bulk update all records beyond the capacity limit
-            $reassignedCount = TestPasser::whereIn('test_passer_id', $idsToReassign)
-                ->update([
-                    'passer_status_id' => 4,
-                    'batch_number' => null,
-                ]);
+            foreach ($beyond as $record) {
+                if ($record->passer_status_id !== 4 || $record->batch_number !== null) {
+                    $record->passer_status_id = 4;
+                    $record->batch_number = null;
+                    $record->save();
+                    $reassignedCount++;
+                }
+            }
 
             return $reassignedCount;
         });

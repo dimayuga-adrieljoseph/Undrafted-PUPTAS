@@ -9,23 +9,12 @@
       </div>
 
       <!-- Upload Form Card -->
-      <div class="bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-8 space-y-6">
-        <!-- Assignment Mode Selector -->
-        <div class="space-y-2">
-          <label class="block text-gray-700 dark:text-gray-200 font-medium">Assignment Mode</label>
-          <select
-            v-model="assignmentMode"
-            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm"
-          >
-            <option value="manual">Manual</option>
-            <option value="auto">Auto</option>
-          </select>
-        </div>
-
+      <div class="bg-white dark:bg-gray-800 shadow-xl rounded-2xl p-8 space-y-6 border border-gray-200 dark:border-gray-700">
+        
         <!-- Batch & Year Selection -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Batch (hidden in auto mode) -->
-          <div v-if="assignmentMode === 'manual'" class="space-y-2">
+          <!-- Batch Number -->
+          <div class="space-y-2">
             <label class="block text-gray-700 dark:text-gray-200 font-medium">Batch Number</label>
             <div class="flex gap-2">
               <select
@@ -72,30 +61,25 @@
           </div>
         </div>
 
-        <!-- Passer Status (hidden in auto mode) -->
-        <div v-if="assignmentMode === 'manual'" class="space-y-2">
+        <!-- Passer Status Selection (Status_Selector) -->
+        <div class="space-y-2">
           <label class="block text-gray-700 dark:text-gray-200 font-medium">Passer Status</label>
           <select
             v-model="passerStatus"
-            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm"
+            class="w-full rounded-md dark:bg-gray-700 dark:text-white shadow-sm"
+            :class="[
+              showStatusError
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                : 'border-gray-300 dark:border-gray-600 focus:border-[#9E122C] focus:ring-[#9E122C]'
+            ]"
           >
             <option value="" disabled>Select Passer Status</option>
             <option value="1">Qualified</option>
             <option value="2">Waitlisted</option>
-            <option value="4">Waitlisted Below Cut Off</option>
             <option value="3">Unqualified</option>
           </select>
-        </div>
-
-        <!-- Auto Mode Summary -->
-        <div v-if="assignmentMode === 'auto'" class="space-y-2">
-          <label class="block text-gray-700 dark:text-gray-200 font-medium">Auto Assignment Rules</label>
-          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-sm text-gray-600 dark:text-gray-300 space-y-2">
-            <p class="font-medium text-gray-700 dark:text-gray-200">Score threshold rules apply automatically based on PUPCET scores.</p>
-            <p class="text-orange-700 dark:text-orange-300">
-              <span class="font-medium">Capacity Note:</span> Applicants who would be waitlisted beyond the 550-slot capacity (combined Qualified + Waitlisted) will receive a status of "Waitlisted Below Cut Off" (passer_status_id=4).
-            </p>
-          </div>
+          <!-- Validation Message Adjacent to Status_Selector -->
+          <p v-if="showStatusError" class="text-sm text-red-600 font-medium mt-1">A status selection is required.</p>
         </div>
 
         <!-- File Upload -->
@@ -133,13 +117,13 @@
         </button>
       </div>
 
-      <!-- Success Modal -->
+      <!-- Success Dialog Modal -->
       <transition name="fade">
         <div
           v-if="showDialog"
-          class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 dark:bg-white"
+          class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
         >
-          <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-96 text-center shadow-xl">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-96 text-center shadow-xl border border-gray-100 dark:border-gray-700">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Success!</h2>
             <p class="text-gray-600 dark:text-gray-300 mb-4">Your records have been uploaded successfully.</p>
             <div class="text-left bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4 space-y-1">
@@ -167,7 +151,6 @@ import { useGlobalLoading } from "@/Composables/useGlobalLoading";
 const axios = window.axios;
 const { start, finish } = useGlobalLoading();
 
-const assignmentMode = ref("manual");
 const batch = ref("Batch 1");
 const customBatch = ref("");
 const year = ref("");
@@ -176,6 +159,7 @@ const file = ref(null);
 const showDialog = ref(false);
 const yearOptions = ref([]);
 const passerStatus = ref("");
+const showStatusError = ref(false);
 const importedCount = ref(0);
 const skippedCount = ref(0);
 const uploading = ref(false);
@@ -203,62 +187,39 @@ const onFileChange = (e) => {
 
 const submitForm = async () => {
   const resolvedYear = year.value === "--Custom--" ? customYear.value : String(year.value);
+  const resolvedBatch = batch.value === "--Custom--" ? customBatch.value : batch.value;
 
-  // Client-side validation based on mode
-  if (assignmentMode.value === "manual") {
-    if (!passerStatus.value) return alert("Please select a passer status.");
-    const resolvedBatch = batch.value === "--Custom--" ? customBatch.value : batch.value;
-    if (!resolvedBatch) return alert("Please enter a batch number.");
-    if (!resolvedYear) return alert("Please select a school year.");
-    if (!file.value) return alert("Please select a file to upload.");
+  showStatusError.value = false;
 
-    const formData = new FormData();
-    formData.append("assignment_mode", "manual");
-    formData.append("batch_number", resolvedBatch);
-    formData.append("school_year", resolvedYear);
-    formData.append("passer_status_id", passerStatus.value);
-    formData.append("file", file.value);
+  // Validate status selector presence
+  if (!passerStatus.value) {
+    showStatusError.value = true;
+    return;
+  }
+  if (!resolvedBatch) return alert("Please enter a batch number.");
+  if (!resolvedYear) return alert("Please select a school year.");
+  if (!file.value) return alert("Please select a file to upload.");
 
-    uploading.value = true;
-    start();
-    try {
-      const response = await axios.post("/test-passers/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      importedCount.value = response.data?.imported_count ?? 0;
-      skippedCount.value = response.data?.skipped_count ?? 0;
-      showDialog.value = true;
-    } catch (error) {
-      handleUploadError(error);
-    } finally {
-      uploading.value = false;
-      finish();
-    }
-  } else {
-    // Auto mode
-    if (!resolvedYear) return alert("Please select a school year.");
-    if (!file.value) return alert("Please select a file to upload.");
+  const formData = new FormData();
+  formData.append("batch_number", resolvedBatch);
+  formData.append("school_year", resolvedYear);
+  formData.append("passer_status_id", passerStatus.value);
+  formData.append("file", file.value);
 
-    const formData = new FormData();
-    formData.append("assignment_mode", "auto");
-    formData.append("school_year", resolvedYear);
-    formData.append("file", file.value);
-
-    uploading.value = true;
-    start();
-    try {
-      const response = await axios.post("/test-passers/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      importedCount.value = response.data?.imported_count ?? 0;
-      skippedCount.value = response.data?.skipped_count ?? 0;
-      showDialog.value = true;
-    } catch (error) {
-      handleUploadError(error);
-    } finally {
-      uploading.value = false;
-      finish();
-    }
+  uploading.value = true;
+  start();
+  try {
+    const response = await axios.post("/test-passers/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    importedCount.value = response.data?.imported_count ?? 0;
+    skippedCount.value = response.data?.skipped_count ?? 0;
+    showDialog.value = true;
+  } catch (error) {
+    handleUploadError(error);
+  } finally {
+    uploading.value = false;
+    finish();
   }
 };
 
@@ -270,7 +231,6 @@ const handleUploadError = (error) => {
   if (status === 403) {
     alert("Upload failed: You do not have permission to upload passers.");
   } else if (status === 422) {
-    // Check if it's a "all duplicates" response
     if (data?.imported_count !== undefined && data?.skipped_count !== undefined) {
       alert(`Upload complete but no new records were added.\n\nSkipped: ${data.skipped_count} duplicate(s).\n\nAll entries in this file already exist in the system.`);
     } else {

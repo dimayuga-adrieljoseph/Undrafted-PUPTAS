@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <Head title="PUPCET Passers Email" />
     <div
         ref="scrollWrapper"
@@ -397,7 +397,7 @@
                                 Waitlisted (Below Cut-off) Template Preview
                             </label>
                             <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
-                                <div v-html="waitlistedCutoffTemplatePreview"></div>
+                                <div v-html="formattedWaitlistedCutoffTemplatePreview"></div>
                             </div>
                         </div>
 
@@ -407,7 +407,7 @@
                                 Default Template Preview
                             </label>
                             <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
-                                <div v-html="defaultTemplatePreview"></div>
+                                <div v-html="formattedDefaultTemplatePreview"></div>
                             </div>
                         </div>
 
@@ -671,11 +671,18 @@
                         <div class="col-span-2 grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
-                                <input
-                                    type="text"
+                                <select
                                     v-model="editingPasser.strand"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="" disabled>Select Strand</option>
+                                    <option value="STEM">STEM</option>
+                                    <option value="HUMSS">HUMSS</option>
+                                    <option value="ABM">ABM</option>
+                                    <option value="TVL">TVL</option>
+                                    <option value="ICT">ICT</option>
+                                    <option value="GAS">GAS</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
@@ -713,14 +720,20 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Batch Number *</label>
-                                <input
-                                    type="text"
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                    Batch Number<span v-if="editingPasser.passer_status_id !== '3' && editingPasser.passer_status_id !== '4' && editingPasser.passer_status_id !== 3 && editingPasser.passer_status_id !== 4"> *</span>
+                                </label>
+                                <select
                                     v-model="editingPasser.batch_number"
-                                    required
-                                    placeholder="e.g., 1"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    :required="editingPasser.passer_status_id !== '3' && editingPasser.passer_status_id !== '4' && editingPasser.passer_status_id !== 3 && editingPasser.passer_status_id !== 4"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">Select Batch</option>
+                                    <option value="Batch 1">Batch 1</option>
+                                    <option value="Batch 2">Batch 2</option>
+                                    <option value="Batch 3">Batch 3</option>
+                                    <option value="Batch 4">Batch 4</option>
+                                </select>
                             </div>
                         </div>
 
@@ -851,11 +864,18 @@
                         <div class="col-span-2 grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
-                                <input
-                                    type="text"
+                                <select
                                     v-model="newPasserData.strand"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="" disabled>Select Strand</option>
+                                    <option value="STEM">STEM</option>
+                                    <option value="HUMSS">HUMSS</option>
+                                    <option value="ABM">ABM</option>
+                                    <option value="TVL">TVL</option>
+                                    <option value="ICT">ICT</option>
+                                    <option value="GAS">GAS</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
@@ -892,14 +912,20 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Batch Number *</label>
-                                <input
-                                    type="text"
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                    Batch Number<span v-if="newPasserData.passer_status_id !== '3' && newPasserData.passer_status_id !== '4' && newPasserData.passer_status_id !== 3 && newPasserData.passer_status_id !== 4"> *</span>
+                                </label>
+                                <select
                                     v-model="newPasserData.batch_number"
-                                    required
-                                    placeholder="e.g., 1"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    :required="newPasserData.passer_status_id !== '3' && newPasserData.passer_status_id !== '4' && newPasserData.passer_status_id !== 3 && newPasserData.passer_status_id !== 4"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="">Select Batch</option>
+                                    <option value="Batch 1">Batch 1</option>
+                                    <option value="Batch 2">Batch 2</option>
+                                    <option value="Batch 3">Batch 3</option>
+                                    <option value="Batch 4">Batch 4</option>
+                                </select>
                             </div>
                         </div>
 
@@ -1141,7 +1167,7 @@ const emailTemplate = ref(
     `
   <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
     <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-      <h1 style="color: #cc0000; text-align: center;">ðŸŽ‰ Congratulations, {{firstname}} {{surname}}!</h1>
+      <h1 style="color: #cc0000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
       <p style="font-size: 16px; color: #333; text-align: center;">
         You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
       </p>
@@ -1168,7 +1194,7 @@ const defaultTemplatePreview = `
 <div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
   <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! ðŸŽ‰</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
@@ -1190,7 +1216,7 @@ const defaultTemplatePreview = `
         CLICK TO CONFIRM YOUR INTERVIEW SLOT
     </a>
     </div>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP â€“ Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP - Taguig Facebook page</a>).</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
     <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
     <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
@@ -1202,7 +1228,7 @@ const waitlistedTemplatePreview = `
 <div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
   <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! ðŸŽ‰</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
@@ -1224,7 +1250,7 @@ const waitlistedTemplatePreview = `
         CLICK TO CONFIRM YOUR INTERVIEW SLOT
     </a>
     </div>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP â€“ Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP - Taguig Facebook page</a>).</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
     <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
     <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
@@ -1245,6 +1271,27 @@ const waitlistedCutoffTemplatePreview = `
     <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Campus Admission and Registration Office</p>
   </div>
 </div>`.trim();
+
+const formattedDefaultTemplatePreview = computed(() => {
+    return defaultTemplatePreview
+        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
+        .replace(/\{\{firstname\}\}/g, 'John')
+        .replace(/\{\{surname\}\}/g, 'Doe');
+});
+
+const formattedWaitlistedTemplatePreview = computed(() => {
+    return waitlistedTemplatePreview
+        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
+        .replace(/\{\{firstname\}\}/g, 'John')
+        .replace(/\{\{surname\}\}/g, 'Doe');
+});
+
+const formattedWaitlistedCutoffTemplatePreview = computed(() => {
+    return waitlistedCutoffTemplatePreview
+        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#9E122C;font-weight:bold;">John Doe</span>')
+        .replace(/\{\{firstname\}\}/g, 'John')
+        .replace(/\{\{surname\}\}/g, 'Doe');
+});
 
 const flatPassers = ref([]);
 
@@ -1532,11 +1579,22 @@ async function executeDelete() {
 }
 
 function openEditModal(passer) {
+    let yearGradVal = '';
+    if (passer.year_graduated != null) {
+        const yearInt = parseInt(passer.year_graduated, 10);
+        if (yearInt >= 2026) {
+            yearGradVal = 'Senior High School of A.Y. 2025-2026';
+        } else {
+            yearGradVal = 'Senior High School of Past School Years';
+        }
+    }
+
     editingPasser.value = { 
         ...passer,
         // Ensure passer_status_id is a string for the <select> v-model binding
         passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
         pupcet_total_score: passer.pupcet_total_score != null ? passer.pupcet_total_score : '',
+        year_graduated: yearGradVal,
     };
     showEditModal.value = true;
 }
@@ -1550,9 +1608,20 @@ async function savePasser() {
     saving.value = true;
     start();
     try {
+        const dataToSend = { ...editingPasser.value };
+        if (dataToSend.year_graduated === 'Senior High School of A.Y. 2025-2026') {
+            dataToSend.year_graduated = 2026;
+        } else if (dataToSend.year_graduated === 'Senior High School of Past School Years') {
+            dataToSend.year_graduated = 2025;
+        } else if (dataToSend.year_graduated === "" || dataToSend.year_graduated === null || dataToSend.year_graduated === undefined) {
+            dataToSend.year_graduated = null;
+        } else {
+            dataToSend.year_graduated = parseInt(dataToSend.year_graduated, 10);
+        }
+
         const response = await axios.put(
             `/test-passers/${editingPasser.value.test_passer_id}`,
-            editingPasser.value
+            dataToSend
         );
         show("Passer updated successfully!", "success");
 
@@ -1616,6 +1685,52 @@ async function savePasser() {
 const showAddModal = ref(false);
 const newPasserData = ref({});
 
+function getStatusAndBatchFromScore(score) {
+    if (score === null || score === undefined || score === "") {
+        return { passer_status_id: "", batch_number: "" };
+    }
+    const numScore = parseFloat(score);
+    if (isNaN(numScore)) {
+        return { passer_status_id: "", batch_number: "" };
+    }
+
+    if (numScore >= 85.00) {
+        return { passer_status_id: "1", batch_number: "Batch 1" };
+    } else if (numScore >= 79.00) {
+        return { passer_status_id: "1", batch_number: "Batch 2" };
+    } else if (numScore >= 75.00) {
+        return { passer_status_id: "2", batch_number: "Batch 3" };
+    } else if (numScore >= 55.00) {
+        return { passer_status_id: "2", batch_number: "Batch 4" };
+    } else {
+        return { passer_status_id: "3", batch_number: "" };
+    }
+}
+
+watch(
+    () => newPasserData.value?.pupcet_total_score,
+    (newScore) => {
+        if (!newPasserData.value) return;
+        const { passer_status_id, batch_number } = getStatusAndBatchFromScore(newScore);
+        if (passer_status_id !== "") {
+            newPasserData.value.passer_status_id = passer_status_id;
+        }
+        newPasserData.value.batch_number = batch_number;
+    }
+);
+
+watch(
+    () => editingPasser.value?.pupcet_total_score,
+    (newScore) => {
+        if (!editingPasser.value) return;
+        const { passer_status_id, batch_number } = getStatusAndBatchFromScore(newScore);
+        if (passer_status_id !== "") {
+            editingPasser.value.passer_status_id = passer_status_id;
+        }
+        editingPasser.value.batch_number = batch_number;
+    }
+);
+
 function openAddModal() {
     newPasserData.value = {
         surname: "",
@@ -1661,9 +1776,20 @@ async function saveNewPasser() {
     saving.value = true;
     start();
     try {
+        const dataToSend = { ...newPasserData.value };
+        if (dataToSend.year_graduated === 'Senior High School of A.Y. 2025-2026') {
+            dataToSend.year_graduated = 2026;
+        } else if (dataToSend.year_graduated === 'Senior High School of Past School Years') {
+            dataToSend.year_graduated = 2025;
+        } else if (dataToSend.year_graduated === "" || dataToSend.year_graduated === null || dataToSend.year_graduated === undefined) {
+            dataToSend.year_graduated = null;
+        } else {
+            dataToSend.year_graduated = parseInt(dataToSend.year_graduated, 10);
+        }
+
         const response = await axios.post(
             "/test-passers-store",
-            newPasserData.value
+            dataToSend
         );
         show("Passer added successfully!", "success");
 

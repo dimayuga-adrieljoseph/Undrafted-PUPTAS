@@ -434,24 +434,61 @@ function reset() {
                                     <p class="text-sm text-gray-800 leading-relaxed">
                                         Dear <strong class="text-[#800000]">{{ result.full_name }}</strong>,
                                     </p>
+
+                                    <p class="text-sm text-gray-800 leading-relaxed font-semibold">
+                                         <span class="text-[#800000]">CONGRATULATIONS!</span> 🎉
+                                    </p>
+
                                     <p class="text-sm text-gray-700 leading-relaxed">
-                                        Thank you for considering <strong>PUP-Taguig Campus</strong> for your higher education.
+                                        We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.
+                                    </p>
+
+                                    <!-- Details box -->
+                                    <div class="rounded-xl bg-gray-50 border border-gray-200 overflow-hidden text-sm divide-y divide-gray-200">
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Applicant Name</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.full_name }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Reference No.</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.reference_number }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Status</span>
+                                            <span class="text-green-700 font-semibold">Qualified</span>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.
                                     </p>
                                     <p class="text-sm text-gray-700 leading-relaxed">
-                                        Based on evaluation, we regret to inform you that your score in the PUP College Entrance Test did not place you in the Top 500 requirement of the Campus.
-                                    </p>
-                                    <p class="text-sm text-gray-700 leading-relaxed">
-                                        Nevertheless, you might still be notified (via email) of the possible remaining slots, based on your evaluated rank. Admission to these slots, however, shall be on a first-come, first-served basis, and subject to specific academic program admission requirements.
-                                    </p>
-                                    <p class="text-sm text-gray-700 leading-relaxed">
-                                        Since we cannot give you an assurance that a slot will be made available to you, we recommend you to still consider your admission options in other higher education institutions.
-                                    </p>
-                                    <p class="text-sm text-gray-700 leading-relaxed">
-                                        We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
+                                        Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!
                                     </p>
                                     <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
                                         PUP-Taguig Campus Admission and Registration Office
                                     </p>
+
+                                    <!-- CTA — opens slot confirmation modal -->
+                                    <button
+                                        type="button"
+                                        @click="confirmSlot"
+                                        :disabled="confirmingSlot"
+                                        class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg font-semibold text-sm text-white shadow-md
+                                               bg-gradient-to-r from-[#800000] to-[#9d0000]
+                                               hover:from-[#600000] hover:to-[#800000] transition-all duration-200
+                                               disabled:opacity-50 disabled:cursor-not-allowed
+                                               focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2"
+                                    >
+                                        <svg v-if="confirmingSlot" class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"/>
+                                        </svg>
+                                        {{ confirmingSlot ? 'Confirming...' : 'Click to Confirm Interview Slot' }}
+                                    </button>
                                 </div>
                             </div>
 

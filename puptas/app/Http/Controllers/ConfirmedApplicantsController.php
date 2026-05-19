@@ -285,11 +285,39 @@ class ConfirmedApplicantsController extends Controller
 
             $redName = '<span style="color:#cc0000;">' . $firstName . ' ' . $surname . '</span>';
 
-            $personalizedMessage = str_replace(
-                ['{{firstname}} {{surname}}', '{{firstname}}', '{{surname}}', '{{reference_no}}'],
-                [$redName, $firstName, $surname, $refNo],
-                $messageTemplate
-            );
+            // Support highly robust and case-insensitive replacements for all name/ref variations
+            $searchTags = [
+                '{{firstname}} {{surname}}',
+                '{{first_name}} {{surname}}',
+                '{{firstname}} {{lastname}}',
+                '{{first_name}} {{lastname}}',
+                '{{first_name}} {{last_name}}',
+                '{{firstname}}',
+                '{{first_name}}',
+                '{{surname}}',
+                '{{lastname}}',
+                '{{last_name}}',
+                '{{reference_no}}',
+                '{{reference_number}}',
+                '{{ref_no}}'
+            ];
+            $replaceValues = [
+                $redName,
+                $redName,
+                $redName,
+                $redName,
+                $redName,
+                $firstName,
+                $firstName,
+                $surname,
+                $surname,
+                $surname,
+                $refNo,
+                $refNo,
+                $refNo
+            ];
+
+            $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
 
             // Use a fake TestPasser-like object for the job (compatible with SendPasserEmail)
             // We dispatch with a mock passer to reuse the existing job infrastructure

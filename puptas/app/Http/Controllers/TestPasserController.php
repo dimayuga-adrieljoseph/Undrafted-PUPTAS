@@ -81,11 +81,41 @@ class TestPasserController extends Controller
                 // Replace placeholders in template for personalization
                 $confirmationUrl = 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad';
                 $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
-                $personalizedMessage = str_replace(
-                    ['{{firstname}} {{surname}}', '{{firstname}}', '{{surname}}', '{{reference_no}}', '{{confirmationUrl}}'],
-                    [$redName, $passer->first_name, $passer->surname, $passer->reference_number, $confirmationUrl],
-                    $messageTemplate
-                );
+                // Support highly robust and case-insensitive replacements for all name/ref variations
+                $searchTags = [
+                    '{{firstname}} {{surname}}',
+                    '{{first_name}} {{surname}}',
+                    '{{firstname}} {{lastname}}',
+                    '{{first_name}} {{lastname}}',
+                    '{{first_name}} {{last_name}}',
+                    '{{firstname}}',
+                    '{{first_name}}',
+                    '{{surname}}',
+                    '{{lastname}}',
+                    '{{last_name}}',
+                    '{{reference_no}}',
+                    '{{reference_number}}',
+                    '{{ref_no}}',
+                    '{{confirmationUrl}}'
+                ];
+                $replaceValues = [
+                    $redName,
+                    $redName,
+                    $redName,
+                    $redName,
+                    $redName,
+                    $passer->first_name,
+                    $passer->first_name,
+                    $passer->surname,
+                    $passer->surname,
+                    $passer->surname,
+                    $passer->reference_number,
+                    $passer->reference_number,
+                    $passer->reference_number,
+                    $confirmationUrl
+                ];
+
+                $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
 
                 SendWaitlistedEmail::dispatch($passer, $personalizedMessage);
             }
@@ -103,11 +133,33 @@ class TestPasserController extends Controller
         foreach ($passers as $passer) {
             // Replace placeholders in template for personalization
             $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
-            $personalizedMessage = str_replace(
-                ['{{firstname}} {{surname}}', '{{firstname}}', '{{surname}}'],
-                [$redName, $passer->first_name, $passer->surname],
-                $messageTemplate
-            );
+            // Support highly robust and case-insensitive replacements for all name/ref variations
+            $searchTags = [
+                '{{firstname}} {{surname}}',
+                '{{first_name}} {{surname}}',
+                '{{firstname}} {{lastname}}',
+                '{{first_name}} {{lastname}}',
+                '{{first_name}} {{last_name}}',
+                '{{firstname}}',
+                '{{first_name}}',
+                '{{surname}}',
+                '{{lastname}}',
+                '{{last_name}}'
+            ];
+            $replaceValues = [
+                $redName,
+                $redName,
+                $redName,
+                $redName,
+                $redName,
+                $passer->first_name,
+                $passer->first_name,
+                $passer->surname,
+                $passer->surname,
+                $passer->surname
+            ];
+
+            $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
 
             SendPasserEmail::dispatch($passer, $personalizedMessage);
         }
@@ -278,91 +330,52 @@ class TestPasserController extends Controller
     // Helper function to replace placeholders
     private function replacePlaceholders($template, $passer)
     {
-        return str_replace(
-            ['{{firstname}}', '{{surname}}'],
-            [$passer->first_name, $passer->surname],
-            $template
-        );
+        $searchTags = [
+            '{{firstname}}',
+            '{{first_name}}',
+            '{{surname}}',
+            '{{lastname}}',
+            '{{last_name}}'
+        ];
+        $replaceValues = [
+            $passer->first_name,
+            $passer->first_name,
+            $passer->surname,
+            $passer->surname,
+            $passer->surname
+        ];
+        return str_ireplace($searchTags, $replaceValues, $template);
     }
 
     public function upload(Request $request)
     {
-        $mode = $request->input('assignment_mode', 'manual');
-
-        // Validate common fields and assignment_mode
+        // Validate payload fields strictly
         $request->validate([
-            'assignment_mode' => 'sometimes|string|in:manual,auto',
-            'school_year' => 'required|string',
+            'batch_number' => 'required|string',
+            'school_year' => 'required|string|max:9|regex:/^\d{4}-\d{4}$/',
+            'passer_status_id' => 'required|integer|in:1,2,3',
             'file' => 'required|file|mimes:xlsx,xls,csv',
         ]);
 
-        if ($mode === 'manual') {
-            // Manual mode requires batch_number and passer_status_id
-            $request->validate([
-                'batch_number' => 'required|string',
-                'passer_status_id' => 'required|integer|in:1,2,3,4',
-            ]);
-
-            $batch = $request->input('batch_number');
-            $schoolYear = $request->input('school_year');
-            $passerStatusId = $request->input('passer_status_id');
-
-            $import = new TestPassersImport($batch, $schoolYear, $passerStatusId, 'manual');
-            Excel::import($import, $request->file('file'));
-
-            $importedCount = $import->getImportedCount();
-            $skippedCount = $import->getSkippedCount();
-
-            $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified', 4 => 'Waitlisted Below Cut Off'];
-            $statusName = $statusNames[$passerStatusId] ?? 'Unknown';
-            $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}, status: {$statusName}. Imported: {$importedCount}, Skipped: {$skippedCount}.", null, 'ADMISSION_DATA');
-
-            if ($importedCount === 0 && $skippedCount > 0) {
-                return response()->json([
-                    'message' => 'No new records were imported. All entries already exist in the system.',
-                    'imported_count' => $importedCount,
-                    'skipped_count' => $skippedCount,
-                ], 422);
-            }
-
-            return response()->json([
-                'message' => 'Excel file uploaded and data imported successfully.',
-                'imported_count' => $importedCount,
-                'skipped_count' => $skippedCount,
-            ]);
-        }
-
-        // Auto mode - only requires school_year and file
+        $batch = $request->input('batch_number');
         $schoolYear = $request->input('school_year');
+        $passerStatusId = (int) $request->input('passer_status_id');
 
-        $import = new TestPassersImport(
-            batch: null,
-            schoolYear: $schoolYear,
-            passerStatusId: null,
-            assignmentMode: 'auto'
-        );
-
-        Excel::import($import, $request->file('file'));
-
-        // Run priority-based capacity enforcement after auto-mode import
-        $capacityService = new \App\Services\CapacityEnforcementService();
-        $reassignedCount = $capacityService->enforce($schoolYear);
-
-        if ($reassignedCount > 0) {
-            \Log::info("Capacity enforcement: {$reassignedCount} record(s) reassigned to 'Waitlisted Below Cut Off' for school year {$schoolYear}.");
-        }
+        $import = new TestPassersImport($batch, $schoolYear, $passerStatusId);
+        \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('file'));
 
         $importedCount = $import->getImportedCount();
         $skippedCount = $import->getSkippedCount();
 
-        $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file in auto mode for school year {$schoolYear}. Imported: {$importedCount}, Skipped: {$skippedCount}. Capacity enforcement reassigned: {$reassignedCount}.", null, 'ADMISSION_DATA');
+        $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified'];
+        $statusName = $statusNames[$passerStatusId] ?? 'Unknown';
+        $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}, status: {$statusName}. Imported: {$importedCount}, Skipped: {$skippedCount}.", null, 'ADMISSION_DATA');
 
         if ($importedCount === 0 && $skippedCount > 0) {
             return response()->json([
                 'message' => 'No new records were imported. All entries already exist in the system.',
                 'imported_count' => $importedCount,
                 'skipped_count' => $skippedCount,
-                'reassigned_count' => $reassignedCount,
             ], 422);
         }
 
@@ -370,7 +383,6 @@ class TestPasserController extends Controller
             'message' => 'Excel file uploaded and data imported successfully.',
             'imported_count' => $importedCount,
             'skipped_count' => $skippedCount,
-            'reassigned_count' => $reassignedCount,
         ]);
     }
 
@@ -856,11 +868,27 @@ class TestPasserController extends Controller
         $messageTemplate = $request->message_template ?? '';
 
         // Replace placeholders in template for preview
-        $personalizedMessage = str_replace(
-            ['{{firstname}}', '{{surname}}', '{{reference_no}}'],
-            [$passer->first_name, $passer->surname, $passer->reference_number],
-            $messageTemplate
-        );
+        $searchTags = [
+            '{{firstname}}',
+            '{{first_name}}',
+            '{{surname}}',
+            '{{lastname}}',
+            '{{last_name}}',
+            '{{reference_no}}',
+            '{{reference_number}}',
+            '{{ref_no}}'
+        ];
+        $replaceValues = [
+            $passer->first_name,
+            $passer->first_name,
+            $passer->surname,
+            $passer->surname,
+            $passer->surname,
+            $passer->reference_number,
+            $passer->reference_number,
+            $passer->reference_number
+        ];
+        $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
 
         // Return the email view directly
         return view('emails.waitlisted', [
