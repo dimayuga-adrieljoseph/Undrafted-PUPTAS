@@ -671,11 +671,18 @@
                         <div class="col-span-2 grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
-                                <input
-                                    type="text"
+                                <select
                                     v-model="editingPasser.strand"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="" disabled>Select Strand</option>
+                                    <option value="STEM">STEM</option>
+                                    <option value="HUMSS">HUMSS</option>
+                                    <option value="ABM">ABM</option>
+                                    <option value="TVL">TVL</option>
+                                    <option value="ICT">ICT</option>
+                                    <option value="GAS">GAS</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
@@ -851,11 +858,18 @@
                         <div class="col-span-2 grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
-                                <input
-                                    type="text"
+                                <select
                                     v-model="newPasserData.strand"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
-                                />
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="" disabled>Select Strand</option>
+                                    <option value="STEM">STEM</option>
+                                    <option value="HUMSS">HUMSS</option>
+                                    <option value="ABM">ABM</option>
+                                    <option value="TVL">TVL</option>
+                                    <option value="ICT">ICT</option>
+                                    <option value="GAS">GAS</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
@@ -1637,6 +1651,52 @@ async function savePasser() {
 
 const showAddModal = ref(false);
 const newPasserData = ref({});
+
+function getStatusAndBatchFromScore(score) {
+    if (score === null || score === undefined || score === "") {
+        return { passer_status_id: "", batch_number: "" };
+    }
+    const numScore = parseFloat(score);
+    if (isNaN(numScore)) {
+        return { passer_status_id: "", batch_number: "" };
+    }
+
+    if (numScore >= 85.00) {
+        return { passer_status_id: "1", batch_number: "Batch 1" };
+    } else if (numScore >= 79.00) {
+        return { passer_status_id: "1", batch_number: "Batch 2" };
+    } else if (numScore >= 75.00) {
+        return { passer_status_id: "2", batch_number: "Batch 3" };
+    } else if (numScore >= 55.00) {
+        return { passer_status_id: "2", batch_number: "Batch 4" };
+    } else {
+        return { passer_status_id: "3", batch_number: "" };
+    }
+}
+
+watch(
+    () => newPasserData.value?.pupcet_total_score,
+    (newScore) => {
+        if (!newPasserData.value) return;
+        const { passer_status_id, batch_number } = getStatusAndBatchFromScore(newScore);
+        if (passer_status_id !== "") {
+            newPasserData.value.passer_status_id = passer_status_id;
+        }
+        newPasserData.value.batch_number = batch_number;
+    }
+);
+
+watch(
+    () => editingPasser.value?.pupcet_total_score,
+    (newScore) => {
+        if (!editingPasser.value) return;
+        const { passer_status_id, batch_number } = getStatusAndBatchFromScore(newScore);
+        if (passer_status_id !== "") {
+            editingPasser.value.passer_status_id = passer_status_id;
+        }
+        editingPasser.value.batch_number = batch_number;
+    }
+);
 
 function openAddModal() {
     newPasserData.value = {
