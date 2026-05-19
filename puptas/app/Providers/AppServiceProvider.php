@@ -13,6 +13,9 @@ use Illuminate\Support\ServiceProvider;
 use App\Listeners\LogUserLogin;
 use App\Listeners\LogUserLogout;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Events\QueryExecuted;
 use Laravel\Passport\Passport;
 
 class AppServiceProvider extends ServiceProvider
@@ -113,5 +116,15 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Passport::setClientUuids(true);
+
+        DB::listen(function (QueryExecuted $query) {
+            if ($query->time > 500) {
+                Log::warning('Slow query detected', [
+                    'sql' => $query->sql,
+                    'bindings' => $query->bindings,
+                    'time_ms' => $query->time,
+                ]);
+            }
+        });
     }
 }

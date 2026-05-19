@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Imports\TestPassersImport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\TestPasser;
+use App\Models\PasserStatus;
 use App\Models\SarGeneration;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Mail;
@@ -20,6 +21,8 @@ use App\Services\AuditLogService;
 use Symfony\Component\Mime\Part\TextPart;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 
 class TestPasserController extends Controller
 {
@@ -27,26 +30,122 @@ class TestPasserController extends Controller
     // Get grouped passers by school year and batch number
 
 
-    public function index()
+    public function index(Request $request)
     {
-        // Order by pupcet_total_score DESC at the DB level so ranking is
-        // consistent regardless of how the frontend sorts or paginates.
-        $passers = TestPasser::with('passerStatus')->orderByRaw('pupcet_total_score DESC')
-            ->get()
-            ->groupBy(['school_year', 'batch_number'])
-            ->map(function ($batches) {
-                return $batches->map(function ($passers) {
-                    return $passers->values();
-                });
-            });
+        // Per-page clamping BEFORE validation: default 15 for non-numeric, clamp to [1, 100]
+        $perPageInput = $request->input('per_page');
+        if (!is_numeric($perPageInput)) {
+            $perPage = 15;
+        } else {
+            $perPage = max(1, min(100, (int) $perPageInput));
+        }
+
+        // Merge the clamped per_page back into the request so validation passes
+        $request->merge(['per_page' => $perPage]);
+
+        // Validate filter and pagination parameters
+        $validated = $request->validate([
+            'school_year' => 'nullable|string|max:20',
+            'batch_number' => 'nullable|string|max:50',
+            'strand' => 'nullable|string|max:100',
+            'status' => 'nullable|integer|exists:passer_statuses,id',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        // Default school_year: most recent when not provided
+        $schoolYear = $request->input('school_year');
+        if (!$request->filled('school_year')) {
+            $schoolYear = TestPasser::max('school_year');
+            if ($schoolYear) {
+                $request->merge(['school_year' => $schoolYear]);
+            }
+        }
+
+        // Default batch_number: first available for selected school_year when not provided
+        $batchNumber = $request->input('batch_number');
+        if (!$request->filled('batch_number') && $schoolYear) {
+            $batchNumber = TestPasser::where('school_year', $schoolYear)
+                ->whereNotNull('batch_number')
+                ->orderBy('batch_number')
+                ->value('batch_number');
+            if ($batchNumber) {
+                $request->merge(['batch_number' => $batchNumber]);
+            }
+        }
+
+        try {
+            // Build filtered query and paginate
+            $query = $this->buildQuery($request);
+            $passers = $query->paginate($perPage);
+
+            // Page clamping: if page > last_page, re-query with last_page
+            $lastPage = $passers->lastPage();
+            $currentPage = $passers->currentPage();
+
+            if ($currentPage > $lastPage && $lastPage > 0) {
+                $request->merge(['page' => $lastPage]);
+                $passers = $this->buildQuery($request)->paginate($perPage, ['*'], 'page', $lastPage);
+            }
+        } catch (QueryException $e) {
+            if (str_contains($e->getMessage(), 'timeout') || str_contains($e->getMessage(), 'Lock wait')) {
+                return back()->with('error', 'The request timed out. Please try again.');
+            }
+            throw $e;
+        }
+
+        // Get filter options for dropdowns
+        $filterOptions = $this->getFilterOptions($schoolYear);
+
+        // Build current filters state
+        $filters = [
+            'school_year' => $schoolYear,
+            'batch_number' => $batchNumber,
+            'strand' => $request->input('strand'),
+            'status' => $request->input('status') ? (int) $request->input('status') : null,
+        ];
 
         return Inertia::render('TestPassers/Email', [
-            'groupedPassers' => $passers,
+            'passers' => $passers,
+            'filterOptions' => $filterOptions,
+            'filters' => $filters,
             'registrationUrl' => 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad',
         ]);
     }
 
 
+
+    /**
+     * Build an optimized Eloquent query with conditional filters and default ordering.
+     *
+     * Applies WHERE clauses for school_year, batch_number, strand, and passer_status_id
+     * only when the corresponding request parameter is present and non-empty.
+     * Orders results by pupcet_total_score descending and eager-loads passerStatus.
+     */
+    private function buildQuery(Request $request): Builder
+    {
+        $query = TestPasser::query()->with('passerStatus');
+
+        if ($request->filled('school_year')) {
+            $query->where('school_year', $request->input('school_year'));
+        }
+
+        if ($request->filled('batch_number')) {
+            $query->where('batch_number', $request->input('batch_number'));
+        }
+
+        if ($request->filled('strand')) {
+            $query->where('strand', $request->input('strand'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('passer_status_id', $request->input('status'));
+        }
+
+        $query->orderBy('pupcet_total_score', 'desc');
+
+        return $query;
+    }
 
     public function sendEmails(Request $request)
     {
@@ -1116,5 +1215,89 @@ class TestPasserController extends Controller
         );
 
         return response()->json(['message' => "{$count} passer(s) deleted successfully."]);
+    }
+
+    /**
+     * Resolve default filter values when not provided in the request.
+     *
+     * When no school_year is provided, defaults to the maximum (most recent) school_year in the database.
+     * When no batch_number is provided, defaults to the first available batch_number for the resolved school_year.
+     * Returns null values gracefully when the database is empty.
+     *
+     * @param Request $request
+     * @return array{school_year: string|null, batch_number: string|null}
+     */
+    private function getDefaultFilters(Request $request): array
+    {
+        // Resolve school_year: use request value if provided, otherwise query the most recent
+        $schoolYear = $request->filled('school_year')
+            ? $request->input('school_year')
+            : TestPasser::max('school_year');
+
+        // Resolve batch_number: use request value if provided, otherwise query the first available for the school_year
+        $batchNumber = $request->filled('batch_number')
+            ? $request->input('batch_number')
+            : null;
+
+        if ($batchNumber === null && $schoolYear !== null) {
+            $batchNumber = TestPasser::where('school_year', $schoolYear)
+                ->whereNotNull('batch_number')
+                ->orderBy('batch_number')
+                ->value('batch_number');
+        }
+
+        return [
+            'school_year' => $schoolYear,
+            'batch_number' => $batchNumber,
+        ];
+    }
+
+    /**
+     * Get available filter options for the test passers listing.
+     *
+     * Queries distinct values using indexed columns for efficient DISTINCT queries.
+     *
+     * @param string|null $schoolYear The selected school year to scope batch numbers
+     * @return array{schoolYears: array, batchNumbers: array, strands: array, statuses: \Illuminate\Database\Eloquent\Collection}
+     */
+    private function getFilterOptions(?string $schoolYear): array
+    {
+        // Distinct school_year values sorted descending (uses idx_test_passers_school_year_batch index)
+        $schoolYears = TestPasser::select('school_year')
+            ->whereNotNull('school_year')
+            ->distinct()
+            ->orderBy('school_year', 'desc')
+            ->pluck('school_year')
+            ->all();
+
+        // Distinct batch_number values for the given school_year (uses idx_test_passers_school_year_batch composite index)
+        $batchNumbers = [];
+        if ($schoolYear) {
+            $batchNumbers = TestPasser::select('batch_number')
+                ->where('school_year', $schoolYear)
+                ->whereNotNull('batch_number')
+                ->distinct()
+                ->orderBy('batch_number')
+                ->pluck('batch_number')
+                ->all();
+        }
+
+        // Distinct strand values (uses idx_test_passers_strand index)
+        $strands = TestPasser::select('strand')
+            ->whereNotNull('strand')
+            ->distinct()
+            ->orderBy('strand')
+            ->pluck('strand')
+            ->all();
+
+        // All passer statuses (uses passer_statuses table primary key)
+        $statuses = PasserStatus::all();
+
+        return [
+            'schoolYears' => $schoolYears,
+            'batchNumbers' => $batchNumbers,
+            'strands' => $strands,
+            'statuses' => $statuses,
+        ];
     }
 }
