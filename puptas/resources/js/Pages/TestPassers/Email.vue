@@ -130,7 +130,7 @@
                                 </h2>
                                 <div class="text-sm text-gray-600 dark:text-gray-400">
                                     Page {{ currentPage }} of {{ totalPages }}
-                                    &bull; Showing {{ paginatedPassers.length }} items
+                                    &bull; Showing {{ paginatedPassers.length }} of {{ passers?.total || 0 }} items
                                 </div>
                             </div>
                         </div>
@@ -291,19 +291,19 @@
                         <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
                             <div class="flex items-center justify-between">
                                 <div class="text-sm text-gray-700 dark:text-gray-400">
-                                    <span v-if="filteredPassers.length === 0">
+                                    <span v-if="!passers || passers.total === 0">
                                         Showing 0 to 0 of 0 results
                                     </span>
                                     <span v-else>
-                                        Showing {{ Math.min((currentPage - 1) * itemsPerPage + 1, filteredPassers.length) }} 
-                                        to {{ Math.min(currentPage * itemsPerPage, filteredPassers.length) }} 
-                                        of {{ filteredPassers.length }} results
+                                        Showing {{ passers.from }} 
+                                        to {{ passers.to }} 
+                                        of {{ passers.total }} results
                                     </span>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <button
                                         :disabled="currentPage === 1"
-                                        @click.prevent="currentPage--"
+                                        @click.prevent="goToPage(currentPage - 1)"
                                         class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
                                     >
                                         <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -315,7 +315,7 @@
                                         <button
                                             v-for="page in visiblePages"
                                             :key="page"
-                                            @click.prevent="currentPage = page"
+                                            @click.prevent="goToPage(page)"
                                             :class="[
                                                 'px-3 py-1 rounded-lg text-sm font-medium transition',
                                                 currentPage === page 
@@ -331,7 +331,7 @@
                                     </div>
                                     <button
                                         :disabled="currentPage === totalPages"
-                                        @click.prevent="currentPage++"
+                                        @click.prevent="goToPage(currentPage + 1)"
                                         class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
                                     >
                                         Next
@@ -1100,7 +1100,7 @@
 import { ref, computed, watch, nextTick} from "vue";
 const axios = window.axios;
 import AppLayout from "@/Layouts/AppLayout.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, router } from "@inertiajs/vue3";
 import { QuillEditor } from "@vueup/vue-quill";
 import "@vueup/vue-quill/dist/vue-quill.snow.css";
 import { useGlobalLoading } from "@/Composables/useGlobalLoading";
@@ -1368,16 +1368,48 @@ const filterPasserStatus = ref(props.filters?.status ? [props.filters.status] : 
 const showStatusDropdown = ref(false);
 const sortKey = ref("pupcet_total_score");
 const sortOrder = ref("desc");
-const currentPage = ref(1);
-const itemsPerPage = 10;
+
+// Server-side pagination: read from the paginator metadata
+const currentPage = computed(() => props.passers?.current_page || 1);
+const totalPages = computed(() => props.passers?.last_page || 1);
+const itemsPerPage = computed(() => props.passers?.per_page || 15);
+
+// Navigate to a different page via Inertia (server-side pagination)
+function goToPage(page) {
+    if (page < 1 || page > totalPages.value || page === currentPage.value) return;
+    router.get('/test-passers', {
+        school_year: filterSchoolYear.value || undefined,
+        batch_number: filterBatchNumber.value || undefined,
+        strand: undefined,
+        status: filterPasserStatus.value.length === 1 ? filterPasserStatus.value[0] : undefined,
+        page: page,
+        per_page: itemsPerPage.value,
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+}
 
 const onSearchInput = debounce(() => {
     debouncedSearchTerm.value = searchTerm.value.toLowerCase();
-    currentPage.value = 1;
 }, 300);
 
-watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, sortKey, sortOrder], () => {
-    currentPage.value = 1;
+// When server-side filters change, reload from server
+function applyServerFilters() {
+    router.get('/test-passers', {
+        school_year: filterSchoolYear.value || undefined,
+        batch_number: filterBatchNumber.value || undefined,
+        status: filterPasserStatus.value.length === 1 ? filterPasserStatus.value[0] : undefined,
+        page: 1,
+        per_page: itemsPerPage.value,
+    }, {
+        preserveState: false,
+        preserveScroll: true,
+    });
+}
+
+watch([filterSchoolYear, filterBatchNumber, filterPasserStatus], () => {
+    applyServerFilters();
 }, { deep: true });
 
 const schoolYears = computed(() => {
@@ -1461,17 +1493,15 @@ const sortedPassers = computed(() => {
 });
 
 /**
- * Returns the 1-based global rank of a passer within the sortedPassers list.
- * Relies on sortedPassers being ordered by score DESC so rank 1 = highest score.
+ * Returns the 1-based global rank of a passer within the full result set.
+ * Uses the server paginator's 'from' value for correct offset across pages.
  */
 function getGlobalRank(passer, pageIndex) {
-    const globalIndex = (currentPage.value - 1) * itemsPerPage + pageIndex;
-    return globalIndex + 1;
+    const from = props.passers?.from || 1;
+    return from + pageIndex;
 }
 
-const totalPages = computed(() =>
-    Math.ceil(sortedPassers.value.length / itemsPerPage)
-);
+// visiblePages for pagination UI (uses server-side totalPages)
 
 // Pagination range for display
 const visiblePages = computed(() => {
@@ -1499,8 +1529,8 @@ const visiblePages = computed(() => {
 });
 
 const paginatedPassers = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage;
-    return sortedPassers.value.slice(start, start + itemsPerPage);
+    // Data is already paginated by the server; just apply client-side search/sort
+    return sortedPassers.value;
 });
 
 const selectedPassers = ref([]);
