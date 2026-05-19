@@ -4,8 +4,6 @@ namespace App\Imports;
 
 use App\Models\TestPasser;
 use App\Models\User;
-use App\Models\ApplicantProfile;
-use App\Services\ScoreThresholdService;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
@@ -13,237 +11,118 @@ class TestPassersImport implements ToModel, WithHeadingRow
 {
     protected ?string $batch;
     protected string $schoolYear;
-    protected ?int $passerStatusId;
-    protected string $assignmentMode;
+    protected int $passerStatusId;
     protected int $importedCount = 0;
     protected int $skippedCount = 0;
     protected array $skippedReasons = [];
-    protected int $runningQualifiedWaitlistedCount = 0;
 
     public function __construct(
         ?string $batch = null,
         string $schoolYear = '',
-        ?int $passerStatusId = null,
-        string $assignmentMode = 'manual'
+        int $passerStatusId = 1
     ) {
         $this->batch = $batch;
         $this->schoolYear = $schoolYear;
         $this->passerStatusId = $passerStatusId;
-        $this->assignmentMode = $assignmentMode;
-
-        if ($this->assignmentMode === 'auto') {
-            $this->initializeRunningCount();
-        }
     }
 
     public function model(array $row): ?TestPasser
     {
-        if ($this->assignmentMode === 'auto') {
-            return $this->processAutoMode($row);
-        }
+        // Trim and check firstname
+        $firstName = isset($row['firstname']) ? trim((string)$row['firstname']) : '';
 
-        return $this->processManualMode($row);
-    }
-
-    /**
-     * Process a row in auto mode using ScoreThresholdService to determine batch/status.
-     */
-    private function processAutoMode(array $row): ?TestPasser
-    {
-        // Trim and check for required fields, especially first_name
-        $firstName = isset($row['firstname']) ? trim($row['firstname']) : null;
-
-        if (empty($firstName)) {
+        if ($firstName === '') {
             $this->skippedCount++;
             $this->skippedReasons[] = 'Missing first name';
             return null;
         }
 
-        // Resolve PUPCET score - skip row if null
-        $pupcetScore = $this->resolvePupcetScore($row);
-
-        if ($pupcetScore === null) {
-            $this->skippedCount++;
-            $this->skippedReasons[] = 'Missing or invalid PUPCET score';
-            return null;
-        }
-
-        $email           = $row['email'] ?? null;
-        $referenceNumber = $row['reference_number'] ?? null;
-
-        // Skip if email already exists in the database
-        if (!empty($email) && TestPasser::where('email', $email)->exists()) {
-            $this->skippedCount++;
-            $this->skippedReasons[] = "Duplicate email: {$email}";
-            return null;
-        }
-
-        // Skip if reference number already exists in the database
-        if (!empty($referenceNumber) && TestPasser::where('reference_number', $referenceNumber)->exists()) {
-            $this->skippedCount++;
-            $this->skippedReasons[] = "Duplicate reference number: {$referenceNumber}";
-            return null;
-        }
-
-        // Use ScoreThresholdService to determine batch and status
-        $service = new ScoreThresholdService();
-        $assignment = $service->resolve($pupcetScore, $this->runningQualifiedWaitlistedCount);
-
-        $batchNumber = $assignment['batch_number'];
-        $passerStatusId = $assignment['passer_status_id'];
-
-        $user = null;
-
-        // If a user with this email already exists, automatically link them and assign student number
-        if ($email) {
-            $user = User::where('email', $email)->first();
-            if ($user && $user->applicantProfile && $referenceNumber) {
-                $user->applicantProfile->update(['student_number' => $referenceNumber]);
+        // Score resolution strictly based on "pupcet_score" column
+        $pupcetScore = null;
+        if (isset($row['pupcet_score']) && trim((string)$row['pupcet_score']) !== '') {
+            $rawScore = $row['pupcet_score'];
+            if (is_numeric($rawScore)) {
+                $floatScore = (float)$rawScore;
+                if ($floatScore >= 0.00 && $floatScore <= 9999.99) {
+                    $pupcetScore = round($floatScore, 2);
+                }
             }
         }
 
-        // Use request-level schoolYear for all records regardless of Excel column
-        $schoolYear = $this->schoolYear;
+        $email = isset($row['email']) ? trim((string)$row['email']) : '';
+        $email = $email !== '' ? $email : null;
 
-        $result = TestPasser::create([
-            'surname'            => $row['surname'] ?? null,
-            'first_name'         => $firstName,
-            'middle_name'        => $row['middlename'] ?? null,
-            'strand'             => $row['strand'] ?? null,
-            'email'              => $email,
-            'reference_number'   => $referenceNumber,
-            'batch_number'       => $batchNumber,
-            'school_year'        => $schoolYear,
-            'pupcet_total_score' => $pupcetScore,
-            'user_id'            => $user?->id,
-            'status'             => $user ? 'registered' : 'pending',
-            'passer_status_id'   => $passerStatusId,
-        ]);
+        $referenceNumber = isset($row['reference_number']) ? trim((string)$row['reference_number']) : '';
+        $referenceNumber = $referenceNumber !== '' ? $referenceNumber : null;
 
-        // Increment running count for qualified (1) or waitlisted (2) statuses
-        if (in_array($passerStatusId, [1, 2])) {
-            $this->runningQualifiedWaitlistedCount++;
-        }
+        $userId = null;
+        $status = 'pending';
 
-        $this->importedCount++;
-        return $result;
-    }
-
-    /**
-     * Process a row in manual mode.
-     */
-    private function processManualMode(array $row): ?TestPasser
-    {
-        // Trim and check for required fields, especially first_name
-        $firstName = isset($row['firstname']) ? trim($row['firstname']) : null;
-
-        if (empty($firstName)) {
-            $this->skippedCount++;
-            $this->skippedReasons[] = 'Missing first name';
-            return null;
-        }
-
-        $email           = $row['email'] ?? null;
-        $referenceNumber = $row['reference_number'] ?? null;
-
-        // Skip if email already exists in the database
-        if (!empty($email) && TestPasser::where('email', $email)->exists()) {
-            $this->skippedCount++;
-            $this->skippedReasons[] = "Duplicate email: {$email}";
-            return null;
-        }
-
-        // Skip if reference number already exists in the database
-        if (!empty($referenceNumber) && TestPasser::where('reference_number', $referenceNumber)->exists()) {
-            $this->skippedCount++;
-            $this->skippedReasons[] = "Duplicate reference number: {$referenceNumber}";
-            return null;
-        }
-
-        $user = null;
-
-        // If a user with this email already exists, automatically link them and assign student number
+        // Check if user exists with matching email
         if ($email) {
             $user = User::where('email', $email)->first();
-            if ($user && $user->applicantProfile && $referenceNumber) {
-                $user->applicantProfile->update(['student_number' => $referenceNumber]);
+            if ($user) {
+                $userId = $user->id;
+                $status = 'registered';
+
+                // Update applicantProfile's student_number if profile and reference number are present
+                if ($user->applicantProfile && $referenceNumber) {
+                    $user->applicantProfile->update(['student_number' => $referenceNumber]);
+                }
             }
         }
 
-        $pupcetScore = $this->resolvePupcetScore($row);
-
-        $result = TestPasser::create([
-            'surname'            => $row['surname'] ?? null,
-            'first_name'         => $firstName,
-            'middle_name'        => $row['middlename'] ?? null,
-            'strand'             => $row['strand'] ?? null,
-            'email'              => $email,
-            'reference_number'   => $referenceNumber,
-            'batch_number'       => $this->batch,
-            'school_year'        => $this->schoolYear,
-            'pupcet_total_score' => $pupcetScore,
-            'user_id'            => $user?->id,
-            'status'             => $user ? 'registered' : 'pending',
-            'passer_status_id'   => $this->passerStatusId,
-        ]);
-
         $this->importedCount++;
-        return $result;
+
+        // If email is present, update or create using email as unique match key
+        if ($email) {
+            return TestPasser::updateOrCreate(
+                ['email' => $email],
+                [
+                    'surname' => isset($row['surname']) ? trim((string)$row['surname']) : null,
+                    'first_name' => $firstName,
+                    'middle_name' => isset($row['middle_name']) ? trim((string)$row['middle_name']) : null,
+                    'strand' => isset($row['strand']) ? trim((string)$row['strand']) : null,
+                    'reference_number' => $referenceNumber,
+                    'pupcet_total_score' => $pupcetScore,
+                    'batch_number' => $this->batch,
+                    'school_year' => $this->schoolYear,
+                    'user_id' => $userId,
+                    'status' => $status,
+                    'passer_status_id' => $this->passerStatusId,
+                ]
+            );
+        }
+
+        // Without email, directly create a new TestPasser record
+        return TestPasser::create([
+            'surname' => isset($row['surname']) ? trim((string)$row['surname']) : null,
+            'first_name' => $firstName,
+            'middle_name' => isset($row['middle_name']) ? trim((string)$row['middle_name']) : null,
+            'strand' => isset($row['strand']) ? trim((string)$row['strand']) : null,
+            'email' => null,
+            'reference_number' => $referenceNumber,
+            'pupcet_total_score' => $pupcetScore,
+            'batch_number' => $this->batch,
+            'school_year' => $this->schoolYear,
+            'user_id' => null,
+            'status' => 'pending',
+            'passer_status_id' => $this->passerStatusId,
+        ]);
     }
 
-    /**
-     * Get the count of successfully imported rows.
-     */
     public function getImportedCount(): int
     {
         return $this->importedCount;
     }
 
-    /**
-     * Get the count of skipped rows.
-     */
     public function getSkippedCount(): int
     {
         return $this->skippedCount;
     }
 
-    /**
-     * Get the reasons for skipped rows.
-     */
     public function getSkippedReasons(): array
     {
         return $this->skippedReasons;
-    }
-
-    private function resolvePupcetScore(array $row): ?float
-    {
-        $value = $row['pupcet_score'] ?? null;
-
-        if ($value === null || trim((string) $value) === '') {
-            return null;
-        }
-
-        if (!is_numeric($value)) {
-            return null;
-        }
-
-        $score = round((float) $value, 2);
-
-        if ($score < 0.00 || $score > 9999.99) {
-            return null;
-        }
-
-        return $score;
-    }
-
-    /**
-     * Initialize the running count of qualified+waitlisted records for the current school year.
-     * This queries existing records in the database before the import begins.
-     */
-    private function initializeRunningCount(): void
-    {
-        $this->runningQualifiedWaitlistedCount = TestPasser::where('school_year', $this->schoolYear)
-            ->whereIn('passer_status_id', [1, 2])
-            ->count();
     }
 }
