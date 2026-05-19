@@ -353,7 +353,7 @@ class TestPasserController extends Controller
         $request->validate([
             'batch_number' => 'required|string',
             'school_year' => 'required|string|max:9|regex:/^\d{4}-\d{4}$/',
-            'passer_status_id' => 'required|integer|in:1,2,3',
+            'passer_status_id' => 'required|integer|in:1,2,3,4',
             'file' => 'required|file|mimes:xlsx,xls,csv',
         ]);
 
@@ -367,7 +367,7 @@ class TestPasserController extends Controller
         $importedCount = $import->getImportedCount();
         $skippedCount = $import->getSkippedCount();
 
-        $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified'];
+        $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified', 4 => 'Waitlisted Below Cut Off'];
         $statusName = $statusNames[$passerStatusId] ?? 'Unknown';
         $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}, status: {$statusName}. Imported: {$importedCount}, Skipped: {$skippedCount}.", null, 'ADMISSION_DATA');
 

@@ -77,6 +77,7 @@
             <option value="1">Qualified</option>
             <option value="2">Waitlisted</option>
             <option value="3">Unqualified</option>
+            <option value="4">Waitlisted Below Cut Off</option>
           </select>
           <!-- Validation Message Adjacent to Status_Selector -->
           <p v-if="showStatusError" class="text-sm text-red-600 font-medium mt-1">A status selection is required.</p>
