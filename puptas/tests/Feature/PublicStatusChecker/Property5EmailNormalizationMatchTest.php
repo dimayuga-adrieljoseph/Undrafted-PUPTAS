@@ -143,7 +143,7 @@ it(
         $passer = TestPasser::create($case['attrs']);
 
         foreach ($case['variants'] as $variantEmail) {
-            $response = $this->postJson('/api/public/check-status', [
+            $response = $this->postJson('/api/public/admission-results', [
                 'referenceNumber' => $passer->reference_number,
                 'email'           => $variantEmail,
             ]);

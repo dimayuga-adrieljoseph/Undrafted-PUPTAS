@@ -371,4 +371,4 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
 Route::get('/callback-loading', [CallbackController::class, 'index']);
 
 // Public Admission Status Checker - No auth required
-Route::get('/check-status', fn () => Inertia::render('Public/CheckStatus'))->name('public.check-status');
+Route::get('/admission-results', fn () => Inertia::render('Public/CheckStatus'))->name('public.check-status');

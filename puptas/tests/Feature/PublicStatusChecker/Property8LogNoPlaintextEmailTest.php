@@ -88,7 +88,7 @@ it(
 
         // POST to the endpoint — credentials may or may not match (non-matching
         // is fine; the controller still logs the attempt either way)
-        $this->postJson('/api/public/check-status', [
+        $this->postJson('/api/public/admission-results', [
             'referenceNumber' => $referenceNumber,
             'email'           => $email,
         ]);

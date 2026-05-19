@@ -48,7 +48,7 @@ Route::prefix('v1')
 use App\Http\Controllers\ChatwootWebhookController;
 use App\Http\Controllers\PublicStatusCheckerController;
 
-Route::post('/public/check-status', [PublicStatusCheckerController::class, 'check'])
+Route::post('/public/admission-results', [PublicStatusCheckerController::class, 'check'])
     ->middleware('throttle:status-checker')
     ->name('public.check-status.api');
 

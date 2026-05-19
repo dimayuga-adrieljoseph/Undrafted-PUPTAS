@@ -71,7 +71,7 @@ let countdownInterval = null;
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 /**
- * Submit the form to POST /api/public/check-status.
+ * Submit the form to POST /api/public/admission-results.
  * Handles 200, 422, 429, and unexpected errors explicitly.
  */
 async function submit() {
@@ -83,7 +83,7 @@ async function submit() {
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
-        const response = await fetch("/api/public/check-status", {
+        const response = await fetch("/api/public/admission-results", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

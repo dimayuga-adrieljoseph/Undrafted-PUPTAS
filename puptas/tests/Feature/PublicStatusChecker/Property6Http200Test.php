@@ -114,7 +114,7 @@ it(
         // For non-matching cases, no record is inserted — the DB is empty
         // (RefreshDatabase ensures a clean slate per test)
 
-        $response = $this->postJson('/api/public/check-status', [
+        $response = $this->postJson('/api/public/admission-results', [
             'referenceNumber' => $case['referenceNumber'],
             'email'           => $case['email'],
         ]);

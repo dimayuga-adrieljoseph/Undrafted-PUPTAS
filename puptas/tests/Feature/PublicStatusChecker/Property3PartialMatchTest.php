@@ -106,7 +106,7 @@ it(
         TestPasser::create($case['attrs']);
 
         // Test 1: correct reference_number + DIFFERENT email → qualified: false
-        $response = $this->postJson('/api/public/check-status', [
+        $response = $this->postJson('/api/public/admission-results', [
             'referenceNumber' => $case['attrs']['reference_number'],
             'email'           => $case['different_email'],
         ]);
@@ -133,7 +133,7 @@ it(
         TestPasser::create($case['attrs']);
 
         // Test 2: DIFFERENT reference_number + correct email → qualified: false
-        $response = $this->postJson('/api/public/check-status', [
+        $response = $this->postJson('/api/public/admission-results', [
             'referenceNumber' => $case['different_ref_number'],
             'email'           => $case['attrs']['email'],
         ]);

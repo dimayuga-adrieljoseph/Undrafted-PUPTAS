@@ -26,7 +26,7 @@
     @include('partials.sienna-widget')
 
     @if(isset($page['component']) && $page['component'] === 'Public/CheckStatus')
-        {{-- Always show Chatwoot on the check-status page --}}
+        {{-- Always show Chatwoot on the admission-results page --}}
         @include('partials.chatwoot-widget-public')
     @else
         @auth

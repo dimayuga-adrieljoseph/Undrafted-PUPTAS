@@ -70,7 +70,7 @@ it(
         // The database is empty (RefreshDatabase) — no TestPasser records exist,
         // so every submitted pair is guaranteed to be non-matching.
 
-        $response = $this->postJson('/api/public/check-status', [
+        $response = $this->postJson('/api/public/admission-results', [
             'referenceNumber' => $referenceNumber,
             'email'           => $email,
         ]);

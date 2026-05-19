@@ -3,7 +3,7 @@
 /**
  * Unit tests for CheckStatusRequest validation.
  *
- * These tests verify that the POST /api/public/check-status endpoint
+ * These tests verify that the POST /api/public/admission-results endpoint
  * correctly validates the referenceNumber and email fields and returns
  * 422 Unprocessable Entity with appropriate error messages when validation fails.
  *
@@ -11,7 +11,7 @@
  */
 
 test('missing referenceNumber returns 422 with error on referenceNumber', function () {
-    $response = $this->postJson('/api/public/check-status', [
+    $response = $this->postJson('/api/public/admission-results', [
         'email' => 'applicant@example.com',
     ]);
 
@@ -21,7 +21,7 @@ test('missing referenceNumber returns 422 with error on referenceNumber', functi
 });
 
 test('missing email returns 422 with error on email', function () {
-    $response = $this->postJson('/api/public/check-status', [
+    $response = $this->postJson('/api/public/admission-results', [
         'referenceNumber' => '2026-000123',
     ]);
 
@@ -31,7 +31,7 @@ test('missing email returns 422 with error on email', function () {
 });
 
 test('invalid email format returns 422 with error on email', function () {
-    $response = $this->postJson('/api/public/check-status', [
+    $response = $this->postJson('/api/public/admission-results', [
         'referenceNumber' => '2026-000123',
         'email'           => 'not-a-valid-email',
     ]);
@@ -42,14 +42,14 @@ test('invalid email format returns 422 with error on email', function () {
 });
 
 test('both fields missing returns 422 with errors on both fields', function () {
-    $response = $this->postJson('/api/public/check-status', []);
+    $response = $this->postJson('/api/public/admission-results', []);
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['referenceNumber', 'email']);
 });
 
 test('both fields valid passes validation and does not return 422', function () {
-    $response = $this->postJson('/api/public/check-status', [
+    $response = $this->postJson('/api/public/admission-results', [
         'referenceNumber' => '2026-000123',
         'email'           => 'applicant@example.com',
     ]);
