@@ -40,13 +40,14 @@ it('POST /api/public/admission-results with valid payload returns 200 without au
         'surname'          => 'Dela Cruz',
         'first_name'       => 'Juan',
         'email'            => 'juan.delacruz@example.com',
-        'reference_number' => 'ROUTE-TEST-001',
+        'reference_number' => '2026-900001',
         'batch_number'     => 'Batch 1',
     ]);
 
     $response = $this->postJson('/api/public/admission-results', [
-        'referenceNumber' => 'ROUTE-TEST-001',
-        'email'           => 'juan.delacruz@example.com',
+        'referenceNumber' => '2026-900001',
+        'firstName'       => 'Juan',
+        'lastName'  => 'Dela Cruz',
     ]);
 
     $response->assertStatus(200);
@@ -55,16 +56,17 @@ it('POST /api/public/admission-results with valid payload returns 200 without au
 it('POST /api/public/admission-results with invalid payload returns 422 without auth', function () {
     $response = $this->postJson('/api/public/admission-results', [
         'referenceNumber' => '',
-        'email'           => 'not-a-valid-email',
+        'firstName'       => '',
+        'lastName'        => '',
     ]);
 
     $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['referenceNumber', 'email']);
+    $response->assertJsonValidationErrors(['referenceNumber', 'firstName', 'lastName']);
 });
 
 it('POST /api/public/admission-results with missing fields returns 422 without auth', function () {
     $response = $this->postJson('/api/public/admission-results', []);
 
     $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['referenceNumber', 'email']);
+    $response->assertJsonValidationErrors(['referenceNumber', 'firstName', 'lastName']);
 });
