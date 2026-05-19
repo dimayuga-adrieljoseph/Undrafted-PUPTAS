@@ -790,9 +790,13 @@ class TestPasserController extends Controller
 
         $score = $passer->pupcet_total_score ?? 0;
         if ($score >= 85) {
-            $enrollmentTime = '08:00';
+            $enrollmentTime = '08:00'; // 8:00 AM
         } elseif ($score >= 79) {
-            $enrollmentTime = '13:00';
+            $enrollmentTime = '10:00'; // 10:00 AM
+        } elseif ($score >= 77) {
+            $enrollmentTime = '13:00'; // 1:00 PM
+        } elseif ($score >= 75) {
+            $enrollmentTime = '14:00'; // 2:00 PM
         } else {
             $enrollmentTime = 'TBD';
         }
