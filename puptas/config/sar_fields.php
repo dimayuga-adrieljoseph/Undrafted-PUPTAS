@@ -137,6 +137,7 @@ return [
             'x' => 35, 'y' => 20, 'w' => 80, 'h' => 5,
             'font' => 'helvetica', 'font_size' => 9,
             'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink',
+            'interactive' => true,
         ],
         // Printed name above "Signature over Printed Name of Applicant"
         'printed_name_enrollee' => [
@@ -145,11 +146,13 @@ return [
             'align' => 'C', 'uppercase' => true, 'fit_mode' => 'shrink',
             'blank' => ['x' => 90, 'y' => 236, 'w' => 140.8, 'h' => 14],
             'redraw_line' => ['x1' => 115, 'y1' => 252, 'x2' => 188, 'y2' => 252],
+            'interactive' => true,
         ],
         'campus' => [
             'x' => 125, 'y' => 45, 'w' => 50, 'h' => 5,
             'font' => 'helvetica', 'font_size' => 9,
             'align' => 'L', 'uppercase' => false, 'fit_mode' => 'shrink',
+            'interactive' => true,
         ],
     ],
 
@@ -165,6 +168,7 @@ return [
             'x' => 55, 'y' => 33, 'w' => 80, 'h' => 5,
             'font' => 'helvetica', 'font_size' => 9,
             'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink',
+            'interactive' => true,
         ],
         'affiant_name' => [
             'x' => 115, 'y' => 160, 'w' => 58, 'h' => 7,
@@ -172,16 +176,19 @@ return [
             'align' => 'R', 'uppercase' => true, 'fit_mode' => 'shrink',
             'blank' => ['x' => 120, 'y' => 160, 'w' => 65, 'h' => 5.8],
             'blank' => ['x' => 30, 'y' => 240, 'w' => 150.8, 'h' => 20],
+            'interactive' => true,
         ],
         'previous_school' => [
             'x' => 120, 'y' => 58, 'w' => 100, 'h' => 5,
             'font' => 'helvetica', 'font_size' => 9,
             'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink',
+            'interactive' => true,
         ],
         'graduation_year' => [
             'x' => 60, 'y' => 63, 'w' => 20, 'h' => 5,
             'font' => 'helvetica', 'font_size' => 9,
             'align' => 'L', 'uppercase' => false, 'fit_mode' => 'shrink',
+            'interactive' => true,
         ],
     ],
 

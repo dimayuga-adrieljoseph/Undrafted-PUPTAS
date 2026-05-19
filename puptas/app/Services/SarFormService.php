@@ -253,7 +253,7 @@ class SarFormService
             }
             
             // Render the field
-            $this->renderField($pdf, $fieldConfig, $value);
+            $this->renderField($pdf, $fieldConfig, $value, $fieldName);
         }
     }
     
@@ -325,9 +325,9 @@ class SarFormService
     }
 
     /**
-     * Render a field with auto-fitting and proper alignment
+     * Render a field with auto-fitting and proper alignment or interactive form field support
      */
-    protected function renderField(Fpdi $pdf, array $config, string $value): void
+    protected function renderField(Fpdi $pdf, array $config, string $value, string $fieldName = ''): void
     {
         $fontSize = $this->fitTextToWidth(
             $pdf,
@@ -337,6 +337,26 @@ class SarFormService
             $config['font_size'],
             max(6, $config['font_size'] - 4) // min font size
         );
+
+        if ($config['interactive'] ?? false) {
+            // TCPDF Text alignment: 0 = Left, 1 = Center, 2 = Right
+            $alignMap = ['L' => 0, 'C' => 1, 'R' => 2];
+            $align = $alignMap[$config['align'] ?? 'L'] ?? 0;
+
+            // Define text field properties
+            $properties = [
+                'v' => $value,
+                'f' => $fontSize,
+                'ff' => $config['font'] ?? 'helvetica',
+                'q' => $align,
+                'bc' => [], // no border color (transparent)
+                'bg' => [], // no background color (transparent)
+            ];
+
+            // Render interactive fillable field
+            $pdf->TextField($fieldName ?: 'field_' . uniqid(), $config['w'], $config['h'], $properties, [], $config['x'], $config['y']);
+            return;
+        }
         
         // Set font (bold)
         $pdf->SetFont($config['font'], 'B', $fontSize);
