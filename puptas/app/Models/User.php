@@ -136,9 +136,9 @@ class User extends Authenticatable
         return $this->hasOne(ApplicantProfile::class);
     }
 
-    public function getStudentNumberAttribute()
+    public function getReferenceNumberAttribute()
     {
-        return $this->applicantProfile?->student_number;
+        return $this->testPasser?->reference_number;
     }
 
     public function testPasser()

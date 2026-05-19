@@ -235,7 +235,7 @@
                             <h4 class="text-base font-semibold text-gray-900 dark:text-white truncate">
                                 {{ selectedUser.lastname ? `${selectedUser.lastname}, ${selectedUser.firstname}` : (selectedUser.email || '—') }}
                             </h4>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedUser.student_number || 'No student number' }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedUser.reference_number || 'No reference number' }}</p>
                             <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ selectedUser.email }}</p>
                         </div>
                     </div>

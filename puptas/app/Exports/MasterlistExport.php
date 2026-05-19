@@ -26,7 +26,6 @@ class MasterlistExport implements FromQuery, WithMapping, WithHeadings
     {
         return [
             '#',
-            'Student Number',
             'Reference Number',
             'Name',
             'Email',
@@ -49,7 +48,6 @@ class MasterlistExport implements FromQuery, WithMapping, WithHeadings
 
         return [
             $this->rowNumber,
-            $this->sanitizeExcelValue($app->user->student_number ?? 'N/A'),
             $this->sanitizeExcelValue($app->user->testPasser->reference_number ?? 'N/A'),
             $this->sanitizeExcelValue($fullName),
             $this->sanitizeExcelValue($app->user->email ?? 'N/A'),

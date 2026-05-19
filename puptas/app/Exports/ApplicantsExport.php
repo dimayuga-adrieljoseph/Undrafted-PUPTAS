@@ -27,7 +27,7 @@ class ApplicantsExport implements FromQuery, WithMapping, WithHeadings
     public function headings(): array
     {
         return [
-            'Student Number',
+            'Reference Number',
             'Name',
             'Program',
             'Status',
@@ -38,7 +38,7 @@ class ApplicantsExport implements FromQuery, WithMapping, WithHeadings
     public function map($app): array
     {
         return [
-            $this->sanitizeExcelValue($app->user->student_number ?? 'N/A'),
+            $this->sanitizeExcelValue($app->user->testPasser->reference_number ?? 'N/A'),
             $this->sanitizeExcelValue(trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? ''))),
             $this->sanitizeExcelValue($app->program->code ?? 'N/A'),
             $this->sanitizeExcelValue($this->statusService->determineStatus($app)),

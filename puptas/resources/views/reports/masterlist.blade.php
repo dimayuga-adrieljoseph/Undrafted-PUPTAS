@@ -25,10 +25,9 @@
         <thead>
             <tr>
                 <th style="width: 5%;">#</th>
-                <th style="width: 15%;">Student Number</th>
-                <th style="width: 15%;">Reference Number</th>
-                <th style="width: 25%;">Name</th>
-                <th style="width: 20%;">Email</th>
+                <th style="width: 20%;">Reference Number</th>
+                <th style="width: 30%;">Name</th>
+                <th style="width: 25%;">Email</th>
                 <th style="width: 10%;">Program</th>
                 <th style="width: 10%;">Date Accepted</th>
             </tr>
@@ -37,7 +36,6 @@
             @foreach($applicants as $key => $app)
             <tr>
                 <td class="text-center">{{ $key + 1 }}</td>
-                <td>{{ $app['student_number'] }}</td>
                 <td>{{ $app['reference_number'] }}</td>
                 <td>{{ $app['name'] }}</td>
                 <td>{{ $app['email'] }}</td>
@@ -47,7 +45,7 @@
             @endforeach
             @if(count($applicants) == 0)
             <tr>
-                <td colspan="7" class="text-center" style="padding: 20px;">No accepted applicants found.</td>
+                <td colspan="6" class="text-center" style="padding: 20px;">No accepted applicants found.</td>
             </tr>
             @endif
         </tbody>

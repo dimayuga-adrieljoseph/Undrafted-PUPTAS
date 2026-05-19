@@ -91,12 +91,9 @@ class CreateNewUser implements CreatesNewUsers
                 'privacy_consent_at' => now(),
             ]);
 
-            $studentNumber = $testPasser->reference_number;
-
             $profile = ApplicantProfile::create([
                 'user_id' => $user->id,
                 'email' => $email,
-                'student_number' => $studentNumber,
                 'firstname' => $input['firstname'],
                 'middlename' => $input['middlename'] ?? null,
                 'lastname' => $input['lastname'],

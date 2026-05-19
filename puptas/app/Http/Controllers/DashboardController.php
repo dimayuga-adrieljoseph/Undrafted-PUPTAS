@@ -173,6 +173,7 @@ class DashboardController extends Controller
                 },
                 'graduateTypes:id,label',
                 'grades', // Include grades
+                'testPasser', // Include testPasser to get reference_number
             ])
             ->where('user_id', $id)
             ->firstOrFail();
@@ -183,7 +184,7 @@ class DashboardController extends Controller
             // Transform the response to use 'application' key for frontend compatibility
             $userData = [
                 'id' => $applicant->user_id,
-                'student_number' => $applicant->student_number,
+                'reference_number' => $applicant->testPasser->reference_number ?? 'N/A',
                 'firstname' => $applicant->firstname,
                 'lastname' => $applicant->lastname,
                 'email' => $applicant->email,

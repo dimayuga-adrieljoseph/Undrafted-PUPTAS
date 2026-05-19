@@ -159,7 +159,6 @@ const clearFilters = () => {
                 <table v-else class="min-w-full text-base">
                     <thead>
                         <tr class="text-left font-semibold text-black dark:text-white border-b dark:border-gray-700">
-                            <th class="pb-2">Student Number</th>
                             <th class="pb-2">Reference Number</th>
                             <th class="pb-2">Name</th>
                             <th class="pb-2">Email</th>
@@ -169,8 +168,7 @@ const clearFilters = () => {
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         <tr v-for="app in applicants" :key="app.id" class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition">
-                            <td class="py-3 text-gray-900 dark:text-white font-medium">{{ app.student_number }}</td>
-                            <td class="py-3 text-gray-700 dark:text-gray-300">{{ app.reference_number || 'N/A' }}</td>
+                            <td class="py-3 text-gray-700 dark:text-gray-300 font-medium">{{ app.reference_number || 'N/A' }}</td>
                             <td class="py-3 text-gray-700 dark:text-gray-300 font-medium text-black dark:text-white">{{ app.name }}</td>
                             <td class="py-3 text-gray-700 dark:text-gray-300">{{ app.email }}</td>
                             <td class="py-3">
@@ -181,7 +179,7 @@ const clearFilters = () => {
                             <td class="py-3 text-gray-500 dark:text-gray-400">{{ app.date_accepted }}</td>
                         </tr>
                         <tr v-if="applicants.length === 0">
-                            <td colspan="6" class="py-8 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="5" class="py-8 text-center text-gray-500 dark:text-gray-400">
                                 No records found matching the report criteria.
                             </td>
                         </tr>

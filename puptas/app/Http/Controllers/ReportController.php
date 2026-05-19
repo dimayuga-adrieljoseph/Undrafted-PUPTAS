@@ -34,13 +34,13 @@ class ReportController extends Controller
     public function getReportData(Request $request)
     {
         $query = $this->buildReportQuery($request);
-        $paginator = $query->with(['user', 'program', 'processes'])->paginate(15);
+        $paginator = $query->with(['user.testPasser', 'program', 'processes'])->paginate(15);
 
         $paginator->getCollection()->transform(function ($app) {
             return [
                 'id' => $app->id,
                 'user_id' => $app->user_id,
-                'student_number' => $app->user->student_number ?? 'N/A',
+                'reference_number' => $app->user->testPasser->reference_number ?? 'N/A',
                 'name' => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
                 'email' => $app->user->email ?? 'N/A',
                 'program' => $app->program->code ?? 'N/A',
@@ -56,11 +56,11 @@ class ReportController extends Controller
     {
         $query = $this->buildReportQuery($request);
         // Limit PDF export to prevent memory exhaustion and extremely slow generation
-        $applicants = $query->with(['user', 'program', 'processes'])->limit(1000)->get();
+        $applicants = $query->with(['user.testPasser', 'program', 'processes'])->limit(1000)->get();
 
         $data = $applicants->map(function ($app) {
             return [
-                'student_number' => $app->user->student_number ?? 'N/A',
+                'reference_number' => $app->user->testPasser->reference_number ?? 'N/A',
                 'name' => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
                 'program' => $app->program->code ?? 'N/A',
                 'status' => $this->statusService->determineStatus($app),
@@ -76,7 +76,7 @@ class ReportController extends Controller
     {
         $query = $this->buildReportQuery($request);
         // Pass the builder instance to the export class for chunked query execution
-        $query->with(['user', 'program', 'processes']);
+        $query->with(['user.testPasser', 'program', 'processes']);
 
         return Excel::download(new ApplicantsExport($query, $this->statusService), 'applicant_report.xlsx');
     }

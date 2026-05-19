@@ -227,6 +227,7 @@ class RecordStaffDashboardController extends Controller
                 },
                 'grades',
                 'graduateTypes:id,label',
+                'testPasser',
             ])
             ->where('user_id', $id)
             ->firstOrFail();
@@ -256,7 +257,7 @@ class RecordStaffDashboardController extends Controller
 
             $userData = [
                 'id' => $user->user_id,
-                'student_number' => $user->student_number,
+                'reference_number' => $user->testPasser->reference_number ?? 'N/A',
                 'firstname' => $user->firstname,
                 'lastname' => $user->lastname,
                 'email' => $user->email,

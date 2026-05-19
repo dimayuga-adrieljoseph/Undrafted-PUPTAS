@@ -156,4 +156,13 @@ class ApplicantProfile extends Model
             $this->documentStatuses()->attach($status->id);
         }
     }
+
+    /**
+     * Get the reference number from the related test passer.
+     */
+    public function getReferenceNumberAttribute(): ?string
+    {
+        return $this->testPasser?->reference_number;
+    }
 }
+
