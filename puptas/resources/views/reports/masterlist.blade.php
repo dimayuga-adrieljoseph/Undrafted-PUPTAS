@@ -3,16 +3,15 @@
 <head>
     <title>Accepted Applicants Masterlist</title>
     <style>
-        body { font-family: sans-serif; font-size: 11px; color: #333; }
+        body { font-family: sans-serif; font-size: 11px; color: #000; }
         .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 18px; color: #800000; }
-        .header p { margin: 5px 0 0 0; font-size: 12px; color: #555; }
+        .header h1 { margin: 0; font-size: 18px; color: #000; }
+        .header p { margin: 5px 0 0 0; font-size: 12px; color: #000; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
-        th { background-color: #800000; color: #fff; font-size: 10px; text-transform: uppercase; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
+        th, td { border: 1px solid #000; padding: 6px; text-align: left; color: #000; }
+        th { font-size: 10px; text-transform: uppercase; font-weight: bold; }
         .text-center { text-align: center; }
-        .footer { margin-top: 30px; font-size: 9px; color: #777; text-align: right; }
+        .footer { margin-top: 30px; font-size: 9px; color: #000; text-align: right; }
     </style>
 </head>
 <body>
