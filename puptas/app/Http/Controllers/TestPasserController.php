@@ -106,6 +106,9 @@ class TestPasserController extends Controller
             'batch_number' => $batchNumber,
             'strand' => $request->input('strand'),
             'status' => $request->input('status') ? (int) $request->input('status') : null,
+            'search' => $request->input('search'),
+            'sort_key' => $request->input('sort_key', 'pupcet_total_score'),
+            'sort_order' => $request->input('sort_order', 'desc'),
         ];
 
         return Inertia::render('TestPassers/Email', [

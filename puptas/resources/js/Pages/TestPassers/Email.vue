@@ -1360,14 +1360,14 @@ watch(
     { immediate: true }
 );
 
-const searchTerm = ref("");
-const debouncedSearchTerm = ref("");
+const searchTerm = ref(props.filters?.search || "");
+const debouncedSearchTerm = ref(props.filters?.search || "");
 const filterSchoolYear = ref(props.filters?.school_year || "");
 const filterBatchNumber = ref(props.filters?.batch_number || "");
 const filterPasserStatus = ref(props.filters?.status ? [props.filters.status] : []);
 const showStatusDropdown = ref(false);
-const sortKey = ref("pupcet_total_score");
-const sortOrder = ref("desc");
+const sortKey = ref(props.filters?.sort_key || "pupcet_total_score");
+const sortOrder = ref(props.filters?.sort_order || "desc");
 
 // Server-side pagination: read from the paginator metadata
 const currentPage = computed(() => props.passers?.current_page || 1);
@@ -1404,7 +1404,7 @@ function goToPage(page) {
 // Reload from server with current filters (resets to page 1)
 function applyServerFilters() {
     router.get('/test-passers', buildServerParams({ page: 1 }), {
-        preserveState: false,
+        preserveState: true,
         preserveScroll: true,
     });
 }
