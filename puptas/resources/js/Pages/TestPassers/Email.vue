@@ -1205,7 +1205,9 @@ const emailTemplate = ref(
       </div>
 
       <p style="font-size: 14px; color: #555; text-align: center;">
-        If you have any questions or need help, please contact our admissions office.
+        If you have any questions or need help, please contact the Admission and Registration Office at
+        <a href="mailto:taguig@pup.edu.ph" style="color:#9E122C;">taguig@pup.edu.ph</a> /
+        <a href="mailto:puptadmission@gmail.com" style="color:#9E122C;">puptadmission@gmail.com</a>.
       </p>
     </div>
   </div>
