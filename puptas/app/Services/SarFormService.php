@@ -280,6 +280,15 @@ class SarFormService
             'affiant_name' => 'full_name_natural',
             'printed_name' => 'full_name',
             'printed_name_enrollee' => 'full_name',
+            // Page 1: Confirmation Slip signature lines
+            'printed_name_signature' => 'full_name',
+            'printed_name_signature_duplicate' => 'full_name',
+            // Page 9: Consent Form
+            'full_name_consent' => 'full_name_natural',
+            'printed_name_consent' => 'full_name_natural',
+            'reference_number_consent' => 'reference_number',
+            // Page 10: Medical Declaration
+            'printed_name_medical' => 'full_name_natural',
         ];
         
         return $mappings[$fieldName] ?? $fieldName;
