@@ -107,6 +107,7 @@ const isListPassersActive = isActiveRouteFor(["lists"]);
 const isProgramsActive = isActiveRouteFor(["programs.index"]);
 const isReportsActive = isActiveRouteFor(["reports.index"]);
 const isTestPasserReportsActive = isActiveRouteFor(["reports.test-passers.index"]);
+const isMasterlistReportsActive = isActiveRouteFor(["reports.masterlist.index"]);
 const isConfirmedApplicantsActive = isActiveRouteFor(["confirmed-applicants.index"]);
 const isManageActive = isActiveRouteFor(["users.index"]);
 
@@ -162,7 +163,7 @@ watch(
         isPasserDropdownOpen.value =
             isUploadFormActive.value || isListPassersActive.value || isConfirmedApplicantsActive.value;
         isReportsDropdownOpen.value = 
-            isReportsActive.value || isTestPasserReportsActive.value;
+            isReportsActive.value || isTestPasserReportsActive.value || isMasterlistReportsActive.value;
     },
     { immediate: true }
 );
@@ -452,7 +453,8 @@ watch(isSidebarOpen, (val) => {
                                 'nav-item-active':
                                     isReportsDropdownOpen ||
                                     isReportsActive ||
-                                    isTestPasserReportsActive,
+                                    isTestPasserReportsActive ||
+                                    isMasterlistReportsActive,
                             }"
                         >
                             <div class="nav-icon">
@@ -519,6 +521,21 @@ watch(isSidebarOpen, (val) => {
                                         class="text-xs mr-2"
                                     />
                                     Passers Reports
+                                </Link>
+                                <Link
+                                    :href="route('reports.masterlist.index')"
+                                    class="dropdown-item"
+                                    :class="{
+                                        'dropdown-item-active':
+                                            isMasterlistReportsActive,
+                                    }"
+                                    @click="emit('close')"
+                                >
+                                    <FontAwesomeIcon
+                                        icon="list"
+                                        class="text-xs mr-2"
+                                    />
+                                    Accepted Masterlist
                                 </Link>
                             </div>
                         </transition>

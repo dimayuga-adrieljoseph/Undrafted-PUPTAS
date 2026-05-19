@@ -29,6 +29,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TestPasserReportController;
 use App\Http\Controllers\ConfirmedApplicantsController;
 
+
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
 Route::get('/', function () {
     return redirect()->route('idp.redirect');
@@ -352,6 +353,12 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/admin/reports/test-passers/data', [TestPasserReportController::class, 'getReportData'])->name('reports.test-passers.data');
     Route::get('/admin/reports/test-passers/export/pdf', [TestPasserReportController::class, 'exportPdf'])->name('reports.test-passers.export.pdf');
     Route::get('/admin/reports/test-passers/export/excel', [TestPasserReportController::class, 'exportExcel'])->name('reports.test-passers.export.excel');
+
+    // Accepted Masterlist Reports
+    Route::get('/admin/reports/masterlist', [ReportController::class, 'masterlistIndex'])->name('reports.masterlist.index');
+    Route::get('/admin/reports/masterlist/data', [ReportController::class, 'masterlistData'])->name('reports.masterlist.data');
+    Route::get('/admin/reports/masterlist/export/pdf', [ReportController::class, 'masterlistExportPdf'])->name('reports.masterlist.export.pdf');
+    Route::get('/admin/reports/masterlist/export/excel', [ReportController::class, 'masterlistExportExcel'])->name('reports.masterlist.export.excel');
 });
 
 // Audit log routes - Protected by Superadmin middleware
