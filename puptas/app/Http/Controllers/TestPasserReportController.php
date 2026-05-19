@@ -30,8 +30,21 @@ class TestPasserReportController extends Controller
         $query = TestPasser::query()->with('passerStatus');
 
         if ($request->filled('status')) {
-            // "qualified" is id 1, "waitlisted" is id 2 based on the migration
-            $statusId = $request->status === 'waitlisted' ? 2 : 1;
+            // Map status string to passer_status_id
+            switch ($request->status) {
+                case 'waitlisted':
+                    $statusId = 2;
+                    break;
+                case 'unqualified':
+                    $statusId = 3;
+                    break;
+                case 'waitlisted_below_cutoff':
+                    $statusId = 4;
+                    break;
+                default:
+                    $statusId = 1; // qualified
+                    break;
+            }
             $query->where('passer_status_id', $statusId);
         }
 
@@ -87,7 +100,12 @@ class TestPasserReportController extends Controller
 
         $pdf = Pdf::loadView('reports.test_passers', [
             'passers' => $passers,
-            'reportType' => $request->input('status') === 'waitlisted' ? 'Waitlisted Applicants' : 'Qualified Applicants',
+            'reportType' => match ($request->input('status')) {
+                'waitlisted' => 'Waitlisted Applicants',
+                'unqualified' => 'Unqualified Applicants',
+                'waitlisted_below_cutoff' => 'Waitlisted Below Cut Off Applicants',
+                default => 'Qualified Applicants',
+            },
             'date' => now()->format('F d, Y')
         ])->setPaper('a4', 'landscape');
 

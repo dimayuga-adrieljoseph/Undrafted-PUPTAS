@@ -93,6 +93,7 @@ const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "qualified") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
     if (s === "waitlisted") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "waitlisted_below_cutoff") return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400";
 };
 </script>
@@ -110,6 +111,7 @@ const getStatusClass = (status) => {
                     <select v-model="filterStatus" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-[#9E122C]">
                         <option value="qualified">Qualified</option>
                         <option value="waitlisted">Waitlisted</option>
+                        <option value="waitlisted_below_cutoff">Waitlisted Below Cut Off</option>
                     </select>
                 </div>
                 <div>

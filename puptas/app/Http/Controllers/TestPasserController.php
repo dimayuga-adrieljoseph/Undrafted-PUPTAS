@@ -300,7 +300,7 @@ class TestPasserController extends Controller
             // Manual mode requires batch_number and passer_status_id
             $request->validate([
                 'batch_number' => 'required|string',
-                'passer_status_id' => 'required|integer|in:1,2,3',
+                'passer_status_id' => 'required|integer|in:1,2,3,4',
             ]);
 
             $batch = $request->input('batch_number');
@@ -313,7 +313,7 @@ class TestPasserController extends Controller
             $importedCount = $import->getImportedCount();
             $skippedCount = $import->getSkippedCount();
 
-            $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified'];
+            $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified', 4 => 'Waitlisted Below Cut Off'];
             $statusName = $statusNames[$passerStatusId] ?? 'Unknown';
             $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}, status: {$statusName}. Imported: {$importedCount}, Skipped: {$skippedCount}.", null, 'ADMISSION_DATA');
 
@@ -344,16 +344,25 @@ class TestPasserController extends Controller
 
         Excel::import($import, $request->file('file'));
 
+        // Run priority-based capacity enforcement after auto-mode import
+        $capacityService = new \App\Services\CapacityEnforcementService();
+        $reassignedCount = $capacityService->enforce($schoolYear);
+
+        if ($reassignedCount > 0) {
+            \Log::info("Capacity enforcement: {$reassignedCount} record(s) reassigned to 'Waitlisted Below Cut Off' for school year {$schoolYear}.");
+        }
+
         $importedCount = $import->getImportedCount();
         $skippedCount = $import->getSkippedCount();
 
-        $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file in auto mode for school year {$schoolYear}. Imported: {$importedCount}, Skipped: {$skippedCount}.", null, 'ADMISSION_DATA');
+        $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file in auto mode for school year {$schoolYear}. Imported: {$importedCount}, Skipped: {$skippedCount}. Capacity enforcement reassigned: {$reassignedCount}.", null, 'ADMISSION_DATA');
 
         if ($importedCount === 0 && $skippedCount > 0) {
             return response()->json([
                 'message' => 'No new records were imported. All entries already exist in the system.',
                 'imported_count' => $importedCount,
                 'skipped_count' => $skippedCount,
+                'reassigned_count' => $reassignedCount,
             ], 422);
         }
 
@@ -361,6 +370,7 @@ class TestPasserController extends Controller
             'message' => 'Excel file uploaded and data imported successfully.',
             'imported_count' => $importedCount,
             'skipped_count' => $skippedCount,
+            'reassigned_count' => $reassignedCount,
         ]);
     }
 

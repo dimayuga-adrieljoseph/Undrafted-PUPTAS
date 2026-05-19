@@ -18,6 +18,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
     protected int $importedCount = 0;
     protected int $skippedCount = 0;
     protected array $skippedReasons = [];
+    protected int $runningQualifiedWaitlistedCount = 0;
 
     public function __construct(
         ?string $batch = null,
@@ -29,6 +30,10 @@ class TestPassersImport implements ToModel, WithHeadingRow
         $this->schoolYear = $schoolYear;
         $this->passerStatusId = $passerStatusId;
         $this->assignmentMode = $assignmentMode;
+
+        if ($this->assignmentMode === 'auto') {
+            $this->initializeRunningCount();
+        }
     }
 
     public function model(array $row): ?TestPasser
@@ -82,7 +87,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
 
         // Use ScoreThresholdService to determine batch and status
         $service = new ScoreThresholdService();
-        $assignment = $service->resolve($pupcetScore);
+        $assignment = $service->resolve($pupcetScore, $this->runningQualifiedWaitlistedCount);
 
         $batchNumber = $assignment['batch_number'];
         $passerStatusId = $assignment['passer_status_id'];
@@ -114,6 +119,11 @@ class TestPassersImport implements ToModel, WithHeadingRow
             'status'             => $user ? 'registered' : 'pending',
             'passer_status_id'   => $passerStatusId,
         ]);
+
+        // Increment running count for qualified (1) or waitlisted (2) statuses
+        if (in_array($passerStatusId, [1, 2])) {
+            $this->runningQualifiedWaitlistedCount++;
+        }
 
         $this->importedCount++;
         return $result;
@@ -224,5 +234,16 @@ class TestPassersImport implements ToModel, WithHeadingRow
         }
 
         return $score;
+    }
+
+    /**
+     * Initialize the running count of qualified+waitlisted records for the current school year.
+     * This queries existing records in the database before the import begins.
+     */
+    private function initializeRunningCount(): void
+    {
+        $this->runningQualifiedWaitlistedCount = TestPasser::where('school_year', $this->schoolYear)
+            ->whereIn('passer_status_id', [1, 2])
+            ->count();
     }
 }
