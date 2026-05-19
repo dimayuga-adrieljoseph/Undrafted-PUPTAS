@@ -603,7 +603,8 @@ class TestPasserController extends Controller
             });
         }
 
-        $sarGenerations = $query->paginate(20);
+        $limit = $request->input('limit', 20);
+        $sarGenerations = $query->paginate($limit);
 
         return response()->json($sarGenerations);
     }
@@ -783,23 +784,12 @@ class TestPasserController extends Controller
         $request->validate([
             'passer_id' => 'required|exists:test_passers,test_passer_id',
             'enrollment_date' => 'required|string',
+            'enrollment_time' => 'required|string',
         ]);
 
         $passer = TestPasser::findOrFail($request->passer_id);
         $enrollmentDate = $request->enrollment_date;
-
-        $score = $passer->pupcet_total_score ?? 0;
-        if ($score >= 85) {
-            $enrollmentTime = '08:00'; // 8:00 AM
-        } elseif ($score >= 79) {
-            $enrollmentTime = '10:00'; // 10:00 AM
-        } elseif ($score >= 77) {
-            $enrollmentTime = '13:00'; // 1:00 PM
-        } elseif ($score >= 75) {
-            $enrollmentTime = '14:00'; // 2:00 PM
-        } else {
-            $enrollmentTime = 'TBD';
-        }
+        $enrollmentTime = $request->enrollment_time;
 
         try {
             // Prepare SAR data from test passer

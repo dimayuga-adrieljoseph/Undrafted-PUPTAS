@@ -113,11 +113,12 @@ class ConfirmedApplicantsController extends Controller
             'applicant_ids'   => 'required|array|min:1',
             'applicant_ids.*' => 'integer',
             'enrollment_date' => 'required|string',
-            // enrollment_time is determined automatically by score/batch
+            'enrollment_time' => 'required|string',
         ]);
 
         $applicantIds   = $request->input('applicant_ids');
         $enrollmentDate = $request->input('enrollment_date');
+        $enrollmentTime = $request->input('enrollment_time');
 
         // Verify all applicants are confirmed (for_evaluation)
         $applicants = ApplicantProfile::with(['currentApplication', 'testPasser'])
@@ -137,32 +138,6 @@ class ConfirmedApplicantsController extends Controller
             ], 422);
         }
 
-        // Automate schedule based on Score & Batch, and restrict per batch
-        $selectedBatch = null;
-
-        foreach ($applicants as $app) {
-            $passer = $app->testPasser;
-            $batch_number = $passer->batch_number ?? '?';
-            $status_id = $passer->passer_status_id ?? 3;
-
-            // Restrict SAR to Qualifiers only (status 1)
-            if ($status_id != 1) {
-                return response()->json([
-                    'message' => "Cannot send SAR Forms to Non-Qualifiers or Waitlisted applicants.",
-                ], 422);
-            }
-
-            // Ensure all selected applicants belong to the exact same batch 
-            // (e.g. "Batch 1" cannot be mixed with "Batch 2")
-            if ($selectedBatch === null) {
-                $selectedBatch = $batch_number;
-            } elseif ($selectedBatch !== $batch_number) {
-                return response()->json([
-                    'message' => 'Restriction: You must select applicants from the same batch. Your selection contains both ' . $selectedBatch . ' and ' . $batch_number . '.',
-                ], 422);
-            }
-        }
-
         $sarService   = app(SarFormService::class);
         $successCount = 0;
         $failedCount  = 0;
@@ -180,20 +155,6 @@ class ConfirmedApplicantsController extends Controller
                     'error'     => 'No test passer record linked. Cannot generate SAR without reference number.',
                 ];
                 continue;
-            }
-
-            // Automate interview time explicitly based on the updated cutoff rules
-            $score = $testPasser->pupcet_total_score ?? 0;
-            if ($score >= 85) {
-                $enrollmentTime = '08:00'; // 8:00 AM
-            } elseif ($score >= 79) {
-                $enrollmentTime = '10:00'; // 10:00 AM
-            } elseif ($score >= 77) {
-                $enrollmentTime = '13:00'; // 1:00 PM
-            } elseif ($score >= 75) {
-                $enrollmentTime = '14:00'; // 2:00 PM
-            } else {
-                $enrollmentTime = 'TBD';
             }
 
             try {

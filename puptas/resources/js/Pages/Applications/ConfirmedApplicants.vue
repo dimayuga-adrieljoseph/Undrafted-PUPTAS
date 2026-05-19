@@ -20,6 +20,7 @@ const selectedIds = ref([]);
 // Template / action mode: 'sar' | 'custom'
 const templateMode = ref("sar");
 const sarEnrollmentDate = ref(new Date().toISOString().split("T")[0]);
+const sarEnrollmentTime = ref("09:00");
 const emailTemplate = ref("");
 
 // Send state
@@ -212,8 +213,8 @@ const send = async () => {
     }
 
     if (templateMode.value === "sar") {
-        if (!sarEnrollmentDate.value) {
-            showSnack("Set enrollment date.", "error");
+        if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
+            showSnack("Set enrollment date and time.", "error");
             return;
         }
     } else {
@@ -232,13 +233,17 @@ const send = async () => {
             const res = await axios.post("/confirmed-applicants/send-sar", {
                 applicant_ids: selectedIds.value,
                 enrollment_date: sarEnrollmentDate.value,
+                enrollment_time: sarEnrollmentTime.value,
             });
             sendResult.value = res.data;
             showSnack(
                 res.data.message,
                 res.data.failed_count ? "error" : "success",
             );
-            if (!res.data.failed_count) selectedIds.value = [];
+            if (!res.data.failed_count) {
+                selectedIds.value = [];
+                await loadSarHistory(1);
+            }
             await fetchApplicants();
         } else {
             const quill = document.querySelector(".ql-editor");
@@ -315,8 +320,8 @@ const previewSarPdfForm = async () => {
         return;
     }
 
-    if (!sarEnrollmentDate.value) {
-        showSnack("Please set enrollment date", "error");
+    if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
+        showSnack("Please set enrollment date and time", "error");
         return;
     }
 
@@ -343,6 +348,7 @@ const previewSarPdfForm = async () => {
         const formData = new FormData();
         formData.append("passer_id", selectedApplicant.test_passer_id);
         formData.append("enrollment_date", sarEnrollmentDate.value);
+        formData.append("enrollment_time", sarEnrollmentTime.value);
 
         const response = await axios.post(
             "/admin/sar/preview-pdf-template",
@@ -380,12 +386,24 @@ const loadingSarHistory = ref(false);
 const showSarPreview = ref(false);
 const sarPreviewUrl = ref("");
 
-const loadSarHistory = async () => {
+const sarCurrentPage = ref(1);
+const sarTotalPages = ref(1);
+const sarTotalResults = ref(0);
+const sarItemsPerPage = 10;
+
+const loadSarHistory = async (page = 1) => {
     loadingSarHistory.value = true;
+    sarCurrentPage.value = page;
     try {
-        const params = { search: searchQuery.value };
+        const params = { 
+            search: searchQuery.value,
+            page: page,
+            limit: sarItemsPerPage
+        };
         const response = await axios.get("/admin/sar-generations", { params });
         sarHistory.value = response.data.data || [];
+        sarTotalPages.value = response.data.last_page || 1;
+        sarTotalResults.value = response.data.total || 0;
     } catch (error) {
         console.error("Failed to load SAR history:", error);
         if (error.response && error.response.status !== 404) {
@@ -395,6 +413,29 @@ const loadSarHistory = async () => {
         loadingSarHistory.value = false;
     }
 };
+
+const sarVisiblePages = computed(() => {
+    const pages = [];
+    const maxVisible = 3;
+
+    if (sarTotalPages.value <= maxVisible) {
+        for (let i = 1; i <= sarTotalPages.value; i++) {
+            pages.push(i);
+        }
+    } else {
+        let start = Math.max(1, sarCurrentPage.value - 1);
+        let end = Math.min(sarTotalPages.value, start + maxVisible - 1);
+
+        if (end - start + 1 < maxVisible) {
+            start = Math.max(1, end - maxVisible + 1);
+        }
+
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+    }
+    return pages;
+});
 
 const previewSar = (id) => {
     sarPreviewUrl.value = `/admin/sar/${id}/preview`;
@@ -417,11 +458,11 @@ const formatDate = (dateString) => {
 };
 
 watch(searchQuery, () => {
-    loadSarHistory();
+    loadSarHistory(1);
 });
 
 onMounted(() => {
-    loadSarHistory();
+    loadSarHistory(1);
 });
 </script>
 
@@ -967,6 +1008,18 @@ onMounted(() => {
                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C]"
                                 />
                             </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-400"
+                                >
+                                    Enrollment Time
+                                </label>
+                                <input
+                                    type="time"
+                                    v-model="sarEnrollmentTime"
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C]"
+                                />
+                            </div>
                         </div>
 
                         <!-- Preview Email Template Button -->
@@ -996,7 +1049,8 @@ onMounted(() => {
                                 @click="previewSarPdfForm"
                                 :disabled="
                                     selectedIds.length === 0 ||
-                                    !sarEnrollmentDate
+                                    !sarEnrollmentDate ||
+                                    !sarEnrollmentTime
                                 "
                                 class="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white text-sm rounded-xl hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition dark:text-gray-900"
                             >
@@ -1246,6 +1300,59 @@ onMounted(() => {
                                         </svg>
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SAR History Pagination -->
+                    <div
+                        v-if="sarTotalResults > 0"
+                        class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+                    >
+                        <div class="flex flex-col space-y-2 items-center justify-between text-xs text-gray-700 dark:text-gray-400">
+                            <div>
+                                Showing
+                                <span class="font-semibold">{{ Math.min((sarCurrentPage - 1) * sarItemsPerPage + 1, sarTotalResults) }}</span>
+                                to
+                                <span class="font-semibold">{{ Math.min(sarCurrentPage * sarItemsPerPage, sarTotalResults) }}</span>
+                                of
+                                <span class="font-semibold">{{ sarTotalResults }}</span>
+                                results
+                            </div>
+                            <div class="flex items-center space-x-1.5 mt-1">
+                                <button
+                                    :disabled="sarCurrentPage === 1"
+                                    @click.prevent="loadSarHistory(sarCurrentPage - 1)"
+                                    class="inline-flex items-center px-2 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                                >
+                                    <svg class="h-3 w-3 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                    Prev
+                                </button>
+                                <button
+                                    v-for="page in sarVisiblePages"
+                                    :key="page"
+                                    @click.prevent="loadSarHistory(page)"
+                                    :class="[
+                                        'px-2 py-1 rounded-lg font-medium transition',
+                                        sarCurrentPage === page
+                                            ? 'bg-[#9E122C] text-white'
+                                            : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
+                                    ]"
+                                >
+                                    {{ page }}
+                                </button>
+                                <button
+                                    :disabled="sarCurrentPage === sarTotalPages"
+                                    @click.prevent="loadSarHistory(sarCurrentPage + 1)"
+                                    class="inline-flex items-center px-2 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                                >
+                                    Next
+                                    <svg class="h-3 w-3 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                     </div>

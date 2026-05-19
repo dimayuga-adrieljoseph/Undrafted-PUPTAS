@@ -481,112 +481,9 @@
                         </div>
                     </div>
 
-                    <!-- SAR History Card -->
-                    <div class="bg-white rounded-2xl shadow-lg p-6 dark:bg-gray-800">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
-                                SAR History
-                            </h2>
-                            <button
-                                @click="loadSarHistory"
-                                class="inline-flex items-center px-3 py-1.5 text-sm text-[#9E122C] hover:bg-[#9E122C]/10 rounded-lg transition dark:text-white"
-                            >
-                                <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Refresh
-                            </button>
-                        </div>
-                        
-                        <div v-if="loadingSarHistory" class="text-center py-8">
-                            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#9E122C]"></div>
-                            <p class="text-gray-600 mt-2 dark:text-gray-400">Loading SAR history...</p>
-                        </div>
-                        
-                        <div v-else-if="sarHistory.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-300">
-                            <svg class="h-12 w-12 mx-auto text-gray-400 mb-2 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <p>No SAR forms generated yet</p>
-                        </div>
-                        
-                        <div v-else class="space-y-3 max-h-96 overflow-y-auto">
-                            <div
-                                v-for="sar in sarHistory"
-                                :key="sar.id"
-                                class="p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition dark:border-gray-700 dark:hover:bg-gray-900"
-                            >
-                                <div class="flex items-start justify-between">
-                                    <div class="flex-1">
-                                        <div class="font-medium text-gray-900 text-sm dark:text-gray-200">
-                                            {{ sar.test_passer?.surname }}, {{ sar.test_passer?.first_name }}
-                                        </div>
-                                        <div class="text-xs text-gray-600 mt-1 dark:text-gray-400">
-                                            Ref: {{ sar.test_passer?.reference_number }}
-                                        </div>
-                                        <div class="text-xs text-gray-500 mt-1 dark:text-gray-300">
-                                            {{ formatDate(sar.sent_at) }}
-                                        </div>
-                                    </div>
-                                    <div class="flex gap-1 ml-2">
-                                        <button
-                                            @click="previewSar(sar.id)"
-                                            class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition dark:text-blue-400 dark:hover:bg-blue-900"
-                                            title="Preview"
-                                        >
-                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            @click="downloadSar(sar.id)"
-                                            class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition dark:text-green-400 dark:hover:bg-green-900"
-                                            title="Download"
-                                        >
-                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
-
-            <!-- SAR Preview Modal -->
-            <div
-                v-if="showSarPreview"
-                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50 dark:bg-white"
-                @click.self="closeSarPreview"
-            >
-                <div class="bg-white rounded-2xl max-w-6xl w-full h-[90vh] flex flex-col shadow-2xl dark:bg-gray-800">
-                    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-200">
-                            SAR Form Preview
-                        </h2>
-                        <button
-                            @click="closeSarPreview"
-                            class="p-2 hover:bg-gray-100 rounded-lg transition dark:hover:bg-gray-800"
-                        >
-                            <svg class="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="flex-1 overflow-hidden">
-                        <iframe
-                            v-if="sarPreviewUrl"
-                            :src="sarPreviewUrl"
-                            class="w-full h-full border-0"
-                        ></iframe>
-                    </div>
-                </div>
-            </div>
-
-
 
             <!-- Bulk Enroll Result Modal -->
             <div
@@ -1784,61 +1681,6 @@ async function saveNewPasser() {
     }
 }
 
-// SAR History Management
-const sarHistory = ref([]);
-const loadingSarHistory = ref(false);
-const showSarPreview = ref(false);
-const sarPreviewUrl = ref('');
-
-const loadSarHistory = async () => {
-    loadingSarHistory.value = true;
-    try {
-        const params = {};
-        if (filterSchoolYear.value) params.school_year = filterSchoolYear.value;
-        if (filterBatchNumber.value) params.batch_number = filterBatchNumber.value;
-        if (debouncedSearchTerm.value) params.search = debouncedSearchTerm.value;
-
-        const response = await axios.get('/admin/sar-generations', { params });
-        sarHistory.value = response.data.data || [];
-    } catch (error) {
-        console.error('Failed to load SAR history:', error);
-        // Don't show error on initial load if no data yet
-        if (error.response && error.response.status !== 404) {
-            show('Failed to load SAR history', 'error');
-        }
-    } finally {
-        loadingSarHistory.value = false;
-    }
-};
-
-const previewSar = (id) => {
-    sarPreviewUrl.value = `/admin/sar/${id}/preview`;
-    showSarPreview.value = true;
-};
-
-const closeSarPreview = () => {
-    showSarPreview.value = false;
-    sarPreviewUrl.value = '';
-};
-
-const downloadSar = (id) => {
-    window.open(`/admin/sar/${id}/download`, '_blank');
-};
-
-const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-};
-
-
-
 // Waitlisted Email Template Preview
 const showWaitlistedEmailPreview = ref(false);
 const waitlistedEmailPreviewHtml = ref('');
@@ -1872,18 +1714,6 @@ const closeWaitlistedEmailPreview = () => {
     showWaitlistedEmailPreview.value = false;
     waitlistedEmailPreviewHtml.value = '';
 };
-
-// Watch filters to reload SAR history
-watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, debouncedSearchTerm], () => {
-    if (sarHistory.value.length > 0 || filterSchoolYear.value || filterBatchNumber.value || filterPasserStatus.value || debouncedSearchTerm.value) {
-        loadSarHistory();
-    }
-});
-
-// Load SAR history on mount
-onMounted(() => {
-    loadSarHistory();
-});
 
 // ── Bulk Enroll ───────────────────────────────────────────────────────────────
 const bulkEnrollRunning    = ref(false);
