@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <Head title="PUPCET Passers Email" />
     <div
         ref="scrollWrapper"
@@ -39,7 +39,7 @@
                                 type="text"
                                 v-model="searchTerm"
                                 @input="onSearchInput"
-                                placeholder="Search by name, surname, or email…"
+                                placeholder="Search by name, surname, or emailâ€¦"
                                 class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                             />
                         </div>
@@ -131,7 +131,7 @@
                                 </h2>
                                 <div class="text-sm text-gray-600 dark:text-gray-400">
                                     Page {{ currentPage }} of {{ totalPages }}
-                                    • Showing {{ paginatedPassers.length }} items
+                                    â€¢ Showing {{ paginatedPassers.length }} items
                                 </div>
                             </div>
                         </div>
@@ -231,14 +231,14 @@
                                              <span v-if="passer.pupcet_total_score !== null && passer.pupcet_total_score !== undefined">
                                                  {{ Number(passer.pupcet_total_score).toFixed(2) }}
                                              </span>
-                                             <span v-else class="text-gray-400 dark:text-gray-500">—</span>
+                                             <span v-else class="text-gray-400 dark:text-gray-500">â€”</span>
                                          </td>
                                          <td class="px-3 py-3">
                                              <div class="flex flex-wrap gap-1">
                                                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-300">
                                                      {{ passer.school_year }}
                                                  </span>
-                                                 <span v-if="passer.passer_status_id !== 3" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-300">
+                                                 <span v-if="passer.batch_number" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-300">
                                                      {{ passer.batch_number }}
                                                  </span>
                                              </div>
@@ -1141,7 +1141,7 @@ const emailTemplate = ref(
     `
   <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
     <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-      <h1 style="color: #cc0000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
+      <h1 style="color: #cc0000; text-align: center;">ðŸŽ‰ Congratulations, {{firstname}} {{surname}}!</h1>
       <p style="font-size: 16px; color: #333; text-align: center;">
         You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
       </p>
@@ -1168,7 +1168,7 @@ const defaultTemplatePreview = `
 <div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
   <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! ðŸŽ‰</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
@@ -1190,7 +1190,7 @@ const defaultTemplatePreview = `
         CLICK TO CONFIRM YOUR INTERVIEW SLOT
     </a>
     </div>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP – Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP â€“ Taguig Facebook page</a>).</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
     <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
     <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
@@ -1202,7 +1202,7 @@ const waitlistedTemplatePreview = `
 <div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
   <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! ðŸŽ‰</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
@@ -1224,7 +1224,7 @@ const waitlistedTemplatePreview = `
         CLICK TO CONFIRM YOUR INTERVIEW SLOT
     </a>
     </div>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP – Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP â€“ Taguig Facebook page</a>).</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
     <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
     <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
@@ -1744,7 +1744,7 @@ watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, debouncedSearchT
 onMounted(() => {
     loadSarHistory();
 });
-// ── Bulk Enroll ───────────────────────────────────────────────────────────────
+// â”€â”€ Bulk Enroll â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const bulkEnrollRunning    = ref(false);
 const showBulkEnrollResult = ref(false);
 const bulkEnrollResult     = ref({ message: '', enrolled: [], errors: [] });
@@ -1850,3 +1850,4 @@ const runBulkEnroll = async () => {
     min-height: 250px;
 }
 </style>
+
