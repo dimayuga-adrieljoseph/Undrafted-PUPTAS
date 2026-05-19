@@ -16,6 +16,7 @@ class TestPasser extends Model
         'first_name',
         'middle_name',
         'strand',
+        'shs_school',
         'year_graduated',
         'email',
         'reference_number',

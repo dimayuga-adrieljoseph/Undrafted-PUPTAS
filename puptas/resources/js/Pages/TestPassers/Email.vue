@@ -667,6 +667,19 @@
                             </div>
                         </div>
 
+                        <!-- High School Attended -->
+                        <div class="col-span-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">High School Attended</label>
+                                <input
+                                    type="text"
+                                    v-model="editingPasser.shs_school"
+                                    placeholder="High School Name"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                />
+                            </div>
+                        </div>
+
                         <div class="col-span-2 grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
@@ -856,6 +869,19 @@
                                     v-model="newPasserData.email"
                                     required
                                     class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- High School Attended -->
+                        <div class="col-span-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">High School Attended</label>
+                                <input
+                                    type="text"
+                                    v-model="newPasserData.shs_school"
+                                    placeholder="High School Name"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 />
                             </div>
                         </div>
@@ -1594,6 +1620,7 @@ function openEditModal(passer) {
         passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
         pupcet_total_score: passer.pupcet_total_score != null ? passer.pupcet_total_score : '',
         year_graduated: yearGradVal,
+        shs_school: passer.shs_school || '',
     };
     showEditModal.value = true;
 }
@@ -1736,6 +1763,7 @@ function openAddModal() {
         first_name: "",
         middle_name: "",
         strand: "",
+        shs_school: "",
         year_graduated: "",
         email: "",
         reference_number: "",

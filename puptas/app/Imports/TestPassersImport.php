@@ -55,6 +55,13 @@ class TestPassersImport implements ToModel, WithHeadingRow
         $referenceNumber = isset($row['reference_number']) ? trim((string)$row['reference_number']) : '';
         $referenceNumber = $referenceNumber !== '' ? $referenceNumber : null;
 
+        $schoolName = null;
+        if (isset($row['school_name']) && trim((string)$row['school_name']) !== '') {
+            $schoolName = trim((string)$row['school_name']);
+        } elseif (isset($row['school']) && trim((string)$row['school']) !== '') {
+            $schoolName = trim((string)$row['school']);
+        }
+
         $userId = null;
         $status = 'pending';
 
@@ -83,6 +90,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
                     'first_name' => $firstName,
                     'middle_name' => isset($row['middle_name']) ? trim((string)$row['middle_name']) : null,
                     'strand' => isset($row['strand']) ? trim((string)$row['strand']) : null,
+                    'shs_school' => $schoolName,
                     'reference_number' => $referenceNumber,
                     'pupcet_total_score' => $pupcetScore,
                     'batch_number' => $this->batch,
@@ -100,6 +108,7 @@ class TestPassersImport implements ToModel, WithHeadingRow
             'first_name' => $firstName,
             'middle_name' => isset($row['middle_name']) ? trim((string)$row['middle_name']) : null,
             'strand' => isset($row['strand']) ? trim((string)$row['strand']) : null,
+            'shs_school' => $schoolName,
             'email' => null,
             'reference_number' => $referenceNumber,
             'pupcet_total_score' => $pupcetScore,

@@ -25,6 +25,7 @@ class ApplicantProfile extends Model
         'privacy_consent',
         'privacy_consent_at',
         'date_graduated',
+        'school',
         'strand',
         'track',
         'first_choice_program',

@@ -24,7 +24,7 @@ onMounted(() => {
         form.firstname = testPasser.first_name || '';
         form.lastname = testPasser.surname || '';
         form.middlename = testPasser.middle_name || '';
-
+        form.school = testPasser.shs_school || '';
     }
 });
 
@@ -38,6 +38,7 @@ const form = useForm({
     sex: "",
     contactnumber: "",
     reference_number: "",
+    school: "",
     schoolyear: "",
     dateGrad: "",
     strand: "",
@@ -411,6 +412,23 @@ const handleTermsCancel = () => {
                                 <div
                                     class="grid grid-cols-1 md:grid-cols-2 gap-6"
                                 >
+                                    <div class="md:col-span-2 space-y-2">
+                                        <label
+                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
+                                        >
+                                            School
+                                            <span class="text-red-500 dark:text-red-300">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.school"
+                                            type="text"
+                                            required
+                                            readonly
+                                            class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 cursor-not-allowed focus:outline-none transition-all duration-200"
+                                            placeholder="High School Name"
+                                        />
+                                    </div>
+
                                     <div class="space-y-2">
                                         <label
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"

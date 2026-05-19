@@ -397,6 +397,7 @@ class TestPasserController extends Controller
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'strand' => 'nullable|string|max:255',
+            'shs_school' => 'nullable|string|max:255',
             'year_graduated' => 'nullable|digits:4|integer|min:1900|max:' . date('Y'),
             'email' => [
                 'required',
@@ -430,6 +431,7 @@ class TestPasserController extends Controller
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'strand' => 'nullable|string|max:255',
+            'shs_school' => 'nullable|string|max:255',
             'year_graduated' => 'nullable|digits:4|integer|min:1900|max:' . (date('Y') + 1),
             'email' => 'required|email|unique:test_passers,email',
             'reference_number' => 'nullable|string|max:255',
