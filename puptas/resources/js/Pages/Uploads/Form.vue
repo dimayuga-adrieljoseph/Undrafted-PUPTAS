@@ -36,6 +36,7 @@
                 <option value="Batch 1">Batch 1</option>
                 <option value="Batch 2">Batch 2</option>
                 <option value="Batch 3">Batch 3</option>
+                <option value="Batch 4">Batch 4</option>
                 <option value="--Custom--">--Custom--</option>
               </select>
               <input

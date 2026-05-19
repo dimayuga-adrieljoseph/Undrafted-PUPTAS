@@ -15,9 +15,11 @@ class ScoreThresholdService
      * Each rule defines: min score (inclusive), max score (exclusive), passer_status_id, batch_number.
      */
     private const THRESHOLDS = [
-        ['min' => 75.00, 'max' => null,  'passer_status_id' => 1, 'batch_number' => 'Batch 1'],
-        ['min' => 56.00, 'max' => 75.00, 'passer_status_id' => 2, 'batch_number' => 'Waitlisted'],
-        ['min' => null,  'max' => 56.00, 'passer_status_id' => 3, 'batch_number' => null],
+        ['min' => 85.00, 'max' => null,   'passer_status_id' => 1, 'batch_number' => 'Batch 1'],
+        ['min' => 79.00, 'max' => 85.00,  'passer_status_id' => 1, 'batch_number' => 'Batch 2'],
+        ['min' => 75.00, 'max' => 79.00,  'passer_status_id' => 2, 'batch_number' => 'Batch 3'],
+        ['min' => 55.00, 'max' => 75.00,  'passer_status_id' => 2, 'batch_number' => 'Batch 4'],
+        ['min' => null,  'max' => 55.00,  'passer_status_id' => 3, 'batch_number' => null],
     ];
 
     /**

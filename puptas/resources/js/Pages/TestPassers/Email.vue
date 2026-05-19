@@ -1733,8 +1733,6 @@ const closeWaitlistedEmailPreview = () => {
     waitlistedEmailPreviewHtml.value = '';
 };
 
-<<<<<<< Updated upstream
-=======
 // Watch filters to reload SAR history
 watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, debouncedSearchTerm], () => {
     if (sarHistory.value.length > 0 || filterSchoolYear.value || filterBatchNumber.value || filterPasserStatus.value.length > 0 || debouncedSearchTerm.value) {
@@ -1746,8 +1744,6 @@ watch([filterSchoolYear, filterBatchNumber, filterPasserStatus, debouncedSearchT
 onMounted(() => {
     loadSarHistory();
 });
-
->>>>>>> Stashed changes
 // ── Bulk Enroll ───────────────────────────────────────────────────────────────
 const bulkEnrollRunning    = ref(false);
 const showBulkEnrollResult = ref(false);
