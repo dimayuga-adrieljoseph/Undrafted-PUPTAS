@@ -517,24 +517,8 @@ function reset() {
                                         Thank you for considering Polytechnic University of the Philippines for your higher education.
                                     </p>
 
-                                    <!-- Details box -->
-                                    <div class="rounded-xl bg-gray-50 border border-gray-200 overflow-hidden text-sm divide-y divide-gray-200">
-                                        <div class="flex items-center justify-between px-4 py-3">
-                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Applicant Name</span>
-                                            <span class="text-gray-900 font-semibold">{{ result.full_name }}</span>
-                                        </div>
-                                        <div class="flex items-center justify-between px-4 py-3">
-                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Reference No.</span>
-                                            <span class="text-gray-900 font-semibold">{{ result.reference_number }}</span>
-                                        </div>
-                                        <div class="flex items-center justify-between px-4 py-3">
-                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Status</span>
-                                            <span class="text-red-600 font-semibold">Not Qualified</span>
-                                        </div>
-                                    </div>
-
                                     <p class="text-sm text-gray-700 leading-relaxed">
-                                        We regret to inform you that your score in the PUP College Entrance Test for Taguig Campus did not meet the qualifying threshold.
+                                        We regret to inform you that your score in the PUP College Entrance Test for Taguig Campus did not place you in the top 500 requirement of the Campus.
                                     </p>
                                     <p class="text-sm text-gray-700 leading-relaxed">
                                         We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
