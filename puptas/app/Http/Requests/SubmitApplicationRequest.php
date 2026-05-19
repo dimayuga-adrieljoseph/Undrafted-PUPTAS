@@ -46,6 +46,16 @@ class SubmitApplicationRequest extends FormRequest
                     }
                 },
             ],
+            'third_choice_id' => [
+                'nullable',
+                'integer',
+                Rule::exists(Program::class, 'id'),
+                function ($attribute, $value, $fail) {
+                    if ($value && ($value == $this->input('program_id') || $value == $this->input('second_choice_id'))) {
+                        $fail('Third choice must be different from the first and second choices.');
+                    }
+                },
+            ],
         ];
     }
 
