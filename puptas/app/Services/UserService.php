@@ -263,6 +263,7 @@ class UserService
         $interviewer = $processes->get('interviewer');
         if ($interviewer) {
             if ($interviewer->status === 'completed') {
+                if ($interviewer->action === 'rejected')     return 'for_interview';
                 if ($interviewer->action === 'transferred') return 'interview_transferred';
                 if ($interviewer->action === 'passed')      return 'interview_passed';
                 return 'interview_passed';

@@ -275,22 +275,17 @@ class InterviewerDashboardController extends Controller
             DB::transaction(function () use ($application, $interviewerInProgress, $userId, $programId) {
                 $program = Program::findOrFail($programId);
 
-                // Update application status to rejected
-                $application->status = 'rejected';
-                $application->save();
-
-                // Close current interviewer in-progress process
+                // Record the rejection but keep the interviewer process in_progress
+                // so the applicant can still be interviewed by another interviewer
+                // for a different program.
                 $interviewerInProgress->update([
-                    'status' => 'completed',
-                    'action' => 'rejected',
-                    'reviewer_notes' => "Rejected by interviewer for program: {$program->code}",
-                    'performed_by' => auth()->id(),
+                    'reviewer_notes' => "Rejected by interviewer (ID: " . auth()->id() . ") for program: {$program->code}",
                 ]);
             });
 
-            $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer rejected application for applicant ID {$userId} for program ID {$programId}.", null, 'ADMISSION_DATA');
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer rejected application for applicant ID {$userId} for program ID {$programId}. Applicant remains available for other interviewers.", null, 'ADMISSION_DATA');
 
-            return response()->json(['message' => 'Application rejected.']);
+            return response()->json(['message' => 'Application rejected for this program. Applicant can still be interviewed for other programs.']);
         } catch (\Throwable $e) {
             \Log::error("❌ Reject failed: " . $e->getMessage());
             return response()->json(['message' => 'An error occurred while rejecting the application.'], 400);

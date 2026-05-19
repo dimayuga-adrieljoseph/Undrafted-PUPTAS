@@ -20,6 +20,10 @@ class ApplicationStatusService
 
         $interview = $application->processes->where('stage', 'interviewer')->where('status', 'completed')->sortByDesc('created_at')->first();
         if ($interview) {
+            if ($interview->action === 'rejected') {
+                // Rejected by interviewer — applicant is still in interview stage
+                return 'For Interview';
+            }
             if ($interview->action === 'transferred') {
                 return 'Interview Finished (Transferred)';
             } elseif ($interview->action === 'passed') {
