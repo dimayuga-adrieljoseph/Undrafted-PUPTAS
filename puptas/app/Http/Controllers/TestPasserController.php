@@ -49,6 +49,9 @@ class TestPasserController extends Controller
             'batch_number' => 'nullable|string|max:50',
             'strand' => 'nullable|string|max:100',
             'status' => 'nullable|integer|exists:passer_statuses,id',
+            'search' => 'nullable|string|max:100',
+            'sort_key' => 'nullable|string|in:pupcet_total_score,surname,first_name,email,school_year,batch_number',
+            'sort_order' => 'nullable|string|in:asc,desc',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
         ]);
@@ -116,11 +119,12 @@ class TestPasserController extends Controller
 
 
     /**
-     * Build an optimized Eloquent query with conditional filters and default ordering.
+     * Build an optimized Eloquent query with conditional filters, search, and ordering.
      *
      * Applies WHERE clauses for school_year, batch_number, strand, and passer_status_id
      * only when the corresponding request parameter is present and non-empty.
-     * Orders results by pupcet_total_score descending and eager-loads passerStatus.
+     * Supports server-side search across surname, first_name, and email.
+     * Supports configurable sort column and direction.
      */
     private function buildQuery(Request $request): Builder
     {
@@ -142,7 +146,29 @@ class TestPasserController extends Controller
             $query->where('passer_status_id', $request->input('status'));
         }
 
-        $query->orderBy('pupcet_total_score', 'desc');
+        // Server-side search across name and email
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('surname', 'like', "%{$search}%")
+                  ->orWhere('first_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // Configurable sort (whitelist allowed columns)
+        $allowedSortColumns = ['pupcet_total_score', 'surname', 'first_name', 'email', 'school_year', 'batch_number'];
+        $sortKey = $request->input('sort_key', 'pupcet_total_score');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        if (!in_array($sortKey, $allowedSortColumns)) {
+            $sortKey = 'pupcet_total_score';
+        }
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc';
+        }
+
+        $query->orderBy($sortKey, $sortOrder);
 
         return $query;
     }
@@ -169,6 +195,15 @@ class TestPasserController extends Controller
 
         if ($request->filled('status')) {
             $query->where('passer_status_id', $request->input('status'));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('surname', 'like', "%{$search}%")
+                  ->orWhere('first_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
         }
 
         $ids = $query->pluck('test_passer_id')->all();

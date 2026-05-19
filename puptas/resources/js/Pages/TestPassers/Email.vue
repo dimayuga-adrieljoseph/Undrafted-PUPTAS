@@ -26,7 +26,7 @@
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filters &amp; Controls</span>
                             <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full">
-                                {{ filteredPassers.length }} passers
+                                {{ passers?.total || 0 }} passers
                             </span>
                         </div>
 
@@ -91,7 +91,7 @@
                                 <option value="surname">Sort: Surname</option>
                                 <option value="first_name">Sort: First Name</option>
                                 <option value="email">Sort: Email</option>
-                                <option value="schoolYear">Sort: School Year</option>
+                                <option value="school_year">Sort: School Year</option>
                             </select>
                             <select v-model="sortOrder"
                                 class="flex-1 min-w-[100px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
@@ -474,7 +474,7 @@
                                     </div>
                                     <div>
                                         <div class="text-sm text-gray-600 dark:text-gray-400">Filtered</div>
-                                        <div class="text-2xl font-bold text-gray-900 dark:text-gray-200">{{ filteredPassers.length }}</div>
+                                        <div class="text-2xl font-bold text-gray-900 dark:text-gray-200">{{ passers?.total || 0 }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -1374,43 +1374,55 @@ const currentPage = computed(() => props.passers?.current_page || 1);
 const totalPages = computed(() => props.passers?.last_page || 1);
 const itemsPerPage = computed(() => props.passers?.per_page || 15);
 
+// Central function to make server requests with all current params
+function buildServerParams(overrides = {}) {
+    const params = {
+        school_year: filterSchoolYear.value || undefined,
+        batch_number: filterBatchNumber.value || undefined,
+        status: filterPasserStatus.value.length === 1 ? filterPasserStatus.value[0] : undefined,
+        search: debouncedSearchTerm.value || undefined,
+        sort_key: sortKey.value || undefined,
+        sort_order: sortOrder.value || undefined,
+        per_page: itemsPerPage.value,
+        page: 1,
+        ...overrides,
+    };
+    // Remove undefined values
+    Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+    return params;
+}
+
 // Navigate to a different page via Inertia (server-side pagination)
 function goToPage(page) {
     if (page < 1 || page > totalPages.value || page === currentPage.value) return;
-    router.get('/test-passers', {
-        school_year: filterSchoolYear.value || undefined,
-        batch_number: filterBatchNumber.value || undefined,
-        strand: undefined,
-        status: filterPasserStatus.value.length === 1 ? filterPasserStatus.value[0] : undefined,
-        page: page,
-        per_page: itemsPerPage.value,
-    }, {
+    router.get('/test-passers', buildServerParams({ page }), {
         preserveState: true,
+        preserveScroll: true,
+    });
+}
+
+// Reload from server with current filters (resets to page 1)
+function applyServerFilters() {
+    router.get('/test-passers', buildServerParams({ page: 1 }), {
+        preserveState: false,
         preserveScroll: true,
     });
 }
 
 const onSearchInput = debounce(() => {
     debouncedSearchTerm.value = searchTerm.value.toLowerCase();
+    applyServerFilters();
 }, 300);
 
 // When server-side filters change, reload from server
-function applyServerFilters() {
-    router.get('/test-passers', {
-        school_year: filterSchoolYear.value || undefined,
-        batch_number: filterBatchNumber.value || undefined,
-        status: filterPasserStatus.value.length === 1 ? filterPasserStatus.value[0] : undefined,
-        page: 1,
-        per_page: itemsPerPage.value,
-    }, {
-        preserveState: false,
-        preserveScroll: true,
-    });
-}
-
 watch([filterSchoolYear, filterBatchNumber, filterPasserStatus], () => {
     applyServerFilters();
 }, { deep: true });
+
+// When sort changes, reload from server (keeps current page 1)
+watch([sortKey, sortOrder], () => {
+    applyServerFilters();
+});
 
 const schoolYears = computed(() => {
     // Use server-provided filter options if available
@@ -1447,49 +1459,13 @@ const batchNumbers = computed(() => {
 });
 
 const filteredPassers = computed(() => {
-    return flatPassers.value.filter((passer) => {
-        const search = debouncedSearchTerm.value;
-        const matchesSearch =
-            passer.surname.toLowerCase().includes(search) ||
-            passer.first_name.toLowerCase().includes(search) ||
-            passer.email.toLowerCase().includes(search);
-
-        const matchesSchoolYear = filterSchoolYear.value
-            ? passer.schoolYear === filterSchoolYear.value
-            : true;
-
-        const matchesBatch = filterBatchNumber.value
-            ? passer.batchNumber === filterBatchNumber.value
-            : true;
-
-        const matchesStatus = filterPasserStatus.value.length > 0
-            ? filterPasserStatus.value.includes(passer.passer_status_id)
-            : true;
-
-        return matchesSearch && matchesSchoolYear && matchesBatch && matchesStatus;
-    });
+    // Filtering is now done server-side; just return all records from the current page
+    return flatPassers.value;
 });
 
 const sortedPassers = computed(() => {
-    return filteredPassers.value.slice().sort((a, b) => {
-        const key = sortKey.value;
-        const valA = a[key];
-        const valB = b[key];
-
-        // Numeric sort for pupcet_total_score (nulls always last)
-        if (key === 'pupcet_total_score') {
-            const numA = valA === null || valA === undefined ? -Infinity : parseFloat(valA);
-            const numB = valB === null || valB === undefined ? -Infinity : parseFloat(valB);
-            return sortOrder.value === 'desc' ? numB - numA : numA - numB;
-        }
-
-        // String sort for everything else
-        const strA = (valA ?? '').toString().toLowerCase();
-        const strB = (valB ?? '').toString().toLowerCase();
-        if (strA < strB) return sortOrder.value === 'asc' ? -1 : 1;
-        if (strA > strB) return sortOrder.value === 'asc' ? 1 : -1;
-        return 0;
-    });
+    // Sorting is now done server-side; data arrives pre-sorted
+    return filteredPassers.value;
 });
 
 /**
@@ -1558,6 +1534,7 @@ const toggleSelectAll = async (isSelected) => {
             if (filterSchoolYear.value) params.school_year = filterSchoolYear.value;
             if (filterBatchNumber.value) params.batch_number = filterBatchNumber.value;
             if (filterPasserStatus.value.length === 1) params.status = filterPasserStatus.value[0];
+            if (debouncedSearchTerm.value) params.search = debouncedSearchTerm.value;
 
             const response = await axios.get('/test-passers/select-all-ids', { params });
             const allIds = response.data.ids;
