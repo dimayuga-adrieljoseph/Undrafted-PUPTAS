@@ -27,6 +27,8 @@ const activeUploadFile = ref(null);
 const activeUploadDropActive = ref(false);
 const activeUploadUploading = ref(false);
 const activeUploadProgress = ref(0);
+const activeUploadLoaded = ref(0);
+const activeUploadTotal = ref(0);
 const activeUploadError = ref("");
 const activeUploadSuccess = ref(false);
 const showQualifiedProgramsModal = ref(false);
@@ -183,6 +185,8 @@ const openInlineUpload = (key) => {
   activeUploadFile.value = null;
   activeUploadDropActive.value = false;
   activeUploadProgress.value = 0;
+  activeUploadLoaded.value = 0;
+  activeUploadTotal.value = 0;
   activeUploadError.value = "";
   activeUploadSuccess.value = false;
 };
@@ -193,6 +197,8 @@ const closeInlineUpload = () => {
   activeUploadFile.value = null;
   activeUploadDropActive.value = false;
   activeUploadProgress.value = 0;
+  activeUploadLoaded.value = 0;
+  activeUploadTotal.value = 0;
   activeUploadError.value = "";
   activeUploadSuccess.value = false;
 };
@@ -253,6 +259,8 @@ const uploadInlineFile = async () => {
 
   activeUploadUploading.value = true;
   activeUploadProgress.value = 0;
+  activeUploadLoaded.value = 0;
+  activeUploadTotal.value = 0;
   activeUploadError.value = '';
   activeUploadSuccess.value = false;
 
@@ -264,7 +272,9 @@ const uploadInlineFile = async () => {
     const { data } = await axios.post('/user/application/reupload', form, {
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total) {
-          activeUploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          activeUploadLoaded.value = progressEvent.loaded;
+          activeUploadTotal.value = progressEvent.total;
+          activeUploadProgress.value = Math.min(99, Math.round((progressEvent.loaded * 100) / progressEvent.total));
         }
       }
     });
@@ -272,6 +282,7 @@ const uploadInlineFile = async () => {
     // Update local status and refresh
     fileStatuses.value[key] = data.file;
     await fetchData();
+    activeUploadProgress.value = 100;
     activeUploadSuccess.value = true;
   } catch (err) {
     activeUploadError.value = err.response?.data?.message || 'Failed to upload file.';
@@ -729,6 +740,9 @@ onMounted(() => {
                               style="background-color: #9E122C;"
                               :style="{ width: activeUploadProgress + '%' }"
                             ></div>
+                          </div>
+                          <div v-if="activeUploadTotal > 0" class="text-[10px] text-gray-400 dark:text-gray-500 text-right">
+                            {{ formatFileSize(activeUploadLoaded) }} / {{ formatFileSize(activeUploadTotal) }}
                           </div>
                         </div>
 
