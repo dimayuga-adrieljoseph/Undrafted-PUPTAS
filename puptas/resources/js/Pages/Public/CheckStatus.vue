@@ -243,8 +243,6 @@ function reset() {
                                     autocomplete="given-name"
                                     placeholder="e.g. Juan"
                                     maxlength="55"
-                                    @keypress="(e) => { if (!/[a-zA-ZÀ-ÖØ-öø-ÿ\s\-']/.test(e.key)) e.preventDefault() }"
-                                    @input="firstName = firstName.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s\-']/g, '')"
                                     :disabled="loading || rateLimited"
                                     :class="[
                                         'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors',
@@ -281,8 +279,6 @@ function reset() {
                                     autocomplete="family-name"
                                     placeholder="e.g. Dela Cruz"
                                     maxlength="55"
-                                    @keypress="(e) => { if (!/[a-zA-ZÀ-ÖØ-öø-ÿ\s\-']/.test(e.key)) e.preventDefault() }"
-                                    @input="lastName = lastName.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s\-']/g, '')"
                                     :disabled="loading || rateLimited"
                                     :class="[
                                         'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors',
