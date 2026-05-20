@@ -659,7 +659,7 @@ onMounted(() => {
                     </div>
 
                     <!-- Document Name -->
-                    <p class="text-xs text-center text-gray-700 dark:text-gray-300 font-medium mb-2 truncate" :title="formatKey(key)">
+                    <p class="text-xs text-center text-gray-700 dark:text-gray-300 font-medium mb-2 leading-tight break-words" :title="formatKey(key)">
                       {{ formatKey(key) }}
                     </p>
 
@@ -695,7 +695,7 @@ onMounted(() => {
                     <!-- Drag and drop area appears below button when Upload/Replace is clicked -->
                     <div v-else class="mt-3 rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-3 shadow-sm dark:border-gray-700 dark:from-gray-950/70 dark:via-gray-900 dark:to-gray-950/80">
                       <div
-                        class="group rounded-2xl border-2 border-dashed p-4 text-center transition-all duration-200"
+                        class="group rounded-2xl border-2 border-dashed p-2 text-center transition-all duration-200"
                         :class="activeUploadDropActive ? 'border-[#9E122C] bg-[#9E122C]/5 shadow-inner' : 'border-gray-300 bg-white/80 hover:border-[#9E122C]/70 hover:bg-white dark:border-gray-700 dark:bg-gray-900/60 dark:hover:bg-gray-900/80'"
                         @click.stop="document.getElementById('inline-file-input-' + key)?.click()"
                         @dragenter.prevent.stop="onInlineDragEnter"
@@ -703,13 +703,13 @@ onMounted(() => {
                         @dragleave.prevent.stop="onInlineDragLeave"
                         @drop.prevent.stop="onInlineDrop"
                       >
-                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#9E122C]/10 text-[#9E122C] transition-transform group-hover:scale-105 dark:bg-white/10 dark:text-white">
-                          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#9E122C]/10 text-[#9E122C] transition-transform group-hover:scale-105 dark:bg-white/10 dark:text-white">
+                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.902A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                           </svg>
                         </div>
 
-                        <p class="mt-2 text-xs font-medium text-gray-900 dark:text-white">
+                        <p class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
                           Choose a file or drag and drop it here
                         </p>
 
@@ -717,6 +717,29 @@ onMounted(() => {
                       </div>
 
                       <div v-if="activeUploadKey === key" class="mt-3 space-y-3">
+                        <!-- Upload Progress Bar -->
+                        <div v-if="activeUploadUploading" class="space-y-1">
+                          <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                            <span class="font-medium">Uploading...</span>
+                            <span class="font-semibold text-[#9E122C]">{{ activeUploadProgress }}%</span>
+                          </div>
+                          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                            <div
+                              class="h-2 rounded-full transition-all duration-200"
+                              style="background-color: #9E122C;"
+                              :style="{ width: activeUploadProgress + '%' }"
+                            ></div>
+                          </div>
+                        </div>
+
+                        <!-- Success indicator -->
+                        <div v-if="activeUploadSuccess && !activeUploadUploading" class="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
+                          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                          Upload complete!
+                        </div>
+
                         <p v-if="activeUploadError && activeUploadKey === key" class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
                           {{ activeUploadError }}
                         </p>
