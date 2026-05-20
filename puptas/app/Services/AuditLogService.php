@@ -187,6 +187,48 @@ class AuditLogService
         ]);
     }
 
+    /**
+     * Log a public admission status check attempt.
+     * Records both successful matches and failed attempts for security monitoring.
+     * Hashes sensitive personal information to protect privacy.
+     *
+     * @param string $referenceNumber  The reference number used in the check
+     * @param string $firstName        The first name used (will be hashed)
+     * @param string $lastName         The last name used (will be hashed)
+     * @param bool   $matched          Whether a record was found
+     * @param string|null $ipAddress   The IP address of the requester
+     * @return AuditLog
+     */
+    public function logStatusCheck(
+        string $referenceNumber,
+        string $firstName,
+        string $lastName,
+        bool $matched,
+        ?string $ipAddress = null
+    ): AuditLog {
+        $outcome = $matched ? 'matched' : 'not_matched';
+        
+        // Hash names for privacy (following existing pattern in controller)
+        $firstNameHash = hash('sha256', strtolower(trim($firstName)));
+        $lastNameHash = hash('sha256', strtolower(trim($lastName)));
+        
+        $description = sprintf(
+            "Public status check: Reference=%s, Outcome=%s (IP: %s)",
+            $referenceNumber,
+            $outcome,
+            $ipAddress ?? 'unknown'
+        );
+
+        return $this->write([
+            'user'         => null, // Public endpoint, no authenticated user
+            'action_type'  => 'READ',
+            'log_category' => AuditLog::CATEGORY_ADMISSION_DATA,
+            'log_type'     => AuditLog::TYPE_SYSTEM,
+            'module_name'  => 'Public Status Checker',
+            'description'  => $description,
+        ]);
+    }
+
     // ─── Internal ───────────────────────────────────────────────────
 
     /**

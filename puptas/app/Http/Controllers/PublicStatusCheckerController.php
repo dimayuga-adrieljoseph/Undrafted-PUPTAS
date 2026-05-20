@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CheckStatusRequest;
 use App\Models\TestPasser;
+use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
 class PublicStatusCheckerController extends Controller
 {
+    public function __construct(
+        private AuditLogService $auditLogService
+    ) {}
+
     public function check(CheckStatusRequest $request): JsonResponse
     {
         $referenceNumber = $request->validated('referenceNumber');
@@ -22,6 +27,7 @@ class PublicStatusCheckerController extends Controller
 
         $matched = $passer !== null;
 
+        // Log to application log (existing behavior)
         Log::info('status_check_attempt', [
             'ip'               => $request->ip(),
             'reference_number' => $referenceNumber,
@@ -29,6 +35,15 @@ class PublicStatusCheckerController extends Controller
             'last_name_hash'   => hash('sha256', $lastName),
             'outcome'          => $matched ? 'matched' : 'not_matched',
         ]);
+
+        // Log to audit trail (new behavior)
+        $this->auditLogService->logStatusCheck(
+            $referenceNumber,
+            $firstName,
+            $lastName,
+            $matched,
+            $request->ip()
+        );
 
         if ($matched) {
             $statusId = $passer->passer_status_id;
