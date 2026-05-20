@@ -46,6 +46,7 @@ class Grade extends Model
         'g12_academic_professional',
         // HUMSS specific - G12 Science
         'g12_earth_life_science',
+        'g12_physical_science',
     ];
 
     protected $casts = [
