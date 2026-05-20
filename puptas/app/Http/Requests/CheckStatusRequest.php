@@ -40,13 +40,11 @@ class CheckStatusRequest extends FormRequest
                 'required',
                 'string',
                 'max:55',
-                'regex:/^[a-zA-ZÀ-ÖØ-öø-ÿ\s\-\']+$/',
             ],
             'lastName' => [
                 'required',
                 'string',
                 'max:55',
-                'regex:/^[a-zA-ZÀ-ÖØ-öø-ÿ\s\-\']+$/',
             ],
         ];
     }
@@ -64,10 +62,8 @@ class CheckStatusRequest extends FormRequest
             'referenceNumber.regex'    => 'Reference number may only contain digits and hyphens.',
             'firstName.required'       => 'First name is required.',
             'firstName.max'            => 'First name must not exceed 55 characters.',
-            'firstName.regex'          => 'First name may only contain letters, spaces, hyphens, and apostrophes.',
             'lastName.required'        => 'Last name is required.',
             'lastName.max'             => 'Last name must not exceed 55 characters.',
-            'lastName.regex'           => 'Last name may only contain letters, spaces, hyphens, and apostrophes.',
         ];
     }
 }
