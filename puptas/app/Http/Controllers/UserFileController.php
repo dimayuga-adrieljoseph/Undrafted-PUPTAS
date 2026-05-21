@@ -228,7 +228,20 @@ class UserFileController extends Controller
             return response()->file($disk->path($file->file_path), $headers);
         }
 
-        return response($disk->get($file->file_path), Response::HTTP_OK, $headers);
+        // Generate a short-lived presigned S3 URL and redirect to it.
+        // S3 serves the file directly to the browser — PHP memory is not involved.
+        // Content-Type and Content-Disposition are forwarded as S3 response-override
+        // parameters so inline preview behaviour is preserved without proxying the body.
+        $temporaryUrl = $disk->temporaryUrl(
+            $file->file_path,
+            now()->addMinutes(5),
+            [
+                'ResponseContentType'        => $mimeType,
+                'ResponseContentDisposition' => $contentDisposition,
+            ]
+        );
+
+        return redirect($temporaryUrl);
     }
 
     private function resolveDiskForPath(string $path): string
