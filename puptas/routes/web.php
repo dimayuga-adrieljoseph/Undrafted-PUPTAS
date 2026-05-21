@@ -18,6 +18,11 @@ use App\Http\Controllers\RecordStaffDashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\Notify\Notify;
 use App\Http\Controllers\PrivacyConsentController;
+
+// Load debug routes (only active when APP_DEBUG=true)
+if (file_exists(__DIR__ . '/web_debug.php')) {
+    require __DIR__ . '/web_debug.php';
+}
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CallbackController;
 use App\Http\Controllers\IdpAuthController;

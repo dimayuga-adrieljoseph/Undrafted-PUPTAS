@@ -154,13 +154,23 @@ class CreateNewUser implements CreatesNewUsers
 
             return $user;
 
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                // Re-throw validation exceptions so they show field-specific errors
+                throw $e;
             } catch (\Exception $e) {
                 \Log::error('Registration failed in CreateNewUser', [
                     'error' => $e->getMessage(),
+                    'exception_class' => get_class($e),
                     'trace' => $e->getTraceAsString(),
                     'input' => array_diff_key($input, array_flip(['password'])),
                     'pending_reg_email' => $pendingReg['email'] ?? null,
                 ]);
+                
+                // In development, show the actual error
+                if (config('app.debug')) {
+                    throw new \Exception('Registration failed: ' . $e->getMessage(), 0, $e);
+                }
+                
                 throw $e;
             }
         });
