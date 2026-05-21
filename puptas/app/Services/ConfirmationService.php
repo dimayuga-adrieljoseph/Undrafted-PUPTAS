@@ -231,11 +231,13 @@ class ConfirmationService
             throw new \InvalidArgumentException('Invalid field name');
         }
 
-        // Use FileService to compress and store the file
-                $compressed = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
+        // Get existing file path before uploading (for cleanup after)
+        $existingFilePath = UserFile::where('user_id', $user->id)
+            ->where('type', $type)
+            ->value('file_path');
 
-        // Delete existing file
-        $this->deleteExistingFile($user, $type);
+        // Use FileService to store the file (streaming, no memory bloat)
+        $compressed = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
 
         // Prepare update data
         $updateData = [
@@ -278,6 +280,18 @@ class ConfirmationService
             'field' => $field,
             'type' => $type,
         ]);
+
+        // Delete old file AFTER success (non-blocking, don't let failure affect response)
+        if ($existingFilePath && $existingFilePath !== $compressed['path']) {
+            try {
+                $this->fileService->delete($existingFilePath);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to delete old file after reupload', [
+                    'path' => $existingFilePath,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return [
             'message' => 'File reuploaded successfully',

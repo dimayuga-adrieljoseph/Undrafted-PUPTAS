@@ -67,6 +67,12 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
 
 RUN echo "memory_limit=256M" > /usr/local/etc/php/conf.d/memory.ini
 
+# Optimize PHP for file uploads
+RUN echo "upload_max_filesize=10M\n\
+post_max_size=12M\n\
+max_execution_time=300\n\
+max_input_time=300" > /usr/local/etc/php/conf.d/uploads.ini
+
 # Fix Apache MPM Conflict
 RUN echo "=== Fixing Apache MPM Conflict ===" \
     && a2dismod mpm_event \
@@ -90,6 +96,9 @@ RUN sed -ri -e "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" \
 # Configure Apache to listen on port 8080
 RUN echo "Listen 8080" > /etc/apache2/ports.conf \
     && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/g' /etc/apache2/sites-available/000-default.conf
+
+# Increase Apache timeout for file uploads (server→S3 relay can be slow)
+RUN echo "Timeout 300\nProxyTimeout 300" >> /etc/apache2/apache2.conf
 
 WORKDIR /var/www/html
 

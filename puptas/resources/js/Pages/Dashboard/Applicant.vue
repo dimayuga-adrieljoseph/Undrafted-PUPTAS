@@ -280,8 +280,8 @@ const clearUploadState = (key) => {
   try { localStorage.removeItem(UPLOAD_STATE_PREFIX + key); } catch (e) { /* */ }
 };
 
-// Active AbortController for cancelling uploads (Fix 4)
-let activeAbortController = null;
+// Active upload state tracking
+let waitingForServer = false;
 
 const uploadInlineFile = async () => {
   const key = activeUploadKey.value;
@@ -305,15 +305,14 @@ const uploadInlineFile = async () => {
   // Fix 3: Mark upload as in-progress
   setUploadState(key, 'uploading');
 
-  // Fix 4: Create AbortController for timeout/cancellation
-  activeAbortController = new AbortController();
-  const uploadTimeout = setTimeout(() => {
-    if (activeAbortController) activeAbortController.abort();
-  }, 5 * 60 * 1000); // 5 minute timeout
+  // Track whether client→server transfer is done (waiting for server→S3)
+  let waitingForServer = false;
 
   new Compressor(originalFile, {
-    quality: 0.8,
-    maxWidth: 1600,
+    quality: 0.6,
+    maxWidth: 1200,
+    convertSize: 500000, // Convert to JPEG if over 500KB
+    mimeType: 'image/webp', // WebP is 30-50% smaller than JPEG
     success: async (compressedFile) => {
       const filename = compressedFile.name || originalFile.name;
 
@@ -324,14 +323,20 @@ const uploadInlineFile = async () => {
         form.append('field', key);
 
         const { data } = await axios.post('/user/application/reupload', form, {
-          signal: activeAbortController.signal,
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               activeUploadLoaded.value = progressEvent.loaded;
               activeUploadTotal.value = progressEvent.total;
-              // Progress tracks client → server transfer
-              // Server → S3 is now fast thanks to putFileAs streaming
-              activeUploadProgress.value = Math.min(95, Math.round((progressEvent.loaded * 100) / progressEvent.total));
+              const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+
+              if (pct >= 100 && !waitingForServer) {
+                // Client finished sending — now waiting for server to store to S3
+                waitingForServer = true;
+                activeUploadProgress.value = 95;
+              } else if (!waitingForServer) {
+                // Still transferring client → server
+                activeUploadProgress.value = Math.min(90, pct);
+              }
             }
           }
         });
@@ -346,22 +351,14 @@ const uploadInlineFile = async () => {
         clearUploadState(key);
       } catch (err) {
         clearUploadState(key);
-        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
-          activeUploadError.value = 'Upload timed out. Please try again.';
-        } else {
-          activeUploadError.value = err.response?.data?.message || 'Failed to upload file.';
-        }
+        activeUploadError.value = err.response?.data?.message || 'Failed to upload file. Please try again.';
         activeUploadSuccess.value = false;
       } finally {
-        clearTimeout(uploadTimeout);
-        activeAbortController = null;
         activeUploadUploading.value = false;
       }
     },
     error(err) {
       clearUploadState(key);
-      clearTimeout(uploadTimeout);
-      activeAbortController = null;
       activeUploadError.value = err.message || 'Image compression failed.';
       activeUploadUploading.value = false;
       activeUploadSuccess.value = false;
