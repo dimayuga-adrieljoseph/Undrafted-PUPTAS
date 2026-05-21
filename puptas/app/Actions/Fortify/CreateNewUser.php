@@ -143,13 +143,20 @@ class CreateNewUser implements CreatesNewUsers
 
             if (!empty($pendingReg['access_token'])) {
                 // Store IDP tokens server-side only — never expose them in browser cookies.
-                // The IDP callback flow already follows this pattern (see IdpAuthController@callback).
-                \App\Models\RefreshToken::create([
-                    'user_id'       => $user->id,
-                    'access_token'  => $pendingReg['access_token'],
-                    'refresh_token' => $pendingReg['refresh_token'] ?? null,
-                    'expires_at'    => $pendingReg['expires_at'] ?? now()->addHour(),
-                ]);
+                // Store IDP tokens server-side only in Redis.
+                // The refresh token lives longer than the access token. We keep it in Redis for 30 days.
+                $expiresAt = $pendingReg['expires_at'] ?? now()->addHour();
+                $ttl = 60 * 60 * 24 * 30; // 30 days
+
+                \Illuminate\Support\Facades\Cache::store('redis')->put(
+                    "idp_tokens:user_{$user->id}",
+                    [
+                        'access_token'  => $pendingReg['access_token'],
+                        'refresh_token' => $pendingReg['refresh_token'] ?? null,
+                        'expires_at'    => $expiresAt->timestamp,
+                    ],
+                    $ttl
+                );
             }
 
             // Clear the pending registration from session

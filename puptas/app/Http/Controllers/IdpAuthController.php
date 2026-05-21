@@ -282,14 +282,18 @@ class IdpAuthController extends Controller
             // Authenticate the user in the local app securely with the eloquent driver
             \Auth::login($localDbUser);
 
-            // Store IDP tokens in the database rather than cookies/session
-            \App\Models\RefreshToken::updateOrCreate(
-                ['user_id' => $localDbUser->id],
+            // Store IDP tokens in Redis rather than MySQL or cookies
+            $expiresAt = now()->addSeconds($expiresIn - 60);
+            $ttl = 60 * 60 * 24 * 30; // Keep in Redis for 30 days
+
+            \Illuminate\Support\Facades\Cache::store('redis')->put(
+                "idp_tokens:user_{$localDbUser->id}",
                 [
                     'access_token'  => $accessToken,
                     'refresh_token' => $refreshToken,
-                    'expires_at'    => now()->addSeconds($expiresIn - 60),
-                ]
+                    'expires_at'    => $expiresAt->timestamp,
+                ],
+                $ttl
             );
 
             $roleId = (int) $localDbUser->role_id;
@@ -347,11 +351,11 @@ class IdpAuthController extends Controller
         if (Auth::check()) {
             $user = Auth::user();
 
-            // Get IDP access token from DB and remove the record
-            $tokenRecord = \App\Models\RefreshToken::where('user_id', $user->id)->first();
-            if ($tokenRecord) {
-                $accessToken = $tokenRecord->access_token;
-                $tokenRecord->delete();
+            // Get IDP access token from Redis and remove the record
+            $tokenData = \Illuminate\Support\Facades\Cache::store('redis')->get("idp_tokens:user_{$user->id}");
+            if ($tokenData) {
+                $accessToken = $tokenData['access_token'] ?? null;
+                \Illuminate\Support\Facades\Cache::store('redis')->forget("idp_tokens:user_{$user->id}");
             }
 
             if (method_exists($user, 'tokens')) {
