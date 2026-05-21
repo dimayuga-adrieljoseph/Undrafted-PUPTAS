@@ -205,12 +205,15 @@ class UserFileController extends Controller
             abort(Response::HTTP_FORBIDDEN);
         }
 
-        $diskName = $this->resolveDiskForPath($file->file_path);
-        $disk = Storage::disk($diskName);
-
-        if (!$disk->exists($file->file_path)) {
+        // resolveDiskForPath() already calls exists() on each candidate disk to find the
+        // correct one, so we can trust its result — a second exists() call would double the
+        // S3 round-trips and create a second failure point.
+        // If no disk reports the file as present, it returns null and we 404.
+        $diskName = FileMapper::resolveDiskForPath($file->file_path, $found);
+        if (!$found) {
             abort(Response::HTTP_NOT_FOUND);
         }
+        $disk = Storage::disk($diskName);
 
         $mimeType = FileMapper::detectMimeType($file);
         $filename = FileMapper::sanitizeFilename($file->original_name);
@@ -242,10 +245,5 @@ class UserFileController extends Controller
         );
 
         return redirect($temporaryUrl);
-    }
-
-    private function resolveDiskForPath(string $path): string
-    {
-        return FileMapper::resolveDiskForPath($path);
     }
 }

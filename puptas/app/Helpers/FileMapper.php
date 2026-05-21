@@ -260,7 +260,7 @@ class FileMapper
         return $extensionMime;
     }
 
-    public static function resolveDiskForPath(string $path): string
+    public static function resolveDiskForPath(string $path, bool &$found = false): string
     {
         $configuredDefault = config('filesystems.default', 'public');
         $candidateDisks = array_unique([$configuredDefault, 'public', 'local', 's3']);
@@ -268,6 +268,7 @@ class FileMapper
         foreach ($candidateDisks as $diskName) {
             try {
                 if (Storage::disk($diskName)->exists($path)) {
+                    $found = true;
                     return $diskName;
                 }
             } catch (\Throwable $e) {
@@ -275,6 +276,7 @@ class FileMapper
             }
         }
 
+        $found = false;
         return 'public';
     }
 
