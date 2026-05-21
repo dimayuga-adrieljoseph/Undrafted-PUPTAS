@@ -98,7 +98,7 @@ RUN echo "Listen 8080" > /etc/apache2/ports.conf \
     && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/g' /etc/apache2/sites-available/000-default.conf
 
 # Increase Apache timeout for file uploads (server→S3 relay can be slow)
-RUN echo "Timeout 300\nProxyTimeout 300" >> /etc/apache2/apache2.conf
+RUN echo "Timeout 300" >> /etc/apache2/apache2.conf
 
 WORKDIR /var/www/html
 
