@@ -271,6 +271,15 @@ class FileMapper
 
     public static function resolveDiskForPath(string $path, bool &$found = false): string
     {
+        $cacheKey = 'file_disk:' . md5($path);
+        
+        // Fast path: Check if we already resolved this file's disk recently
+        $cachedDisk = \Illuminate\Support\Facades\Cache::store('redis')->get($cacheKey);
+        if ($cachedDisk) {
+            $found = true;
+            return $cachedDisk;
+        }
+
         $configuredDefault = config('filesystems.default', 'public');
         $candidateDisks = array_unique([$configuredDefault, 'public', 'local', 's3']);
 
@@ -278,6 +287,8 @@ class FileMapper
             try {
                 if (Storage::disk($diskName)->exists($path)) {
                     $found = true;
+                    // Cache the result for 30 days to bypass slow S3 exists() checks
+                    \Illuminate\Support\Facades\Cache::store('redis')->put($cacheKey, $diskName, now()->addDays(30));
                     return $diskName;
                 }
             } catch (\Throwable $e) {
