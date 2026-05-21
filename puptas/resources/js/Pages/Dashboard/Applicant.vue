@@ -316,67 +316,31 @@ const uploadInlineFile = async () => {
     maxWidth: 1600,
     success: async (compressedFile) => {
       const filename = compressedFile.name || originalFile.name;
-      const extension = filename.split('.').pop().toLowerCase();
 
       try {
-        // Step 1: Get presigned URL for direct-to-S3 upload
-        const { data: urlData } = await axios.post('/user/application/upload-url', {
-          field: key,
-          extension: extension,
-          content_type: compressedFile.type || originalFile.type,
-        }, { signal: activeAbortController.signal });
+        // Upload through server (streaming with putFileAs on backend)
+        const form = new FormData();
+        form.append('file', compressedFile, filename);
+        form.append('field', key);
 
-        if (urlData.url) {
-          // Direct-to-S3 upload path (Fix 2: eliminates server-side relay)
-          // Progress bar now tracks the REAL upload to storage
-          await axios.put(urlData.url, compressedFile, {
-            headers: { 'Content-Type': compressedFile.type || originalFile.type },
-            signal: activeAbortController.signal,
-            onUploadProgress: (progressEvent) => {
-              if (progressEvent.total) {
-                activeUploadLoaded.value = progressEvent.loaded;
-                activeUploadTotal.value = progressEvent.total;
-                // Progress now goes to 100% because we're tracking the actual storage upload
-                activeUploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              }
+        const { data } = await axios.post('/user/application/reupload', form, {
+          signal: activeAbortController.signal,
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              activeUploadLoaded.value = progressEvent.loaded;
+              activeUploadTotal.value = progressEvent.total;
+              // Progress tracks client → server transfer
+              // Server → S3 is now fast thanks to putFileAs streaming
+              activeUploadProgress.value = Math.min(95, Math.round((progressEvent.loaded * 100) / progressEvent.total));
             }
-          });
+          }
+        });
 
-          // Step 2: Confirm upload with server (fast DB-only operation)
-          const { data } = await axios.post('/user/application/confirm-upload', {
-            field: key,
-            path: urlData.path,
-            original_name: filename,
-          }, { signal: activeAbortController.signal });
-
-          // Update local status and refresh
-          fileStatuses.value[key] = data.file;
-          await fetchData();
-          activeUploadProgress.value = 100;
-          activeUploadSuccess.value = true;
-        } else {
-          // Fallback: traditional upload through server (for local disk development)
-          const form = new FormData();
-          form.append('file', compressedFile, filename);
-          form.append('field', key);
-
-          const { data } = await axios.post('/user/application/reupload', form, {
-            signal: activeAbortController.signal,
-            onUploadProgress: (progressEvent) => {
-              if (progressEvent.total) {
-                activeUploadLoaded.value = progressEvent.loaded;
-                activeUploadTotal.value = progressEvent.total;
-                activeUploadProgress.value = Math.min(95, Math.round((progressEvent.loaded * 100) / progressEvent.total));
-              }
-            }
-          });
-
-          // Update local status and refresh
-          fileStatuses.value[key] = data.file;
-          await fetchData();
-          activeUploadProgress.value = 100;
-          activeUploadSuccess.value = true;
-        }
+        // Update local status and refresh
+        fileStatuses.value[key] = data.file;
+        await fetchData();
+        activeUploadProgress.value = 100;
+        activeUploadSuccess.value = true;
 
         // Fix 3: Mark upload as complete
         clearUploadState(key);
