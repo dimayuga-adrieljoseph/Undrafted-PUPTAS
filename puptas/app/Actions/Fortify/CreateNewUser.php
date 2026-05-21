@@ -51,6 +51,7 @@ class CreateNewUser implements CreatesNewUsers
         Validator::make($input, $rules)->validate();
 
         return DB::transaction(function () use ($input, $pendingReg) {
+            try {
             $email = strtolower(trim($pendingReg['email'] ?? ''));
 
             if (!$email) {
@@ -85,7 +86,7 @@ class CreateNewUser implements CreatesNewUsers
                 'lastname' => $input['lastname'],
                 'middlename' => $input['middlename'] ?? null,
                 'sex' => $input['sex'] ?? null,
-                'contactnumber' => $input['contactnumber'] ?? '',
+                'contactnumber' => !empty($input['contactnumber']) ? $input['contactnumber'] : 'N/A',
                 'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)),
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
@@ -98,7 +99,7 @@ class CreateNewUser implements CreatesNewUsers
                 'middlename' => $input['middlename'] ?? null,
                 'lastname' => $input['lastname'],
                 'sex' => $input['sex'] ?? null,
-                'contactnumber' => $input['contactnumber'] ?? '',
+                'contactnumber' => !empty($input['contactnumber']) ? $input['contactnumber'] : 'N/A',
                 'date_graduated' => $input['dateGrad'] ?? null,
                 'school' => $input['school'],
                 'strand' => $input['strand'] ?? null,
@@ -146,7 +147,22 @@ class CreateNewUser implements CreatesNewUsers
             // Log the user in — IDP credentials were already validated and saved above
             Auth::login($user);
 
+            \Log::info('User registration completed successfully', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+            ]);
+
             return $user;
+
+            } catch (\Exception $e) {
+                \Log::error('Registration failed in CreateNewUser', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'input' => array_diff_key($input, array_flip(['password'])),
+                    'pending_reg_email' => $pendingReg['email'] ?? null,
+                ]);
+                throw $e;
+            }
         });
     }
 
