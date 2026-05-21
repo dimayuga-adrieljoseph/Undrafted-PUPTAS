@@ -232,7 +232,7 @@ class ConfirmationService
         }
 
         // Use FileService to compress and store the file
-        $compressed = $this->fileService->store($uploadedFile, 'uploads/files');
+                $compressed = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
 
         // Delete existing file
         $this->deleteExistingFile($user, $type);

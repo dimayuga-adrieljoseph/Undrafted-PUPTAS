@@ -16,6 +16,26 @@ class FileService
     ) {}
 
     /**
+    * Store the uploaded file without any image processing.
+    * Used for cases where client‑side compression already applied.
+    * Returns the same shape as the original `store` method.
+    */
+    public function storeRaw(UploadedFile $file, string $directory): array
+    {
+        // Store the file directly on the local "public" disk.
+        // Using the local disk removes network latency that occurs when the default
+        // disk is a remote service such as S3.
+        $path = $file->store($directory, ['disk' => 'public']);
+        if ($path === false) {
+            throw new \RuntimeException('Failed to store uploaded file on local disk.');
+        }
+        return [
+            'path' => $this->sanitizePath($path),
+            'original_name' => $file->getClientOriginalName(),
+        ];
+    }
+
+    /**
      * Compress and store an uploaded file on the active disk.
      *
      * Note: this method stores a compressed image and returns storage path

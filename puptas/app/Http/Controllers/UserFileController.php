@@ -65,7 +65,7 @@ class UserFileController extends Controller
                 try {
                     $uploadedFile = $request->file($inputName);
 
-                    $stored = $this->fileService->store($uploadedFile, 'uploads/files');
+                    $stored = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
 
                     $userFile = UserFile::updateOrCreate(
                         [
@@ -81,7 +81,7 @@ class UserFileController extends Controller
                         ]
                     );
 
-                    \App\Jobs\ProcessGradeOcr::dispatch($userFile->id);
+                    // OCR processing removed – no background job dispatched
                 } catch (\InvalidArgumentException $e) {
                     return response()->json([
                         'message' => 'Image processing failed: ' . $e->getMessage(),
