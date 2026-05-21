@@ -208,7 +208,8 @@ class UserFileController extends Controller
         // resolveDiskForPath() already calls exists() on each candidate disk to find the
         // correct one, so we can trust its result — a second exists() call would double the
         // S3 round-trips and create a second failure point.
-        // If no disk reports the file as present, it returns null and we 404.
+        // If no disk reports the file as present, $found stays false and we 404.
+        $found = false;
         $diskName = FileMapper::resolveDiskForPath($file->file_path, $found);
         if (!$found) {
             abort(Response::HTTP_NOT_FOUND);
