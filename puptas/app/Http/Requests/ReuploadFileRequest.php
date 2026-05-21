@@ -7,15 +7,20 @@ use App\Helpers\FileMapper;
 
 /**
  * Form Request for reuploading a file
- * 
+ *
  * Validates file reupload requests including field names and file types.
  */
 class ReuploadFileRequest extends FormRequest
 {
+    /** Grade card fields are image-only (they go through compression + OCR). */
+    private const IMAGE_ONLY_FIELDS = [
+        'file10', 'file10Front',
+        'file11', 'file11Front',
+        'file12', 'file12Front',
+    ];
+
     /**
      * Determine if the user is authorized to make this request.
-     *
-     * @return bool
      */
     public function authorize(): bool
     {
@@ -29,18 +34,20 @@ class ReuploadFileRequest extends FormRequest
      */
     public function rules(): array
     {
+        $field = $this->input('field');
+        $isImageOnly = in_array($field, self::IMAGE_ONLY_FIELDS, true);
+
+        $fileRules = $isImageOnly
+            ? ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120']
+            : ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,pdf', 'max:10240'];
+
         return [
             'field' => [
                 'required',
                 'string',
                 'in:' . FileMapper::getValidFileFields(),
             ],
-            'file' => [
-                'required',
-                'image',
-                'mimes:jpg,jpeg,png,webp,gif',
-                'max:5120', // 5MB - increased since we'll compress
-            ],
+            'file' => $fileRules,
         ];
     }
 
@@ -53,11 +60,11 @@ class ReuploadFileRequest extends FormRequest
     {
         return [
             'field.required' => 'The file field name is required.',
-            'field.in' => 'The specified field is not a valid file upload field.',
-            'file.required' => 'Please select a file to upload.',
-            'file.image' => 'Please upload an image file.',
-            'file.mimes' => 'Only JPG, JPEG, PNG, WebP, and GIF files are allowed.',
-            'file.max' => 'The file size must not exceed 5MB.',
+            'field.in'       => 'The specified field is not a valid file upload field.',
+            'file.required'  => 'Please select a file to upload.',
+            'file.image'     => 'Please upload an image file.',
+            'file.mimes'     => 'Only JPG, JPEG, PNG, WebP, GIF, and PDF files are allowed.',
+            'file.max'       => 'The file size must not exceed the allowed limit.',
         ];
     }
 }

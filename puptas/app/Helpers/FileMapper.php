@@ -22,12 +22,21 @@ class FileMapper
      * Format: 'apiKey' => 'databaseType'
      */
     public const MAPPING = [
+        // Grade cards (image-only — compressed + OCR)
         'file10Front' => 'file10_front',
-        'file10' => 'file10_back',
+        'file10'      => 'file10_back',
         'file11Front' => 'file11_front',
-        'file11' => 'file11_back',
+        'file11'      => 'file11_back',
         'file12Front' => 'file12_front',
-        'file12' => 'file12_back',
+        'file12'      => 'file12_back',
+
+        // Official documents (images or PDF accepted)
+        'fileId'        => 'school_id',
+        'fileNonEnroll' => 'non_enroll_cert',
+        'filePSA'       => 'psa',
+        'fileGoodMoral' => 'good_moral',
+        'fileUnderOath' => 'under_oath',
+        'filePhoto2x2'  => 'photo_2x2',
     ];
 
     /**
