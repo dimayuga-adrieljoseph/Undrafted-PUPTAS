@@ -29,11 +29,22 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input)
     {
+        \Log::info('=== REGISTRATION ATTEMPT STARTED ===', [
+            'input_keys' => array_keys($input),
+            'has_session' => session()->has('pending_registration'),
+        ]);
+        
         $pendingReg = session('pending_registration');
         // Enforce IDP-first registration flow
         if (!$pendingReg) {
+            \Log::error('Registration failed: No pending_registration session');
             abort(403, 'You must sign in via the IDP before completing registration.');
         }
+        
+        \Log::info('Pending registration found', [
+            'email' => $pendingReg['email'] ?? 'MISSING',
+            'has_access_token' => !empty($pendingReg['access_token']),
+        ]);
 
         $rules = [
             'email' => ['nullable', 'string', 'email', 'max:255'],
