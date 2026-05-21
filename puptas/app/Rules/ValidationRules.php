@@ -166,27 +166,35 @@ class ValidationRules
 
     /**
      * UserFile validation rules
-     * Note: Max size increased to 5MB (5120KB) since images will be compressed
-     * Supported formats: jpg, jpeg, png, webp, gif
+     *
+     * Grade card files (file10–12) and the 2x2 photo are image-only because they
+     * go through ImageCompressionService and OCR processing.
+     *
+     * Document fields (PSA, Good Moral, Non-enrollment cert, Under Oath, School ID)
+     * accept images OR PDFs up to 10 MB — applicants commonly scan these to PDF.
      */
     public static function userFileUpload()
     {
         return [
-            'application_id' => 'nullable|exists:applications,id',
-            // Increased max size to 5120KB (5MB) since we'll compress images
-            // Added webp and gif to accepted mimes
-            'file10' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'application_id'  => 'nullable|exists:applications,id',
+
+            // Grade cards — image-only, compressed + OCR processed
+            'file10'      => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
             'file10Front' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'file11' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'file12' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'file11'      => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
             'file11Front' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'file12'      => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
             'file12Front' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'fileId' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'fileNonEnroll' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'filePSA' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'fileGoodMoral' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'fileUnderOath' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+
+            // 2x2 photo — image-only
             'filePhoto2x2' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+
+            // Official documents — accept images or PDF, up to 10 MB
+            'fileId'        => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf|max:10240',
+            'fileNonEnroll' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf|max:10240',
+            'filePSA'       => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf|max:10240',
+            'fileGoodMoral' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf|max:10240',
+            'fileUnderOath' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf|max:10240',
         ];
     }
 

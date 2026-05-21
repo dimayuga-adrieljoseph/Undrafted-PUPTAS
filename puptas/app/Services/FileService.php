@@ -7,6 +7,7 @@ use App\Models\UserFile;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class FileService
 {
@@ -17,20 +18,34 @@ class FileService
 
     /**
     * Store the uploaded file without any image processing.
-    * Used for cases where client‑side compression already applied.
-    * Returns the same shape as the original `store` method.
+    * Used for non-image documents (PDFs) and cases where client-side compression
+    * already applied. Returns the same shape as the `store` method.
     */
     public function storeRaw(UploadedFile $file, string $directory): array
     {
-        // Store the file directly on the local "public" disk.
-        // Using the local disk removes network latency that occurs when the default
-        // disk is a remote service such as S3.
-        $path = $file->store($directory, ['disk' => 'public']);
-        if ($path === false) {
-            throw new \RuntimeException('Failed to store uploaded file on local disk.');
+        $disk = $this->activeDisk();
+
+        $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $path     = $this->sanitizePath($directory . '/' . $filename);
+
+        try {
+            $stored = Storage::disk($disk)->put($path, file_get_contents($file->getRealPath()));
+        } catch (\Throwable $e) {
+            throw new \RuntimeException(
+                'Storage put() failed for path "' . $path . '": ' . $e->getMessage(),
+                0,
+                $e
+            );
         }
+
+        if ($stored === false) {
+            throw new \RuntimeException(
+                'Storage put() returned false for path "' . $path . '" on disk "' . $disk . '".'
+            );
+        }
+
         return [
-            'path' => $this->sanitizePath($path),
+            'path'          => $path,
             'original_name' => $file->getClientOriginalName(),
         ];
     }
