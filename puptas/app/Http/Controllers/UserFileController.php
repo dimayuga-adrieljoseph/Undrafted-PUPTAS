@@ -112,18 +112,22 @@ class UserFileController extends Controller
                     return response()->json([
                         'message' => 'File operation failed. Please try again.',
                     ], Response::HTTP_INTERNAL_SERVER_ERROR);
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     $disk = config('filesystems.default', 'public');
 
                     Log::error('FileService store() failed', [
                         'user_id'           => $user->id,
                         'file_type'         => $type,
                         'disk'              => $disk,
+                        'exception_class'   => get_class($e),
                         'exception_message' => $e->getMessage(),
+                        'file'              => $e->getFile(),
+                        'line'              => $e->getLine(),
                     ]);
 
                     return response()->json([
                         'message' => 'File operation failed. Please try again.',
+                        'debug'   => $e->getMessage(), // TODO: remove after debugging
                     ], Response::HTTP_INTERNAL_SERVER_ERROR);
                 }
             }
@@ -212,7 +216,7 @@ class UserFileController extends Controller
         $found = false;
         $diskName = FileMapper::resolveDiskForPath($file->file_path, $found);
         if (!$found) {
-            abort(Response::HTTP_NOT_FOUND);
+            return response()->json(['error' => 'File not found'], 404);
         }
         $disk = Storage::disk($diskName);
 
