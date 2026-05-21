@@ -260,10 +260,7 @@ class ConfirmationService
 
         $savedFile = $userFile;
 
-        // Dispatch OCR processing for the newly saved file
-        if ($savedFile) {
-            ProcessGradeOcr::dispatch($savedFile->id);
-        }
+        // OCR processing has been removed since the system shifted to manual grade entry.
 
         Log::info('File reuploaded', [
             'user_id' => $user->id,

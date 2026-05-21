@@ -2,6 +2,7 @@
 import { defineProps, ref, computed, onMounted } from "vue";
 import { router } from "@inertiajs/vue3";
 import { Head } from "@inertiajs/vue3";
+import Compressor from "compressorjs";
 const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
@@ -254,8 +255,8 @@ const clearInlineSelection = () => {
 
 const uploadInlineFile = async () => {
   const key = activeUploadKey.value;
-  const file = activeUploadFile.value;
-  if (!key || !file) return;
+  const originalFile = activeUploadFile.value;
+  if (!key || !originalFile) return;
 
   activeUploadUploading.value = true;
   activeUploadProgress.value = 0;
@@ -264,32 +265,44 @@ const uploadInlineFile = async () => {
   activeUploadError.value = '';
   activeUploadSuccess.value = false;
 
-  const form = new FormData();
-  form.append('file', file);
-  form.append('field', key);
+  new Compressor(originalFile, {
+    quality: 0.8,
+    maxWidth: 1600,
+    success: async (compressedFile) => {
+      const form = new FormData();
+      const filename = compressedFile.name || originalFile.name;
+      form.append('file', compressedFile, filename);
+      form.append('field', key);
 
-  try {
-    const { data } = await axios.post('/user/application/reupload', form, {
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          activeUploadLoaded.value = progressEvent.loaded;
-          activeUploadTotal.value = progressEvent.total;
-          activeUploadProgress.value = Math.min(99, Math.round((progressEvent.loaded * 100) / progressEvent.total));
-        }
+      try {
+        const { data } = await axios.post('/user/application/reupload', form, {
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              activeUploadLoaded.value = progressEvent.loaded;
+              activeUploadTotal.value = progressEvent.total;
+              activeUploadProgress.value = Math.min(99, Math.round((progressEvent.loaded * 100) / progressEvent.total));
+            }
+          }
+        });
+
+        // Update local status and refresh
+        fileStatuses.value[key] = data.file;
+        await fetchData();
+        activeUploadProgress.value = 100;
+        activeUploadSuccess.value = true;
+      } catch (err) {
+        activeUploadError.value = err.response?.data?.message || 'Failed to upload file.';
+        activeUploadSuccess.value = false;
+      } finally {
+        activeUploadUploading.value = false;
       }
-    });
-
-    // Update local status and refresh
-    fileStatuses.value[key] = data.file;
-    await fetchData();
-    activeUploadProgress.value = 100;
-    activeUploadSuccess.value = true;
-  } catch (err) {
-    activeUploadError.value = err.response?.data?.message || 'Failed to upload file.';
-    activeUploadSuccess.value = false;
-  } finally {
-    activeUploadUploading.value = false;
-  }
+    },
+    error(err) {
+      activeUploadError.value = err.message || 'Image compression failed.';
+      activeUploadUploading.value = false;
+      activeUploadSuccess.value = false;
+    },
+  });
 };
 
 const openImageModal = (file) => { 
