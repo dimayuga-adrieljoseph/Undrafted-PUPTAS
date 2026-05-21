@@ -67,19 +67,30 @@ class UserFileController extends Controller
 
                     $stored = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
 
-                    $userFile = UserFile::updateOrCreate(
-                        [
-                            'user_id' => $user->id,
-                            'type' => $type,
-                        ],
-                        [
-                            'file_path' => $stored['path'],
-                            'original_name' => $stored['original_name'],
-                            'application_id' => $request->application_id ?? null,
-                            'status' => 'pending',
-                            'docling_json' => null,
-                        ]
-                    );
+                    try {
+                        $userFile = UserFile::updateOrCreate(
+                            [
+                                'user_id' => $user->id,
+                                'type' => $type,
+                            ],
+                            [
+                                'file_path' => $stored['path'],
+                                'original_name' => $stored['original_name'],
+                                'application_id' => $request->application_id ?? null,
+                                'status' => 'pending',
+                                'docling_json' => null,
+                            ]
+                        );
+                    } catch (\Throwable $e) {
+                        // The Cleanup Safety Net:
+                        // If DB fails (e.g. out of space due to token bloat), delete the orphaned file from bucket
+                        try {
+                            $this->fileService->delete($stored['path']);
+                        } catch (\Throwable $deleteError) {
+                            // Suppress cleanup error to prioritize reporting the actual DB crash
+                        }
+                        throw $e;
+                    }
 
                     // OCR processing removed – no background job dispatched
                 } catch (\InvalidArgumentException $e) {
