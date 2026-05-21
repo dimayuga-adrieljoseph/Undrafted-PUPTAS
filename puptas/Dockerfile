@@ -65,6 +65,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install \
         pdo pdo_mysql zip mbstring exif pcntl bcmath gd
 
+RUN echo "memory_limit=256M" > /usr/local/etc/php/conf.d/memory.ini
+
 # Fix Apache MPM Conflict
 RUN echo "=== Fixing Apache MPM Conflict ===" \
     && a2dismod mpm_event \
