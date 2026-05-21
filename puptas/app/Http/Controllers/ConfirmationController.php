@@ -107,18 +107,23 @@ class ConfirmationController extends Controller
             ]);
 
             return response()->json(['message' => 'Invalid file field specified.'], 400);
-        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            // Catch-all: covers RuntimeException, TypeError, Error, etc.
+            // Nothing leaks as a raw Laravel 500 — full details go to the log only.
+            \Log::error('File reupload failed', [
+                'user_id'         => $user->id,
+                'field'           => $inputName,
+                'exception_class' => get_class($e),
+                'message'         => $e->getMessage(),
+                'file'            => $e->getFile(),
+                'line'            => $e->getLine(),
+            ]);
+
             $isConnectivity = str_contains($e->getMessage(), 'S3')
                 || str_contains($e->getMessage(), 'connect')
                 || str_contains($e->getMessage(), 'timeout')
                 || str_contains($e->getMessage(), 'cURL')
                 || str_contains($e->getMessage(), 'Could not resolve host');
-
-            \Log::error('File reupload failed — storage error', [
-                'user_id'   => $user->id,
-                'field'     => $inputName,
-                'message'   => $e->getMessage(),
-            ]);
 
             return response()->json([
                 'message' => $isConnectivity
@@ -127,6 +132,7 @@ class ConfirmationController extends Controller
             ], $isConnectivity ? 503 : 500);
         }
     }
+
 
     /**
      * Get eligible programs for the authenticated user
