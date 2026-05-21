@@ -286,6 +286,62 @@ class ConfirmationService
     }
 
     /**
+     * Confirm a direct-to-S3 upload by recording the file path in the database.
+     * Used when the client uploads directly to S3 via presigned URL.
+     *
+     * @param User $user
+     * @param string $field
+     * @param string $path
+     * @param string $originalName
+     * @return array
+     * @throws \InvalidArgumentException
+     */
+    public function confirmDirectUpload(User $user, string $field, string $path, string $originalName): array
+    {
+        $type = FileMapper::MAPPING[$field] ?? null;
+
+        if (!$type) {
+            throw new \InvalidArgumentException('Invalid field name');
+        }
+
+        // Delete existing file
+        $this->deleteExistingFile($user, $type);
+
+        // Prepare update data
+        $updateData = [
+            'file_path' => $path,
+            'original_name' => $originalName,
+            'status' => 'pending',
+        ];
+
+        // Explicitly clear any existing OCR data on reupload
+        if (Schema::hasColumn('user_files', 'docling_json')) {
+            $updateData['docling_json'] = null;
+        }
+
+        // Save new file record
+        $userFile = UserFile::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'type' => $type,
+            ],
+            $updateData
+        );
+
+        Log::info('Direct upload confirmed', [
+            'user_id' => $user->id,
+            'field' => $field,
+            'type' => $type,
+            'path' => $path,
+        ]);
+
+        return [
+            'message' => 'File uploaded successfully',
+            'file' => $userFile ? FileMapper::buildFilePayload($userFile, true) : null,
+        ];
+    }
+
+    /**
      * Delete existing file for a user
      *
      * @param User $user

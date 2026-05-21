@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\ConfirmationService;
+use App\Services\FileService;
 use App\Services\AuditLogService;
 use App\Http\Requests\SubmitApplicationRequest;
 use App\Http\Requests\ReuploadFileRequest;
+use App\Helpers\FileMapper;
 
 class ConfirmationController extends Controller
 {
@@ -17,7 +20,8 @@ class ConfirmationController extends Controller
      */
     public function __construct(
         private ConfirmationService $confirmationService,
-        private AuditLogService $auditLogService
+        private AuditLogService $auditLogService,
+        private FileService $fileService
     ) {}
 
     /**
@@ -145,5 +149,93 @@ class ConfirmationController extends Controller
         $result = $this->confirmationService->getEligiblePrograms($user);
 
         return response()->json($result);
+    }
+
+    /**
+     * Generate a presigned URL for direct-to-S3 upload.
+     * This allows the client to upload directly to storage without proxying through the server.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getUploadUrl(Request $request)
+    {
+        $request->validate([
+            'field' => ['required', 'string', 'in:' . FileMapper::getValidFileFields()],
+            'extension' => ['required', 'string', 'in:jpg,jpeg,png,webp,gif,pdf'],
+            'content_type' => ['required', 'string'],
+        ]);
+
+        try {
+            $result = $this->fileService->generateUploadUrl(
+                'uploads/files',
+                $request->input('extension')
+            );
+
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            \Log::error('Failed to generate upload URL', [
+                'user_id' => auth()->id(),
+                'field' => $request->input('field'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Unable to prepare upload. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Confirm a direct-to-S3 upload by recording the file in the database.
+     * Called after the client successfully uploads directly to S3.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function confirmUpload(Request $request)
+    {
+        $request->validate([
+            'field' => ['required', 'string', 'in:' . FileMapper::getValidFileFields()],
+            'path' => ['required', 'string'],
+            'original_name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $user = auth()->user();
+        $field = $request->input('field');
+        $path = $request->input('path');
+        $originalName = $request->input('original_name');
+
+        try {
+            $result = $this->confirmationService->confirmDirectUpload(
+                $user,
+                $field,
+                $path,
+                $originalName
+            );
+
+            $this->auditLogService->logActivity(
+                'UPDATE',
+                'Applications',
+                "Applicant {$user->firstname} {$user->lastname} uploaded document '{$field}' (direct).",
+                $user,
+                'ADMISSION_DATA'
+            );
+
+            return response()->json($result);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => 'Invalid file field specified.'], 400);
+        } catch (\Throwable $e) {
+            \Log::error('Confirm upload failed', [
+                'user_id' => $user->id,
+                'field' => $field,
+                'path' => $path,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to confirm upload. Please try again.',
+            ], 500);
+        }
     }
 }

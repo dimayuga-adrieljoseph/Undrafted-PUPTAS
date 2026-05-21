@@ -253,10 +253,47 @@ const clearInlineSelection = () => {
   if (input) input.value = '';
 };
 
+// Upload state persistence helpers (Fix 3: prevent duplicate uploads on reload)
+const UPLOAD_STATE_PREFIX = 'puptas_upload_';
+
+const setUploadState = (key, status) => {
+  try {
+    localStorage.setItem(UPLOAD_STATE_PREFIX + key, JSON.stringify({ status, started: Date.now() }));
+  } catch (e) { /* localStorage unavailable */ }
+};
+
+const getUploadState = (key) => {
+  try {
+    const raw = localStorage.getItem(UPLOAD_STATE_PREFIX + key);
+    if (!raw) return null;
+    const state = JSON.parse(raw);
+    // Expire stale states after 10 minutes
+    if (Date.now() - state.started > 10 * 60 * 1000) {
+      localStorage.removeItem(UPLOAD_STATE_PREFIX + key);
+      return null;
+    }
+    return state;
+  } catch (e) { return null; }
+};
+
+const clearUploadState = (key) => {
+  try { localStorage.removeItem(UPLOAD_STATE_PREFIX + key); } catch (e) { /* */ }
+};
+
+// Active AbortController for cancelling uploads (Fix 4)
+let activeAbortController = null;
+
 const uploadInlineFile = async () => {
   const key = activeUploadKey.value;
   const originalFile = activeUploadFile.value;
   if (!key || !originalFile) return;
+
+  // Fix 3: Check if an upload is already in progress for this key
+  const existingState = getUploadState(key);
+  if (existingState && existingState.status === 'uploading') {
+    activeUploadError.value = 'An upload for this document is already in progress. Please wait.';
+    return;
+  }
 
   activeUploadUploading.value = true;
   activeUploadProgress.value = 0;
@@ -265,39 +302,102 @@ const uploadInlineFile = async () => {
   activeUploadError.value = '';
   activeUploadSuccess.value = false;
 
+  // Fix 3: Mark upload as in-progress
+  setUploadState(key, 'uploading');
+
+  // Fix 4: Create AbortController for timeout/cancellation
+  activeAbortController = new AbortController();
+  const uploadTimeout = setTimeout(() => {
+    if (activeAbortController) activeAbortController.abort();
+  }, 5 * 60 * 1000); // 5 minute timeout
+
   new Compressor(originalFile, {
     quality: 0.8,
     maxWidth: 1600,
     success: async (compressedFile) => {
-      const form = new FormData();
       const filename = compressedFile.name || originalFile.name;
-      form.append('file', compressedFile, filename);
-      form.append('field', key);
+      const extension = filename.split('.').pop().toLowerCase();
 
       try {
-        const { data } = await axios.post('/user/application/reupload', form, {
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              activeUploadLoaded.value = progressEvent.loaded;
-              activeUploadTotal.value = progressEvent.total;
-              activeUploadProgress.value = Math.min(99, Math.round((progressEvent.loaded * 100) / progressEvent.total));
-            }
-          }
-        });
+        // Step 1: Get presigned URL for direct-to-S3 upload
+        const { data: urlData } = await axios.post('/user/application/upload-url', {
+          field: key,
+          extension: extension,
+          content_type: compressedFile.type || originalFile.type,
+        }, { signal: activeAbortController.signal });
 
-        // Update local status and refresh
-        fileStatuses.value[key] = data.file;
-        await fetchData();
-        activeUploadProgress.value = 100;
-        activeUploadSuccess.value = true;
+        if (urlData.url) {
+          // Direct-to-S3 upload path (Fix 2: eliminates server-side relay)
+          // Progress bar now tracks the REAL upload to storage
+          await axios.put(urlData.url, compressedFile, {
+            headers: { 'Content-Type': compressedFile.type || originalFile.type },
+            signal: activeAbortController.signal,
+            onUploadProgress: (progressEvent) => {
+              if (progressEvent.total) {
+                activeUploadLoaded.value = progressEvent.loaded;
+                activeUploadTotal.value = progressEvent.total;
+                // Progress now goes to 100% because we're tracking the actual storage upload
+                activeUploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              }
+            }
+          });
+
+          // Step 2: Confirm upload with server (fast DB-only operation)
+          const { data } = await axios.post('/user/application/confirm-upload', {
+            field: key,
+            path: urlData.path,
+            original_name: filename,
+          }, { signal: activeAbortController.signal });
+
+          // Update local status and refresh
+          fileStatuses.value[key] = data.file;
+          await fetchData();
+          activeUploadProgress.value = 100;
+          activeUploadSuccess.value = true;
+        } else {
+          // Fallback: traditional upload through server (for local disk development)
+          const form = new FormData();
+          form.append('file', compressedFile, filename);
+          form.append('field', key);
+
+          const { data } = await axios.post('/user/application/reupload', form, {
+            signal: activeAbortController.signal,
+            onUploadProgress: (progressEvent) => {
+              if (progressEvent.total) {
+                activeUploadLoaded.value = progressEvent.loaded;
+                activeUploadTotal.value = progressEvent.total;
+                activeUploadProgress.value = Math.min(95, Math.round((progressEvent.loaded * 100) / progressEvent.total));
+              }
+            }
+          });
+
+          // Update local status and refresh
+          fileStatuses.value[key] = data.file;
+          await fetchData();
+          activeUploadProgress.value = 100;
+          activeUploadSuccess.value = true;
+        }
+
+        // Fix 3: Mark upload as complete
+        clearUploadState(key);
       } catch (err) {
-        activeUploadError.value = err.response?.data?.message || 'Failed to upload file.';
+        clearUploadState(key);
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+          activeUploadError.value = 'Upload timed out. Please try again.';
+        } else {
+          activeUploadError.value = err.response?.data?.message || 'Failed to upload file.';
+        }
         activeUploadSuccess.value = false;
       } finally {
+        clearTimeout(uploadTimeout);
+        activeAbortController = null;
         activeUploadUploading.value = false;
       }
     },
     error(err) {
+      clearUploadState(key);
+      clearTimeout(uploadTimeout);
+      activeAbortController = null;
       activeUploadError.value = err.message || 'Image compression failed.';
       activeUploadUploading.value = false;
       activeUploadSuccess.value = false;

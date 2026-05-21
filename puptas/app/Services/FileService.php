@@ -29,7 +29,13 @@ class FileService
         $path     = $this->sanitizePath($directory . '/' . $filename);
 
         try {
-            $stored = Storage::disk($disk)->put($path, file_get_contents($file->getRealPath()));
+            // Use putFileAs for streaming upload (avoids loading entire file into memory)
+            // This also enables automatic multipart upload for large files on S3
+            $stored = Storage::disk($disk)->putFileAs(
+                dirname($path),
+                $file,
+                basename($path)
+            );
         } catch (\Throwable $e) {
             throw new \RuntimeException(
                 'Storage put() failed for path "' . $path . '": ' . $e->getMessage(),
@@ -47,6 +53,55 @@ class FileService
         return [
             'path'          => $path,
             'original_name' => $file->getClientOriginalName(),
+        ];
+    }
+
+    /**
+     * Confirm a direct-to-S3 upload by recording the file path in the database.
+     * Used with presigned URL uploads where the file is already on S3.
+     */
+    public function confirmDirectUpload(string $path, string $originalName): array
+    {
+        return [
+            'path'          => $this->sanitizePath($path),
+            'original_name' => $originalName,
+        ];
+    }
+
+    /**
+     * Generate a presigned upload URL for direct-to-S3 uploads.
+     * Returns the URL, headers, and the storage path.
+     */
+    public function generateUploadUrl(string $directory, string $extension): array
+    {
+        $disk = $this->activeDisk();
+        $filename = Str::uuid() . '.' . $extension;
+        $path = $this->sanitizePath($directory . '/' . $filename);
+
+        // For S3-compatible disks, generate a presigned PUT URL
+        if (in_array($disk, ['s3', 'sar_tmp'])) {
+            $client = Storage::disk($disk)->getClient();
+            $bucket = config("filesystems.disks.{$disk}.bucket");
+
+            $command = $client->getCommand('PutObject', [
+                'Bucket' => $bucket,
+                'Key'    => $path,
+            ]);
+
+            $presignedUrl = (string) $client->createPresignedRequest($command, '+30 minutes')->getUri();
+
+            return [
+                'url'  => $presignedUrl,
+                'path' => $path,
+                'disk' => $disk,
+            ];
+        }
+
+        // Fallback: for local disks, return null URL (frontend will use traditional upload)
+        return [
+            'url'  => null,
+            'path' => $path,
+            'disk' => $disk,
         ];
     }
 
