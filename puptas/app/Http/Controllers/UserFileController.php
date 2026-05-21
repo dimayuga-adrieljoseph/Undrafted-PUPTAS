@@ -76,7 +76,7 @@ class UserFileController extends Controller
                             [
                                 'file_path' => $stored['path'],
                                 'original_name' => $stored['original_name'],
-                                'application_id' => $request->application_id ?? null,
+                                'application_id' => $request->application_id ?: null,
                                 'status' => 'pending',
                                 'docling_json' => null,
                             ]
