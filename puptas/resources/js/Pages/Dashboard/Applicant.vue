@@ -586,6 +586,29 @@ onMounted(() => {
           </div>
         </div>
 
+        <!-- Application Process -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">Application Process</p>
+          <div class="flex flex-wrap items-start gap-x-0 gap-y-2 sm:gap-y-0">
+            <template v-for="(step, i) in [
+              'Upload Grade 10, 11 &amp; 12 documents',
+              'Go to &quot;Review Grades&quot;, enter grades &amp; pick 3 programs',
+              'Review entries, then click &quot;Save Grades&quot;',
+              'Go to &quot;Review Application&quot; &amp; verify info',
+              'Click &quot;Submit Application&quot;'
+            ]" :key="i">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="flex-shrink-0 w-5 h-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold" style="background-color:#9E122C">{{ i + 1 }}</span>
+                <span class="text-xs text-gray-600 dark:text-gray-300 leading-tight" v-html="step"></span>
+              </div>
+              <svg v-if="i < 4" class="hidden sm:block flex-shrink-0 w-4 h-4 text-gray-300 dark:text-gray-600 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </template>
+          </div>
+          <p class="mt-2 text-[11px] text-gray-400 dark:text-gray-500 italic">Note: Your application will only be processed after successful submission.</p>
+        </div>
+
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <!-- Left Column - Timeline -->
