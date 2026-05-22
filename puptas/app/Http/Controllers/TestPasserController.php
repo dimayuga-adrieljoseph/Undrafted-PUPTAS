@@ -578,6 +578,11 @@ class TestPasserController extends Controller
             'passer_status_id' => 'nullable|exists:passer_statuses,id',
         ]);
 
+        // Only Superadmin (role_id 7) can update the email
+        if (Auth::user()->role_id !== 7) {
+            unset($validatedData['email']);
+        }
+
         // Update passer with validated data
         $passer->update($validatedData);
 

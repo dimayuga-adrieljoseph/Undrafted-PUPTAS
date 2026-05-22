@@ -632,8 +632,13 @@
                                     type="email"
                                     v-model="editingPasser.email"
                                     required
-                                    readonly
-                                    class="w-full px-4 py-3 bg-gray-100 text-gray-600 border border-gray-300 rounded-xl cursor-not-allowed focus:outline-none transition dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400"
+                                    :readonly="$page.props.auth.user.role_id !== 7"
+                                    :class="[
+                                        'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none transition dark:border-gray-600',
+                                        $page.props.auth.user.role_id !== 7 
+                                            ? 'bg-gray-100 text-gray-600 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400' 
+                                            : 'focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] dark:bg-gray-800 dark:text-white'
+                                    ]"
                                 />
                             </div>
                         </div>
