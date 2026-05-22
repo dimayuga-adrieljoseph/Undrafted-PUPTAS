@@ -579,7 +579,7 @@ class TestPasserController extends Controller
         ]);
 
         // Only Superadmin (role_id 7) can update the email
-        if (Auth::user()->role_id !== 7) {
+        if (auth()->user()->role_id !== 7) {
             unset($validatedData['email']);
         }
 
