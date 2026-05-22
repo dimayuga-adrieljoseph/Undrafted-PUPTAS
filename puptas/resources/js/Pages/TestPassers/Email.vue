@@ -1700,9 +1700,8 @@ async function savePasser() {
         const updatedPasser = flatPassers.value[index];
         if (updatedPasser) {
             const matchesCurrentFilters = (
-                (!filterSchoolYear.value || updatedPasser.schoolYear === filterSchoolYear.value) &&
-                (!filterBatchNumber.value || updatedPasser.batchNumber === filterBatchNumber.value) &&
-                (!filterPasserStatus.value || updatedPasser.passer_status_id === parseInt(filterPasserStatus.value))
+                (!filterSchoolYear.value || filterSchoolYear.value === 'all' || updatedPasser.schoolYear === filterSchoolYear.value) &&
+                (!filterBatchNumber.value || filterBatchNumber.value === 'all' || updatedPasser.batchNumber === filterBatchNumber.value)
             );
             
             if (!matchesCurrentFilters) {
