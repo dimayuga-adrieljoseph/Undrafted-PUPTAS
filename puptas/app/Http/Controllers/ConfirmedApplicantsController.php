@@ -12,12 +12,16 @@ use App\Models\Grade;
 use App\Models\SarGeneration;
 use App\Services\SarFormService;
 use App\Services\AuditLogService;
+use App\Services\EmailTrackingService;
 use App\Jobs\SendSarFormEmail;
 use App\Jobs\SendPasserEmail;
 
 class ConfirmedApplicantsController extends Controller
 {
-    public function __construct(private AuditLogService $auditLogService) {}
+    public function __construct(
+        private AuditLogService $auditLogService,
+        private EmailTrackingService $emailTrackingService,
+    ) {}
 
     /**
      * Render the Confirmed Applicants page.
@@ -140,6 +144,19 @@ class ConfirmedApplicantsController extends Controller
             ], 422);
         }
 
+        // Create bulk email operation for tracking
+        $bulkOperation = $this->emailTrackingService->createBulkOperation(
+            'sar_form',
+            $applicants->count(),
+            $authUser->id
+        );
+
+        if (!$bulkOperation->exists) {
+            return response()->json([
+                'message' => 'Failed to create bulk email operation. No emails were dispatched.',
+            ], 500);
+        }
+
         $sarService   = app(SarFormService::class);
         $successCount = 0;
         $failedCount  = 0;
@@ -197,7 +214,23 @@ class ConfirmedApplicantsController extends Controller
                         'email_sent_successfully' => false,
                     ]);
 
-                    SendSarFormEmail::dispatch($testPasser, $downloadUrl, $sarGeneration->id);
+                    // Create email log record for tracking
+                    $emailLog = $this->emailTrackingService->createEmailLog(
+                        $bulkOperation->id,
+                        $applicant->email,
+                        trim($applicant->firstname . ' ' . $applicant->lastname),
+                        $testPasser->test_passer_id,
+                        'sar_form',
+                        $downloadUrl
+                    );
+
+                    SendSarFormEmail::dispatch(
+                        $testPasser,
+                        $downloadUrl,
+                        $sarGeneration->id,
+                        $emailLog->exists ? $emailLog->id : null,
+                        $bulkOperation->id
+                    );
 
                     $successCount++;
                     $successIds[] = $applicant->user_id;
@@ -236,11 +269,12 @@ class ConfirmedApplicantsController extends Controller
         );
 
         return response()->json([
-            'message'       => "SAR emails sent: {$successCount} successful, {$failedCount} failed",
-            'success_count' => $successCount,
-            'failed_count'  => $failedCount,
-            'errors'        => $errors,
-            'success_ids'   => $successIds,
+            'message'           => "SAR emails sent: {$successCount} successful, {$failedCount} failed",
+            'success_count'     => $successCount,
+            'failed_count'      => $failedCount,
+            'errors'            => $errors,
+            'success_ids'       => $successIds,
+            'bulk_operation_id' => $bulkOperation->id,
         ], $failedCount > 0 ? 207 : 200);
     }
 
@@ -276,6 +310,19 @@ class ConfirmedApplicantsController extends Controller
             return response()->json([
                 'message' => 'No confirmed applicants found.',
             ], 422);
+        }
+
+        // Create bulk email operation for tracking
+        $bulkOperation = $this->emailTrackingService->createBulkOperation(
+            'pupcet_result',
+            $applicants->count(),
+            $authUser->id
+        );
+
+        if (!$bulkOperation->exists) {
+            return response()->json([
+                'message' => 'Failed to create bulk email operation. No emails were dispatched.',
+            ], 500);
         }
 
         $successCount = 0;
@@ -323,17 +370,38 @@ class ConfirmedApplicantsController extends Controller
 
             $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
 
+            // Create email log record for tracking
+            $recipientEmail = $testPasser?->email ?? $applicant->email;
+            $emailLog = $this->emailTrackingService->createEmailLog(
+                $bulkOperation->id,
+                $recipientEmail,
+                trim($firstName . ' ' . $surname),
+                $testPasser?->test_passer_id,
+                'pupcet_result',
+                $personalizedMessage
+            );
+
             // Use a fake TestPasser-like object for the job (compatible with SendPasserEmail)
             // We dispatch with a mock passer to reuse the existing job infrastructure
             if ($testPasser) {
-                SendPasserEmail::dispatch($testPasser, $personalizedMessage);
+                SendPasserEmail::dispatch(
+                    $testPasser,
+                    $personalizedMessage,
+                    $emailLog->exists ? $emailLog->id : null,
+                    $bulkOperation->id
+                );
             } else {
                 // For applicants without a linked test passer, create a minimal object
                 $mockPasser = new TestPasser();
                 $mockPasser->email      = $applicant->email;
                 $mockPasser->first_name = $applicant->firstname;
                 $mockPasser->surname    = $applicant->lastname;
-                SendPasserEmail::dispatch($mockPasser, $personalizedMessage);
+                SendPasserEmail::dispatch(
+                    $mockPasser,
+                    $personalizedMessage,
+                    $emailLog->exists ? $emailLog->id : null,
+                    $bulkOperation->id
+                );
             }
 
             $successCount++;
@@ -348,8 +416,9 @@ class ConfirmedApplicantsController extends Controller
         );
 
         return response()->json([
-            'message'       => "Custom emails sent to {$successCount} confirmed applicant(s) successfully!",
-            'success_count' => $successCount,
+            'message'           => "Custom emails sent to {$successCount} confirmed applicant(s) successfully!",
+            'success_count'     => $successCount,
+            'bulk_operation_id' => $bulkOperation->id,
         ]);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Mail\WaitlistedEmail;
 use App\Models\TestPasser;
+use App\Services\EmailTrackingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -29,8 +30,12 @@ class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
     /**
      * Create a new job instance.
      */
-    public function __construct(TestPasser $passer, $messageTemplate)
-    {
+    public function __construct(
+        TestPasser $passer,
+        $messageTemplate,
+        public readonly ?int $emailLogId = null,
+        public readonly ?int $bulkOperationId = null,
+    ) {
         $this->passer = $passer;
         $this->messageTemplate = $messageTemplate;
     }
@@ -48,7 +53,23 @@ class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
      */
     public function handle(): void
     {
-        Mail::to($this->passer->email)
-            ->send(new WaitlistedEmail($this->passer, $this->messageTemplate));
+        try {
+            Mail::to($this->passer->email)
+                ->send(new WaitlistedEmail($this->passer, $this->messageTemplate));
+
+            if ($this->emailLogId) {
+                app(EmailTrackingService::class)->markSent($this->emailLogId);
+            }
+        } catch (\Throwable $e) {
+            if ($this->emailLogId) {
+                app(EmailTrackingService::class)->markFailed($this->emailLogId, $e->getMessage());
+            }
+
+            throw $e;
+        } finally {
+            if ($this->bulkOperationId) {
+                app(EmailTrackingService::class)->updateBulkProgress($this->bulkOperationId);
+            }
+        }
     }
 }

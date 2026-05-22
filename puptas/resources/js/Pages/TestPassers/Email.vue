@@ -17,6 +17,13 @@
                 </div>
             </div>
 
+            <!-- Email Progress Bar -->
+            <EmailProgressBar
+                v-if="activeBulkOperationId"
+                :bulkOperationId="activeBulkOperationId"
+                @dismissed="activeBulkOperationId = null"
+            />
+
             <!-- Main Content Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Left Panel: Controls & Filters -->
@@ -1081,12 +1088,16 @@ import { QuillEditor } from "@vueup/vue-quill";
 import "@vueup/vue-quill/dist/vue-quill.snow.css";
 import { useGlobalLoading } from "@/Composables/useGlobalLoading";
 import { useSnackbar } from "@/Composables/useSnackbar";
+import EmailProgressBar from "@/Components/EmailProgressBar.vue";
 
 // Scroll functionality (unchanged)
 const scrollWrapper = ref(null);
 const scrollAmount = 200;
 const showScrollUp = ref(false);
 const showScrollDown = ref(true);
+
+// Email progress tracking
+const activeBulkOperationId = ref(null);
 
 const scrollUp = () => {
     if (scrollWrapper.value) {
@@ -1551,13 +1562,19 @@ const sendEmails = async () => {
 
     start();
     try {
-        await axios.post("/test-passers/send-emails", {
+        const response = await axios.post("/test-passers/send-emails", {
             passer_ids: selectedPassers.value,
             message_template: messageHtml,
             template_type: templateType.value,
             enrollment_date: sarEnrollmentDate.value,
             enrollment_time: sarEnrollmentTime.value,
         });
+
+        // Extract bulk_operation_id and show progress bar
+        if (response.data && response.data.bulk_operation_id) {
+            activeBulkOperationId.value = response.data.bulk_operation_id;
+        }
+
         const successMsg = templateType.value === 'sar' 
             ? 'SAR PDFs generated and emails sent successfully!' 
             : 'Emails sent successfully!';

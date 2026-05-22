@@ -18,6 +18,7 @@ use App\Jobs\SendSarFormEmail;
 use App\Jobs\SendWaitlistedEmail;
 use App\Services\SarFormService;
 use App\Services\AuditLogService;
+use App\Services\EmailTrackingService;
 use Symfony\Component\Mime\Part\TextPart;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
@@ -26,7 +27,10 @@ use Illuminate\Database\QueryException;
 
 class TestPasserController extends Controller
 {
-    public function __construct(private AuditLogService $auditLogService) {}
+    public function __construct(
+        private AuditLogService $auditLogService,
+        private EmailTrackingService $emailTrackingService,
+    ) {}
     // Get grouped passers by school year and batch number
 
 
@@ -227,14 +231,42 @@ class TestPasserController extends Controller
             return response()->json(['error' => 'Missing required inputs'], 422);
         }
 
-        $passers = TestPasser::whereIn('test_passer_id', $passerIds)->get();
+        // Validate recipient count against max_recipients_per_operation config
+        $maxRecipients = config('email-tracking.max_recipients_per_operation', 2000);
+        if (count($passerIds) > $maxRecipients) {
+            return response()->json([
+                'error' => "The maximum recipient limit of {$maxRecipients} has been exceeded.",
+            ], 422);
+        }
+
+        // Map template_type to email_type for tracking
+        $emailTypeMap = [
+            'default' => 'pupcet_result',
+            'sar'     => 'sar_form',
+            'waitlisted' => 'waitlisted',
+        ];
+        $emailType = $emailTypeMap[$templateType] ?? 'pupcet_result';
+
+        // Create BulkEmailOperation record before dispatching any jobs
+        $operation = $this->emailTrackingService->createBulkOperation(
+            $emailType,
+            count($passerIds),
+            auth()->id(),
+        );
+
+        // If BulkEmailOperation creation fails, return error without dispatching
+        if (!$operation->exists) {
+            return response()->json([
+                'error' => 'Failed to create bulk email operation. No emails were dispatched.',
+            ], 500);
+        }
 
         // Handle SAR Template - Generate PDFs and send with download links
         if ($templateType === 'sar') {
             if (!$enrollmentDate || !$enrollmentTime) {
                 return response()->json(['error' => 'Enrollment date and time are required for SAR template'], 422);
             }
-            return $this->sendSarEmails($passers, $enrollmentDate, $enrollmentTime);
+            return $this->sendSarEmails($passerIds, $enrollmentDate, $enrollmentTime, $operation);
         }
 
         // Handle Waitlisted Template
@@ -243,11 +275,99 @@ class TestPasserController extends Controller
                 return response()->json(['error' => 'Message template is required for waitlisted emails'], 422);
             }
 
+            $chunkSize = config('email-tracking.chunk_size', 100);
+            $delaySeconds = config('email-tracking.delay_between_emails_seconds', 30);
+            $globalIndex = 0;
+
+            // Load recipients in chunks
+            foreach (array_chunk($passerIds, $chunkSize) as $chunkIds) {
+                $passers = TestPasser::whereIn('test_passer_id', $chunkIds)->get();
+
+                foreach ($passers as $passer) {
+                    // Replace placeholders in template for personalization
+                    $confirmationUrl = 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad';
+                    $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
+                    $searchTags = [
+                        '{{firstname}} {{surname}}',
+                        '{{first_name}} {{surname}}',
+                        '{{firstname}} {{lastname}}',
+                        '{{first_name}} {{lastname}}',
+                        '{{first_name}} {{last_name}}',
+                        '{{firstname}}',
+                        '{{first_name}}',
+                        '{{surname}}',
+                        '{{lastname}}',
+                        '{{last_name}}',
+                        '{{reference_no}}',
+                        '{{reference_number}}',
+                        '{{ref_no}}',
+                        '{{confirmationUrl}}'
+                    ];
+                    $replaceValues = [
+                        $redName,
+                        $redName,
+                        $redName,
+                        $redName,
+                        $redName,
+                        $passer->first_name,
+                        $passer->first_name,
+                        $passer->surname,
+                        $passer->surname,
+                        $passer->surname,
+                        $passer->reference_number,
+                        $passer->reference_number,
+                        $passer->reference_number,
+                        $confirmationUrl
+                    ];
+
+                    $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
+
+                    // Create EmailLog record for this recipient
+                    $emailLog = $this->emailTrackingService->createEmailLog(
+                        $operation->id,
+                        $passer->email,
+                        $passer->first_name . ' ' . $passer->surname,
+                        $passer->test_passer_id,
+                        $emailType,
+                        $personalizedMessage,
+                    );
+
+                    // Dispatch job with emailLogId, bulkOperationId, and staggered delay
+                    SendWaitlistedEmail::dispatch(
+                        $passer,
+                        $personalizedMessage,
+                        $emailLog->exists ? $emailLog->id : null,
+                        $operation->id,
+                    )->delay(now()->addSeconds($delaySeconds * $globalIndex));
+
+                    $globalIndex++;
+                }
+            }
+
+            $this->auditLogService->logActivity('CREATE', 'Test Passers', "Sent waitlisted emails to " . count($passerIds) . " passer(s).", null, 'ADMISSION_DATA');
+
+            return response()->json([
+                'message' => 'Waitlisted emails sent successfully!',
+                'bulk_operation_id' => $operation->id,
+            ]);
+        }
+
+        // Handle Default and Custom templates
+        if (!$messageTemplate) {
+            return response()->json(['error' => 'Message template is required'], 422);
+        }
+
+        $chunkSize = config('email-tracking.chunk_size', 100);
+        $delaySeconds = config('email-tracking.delay_between_emails_seconds', 30);
+        $globalIndex = 0;
+
+        // Load recipients in chunks
+        foreach (array_chunk($passerIds, $chunkSize) as $chunkIds) {
+            $passers = TestPasser::whereIn('test_passer_id', $chunkIds)->get();
+
             foreach ($passers as $passer) {
                 // Replace placeholders in template for personalization
-                $confirmationUrl = 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad';
                 $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
-                // Support highly robust and case-insensitive replacements for all name/ref variations
                 $searchTags = [
                     '{{firstname}} {{surname}}',
                     '{{first_name}} {{surname}}',
@@ -258,11 +378,7 @@ class TestPasserController extends Controller
                     '{{first_name}}',
                     '{{surname}}',
                     '{{lastname}}',
-                    '{{last_name}}',
-                    '{{reference_no}}',
-                    '{{reference_number}}',
-                    '{{ref_no}}',
-                    '{{confirmationUrl}}'
+                    '{{last_name}}'
                 ];
                 $replaceValues = [
                     $redName,
@@ -274,72 +390,46 @@ class TestPasserController extends Controller
                     $passer->first_name,
                     $passer->surname,
                     $passer->surname,
-                    $passer->surname,
-                    $passer->reference_number,
-                    $passer->reference_number,
-                    $passer->reference_number,
-                    $confirmationUrl
+                    $passer->surname
                 ];
 
                 $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
 
-                SendWaitlistedEmail::dispatch($passer, $personalizedMessage);
+                // Create EmailLog record for this recipient
+                $emailLog = $this->emailTrackingService->createEmailLog(
+                    $operation->id,
+                    $passer->email,
+                    $passer->first_name . ' ' . $passer->surname,
+                    $passer->test_passer_id,
+                    $emailType,
+                    $personalizedMessage,
+                );
+
+                // Dispatch job with emailLogId, bulkOperationId, and staggered delay
+                SendPasserEmail::dispatch(
+                    $passer,
+                    $personalizedMessage,
+                    $emailLog->exists ? $emailLog->id : null,
+                    $operation->id,
+                )->delay(now()->addSeconds($delaySeconds * $globalIndex));
+
+                $globalIndex++;
             }
-
-            $this->auditLogService->logActivity('CREATE', 'Test Passers', "Sent waitlisted emails to " . count($passerIds) . " passer(s).", null, 'ADMISSION_DATA');
-
-            return response()->json(['message' => 'Waitlisted emails sent successfully!']);
-        }
-
-        // Handle Default and Custom templates
-        if (!$messageTemplate) {
-            return response()->json(['error' => 'Message template is required'], 422);
-        }
-
-        foreach ($passers as $passer) {
-            // Replace placeholders in template for personalization
-            $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
-            // Support highly robust and case-insensitive replacements for all name/ref variations
-            $searchTags = [
-                '{{firstname}} {{surname}}',
-                '{{first_name}} {{surname}}',
-                '{{firstname}} {{lastname}}',
-                '{{first_name}} {{lastname}}',
-                '{{first_name}} {{last_name}}',
-                '{{firstname}}',
-                '{{first_name}}',
-                '{{surname}}',
-                '{{lastname}}',
-                '{{last_name}}'
-            ];
-            $replaceValues = [
-                $redName,
-                $redName,
-                $redName,
-                $redName,
-                $redName,
-                $passer->first_name,
-                $passer->first_name,
-                $passer->surname,
-                $passer->surname,
-                $passer->surname
-            ];
-
-            $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
-
-            SendPasserEmail::dispatch($passer, $personalizedMessage);
         }
 
         $this->auditLogService->logActivity('CREATE', 'Test Passers', "Sent emails to " . count($passerIds) . " passer(s) using {$templateType} template.", null, 'ADMISSION_DATA');
 
-        return response()->json(['message' => 'Emails sent successfully!']);
+        return response()->json([
+            'message' => 'Emails sent successfully!',
+            'bulk_operation_id' => $operation->id,
+        ]);
     }
 
     /**
      * Send SAR form emails with PDF download links.
      * SAR Forms can only be sent to confirmed applicants (for_evaluation status).
      */
-    private function sendSarEmails($passers, $enrollmentDate, $enrollmentTime)
+    private function sendSarEmails($passerIds, $enrollmentDate, $enrollmentTime, $operation)
     {
         $sarService = app(SarFormService::class);
         $successCount = 0;
@@ -357,90 +447,158 @@ class TestPasserController extends Controller
             ->pluck('testPasser.test_passer_id')
             ->toArray();
 
-        foreach ($passers as $passer) {
-            $sarGeneration = null;
-            $emailSuccess = false;
+        $chunkSize = config('email-tracking.chunk_size', 100);
+        $delaySeconds = config('email-tracking.delay_between_emails_seconds', 30);
+        $globalIndex = 0;
 
-            // Enforce: SAR can only be sent to confirmed applicants (for_evaluation)
-            if (!in_array($passer->test_passer_id, $confirmedPasserIds)) {
-                $failedCount++;
-                $errors[] = [
-                    'passer' => $passer->first_name . ' ' . $passer->surname,
-                    'email'  => $passer->email,
-                    'error'  => 'Not a confirmed applicant. SAR Forms can only be sent to applicants with "For Evaluation" status.',
-                ];
-                continue;
-            }
+        // Load recipients in chunks
+        foreach (array_chunk($passerIds, $chunkSize) as $chunkIds) {
+            $passers = TestPasser::whereIn('test_passer_id', $chunkIds)->get();
 
-            try {
-                // Prepare SAR data from test passer
-                $sarData = $this->prepareSarDataFromPasser($passer, $enrollmentDate, $enrollmentTime);
+            foreach ($passers as $passer) {
+                $sarGeneration = null;
+                $emailSuccess = false;
 
-                // Generate SAR PDF
-                $result = $sarService->generateSarPdf($sarData);
-
-                if ($result['success']) {
-                    // Generate signed download URL (valid for 30 days)
-                    $downloadUrl = \URL::temporarySignedRoute(
-                        'sar.passer-download',
-                        now()->addDays(30),
-                        [
-                            'reference' => $passer->reference_number,
-                            'filename' => $result['filename']
-                        ]
-                    );
-
-                    // Create SAR generation record BEFORE sending email (no sent_at yet)
-                    $sarGeneration = SarGeneration::create([
-                        'test_passer_id' => $passer->test_passer_id,
-                        'filename' => $result['filename'],
-                        'file_path' => $result['pdf_path'],
-                        'enrollment_date' => $enrollmentDate,
-                        'enrollment_time' => $enrollmentTime,
-                        'sent_to_email' => $passer->email,
-                        'created_by_user_id' => auth()->id(),
-                        'email_sent_successfully' => false,
-                    ]);
-
-                    // Dispatch unique job — prevents duplicate sends if worker was down
-                    // The job itself will mark the record as sent after delivery
-                    SendSarFormEmail::dispatch($passer, $downloadUrl, $sarGeneration->id);
-
-                    $emailSuccess = true;
-                    $successCount++;
-                } else {
+                // Enforce: SAR can only be sent to confirmed applicants (for_evaluation)
+                if (!in_array($passer->test_passer_id, $confirmedPasserIds)) {
                     $failedCount++;
                     $errors[] = [
                         'passer' => $passer->first_name . ' ' . $passer->surname,
-                        'email' => $passer->email,
-                        'error' => $result['error']
+                        'email'  => $passer->email,
+                        'error'  => 'Not a confirmed applicant. SAR Forms can only be sent to applicants with "For Evaluation" status.',
                     ];
+
+                    // Create a failed EmailLog for tracking
+                    $emailLog = $this->emailTrackingService->createEmailLog(
+                        $operation->id,
+                        $passer->email,
+                        $passer->first_name . ' ' . $passer->surname,
+                        $passer->test_passer_id,
+                        'sar_form',
+                        null,
+                    );
+                    if ($emailLog->exists) {
+                        $this->emailTrackingService->markFailed($emailLog->id, 'Not a confirmed applicant. SAR Forms can only be sent to applicants with "For Evaluation" status.');
+                        $this->emailTrackingService->updateBulkProgress($operation->id);
+                    }
+
+                    continue;
                 }
-            } catch (\Exception $e) {
-                $failedCount++;
 
-                $errorMessage = $e->getMessage() ?: 'Unknown error occurred while sending SAR email';
+                try {
+                    // Prepare SAR data from test passer
+                    $sarData = $this->prepareSarDataFromPasser($passer, $enrollmentDate, $enrollmentTime);
 
-                $errors[] = [
-                    'passer' => $passer->first_name . ' ' . $passer->surname,
-                    'email' => $passer->email,
-                    'error' => $errorMessage,
-                ];
+                    // Generate SAR PDF
+                    $result = $sarService->generateSarPdf($sarData);
 
-                // If the SAR generation record was created but email failed, mark it with the error
-                if ($sarGeneration) {
-                    $sarGeneration->update([
-                        'email_sent_successfully' => false,
-                        'sent_at' => null,
+                    if ($result['success']) {
+                        // Generate signed download URL (valid for 30 days)
+                        $downloadUrl = \URL::temporarySignedRoute(
+                            'sar.passer-download',
+                            now()->addDays(30),
+                            [
+                                'reference' => $passer->reference_number,
+                                'filename' => $result['filename']
+                            ]
+                        );
+
+                        // Create SAR generation record BEFORE sending email (no sent_at yet)
+                        $sarGeneration = SarGeneration::create([
+                            'test_passer_id' => $passer->test_passer_id,
+                            'filename' => $result['filename'],
+                            'file_path' => $result['pdf_path'],
+                            'enrollment_date' => $enrollmentDate,
+                            'enrollment_time' => $enrollmentTime,
+                            'sent_to_email' => $passer->email,
+                            'created_by_user_id' => auth()->id(),
+                            'email_sent_successfully' => false,
+                        ]);
+
+                        // Create EmailLog record for this recipient
+                        $emailLog = $this->emailTrackingService->createEmailLog(
+                            $operation->id,
+                            $passer->email,
+                            $passer->first_name . ' ' . $passer->surname,
+                            $passer->test_passer_id,
+                            'sar_form',
+                            $downloadUrl,
+                        );
+
+                        // Dispatch unique job with emailLogId, bulkOperationId, and staggered delay
+                        SendSarFormEmail::dispatch(
+                            $passer,
+                            $downloadUrl,
+                            $sarGeneration->id,
+                            $emailLog->exists ? $emailLog->id : null,
+                            $operation->id,
+                        )->delay(now()->addSeconds($delaySeconds * $globalIndex));
+
+                        $emailSuccess = true;
+                        $successCount++;
+                        $globalIndex++;
+                    } else {
+                        $failedCount++;
+                        $errors[] = [
+                            'passer' => $passer->first_name . ' ' . $passer->surname,
+                            'email' => $passer->email,
+                            'error' => $result['error']
+                        ];
+
+                        // Create a failed EmailLog for tracking
+                        $emailLog = $this->emailTrackingService->createEmailLog(
+                            $operation->id,
+                            $passer->email,
+                            $passer->first_name . ' ' . $passer->surname,
+                            $passer->test_passer_id,
+                            'sar_form',
+                            null,
+                        );
+                        if ($emailLog->exists) {
+                            $this->emailTrackingService->markFailed($emailLog->id, $result['error'] ?? 'PDF generation failed');
+                            $this->emailTrackingService->updateBulkProgress($operation->id);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $failedCount++;
+
+                    $errorMessage = $e->getMessage() ?: 'Unknown error occurred while sending SAR email';
+
+                    $errors[] = [
+                        'passer' => $passer->first_name . ' ' . $passer->surname,
+                        'email' => $passer->email,
+                        'error' => $errorMessage,
+                    ];
+
+                    // If the SAR generation record was created but email failed, mark it with the error
+                    if ($sarGeneration) {
+                        $sarGeneration->update([
+                            'email_sent_successfully' => false,
+                            'sent_at' => null,
+                        ]);
+                    }
+
+                    // Create a failed EmailLog for tracking
+                    $emailLog = $this->emailTrackingService->createEmailLog(
+                        $operation->id,
+                        $passer->email,
+                        $passer->first_name . ' ' . $passer->surname,
+                        $passer->test_passer_id,
+                        'sar_form',
+                        null,
+                    );
+                    if ($emailLog->exists) {
+                        $this->emailTrackingService->markFailed($emailLog->id, $errorMessage);
+                        $this->emailTrackingService->updateBulkProgress($operation->id);
+                    }
+
+                    // Log detailed error for debugging
+                    \Log::error('SAR email failed for passer: ' . $passer->test_passer_id, [
+                        'email' => $passer->email,
+                        'error' => $errorMessage,
+                        'trace' => $e->getTraceAsString(),
                     ]);
                 }
-
-                // Log detailed error for debugging
-                \Log::error('SAR email failed for passer: ' . $passer->test_passer_id, [
-                    'email' => $passer->email,
-                    'error' => $errorMessage,
-                    'trace' => $e->getTraceAsString(),
-                ]);
             }
         }
 
@@ -452,7 +610,8 @@ class TestPasserController extends Controller
             'message' => $message,
             'success_count' => $successCount,
             'failed_count' => $failedCount,
-            'errors' => $errors
+            'errors' => $errors,
+            'bulk_operation_id' => $operation->id,
         ], $failedCount > 0 ? 207 : 200); // 207 Multi-Status if some failed
     }
 

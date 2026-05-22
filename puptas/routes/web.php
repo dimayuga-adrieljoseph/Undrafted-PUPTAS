@@ -33,6 +33,7 @@ use App\Http\Controllers\GradeExtractionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TestPasserReportController;
 use App\Http\Controllers\ConfirmedApplicantsController;
+use App\Http\Controllers\EmailTrackingController;
 
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
@@ -230,6 +231,13 @@ Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
     Route::post('/admin/sar/preview-email-template', [TestPasserController::class, 'previewSarEmailTemplate'])->name('admin.sar-preview-email');
     Route::post('/admin/sar/preview-pdf-template', [TestPasserController::class, 'previewSarPdfTemplate'])->name('admin.sar-preview-pdf');
     Route::post('/admin/waitlisted/preview-email-template', [TestPasserController::class, 'previewWaitlistedEmailTemplate'])->name('admin.waitlisted-preview-email');
+
+    // Email Tracking Routes
+    Route::get('/admin/email-tracking', [EmailTrackingController::class, 'index'])->name('email-tracking.index');
+    Route::get('/admin/email-tracking/{id}', [EmailTrackingController::class, 'show'])->name('email-tracking.show');
+    Route::get('/admin/email-tracking/{id}/progress', [EmailTrackingController::class, 'progress'])->name('email-tracking.progress');
+    Route::post('/admin/email-tracking/retry-selected', [EmailTrackingController::class, 'retrySelected'])->name('email-tracking.retry-selected');
+    Route::post('/admin/email-tracking/{id}/retry-all', [EmailTrackingController::class, 'retryAll'])->name('email-tracking.retry-all');
 });
 
 Route::middleware(['auth', EnsureAdmin::class])->group(function () {

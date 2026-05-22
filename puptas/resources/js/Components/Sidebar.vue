@@ -10,6 +10,7 @@ import {
     faCaretRight,
     faGraduationCap,
     faEnvelopeOpenText,
+    faEnvelope,
     faCalendarCheck,
     faSignOutAlt,
     faUpload,
@@ -33,6 +34,7 @@ library.add(
     faCaretRight,
     faGraduationCap,
     faEnvelopeOpenText,
+    faEnvelope,
     faCalendarCheck,
     faSignOutAlt,
     faUpload,
@@ -115,8 +117,13 @@ const isSuperAdmin = computed(() => {
     return user.value && user.value.role_id === 7;
 });
 
+const isAdminOrSuperAdmin = computed(() => {
+    return user.value && (user.value.role_id === 2 || user.value.role_id === 7);
+});
+
 const isAuditLogsActive = isActiveRouteFor(["audit-logs.index"]);
 const isApiClientsActive = isActiveRouteFor(["api-clients.index"]);
+const isEmailTrackingActive = isActiveRouteFor(["email-tracking.index"]);
 
 /* ---------------- INTERACTION ---------------- */
 const onSidebarEnter = () => (isSidebarOpen.value = true);
@@ -563,6 +570,32 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
                                 :class="{ active: isManageActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Email Tracking (Admin and Superadmin Only) -->
+                    <li v-if="isAdminOrSuperAdmin">
+                        <NavLink
+                            :href="route('email-tracking.index')"
+                            :active="isEmailTrackingActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isEmailTrackingActive }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="envelope"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Email Tracking
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ active: isEmailTrackingActive }"
                             ></div>
                         </NavLink>
                     </li>

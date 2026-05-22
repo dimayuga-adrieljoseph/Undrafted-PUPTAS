@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Mail\TestPasserEmail;
 use App\Models\TestPasser;
+use App\Services\EmailTrackingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -36,11 +37,29 @@ class SendPasserEmail implements ShouldQueue, ShouldBeUnique
     public function __construct(
         public readonly TestPasser $passer,
         public readonly string $personalizedMessage,
+        public readonly ?int $emailLogId = null,
+        public readonly ?int $bulkOperationId = null,
     ) {}
 
     public function handle(): void
     {
-        Mail::to($this->passer->email)
-            ->send(new TestPasserEmail($this->passer, $this->personalizedMessage));
+        try {
+            Mail::to($this->passer->email)
+                ->send(new TestPasserEmail($this->passer, $this->personalizedMessage));
+
+            if ($this->emailLogId) {
+                app(EmailTrackingService::class)->markSent($this->emailLogId);
+            }
+        } catch (\Throwable $e) {
+            if ($this->emailLogId) {
+                app(EmailTrackingService::class)->markFailed($this->emailLogId, $e->getMessage());
+            }
+
+            throw $e;
+        } finally {
+            if ($this->bulkOperationId) {
+                app(EmailTrackingService::class)->updateBulkProgress($this->bulkOperationId);
+            }
+        }
     }
 }
