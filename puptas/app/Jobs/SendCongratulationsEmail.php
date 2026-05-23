@@ -30,9 +30,10 @@ class SendCongratulationsEmail implements ShouldQueue
     public function handle(): void
     {
         try {
-            Mail::to($this->email)->send(new CongratulationsMail($this->email));
+            $sentMessage = Mail::to($this->email)->send(new CongratulationsMail($this->email));
 
-            app(EmailTrackingService::class)->markSent($this->emailLogId);
+            $resendMessageId = $this->extractResendMessageId($sentMessage);
+            app(EmailTrackingService::class)->markSent($this->emailLogId, $resendMessageId);
         } catch (\Throwable $e) {
             app(EmailTrackingService::class)->markFailed($this->emailLogId, $e->getMessage());
 
@@ -40,6 +41,22 @@ class SendCongratulationsEmail implements ShouldQueue
         } finally {
             app(EmailTrackingService::class)->updateBulkProgress($this->bulkOperationId);
         }
+    }
+
+    /**
+     * Extract the Resend message ID from the sent message headers.
+     */
+    private function extractResendMessageId($sentMessage): ?string
+    {
+        try {
+            if ($sentMessage && method_exists($sentMessage, 'getOriginalMessage')) {
+                $header = $sentMessage->getOriginalMessage()->getHeaders()->get('X-Resend-Email-ID');
+                return $header?->getBodyAsString();
+            }
+        } catch (\Throwable $e) {
+            // Don't block on header extraction failure
+        }
+        return null;
     }
 
     /**
