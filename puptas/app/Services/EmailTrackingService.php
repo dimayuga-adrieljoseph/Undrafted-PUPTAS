@@ -160,6 +160,16 @@ class EmailTrackingService
                     $this->updateBulkProgressIfNeeded($emailLog);
                     break;
 
+                case 'email.suppressed':
+                    $reason = $eventData['reason'] ?? $eventData['message'] ?? 'Email suppressed by Resend';
+                    $emailLog->update([
+                        'status'        => 'failed',
+                        'failed_at'     => now(),
+                        'error_message' => 'Suppressed: ' . mb_substr($reason, 0, 1000),
+                    ]);
+                    $this->updateBulkProgressIfNeeded($emailLog);
+                    break;
+
                 case 'email.complained':
                     $emailLog->update([
                         'status'        => 'failed',
