@@ -13,6 +13,7 @@ class EmailLog extends Model
         'recipient_id',
         'email_type',
         'status',
+        'resend_message_id',
         'error_message',
         'email_content',
         'retry_count',

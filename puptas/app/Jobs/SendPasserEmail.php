@@ -44,11 +44,12 @@ class SendPasserEmail implements ShouldQueue, ShouldBeUnique
     public function handle(): void
     {
         try {
-            Mail::to($this->passer->email)
+            $sentMessage = Mail::to($this->passer->email)
                 ->send(new TestPasserEmail($this->passer, $this->personalizedMessage));
 
             if ($this->emailLogId) {
-                app(EmailTrackingService::class)->markSent($this->emailLogId);
+                $resendMessageId = $this->extractResendMessageId($sentMessage);
+                app(EmailTrackingService::class)->markSent($this->emailLogId, $resendMessageId);
             }
         } catch (\Throwable $e) {
             if ($this->emailLogId) {
@@ -61,6 +62,22 @@ class SendPasserEmail implements ShouldQueue, ShouldBeUnique
                 app(EmailTrackingService::class)->updateBulkProgress($this->bulkOperationId);
             }
         }
+    }
+
+    /**
+     * Extract the Resend message ID from the sent message headers.
+     */
+    private function extractResendMessageId($sentMessage): ?string
+    {
+        try {
+            if ($sentMessage && method_exists($sentMessage, 'getOriginalMessage')) {
+                $header = $sentMessage->getOriginalMessage()->getHeaders()->get('X-Resend-Email-ID');
+                return $header?->getBodyAsString();
+            }
+        } catch (\Throwable $e) {
+            // Don't block on header extraction failure
+        }
+        return null;
     }
 
     /**

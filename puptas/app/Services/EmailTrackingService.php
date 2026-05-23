@@ -89,24 +89,157 @@ class EmailTrackingService
      * Mark an email log as successfully sent.
      *
      * Updates the status to 'sent' and records the sent timestamp.
+     * Optionally stores the Resend message ID for webhook correlation.
      * Errors are logged without blocking email delivery.
      *
-     * @param int $emailLogId The ID of the EmailLog record to update
+     * @param int         $emailLogId      The ID of the EmailLog record to update
+     * @param string|null $resendMessageId The Resend API message ID for webhook tracking
      * @return void
      */
-    public function markSent(int $emailLogId): void
+    public function markSent(int $emailLogId, ?string $resendMessageId = null): void
     {
         try {
             $emailLog = EmailLog::findOrFail($emailLogId);
-            $emailLog->update([
+
+            $updateData = [
                 'status'  => 'sent',
                 'sent_at' => now(),
-            ]);
+            ];
+
+            if ($resendMessageId) {
+                $updateData['resend_message_id'] = $resendMessageId;
+            }
+
+            $emailLog->update($updateData);
         } catch (\Throwable $e) {
             logger()->error('[EmailTrackingService] Failed to mark email as sent', [
                 'email_log_id' => $emailLogId,
                 'error'        => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Handle a Resend webhook event and update the corresponding email log.
+     *
+     * Looks up the email log by resend_message_id and updates its status
+     * based on the event type (delivered, bounced, complained, etc.).
+     *
+     * @param string $resendMessageId The Resend message ID from the webhook payload
+     * @param string $eventType       The Resend event type (e.g. 'email.bounced')
+     * @param array  $eventData       The full event data payload
+     * @return bool Whether the email log was found and updated
+     */
+    public function handleResendWebhook(string $resendMessageId, string $eventType, array $eventData): bool
+    {
+        try {
+            // Primary lookup: by stored Resend message ID
+            $emailLog = EmailLog::where('resend_message_id', $resendMessageId)->first();
+
+            // Fallback: match by recipient email if message ID not stored yet
+            if (!$emailLog) {
+                $recipientEmail = $eventData['to'][0] ?? ($eventData['email'] ?? null);
+
+                if ($recipientEmail) {
+                    $emailLog = EmailLog::where('recipient_email', $recipientEmail)
+                        ->whereNull('resend_message_id')
+                        ->whereIn('status', ['sent', 'pending'])
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+
+                    // Store the message ID for future webhook events on this email
+                    if ($emailLog) {
+                        $emailLog->update(['resend_message_id' => $resendMessageId]);
+                    }
+                }
+            }
+
+            if (!$emailLog) {
+                logger()->warning('[EmailTrackingService] Webhook received for unknown message', [
+                    'resend_message_id' => $resendMessageId,
+                    'event_type'        => $eventType,
+                    'recipient'         => $eventData['to'][0] ?? ($eventData['email'] ?? 'unknown'),
+                ]);
+                return false;
+            }
+
+            switch ($eventType) {
+                case 'email.sent':
+                    // Resend accepted the email — no status change needed.
+                    // The job already marked it as 'sent'. Just store the message ID if missing.
+                    if (!$emailLog->resend_message_id) {
+                        $emailLog->update(['resend_message_id' => $resendMessageId]);
+                    }
+                    break;
+
+                case 'email.delivered':
+                    // Confirmed delivery — only update if not already failed
+                    if ($emailLog->status !== 'failed') {
+                        $emailLog->update(['sent_at' => now()]);
+                    }
+                    break;
+
+                case 'email.bounced':
+                    $reason = $eventData['bounce']['message'] ?? 'Email bounced';
+                    $emailLog->update([
+                        'status'        => 'failed',
+                        'failed_at'     => now(),
+                        'error_message' => 'Bounced: ' . mb_substr($reason, 0, 1000),
+                    ]);
+                    $this->updateBulkProgressIfNeeded($emailLog);
+                    break;
+
+                case 'email.suppressed':
+                    $reason = $eventData['reason'] ?? $eventData['message'] ?? 'Email suppressed by Resend';
+                    $emailLog->update([
+                        'status'        => 'failed',
+                        'failed_at'     => now(),
+                        'error_message' => 'Suppressed: ' . mb_substr($reason, 0, 1000),
+                    ]);
+                    $this->updateBulkProgressIfNeeded($emailLog);
+                    break;
+
+                case 'email.complained':
+                    $emailLog->update([
+                        'status'        => 'failed',
+                        'failed_at'     => now(),
+                        'error_message' => 'Recipient marked email as spam (complained)',
+                    ]);
+                    $this->updateBulkProgressIfNeeded($emailLog);
+                    break;
+
+                case 'email.delivery_delayed':
+                    $emailLog->update([
+                        'error_message' => 'Delivery delayed: ' . ($eventData['reason'] ?? 'unknown reason'),
+                    ]);
+                    break;
+
+                default:
+                    logger()->info('[EmailTrackingService] Unhandled Resend webhook event', [
+                        'event_type'        => $eventType,
+                        'resend_message_id' => $resendMessageId,
+                    ]);
+                    return false;
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            logger()->error('[EmailTrackingService] Failed to handle Resend webhook', [
+                'resend_message_id' => $resendMessageId,
+                'event_type'        => $eventType,
+                'error'             => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Update bulk progress if the email log belongs to a bulk operation.
+     */
+    private function updateBulkProgressIfNeeded(EmailLog $emailLog): void
+    {
+        if ($emailLog->bulk_operation_id) {
+            $this->updateBulkProgress($emailLog->bulk_operation_id);
         }
     }
 

@@ -47,6 +47,7 @@ Route::prefix('v1')
 
 use App\Http\Controllers\ChatwootWebhookController;
 use App\Http\Controllers\PublicStatusCheckerController;
+use App\Http\Controllers\ResendWebhookController;
 
 Route::post('/public/admission-results', [PublicStatusCheckerController::class, 'check'])
     ->middleware('throttle:status-checker')
@@ -54,6 +55,8 @@ Route::post('/public/admission-results', [PublicStatusCheckerController::class, 
 
 Route::post('/webhooks/chatwoot', [ChatwootWebhookController::class, 'handleMessage']);
 Route::get('/chatwoot/widget-config', [ChatwootWebhookController::class, 'getWidgetConfig'])->middleware('auth:sanctum');
+
+Route::post('/webhooks/resend', [ResendWebhookController::class, 'handle']);
 
 // Route::get('/user-stats', [UserController::class, 'getUserStats']);
 // Route::get('/programs', [ProgramController::class, 'index']);

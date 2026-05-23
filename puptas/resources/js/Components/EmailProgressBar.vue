@@ -15,6 +15,8 @@ const progress = ref(null);
 const isLoading = ref(true);
 const consecutiveFailures = ref(0);
 const showConnectionError = ref(false);
+const terminalPollCount = ref(0);
+const TERMINAL_GRACE_POLLS = 5; // Keep polling 5 more times (15s) after completion
 let pollInterval = null;
 
 const percentage = computed(() => {
@@ -43,7 +45,11 @@ async function fetchProgress() {
         showConnectionError.value = false;
 
         if (isTerminal.value) {
-            stopPolling();
+            terminalPollCount.value++;
+            // Keep polling a few more times after terminal to catch late webhook updates
+            if (terminalPollCount.value >= TERMINAL_GRACE_POLLS) {
+                stopPolling();
+            }
         }
     } catch (error) {
         consecutiveFailures.value++;
