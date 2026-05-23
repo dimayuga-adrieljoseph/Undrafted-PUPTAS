@@ -142,9 +142,9 @@ class EmailTrackingService
 
                 if ($recipientEmail) {
                     $emailLog = EmailLog::where('recipient_email', $recipientEmail)
-                        ->where('status', 'sent')
                         ->whereNull('resend_message_id')
-                        ->orderBy('sent_at', 'desc')
+                        ->whereIn('status', ['sent', 'pending'])
+                        ->orderBy('created_at', 'desc')
                         ->first();
 
                     // Store the message ID for future webhook events on this email
@@ -164,10 +164,19 @@ class EmailTrackingService
             }
 
             switch ($eventType) {
+                case 'email.sent':
+                    // Resend accepted the email — no status change needed.
+                    // The job already marked it as 'sent'. Just store the message ID if missing.
+                    if (!$emailLog->resend_message_id) {
+                        $emailLog->update(['resend_message_id' => $resendMessageId]);
+                    }
+                    break;
+
                 case 'email.delivered':
-                    // Already marked as sent, no status change needed
-                    // but confirm delivery timestamp
-                    $emailLog->update(['sent_at' => now()]);
+                    // Confirmed delivery — only update if not already failed
+                    if ($emailLog->status !== 'failed') {
+                        $emailLog->update(['sent_at' => now()]);
+                    }
                     break;
 
                 case 'email.bounced':
