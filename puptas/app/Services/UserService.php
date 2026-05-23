@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Services;
 
@@ -517,6 +517,120 @@ class UserService
             5 => 'Medical',
             6 => 'Registrar',
             7 => 'Superadmin',
+        ];
+    }
+    /**
+     * Search and paginate users (staff + applicants) at the DB level.
+     *
+     * Returns a plain array shaped like a Laravel paginator so the frontend
+     * can drive pagination controls without loading all records into memory.
+     *
+     * @param  string|null  $search   Optional search term (name / email)
+     * @param  int          $page     1-indexed current page
+     * @param  int          $perPage  Records per page (default 15)
+     * @return array
+     */
+    public function searchUsers(?string $search = null, int $page = 1, int $perPage = 15): array
+    {
+        $term = $search ? '%' . $search . '%' : null;
+
+        // --- Staff query (role_id > 1) ---
+        $staffQuery = \App\Models\User::with(['programs:id,name,code', 'role'])
+            ->where('role_id', '>', 1);
+
+        if ($term) {
+            $staffQuery->where(function ($q) use ($term) {
+                $q->where('firstname', 'like', $term)
+                  ->orWhere('lastname', 'like', $term)
+                  ->orWhere('email', 'like', $term);
+            });
+        }
+
+        $totalStaff = $staffQuery->count();
+
+        // --- Applicant query ---
+        $applicantQuery = \App\Models\ApplicantProfile::with([
+            'firstChoiceProgram:id,name,code',
+            'currentApplication' => function ($q) {
+                $q->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
+            },
+            'currentApplication.program:id,name,code',
+            'officiallyEnrolledApplication' => function ($q) {
+                $q->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
+            },
+            'officiallyEnrolledApplication.program:id,name,code',
+        ]);
+
+        if ($term) {
+            $applicantQuery->where(function ($q) use ($term) {
+                $q->where('firstname', 'like', $term)
+                  ->orWhere('lastname', 'like', $term)
+                  ->orWhere('email', 'like', $term);
+            });
+        }
+
+        $totalApplicants = $applicantQuery->count();
+        $total = $totalStaff + $totalApplicants;
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = min(max(1, $page), $lastPage);
+        $offset = ($page - 1) * $perPage;
+
+        $staff = $staffQuery->orderBy('created_at', 'desc')->get()->map(function ($u) {
+            return (object) [
+                'id'             => $u->idp_user_id ?: $u->id,
+                'firstname'      => $u->firstname,
+                'middlename'     => $u->middlename,
+                'lastname'       => $u->lastname,
+                'extension_name' => $u->extension_name,
+                'email'          => $u->email,
+                'contactnumber'  => $u->contactnumber,
+                'role_id'        => $u->role_id,
+                'created_at'     => $u->created_at,
+                'role'           => (object) ['name' => $u->role ? $u->role->name : 'Staff'],
+                'programs'       => $u->programs,
+                'applicant_profile'               => null,
+                'current_application'             => null,
+                'officially_enrolled_application' => null,
+            ];
+        });
+
+        $applicants = $applicantQuery->orderBy('created_at', 'desc')->get()->map(function ($a) {
+            return (object) [
+                'id'             => $a->user_id,
+                'firstname'      => $a->firstname,
+                'middlename'     => $a->middlename,
+                'lastname'       => $a->lastname,
+                'extension_name' => $a->extension_name,
+                'email'          => $a->email,
+                'contactnumber'  => $a->contactnumber,
+                'role_id'        => 1,
+                'created_at'     => $a->created_at,
+                'role'           => (object) ['name' => 'Applicant'],
+                'programs'       => collect(),
+                'applicant_profile' => (object) [
+                    'first_choice_program' => $a->firstChoiceProgram,
+                ],
+                'current_application' => $a->currentApplication ? (object) [
+                    'program' => $a->currentApplication->program,
+                ] : null,
+                'officially_enrolled_application' => $a->officiallyEnrolledApplication ? (object) [
+                    'program' => $a->officiallyEnrolledApplication->program,
+                ] : null,
+            ];
+        });
+
+        $merged = $staff->concat($applicants)
+            ->sortByDesc('created_at')
+            ->values()
+            ->slice($offset, $perPage)
+            ->values();
+
+        return [
+            'data'         => $merged->toArray(),
+            'total'        => $total,
+            'per_page'     => $perPage,
+            'current_page' => $page,
+            'last_page'    => $lastPage,
         ];
     }
 }

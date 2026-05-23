@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -353,6 +353,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/users/search', [UserController::class, 'search'])->name('users.search');
     Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
@@ -417,3 +418,4 @@ Route::get('/callback-loading', [CallbackController::class, 'index']);
 
 // Public Admission Status Checker - No auth required
 Route::get('/admission-results', fn () => Inertia::render('Public/CheckStatus'))->name('public.check-status');
+
