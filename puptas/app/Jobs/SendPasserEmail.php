@@ -62,4 +62,23 @@ class SendPasserEmail implements ShouldQueue, ShouldBeUnique
             }
         }
     }
+
+    /**
+     * Handle a job failure after all retries are exhausted.
+     * This ensures the email log is marked as failed even when
+     * the job fails at the queue level (timeout, max attempts, etc.).
+     */
+    public function failed(?\Throwable $exception): void
+    {
+        if ($this->emailLogId) {
+            app(EmailTrackingService::class)->markFailed(
+                $this->emailLogId,
+                $exception?->getMessage() ?? 'Job failed permanently (max attempts exceeded or timeout)'
+            );
+        }
+
+        if ($this->bulkOperationId) {
+            app(EmailTrackingService::class)->updateBulkProgress($this->bulkOperationId);
+        }
+    }
 }

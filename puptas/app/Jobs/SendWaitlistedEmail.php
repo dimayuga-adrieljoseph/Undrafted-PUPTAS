@@ -72,4 +72,21 @@ class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
             }
         }
     }
+
+    /**
+     * Handle a job failure after all retries are exhausted.
+     */
+    public function failed(?\Throwable $exception): void
+    {
+        if ($this->emailLogId) {
+            app(EmailTrackingService::class)->markFailed(
+                $this->emailLogId,
+                $exception?->getMessage() ?? 'Job failed permanently (max attempts exceeded or timeout)'
+            );
+        }
+
+        if ($this->bulkOperationId) {
+            app(EmailTrackingService::class)->updateBulkProgress($this->bulkOperationId);
+        }
+    }
 }

@@ -41,4 +41,17 @@ class SendCongratulationsEmail implements ShouldQueue
             app(EmailTrackingService::class)->updateBulkProgress($this->bulkOperationId);
         }
     }
+
+    /**
+     * Handle a job failure after all retries are exhausted.
+     */
+    public function failed(?\Throwable $exception): void
+    {
+        app(EmailTrackingService::class)->markFailed(
+            $this->emailLogId,
+            $exception?->getMessage() ?? 'Job failed permanently (max attempts exceeded or timeout)'
+        );
+
+        app(EmailTrackingService::class)->updateBulkProgress($this->bulkOperationId);
+    }
 }
