@@ -31,6 +31,14 @@ class ResendWebhookController extends Controller
         $eventData = $payload['data'] ?? [];
         $resendMessageId = $eventData['email_id'] ?? null;
 
+        logger()->info('[ResendWebhook] Received event', [
+            'type'     => $eventType,
+            'email_id' => $resendMessageId,
+            'to'       => $eventData['to'] ?? null,
+            'payload_keys' => array_keys($payload),
+            'data_keys'    => array_keys($eventData),
+        ]);
+
         if (!$eventType || !$resendMessageId) {
             return response()->json(['error' => 'Missing event type or email_id'], 422);
         }

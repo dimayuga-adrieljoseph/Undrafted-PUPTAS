@@ -133,12 +133,32 @@ class EmailTrackingService
     public function handleResendWebhook(string $resendMessageId, string $eventType, array $eventData): bool
     {
         try {
+            // Primary lookup: by stored Resend message ID
             $emailLog = EmailLog::where('resend_message_id', $resendMessageId)->first();
 
+            // Fallback: match by recipient email if message ID not stored yet
             if (!$emailLog) {
-                logger()->warning('[EmailTrackingService] Webhook received for unknown message ID', [
+                $recipientEmail = $eventData['to'][0] ?? ($eventData['email'] ?? null);
+
+                if ($recipientEmail) {
+                    $emailLog = EmailLog::where('recipient_email', $recipientEmail)
+                        ->where('status', 'sent')
+                        ->whereNull('resend_message_id')
+                        ->orderBy('sent_at', 'desc')
+                        ->first();
+
+                    // Store the message ID for future webhook events on this email
+                    if ($emailLog) {
+                        $emailLog->update(['resend_message_id' => $resendMessageId]);
+                    }
+                }
+            }
+
+            if (!$emailLog) {
+                logger()->warning('[EmailTrackingService] Webhook received for unknown message', [
                     'resend_message_id' => $resendMessageId,
                     'event_type'        => $eventType,
+                    'recipient'         => $eventData['to'][0] ?? ($eventData['email'] ?? 'unknown'),
                 ]);
                 return false;
             }
