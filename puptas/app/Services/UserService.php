@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ApplicantProfile;
 use App\Models\Program;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,24 +23,28 @@ class UserService
      */
     public function getApplicantsWithApplications(): Collection
     {
-        return ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
-            ->whereHas('currentApplication')
-            ->get()
-            ->map(function ($profile) {
-                return [
-                    'id' => $profile->user_id,
-                    'firstname' => $profile->firstname,
-                    'lastname' => $profile->lastname,
-                    'course' => $profile->course ?? null,
-                    'status' => $profile->currentApplication->status ?? null,
-                    'email' => $profile->email,
-                    'username' => $profile->email,
-                    'phone' => $profile->contactnumber,
-                    'company' => $profile->company ?? null,
-                    'program' => $profile->currentApplication->program ?? null,
-                    'processes' => $profile->currentApplication->processes ?? [],
-                ];
-            });
+        // Cache for 5 minutes (300 seconds) to avoid re-running this heavy query
+        // on every dashboard page load. Uses the default file cache driver.
+        return Cache::remember('applicants_with_applications', 300, function () {
+            return ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
+                ->whereHas('currentApplication')
+                ->get()
+                ->map(function ($profile) {
+                    return [
+                        'id' => $profile->user_id,
+                        'firstname' => $profile->firstname,
+                        'lastname' => $profile->lastname,
+                        'course' => $profile->course ?? null,
+                        'status' => $profile->currentApplication->status ?? null,
+                        'email' => $profile->email,
+                        'username' => $profile->email,
+                        'phone' => $profile->contactnumber,
+                        'company' => $profile->company ?? null,
+                        'program' => $profile->currentApplication->program ?? null,
+                        'processes' => $profile->currentApplication->processes ?? [],
+                    ];
+                });
+        });
     }
 
     /**
