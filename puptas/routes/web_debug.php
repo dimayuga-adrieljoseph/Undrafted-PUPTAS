@@ -1,19 +1,72 @@
 <?php
 
 /**
- * TEMPORARY DEBUG ROUTE - REMOVE AFTER FIXING REGISTRATION
+ * DEBUG ROUTES - Only loaded when APP_DEBUG=true
  * 
- * This route helps diagnose registration issues by checking:
- * 1. Database tables exist
- * 2. Test passer data is correct
- * 3. Graduate types exist
- * 
- * Access: /debug-registration?email=test@example.com
+ * Includes:
+ * - /dev-login: Bypass IDP auth for local testing
+ * - /debug-registration: Diagnose registration issues
  */
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+
+/*
+|--------------------------------------------------------------------------
+| Dev Login - Bypass IDP for local testing
+|--------------------------------------------------------------------------
+|
+| GET /dev-login         → Shows a page with all seeded users to pick from
+| GET /dev-login/{id}    → Logs in as that user and redirects to their dashboard
+|
+*/
+Route::get('/dev-login', function () {
+    if (!config('app.debug')) {
+        abort(404);
+    }
+
+    $users = \App\Models\User::with('role')
+        ->orderBy('role_id')
+        ->get(['id', 'email', 'firstname', 'lastname', 'role_id']);
+
+    $html = '<html><head><title>Dev Login</title>'
+        . '<style>body{font-family:system-ui;max-width:600px;margin:40px auto;padding:0 20px}'
+        . 'a{display:block;padding:12px 16px;margin:8px 0;background:#f3f4f6;border-radius:8px;text-decoration:none;color:#111}'
+        . 'a:hover{background:#e5e7eb}.role{color:#6b7280;font-size:0.85em}</style></head>'
+        . '<body><h1>🔓 Dev Login</h1><p>Pick a user to log in as:</p>';
+
+    foreach ($users as $user) {
+        $roleName = $user->role->name ?? "Role {$user->role_id}";
+        $name = trim(($user->firstname ?? '') . ' ' . ($user->lastname ?? '')) ?: $user->email;
+        $html .= "<a href=\"/dev-login/{$user->id}\"><strong>{$name}</strong><br>"
+            . "<span class=\"role\">{$user->email} — {$roleName}</span></a>";
+    }
+
+    $html .= '</body></html>';
+    return response($html);
+})->middleware('web');
+
+Route::get('/dev-login/{id}', function ($id) {
+    if (!config('app.debug')) {
+        abort(404);
+    }
+
+    $user = \App\Models\User::findOrFail($id);
+    Auth::login($user);
+
+    $redirect = match ((int) $user->role_id) {
+        1 => '/applicant-dashboard',
+        2, 7 => '/dashboard',
+        3 => '/evaluator-dashboard',
+        4 => '/interviewer-dashboard',
+        6 => '/record-dashboard',
+        default => '/dashboard',
+    };
+
+    return redirect($redirect);
+})->middleware('web');
 
 Route::get('/debug-registration', function (\Illuminate\Http\Request $request) {
     try {
