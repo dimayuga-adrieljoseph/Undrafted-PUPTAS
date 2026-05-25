@@ -1,50 +1,71 @@
 <?php
 
 /**
- * TEMPORARY DEBUG ROUTES - REMOVE AFTER FIXING
+ * DEBUG ROUTES - Only loaded when APP_DEBUG=true
+ * 
+ * Includes:
+ * - /dev-login: Bypass IDP auth for local testing
+ * - /debug-registration: Diagnose registration issues
  */
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
 
-/**
- * Test email delivery directly (bypasses queue).
- * Access: /debug-email?to=your-email@gmail.com
- */
-Route::get('/debug-email', function (\Illuminate\Http\Request $request) {
-    $to = $request->query('to');
-    if (!$to) {
-        return response()->json(['error' => 'Provide ?to=email@example.com'], 400);
+/*
+|--------------------------------------------------------------------------
+| Dev Login - Bypass IDP for local testing
+|--------------------------------------------------------------------------
+|
+| GET /dev-login         → Shows a page with all seeded users to pick from
+| GET /dev-login/{id}    → Logs in as that user and redirects to their dashboard
+|
+*/
+Route::get('/dev-login', function () {
+    if (!config('app.debug')) {
+        abort(404);
     }
 
-    // Clear config cache to pick up new env vars
-    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    $users = \App\Models\User::with('role')
+        ->orderBy('role_id')
+        ->get(['id', 'email', 'firstname', 'lastname', 'role_id']);
 
-    try {
-        $result = Mail::raw('This is a test email from PUPTAS at ' . now()->toIso8601String(), function ($msg) use ($to) {
-            $msg->to($to)->subject('PUPTAS Email Delivery Test');
-        });
+    $html = '<html><head><title>Dev Login</title>'
+        . '<style>body{font-family:system-ui;max-width:600px;margin:40px auto;padding:0 20px}'
+        . 'a{display:block;padding:12px 16px;margin:8px 0;background:#f3f4f6;border-radius:8px;text-decoration:none;color:#111}'
+        . 'a:hover{background:#e5e7eb}.role{color:#6b7280;font-size:0.85em}</style></head>'
+        . '<body><h1>🔓 Dev Login</h1><p>Pick a user to log in as:</p>';
 
-        return response()->json([
-            'status' => 'sent',
-            'to' => $to,
-            'mailer' => config('mail.default'),
-            'from' => config('mail.from.address'),
-            'resend_key_prefix' => substr(config('services.resend.key') ?? env('RESEND_API_KEY'), 0, 10) . '...',
-            'timestamp' => now()->toIso8601String(),
-        ]);
-    } catch (\Throwable $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'class' => get_class($e),
-            'mailer' => config('mail.default'),
-            'from' => config('mail.from.address'),
-            'resend_key_prefix' => substr(config('services.resend.key') ?? env('RESEND_API_KEY'), 0, 10) . '...',
-        ], 500);
+    foreach ($users as $user) {
+        $roleName = $user->role->name ?? "Role {$user->role_id}";
+        $name = trim(($user->firstname ?? '') . ' ' . ($user->lastname ?? '')) ?: $user->email;
+        $html .= "<a href=\"/dev-login/{$user->id}\"><strong>{$name}</strong><br>"
+            . "<span class=\"role\">{$user->email} — {$roleName}</span></a>";
     }
+
+    $html .= '</body></html>';
+    return response($html);
+})->middleware('web');
+
+Route::get('/dev-login/{id}', function ($id) {
+    if (!config('app.debug')) {
+        abort(404);
+    }
+
+    $user = \App\Models\User::findOrFail($id);
+    Auth::login($user);
+
+    $redirect = match ((int) $user->role_id) {
+        1 => '/applicant-dashboard',
+        2, 7 => '/dashboard',
+        3 => '/evaluator-dashboard',
+        4 => '/interviewer-dashboard',
+        6 => '/record-dashboard',
+        default => '/dashboard',
+    };
+
+    return redirect($redirect);
 })->middleware('web');
 
 Route::get('/debug-registration', function (\Illuminate\Http\Request $request) {
