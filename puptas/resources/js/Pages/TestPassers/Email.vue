@@ -1168,31 +1168,31 @@ const props = defineProps({
 });
 
 // Email template and settings (unchanged)
-// const emailTemplate = ref(
-//     `
-//   <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
-//     <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-//       <h1 style="color: #cc0000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
-//       <p style="font-size: 16px; color: #333; text-align: center;">
-//         You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
-//       </p>
+const emailTemplate = ref(
+    `
+  <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
+    <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
+      <h1 style="color: #cc0000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
+      <p style="font-size: 16px; color: #333; text-align: center;">
+        You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
+      </p>
 
-//       <div style="text-align: center; margin: 30px 0;">
-//         <a href="${props.registrationUrl}" 
-//            style="background-color: #cc0000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
-//            Complete Your Registration
-//         </a>
-//       </div>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${props.registrationUrl}" 
+           style="background-color: #cc0000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
+           Complete Your Registration
+        </a>
+      </div>
 
-//       <p style="font-size: 14px; color: #555; text-align: center;">
-//         If you have any questions or need help, please contact the Admission and Registration Office at
-//         <a href="mailto:taguig@pup.edu.ph" style="color:#9E122C;">taguig@pup.edu.ph</a> /
-//         <a href="mailto:puptadmission@gmail.com" style="color:#9E122C;">puptadmission@gmail.com</a>.
-//       </p>
-//     </div>
-//   </div>
-// `.trim()
-// );
+      <p style="font-size: 14px; color: #555; text-align: center;">
+        If you have any questions or need help, please contact the Admission and Registration Office at
+        <a href="mailto:taguig@pup.edu.ph" style="color:#9E122C;">taguig@pup.edu.ph</a> /
+        <a href="mailto:puptadmission@gmail.com" style="color:#9E122C;">puptadmission@gmail.com</a>.
+      </p>
+    </div>
+  </div>
+`.trim()
+);
 
 const templateType = ref("default");
 const sarEnrollmentDate = ref(new Date().toISOString().split('T')[0]);
