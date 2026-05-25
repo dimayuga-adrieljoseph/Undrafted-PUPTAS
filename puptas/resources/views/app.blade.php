@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" id="csrf-token" content="{{ csrf_token() }}">
 
-    <title inertia>{{ config('app.name', 'Laravel') }}</title>
+    <title inertia>{{ config('app.name', 'PUPTAS') }}</title>
 
     <link rel="icon" type="image/png" href="/assets/images/pup_logo.png" />
 
@@ -24,10 +24,16 @@
     @inertia
 
     @include('partials.sienna-widget')
-    @auth
-        @if(auth()->user()->role_id === 1)
-            @include('partials.chatwoot-widget')
-        @endif
-    @endauth
+
+    @if(isset($page['component']) && $page['component'] === 'Public/CheckStatus')
+        {{-- Always show Chatwoot on the admission-results page --}}
+        @include('partials.chatwoot-widget-public')
+    @else
+        @auth
+            @if(auth()->user()->role_id === 1)
+                @include('partials.chatwoot-widget')
+            @endif
+        @endauth
+    @endif
 </body>
 </html>

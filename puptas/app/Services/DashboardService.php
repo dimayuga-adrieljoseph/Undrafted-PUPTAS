@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Program;
 use App\Models\Application;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -27,6 +28,9 @@ class DashboardService
 
     /**
      * Get common dashboard data
+     *
+     * Intentional: This role has full visibility across all programs.
+     * Do NOT add program ID scoping here — see Requirements 6.1, 6.2, 6.3.
      *
      * @return array
      */
@@ -214,35 +218,55 @@ class DashboardService
     }
 
     /**
-     * Get dashboard data for evaluator with pending applications
+     * Get dashboard data for evaluator with pending applications.
+     * Filters pendingUsers to only those in the evaluator's assigned programs.
+     * summary and chartData remain global (not scoped) per Requirement 4.3.
      *
      * @return array
      */
     public function getEvaluatorDashboardData(): array
     {
+        $programIds = Auth::user()
+            ->programs()
+            ->pluck('programs.id')
+            ->toArray();
+
+        // If the evaluator has no assigned programs, pendingUsers is empty.
+        // Evaluators must be explicitly assigned to programs to see applicants.
+        $pendingUsers = empty($programIds)
+            ? collect()
+            : $this->userService->getApplicantsByStage('evaluator', $programIds);
+
         return [
-            'pendingUsers' => $this->userService->getApplicantsByStage('evaluator'),
-            'summary' => $this->applicationService->getApplicationSummary(),
-            'chartData' => $this->getApplicationChartData(),
+            'pendingUsers' => $pendingUsers,
+            'summary'      => $this->applicationService->getApplicationSummary(),
+            'chartData'    => $this->getApplicationChartData(),
         ];
     }
 
     /**
      * Get dashboard data for interviewer with pending applications
+     * Interviewers have global access to see all applicants.
      *
      * @return array
      */
     public function getInterviewerDashboardData(): array
     {
+        // Interviewers see all applicants (global access)
+        $pendingUsers = $this->userService->getApplicantsByStage('interviewer');
+
         return [
-            'pendingUsers' => $this->userService->getApplicantsByStage('interviewer'),
-            'summary' => $this->applicationService->getApplicationSummary(),
-            'chartData' => $this->getDailyApplicationChartData(),
+            'pendingUsers' => $pendingUsers,
+            'summary'      => $this->applicationService->getApplicationSummary(),
+            'chartData'    => $this->getDailyApplicationChartData(),
         ];
     }
 
     /**
      * Get dashboard data for medical with pending applications
+     *
+     * Intentional: This role has full visibility across all programs.
+     * Do NOT add program ID scoping here — see Requirements 6.1, 6.2, 6.3.
      *
      * @return array
      */
@@ -257,6 +281,9 @@ class DashboardService
 
     /**
      * Get dashboard data for records staff with pending applications
+     *
+     * Intentional: This role has full visibility across all programs.
+     * Do NOT add program ID scoping here — see Requirements 6.1, 6.2, 6.3.
      *
      * @return array
      */

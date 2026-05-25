@@ -158,6 +158,7 @@ const selectUser = async (user) => {
             getUserFilesEndpoint(user.id)
         );
 
+        // Ensure grades and application are properly assigned AFTER spreading response.data.user
         selectedUser.value = {
             ...user,
             ...response.data.user,
@@ -165,10 +166,16 @@ const selectUser = async (user) => {
                 ...response.data.user.application,
                 processes: response.data.user.application?.processes || [],
             },
+            // Explicitly set grades AFTER spreading to ensure it's not undefined
             grades: response.data.user.grades || null,
         };
 
+        // Ensure uploadedFiles is properly assigned
         selectedUserFiles.value = response.data.uploadedFiles || {};
+        
+        // Debug logging to verify data
+        console.log('Selected user grades:', selectedUser.value.grades);
+        console.log('Selected user files:', selectedUserFiles.value);
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         selectedUserFiles.value = {};
@@ -586,7 +593,7 @@ const clearFilters = () => {
                         <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
                             {{ selectedUser.lastname ? `${selectedUser.lastname}, ${selectedUser.firstname}` : (selectedUser.email || '—') }}
                         </h4>
-                        <p class="text-sm text-gray-700 dark:text-gray-300 mb-0.5">Student No: {{ selectedUser.student_number || 'N/A' }}</p>
+                        <p class="text-sm text-gray-700 dark:text-gray-300 mb-0.5">Reference No: {{ selectedUser.reference_number || 'N/A' }}</p>
                         <p class="text-gray-600 dark:text-gray-400">{{ selectedUser.email }}</p>
                     </div>
                 </div>

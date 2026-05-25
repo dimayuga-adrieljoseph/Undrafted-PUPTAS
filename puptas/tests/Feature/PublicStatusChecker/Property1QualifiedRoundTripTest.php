@@ -87,16 +87,15 @@ it(
         $passer = TestPasser::create($attrs);
 
         // POST to the endpoint with the exact stored credentials
-        $response = $this->postJson('/api/public/check-status', [
+        $response = $this->postJson('/api/public/admission-results', [
             'referenceNumber' => $passer->reference_number,
-            'email'           => $passer->email,
+            'firstName'       => $passer->first_name,
+            'lastName'        => $passer->surname,
         ]);
 
         $response->assertStatus(200)
             ->assertJson([
-                'qualified'    => true,
-                'batch_number' => $passer->batch_number,
-                'message'      => 'You are qualified for the entrance exam.',
+                'found' => true,
             ]);
     }
 )->with($testPasserCases);

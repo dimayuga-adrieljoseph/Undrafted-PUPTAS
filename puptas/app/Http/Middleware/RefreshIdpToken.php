@@ -22,20 +22,22 @@ class RefreshIdpToken
         }
 
         $user = Auth::user();
-        $tokenRecord = \App\Models\RefreshToken::where('user_id', $user->id)->first();
+        $tokenData = \Illuminate\Support\Facades\Cache::store('redis')->get("idp_tokens:user_{$user->id}");
 
         // If no token record or refresh token, just proceed (or fail depending on strictness)
-        if (!$tokenRecord || !$tokenRecord->refresh_token) {
+        if (!$tokenData || empty($tokenData['refresh_token'])) {
             return $next($request);
         }
         
+        $expiresAt = isset($tokenData['expires_at']) ? \Carbon\Carbon::createFromTimestamp($tokenData['expires_at']) : null;
+
         // If we still have time on the clock, proceed normally
-        if ($tokenRecord->expires_at && $tokenRecord->expires_at->isFuture()) {
+        if ($expiresAt && $expiresAt->isFuture()) {
             return $next($request);
         }
 
         // Token is expired (or close to it) - try to refresh
-        Log::info('Attempting to refresh expired IDP token in middleware targeting DB');
+        Log::info('Attempting to refresh expired IDP token in middleware targeting Redis');
         
         $idpConfig = config('services.idp');
         
@@ -45,7 +47,7 @@ class RefreshIdpToken
         $refreshPayload = [
             'client_id' => $idpConfig['client_id'],
             'client_secret' => $idpConfig['client_secret'],
-            'refresh_token' => $tokenRecord->refresh_token,
+            'refresh_token' => $tokenData['refresh_token'],
             'grant_type' => 'refresh_token',
         ];
 
@@ -55,20 +57,25 @@ class RefreshIdpToken
                 ->post($refreshUrl, $refreshPayload);
 
             if ($response->successful()) {
-                $tokenData = $response->json();
-                $expiresIn = (int) ($tokenData['expires_in'] ?? 3600);
+                $newTokenData = $response->json();
+                $expiresIn = (int) ($newTokenData['expires_in'] ?? 3600);
+                $newExpiresAt = now()->addSeconds($expiresIn - 60);
                 
-                // Update DB with new tokens
-                $tokenRecord->update([
-                    'access_token' => $tokenData['access_token'] ?? $tokenRecord->access_token,
-                    'refresh_token' => $tokenData['refresh_token'] ?? $tokenRecord->refresh_token,
-                    'expires_at' => now()->addSeconds($expiresIn - 60),
-                ]);
+                // Update Redis with new tokens
+                \Illuminate\Support\Facades\Cache::store('redis')->put(
+                    "idp_tokens:user_{$user->id}",
+                    [
+                        'access_token'  => $newTokenData['access_token'] ?? $tokenData['access_token'],
+                        'refresh_token' => $newTokenData['refresh_token'] ?? $tokenData['refresh_token'],
+                        'expires_at'    => $newExpiresAt->timestamp,
+                    ],
+                    60 * 60 * 24 * 30 // 30 days
+                );
 
-                \Illuminate\Support\Facades\Cookie::queue('access_token', $tokenRecord->access_token, $expiresIn / 60, null, null, false, false);
-                \Illuminate\Support\Facades\Cookie::queue('refresh_token', $tokenRecord->refresh_token, 60 * 24 * 30, null, null, false, false);
+                \Illuminate\Support\Facades\Cookie::queue('access_token', $newTokenData['access_token'] ?? $tokenData['access_token'], $expiresIn / 60, null, null, false, false);
+                \Illuminate\Support\Facades\Cookie::queue('refresh_token', $newTokenData['refresh_token'] ?? $tokenData['refresh_token'], 60 * 24 * 30, null, null, false, false);
                 
-                Log::info('Successfully refreshed IDP access token via Database storage');
+                Log::info('Successfully refreshed IDP access token via Redis storage');
             } else {
                 Log::error('Failed to refresh IDP token, killing active session for security', [
                     'status' => $response->status(),
@@ -76,7 +83,7 @@ class RefreshIdpToken
                 ]);
                 
                 // Refresh token is dead; kill the local session gracefully
-                $tokenRecord->delete();
+                \Illuminate\Support\Facades\Cache::store('redis')->forget("idp_tokens:user_{$user->id}");
                 Auth::logout();
                 session()->flush();
                 return redirect('/login')->withErrors(['idp' => 'Your session expired. Please log in again.']);

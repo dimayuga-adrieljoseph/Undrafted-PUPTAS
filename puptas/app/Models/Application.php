@@ -19,8 +19,10 @@ class Application extends Model
         'submitted_at',
         'program_id',
         'second_choice_id',
+        'third_choice_id',
         'enrollment_status',
         'enrollment_position',
+        'requires_promissory_note',
     ];
 
     protected $casts = [
@@ -52,5 +54,10 @@ class Application extends Model
     public function secondChoice()
     {
         return $this->belongsTo(Program::class, 'second_choice_id');
+    }
+
+    public function thirdChoice()
+    {
+        return $this->belongsTo(Program::class, 'third_choice_id');
     }
 }

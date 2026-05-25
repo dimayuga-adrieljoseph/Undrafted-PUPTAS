@@ -27,15 +27,8 @@ class ValidationRules
             'program' => 'nullable|array', // Allow multiple programs assigned to staff
             'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
-            // These fields might not be in your form anymore, but keeping for compatibility
-            'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
             'contactnumber' => 'nullable|string|regex:/^\d{10}$/', // Changed to 10-digit validation
-            'street_address' => 'nullable|string|max:255',
-            'barangay' => 'nullable|string|max:100',
-            'city' => 'nullable|string|max:100',
-            'province' => 'nullable|string|max:100',
-            'postal_code' => 'nullable|string|max:10',
             'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
@@ -61,14 +54,8 @@ class ValidationRules
             'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
 
-            'birthday' => 'nullable|date',
             'sex' => 'nullable|in:M,F',
             'contactnumber' => 'required|string|regex:/^\d{10}$/', // Changed to 10-digit validation
-            'street_address' => 'nullable|string|max:255',
-            'barangay' => 'nullable|string|max:100',
-            'city' => 'nullable|string|max:100',
-            'province' => 'nullable|string|max:100',
-            'postal_code' => 'nullable|string|max:10',
             'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
@@ -179,27 +166,35 @@ class ValidationRules
 
     /**
      * UserFile validation rules
-     * Note: Max size increased to 5MB (5120KB) since images will be compressed
-     * Supported formats: jpg, jpeg, png, webp, gif
+     *
+     * Grade card files (file10–12) and the 2x2 photo are image-only because they
+     * go through ImageCompressionService and OCR processing.
+     *
+     * Document fields (PSA, Good Moral, Non-enrollment cert, Under Oath, School ID)
+     * accept images OR PDFs up to 10 MB — applicants commonly scan these to PDF.
      */
     public static function userFileUpload()
     {
         return [
-            'application_id' => 'nullable|exists:applications,id',
-            // Increased max size to 5120KB (5MB) since we'll compress images
-            // Added webp and gif to accepted mimes
-            'file10' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'application_id'  => 'nullable|exists:applications,id',
+
+            // Grade cards — image-only, compressed + OCR processed
+            'file10'      => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
             'file10Front' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'file11' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'file12' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'file11'      => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
             'file11Front' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+            'file12'      => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
             'file12Front' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'fileId' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'fileNonEnroll' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'filePSA' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'fileGoodMoral' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
-            'fileUnderOath' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+
+            // 2x2 photo — image-only
             'filePhoto2x2' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+
+            // Official documents — accept images or PDF, up to 10 MB
+            'fileId'        => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf|max:10240',
+            'fileNonEnroll' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf|max:10240',
+            'filePSA'       => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf|max:10240',
+            'fileGoodMoral' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf|max:10240',
+            'fileUnderOath' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf|max:10240',
         ];
     }
 
@@ -218,35 +213,6 @@ class ValidationRules
     }
 
     /**
-     * Schedule validation rules
-     */
-    public static function scheduleStore()
-    {
-        return [
-            'name' => 'required|string|max:255',
-            'start' => 'required|date',
-            'end' => 'required|date|after:start',
-            'type' => 'required|in:application,interview,medical,announcement,other',
-            'description' => 'nullable|string|max:1000',
-            'location' => 'nullable|string|max:255',
-            'affected_programs' => 'nullable|array',
-        ];
-    }
-
-    public static function scheduleUpdate($scheduleId)
-    {
-        return [
-            'name' => 'required|string|max:255',
-            'start' => 'required|date',
-            'end' => 'required|date|after:start',
-            'type' => 'required|in:application,interview,medical,announcement,other',
-            'description' => 'nullable|string|max:1000',
-            'location' => 'nullable|string|max:255',
-            'affected_programs' => 'nullable|array',
-        ];
-    }
-
-    /**
      * TestPasser validation rules
      */
     public static function testPasserStore()
@@ -255,10 +221,6 @@ class ValidationRules
             'surname' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
-            'date_of_birth' => 'nullable|date',
-            'address' => 'nullable|string|max:500',
-            'school_address' => 'nullable|string|max:500',
-            'shs_school' => 'required|string|max:255',
             'strand' => 'required|string|max:100',
             'year_graduated' => 'required|digits:4|integer|min:1900|max:' . (date('Y') + 1),
             'email' => 'required|email|unique:test_passers,email',
@@ -276,10 +238,6 @@ class ValidationRules
             'surname' => 'required|string|max:255',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
-            'date_of_birth' => 'nullable|date',
-            'address' => 'nullable|string|max:500',
-            'school_address' => 'nullable|string|max:500',
-            'shs_school' => 'required|string|max:255',
             'strand' => 'required|string|max:100',
             'year_graduated' => 'required|digits:4|integer|min:1900|max:' . date('Y'),
             'email' => "required|email|unique:test_passers,email,{$testPasserId},test_passer_id",

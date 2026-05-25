@@ -45,14 +45,8 @@ class User extends Authenticatable
         'middlename',
         'lastname',
         'salutation',
-        'birthday',
         'sex',
         'contactnumber',
-        'street_address',
-        'barangay',
-        'city',
-        'province',
-        'postal_code',
         'privacy_consent',
         'privacy_consent_at',
     ];
@@ -142,9 +136,9 @@ class User extends Authenticatable
         return $this->hasOne(ApplicantProfile::class);
     }
 
-    public function getStudentNumberAttribute()
+    public function getReferenceNumberAttribute()
     {
-        return $this->applicantProfile?->student_number;
+        return $this->testPasser?->reference_number;
     }
 
     public function testPasser()

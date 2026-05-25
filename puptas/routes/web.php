@@ -10,7 +10,6 @@ use App\Http\Controllers\ApplicantDashboardController;
 use App\Http\Controllers\TestPasserController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ConfirmationController;
 use App\Http\Controllers\UserFileController;
 use App\Http\Controllers\EvaluatorDashboardController;
@@ -19,6 +18,11 @@ use App\Http\Controllers\RecordStaffDashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Admin\Notify\Notify;
 use App\Http\Controllers\PrivacyConsentController;
+
+// Load debug routes (only active when APP_DEBUG=true)
+if (file_exists(__DIR__ . '/web_debug.php')) {
+    require __DIR__ . '/web_debug.php';
+}
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CallbackController;
 use App\Http\Controllers\IdpAuthController;
@@ -27,7 +31,9 @@ use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
 use App\Http\Controllers\ReportController;
-
+use App\Http\Controllers\TestPasserReportController;
+use App\Http\Controllers\ConfirmedApplicantsController;
+use App\Http\Controllers\EmailTrackingController;
 
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
@@ -43,6 +49,9 @@ Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
 
 Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
     ->name('idp.callback.alias');
+
+Route::get('/auth/idp/cancel-registration', [IdpAuthController::class, 'cancelRegistration'])
+    ->name('idp.cancel-registration');
 
 Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
     ->middleware('auth')
@@ -86,6 +95,12 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     return response()->json(['taken' => $exists]);
 })->middleware('auth');
 
+Route::post('/check-reference-number', function (\Illuminate\Http\Request $request) {
+    $request->validate(['reference_number' => 'required|string|max:100']);
+    $exists = \App\Models\TestPasser::where('reference_number', trim($request->reference_number))->exists();
+    return response()->json(['valid' => $exists]);
+})->middleware('guest');
+
 Route::middleware(['auth'])->group(function () {
     // Privacy Consent Routes - available to all authenticated users
     Route::post('/privacy-consent/accept', [PrivacyConsentController::class, 'accept'])->name('privacy.consent.accept');
@@ -109,20 +124,29 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/applicant-dashboard', [ApplicantDashboardController::class, 'index'])
         ->name('applicant.dashboard');
+    Route::get('/applicant-dashboard/qualified-programs', [ApplicantDashboardController::class, 'getQualifiedPrograms'])
+        ->name('applicant.qualified-programs');
 
     Route::middleware(['throttle:grade-extraction'])
         ->post('/api/grades/extract', [GradeExtractionController::class, 'extract']);
 
+    // Grade Input Routes - IMPORTANT: Each strand MUST use its own store method
+    // ABM uses storeAbmGrades, ICT uses storeIctGrades, etc.
     Route::get('/grades/abm', [GradesController::class, 'showAbmGradeForm'])->name('grades.abm.form');
     Route::post('/grades/abm', [GradesController::class, 'storeAbmGrades'])->name('grades.abm.store');
+    
     Route::get('/grades/ict', [GradesController::class, 'showIctGradeForm'])->name('grades.ict.form');
-    Route::post('/grades/ict', [GradesController::class, 'storeAbmGrades'])->name('grades.ict.store');
+    Route::post('/grades/ict', [GradesController::class, 'storeIctGrades'])->name('grades.ict.store');
+    
     Route::get('/grades/humss', [GradesController::class, 'showHumssGradeForm'])->name('grades.humss.form');
     Route::post('/grades/humss', [GradesController::class, 'storeHumssGrades'])->name('grades.humss.store');
+    
     Route::get('/grades/gas', [GradesController::class, 'showGasGradeForm'])->name('grades.gas.form');
     Route::post('/grades/gas', [GradesController::class, 'storeGasGrades'])->name('grades.gas.store');
+    
     Route::get('/grades/stem', [GradesController::class, 'showStemGradeForm'])->name('grades.stem.form');
     Route::post('/grades/stem', [GradesController::class, 'storeStemGrades'])->name('grades.stem.store');
+    
     Route::get('/grades/tvl', [GradesController::class, 'showTvlGradeForm'])->name('grades.tvl.form');
     Route::post('/grades/tvl', [GradesController::class, 'storeTvlGrades'])->name('grades.tvl.store');
 });
@@ -174,7 +198,6 @@ Route::get('/home', function () {
     return redirect('/');
 })->middleware(['auth'])->name('home');
 
-Route::middleware(['auth'])->post('/test-passers/upload', [Notify::class, 'handleUpload']);
 Route::middleware(['auth'])->get('/test-passers/form', [Notify::class, 'showUploadForm'])->name('upload.form');
 
 // Public SAR download with signed URL (expires in 30 days)
@@ -187,45 +210,54 @@ Route::get('/applications', function () {
     return Inertia::render('Applications/Index');
 })->middleware(['auth', EnsureAdmin::class])->name('applications');
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
-    Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
-
-    Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
-        Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
-        Route::get('/admin/sar/{id}/download', [TestPasserController::class, 'adminDownloadSar'])->name('admin.sar-download');
-        Route::get('/admin/sar/{id}/preview', [TestPasserController::class, 'adminPreviewSar'])->name('admin.sar-preview');
-        Route::post('/admin/sar/preview-email-template', [TestPasserController::class, 'previewSarEmailTemplate'])->name('admin.sar-preview-email');
-        Route::post('/admin/sar/preview-pdf-template', [TestPasserController::class, 'previewSarPdfTemplate'])->name('admin.sar-preview-pdf');
-        Route::post('/admin/waitlisted/preview-email-template', [TestPasserController::class, 'previewWaitlistedEmailTemplate'])->name('admin.waitlisted-preview-email');
-    });
+// Confirmed Applicants Routes (Admin/Registrar only)
+Route::middleware(['auth', EnsureAdmin::class])->group(function () {
+    Route::get('/confirmed-applicants', [ConfirmedApplicantsController::class, 'index'])->name('confirmed-applicants.index');
+    Route::get('/confirmed-applicants/list', [ConfirmedApplicantsController::class, 'getApplicants'])->name('confirmed-applicants.list');
+    Route::post('/confirmed-applicants/send-sar', [ConfirmedApplicantsController::class, 'sendSar'])->name('confirmed-applicants.send-sar');
+    Route::post('/confirmed-applicants/send-email', [ConfirmedApplicantsController::class, 'sendCustomEmail'])->name('confirmed-applicants.send-email');
 });
 
-Route::middleware(['auth:sanctum'])->group(function () {
+// NOTE: These are web (session-based) routes. auth:sanctum was incorrect here —
+// Auth::login() uses the 'web' guard, not the Sanctum stateless guard.
+Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
+    Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
+    Route::get('/test-passers/select-all-ids', [TestPasserController::class, 'selectAllIds'])->name('test-passers.select-all-ids');
+    Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
+
+    Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
+    Route::get('/admin/sar/{id}/download', [TestPasserController::class, 'adminDownloadSar'])->name('admin.sar-download');
+    Route::get('/admin/sar/{id}/preview', [TestPasserController::class, 'adminPreviewSar'])->name('admin.sar-preview');
+    Route::post('/admin/sar/preview-email-template', [TestPasserController::class, 'previewSarEmailTemplate'])->name('admin.sar-preview-email');
+    Route::post('/admin/sar/preview-pdf-template', [TestPasserController::class, 'previewSarPdfTemplate'])->name('admin.sar-preview-pdf');
+    Route::post('/admin/waitlisted/preview-email-template', [TestPasserController::class, 'previewWaitlistedEmailTemplate'])->name('admin.waitlisted-preview-email');
+
+    // Email Tracking Routes
+    Route::get('/admin/email-tracking', [EmailTrackingController::class, 'index'])->name('email-tracking.index');
+    Route::get('/admin/email-tracking/{id}', [EmailTrackingController::class, 'show'])->name('email-tracking.show');
+    Route::get('/admin/email-tracking/{id}/progress', [EmailTrackingController::class, 'progress'])->name('email-tracking.progress');
+    Route::post('/admin/email-tracking/retry-selected', [EmailTrackingController::class, 'retrySelected'])->name('email-tracking.retry-selected');
+    Route::post('/admin/email-tracking/{id}/retry-all', [EmailTrackingController::class, 'retryAll'])->name('email-tracking.retry-all');
+});
+
+Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::post('/test-passers/upload', [TestPasserController::class, 'upload'])->name('upload');
 });
 
 Route::middleware(['auth'])->group(function () {
     Route::put('/test-passers/{test_passer}', [TestPasserController::class, 'update'])->name('test-passers.update');
     Route::post('/test-passers-store', [TestPasserController::class, 'store']);
+    Route::delete('/test-passers/{test_passer}', [TestPasserController::class, 'destroy'])->name('test-passers.destroy');
+    Route::post('/test-passers/bulk-destroy', [TestPasserController::class, 'bulkDestroy'])->name('test-passers.bulk-destroy');
+    Route::post('/test-passers/bulk-enroll', [TestPasserController::class, 'bulkEnroll'])->middleware('role:2,7')->name('test-passers.bulk-enroll');
 });
-
-Route::resource('schedules', ScheduleController::class)
-    ->middleware(['auth', 'role:2,4'])
-    ->names([
-        'index' => 'schedules.index',
-        'create' => 'schedules.create',
-        'store' => 'schedules.store',
-        'show' => 'schedules.show',
-        'edit' => 'schedules.edit',
-        'update' => 'schedules.update',
-        'destroy' => 'schedules.destroy',
-    ]);
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/user/application', [ConfirmationController::class, 'show']);
     Route::post('/user/application/submit', [ConfirmationController::class, 'submit']);
     Route::post('/user/application/reupload', [ConfirmationController::class, 'reupload']);
+    Route::post('/user/application/upload-url', [ConfirmationController::class, 'getUploadUrl']);
+    Route::post('/user/application/confirm-upload', [ConfirmationController::class, 'confirmUpload']);
     Route::get('/files/{file}/preview', [UserFileController::class, 'preview'])
         ->middleware('signed')
         ->name('files.preview');
@@ -253,13 +285,17 @@ Route::middleware(['auth', 'role:3'])->group(function () {
 Route::middleware(['auth', 'role:4'])->group(function () {
     Route::get('/interviewer-dashboard', [InterviewerDashboardController::class, 'index'])->name('interviewer.dashboard');
     Route::get('/interviewer-applications', function () {
-        return Inertia::render('Applications/Interviewer', ['user' => Auth::user()]);
+        $user = Auth::user();
+        $assignedPrograms = $user->programs()->get(['id', 'code', 'name']);
+        return Inertia::render('Applications/Interviewer', [
+            'user' => $user,
+            'assignedPrograms' => $assignedPrograms,
+        ]);
     })->name('interviewer.applications');
     Route::get('/interviewer-dashboard/applicants', [InterviewerDashboardController::class, 'getUsers']);
     Route::get('/interviewer-dashboard/application/{id}', [InterviewerDashboardController::class, 'getUserFiles']);
     Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
-    Route::post('/interviewer-dashboard/transfer/{id}', [InterviewerDashboardController::class, 'transferToProgram']);
-    Route::get('/interviewer-dashboard/programs', [InterviewerDashboardController::class, 'getPrograms']);
+    Route::post('/interviewer-dashboard/reject/{id}', [InterviewerDashboardController::class, 'reject']);
 });
 
 // Record Staff Routes
@@ -274,6 +310,30 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::post('/record-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
     Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
+});
+
+// Lazy Loading Routes for Staff (Evaluator, Interviewer, Record Staff, Admin)
+Route::middleware(['auth', 'role:2,3,4,6'])->group(function () {
+    Route::get('/api/lazy-load/document/{userId}/{fileType}', [\App\Http\Controllers\LazyLoadController::class, 'loadDocument']);
+    Route::post('/api/lazy-load/documents-batch/{userId}', [\App\Http\Controllers\LazyLoadController::class, 'loadDocumentsBatch']);
+    Route::get('/api/lazy-load/grades/{userId}', [\App\Http\Controllers\LazyLoadController::class, 'loadGrades']);
+});
+
+// Add grades endpoint to each role's trait-based controllers
+Route::middleware(['auth', 'role:3'])->group(function () {
+    Route::get('/dashboard/user-grades/{id}', [EvaluatorDashboardController::class, 'getUserGrades']);
+});
+
+Route::middleware(['auth', 'role:4'])->group(function () {
+    Route::get('/interviewer-dashboard/user-grades/{id}', [InterviewerDashboardController::class, 'getUserGrades']);
+});
+
+Route::middleware(['auth', 'role:6'])->group(function () {
+    Route::get('/record-dashboard/user-grades/{id}', [RecordStaffDashboardController::class, 'getUserGrades']);
+});
+
+Route::middleware(['auth', 'role:2,7'])->group(function () {
+    Route::get('/admin-dashboard/user-grades/{id}', [DashboardController::class, 'getUserGrades']);
 });
 
 Route::middleware(['auth', 'role:2,3,4,7'])->group(function () {
@@ -293,6 +353,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/admin-dashboard/user-files/{id}', [DashboardController::class, 'getUserFiles']);
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/users/search', [UserController::class, 'search'])->name('users.search');
     Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
@@ -304,6 +365,17 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/admin/reports/data', [ReportController::class, 'getReportData'])->name('reports.data');
     Route::get('/admin/reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export.pdf');
     Route::get('/admin/reports/export/excel', [ReportController::class, 'exportExcel'])->name('reports.export.excel');
+
+    Route::get('/admin/reports/test-passers', [TestPasserReportController::class, 'index'])->name('reports.test-passers.index');
+    Route::get('/admin/reports/test-passers/data', [TestPasserReportController::class, 'getReportData'])->name('reports.test-passers.data');
+    Route::get('/admin/reports/test-passers/export/pdf', [TestPasserReportController::class, 'exportPdf'])->name('reports.test-passers.export.pdf');
+    Route::get('/admin/reports/test-passers/export/excel', [TestPasserReportController::class, 'exportExcel'])->name('reports.test-passers.export.excel');
+
+    // Accepted Masterlist Reports
+    Route::get('/admin/reports/masterlist', [ReportController::class, 'masterlistIndex'])->name('reports.masterlist.index');
+    Route::get('/admin/reports/masterlist/data', [ReportController::class, 'masterlistData'])->name('reports.masterlist.data');
+    Route::get('/admin/reports/masterlist/export/pdf', [ReportController::class, 'masterlistExportPdf'])->name('reports.masterlist.export.pdf');
+    Route::get('/admin/reports/masterlist/export/excel', [ReportController::class, 'masterlistExportExcel'])->name('reports.masterlist.export.excel');
 });
 
 // Audit log routes - Protected by Superadmin middleware
@@ -319,8 +391,31 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/api-clients/{id}/regenerate', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'regenerate'])->name('api-clients.regenerate');
 });
 
+// Temporary debug route for SAR PDF generation
+Route::get('/debug-sar-error', function () {
+    try {
+        $sarService = app(\App\Services\SarFormService::class);
+        $result = $sarService->generateSarPdf([
+            'reference_number' => 'DEBUG-TEST-001',
+            'full_name' => 'DOE, JOHN SMITH',
+            'graduation_year' => '2026',
+            'school_attended' => 'Test High School',
+            'shs_strand' => 'STEM',
+            'enrollment_date' => date('Y-m-d'),
+            'enrollment_time' => date('H:i'),
+        ]);
+        return response()->json($result);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 // Callback Routes - Public access for loading screen
 Route::get('/callback-loading', [CallbackController::class, 'index']);
 
 // Public Admission Status Checker - No auth required
-Route::get('/check-status', fn () => Inertia::render('Public/CheckStatus'))->name('public.check-status');
+Route::get('/admission-results', fn () => Inertia::render('Public/CheckStatus'))->name('public.check-status');
+

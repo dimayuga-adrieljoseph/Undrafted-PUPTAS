@@ -472,20 +472,20 @@ const submitPass = async () => {
                             @click="selectUser(applicant)"
                             class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer"
                         >
-                            <div class="flex items-start justify-between mb-3 flex-wrap gap-2">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold dark:bg-gray-900 dark:text-gray-900">
+                            <div class="flex items-center justify-between mb-3 gap-2">
+                                <div class="flex items-center space-x-3 min-w-0">
+                                    <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold dark:bg-gray-900 dark:text-gray-900 shrink-0">
                                         {{ applicant.firstname?.[0] || '' }}{{ applicant.lastname?.[0] || '' }}
                                     </div>
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900 dark:text-white">
+                                    <div class="min-w-0">
+                                        <h4 class="font-semibold text-gray-900 dark:text-white truncate">
                                             {{ applicant.firstname }} {{ applicant.lastname }}
                                         </h4>
-                                        <p class="text-gray-600 dark:text-gray-400 text-sm">{{ applicant.email }}</p>
+                                        <p class="text-gray-600 dark:text-gray-400 text-sm truncate">{{ applicant.email }}</p>
                                     </div>
                                 </div>
                                 <span :class="getStatusClass(applicant.application?.status)" 
-                                      class="px-3 py-1 rounded-full text-xs font-semibold">
+                                      class="px-3 py-1 rounded-full text-xs font-semibold shrink-0">
                                     {{ applicant.application?.status || "Pending" }}
                                 </span>
                             </div>
@@ -556,6 +556,7 @@ const submitPass = async () => {
                                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Course/Program</p>
                                             <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.program?.name || "—" }}</p>
                                             <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.program?.code || "" }}</p>
+                                            <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.program?.slots || 0 }} slots remaining</p>
                                         </div>
                                         <div>
                                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Status</p>

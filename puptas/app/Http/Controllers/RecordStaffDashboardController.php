@@ -209,55 +209,106 @@ class RecordStaffDashboardController extends Controller
     /**
      * Override getUserFiles to allow record staff to access applications
      * that have completed medical stage or are officially enrolled
+     * OPTIMIZED: Loads only essential data, files loaded separately
      */
     public function getUserFiles($id)
     {
-        $user = ApplicantProfile::with([
-            'currentApplication.program',
-            'currentApplication.processes:id,application_id,stage,status,action,reviewer_notes,created_at',
-            'grades',
-            'graduateTypes',
-        ])->where('user_id', $id)->firstOrFail();
+        try {
+            // Load applicant with essential data only (no files relationship)
+            $user = ApplicantProfile::with([
+                'currentApplication' => function ($query) {
+                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.enrollment_status');
+                },
+                'currentApplication.program:id,code,name,slots',
+                'currentApplication.processes' => function ($query) {
+                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'reviewer_notes', 'created_at')
+                        ->orderBy('created_at', 'desc')
+                        ->limit(10);
+                },
+                'grades',
+                'graduateTypes:id,label',
+                'testPasser',
+            ])
+            ->where('user_id', $id)
+            ->firstOrFail();
 
-        $application = $user->currentApplication;
+            $application = $user->currentApplication;
 
-        if (!$application) {
-            return response()->json(['message' => 'Application not found'], 404);
-        }
+            if (!$application) {
+                return response()->json(['message' => 'Application not found'], 404);
+            }
 
-        // Check if application has completed medical stage or is officially enrolled
-        $hasMedicalCompleted = $application->processes()
-            ->where('stage', 'medical')
-            ->where('status', 'completed')
-            ->exists();
+            // Check if application has completed medical stage or is officially enrolled
+            $hasMedicalCompleted = $application->processes()
+                ->where('stage', 'medical')
+                ->where('status', 'completed')
+                ->exists();
 
-        $isOfficiallyEnrolled = $application->enrollment_status === 'officially_enrolled';
+            $isOfficiallyEnrolled = $application->enrollment_status === 'officially_enrolled';
 
-        if (!$hasMedicalCompleted && !$isOfficiallyEnrolled) {
+            if (!$hasMedicalCompleted && !$isOfficiallyEnrolled) {
+                return response()->json([
+                    'message' => 'Cannot access files. Medical process not completed.'
+                ], 403);
+            }
+
+            // Load files separately for better performance
+            $files = UserFile::where('user_id', $id)->get()->keyBy('type');
+
+            $userData = [
+                'id' => $user->user_id,
+                'reference_number' => $user->testPasser->reference_number ?? 'N/A',
+                'firstname' => $user->firstname,
+                'lastname' => $user->lastname,
+                'email' => $user->email,
+                'contactnumber' => $user->contactnumber,
+                'sex' => $user->sex,
+                'created_at' => $user->created_at,
+                'grades' => $user->grades,
+                'application' => [
+                    'id' => $application->id,
+                    'status' => $application->status,
+                    'enrollment_status' => $application->enrollment_status,
+                    'created_at' => $application->created_at,
+                    'program' => $application->program,
+                    'processes' => $application->processes,
+                ],
+            ];
+
+            $graduateType = $user->graduateTypes->first()?->label ?? null;
+
+            // Debug logging
+            \Log::info('Registrar getUserFiles response', [
+                'userId' => $id,
+                'graduateType' => $graduateType,
+                'hasGrades' => $user->grades !== null,
+                'rawFileCount' => $files->count(),
+                'formattedFileCount' => count(FileMapper::formatFilesForGraduateType($files, $graduateType, false)),
+            ]);
+
             return response()->json([
-                'message' => 'Cannot access files. Medical process not completed.'
-            ], 403);
+                'user' => $userData,
+                'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false),
+                'lazyLoad' => false,
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('Applicant not found in registrar getUserFiles', [
+                'userId' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Applicant not found'], 404);
+        } catch (\Exception $e) {
+            \Log::error('Failed to load applicant data in registrar', [
+                'userId' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to load applicant data. Please try again.',
+            ], 500);
         }
-
-        $files = UserFile::where('user_id', $id)->get()->keyBy('type');
-
-        $userData = [
-            'id' => $user->user_id,
-            'student_number' => $user->student_number,
-            'firstname' => $user->firstname,
-            'lastname' => $user->lastname,
-            'email' => $user->email,
-            'files' => $files->values(),
-            'grades' => $user->grades,
-            'application' => $user->currentApplication,
-        ];
-
-        $graduateType = $user->graduateTypes->first()?->label ?? null;
-
-        return response()->json([
-            'user' => $userData,
-            'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false),
-        ]);
     }
 
     /**

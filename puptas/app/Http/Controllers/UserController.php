@@ -105,16 +105,24 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = $this->userService->getAllUsersWithDetails();
+        // Only load the first page here (15 records).
+        // Subsequent pages and search results are fetched via GET /users/search (JSON).
+        $page1 = $this->userService->searchUsers(null, 1, 15);
         $userCountsByRole = $this->userService->getUserCountsByRole();
         $roles = $this->userService->getRoleDefinitions();
         $totalUsers = $this->userService->getTotalUserCount();
 
         return Inertia::render('UserManagement/ManageUsers', [
-            'users' => $users,
+            'users'           => $page1['data'],
+            'pagination'      => [
+                'total'        => $page1['total'],
+                'per_page'     => $page1['per_page'],
+                'current_page' => $page1['current_page'],
+                'last_page'    => $page1['last_page'],
+            ],
             'userCountsByRole' => $userCountsByRole,
-            'roles' => $roles,
-            'totalUsers' => $totalUsers,
+            'roles'            => $roles,
+            'totalUsers'       => $totalUsers,
         ]);
     }
 
@@ -302,5 +310,21 @@ class UserController extends Controller
         );
 
         return redirect()->route('users.index')->with('status', 'User localized details removed successfully!');
+    }
+    /**
+     * JSON search endpoint for ManageUsers.
+     * Called via GET /users/search?q=...&page=N
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function search(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $search  = $request->input('q');
+        $page    = (int) $request->input('page', 1);
+        $perPage = 15;
+
+        $result = $this->userService->searchUsers($search, $page, $perPage);
+
+        return response()->json($result);
     }
 }

@@ -22,19 +22,21 @@ class FileMapper
      * Format: 'apiKey' => 'databaseType'
      */
     public const MAPPING = [
+        // Grade cards (image-only — compressed + OCR)
         'file10Front' => 'file10_front',
-        'file10' => 'file10_back',
+        'file10'      => 'file10_back',
         'file11Front' => 'file11_front',
-        'file11' => 'file11_back',
+        'file11'      => 'file11_back',
         'file12Front' => 'file12_front',
-        'file12' => 'file12_back',
-        'nof137a' => 'f137a',
-        'schoolId' => 'school_id',
-        'nonEnrollCert' => 'non_enroll_cert',
-        'psa' => 'psa',
-        'goodMoral' => 'good_moral',
-        'underOath' => 'under_oath',
-        'photo2x2' => 'photo_2x2',
+        'file12'      => 'file12_back',
+
+        // Official documents (images or PDF accepted)
+        'fileId'        => 'school_id',
+        'fileNonEnroll' => 'non_enroll_cert',
+        'filePSA'       => 'psa',
+        'fileGoodMoral' => 'good_moral',
+        'fileUnderOath' => 'under_oath',
+        'filePhoto2x2'  => 'photo_2x2',
     ];
 
     /**
@@ -51,13 +53,11 @@ class FileMapper
             'file10Front', 'file10',
             'file11Front', 'file11',
             'file12Front', 'file12',
-            'nof137a',
         ],
         'Alternative Learning System' => [
-            'psa',
-            'goodMoral',
-            'underOath',
-            'photo2x2',
+            'file10Front', 'file10',
+            'file11Front', 'file11',
+            'file12Front', 'file12',
         ],
     ];
 
@@ -74,9 +74,21 @@ class FileMapper
     {
         $requiredKeys = self::REQUIRED_BY_GRADUATE_TYPE[$graduateType] ?? null;
 
-        // Unknown/unsupported graduate type — no documents are required yet, return empty array.
+        // Unknown/unsupported graduate type — return ALL uploaded files instead of empty array
         if ($requiredKeys === null) {
-            return [];
+            \Log::warning('Unknown graduate type, returning all files', [
+                'graduateType' => $graduateType,
+                'fileCount' => $files->count(),
+            ]);
+            
+            // Return all files that exist, using all possible keys from MAPPING
+            $uploadedFiles = [];
+            foreach (self::MAPPING as $apiKey => $databaseType) {
+                if (isset($files[$databaseType])) {
+                    $uploadedFiles[$apiKey] = self::buildFilePayload($files[$databaseType], $includeStatus);
+                }
+            }
+            return $uploadedFiles;
         }
 
         $uploadedFiles = [];
@@ -85,6 +97,46 @@ class FileMapper
             $uploadedFiles[$apiKey] = isset($files[$databaseType])
                 ? self::buildFilePayload($files[$databaseType], $includeStatus)
                 : null;
+        }
+
+        return $uploadedFiles;
+    }
+
+    /**
+     * Format only the required files for a given graduate type with minimal metadata.
+     * OPTIMIZED: Returns only file metadata without URLs for lazy loading.
+     * 
+     * @param Collection $files Files collection keyBy('type')
+     * @param string|null $graduateType
+     * @return array
+     */
+    public static function formatFilesForGraduateTypeMinimal(Collection $files, ?string $graduateType): array
+    {
+        $requiredKeys = self::REQUIRED_BY_GRADUATE_TYPE[$graduateType] ?? null;
+
+        // Unknown/unsupported graduate type — no documents are required yet, return empty array.
+        if ($requiredKeys === null) {
+            return [];
+        }
+
+        $uploadedFiles = [];
+        foreach ($requiredKeys as $apiKey) {
+            $databaseType = self::MAPPING[$apiKey];
+            if (isset($files[$databaseType])) {
+                $file = $files[$databaseType];
+                $uploadedFiles[$apiKey] = [
+                    'status' => $file->status ?? 'pending',
+                    'comment' => $file->comment,
+                    'originalName' => self::sanitizeFilename($file->original_name),
+                    'hasFile' => true,
+                    // URL will be loaded lazily by frontend
+                ];
+            } else {
+                $uploadedFiles[$apiKey] = [
+                    'status' => 'not_uploaded',
+                    'hasFile' => false,
+                ];
+            }
         }
 
         return $uploadedFiles;
@@ -145,7 +197,9 @@ class FileMapper
 
     public static function buildFilePayload(UserFile $file, bool $includeStatus = false): array
     {
-        $mimeType = self::detectMimeType($file);
+        // Fast path: Use extension-based mime type detection only
+        $mimeType = self::guessMimeTypeFromPath($file->file_path);
+        
         $payload = [
             'url' => self::buildPreviewUrl($file),
             'mimeType' => $mimeType,
@@ -215,14 +269,26 @@ class FileMapper
         return $extensionMime;
     }
 
-    public static function resolveDiskForPath(string $path): string
+    public static function resolveDiskForPath(string $path, bool &$found = false): string
     {
+        $cacheKey = 'file_disk:' . md5($path);
+        
+        // Fast path: Check if we already resolved this file's disk recently
+        $cachedDisk = \Illuminate\Support\Facades\Cache::store('redis')->get($cacheKey);
+        if ($cachedDisk) {
+            $found = true;
+            return $cachedDisk;
+        }
+
         $configuredDefault = config('filesystems.default', 'public');
         $candidateDisks = array_unique([$configuredDefault, 'public', 'local', 's3']);
 
         foreach ($candidateDisks as $diskName) {
             try {
                 if (Storage::disk($diskName)->exists($path)) {
+                    $found = true;
+                    // Cache the result for 30 days to bypass slow S3 exists() checks
+                    \Illuminate\Support\Facades\Cache::store('redis')->put($cacheKey, $diskName, now()->addDays(30));
                     return $diskName;
                 }
             } catch (\Throwable $e) {
@@ -230,6 +296,7 @@ class FileMapper
             }
         }
 
+        $found = false;
         return 'public';
     }
 
@@ -240,7 +307,7 @@ class FileMapper
         return $sanitized !== '' ? $sanitized : 'document';
     }
 
-    private static function guessMimeTypeFromPath(string $path): string
+    public static function guessMimeTypeFromPath(string $path): string
     {
         return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
             'jpg', 'jpeg' => 'image/jpeg',

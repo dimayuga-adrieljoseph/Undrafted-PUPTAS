@@ -15,85 +15,178 @@ trait ManagesApplicationFiles
     /**
      * Get user files with formatted URLs
      * Only allows access if the application is at the appropriate stage
+     * 
+     * OPTIMIZED: Loads only essential data first, files are loaded separately
      */
     public function getUserFiles($id)
     {
-        // Ensure user has the correct role (admin bypass allowed in stage check)
-        if (auth()->user()->role_id !== 2) {
-            $this->ensureRole($this->getRoleId());
-        }
-
-        $user = User::with([
-            'currentApplication.program',
-            'currentApplication.processes.performedBy:id,firstname,lastname',
-            'files',
-            'grades',
-            'applicantProfile.graduateTypes',
-        ])->findOrFail($id);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        // Security check: Verify the user's application is at the appropriate stage
-        // Admin (role_id 2) can bypass this check
-        if (auth()->user()->role_id !== 2) {
-            $currentStage = $this->getCurrentStage();
-            $application = $user->currentApplication;
-
-            if (!$application) {
-                return response()->json(['message' => 'Application not found'], 404);
+        try {
+            // Ensure user has the correct role (admin bypass allowed in stage check)
+            if (auth()->user()->role_id !== 2) {
+                $this->ensureRole($this->getRoleId());
             }
 
-            // Check if the application has any process at this stage (including completed for read-only access)
-            $hasAccess = $application->processes()
-                ->where('stage', $currentStage)
-                ->whereIn('status', ['in_progress', 'returned', 'completed'])
-                ->exists();
+            // Load user with ONLY essential data (no files relationship)
+            $user = User::with([
+                'currentApplication' => function ($query) {
+                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id');
+                },
+                'currentApplication.program:id,code,name,slots',
+                'currentApplication.secondChoice:id,code,name,slots',
+                'currentApplication.thirdChoice:id,code,name,slots',
+                'currentApplication.processes' => function ($query) {
+                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'created_at', 'performed_by')
+                        ->orderBy('created_at', 'desc')
+                        ->limit(10)
+                        ->with('performedBy:id,firstname,lastname');
+                },
+                'grades', // Include grades
+                'applicantProfile:user_id,student_number',
+                'applicantProfile.graduateTypes:id,label',
+            ])
+            ->findOrFail($id);
 
-            if (!$hasAccess) {
-                return response()->json([
-                    'message' => 'Unauthorized access. Application is not at the ' . $currentStage . ' stage.'
-                ], 403);
+            if (!$user) {
+                return response()->json(['message' => 'User not found'], 404);
             }
+
+            // Security check: Verify the user's application is at the appropriate stage
+            // Admin (role_id 2) can bypass this check
+            if (auth()->user()->role_id !== 2) {
+                $currentStage = $this->getCurrentStage();
+                $application = $user->currentApplication;
+
+                if (!$application) {
+                    return response()->json(['message' => 'Application not found'], 404);
+                }
+
+                // Check if the application has any process at this stage (including completed for read-only access)
+                $hasAccess = $application->processes()
+                    ->where('stage', $currentStage)
+                    ->whereIn('status', ['in_progress', 'returned', 'completed'])
+                    ->exists();
+
+                if (!$hasAccess) {
+                    return response()->json([
+                        'message' => 'Unauthorized access. Application is not at the ' . $currentStage . ' stage.'
+                    ], 403);
+                }
+            }
+
+            // Load files separately (not through relationship) for better performance
+            $files = UserFile::where('user_id', $id)->get()->keyBy('type');
+
+            // Transform the response to map currentApplication to application for frontend compatibility
+            $userData = [
+                'id' => $user->id,
+                'student_number' => $user->applicantProfile?->student_number,
+                'firstname' => $user->firstname,
+                'lastname' => $user->lastname,
+                'email' => $user->email,
+                'contactnumber' => $user->contactnumber,
+                'sex' => $user->sex,
+                'created_at' => $user->created_at,
+                'grades' => $user->grades, // Include grades
+                // Map currentApplication to application for frontend compatibility
+                'application' => $user->currentApplication ? [
+                    'id' => $user->currentApplication->id,
+                    'status' => $user->currentApplication->status,
+                    'created_at' => $user->currentApplication->created_at,
+                    'program' => $user->currentApplication->program,
+                    'second_choice' => $user->currentApplication->secondChoice,
+                    'third_choice' => $user->currentApplication->thirdChoice,
+                    'processes' => $user->currentApplication->processes,
+                ] : null,
+            ];
+
+            $graduateType = $user->applicantProfile?->graduateTypes->first()?->label ?? null;
+
+            // Format files for graduate type
+            $fileList = FileMapper::formatFilesForGraduateType($files, $graduateType, false);
+
+            // Debug logging
+            \Log::info('Staff getUserFiles response', [
+                'userId' => $id,
+                'role' => auth()->user()->role_id,
+                'graduateType' => $graduateType,
+                'hasGrades' => $user->grades !== null,
+                'gradesData' => $user->grades,
+                'rawFileCount' => $files->count(),
+                'formattedFileCount' => count($fileList),
+                'fileKeys' => array_keys($fileList),
+            ]);
+
+            // Return full file data with URLs (not lazy loading)
+            return response()->json([
+                'user' => $userData,
+                'uploadedFiles' => $fileList,
+                'lazyLoad' => false, // Disabled until frontend is updated
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('User not found in getUserFiles', [
+                'userId' => $id,
+                'role' => auth()->user()->role_id ?? 'unknown',
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Applicant not found'], 404);
+        } catch (\Throwable $e) {
+            \Log::error('Failed to load user files', [
+                'userId' => $id,
+                'role' => auth()->user()->role_id ?? 'unknown',
+                'errorClass' => get_class($e),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to load applicant data. Please try again.',
+            ], 500);
         }
+    }
 
-        $files = $user->files->keyBy('type');
+    /**
+     * Get user grades separately for lazy loading
+     * 
+     * @param int $id User ID
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getUserGrades($id)
+    {
+        try {
+            // Ensure user has the correct role (admin bypass allowed in stage check)
+            if (auth()->user()->role_id !== 2) {
+                $this->ensureRole($this->getRoleId());
+            }
 
-        // Transform the response to map currentApplication to application for frontend compatibility
-        $userData = [
-            'id' => $user->id,
-            'student_number' => $user->applicantProfile?->student_number,
-            'firstname' => $user->firstname,
-            'lastname' => $user->lastname,
-            'email' => $user->email,
-            'contactnumber' => $user->contactnumber,
-            'street_address' => $user->street_address,
-            'barangay' => $user->barangay,
-            'city' => $user->city,
-            'province' => $user->province,
-            'postal_code' => $user->postal_code,
-            'birthday' => $user->birthday,
-            'sex' => $user->sex,
-            'created_at' => $user->created_at,
-            'files' => $user->files,
-            'grades' => $user->grades,
-            // Map currentApplication to application for frontend compatibility
-            'application' => $user->currentApplication ? [
-                'id' => $user->currentApplication->id,
-                'status' => $user->currentApplication->status,
-                'created_at' => $user->currentApplication->created_at,
-                'program' => $user->currentApplication->program,
-                'processes' => $user->currentApplication->processes,
-            ] : null,
-        ];
+            $user = User::with('grades')->select('id')->findOrFail($id);
 
-        $graduateType = $user->applicantProfile?->graduateTypes->first()?->label ?? null;
+            return response()->json([
+                'grades' => $user->grades,
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('User not found in getUserGrades', [
+                'userId' => $id,
+                'error' => $e->getMessage(),
+            ]);
 
-        return response()->json([
-            'user' => $userData,
-            'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false),
-        ]);
+            return response()->json([
+                'message' => 'Applicant not found',
+                'grades' => null,
+            ], 404);
+        } catch (\Exception $e) {
+            \Log::error('Failed to load user grades', [
+                'userId' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to load grades. Please try again.',
+                'grades' => null,
+            ], 500);
+        }
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Models\UserFile;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class FileService
 {
@@ -14,6 +15,95 @@ class FileService
         protected ImageCompressionService $compressionService,
         protected FileMapper $fileMapper,
     ) {}
+
+    /**
+    * Store the uploaded file without any image processing.
+    * Used for non-image documents (PDFs) and cases where client-side compression
+    * already applied. Returns the same shape as the `store` method.
+    */
+    public function storeRaw(UploadedFile $file, string $directory): array
+    {
+        $disk = $this->activeDisk();
+
+        $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $path     = $this->sanitizePath($directory . '/' . $filename);
+
+        try {
+            // Use putFileAs for streaming upload (avoids loading entire file into memory)
+            // This also enables automatic multipart upload for large files on S3
+            $stored = Storage::disk($disk)->putFileAs(
+                dirname($path),
+                $file,
+                basename($path)
+            );
+        } catch (\Throwable $e) {
+            throw new \RuntimeException(
+                'Storage put() failed for path "' . $path . '": ' . $e->getMessage(),
+                0,
+                $e
+            );
+        }
+
+        if ($stored === false) {
+            throw new \RuntimeException(
+                'Storage put() returned false for path "' . $path . '" on disk "' . $disk . '".'
+            );
+        }
+
+        return [
+            'path'          => $path,
+            'original_name' => $file->getClientOriginalName(),
+        ];
+    }
+
+    /**
+     * Confirm a direct-to-S3 upload by recording the file path in the database.
+     * Used with presigned URL uploads where the file is already on S3.
+     */
+    public function confirmDirectUpload(string $path, string $originalName): array
+    {
+        return [
+            'path'          => $this->sanitizePath($path),
+            'original_name' => $originalName,
+        ];
+    }
+
+    /**
+     * Generate a presigned upload URL for direct-to-S3 uploads.
+     * Returns the URL, headers, and the storage path.
+     */
+    public function generateUploadUrl(string $directory, string $extension): array
+    {
+        $disk = $this->activeDisk();
+        $filename = Str::uuid() . '.' . $extension;
+        $path = $this->sanitizePath($directory . '/' . $filename);
+
+        // For S3-compatible disks, generate a presigned PUT URL
+        if (in_array($disk, ['s3', 'sar_tmp'])) {
+            $client = Storage::disk($disk)->getClient();
+            $bucket = config("filesystems.disks.{$disk}.bucket");
+
+            $command = $client->getCommand('PutObject', [
+                'Bucket' => $bucket,
+                'Key'    => $path,
+            ]);
+
+            $presignedUrl = (string) $client->createPresignedRequest($command, '+30 minutes')->getUri();
+
+            return [
+                'url'  => $presignedUrl,
+                'path' => $path,
+                'disk' => $disk,
+            ];
+        }
+
+        // Fallback: for local disks, return null URL (frontend will use traditional upload)
+        return [
+            'url'  => null,
+            'path' => $path,
+            'disk' => $disk,
+        ];
+    }
 
     /**
      * Compress and store an uploaded file on the active disk.

@@ -33,7 +33,25 @@ class SarFormService
     
     public function __construct()
     {
-        $this->templatePath = storage_path('app/templates/SAR-FORM_TEMPLATE-2.pdf');
+        $filename = env('SAR_TEMPLATE_FILENAME', 'SAR-FORM_TEMPLATE-2.pdf');
+        
+        // Resolve the best available path for the template, prioritizing the docs/ folder which is immune to storage volume mounts.
+        $paths = [
+            base_path('docs/' . $filename),
+            storage_path('app/templates/' . $filename),
+            base_path('docs/SAR-FORM_TEMPLATE-2.pdf'),
+            storage_path('app/templates/SAR-FORM_TEMPLATE-2.pdf'),
+        ];
+
+        $resolvedPath = null;
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                $resolvedPath = $path;
+                break;
+            }
+        }
+
+        $this->templatePath = $resolvedPath ?? storage_path('app/templates/SAR-FORM_TEMPLATE-2.pdf');
         $this->fieldPositions = config('sar_fields', []);
     }
     
@@ -158,7 +176,10 @@ class SarFormService
             
             // Add page with template dimensions
             $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
-            $pdf->useTemplate($tplId, 0, 0, $size['width'], $size['height'], true);
+            $pdf->useTemplate($tplId, 0, 0, $size['width'], $size['height'], false);
+            
+            // Draw white blanking rectangles FIRST (covers template placeholder lines)
+            $this->applyBlankingRects($pdf, $pageNo);
             
             // Overlay data for this page
             $this->overlayPageData($pdf, $pageNo, $data);
@@ -196,6 +217,37 @@ class SarFormService
             // Skip photo fields (handled separately)
             if ($fieldName === 'photo') {
                 $this->insertPhoto($pdf, $fieldConfig, $data);
+                continue;
+            }
+
+            // Transparent clickable area for static PDF text/link targets
+            if (!empty($fieldConfig['link_url'])) {
+                // White out the existing static text, then redraw as a real clickable hyperlink
+                $url = $fieldConfig['link_url'];
+                $x   = $fieldConfig['x'];
+                $y   = $fieldConfig['y'];
+                $w   = $fieldConfig['w'];
+                $h   = $fieldConfig['h'];
+                $label = $fieldConfig['label'] ?? '';
+
+                if ($label !== '') {
+                    // Cover the old static text with white
+                    $pdf->SetFillColor(255, 255, 255);
+                    $pdf->Rect($x, $y, $w, $h, 'F');
+
+                    // Draw clickable blue underlined hyperlink text
+                    $pdf->SetFont('helvetica', 'BU', $fieldConfig['font_size'] ?? 10);
+                    $pdf->SetTextColor(0, 0, 255);
+                    $pdf->SetXY($x, $y);
+                    $pdf->Cell($w, $h, $label, 0, 0, 'C', false, $url);
+
+                    // Reset colors
+                    $pdf->SetTextColor(0, 0, 0);
+                    $pdf->SetFillColor(0, 0, 0);
+                } else {
+                    // No label — just place an invisible clickable zone over existing text
+                    $pdf->Link($x, $y, $w, $h, $url);
+                }
                 continue;
             }
             
@@ -242,18 +294,68 @@ class SarFormService
             'date' => 'enrollment_date',
             'date_of_enrollment' => 'enrollment_date',
             'time' => 'enrollment_time',
+            'full_name_natural' => 'full_name_natural',
+            'affiant_name' => 'full_name_natural',
+            'printed_name' => 'full_name',
+            'printed_name_enrollee' => 'full_name',
+            // Page 1: Confirmation Slip signature lines
+            'printed_name_signature' => 'full_name',
+            'printed_name_signature_duplicate' => 'full_name',
+            // Page 9: Consent Form
+            'full_name_consent' => 'full_name_natural',
+            'printed_name_consent' => 'full_name_natural',
+            'reference_number_consent' => 'reference_number',
+            // Page 10: Medical Declaration
+            'printed_name_medical' => 'full_name_natural',
         ];
         
         return $mappings[$fieldName] ?? $fieldName;
     }
     
     /**
+     * Apply white blanking rectangles to cover unwanted template lines/labels.
+     * Called immediately after useTemplate so blanks render on top of the template.
+     */
+    protected function applyBlankingRects(Fpdi $pdf, int $pageNo): void
+    {
+        if (!isset($this->fieldPositions[$pageNo])) {
+            return;
+        }
+
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->SetDrawColor(255, 255, 255);
+
+        foreach ($this->fieldPositions[$pageNo] as $fieldName => $config) {
+            if (!empty($config['blank'])) {
+                $b = $config['blank'];
+                $pdf->Rect($b['x'], $b['y'], $b['w'], $b['h'], 'F');
+            }
+            if (!empty($config['blank2'])) {
+                $b = $config['blank2'];
+                $pdf->Rect($b['x'], $b['y'], $b['w'], $b['h'], 'F');
+            }
+        }
+
+        // Reset colors
+        $pdf->SetDrawColor(0, 0, 0);
+        $pdf->SetFillColor(0, 0, 0);
+
+        // Redraw any lines that were erased by blanking
+        $pdf->SetDrawColor(0, 0, 0);
+        $pdf->SetLineWidth(0.3);
+        foreach ($this->fieldPositions[$pageNo] as $fieldName => $config) {
+            if (!empty($config['redraw_line'])) {
+                $l = $config['redraw_line'];
+                $pdf->Line($l['x1'], $l['y1'], $l['x2'], $l['y2']);
+            }
+        }
+    }
+
+    /**
      * Render a field with auto-fitting and proper alignment
-     * NO white background blanking - overlays directly on template
      */
     protected function renderField(Fpdi $pdf, array $config, string $value): void
     {
-        // Determine font size with auto-fitting
         $fontSize = $this->fitTextToWidth(
             $pdf,
             $value,
@@ -470,12 +572,58 @@ class SarFormService
         }
 
         $validated = $validator->validated();
+        $validated['full_name_natural'] = $this->buildNaturalName(
+            $validated['full_name_natural'] ?? null,
+            $validated['full_name']
+        );
+        $validated['campus'] = $validated['campus'] ?? 'Taguig Campus';
         
-        // Format dates and times
-        $validated['enrollment_date'] = $validated['enrollment_date'] ?? date('Y-m-d');
-        $validated['enrollment_time'] = $validated['enrollment_time'] ?? date('H:i');
+        // Format enrollment date as "Month Day, Year" (e.g. May 18, 2026)
+        if (!empty($validated['enrollment_date'])) {
+            try {
+                $validated['enrollment_date'] = \Carbon\Carbon::parse($validated['enrollment_date'])->format('F j, Y');
+            } catch (\Exception $e) {
+                $validated['enrollment_date'] = $validated['enrollment_date']; // keep as-is if already formatted
+            }
+        } else {
+            $validated['enrollment_date'] = \Carbon\Carbon::now()->format('F j, Y');
+        }
+
+        // Format enrollment time with AM/PM (e.g. 08:30 AM)
+        if (!empty($validated['enrollment_time'])) {
+            try {
+                $validated['enrollment_time'] = \Carbon\Carbon::parse($validated['enrollment_time'])->format('h:i A');
+            } catch (\Exception $e) {
+                $validated['enrollment_time'] = $validated['enrollment_time']; // keep as-is if already formatted
+            }
+        } else {
+            $validated['enrollment_time'] = \Carbon\Carbon::now()->format('h:i A');
+        }
         
         return $validated;
+    }
+
+    /**
+     * Build applicant name in natural order: First Middle Surname.
+     */
+    protected function buildNaturalName(?string $fullNameNatural, string $fullName): string
+    {
+        $fullNameNatural = trim((string) $fullNameNatural);
+        if ($fullNameNatural !== '') {
+            return $fullNameNatural;
+        }
+
+        $fullName = trim($fullName);
+        if ($fullName === '') {
+            return '';
+        }
+
+        if (str_contains($fullName, ',')) {
+            [$surname, $givenNames] = array_map('trim', explode(',', $fullName, 2));
+            return trim($givenNames . ' ' . $surname);
+        }
+
+        return $fullName;
     }
 
     /**

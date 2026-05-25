@@ -154,7 +154,7 @@ const getStatusClass = (status) => {
                 <table v-else class="min-w-full text-base">
                     <thead>
                         <tr class="text-left font-semibold text-black dark:text-white border-b dark:border-gray-700">
-                            <th class="pb-2">Student Number</th>
+                            <th class="pb-2">Reference Number</th>
                             <th class="pb-2">Name</th>
                             <th class="pb-2">Course/Program</th>
                             <th class="pb-2">Status</th>
@@ -163,7 +163,7 @@ const getStatusClass = (status) => {
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         <tr v-for="app in applicants" :key="app.id" class="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition">
-                            <td class="py-3 text-gray-900 dark:text-white font-medium">{{ app.student_number }}</td>
+                            <td class="py-3 text-gray-900 dark:text-white font-medium">{{ app.reference_number }}</td>
                             <td class="py-3 text-gray-700 dark:text-gray-300">{{ app.name }}</td>
                             <td class="py-3 text-gray-700 dark:text-gray-300">{{ app.program }}</td>
                             <td class="py-3">

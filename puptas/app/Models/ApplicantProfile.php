@@ -20,23 +20,17 @@ class ApplicantProfile extends Model
         'middlename',
         'extension_name',
         'lastname',
-        'birthday',
         'sex',
         'contactnumber',
-        'street_address',
-        'barangay',
-        'city',
-        'province',
-        'postal_code',
         'privacy_consent',
         'privacy_consent_at',
-        'school',
-        'school_address',
         'date_graduated',
+        'school',
         'strand',
         'track',
         'first_choice_program',
         'second_choice_program',
+        'third_choice_program',
     ];
 
     /**
@@ -46,7 +40,6 @@ class ApplicantProfile extends Model
      * @var array<int, string>
      */
     protected $hidden = [
-        'school_address',
     ];
 
     protected $casts = [
@@ -98,6 +91,11 @@ class ApplicantProfile extends Model
     public function secondChoiceProgram()
     {
         return $this->belongsTo(Program::class, 'second_choice_program');
+    }
+
+    public function thirdChoiceProgram()
+    {
+        return $this->belongsTo(Program::class, 'third_choice_program');
     }
 
     public function documentStatuses()
@@ -158,4 +156,13 @@ class ApplicantProfile extends Model
             $this->documentStatuses()->attach($status->id);
         }
     }
+
+    /**
+     * Get the reference number from the related test passer.
+     */
+    public function getReferenceNumberAttribute(): ?string
+    {
+        return $this->testPasser?->reference_number;
+    }
 }
+

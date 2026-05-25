@@ -159,7 +159,7 @@
             <div class="institution">POLYTECHNIC UNIVERSITY OF THE PHILIPPINES</div>
             <div>Taguig Campus</div>
             <h1>Student Admission Record (SAR) Form</h1>
-            <div style="font-size: 10pt; margin-top: 5px;">Academic Year {{ $academic_year ?? '2025-2026' }}</div>
+            <div style="font-size: 10pt; margin-top: 5px;">Academic Year {{ $academic_year ?? '2026-2027' }}</div>
         </div>
 
         {{-- SECTION 1: SAR FORM 1 – CONFIRMATION SLIP --}}
@@ -199,19 +199,19 @@
         <h3>Declaration</h3>
         <div class="declaration">
             I would like to confirm my interest to be admitted and enrolled this First Semester, 
-            Academic Year {{ $academic_year ?? '2025-2026' }} in a program where I am qualified 
+            Academic Year {{ $academic_year ?? '2026-2027' }} in a program where I am qualified 
             based on the Specific College Criteria.
         </div>
 
         <h3>Enrollment Details</h3>
         <div class="field-group">
             <span class="field-label">Date of Enrollment:</span>
-            <span class="field-value">{{ $enrollment_date }}</span>
+            <span class="field-value">{{ \Carbon\Carbon::parse($enrollment_date)->format('F j, Y') }}</span>
         </div>
         
         <div class="field-group">
             <span class="field-label">Time:</span>
-            <span class="field-value">{{ $enrollment_time }}</span>
+            <span class="field-value">{{ \Carbon\Carbon::parse($enrollment_time)->format('h:i A') }}</span>
         </div>
 
         <div class="signature-section">
@@ -226,7 +226,7 @@
         
         <div class="field-group">
             <span class="field-label">Academic Year:</span>
-            <span class="field-value">{{ $academic_year ?? '2025-2026' }}</span>
+            <span class="field-value">{{ $academic_year ?? '2026-2027' }}</span>
         </div>
 
         <h3>Applicant Details</h3>
@@ -247,12 +247,12 @@
         
         <div class="field-group">
             <span class="field-label">Date of Enrollment:</span>
-            <span class="field-value">{{ $enrollment_date }}</span>
+            <span class="field-value">{{ \Carbon\Carbon::parse($enrollment_date)->format('F j, Y') }}</span>
         </div>
         
         <div class="field-group">
             <span class="field-label">Time:</span>
-            <span class="field-value">{{ $enrollment_time }}</span>
+            <span class="field-value">{{ \Carbon\Carbon::parse($enrollment_time)->format('h:i A') }}</span>
         </div>
 
         {{-- SECTION 3: ADMISSION REQUIREMENTS CHECKLIST --}}

@@ -1,6 +1,8 @@
 <script setup>
 import { defineProps, ref, computed, onMounted } from "vue";
 import { router } from "@inertiajs/vue3";
+import { Head } from "@inertiajs/vue3";
+import Compressor from "compressorjs";
 const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
@@ -8,6 +10,7 @@ import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
 const props = defineProps({ user: Object, gradeUrl: String });
 
 const showModal = ref(false);
+const showSuccessNotification = ref(false);
 const loading = ref(false);
 const error = ref("");
 const fileStatuses = ref({});
@@ -25,8 +28,14 @@ const activeUploadFile = ref(null);
 const activeUploadDropActive = ref(false);
 const activeUploadUploading = ref(false);
 const activeUploadProgress = ref(0);
+const activeUploadLoaded = ref(0);
+const activeUploadTotal = ref(0);
 const activeUploadError = ref("");
 const activeUploadSuccess = ref(false);
+const showQualifiedProgramsModal = ref(false);
+const qualifiedPrograms = ref([]);
+const disqualifiedPrograms = ref([]);
+const loadingPrograms = ref(false);
 
 // Task 4.1: allDocumentsUploaded — true when every fileStatuses slot has a non-null url
 const allDocumentsUploaded = computed(() => {
@@ -58,13 +67,6 @@ const formatKey = (key) => {
     file11: "Grade 11 Report Card (Back)",
     file12Front: "Grade 12 Report Card (Front)",
     file12: "Grade 12 Report Card (Back)",
-    nof137a: "No F137-A Forwarding Certification",
-    schoolId: "School ID",
-    nonEnrollCert: "Certificate of Non-Enrollment",
-    psa: "PSA Birth Certificate",
-    goodMoral: "Good Moral Certificate",
-    underOath: "Under Oath Document",
-    photo2x2: "2x2 Photo",
   };
 
   return labels[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
@@ -184,6 +186,8 @@ const openInlineUpload = (key) => {
   activeUploadFile.value = null;
   activeUploadDropActive.value = false;
   activeUploadProgress.value = 0;
+  activeUploadLoaded.value = 0;
+  activeUploadTotal.value = 0;
   activeUploadError.value = "";
   activeUploadSuccess.value = false;
 };
@@ -194,6 +198,8 @@ const closeInlineUpload = () => {
   activeUploadFile.value = null;
   activeUploadDropActive.value = false;
   activeUploadProgress.value = 0;
+  activeUploadLoaded.value = 0;
+  activeUploadTotal.value = 0;
   activeUploadError.value = "";
   activeUploadSuccess.value = false;
 };
@@ -247,39 +253,117 @@ const clearInlineSelection = () => {
   if (input) input.value = '';
 };
 
+// Upload state persistence helpers (Fix 3: prevent duplicate uploads on reload)
+const UPLOAD_STATE_PREFIX = 'puptas_upload_';
+
+const setUploadState = (key, status) => {
+  try {
+    localStorage.setItem(UPLOAD_STATE_PREFIX + key, JSON.stringify({ status, started: Date.now() }));
+  } catch (e) { /* localStorage unavailable */ }
+};
+
+const getUploadState = (key) => {
+  try {
+    const raw = localStorage.getItem(UPLOAD_STATE_PREFIX + key);
+    if (!raw) return null;
+    const state = JSON.parse(raw);
+    // Expire stale states after 10 minutes
+    if (Date.now() - state.started > 10 * 60 * 1000) {
+      localStorage.removeItem(UPLOAD_STATE_PREFIX + key);
+      return null;
+    }
+    return state;
+  } catch (e) { return null; }
+};
+
+const clearUploadState = (key) => {
+  try { localStorage.removeItem(UPLOAD_STATE_PREFIX + key); } catch (e) { /* */ }
+};
+
+// Active upload state tracking
+let waitingForServer = false;
+
 const uploadInlineFile = async () => {
   const key = activeUploadKey.value;
-  const file = activeUploadFile.value;
-  if (!key || !file) return;
+  const originalFile = activeUploadFile.value;
+  if (!key || !originalFile) return;
+
+  // Fix 3: Check if an upload is already in progress for this key
+  const existingState = getUploadState(key);
+  if (existingState && existingState.status === 'uploading') {
+    activeUploadError.value = 'An upload for this document is already in progress. Please wait.';
+    return;
+  }
 
   activeUploadUploading.value = true;
   activeUploadProgress.value = 0;
+  activeUploadLoaded.value = 0;
+  activeUploadTotal.value = 0;
   activeUploadError.value = '';
   activeUploadSuccess.value = false;
 
-  const form = new FormData();
-  form.append('file', file);
-  form.append('field', key);
+  // Fix 3: Mark upload as in-progress
+  setUploadState(key, 'uploading');
 
-  try {
-    const { data } = await axios.post('/user/application/reupload', form, {
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          activeUploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        }
+  // Track whether client→server transfer is done (waiting for server→S3)
+  let waitingForServer = false;
+
+  new Compressor(originalFile, {
+    quality: 0.6,
+    maxWidth: 1200,
+    convertSize: 500000, // Convert to JPEG if over 500KB
+    mimeType: 'image/webp', // WebP is 30-50% smaller than JPEG
+    success: async (compressedFile) => {
+      const filename = compressedFile.name || originalFile.name;
+
+      try {
+        // Upload through server (streaming with putFileAs on backend)
+        const form = new FormData();
+        form.append('file', compressedFile, filename);
+        form.append('field', key);
+
+        const { data } = await axios.post('/user/application/reupload', form, {
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              activeUploadLoaded.value = progressEvent.loaded;
+              activeUploadTotal.value = progressEvent.total;
+              const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+
+              if (pct >= 100 && !waitingForServer) {
+                // Client finished sending — now waiting for server to store to S3
+                waitingForServer = true;
+                activeUploadProgress.value = 95;
+              } else if (!waitingForServer) {
+                // Still transferring client → server
+                activeUploadProgress.value = Math.min(90, pct);
+              }
+            }
+          }
+        });
+
+        // Update local status and refresh
+        fileStatuses.value[key] = data.file;
+        await fetchData();
+        activeUploadProgress.value = 100;
+        activeUploadSuccess.value = true;
+
+        // Fix 3: Mark upload as complete
+        clearUploadState(key);
+      } catch (err) {
+        clearUploadState(key);
+        activeUploadError.value = err.response?.data?.message || 'Failed to upload file. Please try again.';
+        activeUploadSuccess.value = false;
+      } finally {
+        activeUploadUploading.value = false;
       }
-    });
-
-    // Update local status and refresh
-    fileStatuses.value[key] = data.file;
-    await fetchData();
-    activeUploadSuccess.value = true;
-  } catch (err) {
-    activeUploadError.value = err.response?.data?.message || 'Failed to upload file.';
-    activeUploadSuccess.value = false;
-  } finally {
-    activeUploadUploading.value = false;
-  }
+    },
+    error(err) {
+      clearUploadState(key);
+      activeUploadError.value = err.message || 'Image compression failed.';
+      activeUploadUploading.value = false;
+      activeUploadSuccess.value = false;
+    },
+  });
 };
 
 const openImageModal = (file) => { 
@@ -336,12 +420,46 @@ const triggerExtraction = async () => {
   }
 };
 
+const fetchQualifiedPrograms = async () => {
+  loadingPrograms.value = true;
+  try {
+    const { data } = await axios.get('/applicant-dashboard/qualified-programs');
+    qualifiedPrograms.value = data.qualified || [];
+    disqualifiedPrograms.value = data.disqualified || [];
+    showQualifiedProgramsModal.value = true;
+  } catch (error) {
+    console.error('Failed to fetch qualified programs:', error);
+    alert(error.response?.data?.message || 'Failed to load programs');
+  } finally {
+    loadingPrograms.value = false;
+  }
+};
+
+const closeQualifiedProgramsModal = () => {
+  showQualifiedProgramsModal.value = false;
+};
+
 onMounted(() => { 
-  fetchData(); 
+  fetchData();
+  
+  // Check for success query parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('success') === 'grades_saved') {
+    showSuccessNotification.value = true;
+    
+    // Remove query parameter from URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      showSuccessNotification.value = false;
+    }, 5000);
+  }
 });
 </script>
 
 <template>
+  <Head title="Applicant Dashboard" />
   <ApplicantLayout title="Applicant Dashboard">
     <template #header>
       <h2 class="font-bold text-2xl text-gray-900 dark:text-gray-100">
@@ -351,6 +469,23 @@ onMounted(() => {
 
     <div class="py-8">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        
+        <!-- Success Notification -->
+        <Transition name="slide-down">
+          <div v-if="showSuccessNotification" class="p-4 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 dark:border-green-400 rounded-lg shadow-lg flex items-center gap-3">
+            <div class="flex-shrink-0">
+              <svg class="w-6 h-6 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-semibold text-green-800 dark:text-green-200">Success!</p>
+              <p class="text-sm text-green-700 dark:text-green-300">Grades saved successfully!</p>
+            </div>
+            <button @click="showSuccessNotification = false" class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 text-xl leading-none">&times;</button>
+          </div>
+        </Transition>
+        
         <!-- Welcome Header -->
         <div class="flex justify-between items-center">
           <div>
@@ -362,7 +497,7 @@ onMounted(() => {
           <div class="flex flex-wrap gap-2 items-center">
           <button
             @click="showModal = true"
-            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg dark:text-gray-900 min-h-[44px] w-full sm:w-auto"
+            class="flex items-center gap-2 bg-maroon-700 hover:bg-maroon-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg min-h-[44px] w-full sm:w-auto"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -383,6 +518,23 @@ onMounted(() => {
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             <span class="font-medium">{{ extracting ? 'Extracting...' : 'Review Grades' }}</span>
+          </button>
+
+          <!-- View Qualified Programs Button - Only shown after application is submitted -->
+          <button
+            v-if="applicationStatus && applicationStatus !== 'draft'"
+            @click="fetchQualifiedPrograms"
+            :disabled="loadingPrograms"
+            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg min-h-[44px] w-full sm:w-auto disabled:opacity-70"
+          >
+            <svg v-if="loadingPrograms" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            <span class="font-medium">{{ loadingPrograms ? 'Loading...' : 'View Qualified Programs' }}</span>
           </button>
           </div>
         </div>
@@ -495,6 +647,29 @@ onMounted(() => {
           </div>
         </div>
 
+        <!-- Application Process -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">Application Process</p>
+          <div class="flex flex-wrap items-start gap-x-0 gap-y-2 sm:gap-y-0">
+            <template v-for="(step, i) in [
+              'Upload Grade 10, 11 &amp; 12 documents',
+              'Go to &quot;Review Grades&quot;, enter grades &amp; pick 3 programs',
+              'Review entries, then click &quot;Save Grades&quot;',
+              'Go to &quot;Review Application&quot; &amp; verify info',
+              'Click &quot;Submit Application&quot;'
+            ]" :key="i">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="flex-shrink-0 w-5 h-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold" style="background-color:#9E122C">{{ i + 1 }}</span>
+                <span class="text-xs text-gray-600 dark:text-gray-300 leading-tight" v-html="step"></span>
+              </div>
+              <svg v-if="i < 4" class="hidden sm:block flex-shrink-0 w-4 h-4 text-gray-300 dark:text-gray-600 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </template>
+          </div>
+          <p class="mt-2 text-[11px] text-gray-400 dark:text-gray-500 italic">Note: Your application will only be processed after successful submission.</p>
+        </div>
+
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <!-- Left Column - Timeline -->
@@ -569,14 +744,13 @@ onMounted(() => {
                   <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600 hover:border-maroon-500 transition-all">
                     <!-- Document Icon/Preview -->
                     <div class="relative mb-2">
-                      <div v-if="hasImagePreview(fileStatuses[key])" class="relative">
+                      <div v-if="hasImagePreview(fileStatuses[key])" class="relative cursor-pointer" @click="openImageModal(fileStatuses[key])">
                         <img
                           :src="getFileUrl(fileStatuses[key])"
                           :alt="formatKey(key)"
-                          class="w-full h-20 object-cover rounded-md cursor-pointer"
-                          @click="openImageModal(fileStatuses[key])"
+                          class="w-full h-20 object-cover rounded-md"
                         />
-                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md transition-all dark:bg-white"></div>
+                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md transition-all pointer-events-none"></div>
                       </div>
                       <div v-else class="w-full h-20 bg-gray-200 dark:bg-gray-600 rounded-md flex items-center justify-center">
                         <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -593,7 +767,7 @@ onMounted(() => {
                     </div>
 
                     <!-- Document Name -->
-                    <p class="text-xs text-center text-gray-700 dark:text-gray-300 font-medium mb-2 truncate" :title="formatKey(key)">
+                    <p class="text-xs text-center text-gray-700 dark:text-gray-300 font-medium mb-2 leading-tight break-words" :title="formatKey(key)">
                       {{ formatKey(key) }}
                     </p>
 
@@ -629,7 +803,7 @@ onMounted(() => {
                     <!-- Drag and drop area appears below button when Upload/Replace is clicked -->
                     <div v-else class="mt-3 rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-3 shadow-sm dark:border-gray-700 dark:from-gray-950/70 dark:via-gray-900 dark:to-gray-950/80">
                       <div
-                        class="group rounded-2xl border-2 border-dashed p-4 text-center transition-all duration-200"
+                        class="group rounded-2xl border-2 border-dashed p-2 text-center transition-all duration-200"
                         :class="activeUploadDropActive ? 'border-[#9E122C] bg-[#9E122C]/5 shadow-inner' : 'border-gray-300 bg-white/80 hover:border-[#9E122C]/70 hover:bg-white dark:border-gray-700 dark:bg-gray-900/60 dark:hover:bg-gray-900/80'"
                         @click.stop="document.getElementById('inline-file-input-' + key)?.click()"
                         @dragenter.prevent.stop="onInlineDragEnter"
@@ -637,13 +811,13 @@ onMounted(() => {
                         @dragleave.prevent.stop="onInlineDragLeave"
                         @drop.prevent.stop="onInlineDrop"
                       >
-                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#9E122C]/10 text-[#9E122C] transition-transform group-hover:scale-105 dark:bg-white/10 dark:text-white">
-                          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#9E122C]/10 text-[#9E122C] transition-transform group-hover:scale-105 dark:bg-white/10 dark:text-white">
+                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.902A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                           </svg>
                         </div>
 
-                        <p class="mt-2 text-xs font-medium text-gray-900 dark:text-white">
+                        <p class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
                           Choose a file or drag and drop it here
                         </p>
 
@@ -651,6 +825,32 @@ onMounted(() => {
                       </div>
 
                       <div v-if="activeUploadKey === key" class="mt-3 space-y-3">
+                        <!-- Upload Progress Bar -->
+                        <div v-if="activeUploadUploading" class="space-y-1">
+                          <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                            <span class="font-medium">Uploading...</span>
+                            <span class="font-semibold text-[#9E122C]">{{ activeUploadProgress }}%</span>
+                          </div>
+                          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                            <div
+                              class="h-2 rounded-full transition-all duration-200"
+                              style="background-color: #9E122C;"
+                              :style="{ width: activeUploadProgress + '%' }"
+                            ></div>
+                          </div>
+                          <div v-if="activeUploadTotal > 0" class="text-[10px] text-gray-400 dark:text-gray-500 text-right">
+                            {{ formatFileSize(activeUploadLoaded) }} / {{ formatFileSize(activeUploadTotal) }}
+                          </div>
+                        </div>
+
+                        <!-- Success indicator -->
+                        <div v-if="activeUploadSuccess && !activeUploadUploading" class="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
+                          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                          Upload complete!
+                        </div>
+
                         <p v-if="activeUploadError && activeUploadKey === key" class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
                           {{ activeUploadError }}
                         </p>
@@ -713,6 +913,187 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <!-- Qualified Programs Modal -->
+    <transition name="fade">
+      <div
+        v-if="showQualifiedProgramsModal"
+        class="fixed inset-0 z-50 overflow-y-auto"
+        @click.self="closeQualifiedProgramsModal"
+      >
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+          <!-- Background overlay -->
+          <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75" @click="closeQualifiedProgramsModal"></div>
+
+          <!-- Modal panel -->
+          <div class="inline-block w-full max-w-4xl my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-gray-800 shadow-xl rounded-2xl">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <div class="flex items-center justify-between">
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Program Eligibility</h3>
+                <button
+                  @click="closeQualifiedProgramsModal"
+                  class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition min-h-[44px] min-w-[44px]"
+                >
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Based on your grades, here are the programs you qualify for. Slots are updated in real-time.
+              </p>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-6 max-h-[70vh] overflow-y-auto">
+              <!-- Qualified Programs -->
+              <div v-if="qualifiedPrograms.length > 0" class="mb-8">
+                <h4 class="text-lg font-semibold text-green-700 dark:text-green-300 mb-4 flex items-center">
+                  <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Qualified Programs ({{ qualifiedPrograms.length }})
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div
+                    v-for="program in qualifiedPrograms"
+                    :key="program.id"
+                    class="p-5 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl hover:shadow-lg transition"
+                  >
+                    <div class="flex items-start justify-between mb-3">
+                      <div class="flex-1">
+                        <h5 class="text-lg font-bold text-gray-900 dark:text-white">{{ program.code }}</h5>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">{{ program.name }}</p>
+                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1"><span class="font-semibold">Strands:</span> {{ program.strand_names || 'Open to All' }}</p>
+                      </div>
+                      <svg class="w-8 h-8 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    
+                    <div class="mb-3">
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Slots</span>
+                        <span class="text-lg font-bold text-green-600 dark:text-green-400">{{ program.slots }}</span>
+                      </div>
+                      <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div class="bg-green-600 h-2 rounded-full" :style="{ width: Math.min(program.slots * 2, 100) + '%' }"></div>
+                      </div>
+                    </div>
+
+                    <div class="space-y-2">
+                      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Requirements vs Your Grades:</p>
+                      <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <p class="text-gray-500 dark:text-gray-400">Math</p>
+                          <p class="font-bold text-green-600 dark:text-green-400">{{ program.your_grades.math }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.math }}</p>
+                        </div>
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <p class="text-gray-500 dark:text-gray-400">Science</p>
+                          <p class="font-bold text-green-600 dark:text-green-400">{{ program.your_grades.science }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.science }}</p>
+                        </div>
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <p class="text-gray-500 dark:text-gray-400">English</p>
+                          <p class="font-bold text-green-600 dark:text-green-400">{{ program.your_grades.english }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.english }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Disqualified Programs -->
+              <div v-if="disqualifiedPrograms.length > 0">
+                <h4 class="text-lg font-semibold text-red-700 dark:text-red-300 mb-4 flex items-center">
+                  <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Programs Not Qualified ({{ disqualifiedPrograms.length }})
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div
+                    v-for="program in disqualifiedPrograms"
+                    :key="program.id"
+                    class="p-5 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl opacity-75"
+                  >
+                    <div class="flex items-start justify-between mb-3">
+                      <div class="flex-1">
+                        <h5 class="text-lg font-bold text-gray-900 dark:text-white">{{ program.code }}</h5>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">{{ program.name }}</p>
+                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1"><span class="font-semibold">Strands:</span> {{ program.strand_names || 'Open to All' }}</p>
+                        
+                        <div class="mt-2 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded inline-block">
+                          <span v-if="!program.meets_strand && !program.meets_grades">Reason: Strand mismatch & Grades too low</span>
+                          <span v-else-if="!program.meets_strand">Reason: Strand mismatch</span>
+                          <span v-else-if="!program.meets_grades">Reason: Did not meet grade requirements</span>
+                          <span v-else>Reason: Not qualified</span>
+                        </div>
+                      </div>
+                      <svg class="w-8 h-8 text-red-600 dark:text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                    
+                    <div class="mb-3">
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Slots</span>
+                        <span class="text-lg font-bold text-gray-600 dark:text-gray-400">{{ program.slots }}</span>
+                      </div>
+                    </div>
+
+                    <div class="space-y-2">
+                      <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">Requirements vs Your Grades:</p>
+                      <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded" :class="program.your_grades.math >= program.requirements.math ? 'border border-green-300' : 'border border-red-300'">
+                          <p class="text-gray-500 dark:text-gray-400">Math</p>
+                          <p class="font-bold" :class="program.your_grades.math >= program.requirements.math ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ program.your_grades.math }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.math }}</p>
+                        </div>
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded" :class="program.your_grades.science >= program.requirements.science ? 'border border-green-300' : 'border border-red-300'">
+                          <p class="text-gray-500 dark:text-gray-400">Science</p>
+                          <p class="font-bold" :class="program.your_grades.science >= program.requirements.science ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ program.your_grades.science }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.science }}</p>
+                        </div>
+                        <div class="text-center p-2 bg-white dark:bg-gray-800 rounded" :class="program.your_grades.english >= program.requirements.english ? 'border border-green-300' : 'border border-red-300'">
+                          <p class="text-gray-500 dark:text-gray-400">English</p>
+                          <p class="font-bold" :class="program.your_grades.english >= program.requirements.english ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ program.your_grades.english }}</p>
+                          <p class="text-gray-400 dark:text-gray-500">≥{{ program.requirements.english }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- No Programs Message -->
+              <div v-if="qualifiedPrograms.length === 0 && disqualifiedPrograms.length === 0" class="text-center py-12">
+                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p class="text-gray-500 dark:text-gray-400 text-lg">No program data available</p>
+                <p class="text-gray-400 dark:text-gray-500 text-sm mt-2">Please make sure you have submitted your grades</p>
+              </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+              <div class="flex justify-end">
+                <button
+                  @click="closeQualifiedProgramsModal"
+                  class="px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition font-medium min-h-[44px]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </ApplicantLayout>
 </template>
 
@@ -746,5 +1127,24 @@ onMounted(() => {
 }
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* Slide down animation for notification */
+.slide-down-enter-active {
+  transition: all 0.4s ease-out;
+}
+
+.slide-down-leave-active {
+  transition: all 0.3s ease-in;
+}
+
+.slide-down-enter-from {
+  transform: translateY(-20px);
+  opacity: 0;
+}
+
+.slide-down-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
 }
 </style>

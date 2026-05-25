@@ -282,14 +282,18 @@ class IdpAuthController extends Controller
             // Authenticate the user in the local app securely with the eloquent driver
             \Auth::login($localDbUser);
 
-            // Store IDP tokens in the database rather than cookies/session
-            \App\Models\RefreshToken::updateOrCreate(
-                ['user_id' => $localDbUser->id],
+            // Store IDP tokens in Redis rather than MySQL or cookies
+            $expiresAt = now()->addSeconds($expiresIn - 60);
+            $ttl = 60 * 60 * 24 * 30; // Keep in Redis for 30 days
+
+            \Illuminate\Support\Facades\Cache::store('redis')->put(
+                "idp_tokens:user_{$localDbUser->id}",
                 [
                     'access_token'  => $accessToken,
                     'refresh_token' => $refreshToken,
-                    'expires_at'    => now()->addSeconds($expiresIn - 60),
-                ]
+                    'expires_at'    => $expiresAt->timestamp,
+                ],
+                $ttl
             );
 
             $roleId = (int) $localDbUser->role_id;
@@ -347,11 +351,11 @@ class IdpAuthController extends Controller
         if (Auth::check()) {
             $user = Auth::user();
 
-            // Get IDP access token from DB and remove the record
-            $tokenRecord = \App\Models\RefreshToken::where('user_id', $user->id)->first();
-            if ($tokenRecord) {
-                $accessToken = $tokenRecord->access_token;
-                $tokenRecord->delete();
+            // Get IDP access token from Redis and remove the record
+            $tokenData = \Illuminate\Support\Facades\Cache::store('redis')->get("idp_tokens:user_{$user->id}");
+            if ($tokenData) {
+                $accessToken = $tokenData['access_token'] ?? null;
+                \Illuminate\Support\Facades\Cache::store('redis')->forget("idp_tokens:user_{$user->id}");
             }
 
             if (method_exists($user, 'tokens')) {
@@ -408,5 +412,47 @@ class IdpAuthController extends Controller
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
         
         return \Inertia\Inertia::location($authorizeUrl);
+    }
+
+    public function cancelRegistration(Request $request)
+    {
+        $idpConfig = config('services.idp');
+        $accessToken = null;
+
+        if (session()->has('pending_registration')) {
+            $accessToken = session('pending_registration.access_token');
+            session()->forget('pending_registration');
+        }
+
+        // Send request to IDP logout endpoint
+        if ($accessToken && !empty($idpConfig['base_url'])) {
+            $logoutPath = $idpConfig['logout_path'] ?? '/api/v1/auth/logout';
+            $logoutUrl = rtrim($idpConfig['base_url'], '/') . $logoutPath;
+
+            try {
+                \Log::info('Sending logout request to IDP (Cancel Registration)', ['url' => $logoutUrl]);
+
+                Http::withToken($accessToken)
+                    ->acceptJson()
+                    ->timeout(15)
+                    ->post($logoutUrl, [
+                        'client_id'    => $idpConfig['client_id'],
+                        'base_url'     => config('app.url')
+                    ]);
+            } catch (\Exception $e) {
+                \Log::error('IDP Logout API failed during registration cancel', ['error' => $e->getMessage()]);
+            }
+        }
+
+        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
+        $authorizeQuery = [
+            'client_id'     => $idpConfig['client_id'],
+            'response_type' => 'code',
+            'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
+        ];
+        
+        $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
+        
+        return redirect()->away($authorizeUrl);
     }
 }

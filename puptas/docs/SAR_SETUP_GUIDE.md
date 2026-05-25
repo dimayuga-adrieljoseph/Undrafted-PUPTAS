@@ -20,9 +20,19 @@ composer require setasign/fpdi tecnickcom/tcpdf barryvdh/laravel-dompdf --ignore
 
 ### Step 2: Copy Template File
 
+Copy the **latest** template (AY 2026-2027):
+
 ```bash
-Copy-Item "docs\SAR-FORM_TEMPLATE-2.pdf" "storage\app\templates\SAR-FORM_TEMPLATE-2.pdf" -Force
+Copy-Item "docs\2026-SAR-FORM 1_TEMPLATE(Latest).pdf" "storage\app\templates\2026-SAR-FORM 1_TEMPLATE(Latest).pdf" -Force
 ```
+
+Then set the template filename in your `.env`:
+
+```
+SAR_TEMPLATE_FILENAME=2026-SAR-FORM 1_TEMPLATE(Latest).pdf
+```
+
+> **Note:** If `SAR_TEMPLATE_FILENAME` is not set, the service falls back to `SAR-FORM_TEMPLATE-2.pdf` (old template). Always set this env var on the server when deploying a new template.
 
 ---
 
@@ -57,7 +67,12 @@ The SAR generation feature is now ready. All code is already in place:
 **Problem: "Template not found"**
 
 ```bash
-Copy-Item "docs\SAR-FORM_TEMPLATE-2.pdf" "storage\app\templates\" -Force
+Copy-Item "docs\2026-SAR-FORM 1_TEMPLATE(Latest).pdf" "storage\app\templates\2026-SAR-FORM 1_TEMPLATE(Latest).pdf" -Force
+```
+
+Then confirm your `.env` has:
+```
+SAR_TEMPLATE_FILENAME=2026-SAR-FORM 1_TEMPLATE(Latest).pdf
 ```
 
 **Problem: "Class not found"**

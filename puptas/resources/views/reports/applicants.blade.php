@@ -21,7 +21,7 @@
     <table>
         <thead>
             <tr>
-                <th>Student Number</th>
+                <th>Reference Number</th>
                 <th>Name</th>
                 <th>Program</th>
                 <th>Status</th>
@@ -31,7 +31,7 @@
         <tbody>
             @foreach($applicants as $app)
             <tr>
-                <td>{{ $app['student_number'] }}</td>
+                <td>{{ $app['reference_number'] }}</td>
                 <td>{{ $app['name'] }}</td>
                 <td>{{ $app['program'] }}</td>
                 <td>{{ $app['status'] }}</td>

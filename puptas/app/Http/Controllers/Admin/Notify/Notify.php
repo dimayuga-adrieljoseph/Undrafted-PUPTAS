@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin\Notify;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendCongratulationsEmail;
 use App\Services\AuditLogService;
+use App\Services\EmailTrackingService;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use App\Mail\CongratulationsMail;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
@@ -15,22 +15,16 @@ use Inertia\Inertia;
 
 class Notify extends Controller
 {
-    public function __construct(private AuditLogService $auditLogService) {}
+    public function __construct(
+        private AuditLogService $auditLogService,
+        private EmailTrackingService $emailTrackingService,
+    ) {}
 
     public function showUploadForm()
     {
-        // $admin = Auth::user();
-
-        // if (!$admin) {
-        //     return redirect()->route('login')->with('error', 'Your session has expired. Please log in again.');
-        // }
-
-        // if (is_null($admin->role_id) || $admin->role_id != 2) {
-        //     return redirect()->back()->with('error', 'Unauthorized access.');
-        // }
-
         return Inertia::render('Uploads/Form'); // Vue component name
     }
+
     public function handleUpload(Request $request)
     {
         // Validation for Vue FormData
@@ -63,14 +57,62 @@ class Notify extends Controller
             $emails = $this->findEmailColumn($data);
             Log::info('Extracted Emails: ', $emails);
 
-            foreach ($emails as $email) {
-                Mail::to($email)->send(new CongratulationsMail());
-                Log::info("Email sent to: $email");
+            // Validate: reject if 0 valid emails
+            if (count($emails) === 0) {
+                return response()->json(['error' => 'No valid email addresses found in the uploaded file.'], 422);
             }
 
-            $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file \"{$fileName}\" (batch: {$request->batch_number}, SY: {$request->school_year}) and sent " . count($emails) . " congratulations email(s).", null, 'ADMISSION_DATA');
+            // Validate: reject if more than 2000 valid emails
+            $maxRecipients = config('email-tracking.max_recipients_per_operation', 2000);
+            if (count($emails) > $maxRecipients) {
+                return response()->json(['error' => "The uploaded file contains more than {$maxRecipients} valid email addresses. Please reduce the number of recipients."], 422);
+            }
 
-            return response()->json(['message' => 'Emails sent successfully.'], 200);
+            // Create BulkEmailOperation record
+            $operation = $this->emailTrackingService->createBulkOperation(
+                'congratulations',
+                count($emails),
+                $admin->id,
+                [
+                    'batch_number' => $request->batch_number,
+                    'school_year' => $request->school_year,
+                ]
+            );
+
+            // If creation failed, return error without dispatching jobs
+            if (!$operation->exists) {
+                return response()->json(['error' => 'Failed to create bulk email operation. Please try again.'], 500);
+            }
+
+            // Dispatch queued jobs per recipient with staggered delay
+            $delaySeconds = config('email-tracking.delay_between_emails_seconds', 30);
+            $jobIndex = 0;
+
+            foreach ($emails as $email) {
+                // Create EmailLog record for each recipient
+                $emailLog = $this->emailTrackingService->createEmailLog(
+                    $operation->id,
+                    $email,
+                    null, // no recipient name from spreadsheet
+                    null, // no recipient_id from spreadsheet
+                    'congratulations'
+                );
+
+                // Dispatch the queued job with staggered delay
+                if ($emailLog->exists) {
+                    SendCongratulationsEmail::dispatch($email, $emailLog->id, $operation->id)
+                        ->delay(now()->addSeconds($jobIndex * $delaySeconds));
+                }
+
+                $jobIndex++;
+            }
+
+            $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file \"{$fileName}\" (batch: {$request->batch_number}, SY: {$request->school_year}) and queued " . count($emails) . " congratulations email(s).", null, 'ADMISSION_DATA');
+
+            return response()->json([
+                'message' => 'Emails queued successfully.',
+                'bulk_operation_id' => $operation->id,
+            ], 200);
         } catch (\Exception $e) {
             Log::error('Upload or email error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to process file.'], 500);

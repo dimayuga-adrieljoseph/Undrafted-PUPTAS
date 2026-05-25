@@ -2,32 +2,35 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class TestPasser extends Model
 {
+    use HasFactory;
+    
     protected $primaryKey = 'test_passer_id';
 
     protected $fillable = [
         'surname',
         'first_name',
         'middle_name',
-        'date_of_birth',
-        'address',
-        'school_address',
-        'shs_school',
         'strand',
+        'shs_school',
         'year_graduated',
         'email',
         'reference_number',
         'batch_number',
         'school_year',
+        'pupcet_total_score',
         'user_id',
-        'status'
+        'status',
+        'passer_status_id'
     ];
 
     protected $casts = [
-        'status' => 'string',
+        'status'            => 'string',
+        'pupcet_total_score' => 'float',
     ];
 
     public $timestamps = true;
@@ -35,6 +38,11 @@ class TestPasser extends Model
     public function user()
     {
         return $this->belongsTo(ApplicantProfile::class, 'user_id', 'user_id');
+    }
+
+    public function passerStatus()
+    {
+        return $this->belongsTo(PasserStatus::class);
     }
 
     /**

@@ -39,10 +39,10 @@ class ExternalStudentApiController extends Controller
     public function showByStudentNumber(Request $request, string $studentNumber): JsonResponse
     {
         $application = Application::query()
-            ->with(['user.grades', 'program'])
+            ->with(['user.grades', 'program', 'user.testPasser'])
             ->where('enrollment_status', 'officially_enrolled')
-            ->whereHas('user', function ($query) use ($studentNumber) {
-                $query->where('student_number', $studentNumber);
+            ->whereHas('user.testPasser', function ($query) use ($studentNumber) {
+                $query->where('reference_number', $studentNumber);
             })
             ->first();
 
@@ -76,20 +76,14 @@ class ExternalStudentApiController extends Controller
 
         $payload = [
             'id' => $user->id,
-            'student_number' => $user->student_number,
+            'student_number' => $user->reference_number,
             'firstname' => $user->firstname,
             'middlename' => $user->middlename,
             'extension_name' => $user->extension_name,
             'lastname' => $user->lastname,
             'email' => $user->email,
             'contactnumber' => $user->contactnumber,
-            'birthday' => $user->birthday,
             'sex' => $user->sex,
-            'street_address' => $user->street_address,
-            'barangay' => $user->barangay,
-            'city' => $user->city,
-            'province' => $user->province,
-            'postal_code' => $user->postal_code,
             'g12_gwa' => $g12_gwa,
             'application' => [
                 'application_id' => $application->id,
@@ -127,7 +121,7 @@ class ExternalStudentApiController extends Controller
     public function showByIdpUserId(Request $request, string $idpUserId): JsonResponse
     {
         $application = Application::query()
-            ->with(['user.user', 'user.grades', 'program'])
+            ->with(['user.user', 'user.grades', 'program', 'user.testPasser'])
             ->where('enrollment_status', 'officially_enrolled')
             ->whereHas('user.user', function ($query) use ($idpUserId) {
                 $query->where('idp_user_id', $idpUserId);
@@ -168,20 +162,14 @@ class ExternalStudentApiController extends Controller
         $payload = [
             'id' => $account->id,
             'idp_user_id' => $account->idp_user_id,
-            'student_number' => $user->student_number ?? $account->student_number,
+            'student_number' => $user->reference_number,
             'firstname' => $user->firstname,
             'middlename' => $user->middlename,
             'extension_name' => $user->extension_name,
             'lastname' => $user->lastname,
             'email' => $user->email,
             'contactnumber' => $user->contactnumber,
-            'birthday' => $user->birthday,
             'sex' => $user->sex,
-            'street_address' => $user->street_address,
-            'barangay' => $user->barangay,
-            'city' => $user->city,
-            'province' => $user->province,
-            'postal_code' => $user->postal_code,
             'g12_gwa' => $g12_gwa,
             'application' => [
                 'application_id' => $application->id,

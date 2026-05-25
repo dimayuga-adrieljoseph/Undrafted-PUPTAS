@@ -15,26 +15,30 @@ const idpEmail = computed(() => pendingReg.value?.email ?? null);
 onMounted(() => {
     if (!pendingReg.value) {
         router.visit('/auth/idp/redirect');
+        return;
+    }
+
+    const testPasser = page.props.test_passer_data;
+    if (testPasser) {
+        form.reference_number = testPasser.reference_number || '';
+        form.firstname = testPasser.first_name || '';
+        form.lastname = testPasser.surname || '';
+        form.middlename = testPasser.middle_name || '';
+        form.school = testPasser.shs_school || '';
     }
 });
 
 // Modal control variables
-const showTermsModal = ref(false);
+const showTermsModal = ref(true);
 
 const form = useForm({
     lastname: "",
     firstname: "",
     middlename: "",
-    birthday: "",
     sex: "",
     contactnumber: "",
-    street_address: "",
-    barangay: "",
-    city: "",
-    province: "",
-    postal_code: "",
+    reference_number: "",
     school: "",
-    schoolAdd: "",
     schoolyear: "",
     dateGrad: "",
     strand: "",
@@ -55,22 +59,50 @@ const onlyDigits = (e) => {
     }
 };
 
-// Handle form submission - show modal first
-const handleSubmit = () => {
-    showTermsModal.value = true;
+// Handle form submission - validate reference number first, then show modal
+const handleSubmit = async () => {
+    // Clear any previous reference number error
+    form.clearErrors('reference_number');
+
+    // Pre-validate the reference number before opening the modal
+    try {
+        const response = await fetch('/check-reference-number', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ reference_number: form.reference_number }),
+        });
+
+        const data = await response.json();
+
+        if (!data.valid) {
+            form.setError('reference_number', 'The reference number you entered is not recognized. Only admitted test passers are allowed to create an account. Please verify your reference number and try again.');
+            return;
+        }
+    } catch {
+        form.setError('reference_number', 'Unable to verify your reference number. Please check your connection and try again.');
+        return;
+    }
+
+    // Reference number is valid — submit form directly since they already agreed
+    form.post(route("register"), {
+        onError: () => {
+            // Errors display inline on the form
+        },
+    });
 };
 
 // Handle modal acceptance
 const handleTermsAccept = () => {
     showTermsModal.value = false;
-    form.post(route("register"), {
-        onFinish: () => form.reset(),
-    });
 };
 
 // Handle modal cancellation
 const handleTermsCancel = () => {
-    showTermsModal.value = false;
+    window.location.href = '/auth/idp/cancel-registration';
 };
 </script>
 
@@ -206,6 +238,35 @@ const handleTermsCancel = () => {
                                         </p>
                                     </div>
 
+                                    <!-- Reference Number - required, only test passers may register -->
+                                    <div class="md:col-span-2 space-y-2">
+                                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                            Reference Number
+                                            <span class="text-red-500 dark:text-red-300">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.reference_number"
+                                            type="text"
+                                            required
+                                            readonly
+                                            autocomplete="off"
+                                            class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 cursor-not-allowed focus:outline-none transition-all duration-200"
+                                            placeholder="e.g., 2026-XXXX-001"
+                                        />
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                                            Enter the reference number from your admission test result. Only test passers are allowed to create an account.
+                                        </p>
+                                        <div
+                                            v-if="form.errors.reference_number"
+                                            class="text-red-500 text-sm mt-1 flex items-center dark:text-red-300"
+                                        >
+                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                            </svg>
+                                            {{ form.errors.reference_number }}
+                                        </div>
+                                    </div>
+
                                     <div class="space-y-2">
                                         <label
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
@@ -217,9 +278,9 @@ const handleTermsCancel = () => {
                                             v-model="form.lastname"
                                             type="text"
                                             required
+                                            readonly
                                             autocomplete="family-name"
-                                            @keydown="onlyLetters"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 cursor-not-allowed focus:outline-none transition-all duration-200"
                                             placeholder="Enter your last name"
                                         />
                                         <div
@@ -252,9 +313,9 @@ const handleTermsCancel = () => {
                                             v-model="form.firstname"
                                             type="text"
                                             required
+                                            readonly
                                             autocomplete="given-name"
-                                            @keydown="onlyLetters"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 cursor-not-allowed focus:outline-none transition-all duration-200"
                                             placeholder="Enter your first name"
                                         />
                                         <div
@@ -284,170 +345,18 @@ const handleTermsCancel = () => {
                                         <input
                                             v-model="form.middlename"
                                             type="text"
+                                            readonly
                                             autocomplete="additional-name"
-                                            @keydown="onlyLetters"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 cursor-not-allowed focus:outline-none transition-all duration-200"
                                             placeholder="Enter your middle name"
                                         />
                                     </div>
 
                                     <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Birthday
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.birthday"
-                                            type="date"
-                                            required
-                                            autocomplete="bday"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                        />
+
                                     </div>
 
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Gender
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <select
-                                            v-model="form.sex"
-                                            required
-                                            autocomplete="sex"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                        >
-                                            <option value="" disabled>
-                                                Select Gender
-                                            </option>
-                                            <option value="male">Male</option>
-                                            <option value="female">
-                                                Female
-                                            </option>
-                                            <option value="other">Other</option>
-                                            <option value="prefer-not-to-say">
-                                                Prefer not to say
-                                            </option>
-                                        </select>
-                                    </div>
 
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Contact Number
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <div class="flex">
-                                            <span
-                                                class="inline-flex items-center px-4 bg-gray-100 dark:bg-gray-700 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg text-gray-700 dark:text-gray-300"
-                                            >
-                                                +63
-                                            </span>
-                                            <input
-                                                v-model="form.contactnumber"
-                                                type="tel"
-                                                required
-                                                autocomplete="tel"
-                                                inputmode="numeric"
-                                                maxlength="10"
-                                                @keydown="onlyDigits"
-                                                placeholder="912 345 6789"
-                                                class="flex-1 rounded-r-lg border border-gray-300 dark:border-gray-600 px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div class="md:col-span-2 space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Street Address
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.street_address"
-                                            type="text"
-                                            required
-                                            autocomplete="address-line1"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="House/Unit No., Building, Street"
-                                        />
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Barangay
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.barangay"
-                                            type="text"
-                                            required
-                                            autocomplete="address-level3"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="Barangay"
-                                        />
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            City / Municipality
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.city"
-                                            type="text"
-                                            required
-                                            autocomplete="address-level2"
-                                            @keydown="onlyLetters"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="e.g., Taguig City"
-                                        />
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Province
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.province"
-                                            type="text"
-                                            required
-                                            autocomplete="address-level1"
-                                            @keydown="onlyLetters"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="e.g., Metro Manila"
-                                        />
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            Postal Code
-                                        </label>
-                                        <input
-                                            v-model="form.postal_code"
-                                            type="text"
-                                            inputmode="numeric"
-                                            maxlength="4"
-                                            @keydown="onlyDigits"
-                                            autocomplete="postal-code"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="e.g., 1630"
-                                        />
-                                    </div>
                                 </div>
                             </div>
 
@@ -503,37 +412,20 @@ const handleTermsCancel = () => {
                                 <div
                                     class="grid grid-cols-1 md:grid-cols-2 gap-6"
                                 >
-                                    <div class="space-y-2">
+                                    <div class="md:col-span-2 space-y-2">
                                         <label
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
                                         >
-                                            School Name
+                                            School
                                             <span class="text-red-500 dark:text-red-300">*</span>
                                         </label>
                                         <input
                                             v-model="form.school"
                                             type="text"
                                             required
-                                            autocomplete="organization-title"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="Name of your senior high school"
-                                        />
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
-                                        >
-                                            School Address
-                                            <span class="text-red-500 dark:text-red-300">*</span>
-                                        </label>
-                                        <input
-                                            v-model="form.schoolAdd"
-                                            type="text"
-                                            required
-                                            autocomplete="organization"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
-                                            placeholder="Complete school address"
+                                            readonly
+                                            class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 cursor-not-allowed focus:outline-none transition-all duration-200"
+                                            placeholder="High School Name"
                                         />
                                     </div>
 
@@ -552,7 +444,6 @@ const handleTermsCancel = () => {
                                             <option value="" disabled>Select an option</option>
                                             <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
                                             <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
-                                            <option value="Alternative Learning System">Alternative Learning System</option>
                                         </select>
                                     </div>
 
@@ -611,12 +502,6 @@ const handleTermsCancel = () => {
                                             <option value="GAS">
                                                 GAS (General Academic Strand)
                                             </option>
-                                            <option value="SPORTS">
-                                                Sports Track
-                                            </option>
-                                            <option value="ARTS">
-                                                Arts & Design Track
-                                            </option>
                                         </select>
                                     </div>
 
@@ -643,8 +528,8 @@ const handleTermsCancel = () => {
                             <div
                                 class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4"
                             >
-                                <Link
-                                    :href="route('login')"
+                                <a
+                                    href="/auth/idp/cancel-registration"
                                     class="flex items-center text-gray-600 dark:text-gray-400 hover:text-red-700 dark:hover:text-red-400 font-medium transition-colors duration-200"
                                 >
                                     <svg
@@ -661,7 +546,7 @@ const handleTermsCancel = () => {
                                         ></path>
                                     </svg>
                                     Back to Login
-                                </Link>
+                                </a>
 
                                 <button
                                     type="submit"
@@ -913,18 +798,7 @@ const handleTermsCancel = () => {
             @cancel="handleTermsCancel"
         />
 
-        <!-- Login Link at Bottom -->
-        <div class="mt-8 text-center">
-            <p class="text-gray-600 dark:text-gray-400">
-                Already have an account?
-                <Link
-                    :href="route('login')"
-                    class="font-semibold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 ml-1 underline"
-                >
-                    Sign in here
-                </Link>
-            </p>
-        </div>
+
     </div>
 </template>
 

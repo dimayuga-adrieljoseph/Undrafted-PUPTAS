@@ -65,23 +65,34 @@ class UserFileController extends Controller
                 try {
                     $uploadedFile = $request->file($inputName);
 
-                    $stored = $this->fileService->store($uploadedFile, 'uploads/files');
+                    $stored = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
 
-                    $userFile = UserFile::updateOrCreate(
-                        [
-                            'user_id' => $user->id,
-                            'type' => $type,
-                        ],
-                        [
-                            'file_path' => $stored['path'],
-                            'original_name' => $stored['original_name'],
-                            'application_id' => $request->application_id ?? null,
-                            'status' => 'pending',
-                            'docling_json' => null,
-                        ]
-                    );
+                    try {
+                        $userFile = UserFile::updateOrCreate(
+                            [
+                                'user_id' => $user->id,
+                                'type' => $type,
+                            ],
+                            [
+                                'file_path' => $stored['path'],
+                                'original_name' => $stored['original_name'],
+                                'application_id' => $request->application_id ?: null,
+                                'status' => 'pending',
+                                'docling_json' => null,
+                            ]
+                        );
+                    } catch (\Throwable $e) {
+                        // The Cleanup Safety Net:
+                        // If DB fails (e.g. out of space due to token bloat), delete the orphaned file from bucket
+                        try {
+                            $this->fileService->delete($stored['path']);
+                        } catch (\Throwable $deleteError) {
+                            // Suppress cleanup error to prioritize reporting the actual DB crash
+                        }
+                        throw $e;
+                    }
 
-                    \App\Jobs\ProcessGradeOcr::dispatch($userFile->id);
+                    // OCR processing removed – no background job dispatched
                 } catch (\InvalidArgumentException $e) {
                     return response()->json([
                         'message' => 'Image processing failed: ' . $e->getMessage(),
@@ -112,18 +123,22 @@ class UserFileController extends Controller
                     return response()->json([
                         'message' => 'File operation failed. Please try again.',
                     ], Response::HTTP_INTERNAL_SERVER_ERROR);
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     $disk = config('filesystems.default', 'public');
 
                     Log::error('FileService store() failed', [
                         'user_id'           => $user->id,
                         'file_type'         => $type,
                         'disk'              => $disk,
+                        'exception_class'   => get_class($e),
                         'exception_message' => $e->getMessage(),
+                        'file'              => $e->getFile(),
+                        'line'              => $e->getLine(),
                     ]);
 
                     return response()->json([
                         'message' => 'File operation failed. Please try again.',
+                        'debug'   => $e->getMessage(), // TODO: remove after debugging
                     ], Response::HTTP_INTERNAL_SERVER_ERROR);
                 }
             }
@@ -180,17 +195,9 @@ class UserFileController extends Controller
             'firstname' => $user->firstname,
             'middlename' => $user->middlename,
             'lastname' => $user->lastname,
-            'birthday' => $user->birthday,
             'sex' => $user->sex,
             'contactnumber' => $user->contactnumber,
-            'street_address' => $user->street_address,
-            'barangay' => $user->barangay,
-            'city' => $user->city,
-            'province' => $user->province,
-            'postal_code' => $user->postal_code,
             'email' => $user->email,
-            'school' => $applicantProfile?->school,
-            'schoolAdd' => $applicantProfile?->school_address,
             'schoolyear' => $graduateType,
             'dateGrad' => $applicantProfile?->date_graduated?->format('Y-m-d'),
             'strand' => $applicantProfile?->strand,
@@ -213,12 +220,16 @@ class UserFileController extends Controller
             abort(Response::HTTP_FORBIDDEN);
         }
 
-        $diskName = $this->resolveDiskForPath($file->file_path);
-        $disk = Storage::disk($diskName);
-
-        if (!$disk->exists($file->file_path)) {
-            abort(Response::HTTP_NOT_FOUND);
+        // resolveDiskForPath() already calls exists() on each candidate disk to find the
+        // correct one, so we can trust its result — a second exists() call would double the
+        // S3 round-trips and create a second failure point.
+        // If no disk reports the file as present, $found stays false and we 404.
+        $found = false;
+        $diskName = FileMapper::resolveDiskForPath($file->file_path, $found);
+        if (!$found) {
+            return response()->json(['error' => 'File not found'], 404);
         }
+        $disk = Storage::disk($diskName);
 
         $mimeType = FileMapper::detectMimeType($file);
         $filename = FileMapper::sanitizeFilename($file->original_name);
@@ -236,11 +247,19 @@ class UserFileController extends Controller
             return response()->file($disk->path($file->file_path), $headers);
         }
 
-        return response($disk->get($file->file_path), Response::HTTP_OK, $headers);
-    }
+        // Generate a short-lived presigned S3 URL and redirect to it.
+        // S3 serves the file directly to the browser — PHP memory is not involved.
+        // Content-Type and Content-Disposition are forwarded as S3 response-override
+        // parameters so inline preview behaviour is preserved without proxying the body.
+        $temporaryUrl = $disk->temporaryUrl(
+            $file->file_path,
+            now()->addMinutes(5),
+            [
+                'ResponseContentType'        => $mimeType,
+                'ResponseContentDisposition' => $contentDisposition,
+            ]
+        );
 
-    private function resolveDiskForPath(string $path): string
-    {
-        return FileMapper::resolveDiskForPath($path);
+        return redirect($temporaryUrl);
     }
 }

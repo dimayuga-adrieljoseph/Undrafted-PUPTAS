@@ -3,56 +3,90 @@
 /**
  * Unit tests for CheckStatusRequest validation.
  *
- * These tests verify that the POST /api/public/check-status endpoint
- * correctly validates the referenceNumber and email fields and returns
- * 422 Unprocessable Entity with appropriate error messages when validation fails.
- *
- * Validates: Requirements 2.1, 2.2, 2.3, 2.4
+ * These tests verify that the POST /api/public/admission-results endpoint
+ * correctly validates the referenceNumber, firstName, and lastName fields.
  */
 
 test('missing referenceNumber returns 422 with error on referenceNumber', function () {
-    $response = $this->postJson('/api/public/check-status', [
-        'email' => 'applicant@example.com',
+    $response = $this->postJson('/api/public/admission-results', [
+        'firstName' => 'Juan',
+        'lastName'  => 'Dela Cruz',
     ]);
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['referenceNumber'])
-        ->assertJsonMissingValidationErrors(['email']);
+        ->assertJsonMissingValidationErrors(['firstName', 'lastName']);
 });
 
-test('missing email returns 422 with error on email', function () {
-    $response = $this->postJson('/api/public/check-status', [
+test('missing firstName returns 422 with error on firstName', function () {
+    $response = $this->postJson('/api/public/admission-results', [
         'referenceNumber' => '2026-000123',
+        'lastName'        => 'Dela Cruz',
     ]);
 
     $response->assertStatus(422)
-        ->assertJsonValidationErrors(['email'])
-        ->assertJsonMissingValidationErrors(['referenceNumber']);
+        ->assertJsonValidationErrors(['firstName'])
+        ->assertJsonMissingValidationErrors(['referenceNumber', 'lastName']);
 });
 
-test('invalid email format returns 422 with error on email', function () {
-    $response = $this->postJson('/api/public/check-status', [
+test('missing lastName returns 422 with error on lastName', function () {
+    $response = $this->postJson('/api/public/admission-results', [
         'referenceNumber' => '2026-000123',
-        'email'           => 'not-a-valid-email',
+        'firstName'       => 'Juan',
     ]);
 
     $response->assertStatus(422)
-        ->assertJsonValidationErrors(['email'])
-        ->assertJsonMissingValidationErrors(['referenceNumber']);
+        ->assertJsonValidationErrors(['lastName'])
+        ->assertJsonMissingValidationErrors(['referenceNumber', 'firstName']);
 });
 
-test('both fields missing returns 422 with errors on both fields', function () {
-    $response = $this->postJson('/api/public/check-status', []);
-
-    $response->assertStatus(422)
-        ->assertJsonValidationErrors(['referenceNumber', 'email']);
-});
-
-test('both fields valid passes validation and does not return 422', function () {
-    $response = $this->postJson('/api/public/check-status', [
-        'referenceNumber' => '2026-000123',
-        'email'           => 'applicant@example.com',
+test('invalid referenceNumber format returns 422', function () {
+    $response = $this->postJson('/api/public/admission-results', [
+        'referenceNumber' => 'invalid#format',
+        'firstName'       => 'Juan',
+        'lastName'        => 'Dela Cruz',
     ]);
 
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['referenceNumber']);
+});
+
+test('invalid firstName format returns 422', function () {
+    $response = $this->postJson('/api/public/admission-results', [
+        'referenceNumber' => '2026-000123',
+        'firstName'       => 'Juan123',
+        'lastName'        => 'Dela Cruz',
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['firstName']);
+});
+
+test('invalid lastName format returns 422', function () {
+    $response = $this->postJson('/api/public/admission-results', [
+        'referenceNumber' => '2026-000123',
+        'firstName'       => 'Juan',
+        'lastName'        => 'Dela Cruz!',
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['lastName']);
+});
+
+test('all fields missing returns 422 with errors on all fields', function () {
+    $response = $this->postJson('/api/public/admission-results', []);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['referenceNumber', 'firstName', 'lastName']);
+});
+
+test('all fields valid passes validation and does not return 422', function () {
+    $response = $this->postJson('/api/public/admission-results', [
+        'referenceNumber' => '2026-000123',
+        'firstName'       => 'Juan',
+        'lastName'        => 'Dela Cruz',
+    ]);
+
+    // May return 200 (since no DB records match)
     $response->assertStatus(200);
 });

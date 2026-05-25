@@ -4,10 +4,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ExternalStudentApiController;
-use App\Http\Controllers\GradesController;
-
-
-
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
@@ -15,7 +11,6 @@ Route::get('/user', function (Request $request) {
 Route::middleware('auth:sanctum')->group(function () {
     Route::put('/programs/update/{id}', [ProgramController::class, 'update'])->name('programs.update');
     Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->name('programs.delete');
-    Route::post('/store-grades', [GradesController::class, 'store']);
 });
 
 use App\Http\Controllers\ExternalProgramApiController;
@@ -52,13 +47,16 @@ Route::prefix('v1')
 
 use App\Http\Controllers\ChatwootWebhookController;
 use App\Http\Controllers\PublicStatusCheckerController;
+use App\Http\Controllers\ResendWebhookController;
 
-Route::post('/public/check-status', [PublicStatusCheckerController::class, 'check'])
+Route::post('/public/admission-results', [PublicStatusCheckerController::class, 'check'])
     ->middleware('throttle:status-checker')
     ->name('public.check-status.api');
 
 Route::post('/webhooks/chatwoot', [ChatwootWebhookController::class, 'handleMessage']);
 Route::get('/chatwoot/widget-config', [ChatwootWebhookController::class, 'getWidgetConfig'])->middleware('auth:sanctum');
+
+Route::post('/webhooks/resend', [ResendWebhookController::class, 'handle']);
 
 // Route::get('/user-stats', [UserController::class, 'getUserStats']);
 // Route::get('/programs', [ProgramController::class, 'index']);

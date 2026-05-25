@@ -48,46 +48,30 @@
                                 d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
                             />
                         </svg>
-                        <span>{{ statusFilter ? statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) : 'All Status' }}</span>
+                        <span>{{ statusFilter ? getStatusText({ pipeline_status: statusFilter }) : 'All Status' }}</span>
                     </button>
                     <div
                         v-if="showStatusDropdown"
-                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[150px] dark:border-gray-700"
+                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[200px] dark:border-gray-700"
                     >
-                        <button
-                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                statusFilter = '';
-                                showStatusDropdown = false;
-                            "
-                        >
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = ''; showStatusDropdown = false;">
                             All
                         </button>
-                        <button
-                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                statusFilter = 'accepted';
-                                showStatusDropdown = false;
-                            "
-                        >
-                            Accepted
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'medical_cleared'; showStatusDropdown = false;">
+                            Medical Cleared
                         </button>
-                        <button
-                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                statusFilter = 'submitted';
-                                showStatusDropdown = false;
-                            "
-                        >
-                            Pending
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'for_records'; showStatusDropdown = false;">
+                            For Records
                         </button>
-                        <button
-                            class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="
-                                statusFilter = 'rejected';
-                                showStatusDropdown = false;
-                            "
-                        >
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'officially_enrolled'; showStatusDropdown = false;">
+                            Officially Enrolled
+                        </button>
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'rejected'; showStatusDropdown = false;">
                             Rejected
                         </button>
                     </div>
@@ -170,10 +154,10 @@
                             </td>
                             <td class="py-3">
                                 <span
-                                    :class="getStatusClass(user.enrollment_status === 'officially_enrolled' ? 'officially_enrolled' : user.status)"
+                                    :class="getStatusClass(user)"
                                     class="px-2.5 py-1 rounded-full text-xs font-medium"
                                 >
-                                    {{ user.enrollment_status === 'officially_enrolled' ? 'Officially Enrolled' : (user.status || 'Unknown') }}
+                                    {{ getStatusText(user) }}
                                 </span>
                             </td>
                         </tr>
@@ -219,169 +203,122 @@
             </div>
         </div>
 
-        <!-- User Info Modal -->
+        <!-- Applicant Details Panel -->
         <transition name="slide-fade">
             <div
                 v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-1/3 h-full bg-white dark:bg-gray-800 dark:bg-gray-900 p-6 z-50 shadow-xl shadow-red-200 transition duration-300 ease-in-out overflow-y-auto"
+                class="fixed top-0 right-0 w-full md:w-[400px] h-full bg-white dark:bg-gray-900 z-50 shadow-2xl flex flex-col overflow-hidden"
             >
-                <button
-                    class="mt-6 px-4 py-2 rounded bg-[#9E122C] text-white hover:bg-[#EE6A43] transition dark:bg-gray-900 dark:text-gray-900"
-                    @click="closeUserCard"
-                >
-                    Close
-                </button>
-                <h3
-                    class="text-xl font-semibold text-gray-900 dark:text-white mb-2"
-                >
-                    User Information
-                </h3>
-                <p class="text-gray-800 dark:text-gray-200 font-medium">
-                    Name: {{ selectedUser.lastname }},
-                    {{ selectedUser.firstname }}
-                </p>
-                <p class="text-gray-700 dark:text-gray-400">
-                    Student No: {{ selectedUser.student_number || 'N/A' }}
-                </p>
-                <p class="text-gray-700 dark:text-gray-400">
-                    Email: {{ selectedUser.email }}
-                </p>
-
-                <div
-                    class="mt-3 p-2 border rounded bg-gray-100 dark:bg-gray-800"
-                >
-                    <h4
-                        class="text-sm font-bold text-gray-700 dark:text-white mb-1"
+                <!-- Panel Header -->
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Applicant Details</h3>
+                    <button
+                        @click="closeUserCard"
+                        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                        aria-label="Close panel"
                     >
-                        {{
-                            selectedUser?.application?.enrollment_status ===
-                            "officially_enrolled"
-                                ? "Officially enrolled in:"
-                                : "Temporary enrolled in:"
-                        }}
-                    </h4>
-                    <p class="text-sm text-gray-800 dark:text-gray-300">
-                        {{ selectedUser?.application?.program?.code }} -
-                        {{ selectedUser?.application?.program?.name }}
-                    </p>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
 
-                <div class="mt-4">
-                    <!-- Accept and Transfer buttons -->
-                    <div class="mt-4 flex justify-end space-x-2">
+                <!-- Scrollable Body -->
+                <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+                    <!-- Profile Card -->
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                        <div class="w-14 h-14 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-xl font-bold shrink-0">
+                            {{ (selectedUser.firstname || selectedUser.email || '?').charAt(0).toUpperCase() }}{{ (selectedUser.lastname || '').charAt(0).toUpperCase() }}
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="text-base font-semibold text-gray-900 dark:text-white truncate">
+                                {{ selectedUser.lastname ? `${selectedUser.lastname}, ${selectedUser.firstname}` : (selectedUser.email || '—') }}
+                            </h4>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedUser.reference_number || 'No reference number' }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ selectedUser.email }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Enrollment Status + Program -->
+                    <div class="p-4 bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-xl border border-[#9E122C]/20">
+                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                            {{ selectedUser?.application?.enrollment_status === 'officially_enrolled' ? 'Officially Enrolled In' : 'Temporarily Enrolled In' }}
+                        </h4>
+                        <p class="text-base font-semibold text-gray-900 dark:text-white">
+                            {{ selectedUser?.application?.program?.code }} – {{ selectedUser?.application?.program?.name }}
+                        </p>
+                    </div>
+
+                    <!-- Enrollment Actions -->
+                    <div class="flex gap-2">
                         <button
-                            v-if="
-                                selectedUser?.application?.enrollment_status !==
-                                'officially_enrolled'
-                            "
+                            v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
                             @click="acceptApplication"
-                            class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:text-gray-900"
+                            class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition"
                         >
                             Tag: Officially Enrolled
                         </button>
                         <button
                             @click="untagApplication"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:text-gray-900"
+                            class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
                         >
                             Untag
                         </button>
                     </div>
-                </div>
 
-                <section class="mt-3 text-sm">
-                    <h4 class="font-semibold mb-1 text-base">
-                        Uploaded Documents
-                    </h4>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div
-                            v-for="(file, key) in selectedUserFiles"
-                            :key="key"
-                            class="flex flex-col items-start space-y-1"
-                        >
-                            <div class="flex items-center space-x-2 w-full">
-                                <input
-                                    v-if="isEvaluating"
-                                    type="checkbox"
-                                    :id="key"
-                                    v-model="filesToReturn[key]"
-                                    class="h-4 w-4 mt-1"
-                                />
-                                <label
-                                    :for="key"
-                                    class="text-xs font-medium truncate w-full"
-                                >
-                                    {{ formatFileKey(key) }}
-                                </label>
-                            </div>
-                            <div class="w-full">
+                    <!-- Uploaded Documents -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div
+                                v-for="(file, key) in selectedUserFiles"
+                                :key="key"
+                                class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700"
+                            >
+                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate">{{ formatFileKey(key) }}</p>
                                 <img
                                     v-if="hasImagePreview(file)"
                                     :src="getFileUrl(file)"
                                     alt="Uploaded Document"
-                                    class="h-16 w-full object-contain border rounded cursor-pointer"
+                                    class="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
                                     @click="openImageModal(file)"
                                 />
                                 <div
                                     v-else
-                                    class="h-16 flex items-center justify-center text-[10px] italic text-gray-400 border rounded dark:text-gray-200"
+                                    class="w-full h-24 flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg"
                                 >
-                                    No Image
+                                    No file
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Application History -->
-                    <section
-                        v-if="selectedUser?.application?.processes?.length"
-                        class="mt-4"
-                    >
-                        <h4
-                            class="font-semibold mb-2 text-base text-gray-800 dark:text-gray-200"
-                        >
-                            Application History
-                        </h4>
-                        <ul class="border-l-2 border-red-400 pl-3 space-y-2 dark:border-red-500">
-                            <li
-                                v-for="(process, index) in selectedUser
-                                    .application.processes"
+                    <div v-if="selectedUser?.application?.processes?.length">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Application History</h4>
+                        <div class="space-y-3">
+                            <div
+                                v-for="(process, index) in selectedUser.application.processes"
                                 :key="index"
-                                class="relative"
+                                class="relative pl-6 pb-3 border-l-2 border-[#9E122C] last:border-0"
                             >
-                                <div
-                                    class="absolute -left-[10px] top-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"
-                                ></div>
-                                <p
-                                    class="text-sm font-semibold text-gray-900 dark:text-white"
-                                >
-                                    {{ capitalize(process.stage) }} -
-                                    <span
-                                        :class="{
-                                            'text-green-600':
-                                                process.status === 'completed',
-                                            'text-yellow-600':
-                                                process.status ===
-                                                'in_progress',
-                                            'text-red-600':
-                                                process.status === 'returned',
-                                        }"
-                                    >
-                                        {{ capitalize(process.status) }}
-                                    </span>
+                                <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#9E122C] border-2 border-white dark:border-gray-900"></div>
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                                    {{ capitalize(process.stage) }}
+                                    <span :class="{
+                                        'text-green-600 dark:text-green-400': process.status === 'completed',
+                                        'text-yellow-600 dark:text-yellow-400': process.status === 'in_progress',
+                                        'text-red-600 dark:text-red-400': process.status === 'returned',
+                                    }">• {{ capitalize(process.status) }}</span>
                                 </p>
-                                <p
-                                    v-if="process.notes"
-                                    class="text-xs text-gray-500 italic dark:text-gray-300"
-                                >
-                                    Note: {{ process.notes }}
-                                </p>
-                                <p class="text-xs text-gray-400 dark:text-gray-200">
-                                    {{ formatDate(process.created_at) }}
-                                </p>
-                            </li>
-                        </ul>
-                    </section>
-                </section>
+                                <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.notes }}</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(process.created_at) }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </transition>
         <!-- Snackbar -->
@@ -501,14 +438,43 @@ const chartData = {
     ],
 };
 
-const getStatusClass = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "officially_enrolled") return "bg-blue-100 text-blue-700";
-    if (s === "cleared_for_enrollment") return "bg-teal-100 text-teal-700";
-    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700";
-    if (s === "rejected") return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-600";
+const getStatusText = (user) => {
+    switch (user.pipeline_status) {
+        case 'for_evaluation':       return 'For Evaluation';
+        case 'evaluation_returned':  return 'Returned for Revision';
+        case 'evaluation_passed':    return 'Evaluation Passed';
+        case 'for_interview':        return 'For Interview';
+        case 'interview_returned':   return 'Returned for Revision';
+        case 'interview_passed':     return 'Interview Passed';
+        case 'interview_transferred':return 'Course Transferred';
+        case 'for_medical':          return 'For Medical';
+        case 'medical_cleared':      return 'Medical Cleared';
+        case 'medical_rejected':     return 'Medical Rejected';
+        case 'for_records':          return 'For Records';
+        case 'officially_enrolled':  return 'Officially Enrolled';
+        case 'rejected':             return 'Rejected';
+        default:                     return 'Unknown';
+    }
+};
+
+const getStatusClass = (user) => {
+    const ps = typeof user === 'object' && user.pipeline_status ? user.pipeline_status : user;
+    switch (ps) {
+        case 'for_evaluation':        return 'bg-yellow-100 text-yellow-700';
+        case 'evaluation_returned':   return 'bg-red-100 text-red-700';
+        case 'evaluation_passed':     return 'bg-green-100 text-green-700';
+        case 'for_interview':         return 'bg-yellow-100 text-yellow-700';
+        case 'interview_returned':    return 'bg-red-100 text-red-700';
+        case 'interview_passed':      return 'bg-green-100 text-green-700';
+        case 'interview_transferred': return 'bg-purple-100 text-purple-700';
+        case 'for_medical':           return 'bg-blue-100 text-blue-700';
+        case 'medical_cleared':       return 'bg-teal-100 text-teal-700';
+        case 'medical_rejected':      return 'bg-red-100 text-red-700';
+        case 'for_records':           return 'bg-indigo-100 text-indigo-700';
+        case 'officially_enrolled':   return 'bg-green-100 text-green-700 font-semibold';
+        case 'rejected':              return 'bg-red-100 text-red-700';
+        default:                      return 'bg-gray-100 text-gray-600';
+    }
 };
 
 const fetchUsers = async () => {
@@ -569,7 +535,7 @@ const filteredUsers = computed(() => {
             const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
             const matchesSearch = fullName.includes(q);
             const matchesStatus = statusFilter.value
-                ? u.status?.toLowerCase() === statusFilter.value
+                ? u.pipeline_status === statusFilter.value
                 : true;
             return matchesSearch && matchesStatus;
         })

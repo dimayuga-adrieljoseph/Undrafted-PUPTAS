@@ -1,14 +1,50 @@
 <script setup>
 import { ref } from "vue";
 import { Head } from "@inertiajs/vue3";
+import SlotConfirmationSuccessModal from "@/Pages/Modal/SlotConfirmationSuccessModal.vue";
+
+/** Controls visibility of the IDP redirect reminder modal */
+const showIdpModal = ref(false);
+
+/** Close the reminder modal without redirecting */
+function closeIdpModal() {
+    showIdpModal.value = false;
+}
+
+/** Proceed to IDP registration after the user acknowledges the reminder */
+function proceedToIdp() {
+    showIdpModal.value = false;
+    window.open(result.value.confirmation_url, '_blank', 'noopener,noreferrer');
+}
+
+const confirmingSlot = ref(false);
+const showSuccessModal = ref(false);
+
+async function confirmSlot() {
+    confirmingSlot.value = true;
+    try {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        showSuccessModal.value = true;
+    } finally {
+        confirmingSlot.value = false;
+    }
+}
+
+function handleSuccessModalClose() {
+    showSuccessModal.value = false;
+    showIdpModal.value = true;
+}
 
 // ── Reactive state ────────────────────────────────────────────────────────────
 
 /** Reference number input value */
 const referenceNumber = ref("");
 
-/** Email input value */
-const email = ref("");
+/** First name input value */
+const firstName = ref("");
+
+/** Last name input value */
+const lastName = ref("");
 
 /** True while the API request is in-flight */
 const loading = ref(false);
@@ -35,7 +71,7 @@ let countdownInterval = null;
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 /**
- * Submit the form to POST /api/public/check-status.
+ * Submit the form to POST /api/public/admission-results.
  * Handles 200, 422, 429, and unexpected errors explicitly.
  */
 async function submit() {
@@ -47,7 +83,7 @@ async function submit() {
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
-        const response = await fetch("/api/public/check-status", {
+        const response = await fetch("/api/public/admission-results", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -56,7 +92,8 @@ async function submit() {
             },
             body: JSON.stringify({
                 referenceNumber: referenceNumber.value,
-                email: email.value,
+                firstName: firstName.value,
+                lastName: lastName.value,
             }),
         });
 
@@ -66,8 +103,14 @@ async function submit() {
             const body = await response.json();
             errors.value = body.errors ?? {};
         } else if (response.status === 429) {
+            const body = await response.json().catch(() => ({}));
+            // Use retry_after from the response body, fall back to the Retry-After header, then 60s
+            const retryAfterHeader = parseInt(response.headers.get("Retry-After") ?? "60", 10);
+            const retryAfter = body.retry_after ?? retryAfterHeader;
+
             rateLimited.value = true;
-            rateLimitCountdown.value = 60;
+            rateLimitCountdown.value = retryAfter;
+            genericError.value = body.message ?? "Too many attempts. Please wait before trying again.";
 
             // Clear any existing interval before starting a new one
             if (countdownInterval) clearInterval(countdownInterval);
@@ -79,6 +122,7 @@ async function submit() {
                     countdownInterval = null;
                     rateLimited.value = false;
                     rateLimitCountdown.value = 0;
+                    genericError.value = "";
                 }
             }, 1000);
         } else {
@@ -98,7 +142,8 @@ function reset() {
     result.value = null;
     errors.value = {};
     referenceNumber.value = "";
-    email.value = "";
+    firstName.value = "";
+    lastName.value = "";
     genericError.value = "";
 }
 </script>
@@ -126,8 +171,8 @@ function reset() {
                             <span class="text-3xl font-bold text-red-800">P</span>
                         </div>
                         <h1 class="text-2xl font-bold text-gray-900">Check Exam Result</h1>
-                        <p class="text-sm text-gray-600 mt-1">
-                            Enter your reference number and email to check if you passed the entrance exam.
+                        <p v-if="!result" class="text-sm text-gray-600 mt-1">
+                            Enter your reference number and name to check if you passed the entrance exam.
                         </p>
                     </div>
 
@@ -158,7 +203,10 @@ function reset() {
                                     v-model="referenceNumber"
                                     type="text"
                                     autocomplete="off"
-                                    placeholder="e.g. 2026-000123"
+                                    placeholder="e.g. 2026-XXX-XXX"
+                                    maxlength="55"
+                                    @keypress="(e) => { if (!/[\d\-]/.test(e.key)) e.preventDefault() }"
+                                    @input="referenceNumber = referenceNumber.replace(/[^\d\-]/g, '')"
                                     :disabled="loading || rateLimited"
                                     :class="[
                                         'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors',
@@ -180,38 +228,75 @@ function reset() {
                                 </p>
                             </div>
 
-                            <!-- Email Address -->
+                            <!-- First Name -->
                             <div>
                                 <label
-                                    for="email"
+                                    for="firstName"
                                     class="block text-sm font-medium text-gray-700 mb-1"
                                 >
-                                    Email Address
+                                    First Name
                                 </label>
                                 <input
-                                    id="email"
-                                    v-model="email"
-                                    type="email"
-                                    autocomplete="email"
-                                    placeholder="you@example.com"
+                                    id="firstName"
+                                    v-model="firstName"
+                                    type="text"
+                                    autocomplete="given-name"
+                                    placeholder="e.g. Juan"
+                                    maxlength="55"
                                     :disabled="loading || rateLimited"
                                     :class="[
                                         'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors',
                                         'focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]',
                                         'disabled:bg-gray-100 disabled:cursor-not-allowed',
-                                        errors.email
+                                        errors.firstName
                                             ? 'border-red-500 bg-red-50'
                                             : 'border-gray-300 bg-white/80',
                                     ]"
-                                    aria-describedby="email-error"
+                                    aria-describedby="firstName-error"
                                 />
                                 <p
-                                    v-if="errors.email"
-                                    id="email-error"
+                                    v-if="errors.firstName"
+                                    id="firstName-error"
                                     class="mt-1 text-xs text-red-600"
                                     role="alert"
                                 >
-                                    {{ errors.email[0] }}
+                                    {{ errors.firstName[0] }}
+                                </p>
+                            </div>
+
+                            <!-- Last Name -->
+                            <div>
+                                <label
+                                    for="lastName"
+                                    class="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Last Name
+                                </label>
+                                <input
+                                    id="lastName"
+                                    v-model="lastName"
+                                    type="text"
+                                    autocomplete="family-name"
+                                    placeholder="e.g. Dela Cruz"
+                                    maxlength="55"
+                                    :disabled="loading || rateLimited"
+                                    :class="[
+                                        'block w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors',
+                                        'focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]',
+                                        'disabled:bg-gray-100 disabled:cursor-not-allowed',
+                                        errors.lastName
+                                            ? 'border-red-500 bg-red-50'
+                                            : 'border-gray-300 bg-white/80',
+                                    ]"
+                                    aria-describedby="lastName-error"
+                                />
+                                <p
+                                    v-if="errors.lastName"
+                                    id="lastName-error"
+                                    class="mt-1 text-xs text-red-600"
+                                    role="alert"
+                                >
+                                    {{ errors.lastName[0] }}
                                 </p>
                             </div>
 
@@ -222,7 +307,7 @@ function reset() {
                                 role="status"
                                 aria-live="polite"
                             >
-                                Too many attempts. Please try again later.
+                                Too many attempts. Please try again in {{ rateLimitCountdown }}s.
                             </p>
 
                             <!-- Submit button -->
@@ -245,48 +330,306 @@ function reset() {
                         <!-- ── Result card ─────────────────────────────────────── -->
                         <div v-if="result" class="space-y-4">
 
-                            <!-- Qualified -->
+                            <!-- ✅ Qualified (status 1) -->
                             <div
                                 v-if="result.qualified === true"
-                                class="rounded-xl border border-green-200 bg-green-50 p-6 text-center"
+                                class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
                                 role="status"
                                 aria-live="polite"
                             >
-                                <!-- Success icon -->
-                                <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                    </svg>
+                                <!-- Logo -->
+                                <div class="pt-7 pb-2 flex justify-center">
+                                    <img
+                                        src="/assets/images/pup_taguig_logo.png"
+                                        alt="PUP Taguig Logo"
+                                        class="w-16 h-16 object-contain"
+                                    />
                                 </div>
 
-                                <p class="text-lg font-semibold text-green-800 mb-2">
-                                    {{ result.message }}
-                                </p>
+                                <!-- Body -->
+                                <div class="px-8 pb-7 pt-4 space-y-4">
+                                    <p class="text-sm text-gray-800 leading-relaxed">
+                                        Dear <strong class="text-[#800000]">{{ result.full_name }}</strong>,
+                                    </p>
 
-                                <div class="inline-block mt-1 px-4 py-1.5 rounded-full bg-green-100 border border-green-300">
-                                    <span class="text-sm font-medium text-green-700">
-                                        {{ result.batch_number }}
-                                    </span>
+                                    <p class="text-sm text-gray-800 leading-relaxed font-semibold">
+                                         <span class="text-[#800000]">CONGRATULATIONS!</span> 🎉
+                                    </p>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.
+                                    </p>
+
+                                    <!-- Details box -->
+                                    <div class="rounded-xl bg-gray-50 border border-gray-200 overflow-hidden text-sm divide-y divide-gray-200">
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Applicant Name</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.full_name }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Reference No.</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.reference_number }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Status</span>
+                                            <span class="text-green-700 font-semibold">Qualified</span>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!
+                                    </p>
+                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
+                                        PUP-Taguig Campus Admission and Registration Office
+                                    </p>
+
+                                    <!-- CTA — opens slot confirmation modal -->
+                                    <button
+                                        type="button"
+                                        @click="confirmSlot"
+                                        :disabled="confirmingSlot"
+                                        class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg font-semibold text-sm text-white shadow-md
+                                               bg-gradient-to-r from-[#800000] to-[#9d0000]
+                                               hover:from-[#600000] hover:to-[#800000] transition-all duration-200
+                                               disabled:opacity-50 disabled:cursor-not-allowed
+                                               focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2"
+                                    >
+                                        <svg v-if="confirmingSlot" class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"/>
+                                        </svg>
+                                        {{ confirmingSlot ? 'Confirming...' : 'Click to Confirm Interview Slot' }}
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- Not qualified / no match -->
+                            <!-- ⏳ Waitlisted (status 2) -->
                             <div
-                                v-else
-                                class="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center"
+                                v-else-if="result.waitlisted === true"
+                                class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
                                 role="status"
                                 aria-live="polite"
                             >
-                                <!-- Neutral icon -->
-                                <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg class="w-7 h-7 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
-                                    </svg>
+                                <!-- Logo -->
+                                <div class="pt-7 pb-2 flex justify-center">
+                                    <img
+                                        src="/assets/images/pup_taguig_logo.png"
+                                        alt="PUP Taguig Logo"
+                                        class="w-16 h-16 object-contain"
+                                    />
                                 </div>
 
-                                <p class="text-base font-medium text-gray-700">
-                                    {{ result.message }}
-                                </p>
+                                <!-- Body -->
+                                <div class="px-8 pb-7 pt-4 space-y-4">
+                                    <p class="text-sm text-gray-800 leading-relaxed">
+                                        Dear <strong class="text-[#800000]">{{ result.full_name }}</strong>,
+                                    </p>
+
+                                    <p class="text-sm text-gray-800 leading-relaxed font-semibold">
+                                         <span class="text-[#800000]">CONGRATULATIONS!</span> 🎉
+                                    </p>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.
+                                    </p>
+
+                                    <!-- Details box -->
+                                    <div class="rounded-xl bg-gray-50 border border-gray-200 overflow-hidden text-sm divide-y divide-gray-200">
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Applicant Name</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.full_name }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Reference No.</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.reference_number }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Status</span>
+                                            <span class="text-green-700 font-semibold">Qualified</span>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!
+                                    </p>
+                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
+                                        PUP-Taguig Campus Admission and Registration Office
+                                    </p>
+
+                                    <!-- CTA — opens slot confirmation modal -->
+                                    <button
+                                        type="button"
+                                        @click="confirmSlot"
+                                        :disabled="confirmingSlot"
+                                        class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg font-semibold text-sm text-white shadow-md
+                                               bg-gradient-to-r from-[#800000] to-[#9d0000]
+                                               hover:from-[#600000] hover:to-[#800000] transition-all duration-200
+                                               disabled:opacity-50 disabled:cursor-not-allowed
+                                               focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2"
+                                    >
+                                        <svg v-if="confirmingSlot" class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"/>
+                                        </svg>
+                                        {{ confirmingSlot ? 'Confirming...' : 'Click to Confirm Interview Slot' }}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- ❌ Not Qualified (status 3) -->
+                            <div
+                                v-else-if="result.not_qualified === true"
+                                class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <!-- Logo -->
+                                <div class="pt-7 pb-2 flex justify-center">
+                                    <img
+                                        src="/assets/images/pup_taguig_logo.png"
+                                        alt="PUP Taguig Logo"
+                                        class="w-16 h-16 object-contain"
+                                    />
+                                </div>
+
+                                <!-- Body -->
+                                <div class="px-8 pb-7 pt-4 space-y-4">
+                                    <p class="text-sm text-gray-800 leading-relaxed">
+                                        Dear <strong class="text-[#800000]">{{ result.full_name }}</strong>,
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Thank you for considering Polytechnic University of the Philippines for your higher education.
+                                    </p>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We regret to inform you that your score in the PUP College Entrance Test for Taguig Campus did not place you in the top 500 requirement of the Campus.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
+                                    </p>
+                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
+                                        PUP-Taguig Campus Admission and Registration Office
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- 🟠 Waitlisted (status 4) -->
+                            <div
+                                v-else-if="result.waitlisted_below_cutoff === true"
+                                class="rounded-2xl overflow-hidden shadow-md border border-orange-300 bg-white"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <!-- Logo -->
+                                <div class="pt-7 pb-2 flex justify-center">
+                                    <img
+                                        src="/assets/images/pup_taguig_logo.png"
+                                        alt="PUP Taguig Logo"
+                                        class="w-16 h-16 object-contain"
+                                    />
+                                </div>
+
+                                <!-- Body -->
+                                <div class="px-8 pb-7 pt-4 space-y-4">
+                                    <p class="text-sm text-gray-800 leading-relaxed">
+                                        Dear <strong class="text-[#800000]">{{ result.full_name }}</strong>,
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Thank you for considering PUP for your higher education.
+                                    </p>
+
+                                    <!-- Details box -->
+                                    <div class="rounded-xl bg-orange-50 border border-orange-200 overflow-hidden text-sm divide-y divide-orange-200">
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Applicant Name</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.full_name }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Reference No.</span>
+                                            <span class="text-gray-900 font-semibold">{{ result.reference_number }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-3">
+                                            <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Status</span>
+                                            <span class="text-orange-700 font-semibold">Waitlisted</span>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Based on evaluation, we regret to inform you that your score in the PUP College Entrance Test did not place you in the Top 500 requirement of the Campus.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Nevertheless, you might still be notified (via email) of the possible remaining slots, based on your evaluated rank. Admission to these slots, however, shall be on a first-come, first-served basis, and subject to specific academic program admission requirements.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Since we cannot give you an assurance that a slot will be made available to you, we recommend you to still consider your admission options in other higher education institutions.
+                                    </p>
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.
+                                    </p>
+                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
+                                        PUP-Taguig Campus Admission and Registration Office
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- 🔍 No Record Found -->
+                            <div
+                                v-else
+                                class="rounded-2xl overflow-hidden shadow-md border border-gray-200 bg-white"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <!-- Logo -->
+                                <div class="pt-7 pb-2 flex justify-center">
+                                    <img
+                                        src="/assets/images/pup_taguig_logo.png"
+                                        alt="PUP Taguig Logo"
+                                        class="w-16 h-16 object-contain"
+                                    />
+                                </div>
+
+                                <!-- Body -->
+                                <div class="px-8 pb-7 pt-4 space-y-4">
+                                    <div class="flex justify-center">
+                                        <div class="w-12 h-12 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm text-gray-800 leading-relaxed font-semibold text-center">
+                                        No Record Found
+                                    </p>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        We could not find any record matching the information you provided. This may be because:
+                                    </p>
+                                    <ul class="text-sm text-gray-600 list-disc pl-5 space-y-1">
+                                        <li>The reference number or name was entered incorrectly</li>
+                                        <li>Your results have not yet been uploaded to the system</li>
+                                        <li>The reference number does not exist in our records</li>
+                                    </ul>
+
+                                    <p class="text-sm text-gray-700 leading-relaxed">
+                                        Please double-check your reference number and name, then try again. If the issue persists, contact the <strong>Admission and Registration Office</strong> for assistance.
+                                    </p>
+                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide pt-2 border-t border-gray-100">
+                                        PUP-Taguig Campus Admission and Registration Office
+                                    </p>
+                                </div>
                             </div>
 
                             <!-- Check another button -->
@@ -306,10 +649,100 @@ function reset() {
 
                 <!-- Footer note -->
                 <p class="mt-4 text-center text-xs text-gray-500">
-                    PUP-T Admission System &mdash; For inquiries, contact the Registrar's Office.
+                    PUP-Taguig Admission System &mdash; For inquiries, please contact the Admission and Registration Office at
+                    <a href="mailto:taguig@pup.edu.ph" class="underline hover:text-gray-700">taguig@pup.edu.ph</a>
+                    /
+                    <a href="mailto:puptadmission@gmail.com" class="underline hover:text-gray-700">puptadmission@gmail.com</a>
                 </p>
 
             </div>
         </div>
+
+        <!-- ── IDP Redirect Reminder Modal ──────────────────────────────────── -->
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showIdpModal"
+                class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="idp-modal-title"
+                aria-describedby="idp-modal-desc"
+                @keydown.esc="closeIdpModal"
+            >
+                <!-- Backdrop -->
+                <div
+                    class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                    @click="closeIdpModal"
+                    aria-hidden="true"
+                ></div>
+
+                <!-- Panel -->
+                <div class="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+                    <!-- Accent bar -->
+                    <div class="h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000]"></div>
+
+                    <div class="px-6 pt-6 pb-7 space-y-5">
+
+                        <!-- Icon + title -->
+                        <div class="flex flex-col items-center text-center gap-3">
+                            <div class="w-14 h-14 rounded-full bg-yellow-50 border border-yellow-200 flex items-center justify-center">
+                                <!-- Warning / info icon -->
+                                <svg class="w-7 h-7 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                </svg>
+                            </div>
+                            <h2 id="idp-modal-title" class="text-lg font-bold text-gray-900">
+                                Before You Proceed
+                            </h2>
+                        </div>
+
+                        <!-- Reminder message -->
+                        <p id="idp-modal-desc" class="text-sm text-gray-700 leading-relaxed text-center">
+                            Make sure that you will be using the
+                            <strong class="text-[#800000]">same email on iApply</strong>
+                            when logging in to IDP.
+                        </p>
+
+                        <!-- Actions -->
+                        <div class="flex flex-col gap-3 pt-1">
+                            <button
+                                type="button"
+                                @click="proceedToIdp"
+                                class="w-full py-2.5 rounded-lg font-semibold text-sm text-white shadow-md
+                                       bg-gradient-to-r from-[#800000] to-[#9d0000]
+                                       hover:from-[#600000] hover:to-[#800000] transition-all duration-200
+                                       focus:outline-none focus:ring-2 focus:ring-[#800000] focus:ring-offset-2"
+                            >
+                                I Understand, Proceed to IDP
+                            </button>
+                            <button
+                                type="button"
+                                @click="closeIdpModal"
+                                class="w-full py-2.5 rounded-lg font-semibold text-sm text-gray-600 border border-gray-300
+                                       hover:bg-gray-50 transition-all duration-200
+                                       focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+        <SlotConfirmationSuccessModal
+            :show="showSuccessModal"
+            @close="handleSuccessModalClose"
+        />
+
     </div>
 </template>

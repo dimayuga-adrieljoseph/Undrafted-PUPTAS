@@ -54,6 +54,13 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'pending_registration' => $request->session()->get('pending_registration'),
+            'test_passer_data' => function () use ($request) {
+                $pendingReg = $request->session()->get('pending_registration');
+                if ($pendingReg && !empty($pendingReg['email'])) {
+                    return \App\Models\TestPasser::where('email', $pendingReg['email'])->first();
+                }
+                return null;
+            },
             'privacy_consent' => [
                 'required' => $request->user() ? !$request->user()->privacy_consent : false,
             ],

@@ -81,12 +81,17 @@
             <input
               v-model="searchTerm"
               type="text"
-              placeholder="Search by name, email, or role..."
+              placeholder="Search by name or email..."
               class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
             />
+            <!-- Loading spinner -->
+            <svg v-if="searching" class="w-4 h-4 text-[#9E122C] absolute right-3 top-3 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+            </svg>
           </div>
           <p class="text-sm text-gray-500 dark:text-gray-400 self-center whitespace-nowrap">
-            {{ filteredUsers.length }} of {{ users.length }} users
+            {{ paginationInfo.total }} users &bull; page {{ paginationInfo.current_page }} of {{ paginationInfo.last_page }}
           </p>
         </div>
 
@@ -106,7 +111,7 @@
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
               <tr
-                v-for="user in filteredUsers"
+                v-for="user in displayedUsers"
                 :key="user.id"
                 class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
               >
@@ -168,7 +173,7 @@
         <!-- Mobile Cards -->
         <div class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
           <div
-            v-for="user in filteredUsers"
+            v-for="user in displayedUsers"
             :key="user.id"
             class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
           >
@@ -220,7 +225,7 @@
         </div>
 
         <!-- Empty State -->
-        <div v-if="!filteredUsers.length" class="text-center py-16">
+        <div v-if="!displayedUsers.length && !searching" class="text-center py-16">
           <svg class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
           </svg>
@@ -240,6 +245,52 @@
             Add New User
           </Link>
         </div>
+
+        <!-- Pagination Controls -->
+        <div
+          v-if="paginationInfo.last_page > 1"
+          class="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700"
+        >
+          <button
+            @click="changePage(paginationInfo.current_page - 1)"
+            :disabled="paginationInfo.current_page <= 1 || searching"
+            class="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Prev
+          </button>
+
+          <!-- Page numbers -->
+          <div class="flex items-center gap-1">
+            <button
+              v-for="p in visiblePages"
+              :key="p"
+              @click="changePage(p)"
+              :disabled="searching"
+              :class="[
+                'px-3 py-1.5 text-sm rounded-lg transition',
+                p === paginationInfo.current_page
+                  ? 'bg-[#9E122C] text-white font-semibold'
+                  : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              ]"
+            >
+              {{ p }}
+            </button>
+          </div>
+
+          <button
+            @click="changePage(paginationInfo.current_page + 1)"
+            :disabled="paginationInfo.current_page >= paginationInfo.last_page || searching"
+            class="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+          >
+            Next
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -258,20 +309,69 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
-  users: Array,
+  users:            Array,
+  pagination:       Object,   // { total, per_page, current_page, last_page }
   userCountsByRole: Object,
-  roles: Object,
-  totalUsers: Number,
+  roles:            Object,
+  totalUsers:       Number,
 });
 
 const page = usePage();
-const searchTerm = ref('');
 
+// ── State ──────────────────────────────────────────────────────────────────
+const searchTerm     = ref('');
+const searching      = ref(false);
+const displayedUsers = ref([...(props.users ?? [])]);
+const paginationInfo = ref({ ...(props.pagination ?? { total: 0, per_page: 15, current_page: 1, last_page: 1 }) });
+
+let debounceTimer = null;
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+async function fetchPage(q, p) {
+  searching.value = true;
+  try {
+    const { data } = await axios.get(route('users.search'), { params: { q: q || undefined, page: p } });
+    displayedUsers.value = data.data;
+    paginationInfo.value = {
+      total:        data.total,
+      per_page:     data.per_page,
+      current_page: data.current_page,
+      last_page:    data.last_page,
+    };
+  } finally {
+    searching.value = false;
+  }
+}
+
+function changePage(p) {
+  if (p < 1 || p > paginationInfo.value.last_page || searching.value) return;
+  fetchPage(searchTerm.value, p);
+}
+
+// Debounced search — 350 ms after last keystroke
+watch(searchTerm, (val) => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => fetchPage(val, 1), 350);
+});
+
+// Visible page numbers (max 5 around current page)
+const visiblePages = computed(() => {
+  const { current_page, last_page } = paginationInfo.value;
+  const delta = 2;
+  const range = [];
+  const start = Math.max(1, current_page - delta);
+  const end   = Math.min(last_page, current_page + delta);
+  for (let i = start; i <= end; i++) range.push(i);
+  return range;
+});
+
+// ── Display helpers ────────────────────────────────────────────────────────
 const roleStats = [
   {
     label: 'Applicants', roleId: 1,
@@ -294,15 +394,6 @@ const roleStats = [
     bg: 'bg-green-100 dark:bg-green-900/30', color: 'text-green-600 dark:text-green-300',
   },
 ];
-
-const filteredUsers = computed(() => {
-  if (!searchTerm.value) return props.users;
-  const term = searchTerm.value.toLowerCase();
-  return props.users.filter(user => {
-    const fullName = `${user.firstname} ${user.middlename || ''} ${user.lastname} ${user.extension_name || ''}`.toLowerCase();
-    return fullName.includes(term) || user.email.toLowerCase().includes(term) || (props.roles?.[user.role_id] || '').toLowerCase().includes(term);
-  });
-});
 
 const getRoleBadgeClass = (roleId) => {
   const map = {
