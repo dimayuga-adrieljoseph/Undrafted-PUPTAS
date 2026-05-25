@@ -117,6 +117,10 @@
             </div>
 
             <div class="message">
+                <p><em>Kindly disregard this email if you already have confirmed your interview slot.</em></p>
+            </div>
+
+            <div class="message">
                 <p>We look forward to welcoming you to the PUP Taguig community!</p>
                 <p><strong>Best regards,</strong><br>
                 PUP Taguig Admission and Registration Office</p>
