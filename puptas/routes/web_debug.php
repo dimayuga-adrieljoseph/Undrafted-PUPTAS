@@ -1,19 +1,46 @@
 <?php
 
 /**
- * TEMPORARY DEBUG ROUTE - REMOVE AFTER FIXING REGISTRATION
- * 
- * This route helps diagnose registration issues by checking:
- * 1. Database tables exist
- * 2. Test passer data is correct
- * 3. Graduate types exist
- * 
- * Access: /debug-registration?email=test@example.com
+ * TEMPORARY DEBUG ROUTES - REMOVE AFTER FIXING
  */
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+
+/**
+ * Test email delivery directly (bypasses queue).
+ * Access: /debug-email?to=your-email@gmail.com
+ */
+Route::get('/debug-email', function (\Illuminate\Http\Request $request) {
+    $to = $request->query('to');
+    if (!$to) {
+        return response()->json(['error' => 'Provide ?to=email@example.com'], 400);
+    }
+
+    try {
+        $result = Mail::raw('This is a test email from PUPTAS at ' . now()->toIso8601String(), function ($msg) use ($to) {
+            $msg->to($to)->subject('PUPTAS Email Delivery Test');
+        });
+
+        return response()->json([
+            'status' => 'sent',
+            'to' => $to,
+            'mailer' => config('mail.default'),
+            'from' => config('mail.from.address'),
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'class' => get_class($e),
+            'mailer' => config('mail.default'),
+            'from' => config('mail.from.address'),
+        ], 500);
+    }
+})->middleware('web');
 
 Route::get('/debug-registration', function (\Illuminate\Http\Request $request) {
     try {
