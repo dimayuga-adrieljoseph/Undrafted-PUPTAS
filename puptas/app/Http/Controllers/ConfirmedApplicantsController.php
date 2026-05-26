@@ -381,6 +381,9 @@ class ConfirmedApplicantsController extends Controller
                 $personalizedMessage
             );
 
+            // Dispatch with staggered delay to avoid triggering receiving server throttling
+            $delaySeconds = config('email-tracking.delay_between_emails_seconds', 30);
+
             // Use a fake TestPasser-like object for the job (compatible with SendPasserEmail)
             // We dispatch with a mock passer to reuse the existing job infrastructure
             if ($testPasser) {
@@ -389,7 +392,7 @@ class ConfirmedApplicantsController extends Controller
                     $personalizedMessage,
                     $emailLog->exists ? $emailLog->id : null,
                     $bulkOperation->id
-                );
+                )->delay(now()->addSeconds($successCount * $delaySeconds));
             } else {
                 // For applicants without a linked test passer, create a minimal object
                 $mockPasser = new TestPasser();
@@ -401,7 +404,7 @@ class ConfirmedApplicantsController extends Controller
                     $personalizedMessage,
                     $emailLog->exists ? $emailLog->id : null,
                     $bulkOperation->id
-                );
+                )->delay(now()->addSeconds($successCount * $delaySeconds));
             }
 
             $successCount++;

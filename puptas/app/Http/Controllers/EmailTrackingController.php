@@ -92,8 +92,9 @@ class EmailTrackingController extends Controller
             ->where('status', 'pending')
             ->get();
 
-        foreach ($retriedLogs as $log) {
-            $this->dispatchRetryJob($log);
+        $delaySeconds = config('email-tracking.delay_between_emails_seconds', 30);
+        foreach ($retriedLogs as $index => $log) {
+            $this->dispatchRetryJob($log, $index * $delaySeconds);
         }
 
         return response()->json([
@@ -114,8 +115,9 @@ class EmailTrackingController extends Controller
             ->where('retry_count', '>', 0)
             ->get();
 
-        foreach ($retriedLogs as $log) {
-            $this->dispatchRetryJob($log);
+        $delaySeconds = config('email-tracking.delay_between_emails_seconds', 30);
+        foreach ($retriedLogs as $index => $log) {
+            $this->dispatchRetryJob($log, $index * $delaySeconds);
         }
 
         return response()->json([
@@ -126,7 +128,7 @@ class EmailTrackingController extends Controller
     /**
      * Dispatch the appropriate job for a retried email log based on its email_type.
      */
-    private function dispatchRetryJob(EmailLog $log): void
+    private function dispatchRetryJob(EmailLog $log, int $delaySeconds = 0): void
     {
         $bulkOperationId = $log->bulk_operation_id;
 
@@ -136,7 +138,7 @@ class EmailTrackingController extends Controller
                     $log->recipient_email,
                     $log->id,
                     $bulkOperationId,
-                );
+                )->delay(now()->addSeconds($delaySeconds));
                 break;
 
             case 'pupcet_result':
@@ -148,7 +150,7 @@ class EmailTrackingController extends Controller
                             $log->email_content ?? '',
                             $log->id,
                             $bulkOperationId,
-                        );
+                        )->delay(now()->addSeconds($delaySeconds));
                     }
                 }
                 break;
@@ -170,7 +172,7 @@ class EmailTrackingController extends Controller
                                 $sarGeneration->id,
                                 $log->id,
                                 $bulkOperationId,
-                            );
+                            )->delay(now()->addSeconds($delaySeconds));
                         }
                     }
                 }
@@ -185,7 +187,7 @@ class EmailTrackingController extends Controller
                             $log->email_content ?? '',
                             $log->id,
                             $bulkOperationId,
-                        );
+                        )->delay(now()->addSeconds($delaySeconds));
                     }
                 }
                 break;
