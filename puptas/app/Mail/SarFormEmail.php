@@ -31,6 +31,7 @@ class SarFormEmail extends Mailable
         
         return $this->subject('PUP Taguig - Student Admission Record (SAR)')
                     ->view('emails.sar-form')
+                    ->text('emails.plain.sar-form')
                     ->with([
                         'passerName' => $fullName,
                         'referenceNumber' => $this->passer->reference_number,
