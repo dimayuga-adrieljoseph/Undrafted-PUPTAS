@@ -101,6 +101,19 @@ Route::post('/check-reference-number', function (\Illuminate\Http\Request $reque
     return response()->json(['valid' => $exists]);
 })->middleware('guest');
 
+// Email Link Redirects — hosted on our domain so email link URLs match the sending domain
+Route::get('/links/admission-criteria', function () {
+    return redirect()->away('https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view');
+})->name('links.admission-criteria');
+
+Route::get('/links/facebook', function () {
+    return redirect()->away('https://www.facebook.com/PUPTOFFICIAL');
+})->name('links.facebook');
+
+Route::get('/links/register', function () {
+    return redirect()->away('https://identity-provider.isaxbsit2027.com/register?client_id=' . config('services.idp.client_id', '037f48dd-245b-450b-9e7a-3348b65b9dad'));
+})->name('links.register');
+
 Route::middleware(['auth'])->group(function () {
     // Privacy Consent Routes - available to all authenticated users
     Route::post('/privacy-consent/accept', [PrivacyConsentController::class, 'accept'])->name('privacy.consent.accept');
