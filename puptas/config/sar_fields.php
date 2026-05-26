@@ -191,7 +191,6 @@ return [
             'align' => 'R', 'uppercase' => true, 'fit_mode' => 'shrink',
             'blank'       => ['x' => 113, 'y' => 158, 'w' => 75, 'h' => 8],
             'blank2'      => ['x' => 10,  'y' => 238, 'w' => 180, 'h' => 25],
-            'blank3'      => ['x' => 117,  'y' => 167, 'w' => 150.8, 'h' => 20],
             'redraw_line' => ['x1' => 117, 'y1' => 166, 'x2' => 180, 'y2' => 166],
         ],
         'previous_school' => [
