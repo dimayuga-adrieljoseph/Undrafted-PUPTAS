@@ -334,6 +334,14 @@ class SarFormService
                 $b = $config['blank2'];
                 $pdf->Rect($b['x'], $b['y'], $b['w'], $b['h'], 'F');
             }
+            if (!empty($config['blank3'])) {
+                $b = $config['blank3'];
+                $pdf->Rect($b['x'], $b['y'], $b['w'], $b['h'], 'F');
+            }
+            if (!empty($config['blank4'])) {
+                $b = $config['blank4'];
+                $pdf->Rect($b['x'], $b['y'], $b['w'], $b['h'], 'F');
+            }
         }
 
         // Reset colors
@@ -349,6 +357,15 @@ class SarFormService
                 $pdf->Line($l['x1'], $l['y1'], $l['x2'], $l['y2']);
             }
         }
+
+        // Override any stray hyperlink annotations from the template by placing
+        // an invisible null-link on top (PDF annotations render above drawn content)
+        foreach ($this->fieldPositions[$pageNo] as $fieldName => $config) {
+            if (!empty($config['blank_link'])) {
+                $b = $config['blank_link'];
+                $pdf->Link($b['x'], $b['y'], $b['w'], $b['h'], '');
+            }
+        }
     }
 
     /**
@@ -356,6 +373,45 @@ class SarFormService
      */
     protected function renderField(Fpdi $pdf, array $config, string $value): void
     {
+        $fitMode = $config['fit_mode'] ?? 'shrink';
+
+        // For wrap mode, always use the configured font size (no shrinking needed)
+        if ($fitMode === 'wrap') {
+            $pdf->SetFont($config['font'], 'B', $config['font_size']);
+            $pdf->SetTextColor(0, 0, 0);
+            $pdf->SetXY($config['x'], $config['y']);
+            $pdf->MultiCell($config['w'], 4.5, $value, 0, $config['align']);
+            return;
+        }
+
+        // shrink_or_wrap: fit on one line if possible, otherwise wrap onto two lines.
+        // Short names render at the correct baseline (y); long names wrap upward so
+        // the first line still lands on the underline.
+        if ($fitMode === 'shrink_or_wrap') {
+            $minSize = max(6, $config['font_size'] - 4);
+            $fontSize = $this->fitTextToWidth(
+                $pdf, $value, $config['w'],
+                $config['font'], $config['font_size'], $minSize
+            );
+            $pdf->SetFont($config['font'], 'B', $fontSize);
+            $pdf->SetTextColor(0, 0, 0);
+
+            $textWidth = $pdf->GetStringWidth($value);
+            if ($textWidth <= $config['w']) {
+                // Fits on one line — render at the normal baseline
+                $pdf->SetXY($config['x'], $config['y']);
+                $pdf->Write(0, $value);
+            } else {
+                // Too long — wrap using MultiCell. Start one line-height above
+                // so the first line sits on the underline at y.
+                $lineH = 4.5;
+                $pdf->SetFont($config['font'], 'B', $config['font_size']);
+                $pdf->SetXY($config['x'], $config['y'] - $lineH);
+                $pdf->MultiCell($config['w'], $lineH, $value, 0, $config['align']);
+            }
+            return;
+        }
+
         $fontSize = $this->fitTextToWidth(
             $pdf,
             $value,
@@ -368,13 +424,6 @@ class SarFormService
         // Set font (bold)
         $pdf->SetFont($config['font'], 'B', $fontSize);
         $pdf->SetTextColor(0, 0, 0);
-        
-        // Handle multi-line fields (wrap mode)
-        if (($config['fit_mode'] ?? 'shrink') === 'wrap') {
-            $pdf->SetXY($config['x'], $config['y']);
-            $pdf->MultiCell($config['w'], 4.5, $value, 0, $config['align']);
-            return;
-        }
         
         // Calculate vertical centering
         $textHeight = $fontSize * 0.352777778; // 1pt = 0.352777778mm
