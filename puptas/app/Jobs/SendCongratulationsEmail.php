@@ -6,14 +6,24 @@ use App\Mail\CongratulationsMail;
 use App\Services\EmailTrackingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Queue\Middleware\RateLimited;
 
-class SendCongratulationsEmail implements ShouldQueue
+class SendCongratulationsEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public $queue = 'emails';
+    public $uniqueFor = 3600;
+
+    public function middleware(): array
+    {
+        return [new RateLimited('emails')];
+    }
 
     /**
      * Create a new job instance.

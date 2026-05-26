@@ -13,6 +13,8 @@ class ApplicationConfirmation extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    public $queue = 'high';
+
     /**
      * Create a new message instance.
      */

@@ -13,10 +13,18 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Queue\Middleware\RateLimited;
 
 class SendSarFormEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public $queue = 'emails';
+
+    public function middleware(): array
+    {
+        return [new RateLimited('emails')];
+    }
 
     /**
      * The number of seconds the unique lock should be maintained.

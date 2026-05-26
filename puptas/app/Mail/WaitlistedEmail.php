@@ -11,6 +11,8 @@ class WaitlistedEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    public $queue = 'emails';
+
     public $passer;
     public $messageTemplate;
 

@@ -115,6 +115,10 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('emails', function () {
+            return Limit::perSecond(10);
+        });
+
         Passport::setClientUuids(true);
 
         DB::listen(function (QueryExecuted $query) {

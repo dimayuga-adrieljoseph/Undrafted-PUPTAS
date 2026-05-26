@@ -18,6 +18,8 @@ class ProcessGradeOcr implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $queue = 'default';
+
     public $uniqueFor = 3600;
 
     public function uniqueId(): string
