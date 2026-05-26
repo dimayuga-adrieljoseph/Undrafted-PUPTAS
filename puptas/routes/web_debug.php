@@ -19,6 +19,9 @@ Route::get('/debug-email', function (\Illuminate\Http\Request $request) {
         return response()->json(['error' => 'Provide ?to=email@example.com'], 400);
     }
 
+    // Clear config cache to pick up new env vars
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+
     try {
         $result = Mail::raw('This is a test email from PUPTAS at ' . now()->toIso8601String(), function ($msg) use ($to) {
             $msg->to($to)->subject('PUPTAS Email Delivery Test');
@@ -29,6 +32,7 @@ Route::get('/debug-email', function (\Illuminate\Http\Request $request) {
             'to' => $to,
             'mailer' => config('mail.default'),
             'from' => config('mail.from.address'),
+            'resend_key_prefix' => substr(config('services.resend.key') ?? env('RESEND_API_KEY'), 0, 10) . '...',
             'timestamp' => now()->toIso8601String(),
         ]);
     } catch (\Throwable $e) {
@@ -38,6 +42,7 @@ Route::get('/debug-email', function (\Illuminate\Http\Request $request) {
             'class' => get_class($e),
             'mailer' => config('mail.default'),
             'from' => config('mail.from.address'),
+            'resend_key_prefix' => substr(config('services.resend.key') ?? env('RESEND_API_KEY'), 0, 10) . '...',
         ], 500);
     }
 })->middleware('web');
