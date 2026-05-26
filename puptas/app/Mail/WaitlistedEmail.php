@@ -11,8 +11,6 @@ class WaitlistedEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public $queue = 'emails';
-
     public $passer;
     public $messageTemplate;
 
@@ -23,6 +21,7 @@ class WaitlistedEmail extends Mailable implements ShouldQueue
     {
         $this->passer = $passer;
         $this->messageTemplate = $messageTemplate;
+        $this->onQueue('emails');
     }
 
     /**

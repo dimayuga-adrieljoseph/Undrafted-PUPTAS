@@ -13,8 +13,6 @@ class UserCreated extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public $queue = 'high';
-
     public $user;
     public $password;
 
@@ -22,6 +20,7 @@ class UserCreated extends Mailable implements ShouldQueue
     {
         $this->user = $user;
         $this->password = $password;
+        $this->onQueue('high');
     }
 
     public function build()

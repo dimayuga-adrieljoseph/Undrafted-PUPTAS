@@ -14,8 +14,6 @@ class TestPasserEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public $queue = 'emails';
-
     /**
      * Create a new message instance.
      */
@@ -29,6 +27,7 @@ class TestPasserEmail extends Mailable implements ShouldQueue
     {
         $this->passer = $passer;
         $this->messageTemplate = $messageTemplate;
+        $this->onQueue('emails');
     }
 
     public function build()

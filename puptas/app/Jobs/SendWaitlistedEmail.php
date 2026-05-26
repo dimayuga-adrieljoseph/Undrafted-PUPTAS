@@ -18,8 +18,6 @@ class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $queue = 'emails';
-
     public function middleware(): array
     {
         return [new RateLimited('emails')];
@@ -46,6 +44,7 @@ class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
     ) {
         $this->passer = $passer;
         $this->messageTemplate = $messageTemplate;
+        $this->onQueue('emails');
     }
 
     /**

@@ -19,8 +19,6 @@ class SendSarFormEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $queue = 'emails';
-
     public function middleware(): array
     {
         return [new RateLimited('emails')];
@@ -47,7 +45,9 @@ class SendSarFormEmail implements ShouldQueue, ShouldBeUnique
         public readonly int $sarGenerationId,
         public readonly ?int $emailLogId = null,
         public readonly ?int $bulkOperationId = null,
-    ) {}
+    ) {
+        $this->onQueue('emails');
+    }
 
     public function handle(): void
     {
