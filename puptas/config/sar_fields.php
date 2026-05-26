@@ -42,9 +42,9 @@ return [
             'align' => 'L', 'uppercase' => false, 'fit_mode' => 'shrink',
         ],
         'previous_school' => [
-            'x' => 30, 'y' => 85, 'w' => 110, 'h' => 20,
+            'x' => 30, 'y' => 85, 'w' => 110, 'h' => 6,
             'font' => 'helvetica', 'font_size' => 9,
-            'align' => 'L', 'uppercase' => true, 'fit_mode' => 'wrap',
+            'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink_or_wrap',
         ],
         'date_of_enrollment' => [
             'x' => 140, 'y' => 101, 'w' => 30, 'h' => 6,
@@ -86,9 +86,9 @@ return [
             'align' => 'L', 'uppercase' => false, 'fit_mode' => 'shrink',
         ],
         'previous_school_duplicate' => [
-            'x' => 30, 'y' => 225, 'w' => 110, 'h' => 20,
+            'x' => 30, 'y' => 225, 'w' => 110, 'h' => 6,
             'font' => 'helvetica', 'font_size' => 9,
-            'align' => 'L', 'uppercase' => true, 'fit_mode' => 'wrap',
+            'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink_or_wrap',
         ],
         'date_of_enrollment_duplicate' => [
             'x' => 140, 'y' => 244, 'w' => 30, 'h' => 6,
@@ -165,6 +165,11 @@ return [
             'font' => 'helvetica', 'font_size' => 9,
             'align' => 'L', 'uppercase' => false, 'fit_mode' => 'shrink',
         ],
+        // Cover the stray blue hyperlink annotation at the bottom-left of page 6
+        'blue_link_cover' => [
+            'blank'      => ['x' => 15, 'y' => 260, 'w' => 50, 'h' => 10],
+            'blank_link' => ['x' => 15, 'y' => 260, 'w' => 50, 'h' => 10],
+        ],
     ],
 
     // -------------------------------------------------------------------------
@@ -185,14 +190,14 @@ return [
             'font' => 'helvetica', 'font_size' => 8,
             'align' => 'R', 'uppercase' => true, 'fit_mode' => 'shrink',
             'blank'       => ['x' => 113, 'y' => 158, 'w' => 75, 'h' => 8],
-            'blank2'      => ['x' => 30,  'y' => 240, 'w' => 150.8, 'h' => 20],
+            'blank2'      => ['x' => 10,  'y' => 238, 'w' => 180, 'h' => 25],
             'blank3'      => ['x' => 117,  'y' => 167, 'w' => 150.8, 'h' => 20],
             'redraw_line' => ['x1' => 117, 'y1' => 166, 'x2' => 180, 'y2' => 166],
         ],
         'previous_school' => [
-            'x' => 120, 'y' => 58, 'w' => 100, 'h' => 5,
-            'font' => 'helvetica', 'font_size' => 9,
-            'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink',
+            'x' => 117, 'y' => 58, 'w' => 60, 'h' => 5,
+            'font' => 'helvetica', 'font_size' => 8,
+            'align' => 'L', 'uppercase' => true, 'fit_mode' => 'shrink_or_wrap',
         ],
         'graduation_year' => [
             'x' => 60, 'y' => 63, 'w' => 20, 'h' => 5,
