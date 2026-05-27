@@ -149,7 +149,7 @@ class UserController extends Controller
             ];
         } else {
             $applicant = \App\Models\ApplicantProfile::where('user_id', $id)->orWhere('user_id', $userModel->id)->firstOrFail();
-            $applicant->load('firstChoiceProgram');
+            $applicant->load('firstChoiceProgram', 'secondChoiceProgram', 'thirdChoiceProgram');
             $user = (object) [
                 'id' => $applicant->user_id,
                 'firstname' => $applicant->firstname,
@@ -160,7 +160,9 @@ class UserController extends Controller
                 'contactnumber' => $applicant->contactnumber,
                 'role_id' => 1,
                 'applicant_profile' => $applicant,
-                'program' => $applicant->firstChoiceProgram
+                'program' => $applicant->firstChoiceProgram,
+                'second_program' => $applicant->secondChoiceProgram,
+                'third_program' => $applicant->thirdChoiceProgram,
             ];
         }
 
@@ -235,24 +237,46 @@ class UserController extends Controller
                     // Update the applicant profile with the first choice program
                     $applicantProfile->update(['first_choice_program' => $program->id]);
 
+                    // Resolve 2nd choice program
+                    $secondProgram = $request->filled('applicant_second_program')
+                        ? Program::where('code', $request->applicant_second_program)->first()
+                        : null;
+                    $applicantProfile->update(['second_choice_program' => $secondProgram?->id]);
+
+                    // Resolve 3rd choice program
+                    $thirdProgram = $request->filled('applicant_third_program')
+                        ? Program::where('code', $request->applicant_third_program)->first()
+                        : null;
+                    $applicantProfile->update(['third_choice_program' => $thirdProgram?->id]);
+
                     // Update existing applications
                     $officiallyEnrolled = $applicantProfile->applications()
                         ->where('enrollment_status', 'officially_enrolled')
                         ->first();
 
                     if ($officiallyEnrolled) {
-                        $officiallyEnrolled->update(['program_id' => $program->id]);
+                        $officiallyEnrolled->update([
+                            'program_id'       => $program->id,
+                            'second_choice_id' => $secondProgram?->id,
+                            'third_choice_id'  => $thirdProgram?->id,
+                        ]);
                     } else {
                         $latestApplication = $applicantProfile->applications()
                             ->orderBy('created_at', 'desc')
                             ->first();
 
                         if ($latestApplication) {
-                            $latestApplication->update(['program_id' => $program->id]);
+                            $latestApplication->update([
+                                'program_id'       => $program->id,
+                                'second_choice_id' => $secondProgram?->id,
+                                'third_choice_id'  => $thirdProgram?->id,
+                            ]);
                         }
                     }
 
-                    $actionDetails = "Updated Applicant {$userEmail} program to {$program->code}";
+                    $actionDetails = "Updated Applicant {$userEmail} 1st choice to {$program->code}"
+                        . ($secondProgram ? ", 2nd choice to {$secondProgram->code}" : '')
+                        . ($thirdProgram  ? ", 3rd choice to {$thirdProgram->code}"  : '');
                 }
             } elseif (in_array($roleId, [3, 4]) && $request->filled('program') && is_array($request->program) && $user) {
                 // For Evaluators (3) and Interviewers (4): handle program arrays (using program code)

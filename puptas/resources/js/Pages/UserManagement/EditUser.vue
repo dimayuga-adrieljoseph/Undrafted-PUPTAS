@@ -23,8 +23,10 @@ const form = useForm({
     role_id: props.user.role_id || '',
     // Use an array of program CODEs for staff (evaluators, interviewers)
     program: props.user.programs && props.user.programs.length > 0 ? props.user.programs.map(p => p.code) : [],
-    // For applicants: use single selection from their program
-    applicant_program: props.user.program ? props.user.program.code : ''
+    // For applicants: 1st, 2nd, and 3rd choice programs (using program code)
+    applicant_program: props.user.program ? props.user.program.code : '',
+    applicant_second_program: props.user.second_program ? props.user.second_program.code : '',
+    applicant_third_program: props.user.third_program ? props.user.third_program.code : '',
 });
 
 const showProgramAssignment = computed(() => {
@@ -41,6 +43,8 @@ const onRoleChange = () => {
     }
     if (!showApplicantProgram.value) {
         form.applicant_program = '';
+        form.applicant_second_program = '';
+        form.applicant_third_program = '';
     }
 };
 
@@ -370,7 +374,7 @@ const submitForm = () => {
                                 <!-- Program Assignment for Applicants -->
                                 <div v-if="showApplicantProgram" class="form-group">
                                     <label for="applicant_program" class="form-label">
-                                        Program Selection
+                                        1st Choice Program
                                         <span class="required">*</span>
                                     </label>
                                     <select 
@@ -379,7 +383,7 @@ const submitForm = () => {
                                         :class="['form-input w-full', { 'error': form.errors.applicant_program }]"
                                         :required="showApplicantProgram"
                                     >
-                                        <option value="" disabled>Select program to apply for</option>
+                                        <option value="" disabled>Select 1st choice program</option>
                                         <option v-for="program in programs" :key="program.id" :value="program.code">
                                             {{ program.name }}
                                         </option>
@@ -389,6 +393,52 @@ const submitForm = () => {
                                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                                         </svg>
                                         {{ form.errors.applicant_program }}
+                                    </div>
+                                </div>
+
+                                <!-- 2nd Choice Program for Applicants -->
+                                <div v-if="showApplicantProgram" class="form-group">
+                                    <label for="applicant_second_program" class="form-label">
+                                        2nd Choice Program
+                                    </label>
+                                    <select 
+                                        id="applicant_second_program" 
+                                        v-model="form.applicant_second_program" 
+                                        :class="['form-input w-full', { 'error': form.errors.applicant_second_program }]"
+                                    >
+                                        <option value="">None</option>
+                                        <option v-for="program in programs" :key="program.id" :value="program.code">
+                                            {{ program.name }}
+                                        </option>
+                                    </select>
+                                    <div v-if="form.errors.applicant_second_program" class="form-error">
+                                        <svg class="error-icon" viewBox="0 0 24 24">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                        </svg>
+                                        {{ form.errors.applicant_second_program }}
+                                    </div>
+                                </div>
+
+                                <!-- 3rd Choice Program for Applicants -->
+                                <div v-if="showApplicantProgram" class="form-group">
+                                    <label for="applicant_third_program" class="form-label">
+                                        3rd Choice Program
+                                    </label>
+                                    <select 
+                                        id="applicant_third_program" 
+                                        v-model="form.applicant_third_program" 
+                                        :class="['form-input w-full', { 'error': form.errors.applicant_third_program }]"
+                                    >
+                                        <option value="">None</option>
+                                        <option v-for="program in programs" :key="program.id" :value="program.code">
+                                            {{ program.name }}
+                                        </option>
+                                    </select>
+                                    <div v-if="form.errors.applicant_third_program" class="form-error">
+                                        <svg class="error-icon" viewBox="0 0 24 24">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                        </svg>
+                                        {{ form.errors.applicant_third_program }}
                                     </div>
                                 </div>
                             </div>
