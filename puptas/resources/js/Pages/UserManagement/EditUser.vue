@@ -19,7 +19,6 @@ const form = useForm({
     middlename: props.user.middlename || '',
     extension_name: props.user.extension_name || '',
     email: props.user.email || '',
-    contactnumber: props.user.contactnumber || '',
     role_id: props.user.role_id || '',
     // Use an array of program CODEs for staff (evaluators, interviewers)
     program: props.user.programs && props.user.programs.length > 0 ? props.user.programs.map(p => p.code) : [],
@@ -175,7 +174,7 @@ const submitForm = () => {
                         </div>
                     </div>
 
-                    <form @submit.prevent="submitForm" class="form-content">
+                    <form @submit.prevent="submitForm" class="form-content" novalidate>
                         <!-- Name Section -->
                         <div class="form-section">
                             <h3 class="section-title">Personal Information</h3>
