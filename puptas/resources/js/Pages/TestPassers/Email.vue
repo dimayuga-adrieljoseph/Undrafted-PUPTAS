@@ -289,23 +289,17 @@
                                         </svg>
                                         Previous
                                     </button>
-                                    <div class="flex items-center space-x-1">
-                                        <button
-                                            v-for="page in visiblePages"
-                                            :key="page"
-                                            @click.prevent="goToPage(page)"
-                                            :class="[
-                                                'px-3 py-1 rounded-lg text-sm font-medium transition',
-                                                currentPage === page 
-                                                    ? 'bg-[#9E122C] text-white' 
-                                                    : 'text-gray-700 hover:bg-gray-100'
-                                            ]"
-                                        >
-                                            {{ page }}
-                                        </button>
-                                        <span v-if="totalPages > 5 && currentPage < totalPages - 2" class="px-2 text-gray-500 dark:text-gray-300">
-                                            ...
-                                        </span>
+                                    <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
+                                        <span>Page</span>
+                                        <input
+                                            type="number"
+                                            :value="currentPage"
+                                            min="1"
+                                            :max="totalPages || 1"
+                                            @change="goToPage(Math.max(1, Math.min($event.target.value, totalPages || 1)))"
+                                            class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                                        />
+                                        <span>of <span class="font-semibold">{{ totalPages || 1 }}</span></span>
                                     </div>
                                     <button
                                         :disabled="currentPage === totalPages"

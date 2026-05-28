@@ -898,29 +898,17 @@ onMounted(() => {
                                     </svg>
                                     Previous
                                 </button>
-                                <div class="flex items-center space-x-1">
-                                    <button
-                                        v-for="page in visiblePages"
-                                        :key="page"
-                                        @click.prevent="currentPage = page"
-                                        :class="[
-                                            'px-3 py-1 rounded-lg text-sm font-medium transition',
-                                            currentPage === page
-                                                ? 'bg-[#9E122C] text-white'
-                                                : 'text-gray-700 hover:bg-gray-100',
-                                        ]"
-                                    >
-                                        {{ page }}
-                                    </button>
-                                    <span
-                                        v-if="
-                                            totalPages > 5 &&
-                                            currentPage < totalPages - 2
-                                        "
-                                        class="px-2 text-gray-500 dark:text-gray-300"
-                                    >
-                                        ...
-                                    </span>
+                                <div class="flex items-center space-x-2 mx-2">
+                                    <input
+                                        type="number"
+                                        v-model.number="currentPage"
+                                        min="1"
+                                        :max="totalPages || 1"
+                                        @change="currentPage = Math.max(1, Math.min($event.target.value, totalPages || 1))"
+                                        class="w-16 px-2 py-2 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium"
+                                    />
+                                    <span class="text-gray-500 dark:text-gray-400">of</span>
+                                    <span class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">{{ totalPages || 1 }}</span>
                                 </div>
                                 <button
                                     :disabled="currentPage === totalPages"
@@ -1363,19 +1351,18 @@ onMounted(() => {
                                     </svg>
                                     Prev
                                 </button>
-                                <button
-                                    v-for="page in sarVisiblePages"
-                                    :key="page"
-                                    @click.prevent="loadSarHistory(page)"
-                                    :class="[
-                                        'px-2 py-1 rounded-lg font-medium transition',
-                                        sarCurrentPage === page
-                                            ? 'bg-[#9E122C] text-white'
-                                            : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
-                                    ]"
-                                >
-                                    {{ page }}
-                                </button>
+                                <div class="flex items-center space-x-2 mx-2">
+                                    <input
+                                        type="number"
+                                        :value="sarCurrentPage"
+                                        min="1"
+                                        :max="sarTotalPages || 1"
+                                        @change="loadSarHistory(Math.max(1, Math.min($event.target.value, sarTotalPages || 1)))"
+                                        class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                                    />
+                                    <span class="text-gray-500 dark:text-gray-400 text-sm">of</span>
+                                    <span class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium text-sm">{{ sarTotalPages || 1 }}</span>
+                                </div>
                                 <button
                                     :disabled="sarCurrentPage === sarTotalPages"
                                     @click.prevent="loadSarHistory(sarCurrentPage + 1)"

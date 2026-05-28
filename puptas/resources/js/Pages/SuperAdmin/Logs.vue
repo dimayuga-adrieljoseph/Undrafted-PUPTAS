@@ -523,7 +523,14 @@ const getPageUrl = (pageNum) => {
             </a>
             
             <div class="flex items-center gap-1">
-                <span class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium dark:text-gray-900">{{ pagination.current_page }}</span>
+                <input
+                    type="number"
+                    :value="pagination.current_page"
+                    min="1"
+                    :max="pagination.last_page || 1"
+                    @change="router.visit(getPageUrl(Math.max(1, Math.min($event.target.value, pagination.last_page || 1))))"
+                    class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-transparent font-medium text-sm"
+                />
                 <span class="text-gray-400 dark:text-gray-500 text-sm">/</span>
                 <span class="px-3 py-1.5 text-gray-600 dark:text-gray-300 text-sm">{{ pagination.last_page }}</span>
             </div>

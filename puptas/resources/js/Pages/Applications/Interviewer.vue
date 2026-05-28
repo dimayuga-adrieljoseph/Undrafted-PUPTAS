@@ -198,7 +198,14 @@
                         </button>
                         
                         <div class="flex items-center space-x-2">
-                            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium dark:bg-gray-900 dark:text-gray-900">{{ currentPage }}</span>
+                            <input
+                                type="number"
+                                v-model.number="currentPage"
+                                min="1"
+                                :max="totalPages || 1"
+                                @change="currentPage = Math.max(1, Math.min($event.target.value, totalPages || 1))"
+                                class="w-16 px-2 py-2 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium"
+                            />
                             <span class="text-gray-500 dark:text-gray-400">of</span>
                             <span class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">{{ totalPages || 1 }}</span>
                         </div>

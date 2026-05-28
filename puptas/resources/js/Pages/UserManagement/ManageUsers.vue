@@ -278,6 +278,20 @@
             </button>
           </div>
 
+          <!-- Go to page -->
+          <div class="hidden sm:flex items-center gap-2 ml-4">
+            <span class="text-sm text-gray-500 dark:text-gray-400">Go to:</span>
+            <input
+              type="number"
+              min="1"
+              :max="paginationInfo.last_page"
+              :value="paginationInfo.current_page"
+              @change="changePage(Number($event.target.value))"
+              :disabled="searching"
+              class="w-16 px-2 py-1.5 text-sm text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+            />
+          </div>
+
           <button
             @click="changePage(paginationInfo.current_page + 1)"
             :disabled="paginationInfo.current_page >= paginationInfo.last_page || searching"

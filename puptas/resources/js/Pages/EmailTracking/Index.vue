@@ -105,22 +105,17 @@
               Previous
             </span>
 
-            <div class="flex items-center space-x-1">
-              <template v-for="page in visiblePages" :key="page">
-                <Link
-                  v-if="page !== '...'"
-                  :href="getPageUrl(page)"
-                  :class="[
-                    'px-3 py-1 rounded-lg text-sm font-medium transition',
-                    operations.current_page === page
-                      ? 'bg-[#9E122C] text-white'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  ]"
-                >
-                  {{ page }}
-                </Link>
-                <span v-else class="px-2 text-gray-500 dark:text-gray-400">...</span>
-              </template>
+            <div class="flex items-center space-x-2 mx-2">
+                <input
+                    type="number"
+                    :value="operations.current_page"
+                    min="1"
+                    :max="operations.last_page || 1"
+                    @change="router.visit(getPageUrl(Math.max(1, Math.min($event.target.value, operations.last_page || 1))))"
+                    class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                />
+                <span class="text-gray-500 dark:text-gray-400 text-sm">of</span>
+                <span class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium text-sm">{{ operations.last_page || 1 }}</span>
             </div>
 
             <Link

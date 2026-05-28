@@ -226,8 +226,17 @@ const getStatusClass = (status) => {
 
             <!-- Pagination -->
             <div v-if="lastPage > 1 && !loading" class="mt-4 flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow gap-4">
-                <div class="text-sm text-gray-700 dark:text-gray-300">
-                    Showing page <span class="font-semibold">{{ currentPage }}</span> of <span class="font-semibold">{{ lastPage }}</span> (Total: {{ total }} records)
+                <div class="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span>Showing page</span>
+                    <input
+                        type="number"
+                        :value="currentPage"
+                        min="1"
+                        :max="lastPage || 1"
+                        @change="fetchReportData(Math.max(1, Math.min($event.target.value, lastPage || 1)))"
+                        class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-[#9E122C]"
+                    />
+                    <span>of <span class="font-semibold">{{ lastPage }}</span> (Total: {{ total }} records)</span>
                 </div>
                 <div class="flex gap-2">
                     <button 
