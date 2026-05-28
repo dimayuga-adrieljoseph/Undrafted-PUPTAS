@@ -226,6 +226,18 @@ class UserController extends Controller
                 ]);
             }
 
+            // Sync updated info to the linked test_passers record
+            $testPasser = \App\Models\TestPasser::where('user_id', $id)
+                ->orWhere('user_id', optional($user)->id)
+                ->first();
+            if ($testPasser) {
+                $testPasser->update([
+                    'surname'    => $request->lastname,
+                    'first_name' => $request->firstname,
+                    'middle_name' => $request->middlename,
+                ]);
+            }
+
             $userEmail = $request->email;
             $actionDetails = "Updated User {$userEmail}";
 
