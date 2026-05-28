@@ -737,6 +737,8 @@ class TestPasserController extends Controller
             'school_year' => 'nullable|string|max:9|regex:/^\d{4}-\d{4}$/',
             'pupcet_total_score' => 'nullable|numeric|min:0|max:999.99',
             'passer_status_id' => 'nullable|exists:passer_statuses,id',
+            'graduate_of' => 'nullable|string|max:255',
+            'graduation_date' => 'nullable|date',
         ]);
 
         // Only Superadmin (role_id 7) can update the email
@@ -771,6 +773,8 @@ class TestPasserController extends Controller
             'school_year' => 'nullable|string|max:9|regex:/^\d{4}-\d{4}$/',
             'pupcet_total_score' => 'nullable|numeric|min:0|max:999.99',
             'passer_status_id' => 'nullable|exists:passer_statuses,id',
+            'graduate_of' => 'nullable|string|max:255',
+            'graduation_date' => 'nullable|date',
         ]);
 
         // Create new passer record
