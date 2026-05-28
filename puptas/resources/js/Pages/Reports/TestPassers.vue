@@ -15,6 +15,7 @@ const loading = ref(false);
 const currentPage = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
+const perPage = ref(15);
 
 const filterStatus = ref(["qualified"]);
 const showStatusDropdown = ref(false);
@@ -49,6 +50,7 @@ const fetchReportData = async (page = 1) => {
         currentPage.value = response.data.current_page;
         lastPage.value = response.data.last_page;
         total.value = response.data.total;
+        perPage.value = response.data.per_page || 15;
     } catch (err) {
         if (axios.isCancel(err)) {
             console.log("Request canceled due to new request.");
@@ -232,8 +234,8 @@ const getStatusClass = (status) => {
                             Showing 0 to 0 of 0 results
                         </span>
                         <span v-else>
-                            Showing {{ (currentPage - 1) * 10 + 1 }} 
-                            to {{ (currentPage - 1) * 10 + passers.length }} 
+                            Showing {{ (currentPage - 1) * perPage + 1 }} 
+                            to {{ (currentPage - 1) * perPage + passers.length }} 
                             of {{ total }} results
                         </span>
                     </div>

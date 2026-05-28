@@ -13,6 +13,7 @@ const loading = ref(false);
 const currentPage = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
+const perPage = ref(15);
 
 // Filters
 const filterSearch = ref("");
@@ -47,6 +48,7 @@ const fetchMasterlistData = async (page = 1) => {
         currentPage.value = response.data.paginator.current_page;
         lastPage.value = response.data.paginator.last_page;
         total.value = response.data.paginator.total;
+        perPage.value = response.data.paginator.per_page || 15;
     } catch (err) {
         if (axios.isCancel(err)) {
             console.log("Request canceled due to new request.");
@@ -195,8 +197,8 @@ const clearFilters = () => {
                             Showing 0 to 0 of 0 results
                         </span>
                         <span v-else>
-                            Showing {{ (currentPage - 1) * 10 + 1 }} 
-                            to {{ (currentPage - 1) * 10 + applicants.length }} 
+                            Showing {{ (currentPage - 1) * perPage + 1 }} 
+                            to {{ (currentPage - 1) * perPage + applicants.length }} 
                             of {{ total }} results
                         </span>
                     </div>
