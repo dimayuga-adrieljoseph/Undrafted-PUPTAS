@@ -18,7 +18,6 @@ class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $queue = 'emails';
     public $tries = 15;
     public $maxExceptions = 3;
     public $backoff = [10, 30, 60];
@@ -43,6 +42,7 @@ class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
     ) {
         $this->passer = $passer;
         $this->messageTemplate = $messageTemplate;
+        $this->onQueue('emails');
     }
 
     /**
