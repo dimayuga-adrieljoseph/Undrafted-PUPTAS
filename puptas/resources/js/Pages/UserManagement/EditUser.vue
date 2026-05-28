@@ -281,30 +281,7 @@ const submitForm = () => {
                                     </div>
                                 </div>
 
-                                <div class="form-group">
-                                    <label for="contactnumber" class="form-label">
-                                        Contact Number
-                                        <span class="required">*</span>
-                                    </label>
-                                    <div class="phone-input">
-                                        <div class="country-code">+63</div>
-                                        <input 
-                                            id="contactnumber" 
-                                            v-model="form.contactnumber" 
-                                            :class="['form-input w-full', { 'error': form.errors.contactnumber }]"
-                                            type="text" 
-                                            required 
-                                            placeholder="912 345 6789"
-                                            maxlength="10"
-                                        />
-                                    </div>
-                                    <div v-if="form.errors.contactnumber" class="form-error">
-                                        <svg class="error-icon" viewBox="0 0 24 24">
-                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                                        </svg>
-                                        {{ form.errors.contactnumber }}
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
 
