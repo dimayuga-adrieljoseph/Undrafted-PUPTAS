@@ -688,7 +688,7 @@
                             </div>
                         </div>
 
-                        <div class="col-span-2 grid grid-cols-3 gap-4">
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
                                 <select
@@ -702,17 +702,6 @@
                                     <option value="TVL">TVL</option>
                                     <option value="ICT">ICT</option>
                                     <option value="GAS">GAS</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
-                                <select
-                                    v-model="editingPasser.year_graduated"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="" disabled>Select an option</option>
-                                    <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
-                                    <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
                                 </select>
                             </div>
                             <div>
@@ -919,7 +908,7 @@
                             </div>
                         </div>
 
-                        <div class="col-span-2 grid grid-cols-3 gap-4">
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
                                 <select
@@ -933,17 +922,6 @@
                                     <option value="TVL">TVL</option>
                                     <option value="ICT">ICT</option>
                                     <option value="GAS">GAS</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
-                                <select
-                                    v-model="newPasserData.year_graduated"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="" disabled>Select an option</option>
-                                    <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
-                                    <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
                                 </select>
                             </div>
                             <div>
