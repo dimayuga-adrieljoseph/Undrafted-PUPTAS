@@ -225,36 +225,52 @@ const getStatusClass = (status) => {
             </div>
 
             <!-- Pagination -->
-            <div v-if="lastPage > 1 && !loading" class="mt-4 flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow gap-4">
-                <div class="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
-                    <span>Showing page</span>
-                    <input
-                        type="number"
-                        :value="currentPage"
-                        min="1"
-                        :max="lastPage || 1"
-                        @change="fetchReportData(Math.max(1, Math.min($event.target.value, lastPage || 1)))"
-                        class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-[#9E122C]"
-                    />
-                    <span>of <span class="font-semibold">{{ lastPage }}</span> (Total: {{ total }} records)</span>
-                </div>
-                <div class="flex gap-2">
-                    <button 
-                        @click="fetchReportData(currentPage - 1)" 
-                        :disabled="currentPage === 1"
-                        class="px-3 py-1.5 rounded-md border text-sm font-medium transition-colors"
-                        :class="currentPage === 1 ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed dark:text-gray-500' : 'text-gray-700 border-gray-300 hover:bg-gray-50 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700'"
-                    >
-                        Previous
-                    </button>
-                    <button 
-                        @click="fetchReportData(currentPage + 1)" 
-                        :disabled="currentPage === lastPage"
-                        class="px-3 py-1.5 rounded-md border text-sm font-medium transition-colors"
-                        :class="currentPage === lastPage ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed dark:text-gray-500' : 'text-gray-700 border-gray-300 hover:bg-gray-50 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700'"
-                    >
-                        Next
-                    </button>
+            <div v-if="lastPage > 1 && !loading" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-b-xl shadow mt-4">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-700 dark:text-gray-400">
+                        <span v-if="!total || total === 0">
+                            Showing 0 to 0 of 0 results
+                        </span>
+                        <span v-else>
+                            Showing {{ (currentPage - 1) * 10 + 1 }} 
+                            to {{ (currentPage - 1) * 10 + passers.length }} 
+                            of {{ total }} results
+                        </span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button
+                            :disabled="currentPage === 1"
+                            @click.prevent="fetchReportData(currentPage - 1)"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                        >
+                            <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Previous
+                        </button>
+                        <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
+                            <span>Page</span>
+                            <input
+                                type="number"
+                                :value="currentPage"
+                                min="1"
+                                :max="lastPage || 1"
+                                @change="fetchReportData(Math.max(1, Math.min($event.target.value, lastPage || 1)))"
+                                class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                            />
+                            <span>of <span class="font-semibold">{{ lastPage || 1 }}</span></span>
+                        </div>
+                        <button
+                            :disabled="currentPage === lastPage || lastPage === 0"
+                            @click.prevent="fetchReportData(currentPage + 1)"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                        >
+                            Next
+                            <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
