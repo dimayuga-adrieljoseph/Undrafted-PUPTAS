@@ -49,7 +49,10 @@ const onRoleChange = () => {
 
 const submitForm = () => {
     form.put(route('users.update', props.user.id), {
-        preserveScroll: true
+        onError: (errors) => {
+            alert('Validation failed: ' + JSON.stringify(errors));
+            window.scrollTo(0, 0);
+        }
     });
 };
 </script>

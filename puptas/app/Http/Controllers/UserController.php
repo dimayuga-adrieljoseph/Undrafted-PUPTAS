@@ -181,7 +181,7 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $request->validate([
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
             'middlename' => 'nullable|string|max:255',
@@ -190,6 +190,11 @@ class UserController extends Controller
             'contactnumber' => 'nullable|string|max:20',
             'role_id' => 'required|integer',
         ]);
+
+        if ($validator->fails()) {
+            \Illuminate\Support\Facades\Log::error('User Update Validation Failed', $validator->errors()->toArray());
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
 
         // If Role is 1 (Applicant), we find them in ApplicantProfile. Else StaffProfile.
         $roleId = $request->role_id;
@@ -206,7 +211,6 @@ class UserController extends Controller
                     'lastname' => $request->lastname,
                     'extension_name' => $request->extension_name,
                     'email' => $request->email,
-                    'contactnumber' => $request->contactnumber,
                     'role_id' => $roleId,
                 ]);
 
@@ -222,7 +226,6 @@ class UserController extends Controller
                     'lastname' => $request->lastname,
                     'extension_name' => $request->extension_name,
                     'email' => $request->email,
-                    'contactnumber' => $request->contactnumber,
                 ]);
             }
 
