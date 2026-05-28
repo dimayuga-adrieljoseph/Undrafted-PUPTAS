@@ -50,5 +50,8 @@
         </tbody>
     </table>
 
+    <div style="margin-top: 30px; font-size: 10px; text-align: center;">
+        This is a system generated report.
+    </div>
 </body>
 </html>
