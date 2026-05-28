@@ -644,7 +644,7 @@ class TestPasserController extends Controller
             'full_name' => $fullName,
             'full_name_natural' => $fullNameNatural,
             'shs_strand' => $passer->strand ?? 'N/A',
-            'graduation_year' => $passer->year_graduated ?? date('Y'),
+            'graduation_year' => $passer->graduation_year,
             'school_attended' => $passer->shs_school ?? 'N/A',
             'enrollment_date' => $formattedDate,
             'enrollment_time' => $formattedTime,
@@ -856,7 +856,7 @@ class TestPasserController extends Controller
                 $rowData = [
                     'reference_number' => $passer->reference_number,
                     'full_name' => $fullName,
-                    'graduation_year' => $passer->year_graduated ?? date('Y'),
+                    'graduation_year' => $passer->graduation_year,
                     'school_attended' => $passer->shs_school ?? 'N/A',
                     'shs_strand' => $passer->strand ?? 'N/A',
                     'enrollment_date' => $sarGeneration->enrollment_date ?
@@ -1003,7 +1003,7 @@ class TestPasserController extends Controller
                 $rowData = [
                     'reference_number' => $passer->reference_number,
                     'full_name' => $fullName,
-                    'graduation_year' => $passer->year_graduated ?? date('Y'),
+                    'graduation_year' => $passer->graduation_year,
                     'school_attended' => $passer->shs_school ?? 'N/A',
                     'shs_strand' => $passer->strand ?? 'N/A',
                     'enrollment_date' => $sarGeneration->enrollment_date ?

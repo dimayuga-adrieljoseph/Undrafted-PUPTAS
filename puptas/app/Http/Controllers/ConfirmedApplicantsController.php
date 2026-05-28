@@ -185,7 +185,7 @@ class ConfirmedApplicantsController extends Controller
                     'surname'          => $testPasser->surname,
                     'firstname_middle' => trim($testPasser->first_name . ' ' . ($testPasser->middle_name ?? '')),
                     'shs_strand'       => $testPasser->strand ?? 'N/A',
-                    'graduation_year'  => $testPasser->year_graduated ?? date('Y'),
+                    'graduation_year'  => $testPasser->graduation_year,
                     'school_attended'  => $testPasser->shs_school ?? 'N/A',
                     'enrollment_date'  => $enrollmentDate,
                     'enrollment_time'  => $enrollmentTime,
