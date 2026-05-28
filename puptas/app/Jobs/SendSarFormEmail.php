@@ -19,15 +19,16 @@ class SendSarFormEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $queue = 'emails';
+    public $tries = 15;
+    public $maxExceptions = 3;
+    public $backoff = [10, 30, 60];
+    public $uniqueFor = 3600;
+
     public function middleware(): array
     {
         return [new RateLimited('emails')];
     }
-
-    /**
-     * The number of seconds the unique lock should be maintained.
-     */
-    public $uniqueFor = 3600;
 
     /**
      * One SAR email job per passer — prevents duplicate sends
@@ -46,7 +47,6 @@ class SendSarFormEmail implements ShouldQueue, ShouldBeUnique
         public readonly ?int $emailLogId = null,
         public readonly ?int $bulkOperationId = null,
     ) {
-        $this->onQueue('emails');
     }
 
     public function handle(): void

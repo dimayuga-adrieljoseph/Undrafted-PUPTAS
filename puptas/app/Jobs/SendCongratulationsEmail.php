@@ -17,6 +17,10 @@ class SendCongratulationsEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $queue = 'emails';
+    public $tries = 15;
+    public $maxExceptions = 3;
+    public $backoff = [10, 30, 60];
     public $uniqueFor = 3600;
 
     public function middleware(): array
@@ -32,7 +36,6 @@ class SendCongratulationsEmail implements ShouldQueue, ShouldBeUnique
         public readonly int $emailLogId,
         public readonly int $bulkOperationId,
     ) {
-        $this->onQueue('emails');
     }
 
     /**
