@@ -170,7 +170,7 @@ watch(
         isPasserDropdownOpen.value =
             isUploadFormActive.value || isListPassersActive.value || isConfirmedApplicantsActive.value;
         isReportsDropdownOpen.value = 
-            isReportsActive.value || isTestPasserReportsActive.value || isMasterlistReportsActive.value;
+            isReportsActive.value || isTestPasserReportsActive.value || isMasterlistReportsActive.value || isEmailTrackingActive.value;
     },
     { immediate: true }
 );
@@ -461,7 +461,8 @@ watch(isSidebarOpen, (val) => {
                                     isReportsDropdownOpen ||
                                     isReportsActive ||
                                     isTestPasserReportsActive ||
-                                    isMasterlistReportsActive,
+                                    isMasterlistReportsActive ||
+                                    isEmailTrackingActive,
                             }"
                         >
                             <div class="nav-icon">
@@ -491,8 +492,8 @@ watch(isSidebarOpen, (val) => {
                             enter-active-class="transition-all duration-200 ease-out"
                             leave-active-class="transition-all duration-150 ease-in"
                             enter-from-class="opacity-0 max-h-0"
-                            enter-to-class="opacity-100 max-h-40"
-                            leave-from-class="opacity-100 max-h-40"
+                            enter-to-class="opacity-100 max-h-60"
+                            leave-from-class="opacity-100 max-h-60"
                             leave-to-class="opacity-0 max-h-0"
                         >
                             <div
@@ -544,6 +545,22 @@ watch(isSidebarOpen, (val) => {
                                     />
                                     Accepted Masterlist
                                 </Link>
+                                <Link
+                                    v-if="isAdminOrSuperAdmin"
+                                    :href="route('email-tracking.index')"
+                                    class="dropdown-item"
+                                    :class="{
+                                        'dropdown-item-active':
+                                            isEmailTrackingActive,
+                                    }"
+                                    @click="emit('close')"
+                                >
+                                    <FontAwesomeIcon
+                                        icon="envelope"
+                                        class="text-xs mr-2"
+                                    />
+                                    Email Tracking
+                                </Link>
                             </div>
                         </transition>
                     </li>
@@ -574,31 +591,7 @@ watch(isSidebarOpen, (val) => {
                         </NavLink>
                     </li>
 
-                    <!-- Email Tracking (Admin and Superadmin Only) -->
-                    <li v-if="isAdminOrSuperAdmin">
-                        <NavLink
-                            :href="route('email-tracking.index')"
-                            :active="isEmailTrackingActive"
-                            class="nav-item group"
-                            :class="{ 'nav-item-active': isEmailTrackingActive }"
-                            @click="emit('close')"
-                        >
-                            <div class="nav-icon">
-                                <FontAwesomeIcon
-                                    icon="envelope"
-                                    class="text-lg"
-                                />
-                            </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
-                                Email Tracking
-                            </span>
-                            <div
-                                v-if="isSidebarOpen"
-                                class="nav-indicator"
-                                :class="{ active: isEmailTrackingActive }"
-                            ></div>
-                        </NavLink>
-                    </li>
+
 
                     <!-- Audit Logs (Superadmin Only) -->
                     <li v-if="isSuperAdmin">

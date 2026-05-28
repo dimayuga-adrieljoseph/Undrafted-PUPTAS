@@ -119,7 +119,9 @@ class TestPasserController extends Controller
             'passers' => $passers,
             'filterOptions' => $filterOptions,
             'filters' => $filters,
-            'registrationUrl' => 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad',
+            'registrationUrl' => url('/links/register'),
+            'admissionCriteriaUrl' => url('/links/admission-criteria'),
+            'facebookUrl' => url('/links/facebook'),
         ]);
     }
 
@@ -285,7 +287,7 @@ class TestPasserController extends Controller
 
                 foreach ($passers as $passer) {
                     // Replace placeholders in template for personalization
-                    $confirmationUrl = 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad';
+                    $confirmationUrl = url('/links/register');
                     $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
                     $searchTags = [
                         '{{firstname}} {{surname}}',
