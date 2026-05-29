@@ -16,6 +16,7 @@ const filterBatch = ref("");
 const filterPasserStatus = ref([]);
 const showStatusDropdown = ref(false);
 const filterSarStatus = ref("");
+const filterGraduateType = ref("");
 const selectedIds = ref([]);
 
 // Template / action mode: 'sar' | 'custom'
@@ -88,6 +89,13 @@ const passerStatuses = computed(() => {
     return Array.from(statusSet).sort();
 });
 
+const graduateTypes = computed(() => {
+    const typeSet = new Set(
+        applicants.value.map((a) => a.graduate_type).filter(Boolean),
+    );
+    return Array.from(typeSet).sort();
+});
+
 const filtered = computed(() => {
     let list = applicants.value;
     const q = searchQuery.value.trim().toLowerCase();
@@ -109,6 +117,8 @@ const filtered = computed(() => {
     if (filterSarStatus.value === "sent") list = list.filter((a) => a.sar_sent);
     if (filterSarStatus.value === "pending")
         list = list.filter((a) => !a.sar_sent);
+    if (filterGraduateType.value)
+        list = list.filter((a) => a.graduate_type === filterGraduateType.value);
     return list;
 });
 
@@ -154,6 +164,7 @@ watch(
         filterBatch,
         filterPasserStatus,
         filterSarStatus,
+        filterGraduateType,
     ],
     () => {
         currentPage.value = 1;
@@ -601,6 +612,15 @@ onMounted(() => {
                             <option value="sent">SAR Sent</option>
                             <option value="pending">SAR Pending</option>
                         </select>
+                        <select
+                            v-model="filterGraduateType"
+                            class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                        >
+                            <option value="">All Graduate Types</option>
+                            <option v-for="gt in graduateTypes" :key="gt" :value="gt">
+                                {{ gt }}
+                            </option>
+                        </select>
                         <button
                             @click="fetchApplicants"
                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
@@ -719,6 +739,11 @@ onMounted(() => {
                                     <th
                                         class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
+                                        Graduate Type
+                                    </th>
+                                    <th
+                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                    >
                                         SAR STATUS
                                     </th>
                                 </tr>
@@ -732,7 +757,7 @@ onMounted(() => {
                                     class="bg-gray-50 dark:bg-gray-900"
                                 >
                                     <td
-                                        colspan="6"
+                                        colspan="8"
                                         class="px-6 py-12 text-center"
                                     >
                                         <div
@@ -825,6 +850,11 @@ onMounted(() => {
                                         >
                                             {{ a.passer_status_name }}
                                         </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm text-gray-900 dark:text-gray-200">
+                                            {{ a.graduate_type || "—" }}
+                                        </div>
                                     </td>
                                     <td
                                         class="px-6 py-4 whitespace-nowrap text-sm font-medium"
