@@ -1806,17 +1806,10 @@ watch(
     }
 );
 
-watch(
-    () => editingPasser.value?.pupcet_total_score,
-    (newScore) => {
-        if (!editingPasser.value) return;
-        const { passer_status_id, batch_number } = getStatusAndBatchFromScore(newScore);
-        if (passer_status_id !== "") {
-            editingPasser.value.passer_status_id = passer_status_id;
-        }
-        editingPasser.value.batch_number = batch_number;
-    }
-);
+// REMOVED: Automatic status recalculation when editing existing records
+// This was causing WBC (status 4) records to be incorrectly changed to Waitlisted (status 2)
+// when editing other fields like email. Status should only be auto-calculated for NEW records.
+// When editing, the admin must manually change the status if needed.
 
 function openAddModal() {
     newPasserData.value = {
