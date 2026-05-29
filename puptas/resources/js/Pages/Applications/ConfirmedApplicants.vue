@@ -251,6 +251,14 @@ const send = async () => {
         }
     }
 
+    const confirmMessage = templateMode.value === "sar" 
+        ? `Are you sure you want to send SAR forms to ${selectedIds.value.length} applicant(s)?`
+        : `Are you sure you want to send custom emails to ${selectedIds.value.length} applicant(s)?`;
+        
+    if (!window.confirm(confirmMessage)) {
+        return;
+    }
+
     sending.value = true;
     sendResult.value = null;
 
@@ -1077,7 +1085,7 @@ onMounted(() => {
                         <div class="mt-4 space-y-2">
                             <button
                                 @click="previewSarEmailTemplate"
-                                :disabled="selectedIds.length === 0"
+                                :disabled="selectedIds.length !== 1"
                                 class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition dark:text-gray-900"
                             >
                                 <svg
@@ -1099,7 +1107,7 @@ onMounted(() => {
                             <button
                                 @click="previewSarPdfForm"
                                 :disabled="
-                                    selectedIds.length === 0 ||
+                                    selectedIds.length !== 1 ||
                                     !sarEnrollmentDate ||
                                     !sarEnrollmentTime
                                 "
