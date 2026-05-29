@@ -162,6 +162,9 @@ Route::middleware(['auth'])->group(function () {
     
     Route::get('/grades/tvl', [GradesController::class, 'showTvlGradeForm'])->name('grades.tvl.form');
     Route::post('/grades/tvl', [GradesController::class, 'storeTvlGrades'])->name('grades.tvl.store');
+
+    // Unified grade store endpoint (dynamic grade input)
+    Route::post('/grades/store', [GradesController::class, 'storeGrades'])->name('grades.store');
 });
 
 Route::get('/home', function () {
