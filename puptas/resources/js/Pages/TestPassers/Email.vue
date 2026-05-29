@@ -1781,16 +1781,20 @@ function getStatusAndBatchFromScore(score) {
         return { passer_status_id: "", batch_number: "" };
     }
 
-    if (numScore >= 85.00) {
+    // Updated thresholds as of May 29, 2026:
+    // 79+ = Qualified (Status 1), Batch 1
+    // 75-78 = Waitlisted (Status 2), Batch 2
+    // 55-74 = Waitlisted Below Cut Off (Status 4), Batch 3
+    // <55 = Unqualified (Status 3), Batch 4
+    
+    if (numScore >= 79.00) {
         return { passer_status_id: "1", batch_number: "Batch 1" };
-    } else if (numScore >= 79.00) {
-        return { passer_status_id: "1", batch_number: "Batch 2" };
     } else if (numScore >= 75.00) {
-        return { passer_status_id: "2", batch_number: "Batch 3" };
+        return { passer_status_id: "2", batch_number: "Batch 2" };
     } else if (numScore >= 55.00) {
-        return { passer_status_id: "2", batch_number: "Batch 4" };
+        return { passer_status_id: "4", batch_number: "Batch 3" };
     } else {
-        return { passer_status_id: "3", batch_number: "" };
+        return { passer_status_id: "3", batch_number: "Batch 4" };
     }
 }
 
