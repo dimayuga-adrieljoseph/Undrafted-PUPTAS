@@ -44,6 +44,10 @@ Route::get('/', function () {
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->name('idp.redirect');
 
+Route::get('/auth/idp/error', function () {
+    return Inertia::render('Auth/IdpError');
+})->name('idp.error');
+
 Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
     ->name('idp.callback');
 

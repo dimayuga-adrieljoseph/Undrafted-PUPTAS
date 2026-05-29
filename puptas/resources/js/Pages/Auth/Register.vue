@@ -20,6 +20,15 @@ onMounted(() => {
 
     const testPasser = page.props.test_passer_data;
     if (testPasser) {
+        if (testPasser.passer_status_id === 3 || testPasser.passer_status_id === 4) {
+            showTermsModal.value = false;
+            showBlockedModal.value = true;
+            if (testPasser.passer_status_id === 3) {
+                blockedMessage.value = 'Registration is not available for Unqualified applicants.';
+            } else {
+                blockedMessage.value = 'Registration is currently unavailable at this time. Please wait for further announcements regarding open slots.';
+            }
+        }
         form.reference_number = testPasser.reference_number || '';
         form.firstname = testPasser.first_name || '';
         form.lastname = testPasser.surname || '';
@@ -30,6 +39,8 @@ onMounted(() => {
 
 // Modal control variables
 const showTermsModal = ref(true);
+const showBlockedModal = ref(false);
+const blockedMessage = ref('');
 
 const form = useForm({
     lastname: "",
@@ -798,6 +809,30 @@ const handleTermsCancel = () => {
             @cancel="handleTermsCancel"
         />
 
+        <!-- Blocked Applicant Modal -->
+        <div v-if="showBlockedModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+            <div class="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75 backdrop-blur-sm"></div>
+            
+            <div class="relative w-full max-w-md overflow-hidden bg-white rounded-2xl shadow-2xl transform transition-all dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-[slideUp_0.3s_ease-out]">
+                <div class="p-6 sm:p-8 flex flex-col items-center text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-6 dark:bg-red-900/30">
+                        <svg class="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    
+                    <h3 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">Registration Closed</h3>
+                    
+                    <p class="mb-8 text-gray-600 dark:text-gray-300">
+                        {{ blockedMessage }}
+                    </p>
+                    
+                    <a href="/auth/idp/cancel-registration" class="w-full inline-flex justify-center items-center px-6 py-3.5 border border-transparent text-base font-medium rounded-xl text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors shadow-lg hover:shadow-xl dark:focus:ring-offset-gray-800">
+                        Back to Login
+                    </a>
+                </div>
+            </div>
+        </div>
 
     </div>
 </template>
