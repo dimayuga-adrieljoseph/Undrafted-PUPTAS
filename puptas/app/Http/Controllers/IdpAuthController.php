@@ -244,6 +244,15 @@ class IdpAuthController extends Controller
                 // Email not found in local DB -> treat as new user/applicant
                 \Log::info('Intercepting first-time IDP applicant for registration flow (email not in DB)', ['email' => $idpEmail]);
 
+                // Check if they are a test passer whose registration is closed
+                $testPasser = \App\Models\TestPasser::where('email', $idpEmail)->first();
+                if ($testPasser && in_array($testPasser->passer_status_id, [3, 4])) {
+                    $statusName = $testPasser->passer_status_id === 3 ? 'Unqualified' : 'Waitlisted Below Cutoff';
+                    return redirect('/login')->withErrors([
+                        'idp' => "Registration is currently closed for {$statusName} applicants. Please wait for further announcements regarding open slots.",
+                    ]);
+                }
+
                 session(['pending_registration' => [
                     'user_id'       => $idpUser['id'] ?? null,
                     'email'         => $idpEmail,
