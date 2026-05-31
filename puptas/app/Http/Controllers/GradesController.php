@@ -10,10 +10,204 @@ use App\Models\Application;
 use App\Models\ApplicationProcess;
 use App\Models\Program;
 use App\Rules\ValidationRules;
+use App\Services\GradeValidationService;
+use App\Services\GradeComputationService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class GradesController extends Controller
 {
+    protected GradeValidationService $validationService;
+    protected GradeComputationService $computationService;
+
+    public function __construct(
+        GradeValidationService $validationService,
+        GradeComputationService $computationService
+    ) {
+        $this->validationService = $validationService;
+        $this->computationService = $computationService;
+    }
+
+    /**
+     * Unified method to store grades for any strand.
+     * Replaces the 6 separate store{Strand}Grades methods.
+     *
+     * Validates individual grades using strand-aware nullable rules,
+     * validates dynamic subjects, ensures minimum-per-category constraint,
+     * recomputes averages server-side, verifies program qualification,
+     * and persists within a database transaction.
+     */
+    public function storeGrades(Request $request)
+    {
+        $user = Auth::user();
+
+        // Check if application is locked
+        if ($this->isEvaluatorLocked($user)) {
+            return back()->withErrors(['locked' => 'Grade submission is no longer allowed. Your application has been submitted.']);
+        }
+
+        // Get applicant profile and strand
+        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+
+        if (!$profile || !$profile->strand) {
+            return back()->withErrors(['strand' => 'Applicant profile or strand not found.']);
+        }
+
+        $strand = strtoupper($profile->strand);
+
+        // 1. Validate individual grades using strand-aware nullable rules
+        $gradeRules = $this->validationService->getRules($strand);
+
+        // Add common fields validation
+        $commonRules = [
+            'g12_first_sem' => 'required|numeric|min:0|max:100',
+            'g12_second_sem' => 'required|numeric|min:0|max:100',
+            'dynamic_subjects' => 'nullable|array',
+            'dynamic_subjects.*.category' => 'required_with:dynamic_subjects|string|in:math,english,science',
+            'dynamic_subjects.*.name' => 'required_with:dynamic_subjects|string|max:100',
+            'dynamic_subjects.*.grade' => 'required_with:dynamic_subjects|numeric|min:0|max:100',
+            // Program choices
+            'first_choice_program' => 'required|exists:programs,id',
+            'second_choice_program' => 'nullable|exists:programs,id|different:first_choice_program',
+            'third_choice_program' => 'nullable|exists:programs,id|different:first_choice_program,second_choice_program',
+            // Frontend-computed averages (for verification)
+            'mathematics' => 'nullable|numeric|min:0|max:100',
+            'english' => 'nullable|numeric|min:0|max:100',
+            'science' => 'nullable|numeric|min:0|max:100',
+        ];
+
+        $allRules = array_merge($gradeRules, $commonRules);
+        $validated = $request->validate($allRules);
+
+        // 2. Validate dynamic subjects array (detailed validation)
+        $dynamicSubjects = $validated['dynamic_subjects'] ?? [];
+        $dynamicSubjectErrors = $this->validationService->validateDynamicSubjects($dynamicSubjects);
+
+        if (!empty($dynamicSubjectErrors)) {
+            return back()->withErrors($dynamicSubjectErrors)->withInput();
+        }
+
+        // 3. Validate minimum-per-category constraint
+        if (!$this->validationService->validateMinimumPerCategory($validated, $strand)) {
+            return back()->withErrors([
+                'category_minimum' => 'At least one grade is required in each category (Mathematics, English, and Science).',
+            ])->withInput();
+        }
+
+        // 4. Recompute averages server-side using GradeComputationService
+        $mathSubjects = $this->validationService->getSubjectsForStrand($strand, 'math');
+        $englishSubjects = $this->validationService->getSubjectsForStrand($strand, 'english');
+        $scienceSubjects = $this->validationService->getSubjectsForStrand($strand, 'science');
+
+        $mathGrades = array_map(fn($field) => $validated[$field] ?? null, $mathSubjects);
+        $englishGrades = array_map(fn($field) => $validated[$field] ?? null, $englishSubjects);
+        $scienceGrades = array_map(fn($field) => $validated[$field] ?? null, $scienceSubjects);
+
+        $mathDynamic = array_filter($dynamicSubjects, fn($s) => ($s['category'] ?? '') === 'math');
+        $englishDynamic = array_filter($dynamicSubjects, fn($s) => ($s['category'] ?? '') === 'english');
+        $scienceDynamic = array_filter($dynamicSubjects, fn($s) => ($s['category'] ?? '') === 'science');
+
+        $computedMathAvg = $this->computationService->computeCategoryAverage($mathGrades, array_values($mathDynamic));
+        $computedEnglishAvg = $this->computationService->computeCategoryAverage($englishGrades, array_values($englishDynamic));
+        $computedScienceAvg = $this->computationService->computeCategoryAverage($scienceGrades, array_values($scienceDynamic));
+
+        // Calculate GWA from semester grades
+        $g12Gwa = ($validated['g12_first_sem'] + $validated['g12_second_sem']) / 2;
+
+        // 5. Verify frontend-submitted averages against backend-computed (tolerance of 0.01)
+        $frontendMath = $validated['mathematics'] ?? null;
+        $frontendEnglish = $validated['english'] ?? null;
+        $frontendScience = $validated['science'] ?? null;
+
+        // Use backend-computed values as the authoritative source
+        $mathAverage = $computedMathAvg;
+        $englishAverage = $computedEnglishAvg;
+        $scienceAverage = $computedScienceAvg;
+
+        // 6. Validate program qualification
+        $firstProgram = Program::with('strands')->find($validated['first_choice_program']);
+        $secondProgram = !empty($validated['second_choice_program'])
+            ? Program::with('strands')->find($validated['second_choice_program'])
+            : null;
+        $thirdProgram = !empty($validated['third_choice_program'])
+            ? Program::with('strands')->find($validated['third_choice_program'])
+            : null;
+
+        $qualificationErrors = [];
+
+        if ($firstProgram && !$this->computationService->isQualified(
+            $firstProgram, $strand, $mathAverage, $englishAverage, $scienceAverage, $g12Gwa
+        )) {
+            $qualificationErrors['first_choice_program'] = "You are not qualified for {$firstProgram->code} based on the submitted grades.";
+        }
+
+        if ($secondProgram && !$this->computationService->isQualified(
+            $secondProgram, $strand, $mathAverage, $englishAverage, $scienceAverage, $g12Gwa
+        )) {
+            $qualificationErrors['second_choice_program'] = "You are not qualified for {$secondProgram->code} based on the submitted grades.";
+        }
+
+        if ($thirdProgram && !$this->computationService->isQualified(
+            $thirdProgram, $strand, $mathAverage, $englishAverage, $scienceAverage, $g12Gwa
+        )) {
+            $qualificationErrors['third_choice_program'] = "You are not qualified for {$thirdProgram->code} based on the submitted grades.";
+        }
+
+        if (!empty($qualificationErrors)) {
+            return back()->withErrors($qualificationErrors)->withInput();
+        }
+
+        // 7. Persist within a database transaction
+        DB::transaction(function () use ($user, $validated, $strand, $dynamicSubjects, $mathAverage, $englishAverage, $scienceAverage) {
+            // Build grade data from all individual subject fields
+            $gradeData = [
+                'mathematics' => $mathAverage,
+                'english' => $englishAverage,
+                'science' => $scienceAverage,
+                'g12_first_sem' => $validated['g12_first_sem'],
+                'g12_second_sem' => $validated['g12_second_sem'],
+                'dynamic_subjects' => $dynamicSubjects,
+            ];
+
+            // Add all individual subject grades for this strand
+            $allSubjects = array_merge(
+                $this->validationService->getSubjectsForStrand($strand, 'math'),
+                $this->validationService->getSubjectsForStrand($strand, 'english'),
+                $this->validationService->getSubjectsForStrand($strand, 'science')
+            );
+
+            foreach ($allSubjects as $field) {
+                $gradeData[$field] = $validated[$field] ?? null;
+            }
+
+            // Persist grade record
+            Grade::updateOrCreate(
+                ['user_id' => $user->id],
+                $gradeData
+            );
+
+            // Update applicant profile program choices
+            ApplicantProfile::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'first_choice_program' => $validated['first_choice_program'],
+                    'second_choice_program' => $validated['second_choice_program'] ?? null,
+                    'third_choice_program' => $validated['third_choice_program'] ?? null,
+                ]
+            );
+        });
+
+        // Audit log
+        app(\App\Services\AuditLogService::class)->logActivity(
+            'CREATE',
+            'Applications',
+            "Applicant {$user->firstname} {$user->lastname} submitted grades and program choices.",
+            $user,
+            'ADMISSION_DATA'
+        );
+
+        return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
+    }
     public function showAbmGradeForm()
     {
         $user = Auth::user();
@@ -41,6 +235,7 @@ class GradesController extends Controller
             'profile' => $profile, // Pass full profile for program choices
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
+            'dynamic_subjects' => $grade->dynamic_subjects ?? [],
         ]);
     }
 
@@ -71,6 +266,7 @@ class GradesController extends Controller
             'profile' => $profile,
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
+            'dynamic_subjects' => $grade->dynamic_subjects ?? [],
         ]);
     }
 
@@ -174,6 +370,7 @@ class GradesController extends Controller
             'profile' => $profile,
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
+            'dynamic_subjects' => $grade->dynamic_subjects ?? [],
         ]);
     }
 
@@ -204,6 +401,7 @@ class GradesController extends Controller
             'profile' => $profile,
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
+            'dynamic_subjects' => $grade->dynamic_subjects ?? [],
         ]);
     }
 
@@ -234,6 +432,7 @@ class GradesController extends Controller
             'profile' => $profile,
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
+            'dynamic_subjects' => $grade->dynamic_subjects ?? [],
         ]);
     }
 
@@ -264,6 +463,7 @@ class GradesController extends Controller
             'profile' => $profile,
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
+            'dynamic_subjects' => $grade->dynamic_subjects ?? [],
         ]);
     }
 
