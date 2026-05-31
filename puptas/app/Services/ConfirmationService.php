@@ -60,7 +60,6 @@ class ConfirmationService
             'middlename' => $user->middlename,
             'lastname' => $user->lastname,
             'sex' => $user->sex,
-            'contactnumber' => $user->contactnumber,
             'email' => $user->email,
             'schoolyear' => $graduateType,
             'dateGrad' => $profile?->date_graduated

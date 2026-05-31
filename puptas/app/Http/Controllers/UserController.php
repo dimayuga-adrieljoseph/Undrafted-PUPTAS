@@ -83,7 +83,6 @@ class UserController extends Controller
                     'middlename' => $user->middlename,
                     'extension_name' => $user->extension_name,
                     'email' => $user->email,
-                    'contactnumber' => $user->contactnumber,
                     'first_choice_program' => $program->id
                 ]);
             }
@@ -143,26 +142,66 @@ class UserController extends Controller
                 'lastname' => $userModel->lastname,
                 'extension_name' => $userModel->extension_name,
                 'email' => $userModel->email,
-                'contactnumber' => $userModel->contactnumber,
                 'role_id' => $userModel->role_id,
                 'programs' => $userModel->programs,
             ];
         } else {
             $applicant = \App\Models\ApplicantProfile::where('user_id', $id)->orWhere('user_id', $userModel->id)->firstOrFail();
-            $applicant->load('firstChoiceProgram', 'secondChoiceProgram', 'thirdChoiceProgram');
+            $applicant->load(
+                'firstChoiceProgram',
+                'secondChoiceProgram',
+                'thirdChoiceProgram',
+                'grades',
+                'graduateTypes',
+                'documentStatuses',
+                'testPasser'
+            );
+
+            // Load current application with program details
+            $currentApp = \App\Models\Application::where('user_id', $applicant->user_id)
+                ->whereNull('deleted_at')
+                ->with(['program', 'secondChoice', 'thirdChoice', 'processes'])
+                ->orderByDesc('id')
+                ->first();
+
+            // Load uploaded files
+            $files = \App\Models\UserFile::where('user_id', $applicant->user_id)
+                ->whereNull('deleted_at')
+                ->get()
+                ->map(fn($f) => [
+                    'id'            => $f->id,
+                    'type'          => $f->type,
+                    'original_name' => $f->original_name,
+                    'status'        => $f->status,
+                    'comment'       => $f->comment,
+                    'created_at'    => $f->created_at,
+                ]);
+
             $user = (object) [
-                'id' => $applicant->user_id,
-                'firstname' => $applicant->firstname,
-                'middlename' => $applicant->middlename,
-                'lastname' => $applicant->lastname,
-                'extension_name' => $applicant->extension_name,
-                'email' => $applicant->email,
-                'contactnumber' => $applicant->contactnumber,
-                'role_id' => 1,
-                'applicant_profile' => $applicant,
-                'program' => $applicant->firstChoiceProgram,
-                'second_program' => $applicant->secondChoiceProgram,
-                'third_program' => $applicant->thirdChoiceProgram,
+                'id'                  => $applicant->user_id,
+                'firstname'           => $applicant->firstname,
+                'middlename'          => $applicant->middlename,
+                'lastname'            => $applicant->lastname,
+                'extension_name'      => $applicant->extension_name,
+                'email'               => $applicant->email,
+                'sex'                 => $applicant->sex,
+                'salutation'          => $applicant->salutation,
+                'student_number'      => $applicant->student_number,
+                'school'              => $applicant->school,
+                'strand'              => $applicant->strand,
+                'track'               => $applicant->track,
+                'date_graduated'      => $applicant->date_graduated,
+                'role_id'             => 1,
+                'applicant_profile'   => $applicant,
+                'program'             => $applicant->firstChoiceProgram,
+                'second_program'      => $applicant->secondChoiceProgram,
+                'third_program'       => $applicant->thirdChoiceProgram,
+                'grades'              => $applicant->grades,
+                'graduate_types'      => $applicant->graduateTypes,
+                'document_statuses'   => $applicant->documentStatuses,
+                'test_passer'         => $applicant->testPasser,
+                'current_application' => $currentApp,
+                'files'               => $files,
             ];
         }
 
@@ -170,9 +209,9 @@ class UserController extends Controller
         $roles = $this->userService->getRoleDefinitions();
 
         return Inertia::render('UserManagement/EditUser', [
-            'user' => $user,
+            'user'     => $user,
             'programs' => $programs,
-            'roles' => $roles,
+            'roles'    => $roles,
         ]);
     }
 
@@ -187,7 +226,6 @@ class UserController extends Controller
             'middlename' => 'nullable|string|max:255',
             'extension_name' => 'nullable|string|max:255',
             'email' => 'required|email|max:255',
-            'contactnumber' => 'nullable|string|max:20',
             'role_id' => 'required|integer',
         ]);
 
@@ -206,7 +244,6 @@ class UserController extends Controller
                     'lastname' => $request->lastname,
                     'extension_name' => $request->extension_name,
                     'email' => $request->email,
-                    'contactnumber' => $request->contactnumber,
                     'role_id' => $roleId,
                 ]);
 
@@ -222,7 +259,6 @@ class UserController extends Controller
                     'lastname' => $request->lastname,
                     'extension_name' => $request->extension_name,
                     'email' => $request->email,
-                    'contactnumber' => $request->contactnumber,
                 ]);
             }
 
@@ -320,6 +356,88 @@ class UserController extends Controller
 
             return redirect()->route('users.index')->with('status', 'User details updated successfully!');
         });
+    }
+
+    /**
+     * Update grades for an applicant user and recompute category averages.
+     */
+    public function updateGrades(Request $request, $id)
+    {
+        $individualFields = [
+            'g12_first_sem', 'g12_second_sem',
+            'g11_oral_communication', 'g11_21st_century_lit', 'g11_academic_professional',
+            'g11_reading_writing', 'g11_general_mathematics', 'g11_statistics_probability',
+            'g11_earth_life_science', 'g11_physical_science', 'g11_business_mathematics',
+            'g11_pre_calculus', 'g11_basic_calculus', 'g11_earth_science',
+            'g11_general_chemistry_1', 'g12_21st_century_lit', 'g12_academic_professional',
+            'g12_general_physics_1', 'g12_general_physics_2', 'g12_general_biology_1',
+            'g12_general_biology_2', 'g12_general_chemistry_2', 'g12_earth_life_science',
+            'g12_physical_science',
+        ];
+
+        $rules = [];
+        foreach ($individualFields as $field) {
+            $rules[$field] = 'nullable|numeric|min:0|max:100';
+        }
+        $rules['dynamic_subjects']              = 'nullable|array';
+        $rules['dynamic_subjects.*.subject']    = 'required|string|max:100';
+        $rules['dynamic_subjects.*.grade']      = 'nullable|numeric|min:0|max:100';
+        $rules['dynamic_subjects.*.category']   = 'required|string|in:math,english,science';
+
+        $validated = $request->validate($rules);
+
+        $user = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->firstOrFail();
+
+        // Load applicant strand for category-aware average computation
+        $profile = \App\Models\ApplicantProfile::where('user_id', $user->id)->first();
+        $strand  = strtoupper($profile->strand ?? 'GAS');
+
+        $validationService  = app(\App\Services\GradeValidationService::class);
+        $computationService = app(\App\Services\GradeComputationService::class);
+
+        // Normalise dynamic subjects: map 'subject' key → 'name' for GradeComputationService
+        $dynamicSubjects = collect($validated['dynamic_subjects'] ?? [])
+            ->map(fn($s) => [
+                'name'     => $s['subject'] ?? '',
+                'grade'    => $s['grade'] ?? null,
+                'category' => $s['category'],
+                'subject'  => $s['subject'] ?? '',
+            ])
+            ->values()
+            ->toArray();
+
+        // Recompute category averages server-side
+        foreach (['math', 'english', 'science'] as $cat) {
+            $defaultFields  = $validationService->getSubjectsForStrand($strand, $cat);
+            $defaultGrades  = array_map(fn($f) => $validated[$f] ?? null, $defaultFields);
+            $catDynamic     = array_values(array_filter($dynamicSubjects, fn($s) => $s['category'] === $cat));
+            ${'computed_' . $cat} = $computationService->computeCategoryAverage($defaultGrades, $catDynamic);
+        }
+
+        // Build grade record
+        $gradeData = ['user_id' => $user->id];
+        foreach ($individualFields as $field) {
+            $gradeData[$field] = $validated[$field] ?? null;
+        }
+        $gradeData['mathematics']      = $computed_math;
+        $gradeData['english']          = $computed_english;
+        $gradeData['science']          = $computed_science;
+        $gradeData['dynamic_subjects'] = $dynamicSubjects;
+
+        \App\Models\Grade::updateOrCreate(
+            ['user_id' => $user->id],
+            $gradeData
+        );
+
+        $this->auditLogService->logActivity(
+            'UPDATE',
+            'Grades',
+            "Updated grades for user {$user->email} (math avg: {$computed_math}, english avg: {$computed_english}, science avg: {$computed_science})",
+            null,
+            'USER_MANAGEMENT'
+        );
+
+        return back()->with('status', 'Grades updated successfully!');
     }
 
     /**

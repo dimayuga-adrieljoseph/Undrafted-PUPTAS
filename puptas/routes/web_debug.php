@@ -103,7 +103,7 @@ Route::get('/dev-login', function (Request $request) {
             . "<td>{$u->firstname} {$u->lastname}</td>"
             . "<td>{$u->email}</td>"
             . "<td><span class='badge'>{$role}</span></td>"
-            . "<td><a href='/dev-login?id={$u->id}'>Login →</a></td>"
+            . "<td><a href='/dev-login/{$u->id}'>Login →</a></td>"
             . "</tr>";
     }
 

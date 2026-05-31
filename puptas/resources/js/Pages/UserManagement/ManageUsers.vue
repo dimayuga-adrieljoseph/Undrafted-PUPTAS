@@ -102,7 +102,6 @@
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">User</th>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Email</th>
-                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Contact</th>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Role</th>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Program</th>
                 <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Joined</th>
@@ -131,7 +130,6 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ user.email }}</td>
-                <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ user.contactnumber || '—' }}</td>
                 <td class="px-6 py-4">
                   <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium', getRoleBadgeClass(user.role_id)]">
                     {{ roles?.[user.role_id] || 'Unknown' }}

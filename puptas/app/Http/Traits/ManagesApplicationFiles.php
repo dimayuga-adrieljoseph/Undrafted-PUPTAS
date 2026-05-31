@@ -83,7 +83,6 @@ trait ManagesApplicationFiles
                 'firstname' => $user->firstname,
                 'lastname' => $user->lastname,
                 'email' => $user->email,
-                'contactnumber' => $user->contactnumber,
                 'sex' => $user->sex,
                 'created_at' => $user->created_at,
                 'grades' => $user->grades, // Include grades
