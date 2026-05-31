@@ -19,9 +19,6 @@ const enrollmentStatus = ref("");
 const applicationProcesses = ref([]);
 const showImageModal = ref(false);
 const previewSrc = ref("");
-const uploadingKeys = ref([]);
-const fileUploadProgress = ref({});
-const uploadErrors = ref({});
 const showMedicalRedirect = ref(false);
 const activeUploadKey = ref("");
 const activeUploadFile = ref(null);
@@ -37,21 +34,19 @@ const qualifiedPrograms = ref([]);
 const disqualifiedPrograms = ref([]);
 const loadingPrograms = ref(false);
 
-// Task 4.1: allDocumentsUploaded — true when every fileStatuses slot has a non-null url
+// checks if all documents have been uploaded (i.e. all fileStatuses have a completed status with a url)
 const allDocumentsUploaded = computed(() => {
   const values = Object.values(fileStatuses.value);
-  return values.length > 0 && values.every(f => f?.url != null);
+  return values.length > 0 && values.every(f => f?.url != null && f?.status !== 'uploading' && f?.status !== 'failed');
 });
 
-// Task 4.2: extraction state refs
-const extracting = ref(false);
-const extractionError = ref('');
+// (grades extraction removed) documents are simply uploaded
 
 // File statuses come directly from the backend
 const stepKeys = computed(() => Object.keys(fileStatuses.value));
 
 const uploadedCount = computed(() => {
-  return Object.values(fileStatuses.value).filter(f => f?.url).length;
+  return Object.values(fileStatuses.value).filter(f => f?.url && f?.status !== 'uploading' && f?.status !== 'failed').length;
 });
 
 const uploadProgressPercentage = computed(() => {
@@ -88,8 +83,9 @@ const getStatusShort = (status) => {
   switch ((status || "").toLowerCase()) {
     case "approved": case "completed": return "OK";
     case "pending": case "submitted": return "PD";
-    case "in_progress": case "processing": return "IP";
+    case "in_progress": case "processing": case "uploading": return "IP";
     case "rejected": case "returned": return "RJ";
+    case "failed": return "FL";
     case "draft": return "DR";
     default: return "PD";
   }
@@ -99,8 +95,8 @@ const getStatusIconBg = (status) => {
   switch ((status || "").toLowerCase()) {
     case "approved": case "completed": return "bg-green-600";
     case "pending": case "submitted": return "bg-blue-600";
-    case "in_progress": case "processing": return "bg-yellow-600";
-    case "rejected": case "returned": return "bg-red-600";
+    case "in_progress": case "processing": case "uploading": return "bg-yellow-600";
+    case "rejected": case "returned": case "failed": return "bg-red-600";
     case "draft": return "bg-gray-600";
     default: return "bg-gray-600";
   }
@@ -119,8 +115,8 @@ const getBadgeClass = (status) => {
   switch ((status || "").toLowerCase()) {
     case "approved": case "completed": return "bg-green-500";
     case "pending": case "submitted": return "bg-blue-500";
-    case "in_progress": case "processing": return "bg-yellow-500";
-    case "rejected": case "returned": return "bg-red-500";
+    case "in_progress": case "processing": case "uploading": return "bg-yellow-500";
+    case "rejected": case "returned": case "failed": return "bg-red-500";
     case "draft": return "bg-gray-400";
     default: return "bg-gray-500";
   }
@@ -164,6 +160,8 @@ const triggerFileInput = (key) => {
 // Prevents opening another uploader while an upload is in progress.
 const handleOpenUpload = (key) => {
   if (activeUploadUploading.value) return;
+  // Backend-authoritative check: don't allow opening uploader if backend says uploading
+  if (fileStatuses.value[key]?.status === 'uploading') return;
   openInlineUpload(key);
   triggerFileInput(key);
 };
@@ -253,32 +251,9 @@ const clearInlineSelection = () => {
   if (input) input.value = '';
 };
 
-// Upload state persistence helpers (Fix 3: prevent duplicate uploads on reload)
-const UPLOAD_STATE_PREFIX = 'puptas_upload_';
-
-const setUploadState = (key, status) => {
-  try {
-    localStorage.setItem(UPLOAD_STATE_PREFIX + key, JSON.stringify({ status, started: Date.now() }));
-  } catch (e) { /* localStorage unavailable */ }
-};
-
-const getUploadState = (key) => {
-  try {
-    const raw = localStorage.getItem(UPLOAD_STATE_PREFIX + key);
-    if (!raw) return null;
-    const state = JSON.parse(raw);
-    // Expire stale states after 10 minutes
-    if (Date.now() - state.started > 10 * 60 * 1000) {
-      localStorage.removeItem(UPLOAD_STATE_PREFIX + key);
-      return null;
-    }
-    return state;
-  } catch (e) { return null; }
-};
-
-const clearUploadState = (key) => {
-  try { localStorage.removeItem(UPLOAD_STATE_PREFIX + key); } catch (e) { /* */ }
-};
+// Backend-authoritative upload state check.
+// The backend sets status='uploading' before storage begins, so we can
+// check the file payload from the last fetchData() call instead of localStorage.
 
 // Active upload state tracking
 let waitingForServer = false;
@@ -288,9 +263,10 @@ const uploadInlineFile = async () => {
   const originalFile = activeUploadFile.value;
   if (!key || !originalFile) return;
 
-  // Fix 3: Check if an upload is already in progress for this key
-  const existingState = getUploadState(key);
-  if (existingState && existingState.status === 'uploading') {
+  // Backend-authoritative guard: check if the backend already reports this file as uploading.
+  // This replaces the old localStorage-based duplicate upload prevention.
+  const backendFile = fileStatuses.value[key];
+  if (backendFile?.status === 'uploading' && !activeUploadUploading.value) {
     activeUploadError.value = 'An upload for this document is already in progress. Please wait.';
     return;
   }
@@ -301,9 +277,6 @@ const uploadInlineFile = async () => {
   activeUploadTotal.value = 0;
   activeUploadError.value = '';
   activeUploadSuccess.value = false;
-
-  // Fix 3: Mark upload as in-progress
-  setUploadState(key, 'uploading');
 
   // Track whether client→server transfer is done (waiting for server→S3)
   let waitingForServer = false;
@@ -341,24 +314,24 @@ const uploadInlineFile = async () => {
           }
         });
 
-        // Update local status and refresh
+        // Update local status from backend response (source of truth)
         fileStatuses.value[key] = data.file;
-        await fetchData();
         activeUploadProgress.value = 100;
         activeUploadSuccess.value = true;
 
-        // Fix 3: Mark upload as complete
-        clearUploadState(key);
+        // Refresh full state from backend to ensure consistency
+        await fetchData();
       } catch (err) {
-        clearUploadState(key);
         activeUploadError.value = err.response?.data?.message || 'Failed to upload file. Please try again.';
         activeUploadSuccess.value = false;
+
+        // Refresh to get the backend's 'failed' status
+        await fetchData();
       } finally {
         activeUploadUploading.value = false;
       }
     },
     error(err) {
-      clearUploadState(key);
       activeUploadError.value = err.message || 'Image compression failed.';
       activeUploadUploading.value = false;
       activeUploadSuccess.value = false;
@@ -382,42 +355,9 @@ const closeImageModal = () => {
 
 const closeModal = () => (showModal.value = false);
 
-// Task 4.3: triggerExtraction — POST to /api/grades/extract, backend stores result in session
-// and returns the redirect URL; we then navigate there so the grade page receives
-// extractionResult as a proper Inertia prop (session → prop via GradesController).
-const strandRoutes = {
-  ABM: '/grades/abm',
-  ICT: '/grades/ict',
-  HUMSS: '/grades/humss',
-  GAS: '/grades/gas',
-  STEM: '/grades/stem',
-  TVL: '/grades/tvl',
-};
-
-const triggerExtraction = async () => {
-  extracting.value = true;
-  extractionError.value = '';
-  try {
-    const response = await axios.post('/api/grades/extract');
-    const redirectUrl = response.data?.redirect;
-    const strand = props.user?.strand;
-    const fallback = strandRoutes[strand] || '/grades/abm';
-
-    if (response.data?.fallback) {
-      // AI failed — navigate to grade page anyway for manual input
-      router.visit(redirectUrl || fallback);
-      return;
-    }
-
-    router.visit(redirectUrl || fallback);
-  } catch (error) {
-    // Unexpected network/server error — still redirect to grade page for manual input
-    const strand = props.user?.strand;
-    const fallback = strandRoutes[strand] || '/grades/abm';
-    router.visit(fallback);
-  } finally {
-    extracting.value = false;
-  }
+// grades extraction removed — documents are uploaded and stored as usual
+const goToGrades = () => {
+  router.visit(props.gradeUrl || '/grades/abm');
 };
 
 const fetchQualifiedPrograms = async () => {
@@ -505,19 +445,14 @@ onMounted(() => {
             <span class="font-medium">Review Application</span>
           </button>
 
-          <!-- Task 4.4: Review Grades Button — only shown when all documents are uploaded -->
+          <!-- Task 4.4: Input Grades Button — only shown when all documents are uploaded -->
           <button
             v-if="allDocumentsUploaded"
-            @click="triggerExtraction"
-            :disabled="extracting"
+            @click="goToGrades"
             style="background-color: #9E122C"
-            class="flex items-center gap-2 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg min-h-[44px] w-full sm:w-auto disabled:opacity-70"
+            class="flex items-center gap-2 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg min-h-[44px] w-full sm:w-auto"
           >
-            <svg v-if="extracting" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="font-medium">{{ extracting ? 'Extracting...' : 'Review Grades' }}</span>
+            <span class="font-medium">Input Grades</span>
           </button>
 
           <!-- View Qualified Programs Button - Only shown after application is submitted -->
@@ -649,25 +584,82 @@ onMounted(() => {
 
         <!-- Application Process -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-3">
-          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">Application Process</p>
-          <div class="flex flex-wrap items-start gap-x-0 gap-y-2 sm:gap-y-0">
+
+          <!-- Header -->
+          <div class="flex items-center gap-2 mb-4">
+            <svg class="w-4 h-4 flex-shrink-0" style="color:#9E122C" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Application Process</p>
+          </div>
+
+          <!-- Timeline -->
+          <div class="relative flex flex-col sm:flex-row items-start sm:justify-between gap-0">
+
+            <!-- Spine: vertical on mobile, horizontal on desktop -->
+            <div class="
+              absolute z-0
+              left-[13px] top-[14px] bottom-[14px] w-px sm:w-auto
+              sm:left-[14px] sm:right-[14px] sm:top-[13px] sm:bottom-auto sm:h-px
+              bg-gray-200 dark:bg-gray-700
+            "></div>
+
             <template v-for="(step, i) in [
               'Upload Grade 10, 11 &amp; 12 documents',
-              'Go to &quot;Review Grades&quot;, enter grades &amp; pick 3 programs',
-              'Review entries, then click &quot;Save Grades&quot;',
-              'Go to &quot;Review Application&quot; &amp; verify info',
-              'Click &quot;Submit Application&quot;'
+              'Go to <code>Input Grades</code>, enter grades &amp; pick 3 programs',
+              'Review entries, then click <code>Save Grades</code>',
+              'Go to <code>Review Application</code> &amp; verify info',
+              'Click <code class=\'submit\'>Submit Application</code>'
             ]" :key="i">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span class="flex-shrink-0 w-5 h-5 rounded-full text-white flex items-center justify-center text-[10px] font-bold" style="background-color:#9E122C">{{ i + 1 }}</span>
-                <span class="text-xs text-gray-600 dark:text-gray-300 leading-tight" v-html="step"></span>
+
+              <div class="relative z-10 flex flex-row sm:flex-col items-start sm:items-center gap-3 sm:gap-2 flex-1 py-2 sm:py-0">
+
+                <!-- Node -->
+                <div
+                  class="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-medium flex-shrink-0"
+                  style="background-color:#9E122C"
+                >
+                  <template v-if="i < 4">{{ i + 1 }}</template>
+                  <template v-else>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </template>
+                </div>
+
+                <!-- Label -->
+                <p
+                  class="
+                    text-[11.5px] text-gray-500 dark:text-gray-400 leading-relaxed
+                    text-left sm:text-center
+                    px-0 sm:px-1
+                    mt-0.5 sm:mt-0
+                    [&_code]:font-mono [&_code]:text-[11px]
+                    [&_code]:bg-gray-100 dark:[&_code]:bg-gray-700
+                    [&_code]:border [&_code]:border-gray-200 dark:[&_code]:border-gray-600
+                    [&_code]:rounded [&_code]:px-1 [&_code]:py-px
+                    [&_code.submit]:bg-red-50 dark:[&_code.submit]:bg-red-950/40
+                    [&_code.submit]:border-red-200 dark:[&_code.submit]:border-red-900
+                    [&_code.submit]:text-[#9E122C]
+                  "
+                  v-html="step"
+                ></p>
+
               </div>
-              <svg v-if="i < 4" class="hidden sm:block flex-shrink-0 w-4 h-4 text-gray-300 dark:text-gray-600 mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-              </svg>
             </template>
+
           </div>
-          <p class="mt-2 text-[11px] text-gray-400 dark:text-gray-500 italic">Note: Your application will only be processed after successful submission.</p>
+
+          <!-- Note -->
+          <div class="flex items-start gap-1.5 mt-4 px-2.5 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+            <svg class="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
+            </svg>
+            <p class="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed">
+              Your application will only be processed after successful submission.
+            </p>
+          </div>
+
         </div>
 
         <!-- Main Content Grid -->
@@ -744,7 +736,22 @@ onMounted(() => {
                   <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600 hover:border-maroon-500 transition-all">
                     <!-- Document Icon/Preview -->
                     <div class="relative mb-2">
-                      <div v-if="hasImagePreview(fileStatuses[key])" class="relative cursor-pointer" @click="openImageModal(fileStatuses[key])">
+                      <!-- Show spinner overlay when backend reports uploading (e.g. from another tab/session) -->
+                      <div v-if="fileStatuses[key]?.status === 'uploading' && activeUploadKey !== key" class="w-full h-20 bg-yellow-50 dark:bg-yellow-900/20 rounded-md flex flex-col items-center justify-center border border-yellow-200 dark:border-yellow-700">
+                        <svg class="animate-spin h-6 w-6 text-yellow-600 dark:text-yellow-400 mb-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-[10px] text-yellow-700 dark:text-yellow-300 font-medium">Processing...</span>
+                      </div>
+                      <!-- Show failed state from backend -->
+                      <div v-else-if="fileStatuses[key]?.status === 'failed'" class="w-full h-20 bg-red-50 dark:bg-red-900/20 rounded-md flex flex-col items-center justify-center border border-red-200 dark:border-red-700">
+                        <svg class="w-6 h-6 text-red-500 dark:text-red-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        <span class="text-[10px] text-red-600 dark:text-red-300 font-medium">Upload Failed</span>
+                      </div>
+                      <div v-else-if="hasImagePreview(fileStatuses[key])" class="relative cursor-pointer" @click="openImageModal(fileStatuses[key])">
                         <img
                           :src="getFileUrl(fileStatuses[key])"
                           :alt="formatKey(key)"
@@ -771,18 +778,32 @@ onMounted(() => {
                       {{ formatKey(key) }}
                     </p>
 
+                    <!-- Returned comment from evaluator -->
+                    <p v-if="fileStatuses[key]?.status === 'returned' && fileStatuses[key]?.comment" class="text-[10px] text-red-600 dark:text-red-400 mb-2 text-center italic">
+                      {{ fileStatuses[key].comment }}
+                    </p>
+
                     <!-- Upload / Replace button: clicking opens file picker and shows drag-drop area below -->
                     <div v-if="activeUploadKey !== key">
                       <button
-                        v-if="!fileStatuses[key]?.url"
+                        v-if="!fileStatuses[key]?.url && fileStatuses[key]?.status !== 'uploading'"
                         @click.prevent="handleOpenUpload(key)"
                         :disabled="activeUploadUploading"
                         class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900 min-h-[44px] disabled:opacity-70"
                       >
                         Upload
                       </button>
+                      <!-- Retry button for failed uploads -->
                       <button
-                        v-else
+                        v-else-if="fileStatuses[key]?.status === 'failed'"
+                        @click.prevent="handleOpenUpload(key)"
+                        :disabled="activeUploadUploading"
+                        class="w-full py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors min-h-[44px] disabled:opacity-70"
+                      >
+                        Retry Upload
+                      </button>
+                      <button
+                        v-else-if="fileStatuses[key]?.url"
                         @click.prevent="handleOpenUpload(key)"
                         :disabled="activeUploadUploading"
                         class="w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded transition-colors min-h-[44px] disabled:opacity-70"

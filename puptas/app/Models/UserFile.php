@@ -11,6 +11,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserFile extends Model
 {
+    /** Status constants — backend is authoritative for upload state */
+    public const STATUS_UPLOADING = 'uploading';
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_RETURNED = 'returned';
+    public const STATUS_FAILED = 'failed';
 
     protected $fillable = [
         'user_id',
@@ -29,6 +35,29 @@ class UserFile extends Model
         'docling_json'  => 'array',
     ];
 
+    /**
+     * Check if the file is currently being uploaded (in-flight).
+     */
+    public function isUploading(): bool
+    {
+        return $this->status === self::STATUS_UPLOADING;
+    }
+
+    /**
+     * Check if the file upload has completed (regardless of approval status).
+     */
+    public function isUploaded(): bool
+    {
+        return in_array($this->status, [self::STATUS_PENDING, self::STATUS_APPROVED, self::STATUS_RETURNED], true);
+    }
+
+    /**
+     * Check if the file upload failed.
+     */
+    public function isFailed(): bool
+    {
+        return $this->status === self::STATUS_FAILED;
+    }
 
     public function user()
     {

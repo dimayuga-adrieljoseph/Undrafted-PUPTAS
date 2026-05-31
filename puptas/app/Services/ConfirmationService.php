@@ -39,7 +39,17 @@ class ConfirmationService
      */
     public function getConfirmationData(User $user): array
     {
-        $files = $user->files()->get()->keyBy('type');
+        $files = $user->files()->get();
+
+        // Auto-expire stale 'uploading' statuses (stuck for >10 minutes = failed)
+        $staleThreshold = now()->subMinutes(10);
+        foreach ($files as $file) {
+            if ($file->status === 'uploading' && $file->updated_at < $staleThreshold) {
+                $file->update(['status' => 'failed']);
+            }
+        }
+
+        $files = $files->keyBy('type');
         $application = $user->currentApplication;
         $profile = $user->applicantProfile()->with('graduateTypes')->first();
 
@@ -232,12 +242,41 @@ class ConfirmationService
         }
 
         // Get existing file path before uploading (for cleanup after)
-        $existingFilePath = UserFile::where('user_id', $user->id)
+        $existingFile = UserFile::where('user_id', $user->id)
             ->where('type', $type)
-            ->value('file_path');
+            ->first();
+
+        $existingFilePath = $existingFile?->file_path;
+
+        // Mark the file as "uploading" in the DB BEFORE the actual storage operation.
+        // This makes the backend authoritative — the frontend can poll this status
+        // instead of relying on localStorage to detect in-progress uploads.
+        $userFile = UserFile::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'type' => $type,
+            ],
+            [
+                'status' => 'uploading',
+                'original_name' => $uploadedFile->getClientOriginalName(),
+            ]
+        );
 
         // Use FileService to store the file (streaming, no memory bloat)
-        $compressed = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
+        try {
+            $compressed = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
+        } catch (\Throwable $e) {
+            // Storage failed — mark as failed so frontend shows the correct state
+            $userFile->update(['status' => 'failed']);
+
+            Log::error('File storage failed during reupload', [
+                'user_id' => $user->id,
+                'field' => $field,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
 
         // Prepare update data
         $updateData = [
@@ -251,29 +290,25 @@ class ConfirmationService
             $updateData['docling_json'] = null;
         }
 
-        // Save new file record and capture the model
+        // Finalize the file record with the stored path and 'pending' status
         try {
-            $userFile = UserFile::updateOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'type' => $type,
-                ],
-                $updateData
-            );
+            $userFile->update($updateData);
         } catch (\Throwable $e) {
             // The Cleanup Safety Net:
-            // If DB fails (e.g. out of space due to token bloat), delete the orphaned file from bucket
+            // If DB fails, delete the orphaned file from bucket and mark as failed
             try {
                 $this->fileService->delete($compressed['path']);
             } catch (\Throwable $deleteError) {
                 // Suppress cleanup error to prioritize reporting the actual DB crash
             }
+
+            // Try to mark as failed (best-effort)
+            try {
+                $userFile->update(['status' => 'failed']);
+            } catch (\Throwable $ignored) {}
+
             throw $e;
         }
-
-        $savedFile = $userFile;
-
-        // OCR processing has been removed since the system shifted to manual grade entry.
 
         Log::info('File reuploaded', [
             'user_id' => $user->id,
@@ -293,9 +328,12 @@ class ConfirmationService
             }
         }
 
+        // Refresh the model to get the latest state
+        $userFile->refresh();
+
         return [
             'message' => 'File reuploaded successfully',
-            'file' => $savedFile ? FileMapper::buildFilePayload($savedFile, true) : null,
+            'file' => FileMapper::buildFilePayload($userFile, true),
         ];
     }
 

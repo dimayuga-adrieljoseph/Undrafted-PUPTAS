@@ -85,7 +85,7 @@ class FileMapper
             $uploadedFiles = [];
             foreach (self::MAPPING as $apiKey => $databaseType) {
                 if (isset($files[$databaseType])) {
-                    $uploadedFiles[$apiKey] = self::buildFilePayload($files[$databaseType], $includeStatus);
+                    $uploadedFiles[$apiKey] = self::buildFilePayload($files[$databaseType], true);
                 }
             }
             return $uploadedFiles;
@@ -95,7 +95,7 @@ class FileMapper
         foreach ($requiredKeys as $apiKey) {
             $databaseType = self::MAPPING[$apiKey];
             $uploadedFiles[$apiKey] = isset($files[$databaseType])
-                ? self::buildFilePayload($files[$databaseType], $includeStatus)
+                ? self::buildFilePayload($files[$databaseType], true)
                 : null;
         }
 
@@ -199,16 +199,21 @@ class FileMapper
     {
         // Fast path: Use extension-based mime type detection only
         $mimeType = self::guessMimeTypeFromPath($file->file_path);
-        
+
+        // Don't generate preview URLs for files still uploading or failed
+        $isReady = !in_array($file->status, ['uploading', 'failed'], true);
+
         $payload = [
-            'url' => self::buildPreviewUrl($file),
+            'url' => $isReady ? self::buildPreviewUrl($file) : null,
             'mimeType' => $mimeType,
             'originalName' => self::sanitizeFilename($file->original_name),
             'isImage' => str_starts_with($mimeType, 'image/'),
+            'updatedAt' => $file->updated_at?->toIso8601String(),
         ];
 
         if ($includeStatus) {
             $payload['status'] = $file->status;
+            $payload['comment'] = $file->comment;
         }
 
         return $payload;
