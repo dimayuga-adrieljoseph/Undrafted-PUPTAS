@@ -663,7 +663,32 @@
                             </div>
                         </div>
 
-                        <div class="col-span-2 grid grid-cols-3 gap-4">
+                        <!-- Graduate of & Graduation Date -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Graduate of: *</label>
+                                <select
+                                    v-model="editingPasser.graduate_of"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="" disabled>Select an option</option>
+                                    <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
+                                    <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Graduation Date *</label>
+                                <input
+                                    type="date"
+                                    v-model="editingPasser.graduation_date"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
                                 <select
@@ -677,17 +702,6 @@
                                     <option value="TVL">TVL</option>
                                     <option value="ICT">ICT</option>
                                     <option value="GAS">GAS</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
-                                <select
-                                    v-model="editingPasser.year_graduated"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="" disabled>Select an option</option>
-                                    <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
-                                    <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
                                 </select>
                             </div>
                             <div>
@@ -869,7 +883,32 @@
                             </div>
                         </div>
 
-                        <div class="col-span-2 grid grid-cols-3 gap-4">
+                        <!-- Graduate of & Graduation Date -->
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Graduate of: *</label>
+                                <select
+                                    v-model="newPasserData.graduate_of"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                >
+                                    <option value="" disabled>Select an option</option>
+                                    <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
+                                    <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Graduation Date *</label>
+                                <input
+                                    type="date"
+                                    v-model="newPasserData.graduation_date"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
                                 <select
@@ -883,17 +922,6 @@
                                     <option value="TVL">TVL</option>
                                     <option value="ICT">ICT</option>
                                     <option value="GAS">GAS</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Year Graduated</label>
-                                <select
-                                    v-model="newPasserData.year_graduated"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="" disabled>Select an option</option>
-                                    <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
-                                    <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
                                 </select>
                             </div>
                             <div>
@@ -1165,6 +1193,8 @@ const props = defineProps({
     filterOptions: Object,
     filters: Object,
     registrationUrl: String,
+    admissionCriteriaUrl: String,
+    facebookUrl: String,
 });
 
 // Email template and settings (unchanged)
@@ -1204,7 +1234,7 @@ const defaultTemplatePreview = `
     <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 10, 2026 (Wednesday)</strong>. You will receive an email within three working days containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long bond paper, sign, and bring them on the day of the interview. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
     <div style="text-align:center;margin:24px 0;">
     <a 
@@ -1223,7 +1253,7 @@ const defaultTemplatePreview = `
         CLICK TO CONFIRM YOUR INTERVIEW SLOT
     </a>
     </div>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP - Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="${props.facebookUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP - Taguig Facebook page</a>).</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;font-style:italic;">Kindly disregard this email if you already have confirmed your interview slot.</p>
     <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
@@ -1239,7 +1269,7 @@ const waitlistedTemplatePreview = `
     <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 10, 2026 (Wednesday)</strong>. You will receive an email within three working days containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long bond paper, sign, and bring them on the day of the interview. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
     <div style="text-align:center;margin:24px 0;">
     <a 
@@ -1258,7 +1288,7 @@ const waitlistedTemplatePreview = `
         CLICK TO CONFIRM YOUR INTERVIEW SLOT
     </a>
     </div>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP - Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="${props.facebookUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP - Taguig Facebook page</a>).</p>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
     <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
     <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
@@ -1657,6 +1687,8 @@ function openEditModal(passer) {
         pupcet_total_score: passer.pupcet_total_score != null ? passer.pupcet_total_score : '',
         year_graduated: yearGradVal,
         shs_school: passer.shs_school || '',
+        graduate_of: passer.graduate_of || '',
+        graduation_date: passer.graduation_date || '',
     };
     showEditModal.value = true;
 }
@@ -1806,6 +1838,8 @@ function openAddModal() {
         school_year: "",
         pupcet_total_score: "",
         passer_status_id: "",
+        graduate_of: "",
+        graduation_date: "",
     };
     showAddModal.value = true;
 }

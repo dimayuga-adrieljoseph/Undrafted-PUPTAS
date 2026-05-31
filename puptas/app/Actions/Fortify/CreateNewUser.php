@@ -123,13 +123,15 @@ class CreateNewUser implements CreatesNewUsers
             // the latest information the user provided during registration.
             if ($testPasser) {
                 $testPasser->update([
-                    'user_id'        => $user->id,
-                    'status'         => 'registered',
-                    'surname'        => $input['lastname'],
-                    'first_name'     => $input['firstname'],
-                    'middle_name'    => $input['middlename'] ?? $testPasser->middle_name,
-                    'strand'         => $input['strand'] ?? $testPasser->strand,
-                    'shs_school'     => $input['school'] ?? $testPasser->shs_school,
+                    'user_id'          => $user->id,
+                    'status'           => 'registered',
+                    'surname'          => $input['lastname'],
+                    'first_name'       => $input['firstname'],
+                    'middle_name'      => $input['middlename'] ?? $testPasser->middle_name,
+                    'strand'           => $input['strand'] ?? $testPasser->strand,
+                    'shs_school'       => $input['school'] ?? $testPasser->shs_school,
+                    'graduate_of'      => $input['schoolyear'] ?? $testPasser->graduate_of,
+                    'graduation_date'  => $input['dateGrad'] ?? $testPasser->graduation_date,
                 ]);
             }
 

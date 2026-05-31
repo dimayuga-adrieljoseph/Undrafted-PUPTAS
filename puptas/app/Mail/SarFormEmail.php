@@ -6,9 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
-
-class SarFormEmail extends Mailable implements ShouldQueue
+class SarFormEmail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -33,6 +31,7 @@ class SarFormEmail extends Mailable implements ShouldQueue
         
         return $this->subject('PUP Taguig - Student Admission Record (SAR)')
                     ->view('emails.sar-form')
+                    ->text('emails.plain.sar-form')
                     ->with([
                         'passerName' => $fullName,
                         'referenceNumber' => $this->passer->reference_number,

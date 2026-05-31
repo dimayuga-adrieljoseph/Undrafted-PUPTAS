@@ -27,7 +27,9 @@ class ProcessGradeOcr implements ShouldQueue, ShouldBeUnique
 
     public function __construct(
         public int $userFileId
-    ) {}
+    ) {
+        $this->onQueue('default');
+    }
 
     public function handle(DoclingService $doclingService): void
     {

@@ -12,10 +12,16 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Queue\Middleware\RateLimited;
 
 class SendPasserEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public function middleware(): array
+    {
+        return [new RateLimited('emails')];
+    }
 
     /**
      * The number of seconds the unique lock should be maintained.
@@ -39,7 +45,9 @@ class SendPasserEmail implements ShouldQueue, ShouldBeUnique
         public readonly string $personalizedMessage,
         public readonly ?int $emailLogId = null,
         public readonly ?int $bulkOperationId = null,
-    ) {}
+    ) {
+        $this->onQueue('emails');
+    }
 
     public function handle(): void
     {

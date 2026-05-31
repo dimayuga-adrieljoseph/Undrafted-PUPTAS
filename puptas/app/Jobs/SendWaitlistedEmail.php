@@ -12,10 +12,16 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Queue\Middleware\RateLimited;
 
 class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public function middleware(): array
+    {
+        return [new RateLimited('emails')];
+    }
 
     public $passer;
     public $messageTemplate;
@@ -38,6 +44,7 @@ class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
     ) {
         $this->passer = $passer;
         $this->messageTemplate = $messageTemplate;
+        $this->onQueue('emails');
     }
 
     /**

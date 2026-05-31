@@ -39,7 +39,17 @@ class ConfirmationService
      */
     public function getConfirmationData(User $user): array
     {
-        $files = $user->files()->get()->keyBy('type');
+        $files = $user->files()->get();
+
+        // Auto-expire stale 'uploading' statuses (stuck for >10 minutes = failed)
+        $staleThreshold = now()->subMinutes(10);
+        foreach ($files as $file) {
+            if ($file->status === 'uploading' && $file->updated_at < $staleThreshold) {
+                $file->update(['status' => 'failed']);
+            }
+        }
+
+        $files = $files->keyBy('type');
         $application = $user->currentApplication;
         $profile = $user->applicantProfile()->with('graduateTypes')->first();
 
@@ -238,6 +248,42 @@ class ConfirmationService
 
         // Use FileService to store the file (streaming, no memory bloat)
         $compressed = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
+        // Get existing file path before uploading (for cleanup after)
+        $existingFile = UserFile::where('user_id', $user->id)
+            ->where('type', $type)
+            ->first();
+
+        $existingFilePath = $existingFile?->file_path;
+
+        // Mark the file as "uploading" in the DB BEFORE the actual storage operation.
+        // This makes the backend authoritative — the frontend can poll this status
+        // instead of relying on localStorage to detect in-progress uploads.
+        $userFile = UserFile::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'type' => $type,
+            ],
+            [
+                'status' => 'uploading',
+                'original_name' => $uploadedFile->getClientOriginalName(),
+            ]
+        );
+
+        // Use FileService to store the file (streaming, no memory bloat)
+        try {
+            $compressed = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
+        } catch (\Throwable $e) {
+            // Storage failed — mark as failed so frontend shows the correct state
+            $userFile->update(['status' => 'failed']);
+
+            Log::error('File storage failed during reupload', [
+                'user_id' => $user->id,
+                'field' => $field,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
 
         // Prepare update data
         $updateData = [
@@ -270,10 +316,25 @@ class ConfirmationService
             }
             throw $e;
         }
+        // Finalize the file record with the stored path and 'pending' status
+        try {
+            $userFile->update($updateData);
+        } catch (\Throwable $e) {
+            // The Cleanup Safety Net:
+            // If DB fails, delete the orphaned file from bucket and mark as failed
+            try {
+                $this->fileService->delete($compressed['path']);
+            } catch (\Throwable $deleteError) {
+                // Suppress cleanup error to prioritize reporting the actual DB crash
+            }
 
-        $savedFile = $userFile;
+            // Try to mark as failed (best-effort)
+            try {
+                $userFile->update(['status' => 'failed']);
+            } catch (\Throwable $ignored) {}
 
-        // OCR processing has been removed since the system shifted to manual grade entry.
+            throw $e;
+        }
 
         Log::info('File reuploaded', [
             'user_id' => $user->id,
@@ -293,9 +354,85 @@ class ConfirmationService
             }
         }
 
+        // Refresh the model to get the latest state
+        $userFile->refresh();
+
         return [
             'message' => 'File reuploaded successfully',
-            'file' => $savedFile ? FileMapper::buildFilePayload($savedFile, true) : null,
+            'file' => FileMapper::buildFilePayload($userFile, true),
+        ];
+    }
+
+    /**
+     * Confirm a direct-to-S3 upload by recording the file path in the database.
+     * Used when the client uploads directly to S3 via presigned URL.
+     *
+     * @param User $user
+     * @param string $field
+     * @param string $path
+     * @param string $originalName
+     * @return array
+     * @throws \InvalidArgumentException
+     */
+    public function confirmDirectUpload(User $user, string $field, string $path, string $originalName): array
+    {
+        $type = FileMapper::MAPPING[$field] ?? null;
+
+        if (!$type) {
+            throw new \InvalidArgumentException('Invalid field name');
+        }
+
+        // Delete existing file
+        $this->deleteExistingFile($user, $type);
+
+        // Prepare update data
+        $updateData = [
+            'file_path' => $path,
+            'original_name' => $originalName,
+            'status' => 'pending',
+        ];
+
+        // Explicitly clear any existing OCR data on reupload
+        if (Schema::hasColumn('user_files', 'docling_json')) {
+            $updateData['docling_json'] = null;
+        }
+
+        // Save new file record
+        $userFile = UserFile::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'type' => $type,
+            ],
+            $updateData
+        );
+
+        $savedFile = $userFile;
+
+        // OCR processing has been removed since the system shifted to manual grade entry.
+
+        Log::info('File reuploaded', [
+        Log::info('Direct upload confirmed', [
+            'user_id' => $user->id,
+            'field' => $field,
+            'type' => $type,
+            'path' => $path,
+        ]);
+
+        // Delete old file AFTER success (non-blocking, don't let failure affect response)
+        if ($existingFilePath && $existingFilePath !== $compressed['path']) {
+            try {
+                $this->fileService->delete($existingFilePath);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to delete old file after reupload', [
+                    'path' => $existingFilePath,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return [
+            'message' => 'File uploaded successfully',
+            'file' => $userFile ? FileMapper::buildFilePayload($userFile, true) : null,
         ];
     }
 

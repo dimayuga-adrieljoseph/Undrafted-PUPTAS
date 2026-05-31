@@ -25,7 +25,9 @@ class TestPasser extends Model
         'pupcet_total_score',
         'user_id',
         'status',
-        'passer_status_id'
+        'passer_status_id',
+        'graduate_of',
+        'graduation_date'
     ];
 
     protected $casts = [
@@ -51,5 +53,27 @@ class TestPasser extends Model
     public function sarGenerations()
     {
         return $this->hasMany(SarGeneration::class, 'test_passer_id', 'test_passer_id');
+    }
+
+    /**
+     * Get the graduation year for SAR form generation.
+     * Priority: year_graduated field → date_graduated from profile → current year
+     * 
+     * @return string 4-digit year (e.g., "2024")
+     */
+    public function getGraduationYearAttribute(): string
+    {
+        // Priority 1: Use year_graduated if explicitly set
+        if (!empty($this->attributes['year_graduated'])) {
+            return (string) $this->attributes['year_graduated'];
+        }
+
+        // Priority 2: Extract year from applicant profile's date_graduated
+        if ($this->user && $this->user->date_graduated) {
+            return $this->user->date_graduated->format('Y');
+        }
+
+        // Priority 3: Fallback to current year
+        return date('Y');
     }
 }

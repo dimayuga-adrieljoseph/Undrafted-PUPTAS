@@ -119,7 +119,9 @@ class TestPasserController extends Controller
             'passers' => $passers,
             'filterOptions' => $filterOptions,
             'filters' => $filters,
-            'registrationUrl' => 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad',
+            'registrationUrl' => url('/links/register'),
+            'admissionCriteriaUrl' => url('/links/admission-criteria'),
+            'facebookUrl' => url('/links/facebook'),
         ]);
     }
 
@@ -285,7 +287,7 @@ class TestPasserController extends Controller
 
                 foreach ($passers as $passer) {
                     // Replace placeholders in template for personalization
-                    $confirmationUrl = 'https://identity-provider.isaxbsit2027.com/register?client_id=037f48dd-245b-450b-9e7a-3348b65b9dad';
+                    $confirmationUrl = url('/links/register');
                     $redName = '<span style="color:#cc0000;">' . $passer->first_name . ' ' . $passer->surname . '</span>';
                     $searchTags = [
                         '{{firstname}} {{surname}}',
@@ -642,7 +644,7 @@ class TestPasserController extends Controller
             'full_name' => $fullName,
             'full_name_natural' => $fullNameNatural,
             'shs_strand' => $passer->strand ?? 'N/A',
-            'graduation_year' => $passer->year_graduated ?? date('Y'),
+            'graduation_year' => $passer->graduation_year,
             'school_attended' => $passer->shs_school ?? 'N/A',
             'enrollment_date' => $formattedDate,
             'enrollment_time' => $formattedTime,
@@ -735,6 +737,8 @@ class TestPasserController extends Controller
             'school_year' => 'nullable|string|max:9|regex:/^\d{4}-\d{4}$/',
             'pupcet_total_score' => 'nullable|numeric|min:0|max:999.99',
             'passer_status_id' => 'nullable|exists:passer_statuses,id',
+            'graduate_of' => 'nullable|string|max:255',
+            'graduation_date' => 'nullable|date',
         ]);
 
         // Only Superadmin (role_id 7) can update the email
@@ -769,6 +773,8 @@ class TestPasserController extends Controller
             'school_year' => 'nullable|string|max:9|regex:/^\d{4}-\d{4}$/',
             'pupcet_total_score' => 'nullable|numeric|min:0|max:999.99',
             'passer_status_id' => 'nullable|exists:passer_statuses,id',
+            'graduate_of' => 'nullable|string|max:255',
+            'graduation_date' => 'nullable|date',
         ]);
 
         // Create new passer record
@@ -850,7 +856,7 @@ class TestPasserController extends Controller
                 $rowData = [
                     'reference_number' => $passer->reference_number,
                     'full_name' => $fullName,
-                    'graduation_year' => $passer->year_graduated ?? date('Y'),
+                    'graduation_year' => $passer->graduation_year,
                     'school_attended' => $passer->shs_school ?? 'N/A',
                     'shs_strand' => $passer->strand ?? 'N/A',
                     'enrollment_date' => $sarGeneration->enrollment_date ?
@@ -997,7 +1003,7 @@ class TestPasserController extends Controller
                 $rowData = [
                     'reference_number' => $passer->reference_number,
                     'full_name' => $fullName,
-                    'graduation_year' => $passer->year_graduated ?? date('Y'),
+                    'graduation_year' => $passer->graduation_year,
                     'school_attended' => $passer->shs_school ?? 'N/A',
                     'shs_strand' => $passer->strand ?? 'N/A',
                     'enrollment_date' => $sarGeneration->enrollment_date ?

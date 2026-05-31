@@ -18,7 +18,7 @@ class ApplicationConfirmation extends Mailable implements ShouldQueue
      */
     public function __construct()
     {
-        //
+        $this->onQueue('high');
     }
 
     /**

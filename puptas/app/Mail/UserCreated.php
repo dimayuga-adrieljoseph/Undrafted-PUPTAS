@@ -20,6 +20,7 @@ class UserCreated extends Mailable implements ShouldQueue
     {
         $this->user = $user;
         $this->password = $password;
+        $this->onQueue('high');
     }
 
     public function build()

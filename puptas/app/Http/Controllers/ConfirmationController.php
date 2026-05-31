@@ -152,6 +152,44 @@ class ConfirmationController extends Controller
     }
 
     /**
+     * Check the upload status of a specific file field.
+     * Used by the frontend to replace localStorage-based "in progress" guards
+     * with authoritative backend state.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function fileStatus(Request $request)
+    {
+        $request->validate([
+            'field' => ['required', 'string', 'in:' . FileMapper::getValidFileFields()],
+        ]);
+
+        $user = auth()->user();
+        $type = FileMapper::MAPPING[$request->input('field')] ?? null;
+
+        if (!$type) {
+            return response()->json(['status' => null]);
+        }
+
+        $file = \App\Models\UserFile::where('user_id', $user->id)
+            ->where('type', $type)
+            ->first();
+
+        if (!$file) {
+            return response()->json(['status' => null, 'hasFile' => false]);
+        }
+
+        return response()->json([
+            'status' => $file->status,
+            'hasFile' => $file->isUploaded(),
+            'isUploading' => $file->isUploading(),
+            'isFailed' => $file->isFailed(),
+            'updatedAt' => $file->updated_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
      * Generate a presigned URL for direct-to-S3 upload.
      * This allows the client to upload directly to storage without proxying through the server.
      *
@@ -160,11 +198,19 @@ class ConfirmationController extends Controller
      */
     public function getUploadUrl(Request $request)
     {
+        $allowedExtensions = app()->environment('local')
+            ? 'jpg,jpeg,png,webp,gif,pdf,doc,docx,txt'
+            : 'jpg,jpeg,png,webp,gif,pdf';
+
         $request->validate([
             'field' => ['required', 'string', 'in:' . FileMapper::getValidFileFields()],
-            'extension' => ['required', 'string', 'in:jpg,jpeg,png,webp,gif,pdf'],
+            'extension' => ['required', 'string', 'in:' . $allowedExtensions],
             'content_type' => ['required', 'string'],
         ]);
+
+        $user = auth()->user();
+        $field = $request->input('field');
+        $type = FileMapper::MAPPING[$field] ?? null;
 
         try {
             $result = $this->fileService->generateUploadUrl(
@@ -172,11 +218,20 @@ class ConfirmationController extends Controller
                 $request->input('extension')
             );
 
+            // Mark the file as 'uploading' in the DB so the backend is authoritative
+            // about the in-progress state (even for direct S3 uploads).
+            if ($type) {
+                \App\Models\UserFile::updateOrCreate(
+                    ['user_id' => $user->id, 'type' => $type],
+                    ['status' => 'uploading', 'original_name' => 'uploading...']
+                );
+            }
+
             return response()->json($result);
         } catch (\Throwable $e) {
             \Log::error('Failed to generate upload URL', [
-                'user_id' => auth()->id(),
-                'field' => $request->input('field'),
+                'user_id' => $user->id,
+                'field' => $field,
                 'error' => $e->getMessage(),
             ]);
 

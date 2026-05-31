@@ -36,7 +36,7 @@ return [
     |
     */
 
-    'delay_between_emails_seconds' => env('EMAIL_TRACKING_DELAY_SECONDS', 30),
+    'delay_between_emails_seconds' => env('EMAIL_TRACKING_DELAY_SECONDS', 1),
 
     /*
     |--------------------------------------------------------------------------
