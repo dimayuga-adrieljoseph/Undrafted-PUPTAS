@@ -198,9 +198,13 @@ class ConfirmationController extends Controller
      */
     public function getUploadUrl(Request $request)
     {
+        $allowedExtensions = app()->environment('local')
+            ? 'jpg,jpeg,png,webp,gif,pdf,doc,docx,txt'
+            : 'jpg,jpeg,png,webp,gif,pdf';
+
         $request->validate([
             'field' => ['required', 'string', 'in:' . FileMapper::getValidFileFields()],
-            'extension' => ['required', 'string', 'in:jpg,jpeg,png,webp,gif,pdf'],
+            'extension' => ['required', 'string', 'in:' . $allowedExtensions],
             'content_type' => ['required', 'string'],
         ]);
 

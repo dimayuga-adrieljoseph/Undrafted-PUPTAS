@@ -968,6 +968,14 @@ const reviewSections = computed(() => [
         ],
     },
     {
+        title: 'Additional Subjects',
+        items: [
+            ...dynamicSubjects.value.math.filter(s => s.name && s.grade != null).map(s => ({ label: `Math: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.english.filter(s => s.name && s.grade != null).map(s => ({ label: `English: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.science.filter(s => s.name && s.grade != null).map(s => ({ label: `Science: ${s.name}`, value: s.grade })),
+        ],
+    },
+    {
         title: 'Program Choices and Averages',
         items: [
             { label: 'First Choice Program *', value: reviewData.value.first_choice_program || '—' },

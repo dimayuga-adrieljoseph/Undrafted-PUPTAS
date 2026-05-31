@@ -187,9 +187,9 @@
                                     type="button"
                                     :disabled="isLocked"
                                     @click="addSubject('math')"
-                                    class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-[#9E122C] bg-red-50 dark:bg-red-900/20 border border-[#9E122C] dark:border-red-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-[#9E122C] bg-red-50 dark:bg-red-900/20 border border-[#9E122C]/30 dark:border-red-700/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                     </svg>
                                     Add Subject
@@ -291,15 +291,15 @@
                                     type="button"
                                     :disabled="isLocked"
                                     @click="addSubject('english')"
-                                    class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-[#9E122C] bg-red-50 dark:bg-red-900/20 border border-[#9E122C] dark:border-red-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-[#9E122C] bg-red-50 dark:bg-red-900/20 border border-[#9E122C]/30 dark:border-red-700/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                     </svg>
                                     Add Subject
                                 </button>
                                 <p v-else class="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                                    <i class="fas fa-info-circle mr-1"></i>Maximum of 5 additional english subjects reached.
+                                    <i class="fas fa-info-circle mr-1"></i>Maximum of 5 additional English subjects reached.
                                 </p>
                             </div>
 
@@ -369,9 +369,9 @@
                                     type="button"
                                     :disabled="isLocked"
                                     @click="addSubject('science')"
-                                    class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-[#9E122C] bg-red-50 dark:bg-red-900/20 border border-[#9E122C] dark:border-red-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-[#9E122C] bg-red-50 dark:bg-red-900/20 border border-[#9E122C]/30 dark:border-red-700/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                     </svg>
                                     Add Subject
@@ -748,6 +748,14 @@ const reviewSections = computed(() => [
         items: [
             { label: '1st Semester', value: form.g12_first_sem_gwa },
             { label: '2nd Semester', value: form.g12_second_sem_gwa },
+        ],
+    },
+    {
+        title: 'Additional Subjects',
+        items: [
+            ...dynamicSubjects.value.math.filter(s => s.name && s.grade != null).map(s => ({ label: `Math: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.english.filter(s => s.name && s.grade != null).map(s => ({ label: `English: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.science.filter(s => s.name && s.grade != null).map(s => ({ label: `Science: ${s.name}`, value: s.grade })),
         ],
     },
     {

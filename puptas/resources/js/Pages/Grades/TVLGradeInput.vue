@@ -831,7 +831,7 @@ const reviewSections = computed(() => [
         ],
     },
     {
-        title: 'Dynamic Subjects',
+        title: 'Additional Subjects',
         items: [
             ...dynamicSubjects.value.math.filter(s => s.name && s.grade != null).map(s => ({ label: `Math: ${s.name}`, value: s.grade })),
             ...dynamicSubjects.value.science.filter(s => s.name && s.grade != null).map(s => ({ label: `Science: ${s.name}`, value: s.grade })),

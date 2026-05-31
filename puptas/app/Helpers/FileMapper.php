@@ -279,10 +279,14 @@ class FileMapper
         $cacheKey = 'file_disk:' . md5($path);
         
         // Fast path: Check if we already resolved this file's disk recently
-        $cachedDisk = \Illuminate\Support\Facades\Cache::store('redis')->get($cacheKey);
-        if ($cachedDisk) {
-            $found = true;
-            return $cachedDisk;
+        try {
+            $cachedDisk = \Illuminate\Support\Facades\Cache::store('redis')->get($cacheKey);
+            if ($cachedDisk) {
+                $found = true;
+                return $cachedDisk;
+            }
+        } catch (\Throwable $e) {
+            // Redis unavailable (common in local dev) — skip cache
         }
 
         $configuredDefault = config('filesystems.default', 'public');
@@ -293,7 +297,11 @@ class FileMapper
                 if (Storage::disk($diskName)->exists($path)) {
                     $found = true;
                     // Cache the result for 30 days to bypass slow S3 exists() checks
-                    \Illuminate\Support\Facades\Cache::store('redis')->put($cacheKey, $diskName, now()->addDays(30));
+                    try {
+                        \Illuminate\Support\Facades\Cache::store('redis')->put($cacheKey, $diskName, now()->addDays(30));
+                    } catch (\Throwable $e) {
+                        // Redis unavailable — skip caching
+                    }
                     return $diskName;
                 }
             } catch (\Throwable $e) {

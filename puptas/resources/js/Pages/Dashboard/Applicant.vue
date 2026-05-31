@@ -214,14 +214,29 @@ const onInlineFileChange = (e) => {
 
 const selectInlineFile = (file) => {
   activeUploadSuccess.value = false;
-  const maxSize = 5 * 1024 * 1024;
-  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  
+  // Use relaxed limits for local testing environment
+  let maxSize = 5 * 1024 * 1024; // 5MB default
+  let validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  
+  // In local environment, allow more file types and larger sizes
+  if (import.meta.env.VITE_APP_ENV === 'local') {
+    maxSize = 50 * 1024 * 1024; // 50MB for testing
+    validTypes = [
+      'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+  }
+  
   if (file.size > maxSize) {
-    activeUploadError.value = 'File size must not exceed 5MB.';
+    activeUploadError.value = `File size must not exceed ${maxSize / (1024 * 1024)}MB.`;
     return;
   }
   if (!validTypes.includes(file.type)) {
-    activeUploadError.value = 'Please upload JPG, PNG, WebP, or GIF images only.';
+    activeUploadError.value = 'Please upload JPG, PNG, WebP, GIF, PDF, Word, or text files only.';
     return;
   }
   activeUploadFile.value = file;
@@ -281,56 +296,56 @@ const uploadInlineFile = async () => {
   // Track whether client→server transfer is done (waiting for server→S3)
   let waitingForServer = false;
 
+  const doUpload = async (fileToUpload) => {
+    const filename = fileToUpload.name || originalFile.name;
+    try {
+      const form = new FormData();
+      form.append('file', fileToUpload, filename);
+      form.append('field', key);
+
+      const { data } = await axios.post('/user/application/reupload', form, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            activeUploadLoaded.value = progressEvent.loaded;
+            activeUploadTotal.value = progressEvent.total;
+            const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+
+            if (pct >= 100 && !waitingForServer) {
+              waitingForServer = true;
+              activeUploadProgress.value = 95;
+            } else if (!waitingForServer) {
+              activeUploadProgress.value = Math.min(90, pct);
+            }
+          }
+        }
+      });
+
+      fileStatuses.value[key] = data.file;
+      activeUploadProgress.value = 100;
+      activeUploadSuccess.value = true;
+      await fetchData();
+    } catch (err) {
+      activeUploadError.value = err.response?.data?.message || 'Failed to upload file. Please try again.';
+      activeUploadSuccess.value = false;
+      await fetchData();
+    } finally {
+      activeUploadUploading.value = false;
+    }
+  };
+
+  // Non-image files (e.g. PDF) cannot be processed by Compressor — upload directly.
+  const isImage = originalFile.type.startsWith('image/');
+  if (!isImage) {
+    await doUpload(originalFile);
+    return;
+  }
+
   new Compressor(originalFile, {
     quality: 0.6,
     maxWidth: 1200,
     convertSize: 500000, // Convert to JPEG if over 500KB
     mimeType: 'image/webp', // WebP is 30-50% smaller than JPEG
-    success: async (compressedFile) => {
-      const filename = compressedFile.name || originalFile.name;
-
-      try {
-        // Upload through server (streaming with putFileAs on backend)
-        const form = new FormData();
-        form.append('file', compressedFile, filename);
-        form.append('field', key);
-
-        const { data } = await axios.post('/user/application/reupload', form, {
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              activeUploadLoaded.value = progressEvent.loaded;
-              activeUploadTotal.value = progressEvent.total;
-              const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-
-              if (pct >= 100 && !waitingForServer) {
-                // Client finished sending — now waiting for server to store to S3
-                waitingForServer = true;
-                activeUploadProgress.value = 95;
-              } else if (!waitingForServer) {
-                // Still transferring client → server
-                activeUploadProgress.value = Math.min(90, pct);
-              }
-            }
-          }
-        });
-
-        // Update local status from backend response (source of truth)
-        fileStatuses.value[key] = data.file;
-        activeUploadProgress.value = 100;
-        activeUploadSuccess.value = true;
-
-        // Refresh full state from backend to ensure consistency
-        await fetchData();
-      } catch (err) {
-        activeUploadError.value = err.response?.data?.message || 'Failed to upload file. Please try again.';
-        activeUploadSuccess.value = false;
-
-        // Refresh to get the backend's 'failed' status
-        await fetchData();
-      } finally {
-        activeUploadUploading.value = false;
-      }
-    },
+    success: (compressedFile) => { doUpload(compressedFile); },
     error(err) {
       activeUploadError.value = err.message || 'Image compression failed.';
       activeUploadUploading.value = false;
@@ -606,7 +621,7 @@ onMounted(() => {
 
             <template v-for="(step, i) in [
               'Upload Grade 10, 11 &amp; 12 documents',
-              'Go to <code>Input Grades</code>, enter grades &amp; pick 3 programs',
+              'Go to <code>Review Grades</code>, enter grades &amp; pick 3 programs',
               'Review entries, then click <code>Save Grades</code>',
               'Go to <code>Review Application</code> &amp; verify info',
               'Click <code class=\'submit\'>Submit Application</code>'
@@ -717,9 +732,9 @@ onMounted(() => {
                 <div class="flex items-center gap-2 flex-wrap">
                 </div>
               </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                Upload images only. Accepted formats: JPG, JPEG, PNG. Maximum file size: 2MB.
-              </p>
+               <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                 Upload files (images, PDF, Word, text). Maximum file size: 50MB for testing.
+               </p>
               
               <div v-if="loading && !stepKeys.length" class="text-center py-8">
                 <div class="flex justify-center items-center space-x-2">
@@ -811,14 +826,14 @@ onMounted(() => {
                         Replace
                       </button>
 
-                      <!-- Hidden File Input for file picker -->
-                      <input
-                        type="file"
-                        :id="'file-input-' + key"
-                        class="hidden"
-                        accept=".jpg,.jpeg,.png,image/jpeg,image/png,.webp,.gif,image/*"
-                        @change="reuploadFile($event, key)"
-                      />
+                       <!-- Hidden File Input for file picker -->
+                       <input
+                         type="file"
+                         :id="'file-input-' + key"
+                         class="hidden"
+                         accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.txt,image/*,application/*,text/*"
+                         @change="reuploadFile($event, key)"
+                       />
                     </div>
 
                     <!-- Drag and drop area appears below button when Upload/Replace is clicked -->
@@ -842,7 +857,7 @@ onMounted(() => {
                           Choose a file or drag and drop it here
                         </p>
 
-                        <input :id="'inline-file-input-' + key" type="file" class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,image/*" @change="onInlineFileChange" />
+                         <input :id="'inline-file-input-' + key" type="file" class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.txt,image/*,application/*,text/*" @change="onInlineFileChange" />
                       </div>
 
                       <div v-if="activeUploadKey === key" class="mt-3 space-y-3">
