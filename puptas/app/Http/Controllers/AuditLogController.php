@@ -27,6 +27,7 @@ class AuditLogController extends Controller
                 AuditLog::TYPE_AUDIT,
                 AuditLog::TYPE_SECURITY,
             ])],
+            'search' => ['nullable', 'string'],
         ]);
 
         $logsQuery = AuditLog::query();
@@ -75,6 +76,7 @@ class AuditLogController extends Controller
                 'user_id' => $filters['user_id'] ?? null,
                 'date' => $filters['date'] ?? null,
                 'log_type' => $filters['log_type'] ?? null,
+                'search' => $filters['search'] ?? null,
             ]
         ]);
     }
@@ -93,6 +95,7 @@ class AuditLogController extends Controller
                 AuditLog::TYPE_AUDIT,
                 AuditLog::TYPE_SECURITY,
             ])],
+            'search' => ['nullable', 'string'],
         ]);
 
         $query = AuditLog::query()->where('id', '>', $sinceId);
@@ -128,6 +131,11 @@ class AuditLogController extends Controller
 
         if (!empty($filters['log_type'])) {
             $query->forType($filters['log_type']);
+        }
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->whereFullText(['username', 'description', 'module_name', 'user_role'], $search);
         }
     }
 }

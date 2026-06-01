@@ -717,6 +717,7 @@ class TestPasserController extends Controller
     {
         // Find the passer or fail
         $passer = TestPasser::findOrFail($id);
+        $oldValues = $passer->toArray();
 
         // Validate input
         $validatedData = $request->validate([
@@ -748,8 +749,17 @@ class TestPasserController extends Controller
 
         // Update passer with validated data
         $passer->update($validatedData);
+        $newValues = $passer->fresh()->toArray();
 
-        $this->auditLogService->logActivity('UPDATE', 'Test Passers', "Updated passer: {$passer->first_name} {$passer->surname} (ID: {$passer->test_passer_id}).", null, 'ADMISSION_DATA');
+        $this->auditLogService->logActivity(
+            'UPDATE', 
+            'Test Passers', 
+            "Updated passer: {$passer->first_name} {$passer->surname} (ID: {$passer->test_passer_id}).", 
+            null, 
+            'ADMISSION_DATA',
+            $oldValues,
+            $newValues
+        );
 
         return response()->json([
             'message' => 'Passer updated successfully',
