@@ -49,7 +49,7 @@ class UserController extends Controller
             'roles' => $roles,
             'totalUsers' => $totalUsers,
             'programs' => $programs,
-            'currentUserRoleId' => 7,
+            'currentUserRoleId' => $request->user()->role_id,
         ]);
     }
 
