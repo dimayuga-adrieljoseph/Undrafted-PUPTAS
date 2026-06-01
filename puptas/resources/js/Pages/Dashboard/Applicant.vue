@@ -295,6 +295,9 @@ const uploadInlineFile = async () => {
 
   // Track whether client→server transfer is done (waiting for server→S3)
   let waitingForServer = false;
+  // Set up abort controller for timeout
+  const abortController = new AbortController();
+  let serverTimeout = null;
 
   const doUpload = async (fileToUpload) => {
     const filename = fileToUpload.name || originalFile.name;
@@ -304,6 +307,7 @@ const uploadInlineFile = async () => {
       form.append('field', key);
 
       const { data } = await axios.post('/user/application/reupload', form, {
+        signal: abortController.signal,
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             activeUploadLoaded.value = progressEvent.loaded;
@@ -313,6 +317,10 @@ const uploadInlineFile = async () => {
             if (pct >= 100 && !waitingForServer) {
               waitingForServer = true;
               activeUploadProgress.value = 95;
+              // Start a 60-second timeout for server processing
+              serverTimeout = setTimeout(() => {
+                abortController.abort();
+              }, 60000);
             } else if (!waitingForServer) {
               activeUploadProgress.value = Math.min(90, pct);
             }
@@ -320,12 +328,19 @@ const uploadInlineFile = async () => {
         }
       });
 
+      if (serverTimeout) clearTimeout(serverTimeout);
+
       fileStatuses.value[key] = data.file;
       activeUploadProgress.value = 100;
       activeUploadSuccess.value = true;
       await fetchData();
     } catch (err) {
-      activeUploadError.value = err.response?.data?.message || 'Failed to upload file. Please try again.';
+      if (serverTimeout) clearTimeout(serverTimeout);
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED' || axios.isCancel(err)) {
+        activeUploadError.value = 'Server took too long to respond, please try again.';
+      } else {
+        activeUploadError.value = err.response?.data?.message || 'Failed to upload file. Please try again.';
+      }
       activeUploadSuccess.value = false;
       await fetchData();
     } finally {
@@ -395,6 +410,17 @@ const closeQualifiedProgramsModal = () => {
 };
 
 onMounted(() => { 
+  // Clear all upload state locks so a refresh allows the user to retry
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('puptas_upload_')) {
+        localStorage.removeItem(k);
+        i--;
+      }
+    }
+  } catch (e) { /* ignore */ }
+
   fetchData();
   
   // Check for success query parameter
