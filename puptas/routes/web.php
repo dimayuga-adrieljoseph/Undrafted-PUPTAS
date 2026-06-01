@@ -101,6 +101,19 @@ Route::post('/check-reference-number', function (\Illuminate\Http\Request $reque
     return response()->json(['valid' => $exists]);
 })->middleware('guest');
 
+// Email Link Redirects — hosted on our domain so email link URLs match the sending domain
+Route::get('/links/admission-criteria', function () {
+    return redirect()->away('https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view');
+})->name('links.admission-criteria');
+
+Route::get('/links/facebook', function () {
+    return redirect()->away('https://www.facebook.com/PUPTOFFICIAL');
+})->name('links.facebook');
+
+Route::get('/links/register', function () {
+    return redirect()->away('https://identity-provider.isaxbsit2027.com/register?client_id=' . config('services.idp.client_id', '037f48dd-245b-450b-9e7a-3348b65b9dad'));
+})->name('links.register');
+
 Route::middleware(['auth'])->group(function () {
     // Privacy Consent Routes - available to all authenticated users
     Route::post('/privacy-consent/accept', [PrivacyConsentController::class, 'accept'])->name('privacy.consent.accept');
@@ -149,6 +162,11 @@ Route::middleware(['auth'])->group(function () {
     
     Route::get('/grades/tvl', [GradesController::class, 'showTvlGradeForm'])->name('grades.tvl.form');
     Route::post('/grades/tvl', [GradesController::class, 'storeTvlGrades'])->name('grades.tvl.store');
+
+    // Unified grade store — handles all strands including dynamic/additional subjects.
+    // The per-strand POST routes above are kept for backward compatibility but the
+    // grade input composable (useGradeForm.js) posts here to save dynamic_subjects.
+    Route::post('/grades/store', [GradesController::class, 'storeGrades'])->name('grades.store');
 });
 
 Route::get('/home', function () {
@@ -258,6 +276,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/user/application/reupload', [ConfirmationController::class, 'reupload']);
     Route::post('/user/application/upload-url', [ConfirmationController::class, 'getUploadUrl']);
     Route::post('/user/application/confirm-upload', [ConfirmationController::class, 'confirmUpload']);
+    Route::get('/user/application/file-status', [ConfirmationController::class, 'fileStatus']);
     Route::get('/files/{file}/preview', [UserFileController::class, 'preview'])
         ->middleware('signed')
         ->name('files.preview');
@@ -358,6 +377,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::put('/users/{user}/grades', [UserController::class, 'updateGrades'])->name('users.grades.update');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     // Admin Reports

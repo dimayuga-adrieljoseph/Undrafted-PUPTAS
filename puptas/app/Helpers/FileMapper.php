@@ -272,12 +272,18 @@ class FileMapper
     public static function resolveDiskForPath(string $path, bool &$found = false): string
     {
         $cacheKey = 'file_disk:' . md5($path);
-        
-        // Fast path: Check if we already resolved this file's disk recently
-        $cachedDisk = \Illuminate\Support\Facades\Cache::store('redis')->get($cacheKey);
-        if ($cachedDisk) {
-            $found = true;
-            return $cachedDisk;
+
+        // Fast path: Check if we already resolved this file's disk recently.
+        // Use the default cache store (file/array/redis) — never hardcode 'redis'
+        // so this works in local environments without Redis installed.
+        try {
+            $cachedDisk = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            if ($cachedDisk) {
+                $found = true;
+                return $cachedDisk;
+            }
+        } catch (\Throwable $e) {
+            // Cache unavailable — continue without it
         }
 
         $configuredDefault = config('filesystems.default', 'public');
@@ -288,7 +294,11 @@ class FileMapper
                 if (Storage::disk($diskName)->exists($path)) {
                     $found = true;
                     // Cache the result for 30 days to bypass slow S3 exists() checks
-                    \Illuminate\Support\Facades\Cache::store('redis')->put($cacheKey, $diskName, now()->addDays(30));
+                    try {
+                        \Illuminate\Support\Facades\Cache::put($cacheKey, $diskName, now()->addDays(30));
+                    } catch (\Throwable $e) {
+                        // Cache write failed — non-fatal, continue
+                    }
                     return $diskName;
                 }
             } catch (\Throwable $e) {

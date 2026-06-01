@@ -22,7 +22,14 @@ class RefreshIdpToken
         }
 
         $user = Auth::user();
-        $tokenData = \Illuminate\Support\Facades\Cache::store('redis')->get("idp_tokens:user_{$user->id}");
+
+        // If Redis is not available locally, skip token refresh gracefully
+        try {
+            $tokenData = \Illuminate\Support\Facades\Cache::store('redis')->get("idp_tokens:user_{$user->id}");
+        } catch (\Throwable $e) {
+            Log::debug('Redis unavailable, skipping IDP token refresh: ' . $e->getMessage());
+            return $next($request);
+        }
 
         // If no token record or refresh token, just proceed (or fail depending on strictness)
         if (!$tokenData || empty($tokenData['refresh_token'])) {

@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
+use Symfony\Component\ErrorHandler\Error\FatalError;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
@@ -131,6 +132,13 @@ class Handler extends ExceptionHandler
      */
     private function logStructured(Throwable $e, Request $request): void
     {
+        // FatalErrors (e.g. max execution time exceeded) can cause an infinite
+        // logging loop because writing a large trace itself triggers another
+        // FatalError. Skip them entirely.
+        if ($e instanceof FatalError) {
+            return;
+        }
+
         // Auth facade may not be available if the app container isn't fully booted
         // (e.g. during a ParseError), so we guard against that here.
         try {
@@ -142,12 +150,11 @@ class Handler extends ExceptionHandler
         Log::error('exception', [
             'message'      => $e->getMessage(),
             'exception'    => get_class($e),
-            'trace'        => $e->getTraceAsString(),
+            'file'         => $e->getFile() . ':' . $e->getLine(),
             'timestamp'    => now()->utc()->toIso8601String(),
             'method'       => $request->method(),
             'endpoint'     => $request->path(),
             'user_id'      => $userId,
-            'request_data' => $this->sanitize($request->all()),
         ]);
     }
 

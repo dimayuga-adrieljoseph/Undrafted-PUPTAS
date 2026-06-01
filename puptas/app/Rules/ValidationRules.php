@@ -28,7 +28,6 @@ class ValidationRules
             'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
             'sex' => 'nullable|in:M,F',
-            'contactnumber' => 'nullable|string|regex:/^\d{10}$/', // Changed to 10-digit validation
             'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }
@@ -55,7 +54,6 @@ class ValidationRules
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
 
             'sex' => 'nullable|in:M,F',
-            'contactnumber' => 'required|string|regex:/^\d{10}$/', // Changed to 10-digit validation
             'salutation' => 'nullable|in:Mr.,Mrs.,Ms.,Dr.,Prof.', // Keeping if you still use it
         ];
     }

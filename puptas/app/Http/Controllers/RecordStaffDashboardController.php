@@ -198,7 +198,6 @@ class RecordStaffDashboardController extends Controller
                     'firstname' => $applicant->firstname,
                     'lastname' => $applicant->lastname,
                     'email' => $applicant->email,
-                    'phone' => $applicant->contactnumber,
                     'application' => $applicant->currentApplication,
                     'program' => $applicant->currentApplication->program ?? null,
                 ];
@@ -261,7 +260,6 @@ class RecordStaffDashboardController extends Controller
                 'firstname' => $user->firstname,
                 'lastname' => $user->lastname,
                 'email' => $user->email,
-                'contactnumber' => $user->contactnumber,
                 'sex' => $user->sex,
                 'created_at' => $user->created_at,
                 'grades' => $user->grades,
@@ -501,7 +499,6 @@ class RecordStaffDashboardController extends Controller
                 $applicant->firstname,
                 $applicant->lastname,
                 $applicant->email,
-                $applicant->contactnumber,
                 $program ? $program->code : 'N/A',
                 $program ? $program->name : 'N/A',
                 $application->updated_at->format('Y-m-d H:i:s')

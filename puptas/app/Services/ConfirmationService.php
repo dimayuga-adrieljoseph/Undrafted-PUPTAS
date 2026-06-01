@@ -60,7 +60,6 @@ class ConfirmationService
             'middlename' => $user->middlename,
             'lastname' => $user->lastname,
             'sex' => $user->sex,
-            'contactnumber' => $user->contactnumber,
             'email' => $user->email,
             'schoolyear' => $graduateType,
             'dateGrad' => $profile?->date_graduated
@@ -242,13 +241,6 @@ class ConfirmationService
         }
 
         // Get existing file path before uploading (for cleanup after)
-        $existingFilePath = UserFile::where('user_id', $user->id)
-            ->where('type', $type)
-            ->value('file_path');
-
-        // Use FileService to store the file (streaming, no memory bloat)
-        $compressed = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
-        // Get existing file path before uploading (for cleanup after)
         $existingFile = UserFile::where('user_id', $user->id)
             ->where('type', $type)
             ->first();
@@ -360,79 +352,6 @@ class ConfirmationService
         return [
             'message' => 'File reuploaded successfully',
             'file' => FileMapper::buildFilePayload($userFile, true),
-        ];
-    }
-
-    /**
-     * Confirm a direct-to-S3 upload by recording the file path in the database.
-     * Used when the client uploads directly to S3 via presigned URL.
-     *
-     * @param User $user
-     * @param string $field
-     * @param string $path
-     * @param string $originalName
-     * @return array
-     * @throws \InvalidArgumentException
-     */
-    public function confirmDirectUpload(User $user, string $field, string $path, string $originalName): array
-    {
-        $type = FileMapper::MAPPING[$field] ?? null;
-
-        if (!$type) {
-            throw new \InvalidArgumentException('Invalid field name');
-        }
-
-        // Delete existing file
-        $this->deleteExistingFile($user, $type);
-
-        // Prepare update data
-        $updateData = [
-            'file_path' => $path,
-            'original_name' => $originalName,
-            'status' => 'pending',
-        ];
-
-        // Explicitly clear any existing OCR data on reupload
-        if (Schema::hasColumn('user_files', 'docling_json')) {
-            $updateData['docling_json'] = null;
-        }
-
-        // Save new file record
-        $userFile = UserFile::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'type' => $type,
-            ],
-            $updateData
-        );
-
-        $savedFile = $userFile;
-
-        // OCR processing has been removed since the system shifted to manual grade entry.
-
-        Log::info('File reuploaded', [
-        Log::info('Direct upload confirmed', [
-            'user_id' => $user->id,
-            'field' => $field,
-            'type' => $type,
-            'path' => $path,
-        ]);
-
-        // Delete old file AFTER success (non-blocking, don't let failure affect response)
-        if ($existingFilePath && $existingFilePath !== $compressed['path']) {
-            try {
-                $this->fileService->delete($existingFilePath);
-            } catch (\Throwable $e) {
-                Log::warning('Failed to delete old file after reupload', [
-                    'path' => $existingFilePath,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        return [
-            'message' => 'File uploaded successfully',
-            'file' => $userFile ? FileMapper::buildFilePayload($userFile, true) : null,
         ];
     }
 

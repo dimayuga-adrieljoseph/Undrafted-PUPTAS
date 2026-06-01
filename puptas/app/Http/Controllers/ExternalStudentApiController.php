@@ -82,7 +82,6 @@ class ExternalStudentApiController extends Controller
             'extension_name' => $user->extension_name,
             'lastname' => $user->lastname,
             'email' => $user->email,
-            'contactnumber' => $user->contactnumber,
             'sex' => $user->sex,
             'g12_gwa' => $g12_gwa,
             'application' => [
@@ -168,7 +167,6 @@ class ExternalStudentApiController extends Controller
             'extension_name' => $user->extension_name,
             'lastname' => $user->lastname,
             'email' => $user->email,
-            'contactnumber' => $user->contactnumber,
             'sex' => $user->sex,
             'g12_gwa' => $g12_gwa,
             'application' => [
