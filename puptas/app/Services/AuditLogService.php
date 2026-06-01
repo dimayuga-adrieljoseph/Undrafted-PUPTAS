@@ -132,10 +132,31 @@ class AuditLogService
         string $moduleName,
         string $description,
         ?Authenticatable $actor = null,
-        ?string $logCategory = null
+        ?string $logCategory = null,
+        ?array $oldValues = null,
+        ?array $newValues = null
     ): AuditLog {
         $actor = $actor ?? Auth::user();
         $actorId = $actor ? ($actor->id ?? $actor->idp_user_id) : 'null';
+
+        if ($oldValues !== null && $newValues !== null && strtoupper($actionType) === AuditLog::ACTION_UPDATE) {
+            $changes = [];
+            foreach ($newValues as $key => $newValue) {
+                if (in_array($key, ['updated_at', 'created_at', 'id'])) {
+                    continue;
+                }
+                
+                $oldValue = $oldValues[$key] ?? null;
+                if ($oldValue !== $newValue) {
+                    $oldStr = is_array($oldValue) ? json_encode($oldValue) : (string)$oldValue;
+                    $newStr = is_array($newValue) ? json_encode($newValue) : (string)$newValue;
+                    $changes[] = "{$key}: '{$oldStr}' -> '{$newStr}'";
+                }
+            }
+            if (!empty($changes)) {
+                $description .= " [Changes: " . implode(', ', $changes) . "]";
+            }
+        }
 
         logger()->info('[AuditLog] ' . strtoupper($actionType) . ' | ' . $moduleName . ' | user=' . $actorId . ' | ' . $description);
 
@@ -146,6 +167,8 @@ class AuditLogService
             'log_type'     => $this->resolveLogType($actionType, $logCategory, $moduleName),
             'module_name'  => $moduleName,
             'description'  => $description,
+            'old_values'   => $oldValues,
+            'new_values'   => $newValues,
         ]);
     }
 
@@ -251,7 +274,7 @@ class AuditLogService
             $id = $user ? ($user->id ?? $user->idp_user_id) : null;
             $isNumericId = $id !== null && is_numeric($id);
 
-            return AuditLog::create([
+            $logData = [
                 'user_id'      => $isNumericId ? $id : null,
                 'username'     => $user?->email ?? 'system',
                 'user_role'    => $this->resolveRole($user),
@@ -271,7 +294,18 @@ class AuditLogService
                 // Avoid storing sensitive query parameters (tokens/codes) in audit rows.
                 'request_url'  => $this->truncate((string) ($request?->url() ?? ''), 512),
                 'session_id'   => $sessionId,
-            ]);
+                'old_values'   => $data['old_values'] ?? null,
+                'new_values'   => $data['new_values'] ?? null,
+            ];
+
+            if (in_array($data['action_type'], [AuditLog::ACTION_LOGIN, AuditLog::ACTION_LOGOUT], true)) {
+                return \App\Models\AuditLog::create($logData);
+            }
+
+            \App\Jobs\ProcessAuditLog::dispatch($logData)->afterCommit();
+
+            // Return unsaved model for backward compatibility with existing signatures
+            return new AuditLog($logData);
         } catch (\Throwable $e) {
             logger()->error('[AuditLogService] Failed to write log', [
                 'action_type' => $data['action_type'] ?? null,

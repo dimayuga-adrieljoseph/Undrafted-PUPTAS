@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        $driver = Schema::getConnection()->getDriverName();
+        if (in_array($driver, ['mysql', 'mariadb'])) {
+            Schema::table('audit_logs', function (Blueprint $table) {
+                $table->fullText(['username', 'description', 'module_name', 'user_role'], 'audit_logs_fulltext_search');
+            });
+        }
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        $driver = Schema::getConnection()->getDriverName();
+        if (in_array($driver, ['mysql', 'mariadb'])) {
+            Schema::table('audit_logs', function (Blueprint $table) {
+                $table->dropFullText('audit_logs_fulltext_search');
+            });
+        }
+    }
+};
