@@ -429,10 +429,14 @@ class UserController extends Controller
             $gradeData
         );
 
+        $mathLog = $computed_math ?? 'N/A';
+        $englishLog = $computed_english ?? 'N/A';
+        $scienceLog = $computed_science ?? 'N/A';
+
         $this->auditLogService->logActivity(
             'UPDATE',
             'Grades',
-            "Updated grades for user {$user->email} (math avg: {$computed_math}, english avg: {$computed_english}, science avg: {$computed_science})",
+            "Updated grades for user {$user->email} (math avg: {$mathLog}, english avg: {$englishLog}, science avg: {$scienceLog})",
             null,
             'USER_MANAGEMENT'
         );
