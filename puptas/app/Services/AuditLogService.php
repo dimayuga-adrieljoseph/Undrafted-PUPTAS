@@ -298,7 +298,11 @@ class AuditLogService
                 'new_values'   => $data['new_values'] ?? null,
             ];
 
-            \App\Jobs\ProcessAuditLog::dispatch($logData);
+            if (in_array($data['action_type'], [AuditLog::ACTION_LOGIN, AuditLog::ACTION_LOGOUT], true)) {
+                return \App\Models\AuditLog::create($logData);
+            }
+
+            \App\Jobs\ProcessAuditLog::dispatch($logData)->afterCommit();
 
             // Return unsaved model for backward compatibility with existing signatures
             return new AuditLog($logData);

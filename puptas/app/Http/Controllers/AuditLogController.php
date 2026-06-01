@@ -135,7 +135,18 @@ class AuditLogController extends Controller
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
-            $query->whereFullText(['username', 'description', 'module_name', 'user_role'], $search);
+            $driver = $query->getConnection()->getDriverName();
+            
+            if (in_array($driver, ['mysql', 'mariadb'])) {
+                $query->whereFullText(['username', 'description', 'module_name', 'user_role'], $search);
+            } else {
+                $query->where(function ($q) use ($search) {
+                    $q->where('username', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('module_name', 'like', "%{$search}%")
+                      ->orWhere('user_role', 'like', "%{$search}%");
+                });
+            }
         }
     }
 }

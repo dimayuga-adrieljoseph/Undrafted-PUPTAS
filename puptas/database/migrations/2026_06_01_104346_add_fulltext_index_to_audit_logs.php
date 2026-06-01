@@ -11,9 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table) {
-            $table->fullText(['username', 'description', 'module_name', 'user_role'], 'audit_logs_fulltext_search');
-        });
+        $driver = Schema::getConnection()->getDriverName();
+        if (in_array($driver, ['mysql', 'mariadb'])) {
+            Schema::table('audit_logs', function (Blueprint $table) {
+                $table->fullText(['username', 'description', 'module_name', 'user_role'], 'audit_logs_fulltext_search');
+            });
+        }
     }
 
     /**
@@ -21,8 +24,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table) {
-            $table->dropFullText('audit_logs_fulltext_search');
-        });
+        $driver = Schema::getConnection()->getDriverName();
+        if (in_array($driver, ['mysql', 'mariadb'])) {
+            Schema::table('audit_logs', function (Blueprint $table) {
+                $table->dropFullText('audit_logs_fulltext_search');
+            });
+        }
     }
 };
