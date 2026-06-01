@@ -7,7 +7,11 @@ const props = defineProps({
     user:     Object,
     programs: Array,
     roles:    Object,
+    currentUserRoleId: Number,
+    readOnly: { type: Boolean, default: false },
 });
+
+const isSuperAdmin = computed(() => props.currentUserRoleId === 7);
 
 const isApplicant = computed(() => parseInt(props.user.role_id) === 1);
 
@@ -313,7 +317,40 @@ const roleColor = computed(() => {
     <Head title="User Profile" />
     <AppLayout title="User Profile">
 
+        <!-- Access Denied for users without proper role -->
+        <div v-if="!isSuperAdmin && !readOnly" class="profile-root">
+            <div class="card" style="max-width:600px;margin:4rem auto;">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Access Denied</h2>
+                        <p class="card-subtitle">You do not have permission to view this user's profile.</p>
+                    </div>
+                </div>
+                <div style="padding:1rem 1.5rem 1.5rem;">
+                    <Link :href="route('users.index')" class="btn btn--primary">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                        Back to User Management
+                    </Link>
+                </div>
+            </div>
+        </div>
+
+        <!-- SuperAdmin or Admin Content -->
+        <div v-else>
+
         <div class="profile-root">
+
+            <!-- ── Read-Only Banner ───────────────────────────────── -->
+            <div v-if="readOnly" class="readonly-banner">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                <div>
+                    <p class="readonly-banner-title">Read-Only Mode</p>
+                    <p class="readonly-banner-text">You are viewing this user's profile. Editing is restricted to SuperAdmins only.</p>
+                </div>
+            </div>
 
             <!-- ── Breadcrumb ──────────────────────────────────────── -->
             <nav class="breadcrumb">
@@ -386,8 +423,8 @@ const roleColor = computed(() => {
                                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                                 </div>
                                 <div>
-                                    <h2 class="card-title">Edit Profile</h2>
-                                    <p class="card-subtitle">Update applicant account details</p>
+                                    <h2 class="card-title">{{ readOnly ? 'Profile Details' : 'Edit Profile' }}</h2>
+                                    <p class="card-subtitle">{{ readOnly ? 'View applicant account information' : 'Update applicant account details' }}</p>
                                 </div>
                             </div>
 
@@ -407,22 +444,22 @@ const roleColor = computed(() => {
                                     <legend class="fieldset-legend">Personal Information</legend>
                                     <div class="field-grid">
                                         <div class="field">
-                                            <label class="field-label">First Name <span class="req">*</span></label>
-                                            <input v-model="form.firstname" type="text" required :class="['field-input', form.errors.firstname ? 'field-input--error' : '']" placeholder="First name" />
+                                            <label class="field-label">First Name <span v-if="!readOnly" class="req">*</span></label>
+                                            <input v-model="form.firstname" type="text" :required="!readOnly" :disabled="readOnly" :class="['field-input', form.errors.firstname ? 'field-input--error' : '', readOnly ? 'field-input--readonly' : '']" placeholder="First name" />
                                             <p v-if="form.errors.firstname" class="field-error">{{ form.errors.firstname }}</p>
                                         </div>
                                         <div class="field">
-                                            <label class="field-label">Last Name <span class="req">*</span></label>
-                                            <input v-model="form.lastname" type="text" required :class="['field-input', form.errors.lastname ? 'field-input--error' : '']" placeholder="Last name" />
+                                            <label class="field-label">Last Name <span v-if="!readOnly" class="req">*</span></label>
+                                            <input v-model="form.lastname" type="text" :required="!readOnly" :disabled="readOnly" :class="['field-input', form.errors.lastname ? 'field-input--error' : '', readOnly ? 'field-input--readonly' : '']" placeholder="Last name" />
                                             <p v-if="form.errors.lastname" class="field-error">{{ form.errors.lastname }}</p>
                                         </div>
                                         <div class="field">
                                             <label class="field-label">Middle Name</label>
-                                            <input v-model="form.middlename" type="text" class="field-input" placeholder="Middle name" />
+                                            <input v-model="form.middlename" type="text" :disabled="readOnly" :class="['field-input', readOnly ? 'field-input--readonly' : '']" placeholder="Middle name" />
                                         </div>
                                         <div class="field">
                                             <label class="field-label">Extension Name</label>
-                                            <select v-model="form.extension_name" class="field-input">
+                                            <select v-model="form.extension_name" :disabled="readOnly" :class="['field-input', readOnly ? 'field-input--readonly' : '']">
                                                 <option value="">None</option>
                                                 <option>Jr.</option><option>Sr.</option>
                                                 <option>II</option><option>III</option><option>IV</option>
@@ -437,7 +474,7 @@ const roleColor = computed(() => {
                                     <div class="field-grid">
                                         <div class="field">
                                             <label class="field-label">Email <span class="req">*</span></label>
-                                            <input v-model="form.email" type="email" required :class="['field-input', form.errors.email ? 'field-input--error' : '']" placeholder="email@example.com" />
+                                            <input v-model="form.email" type="email" :required="!readOnly" :disabled="readOnly" :class="['field-input', form.errors.email ? 'field-input--error' : '', readOnly ? 'field-input--readonly' : '']" placeholder="email@example.com" />
                                             <p v-if="form.errors.email" class="field-error">{{ form.errors.email }}</p>
                                         </div>
                                     </div>
@@ -448,22 +485,22 @@ const roleColor = computed(() => {
                                     <legend class="fieldset-legend">Program Choices</legend>
                                     <div class="field-grid field-grid--3">
                                         <div class="field">
-                                            <label class="field-label">1st Choice <span class="req">*</span></label>
-                                            <select v-model="form.applicant_program" required :class="['field-input', form.errors.applicant_program ? 'field-input--error' : '']">
+                                            <label class="field-label">1st Choice <span v-if="!readOnly" class="req">*</span></label>
+                                            <select v-model="form.applicant_program" :required="!readOnly" :disabled="readOnly" :class="['field-input', form.errors.applicant_program ? 'field-input--error' : '', readOnly ? 'field-input--readonly' : '']">
                                                 <option value="" disabled>Select program</option>
                                                 <option v-for="p in programs" :key="p.id" :value="p.code">{{ p.name }}</option>
                                             </select>
                                         </div>
                                         <div class="field">
                                             <label class="field-label">2nd Choice</label>
-                                            <select v-model="form.applicant_second_program" class="field-input">
+                                            <select v-model="form.applicant_second_program" :disabled="readOnly" :class="['field-input', readOnly ? 'field-input--readonly' : '']">
                                                 <option value="">None</option>
                                                 <option v-for="p in programs" :key="p.id" :value="p.code">{{ p.name }}</option>
                                             </select>
                                         </div>
                                         <div class="field">
                                             <label class="field-label">3rd Choice</label>
-                                            <select v-model="form.applicant_third_program" class="field-input">
+                                            <select v-model="form.applicant_third_program" :disabled="readOnly" :class="['field-input', readOnly ? 'field-input--readonly' : '']">
                                                 <option value="">None</option>
                                                 <option v-for="p in programs" :key="p.id" :value="p.code">{{ p.name }}</option>
                                             </select>
@@ -473,8 +510,8 @@ const roleColor = computed(() => {
 
                                 <!-- Actions -->
                                 <div class="form-actions">
-                                    <Link :href="route('users.index')" class="btn btn--ghost">Cancel</Link>
-                                    <button type="submit" :disabled="form.processing" class="btn btn--primary">
+                                    <Link :href="route('users.index')" class="btn btn--ghost">{{ readOnly ? 'Back' : 'Cancel' }}</Link>
+                                    <button v-if="!readOnly" type="submit" :disabled="form.processing" class="btn btn--primary">
                                         <span v-if="form.processing" class="spinner"></span>
                                         <svg v-else viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
                                         {{ form.processing ? 'Saving…' : 'Save Changes' }}
@@ -700,7 +737,8 @@ const roleColor = computed(() => {
                                 {{ liveAvgScience ?? '—' }}
                             </span>
                         </div>
-                        <p class="avg-summary-note">Averages update live as you edit. Saved values determine program qualification.</p>
+                        <p v-if="!readOnly" class="avg-summary-note">Averages update live as you edit. Saved values determine program qualification.</p>
+                        <p v-else class="avg-summary-note">Grade averages are displayed below.</p>
                     </div>
 
                     <div class="grade-groups">
@@ -725,7 +763,8 @@ const roleColor = computed(() => {
                                             min="0"
                                             max="100"
                                             step="0.01"
-                                            class="grade-edit-input"
+                                            :disabled="readOnly"
+                                            :class="['grade-edit-input', readOnly ? 'field-input--readonly' : '']"
                                             placeholder="—"
                                         />
                                         <span
@@ -763,7 +802,7 @@ const roleColor = computed(() => {
                                 </div>
                                 <div v-for="subject in dynamicGradeSubjects" :key="subject.id" class="grade-dynamic-row">
                                     <!-- Category selector -->
-                                    <select v-model="subject.category" class="grade-edit-input grade-edit-input--cat">
+                                    <select v-model="subject.category" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--cat', readOnly ? 'field-input--readonly' : '']">
                                         <option value="math">Math</option>
                                         <option value="english">English</option>
                                         <option value="science">Science</option>
@@ -772,7 +811,8 @@ const roleColor = computed(() => {
                                     <input
                                         v-model="subject.name"
                                         type="text"
-                                        class="grade-edit-input grade-edit-input--name"
+                                        :disabled="readOnly"
+                                        :class="['grade-edit-input grade-edit-input--name', readOnly ? 'field-input--readonly' : '']"
                                         placeholder="Subject name"
                                         maxlength="100"
                                     />
@@ -783,10 +823,12 @@ const roleColor = computed(() => {
                                         min="0"
                                         max="100"
                                         step="0.01"
-                                        class="grade-edit-input grade-edit-input--grade"
+                                        :disabled="readOnly"
+                                        :class="['grade-edit-input grade-edit-input--grade', readOnly ? 'field-input--readonly' : '']"
                                         placeholder="0–100"
                                     />
                                     <button
+                                        v-if="!readOnly"
                                         type="button"
                                         class="grade-remove-btn"
                                         @click="removeDynamicSubject(subject.id)"
@@ -796,7 +838,7 @@ const roleColor = computed(() => {
                                     </button>
                                 </div>
                             </div>
-                            <div class="grade-add-row">
+                            <div v-if="!readOnly" class="grade-add-row">
                                 <button type="button" class="btn-add-subject" @click="addDynamicSubject">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                                     Add Subject
@@ -807,7 +849,7 @@ const roleColor = computed(() => {
                     </div>
 
                     <!-- Save button -->
-                    <div class="grades-save-bar">
+                    <div v-if="!readOnly" class="grades-save-bar">
                         <button type="button" class="btn btn--primary" :disabled="gradesSaving" @click="saveGrades">
                             <span v-if="gradesSaving" class="spinner"></span>
                             <svg v-else viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
@@ -820,52 +862,52 @@ const roleColor = computed(() => {
                 <div v-show="activeTab === 'documents'" class="tab-panel">
                     <template v-if="user.files?.length">
                         <div class="doc-grid">
-                            <div v-for="file in user.files" :key="file.id" class="doc-card">
-                                <div class="doc-card-top">
-                                    <div class="doc-icon">
-                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                                <div v-for="file in user.files" :key="file.id" class="doc-card">
+                                    <div class="doc-card-top">
+                                        <div class="doc-icon">
+                                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                                        </div>
+                                        <div class="doc-meta">
+                                            <p class="doc-type">{{ docTypeLabels[file.type] ?? file.type?.replace(/_/g, ' ') ?? 'Document' }}</p>
+                                            <p class="doc-filename">{{ file.original_name ?? '—' }}</p>
+                                        </div>
+                                        <span :class="['status-badge', docStatusBadge(file.status).cls]">{{ docStatusBadge(file.status).label }}</span>
                                     </div>
-                                    <div class="doc-meta">
-                                        <p class="doc-type">{{ docTypeLabels[file.type] ?? file.type?.replace(/_/g, ' ') ?? 'Document' }}</p>
-                                        <p class="doc-filename">{{ file.original_name ?? '—' }}</p>
+                                    <div v-if="file.comment" class="doc-remark">
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                                        <span>{{ file.comment }}</span>
                                     </div>
-                                    <span :class="['status-badge', docStatusBadge(file.status).cls]">{{ docStatusBadge(file.status).label }}</span>
+                                    <p class="doc-date">Uploaded {{ file.created_at ? new Date(file.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' }}</p>
                                 </div>
-                                <div v-if="file.comment" class="doc-remark">
-                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                                    <span>{{ file.comment }}</span>
-                                </div>
-                                <p class="doc-date">Uploaded {{ file.created_at ? new Date(file.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' }}</p>
                             </div>
-                        </div>
 
-                        <!-- Summary -->
-                        <div class="card summary-card">
-                            <div class="card-header">
-                                <div class="card-icon">
-                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                            <!-- Summary -->
+                            <div class="card summary-card card--wide">
+                                <div class="card-header">
+                                    <div class="card-icon">
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                                    </div>
+                                    <h3 class="card-title">Upload Summary</h3>
                                 </div>
-                                <h3 class="card-title">Upload Summary</h3>
+                                <div class="summary-grid">
+                                    <div class="summary-stat summary-stat--neutral">
+                                        <span class="summary-num">{{ user.files.length }}</span>
+                                        <span class="summary-label">Total Files</span>
+                                    </div>
+                                    <div class="summary-stat summary-stat--green">
+                                        <span class="summary-num">{{ user.files.filter(f => f.status === 'approved').length }}</span>
+                                        <span class="summary-label">Approved</span>
+                                    </div>
+                                    <div class="summary-stat summary-stat--yellow">
+                                        <span class="summary-num">{{ user.files.filter(f => f.status === 'pending').length }}</span>
+                                        <span class="summary-label">Pending</span>
+                                    </div>
+                                    <div class="summary-stat summary-stat--red">
+                                        <span class="summary-num">{{ user.files.filter(f => f.status === 'returned').length }}</span>
+                                        <span class="summary-label">Returned</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="summary-grid">
-                                <div class="summary-stat summary-stat--neutral">
-                                    <span class="summary-num">{{ user.files.length }}</span>
-                                    <span class="summary-label">Total Files</span>
-                                </div>
-                                <div class="summary-stat summary-stat--green">
-                                    <span class="summary-num">{{ user.files.filter(f => f.status === 'approved').length }}</span>
-                                    <span class="summary-label">Approved</span>
-                                </div>
-                                <div class="summary-stat summary-stat--yellow">
-                                    <span class="summary-num">{{ user.files.filter(f => f.status === 'pending').length }}</span>
-                                    <span class="summary-label">Pending</span>
-                                </div>
-                                <div class="summary-stat summary-stat--red">
-                                    <span class="summary-num">{{ user.files.filter(f => f.status === 'returned').length }}</span>
-                                    <span class="summary-label">Returned</span>
-                                </div>
-                            </div>
-                        </div>
                     </template>
                     <div v-else class="empty-card">
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
@@ -888,8 +930,8 @@ const roleColor = computed(() => {
                                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                             </div>
                             <div>
-                                <h2 class="card-title">Edit Staff Profile</h2>
-                                <p class="card-subtitle">Update account details, role, and program assignments</p>
+                                    <h2 class="card-title">{{ readOnly ? 'Staff Profile' : 'Edit Staff Profile' }}</h2>
+                                    <p class="card-subtitle">{{ readOnly ? 'View account details, role, and program assignments' : 'Update account details, role, and program assignments' }}</p>
                             </div>
                         </div>
 
@@ -909,26 +951,26 @@ const roleColor = computed(() => {
                                 <div class="field-grid">
                                     <div class="field">
                                         <label class="field-label">First Name <span class="req">*</span></label>
-                                        <input v-model="form.firstname" type="text" required :class="['field-input', form.errors.firstname ? 'field-input--error' : '']" placeholder="First name" />
-                                        <p v-if="form.errors.firstname" class="field-error">{{ form.errors.firstname }}</p>
-                                    </div>
-                                    <div class="field">
-                                        <label class="field-label">Last Name <span class="req">*</span></label>
-                                        <input v-model="form.lastname" type="text" required :class="['field-input', form.errors.lastname ? 'field-input--error' : '']" placeholder="Last name" />
-                                        <p v-if="form.errors.lastname" class="field-error">{{ form.errors.lastname }}</p>
-                                    </div>
-                                    <div class="field">
-                                        <label class="field-label">Middle Name</label>
-                                        <input v-model="form.middlename" type="text" class="field-input" placeholder="Middle name" />
-                                    </div>
-                                    <div class="field">
-                                        <label class="field-label">Extension Name</label>
-                                        <select v-model="form.extension_name" class="field-input">
-                                            <option value="">None</option>
-                                            <option>Jr.</option><option>Sr.</option>
-                                            <option>II</option><option>III</option><option>IV</option>
-                                        </select>
-                                    </div>
+                                            <input v-model="form.firstname" type="text" :required="!readOnly" :disabled="readOnly" :class="['field-input', form.errors.firstname ? 'field-input--error' : '', readOnly ? 'field-input--readonly' : '']" placeholder="First name" />
+                                            <p v-if="form.errors.firstname" class="field-error">{{ form.errors.firstname }}</p>
+                                        </div>
+                                        <div class="field">
+                                            <label class="field-label">Last Name <span v-if="!readOnly" class="req">*</span></label>
+                                            <input v-model="form.lastname" type="text" :required="!readOnly" :disabled="readOnly" :class="['field-input', form.errors.lastname ? 'field-input--error' : '', readOnly ? 'field-input--readonly' : '']" placeholder="Last name" />
+                                            <p v-if="form.errors.lastname" class="field-error">{{ form.errors.lastname }}</p>
+                                        </div>
+                                        <div class="field">
+                                            <label class="field-label">Middle Name</label>
+                                            <input v-model="form.middlename" type="text" :disabled="readOnly" :class="['field-input', readOnly ? 'field-input--readonly' : '']" placeholder="Middle name" />
+                                        </div>
+                                        <div class="field">
+                                            <label class="field-label">Extension Name</label>
+                                            <select v-model="form.extension_name" :disabled="readOnly" :class="['field-input', readOnly ? 'field-input--readonly' : '']">
+                                                <option value="">None</option>
+                                                <option>Jr.</option><option>Sr.</option>
+                                                <option>II</option><option>III</option><option>IV</option>
+                                            </select>
+                                        </div>
                                 </div>
                             </fieldset>
 
@@ -937,7 +979,7 @@ const roleColor = computed(() => {
                                 <div class="field-grid">
                                     <div class="field">
                                         <label class="field-label">Email <span class="req">*</span></label>
-                                        <input v-model="form.email" type="email" required :class="['field-input', form.errors.email ? 'field-input--error' : '']" placeholder="email@example.com" />
+                                            <input v-model="form.email" type="email" :required="!readOnly" :disabled="readOnly" :class="['field-input', form.errors.email ? 'field-input--error' : '', readOnly ? 'field-input--readonly' : '']" placeholder="email@example.com" />
                                         <p v-if="form.errors.email" class="field-error">{{ form.errors.email }}</p>
                                     </div>
                                 </div>
@@ -946,27 +988,27 @@ const roleColor = computed(() => {
                             <fieldset class="fieldset">
                                 <legend class="fieldset-legend">Role & Assignment</legend>
                                 <div class="field-grid">
-                                    <div class="field">
-                                        <label class="field-label">Role <span class="req">*</span></label>
-                                        <select v-model="form.role_id" @change="onRoleChange" required :class="['field-input', form.errors.role_id ? 'field-input--error' : '']">
-                                            <option v-for="(name, id) in roles" :key="id" :value="id">{{ name }}</option>
-                                        </select>
-                                        <p v-if="form.errors.role_id" class="field-error">{{ form.errors.role_id }}</p>
-                                    </div>
-                                    <div v-if="showProgramAssignment" class="field">
-                                        <label class="field-label">Program Assignment <span class="req">*</span></label>
-                                        <select v-model="form.program" multiple size="4" :class="['field-input field-input--multi', form.errors.program ? 'field-input--error' : '']">
+                                        <div class="field">
+                                            <label class="field-label">Role <span v-if="!readOnly" class="req">*</span></label>
+                                            <select v-model="form.role_id" @change="onRoleChange" :required="!readOnly" :disabled="readOnly" :class="['field-input', form.errors.role_id ? 'field-input--error' : '', readOnly ? 'field-input--readonly' : '']">
+                                                <option v-for="(name, id) in roles" :key="id" :value="id">{{ name }}</option>
+                                            </select>
+                                            <p v-if="form.errors.role_id" class="field-error">{{ form.errors.role_id }}</p>
+                                        </div>
+                                        <div v-if="showProgramAssignment" class="field">
+                                            <label class="field-label">Program Assignment <span v-if="!readOnly" class="req">*</span></label>
+                                            <select v-model="form.program" multiple size="4" :disabled="readOnly" :class="['field-input field-input--multi', form.errors.program ? 'field-input--error' : '', readOnly ? 'field-input--readonly' : '']">
                                             <option v-for="p in programs" :key="p.id" :value="p.code">{{ p.name }} ({{ p.code }})</option>
                                         </select>
-                                        <p class="field-hint">Hold Ctrl / Cmd to select multiple programs.</p>
+                                        <p v-if="!readOnly" class="field-hint">Hold Ctrl / Cmd to select multiple programs.</p>
                                         <p v-if="form.errors.program" class="field-error">{{ form.errors.program }}</p>
                                     </div>
                                 </div>
                             </fieldset>
 
                             <div class="form-actions">
-                                <Link :href="route('users.index')" class="btn btn--ghost">Cancel</Link>
-                                <button type="submit" :disabled="form.processing" class="btn btn--primary">
+                                <Link :href="route('users.index')" class="btn btn--ghost">{{ readOnly ? 'Back' : 'Cancel' }}</Link>
+                                <button v-if="!readOnly" type="submit" :disabled="form.processing" class="btn btn--primary">
                                     <span v-if="form.processing" class="spinner"></span>
                                     <svg v-else viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
                                     {{ form.processing ? 'Saving…' : 'Save Changes' }}
@@ -978,6 +1020,7 @@ const roleColor = computed(() => {
             </template>
 
         </div>
+    </div>
     </AppLayout>
 </template>
 
@@ -1311,6 +1354,33 @@ const roleColor = computed(() => {
 .summary-stat--yellow .summary-num { color: #92400e; }
 .summary-stat--red    .summary-num { color: #b91c1c; }
 .summary-label { font-size: .72rem; color: #6b7280; font-weight: 500; }
+
+/* ── Read-Only Banner ─────────────────────────────────────────────────── */
+.readonly-banner {
+    display: flex; align-items: flex-start; gap: .75rem;
+    padding: .85rem 1rem; margin-bottom: 1.25rem;
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+}
+.readonly-banner svg { width: 18px; height: 18px; fill: #3b82f6; flex-shrink: 0; margin-top: 2px; }
+.readonly-banner-title { font-size: .82rem; font-weight: 700; color: #1d4ed8; margin-bottom: 1px; }
+.readonly-banner-text { font-size: .75rem; color: #3b82f6; margin: 0; }
+.dark .readonly-banner { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.2); }
+.dark .readonly-banner svg { fill: #60a5fa; }
+.dark .readonly-banner-title { color: #60a5fa; }
+.dark .readonly-banner-text { color: #93bbfd; }
+
+/* ── Read-Only Input Styling ──────────────────────────────────────────── */
+.field-input--readonly {
+    background: #f3f4f6 !important;
+    color: #4b5563;
+    cursor: not-allowed;
+    border-color: #e5e7eb;
+}
+.dark .field-input--readonly {
+    background: #1e2130 !important;
+    color: #94a3b8;
+    border-color: #2a2d3a;
+}
 
 /* ── Empty states ────────────────────────────────────────────────────── */
 .empty-state { text-align: center; padding: 3rem 1rem; }

@@ -394,7 +394,10 @@ const props = defineProps({
     totalUsers: Number,
     userCountsByRole: Object,
     roles: Object,
+    currentUserRoleId: Number,
 });
+
+const isSuperAdmin = computed(() => props.currentUserRoleId === 7);
 
 const form = ref({
     email: "",
