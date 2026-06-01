@@ -44,6 +44,10 @@ Route::get('/', function () {
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->name('idp.redirect');
 
+Route::get('/auth/idp/error', function () {
+    return Inertia::render('Auth/IdpError');
+})->name('idp.error');
+
 Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
     ->name('idp.callback');
 
@@ -97,8 +101,12 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
 
 Route::post('/check-reference-number', function (\Illuminate\Http\Request $request) {
     $request->validate(['reference_number' => 'required|string|max:100']);
-    $exists = \App\Models\TestPasser::where('reference_number', trim($request->reference_number))->exists();
-    return response()->json(['valid' => $exists]);
+    $testPasser = \App\Models\TestPasser::where('reference_number', trim($request->reference_number))->first();
+    
+    // Valid if it exists and status is not 3 (Unqualified) or 4 (Waitlisted Below Cutoff)
+    $valid = $testPasser && !in_array($testPasser->passer_status_id, [3, 4]);
+    
+    return response()->json(['valid' => $valid]);
 })->middleware('guest');
 
 // Email Link Redirects — hosted on our domain so email link URLs match the sending domain

@@ -18,17 +18,15 @@ class SendPasserEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $tries = 15;
+    public $maxExceptions = 3;
+    public $backoff = [10, 30, 60];
+    public $uniqueFor = 3600;
+
     public function middleware(): array
     {
         return [new RateLimited('emails')];
     }
-
-    /**
-     * The number of seconds the unique lock should be maintained.
-     * If the worker is down longer than this, the lock will expire
-     * and the job can be dispatched again.
-     */
-    public $uniqueFor = 3600;
 
     /**
      * One job per passer + template combination.

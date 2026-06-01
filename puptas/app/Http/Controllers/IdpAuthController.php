@@ -33,7 +33,7 @@ class IdpAuthController extends Controller
                 'config_keys' => $idpConfig ? array_keys($idpConfig) : 'config not found',
             ]);
 
-            return redirect('/login')->withErrors([
+            return redirect('/auth/idp/error')->withErrors([
                 'idp' => 'IDP configuration is missing. Please contact administrator.'
             ]);
         }
@@ -123,7 +123,7 @@ class IdpAuthController extends Controller
                 'full_url'     => $request->fullUrl(),
             ]);
 
-            return redirect('/login')->withErrors([
+            return redirect('/auth/idp/error')->withErrors([
                 'idp' => 'Authorization code is missing. Please try signing in again.',
             ]);
         }
@@ -136,7 +136,7 @@ class IdpAuthController extends Controller
                 'config_keys' => $idpConfig ? array_keys($idpConfig) : 'config not found',
             ]);
 
-            return redirect('/login')->withErrors([
+            return redirect('/auth/idp/error')->withErrors([
                 'idp' => 'IDP configuration is incomplete. Please contact administrator.',
             ]);
         }
@@ -177,7 +177,7 @@ class IdpAuthController extends Controller
                     'token_url'    => $tokenUrl,
                 ]);
 
-                return redirect('/login?idp_error=true')->withErrors([
+                return redirect('/auth/idp/error')->withErrors([
                     'idp' => "IDP Error: {$idpError}. Please try signing in again.",
                 ]);
             }
@@ -192,7 +192,7 @@ class IdpAuthController extends Controller
                     'response_keys' => array_keys($tokenData),
                 ]);
 
-                return redirect('/login')->withErrors([
+                return redirect('/auth/idp/error')->withErrors([
                     'idp' => 'Invalid token response from IDP.',
                 ]);
             }
@@ -224,7 +224,7 @@ class IdpAuthController extends Controller
                     'body' => $errorBody,
                 ]);
 
-                return redirect('/login')->withErrors([
+                return redirect('/auth/idp/error')->withErrors([
                     'idp' => "IDP User Info Failed (Status: $errorStatus) - $errorBody",
                 ]);
             }
@@ -234,7 +234,7 @@ class IdpAuthController extends Controller
             // Extract email from IDP
             $idpEmail = $idpUser['email'] ?? null;
             if (!$idpEmail) {
-                return redirect('/login')->withErrors(['idp' => 'No email provided by IDP.']);
+                return redirect('/auth/idp/error')->withErrors(['idp' => 'No email provided by IDP.']);
             }
 
             // Cross-reference user's email with local database
@@ -328,7 +328,7 @@ class IdpAuthController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return redirect('/login')->withErrors([
+            return redirect('/auth/idp/error')->withErrors([
                 'idp' => 'Unable to connect to IDP. Please try again later.',
             ]);
         } catch (\Exception $e) {
@@ -336,7 +336,7 @@ class IdpAuthController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return redirect('/login')->withErrors([
+            return redirect('/auth/idp/error')->withErrors([
                 'idp' => 'An unexpected error occurred during IDP login.',
             ]);
         }

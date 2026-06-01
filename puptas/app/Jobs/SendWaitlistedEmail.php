@@ -18,6 +18,11 @@ class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $tries = 15;
+    public $maxExceptions = 3;
+    public $backoff = [10, 30, 60];
+    public $uniqueFor = 3600;
+
     public function middleware(): array
     {
         return [new RateLimited('emails')];
@@ -25,13 +30,6 @@ class SendWaitlistedEmail implements ShouldQueue, ShouldBeUnique
 
     public $passer;
     public $messageTemplate;
-
-    /**
-     * The number of seconds after which the job's unique lock will be released.
-     *
-     * @var int
-     */
-    public $uniqueFor = 3600;
 
     /**
      * Create a new job instance.
