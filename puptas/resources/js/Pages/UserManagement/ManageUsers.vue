@@ -55,17 +55,17 @@
 
     <!-- Flash Messages -->
     <div class="px-4 md:px-8 mb-6">
-      <div v-if="page.props.flash.status" class="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-800 dark:text-green-300">
+      <div v-if="$page.props.flash.success || $page.props.flash.status" class="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-800 dark:text-green-300">
         <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
         </svg>
-        <p class="text-sm font-medium">{{ page.props.flash.status }}</p>
+        <p class="text-sm font-medium">{{ $page.props.flash.success || $page.props.flash.status }}</p>
       </div>
-      <div v-if="page.props.flash.error" class="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-800 dark:text-red-300">
+      <div v-if="$page.props.flash.error" class="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-800 dark:text-red-300">
         <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
         </svg>
-        <p class="text-sm font-medium">{{ page.props.flash.error }}</p>
+        <p class="text-sm font-medium">{{ $page.props.flash.error }}</p>
       </div>
     </div>
 

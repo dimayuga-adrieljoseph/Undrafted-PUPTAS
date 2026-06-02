@@ -121,11 +121,6 @@ watchEffect(() => {
 
                 <!-- Controls -->
                 <div class="flex items-center gap-4">
-                    <button
-                        class="text-gray-500 hover:text-[#9E122C] dark:hover:text-white transition dark:text-gray-300"
-                    >
-                        <FontAwesomeIcon :icon="['fas', 'bell']" class="text-lg" />
-                    </button>
 
                     <button
                         @click="toggleDarkMode"

@@ -602,7 +602,8 @@ const roleColor = computed(() => {
 
                                 <!-- Actions -->
                                 <div class="form-actions">
-                                    <Link :href="route('users.index')" class="btn btn--ghost">{{ readOnly ? 'Back' : 'Cancel' }}</Link>
+                                    <Link :href="route('users.index')" class="btn btn--ghost">Back</Link>
+                                    <Link v-if="!readOnly" :href="route('users.index')" class="btn btn--ghost">Cancel</Link>
                                     <button v-if="!readOnly" type="submit" :disabled="form.processing" class="btn btn--primary">
                                         <span v-if="form.processing" class="spinner"></span>
                                         <svg v-else viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
@@ -692,7 +693,7 @@ const roleColor = computed(() => {
                         <p v-if="!readOnly" class="avg-summary-note">Averages update live as you edit. Saved values determine program qualification.</p>
                         <p v-else class="avg-summary-note">Grade averages are displayed below.</p>
                     </div>
-                    <div class="grade-groups">
+                    <form @submit.prevent="saveAllChanges" class="grade-groups">
                         <div v-for="group in knownGradeGroups" :key="group.title" class="card">
                             <div class="card-header"><div class="card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg></div><h2 class="card-title">{{ group.title }}</h2></div>
                             <div class="grade-edit-list">
@@ -709,13 +710,18 @@ const roleColor = computed(() => {
                         </div>
                         <div class="card">
                             <div class="card-header"><div class="card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg></div><h2 class="card-title">Additional Subjects</h2></div>
-                            <div v-if="dynamicGradeSubjects.length" class="grade-dynamic-header"><span class="dyn-col-cat">Category</span><span class="dyn-col-name">Subject Name</span><span class="dyn-col-grade">Grade</span><span class="dyn-col-remove"></span></div>
+                            <div v-if="dynamicGradeSubjects.length" class="grade-dynamic-header">
+                                <span class="dyn-col-cat">Category</span>
+                                <span class="dyn-col-name">Subject Name <span v-if="!readOnly" class="req">*</span></span>
+                                <span class="dyn-col-grade">Grade <span v-if="!readOnly" class="req">*</span></span>
+                                <span class="dyn-col-remove"></span>
+                            </div>
                             <div class="grade-edit-list">
                                 <div v-if="dynamicGradeSubjects.length === 0" class="grade-empty-note">No additional subjects yet. Click "Add Subject" to add one.</div>
                                 <div v-for="subject in dynamicGradeSubjects" :key="subject.id" class="grade-dynamic-row">
-                                    <select v-model="subject.category" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--cat', readOnly ? 'field-input--readonly' : '']"><option value="math">Math</option><option value="english">English</option><option value="science">Science</option></select>
-                                    <input v-model="subject.name" type="text" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--name', readOnly ? 'field-input--readonly' : '']" placeholder="Subject name" maxlength="100" />
-                                    <input v-model="subject.grade" type="number" @keydown="preventInvalidGradeInput" min="0" max="100" step="1" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--grade', readOnly ? 'field-input--readonly' : '']" placeholder="0–100" />
+                                    <select v-model="subject.category" :required="!readOnly" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--cat', readOnly ? 'field-input--readonly' : '']"><option value="math">Math</option><option value="english">English</option><option value="science">Science</option></select>
+                                    <input v-model="subject.name" type="text" :required="!readOnly" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--name', readOnly ? 'field-input--readonly' : '']" placeholder="Subject name" maxlength="100" />
+                                    <input v-model="subject.grade" type="number" @keydown="preventInvalidGradeInput" min="0" max="100" step="1" :required="!readOnly" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--grade', readOnly ? 'field-input--readonly' : '']" placeholder="0–100" />
                                     <button v-if="!readOnly" type="button" class="grade-remove-btn" @click="removeDynamicSubject(subject.id)" title="Remove subject"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                                 </div>
                             </div>
@@ -724,7 +730,15 @@ const roleColor = computed(() => {
                                 <p class="grade-add-hint">Each subject is included in its category's average, which affects program qualification.</p>
                             </div>
                         </div>
-                    </div>
+                        <!-- Save button -->
+                        <div v-if="!readOnly" class="grades-save-bar">
+                            <button type="submit" class="btn btn--primary" :disabled="allChangesSaving">
+                                <span v-if="allChangesSaving" class="spinner"></span>
+                                <svg v-else viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                                {{ allChangesSaving ? 'Saving…' : 'Save Changes' }}
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
                 <!-- ── Documents Tab ──────────────────────────────── -->

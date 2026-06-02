@@ -70,7 +70,7 @@ class GradeValidationService
         'TVL' => [
             'math' => [],
             'english' => [],
-            'science' => [],
+            'science' => ['g12_earth_life_science', 'g12_physical_science'],
         ],
     ];
 

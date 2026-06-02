@@ -149,8 +149,10 @@ class UserController extends Controller
             return redirect()->route('users.index')->with('error', 'You do not have permission to view this user.');
         }
 
-        // Fetch the user model primarily to check role. Fallback to ID match.
-        $userModel = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->firstOrFail();
+        $userModel = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
+        if (!$userModel) {
+            abort(404, 'User not found.');
+        }
 
         if ($userModel->role_id > 1) {
             $userModel->load('programs');
@@ -248,12 +250,31 @@ class UserController extends Controller
             return redirect()->route('users.index')->with('error', 'You do not have permission to update users.');
         }
 
+        $userModel = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
+        if (!$userModel) {
+            abort(404, 'User not found.');
+        }
+
+        // Resolve linked TestPasser by IDP UUID first, fall back to numeric id
+        // This is necessary because test_passers.user_id may be an IDP UUID (string)
+        // rather than the numeric users.id, so ignoring by user_id = $userModel->id can fail.
+        $testPasser = \App\Models\TestPasser::where('user_id', $userModel->idp_user_id)
+            ->orWhere('user_id', (string) $userModel->id)
+            ->first();
+
         $request->validate([
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
             'middlename' => 'nullable|string|max:255',
             'extension_name' => 'nullable|string|max:255',
-            'email' => 'required|email|max:255',
+            'email' => [
+                'required', 
+                'email', 
+                'max:255', 
+                \Illuminate\Validation\Rule::unique('users')->ignore($userModel->id),
+                \Illuminate\Validation\Rule::unique('test_passers', 'email')
+                    ->ignore($testPasser?->test_passer_id, 'test_passer_id'),
+            ],
             'role_id' => 'required|integer',
             'strand' => 'nullable|string|max:255',
             'school' => 'nullable|string|max:255',
@@ -402,7 +423,7 @@ class UserController extends Controller
                 'USER_MANAGEMENT'
             );
 
-            return redirect()->route('users.index')->with('status', 'User details updated successfully!');
+            return redirect()->route('users.index')->with('success', 'User details updated successfully!');
         });
     }
 
@@ -521,7 +542,7 @@ class UserController extends Controller
             'USER_MANAGEMENT'
         );
 
-        return redirect()->route('users.index')->with('status', 'User localized details removed successfully!');
+        return redirect()->route('users.index')->with('success', 'User localized details removed successfully!');
     }
     /**
      * JSON search endpoint for ManageUsers.

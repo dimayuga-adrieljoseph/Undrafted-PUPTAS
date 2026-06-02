@@ -151,6 +151,89 @@
                     </div>
 
                     <form @submit.prevent="submitForm" class="form-content" novalidate>
+                        <!-- Personal Details Section -->
+                        <div class="form-section">
+                            <h3 class="section-title">Personal Details</h3>
+
+                            <div class="form-grid flex flex-col md:flex-row gap-4">
+                                <div class="form-group">
+                                    <label for="firstname" class="form-label">
+                                        First Name <span class="required">*</span>
+                                    </label>
+                                    <input
+                                        id="firstname"
+                                        v-model="form.firstname"
+                                        @blur="validateField('firstname')"
+                                        :class="['form-input w-full', { error: errors.firstname }]"
+                                        type="text"
+                                        required
+                                        placeholder="Juan"
+                                    />
+                                    <div v-if="errors.firstname" class="form-error">
+                                        {{ errors.firstname }}
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="lastname" class="form-label">
+                                        Last Name <span class="required">*</span>
+                                    </label>
+                                    <input
+                                        id="lastname"
+                                        v-model="form.lastname"
+                                        @blur="validateField('lastname')"
+                                        :class="['form-input w-full', { error: errors.lastname }]"
+                                        type="text"
+                                        required
+                                        placeholder="Dela Cruz"
+                                    />
+                                    <div v-if="errors.lastname" class="form-error">
+                                        {{ errors.lastname }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-grid flex flex-col md:flex-row gap-4">
+                                <div class="form-group">
+                                    <label for="middlename" class="form-label">
+                                        Middle Name
+                                    </label>
+                                    <input
+                                        id="middlename"
+                                        v-model="form.middlename"
+                                        :class="['form-input w-full', { error: errors.middlename }]"
+                                        type="text"
+                                        placeholder="Santos"
+                                    />
+                                    <div v-if="errors.middlename" class="form-error">
+                                        {{ errors.middlename }}
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="extension_name" class="form-label">
+                                        Extension Name
+                                    </label>
+                                    <select
+                                        id="extension_name"
+                                        v-model="form.extension_name"
+                                        :class="['form-input w-full', { error: errors.extension_name }]"
+                                    >
+                                        <option value="">None</option>
+                                        <option value="Jr.">Jr.</option>
+                                        <option value="Sr.">Sr.</option>
+                                        <option value="II">II</option>
+                                        <option value="III">III</option>
+                                        <option value="IV">IV</option>
+                                        <option value="V">V</option>
+                                    </select>
+                                    <div v-if="errors.extension_name" class="form-error">
+                                        {{ errors.extension_name }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Account Details Section -->
                         <div class="form-section">
                             <h3 class="section-title">Account Details</h3>
@@ -400,6 +483,10 @@ const props = defineProps({
 const isSuperAdmin = computed(() => props.currentUserRoleId === 7);
 
 const form = ref({
+    firstname: "",
+    lastname: "",
+    middlename: "",
+    extension_name: "",
     email: "",
     role_id: "",
     program: [],
