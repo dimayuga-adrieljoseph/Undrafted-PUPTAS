@@ -31,9 +31,11 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
-        // Redirect login view to IDP unless there are errors
+        // Redirect login view to IDP unless there are errors or bypass is requested
         Fortify::loginView(function () {
-            if (session()->has('errors') || request()->has('idp_error')) {
+            $isBypassAllowed = in_array(config('app.env'), ['local', 'staging']) && request()->has('local');
+
+            if ($isBypassAllowed || session()->has('errors') || request()->has('idp_error')) {
                 return \Inertia\Inertia::render('Auth/Login', [
                     'canResetPassword' => \Illuminate\Support\Facades\Route::has('password.request'),
                     'status' => session('status'),

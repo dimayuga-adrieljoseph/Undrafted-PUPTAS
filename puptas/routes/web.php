@@ -37,7 +37,12 @@ use App\Http\Controllers\EmailTrackingController;
 
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
-Route::get('/', function () {
+Route::get('/', function (\Illuminate\Http\Request $request) {
+    // Allow bypassing IDP on local and staging using ?local=1
+    if (in_array(config('app.env'), ['local', 'staging']) && $request->has('local')) {
+        return redirect('/login?local=1');
+    }
+    
     return redirect()->route('idp.redirect');
 })->middleware('guest')->name('welcome');
 
