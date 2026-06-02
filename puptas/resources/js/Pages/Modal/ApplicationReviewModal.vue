@@ -372,6 +372,23 @@ watch(
     }
 );
 
+// Clear conflicting choices when first choice changes
+watch(selectedProgramId, (newVal) => {
+    if (newVal && selectedSecondChoiceId.value === newVal) {
+        selectedSecondChoiceId.value = '';
+    }
+    if (newVal && selectedThirdChoiceId.value === newVal) {
+        selectedThirdChoiceId.value = '';
+    }
+});
+
+// Clear third choice when it conflicts with second choice
+watch(selectedSecondChoiceId, (newVal) => {
+    if (newVal && selectedThirdChoiceId.value === newVal) {
+        selectedThirdChoiceId.value = '';
+    }
+});
+
 // Helper Functions
 const formatStatus = (status) => {
     if (!status) return "Unknown";
