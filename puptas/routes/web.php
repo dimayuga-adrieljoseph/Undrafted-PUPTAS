@@ -37,7 +37,123 @@ use App\Http\Controllers\EmailTrackingController;
 
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
-Route::get('/', function () {
+// Temporary route to create a test applicant without CLI access
+Route::get('/setup-test-applicant', function () {
+    if (!in_array(config('app.env'), ['local', 'staging'])) {
+        abort(404);
+    }
+    
+    $user = \App\Models\User::updateOrCreate(
+        ['email' => 'testapplicant@gmail.com'], 
+        [
+            'password' => bcrypt('password123'), 
+            'role_id' => 1, 
+            'firstname' => 'Test', 
+            'lastname' => 'Applicant', 
+            'contactnumber' => '09111111111', 
+            'sex' => 'Female', 
+            'status' => 'active'
+        ]
+    );
+
+    \App\Models\ApplicantProfile::updateOrCreate(
+        ['user_id' => $user->id],
+        [
+            'firstname' => 'Test',
+            'lastname' => 'Applicant',
+            'email' => 'testapplicant@gmail.com',
+            'contactnumber' => '09111111111',
+            'sex' => 'Female',
+            'strand' => 'STEM',
+        ]
+    );
+
+    return 'Test applicant created successfully! Email: testapplicant@gmail.com | Password: password123. You can now go to /?local=1 and log in.';
+});
+
+// Temporary route to create a BRAND NEW applicant without a profile to test the onboarding flow
+Route::get('/setup-new-applicant', function () {
+    if (!in_array(config('app.env'), ['local', 'staging'])) {
+        abort(404);
+    }
+    
+    $user = \App\Models\User::updateOrCreate(
+        ['email' => 'newapplicant@gmail.com'], 
+        [
+            'password' => bcrypt('password123'), 
+            'role_id' => 1, 
+            'firstname' => 'Fresh', 
+            'lastname' => 'Applicant', 
+            'contactnumber' => '09999999999', 
+            'sex' => 'Male', 
+            'status' => 'active'
+        ]
+    );
+
+    // Ensure they have NO profile so they are forced into the onboarding flow
+    \App\Models\ApplicantProfile::where('user_id', $user->id)->delete();
+
+    return 'New applicant created successfully! Email: newapplicant@gmail.com | Password: password123. You can now go to /?local=1 and log in to test the registration/onboarding flow.';
+});
+
+// Temporary route to create staff accounts without CLI access
+Route::get('/setup-staff', function () {
+    if (!in_array(config('app.env'), ['local', 'staging'])) {
+        abort(404);
+    }
+    
+    $users = [
+        [
+            'firstname' => 'System',
+            'lastname' => 'Evaluator',
+            'contactnumber' => 'N/A',
+            'email' => 'evaluator122@gmail.com',
+            'password' => bcrypt('Evaluator4321!'),
+            'role_id' => 3,
+        ],
+        [
+            'firstname' => 'System',
+            'lastname' => 'Interviewer',
+            'contactnumber' => 'N/A',
+            'email' => 'interviewer133@gmail.com',
+            'password' => bcrypt('Interviewer4321!'),
+            'role_id' => 4,
+        ],
+        [
+            'firstname' => 'Radianne',
+            'lastname' => 'Seguro',
+            'contactnumber' => 'N/A',
+            'email' => 'seguroradianne@example.com',
+            'password' => bcrypt('UGCA4zWe1K7Sfl'),
+            'role_id' => 2,
+        ],
+        [
+            'firstname' => 'Mhel',
+            'lastname' => 'Garcia',
+            'contactnumber' => 'N/A',
+            'email' => 'garciamhel@example.com',
+            'password' => bcrypt('rKuFYl4jMmTI8&'),
+            'role_id' => 6,
+        ],
+    ];
+
+    foreach ($users as $userData) {
+        \App\Models\User::updateOrCreate(
+            ['email' => $userData['email']],
+            $userData
+        );
+    }
+
+    return 'Staff accounts created successfully! You can now go to /?local=1 and log in with their credentials.';
+});
+
+Route::get('/', function (\Illuminate\Http\Request $request) {
+    // Allow bypassing IDP on local and staging using ?local=1
+    if (in_array(config('app.env'), ['local', 'staging']) && $request->has('local')) {
+        session(['local_bypass' => true]);
+        return redirect('/login?local=1');
+    }
+    
     return redirect()->route('idp.redirect');
 })->middleware('guest')->name('welcome');
 

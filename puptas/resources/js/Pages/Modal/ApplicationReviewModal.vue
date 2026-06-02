@@ -126,7 +126,12 @@
                                     :disabled="submitting"
                                 >
                                     <option value="">Select a program</option>
-                                    <option v-for="program in eligiblePrograms" :key="program.id" :value="program.id">
+                                    <option
+                                        v-for="program in eligiblePrograms"
+                                        :key="program.id"
+                                        :value="program.id"
+                                        :disabled="program.id == selectedSecondChoiceId || program.id == selectedThirdChoiceId"
+                                    >
                                         {{ program.name }}
                                     </option>
                                 </select>
@@ -141,7 +146,12 @@
                                     :disabled="submitting"
                                 >
                                     <option value="">Select a program</option>
-                                    <option v-for="program in filteredSecondChoicePrograms" :key="program.id" :value="program.id">
+                                    <option
+                                        v-for="program in eligiblePrograms"
+                                        :key="program.id"
+                                        :value="program.id"
+                                        :disabled="program.id == selectedProgramId || program.id == selectedThirdChoiceId"
+                                    >
                                         {{ program.name }}
                                     </option>
                                 </select>
@@ -156,7 +166,12 @@
                                     :disabled="submitting"
                                 >
                                     <option value="">Select a program</option>
-                                    <option v-for="program in filteredThirdChoicePrograms" :key="program.id" :value="program.id">
+                                    <option
+                                        v-for="program in eligiblePrograms"
+                                        :key="program.id"
+                                        :value="program.id"
+                                        :disabled="program.id == selectedProgramId || program.id == selectedSecondChoiceId"
+                                    >
                                         {{ program.name }}
                                     </option>
                                 </select>
@@ -167,15 +182,15 @@
                         <div v-else-if="applicationData.program_id" class="grid grid-cols-3 gap-3">
                             <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">First Choice</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ getProgramName(applicationData.program_id) || 'Not selected' }}</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.program_name || getProgramName(applicationData.program_id) || 'Not selected' }}</p>
                             </div>
                             <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Second Choice</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ getProgramName(applicationData.second_choice_id) || 'Not selected' }}</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.second_choice_name || getProgramName(applicationData.second_choice_id) || 'Not selected' }}</p>
                             </div>
                             <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Third Choice</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ getProgramName(applicationData.third_choice_id) || 'Not selected' }}</p>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.third_choice_name || getProgramName(applicationData.third_choice_id) || 'Not selected' }}</p>
                             </div>
                         </div>
 
@@ -406,22 +421,6 @@ const canSubmitApplication = computed(() => {
     );
 });
 
-// Computed: Filter out first choice from second choice options
-const filteredSecondChoicePrograms = computed(() => {
-    if (!selectedProgramId.value) return eligiblePrograms.value;
-    return eligiblePrograms.value.filter(
-        (p) => p.id !== selectedProgramId.value
-    );
-});
-
-// Computed: Filter out first and second choice from third choice options
-const filteredThirdChoicePrograms = computed(() => {
-    const excludedIds = [selectedProgramId.value, selectedSecondChoiceId.value].filter(Boolean);
-    return eligiblePrograms.value.filter(
-        (p) => !excludedIds.includes(p.id)
-    );
-});
-
 // Watch for prop changes
 watch(
     () => props.show,
@@ -435,6 +434,8 @@ watch(
         }
     }
 );
+
+
 
 // Helper Functions
 const formatStatus = (status) => {
@@ -489,7 +490,8 @@ const formatFileName = (key) => {
 
 const getProgramName = (programId) => {
     if (!programId || !eligiblePrograms.value.length) return null;
-    const program = eligiblePrograms.value.find((p) => p.id === programId);
+    // Use == (loose) to handle potential string/integer type mismatch
+    const program = eligiblePrograms.value.find((p) => p.id == programId);
     return program ? program.name : null;
 };
 
@@ -550,7 +552,13 @@ const confirmAndSubmit = async () => {
     await submitApplication();
 };
 
-const submitApplication = async () => {
+    // Capture names NOW from all programs (not just filtered lists) before any state changes
+    const allPrograms = eligiblePrograms.value;
+    const findName = (id) => allPrograms.find((p) => p.id == id)?.name ?? null;
+    const capturedFirstName  = findName(selectedProgramId.value);
+    const capturedSecondName = findName(selectedSecondChoiceId.value);
+    const capturedThirdName  = findName(selectedThirdChoiceId.value);
+
     submitting.value = true;
     submitError.value = "";
     submitSuccess.value = "";
@@ -570,12 +578,15 @@ const submitApplication = async () => {
         submitSuccess.value =
             response.data.message || "Application submitted successfully!";
 
-        // Update local application data
+        // Update local application data using pre-captured names
         if (applicationData.value) {
             applicationData.value.status = response.data.status;
-            applicationData.value.program_id = selectedProgramId.value;
-            applicationData.value.second_choice_id = selectedSecondChoiceId.value;
-            applicationData.value.third_choice_id = selectedThirdChoiceId.value;
+            applicationData.value.program_id = selectedProgramId.value ? Number(selectedProgramId.value) : null;
+            applicationData.value.second_choice_id = selectedSecondChoiceId.value ? Number(selectedSecondChoiceId.value) : null;
+            applicationData.value.third_choice_id = selectedThirdChoiceId.value ? Number(selectedThirdChoiceId.value) : null;
+            applicationData.value.program_name       = capturedFirstName;
+            applicationData.value.second_choice_name = capturedSecondName;
+            applicationData.value.third_choice_name  = capturedThirdName;
         }
 
         // Emit refresh event to parent
