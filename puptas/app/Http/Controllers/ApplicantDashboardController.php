@@ -48,7 +48,7 @@ class ApplicantDashboardController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $grades = Grade::where('user_id', $user->id)->first();
+        $grades = Grade::where('user_id', (string) $user->id)->first();
         $profile = $user->applicantProfile;
 
         if (!$grades) {

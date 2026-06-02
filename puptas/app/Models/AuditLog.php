@@ -71,7 +71,7 @@ class AuditLog extends Model
      */
     public function scopeForUser(Builder $query, int $userId): Builder
     {
-        return $query->where('user_id', $userId);
+        return $query->where('user_id', (string) $userId);
     }
 
     /**

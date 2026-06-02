@@ -800,9 +800,12 @@ class TestPasserController extends Controller
                     $profileData['date_graduated'] = $passer->year_graduated
                         ? ($passer->year_graduated . '-04-01')
                         : null;
-                    \App\Models\ApplicantProfile::where('user_id', $user->id)
-                        ->orWhere('user_id', $user->idp_user_id)
-                        ->update($profileData);
+                    
+                    $profileQuery = \App\Models\ApplicantProfile::where('user_id', (string) $user->id);
+                    if (!empty($user->idp_user_id)) {
+                        $profileQuery->orWhere('user_id', (string) $user->idp_user_id);
+                    }
+                    $profileQuery->update($profileData);
                 }
             });
         } catch (\Throwable $e) {

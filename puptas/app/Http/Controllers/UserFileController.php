@@ -151,7 +151,7 @@ class UserFileController extends Controller
 
         return response()->json([
             'message' => 'Files uploaded successfully',
-            'uploadedFiles' => FileMapper::formatFiles(UserFile::where('user_id', $user->id)->get()->keyBy('type')),
+            'uploadedFiles' => FileMapper::formatFiles(UserFile::where('user_id', (string) $user->id)->get()->keyBy('type')),
         ]);
     }
 
@@ -189,7 +189,7 @@ class UserFileController extends Controller
         $user = auth()->user();
         $user->load('applicantProfile');
 
-        $files = UserFile::where('user_id', $user->id)->get();
+        $files = UserFile::where('user_id', (string) $user->id)->get();
 
         // Map files by type and generate URL
         $uploadedFiles = [];

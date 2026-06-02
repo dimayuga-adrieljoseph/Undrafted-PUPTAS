@@ -44,7 +44,7 @@ class AuditLogService
             ->latest();
 
         if ($isNumericId) {
-            $query->where('user_id', $id);
+            $query->where('user_id', (string) $id);
         } else {
             $query->where('username', $user->email ?? 'system');
         }
@@ -81,7 +81,7 @@ class AuditLogService
             ->latest();
 
         if ($isNumericId) {
-            $logoutQuery->where('user_id', $id);
+            $logoutQuery->where('user_id', (string) $id);
         } else {
             $logoutQuery->where('username', $user->email ?? 'system');
         }
@@ -95,7 +95,7 @@ class AuditLogService
             ->latest();
 
         if ($isNumericId) {
-            $openLoginQuery->where('user_id', $id);
+            $openLoginQuery->where('user_id', (string) $id);
         } else {
             $openLoginQuery->where('username', $user->email ?? 'system');
         }

@@ -73,7 +73,7 @@ class GradeExtractionService
      */
     protected function loadDoclingJson(User $user): array
     {
-        return UserFile::where('user_id', $user->id)
+        return UserFile::where('user_id', (string) $user->id)
             ->whereNotNull('docling_json')
             ->get()
             ->map(fn ($f) => $f->docling_json)
@@ -196,7 +196,7 @@ PROMPT;
      */
     protected function loadImages(User $user): array
     {
-        $files = UserFile::where('user_id', $user->id)->get();
+        $files = UserFile::where('user_id', (string) $user->id)->get();
 
         $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
         $images = [];

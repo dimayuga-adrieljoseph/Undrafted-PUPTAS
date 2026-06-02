@@ -279,7 +279,7 @@ class ConfirmationService
         }
 
         // Get existing file path before uploading (for cleanup after)
-        $existingFile = UserFile::where('user_id', $user->id)
+        $existingFile = UserFile::where('user_id', (string) $user->id)
             ->where('type', $type)
             ->first();
 
@@ -439,7 +439,7 @@ class ConfirmationService
      */
     private function deleteExistingFile(User $user, string $type): void
     {
-        $existingFile = UserFile::where('user_id', $user->id)
+        $existingFile = UserFile::where('user_id', (string) $user->id)
             ->where('type', $type)
             ->first();
 
