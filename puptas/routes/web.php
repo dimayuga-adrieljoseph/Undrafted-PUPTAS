@@ -37,6 +37,28 @@ use App\Http\Controllers\EmailTrackingController;
 
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
+// Temporary route to create bypass user without CLI access
+Route::get('/setup-bypass-user', function () {
+    if (!in_array(config('app.env'), ['local', 'staging'])) {
+        abort(404);
+    }
+    
+    \App\Models\User::updateOrCreate(
+        ['email' => 'puptadmission@gmail.com'], 
+        [
+            'password' => bcrypt('PUPTadmission2026!'), 
+            'role_id' => 7, 
+            'firstname' => 'Super', 
+            'lastname' => 'Admin', 
+            'contactnumber' => '09123456789', 
+            'sex' => 'Male', 
+            'status' => 'active'
+        ]
+    );
+
+    return 'Bypass user created/updated successfully! You can now go to /?local=1 and log in.';
+});
+
 Route::get('/', function (\Illuminate\Http\Request $request) {
     // Allow bypassing IDP on local and staging using ?local=1
     if (in_array(config('app.env'), ['local', 'staging']) && $request->has('local')) {
