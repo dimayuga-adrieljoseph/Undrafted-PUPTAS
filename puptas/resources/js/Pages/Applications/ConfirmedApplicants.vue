@@ -5,6 +5,7 @@ import { Head } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import { QuillEditor } from "@vueup/vue-quill";
 import "@vueup/vue-quill/dist/vue-quill.snow.css";
+import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
 
 // ── State ──────────────────────────────────────────────────────────────────────
 const applicants = ref([]);
@@ -231,8 +232,18 @@ const toggleSelectAll = (checked) => {
     }
 };
 
+const confirmModalOpen = ref(false);
+const confirmModalTitle = ref("");
+const confirmModalMessage = ref("");
+const confirmModalConfirmText = ref("Send");
+const confirmModalHideTable = ref(false);
+
+const selectedApplicantsList = computed(() => {
+    return applicants.value.filter(a => selectedIds.value.includes(a.id));
+});
+
 // ── Send ───────────────────────────────────────────────────────────────────────
-const send = async () => {
+const promptSend = () => {
     if (!selectedIds.value.length) {
         showSnack("Select at least one applicant.", "error");
         return;
@@ -251,14 +262,17 @@ const send = async () => {
         }
     }
 
-    const confirmMessage = templateMode.value === "sar" 
-        ? `Are you sure you want to send SAR forms to ${selectedIds.value.length} applicant(s)?`
-        : `Are you sure you want to send custom emails to ${selectedIds.value.length} applicant(s)?`;
-        
-    if (!window.confirm(confirmMessage)) {
-        return;
-    }
+    confirmModalTitle.value = templateMode.value === "sar" ? "Send SAR Forms?" : "Send Custom Emails?";
+    confirmModalMessage.value = templateMode.value === "sar" 
+        ? `Review the list of applicants before sending SAR forms.`
+        : `Review the list of applicants before sending custom emails.`;
+    confirmModalConfirmText.value = templateMode.value === "sar" ? "Send SAR Forms" : "Send Emails";
+    confirmModalHideTable.value = false;
+    confirmModalOpen.value = true;
+};
 
+const executeSend = async () => {
+    confirmModalOpen.value = false;
     sending.value = true;
     sendResult.value = null;
 
@@ -1182,7 +1196,7 @@ onMounted(() => {
 
                     <!-- Send button -->
                     <button
-                        @click="send"
+                        @click="promptSend"
                         :disabled="sending || !selectedIds.length"
                         :class="[
                             'w-full mt-3 py-3 rounded-xl font-semibold text-sm text-white transition-all flex items-center justify-center gap-2',
@@ -1593,5 +1607,47 @@ onMounted(() => {
                 </div>
             </div>
         </div>
+        <!-- Confirm Action Modal -->
+        <ChangesConfirmationModal
+            :show="confirmModalOpen"
+            :title="confirmModalTitle"
+            :subtitle="confirmModalMessage"
+            :confirmText="confirmModalConfirmText"
+            :hideTable="confirmModalHideTable"
+            :disableChangesValidation="true"
+            @confirm="executeSend"
+            @cancel="confirmModalOpen = false"
+        >
+            <template #content>
+                <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 max-h-[50vh] overflow-y-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Applicant</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Email</th>
+                                <th v-if="templateMode === 'sar'" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Schedule</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <tr v-for="applicant in selectedApplicantsList" :key="applicant.id" class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition">
+                                <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-200 whitespace-nowrap">
+                                    {{ applicant.firstname }} {{ applicant.lastname }}
+                                </td>
+                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    {{ applicant.email }}
+                                </td>
+                                <td v-if="templateMode === 'sar'" class="px-4 py-3 text-gray-900 dark:text-gray-200 font-medium whitespace-nowrap">
+                                    <div class="flex flex-col">
+                                        <span>{{ sarEnrollmentDate }}</span>
+                                        <span class="text-xs text-gray-500">{{ sarEnrollmentTime }}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+        </ChangesConfirmationModal>
+
     </AppLayout>
 </template>
