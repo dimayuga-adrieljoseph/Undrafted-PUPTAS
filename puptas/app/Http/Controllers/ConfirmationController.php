@@ -172,7 +172,7 @@ class ConfirmationController extends Controller
             return response()->json(['status' => null]);
         }
 
-        $file = \App\Models\UserFile::where('user_id', $user->id)
+        $file = \App\Models\UserFile::where('user_id', (string) $user->id)
             ->where('type', $type)
             ->first();
 

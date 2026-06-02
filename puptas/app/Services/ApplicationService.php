@@ -38,7 +38,7 @@ class ApplicationService
      */
     public function getApplicationByUserId(string $userId): Application
     {
-        return Application::where('user_id', $userId)->firstOrFail();
+        return Application::where('user_id', (string) $userId)->firstOrFail();
     }
 
     /**
