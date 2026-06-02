@@ -55,34 +55,29 @@ class FortifyServiceProvider extends ServiceProvider
             if ($isBypassAllowed) {
                 session(['local_bypass' => true]);
                 
-                $refNumber = '2026-LOCAL-TEST';
+                $email = request()->query('email', 'localapplicant@gmail.com');
+                $refNumber = request()->query('ref', '2026-LOCAL-TEST');
                 
-                // Ensure a dummy test passer exists so the form validation passes
-                \App\Models\TestPasser::firstOrCreate(
-                    ['reference_number' => $refNumber],
-                    [
-                        'first_name' => 'Local',
-                        'surname' => 'Applicant',
-                        'email' => 'localapplicant@gmail.com',
-                        'passer_status_id' => 1,
-                    ]
-                );
-
-                // Inject fake IDP data into the session so the form renders properly
-                if (!session()->has('pending_registration')) {
-                    session([
-                        'pending_registration' => [
-                            'email' => 'localapplicant@gmail.com',
-                            'sub' => 'mock-idp-sub-local-1',
-                        ],
-                        'test_passer_data' => [
-                            'reference_number' => $refNumber,
+                // If they are using the default mock, ensure a dummy test passer exists so the form validation passes
+                if ($email === 'localapplicant@gmail.com') {
+                    \App\Models\TestPasser::firstOrCreate(
+                        ['reference_number' => $refNumber],
+                        [
                             'first_name' => 'Local',
                             'surname' => 'Applicant',
+                            'email' => $email,
                             'passer_status_id' => 1,
                         ]
-                    ]);
+                    );
                 }
+
+                // Inject IDP data into the session so the form renders properly
+                session([
+                    'pending_registration' => [
+                        'email' => $email,
+                        'sub' => 'mock-idp-sub-local-1',
+                    ]
+                ]);
                 
                 return \Inertia\Inertia::render('Auth/Register');
             }
