@@ -385,7 +385,7 @@
                         <!-- Send Button -->
                         <button
                             type="button"
-                            @click="sendEmails"
+                            @click="promptSendEmails"
                             :disabled="!selectedPassers.length || !emailTemplate"
                             :class="[
                                 'w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-all duration-200',
@@ -1016,6 +1016,48 @@
                 @cancel="showEditConfirmModal = false"
             />
 
+            <!-- Send Emails Confirmation Modal -->
+            <ChangesConfirmationModal
+                :show="showSendEmailsConfirmModal"
+                :title="templateType === 'sar' ? 'Send SAR Forms?' : 'Send Emails?'"
+                :subtitle="templateType === 'sar' ? 'Review the list of passers before sending SAR forms.' : 'Review the list of passers before sending emails.'"
+                :confirmText="templateType === 'sar' ? 'Send SAR Forms' : 'Send Emails'"
+                :hideTable="false"
+                :disableChangesValidation="true"
+                @confirm="executeSendEmails"
+                @cancel="showSendEmailsConfirmModal = false"
+            >
+                <template #content>
+                    <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 max-h-[50vh] overflow-y-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Passer</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Email</th>
+                                    <th v-if="templateType === 'sar'" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Schedule</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <tr v-for="passer in selectedPassersList" :key="passer.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition">
+                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-200 whitespace-nowrap">
+                                        {{ passer.first_name }} {{ passer.surname }}
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        {{ passer.email }}
+                                    </td>
+                                    <td v-if="templateType === 'sar'" class="px-4 py-3 text-gray-900 dark:text-gray-200 font-medium whitespace-nowrap">
+                                        <div class="flex flex-col">
+                                            <span>{{ sarEnrollmentDate }}</span>
+                                            <span class="text-xs text-gray-500">{{ sarEnrollmentTime }}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+            </ChangesConfirmationModal>
+
             <!-- Snackbar -->
             <div
                 v-if="snackbar.show"
@@ -1524,7 +1566,30 @@ watch([filterSchoolYear, filterBatchNumber], () => {
     allFilteredSelected.value = false;
 }, { deep: true });
 
-const sendEmails = async () => {
+const showSendEmailsConfirmModal = ref(false);
+
+const selectedPassersList = computed(() => {
+    return flatPassers.value.filter(p => selectedPassers.value.includes(p.test_passer_id));
+});
+
+const promptSendEmails = () => {
+    if (selectedPassers.value.length === 0) {
+        show('Please select at least one passer first.', 'error');
+        return;
+    }
+
+    if (templateType.value === 'sar') {
+        if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
+            show("Please set enrollment date and time for SAR forms.", "error");
+            return;
+        }
+    }
+
+    showSendEmailsConfirmModal.value = true;
+};
+
+const executeSendEmails = async () => {
+    showSendEmailsConfirmModal.value = false;
     let messageHtml;
 
     if (templateType.value === 'default') {
