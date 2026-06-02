@@ -68,18 +68,8 @@ function routeStub(name?: string): string | { current: (name?: string) => boolea
 vi.stubGlobal('route', routeStub)
 
 // --- Form component imports (after mocks) ---
-// @ts-ignore
-import ScheduleForm from '@/Components/ScheduleForm.vue'
-// @ts-ignore
 import AddUser from '@/Pages/UserManagement/AddUser.vue'
-// @ts-ignore
 import EditUser from '@/Pages/UserManagement/EditUser.vue'
-
-const scheduleFormEntry = {
-    name: 'ScheduleForm',
-    component: ScheduleForm,
-    props: {},
-}
 
 const addUserEntry = {
     name: 'AddUser (UserManagement)',
@@ -114,7 +104,7 @@ const editUserEntry = {
     },
 }
 
-const formEntries = [scheduleFormEntry, addUserEntry, editUserEntry]
+const formEntries = [addUserEntry, editUserEntry]
 
 /**
  * Finds all multi-field row containers that lay out form fields side by side on desktop.
