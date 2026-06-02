@@ -37,6 +37,40 @@ use App\Http\Controllers\EmailTrackingController;
 
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
+// Temporary route to create a test applicant without CLI access
+Route::get('/setup-test-applicant', function () {
+    if (!in_array(config('app.env'), ['local', 'staging'])) {
+        abort(404);
+    }
+    
+    $user = \App\Models\User::updateOrCreate(
+        ['email' => 'testapplicant@gmail.com'], 
+        [
+            'password' => bcrypt('password123'), 
+            'role_id' => 1, 
+            'firstname' => 'Test', 
+            'lastname' => 'Applicant', 
+            'contactnumber' => '09111111111', 
+            'sex' => 'Female', 
+            'status' => 'active'
+        ]
+    );
+
+    \App\Models\ApplicantProfile::updateOrCreate(
+        ['user_id' => $user->id],
+        [
+            'firstname' => 'Test',
+            'lastname' => 'Applicant',
+            'email' => 'testapplicant@gmail.com',
+            'contactnumber' => '09111111111',
+            'sex' => 'Female',
+            'strand' => 'STEM',
+        ]
+    );
+
+    return 'Test applicant created successfully! Email: testapplicant@gmail.com | Password: password123. You can now go to /?local=1 and log in.';
+});
+
 Route::get('/', function (\Illuminate\Http\Request $request) {
     // Allow bypassing IDP on local and staging using ?local=1
     if (in_array(config('app.env'), ['local', 'staging']) && $request->has('local')) {
