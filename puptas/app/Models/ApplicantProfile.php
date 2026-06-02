@@ -58,7 +58,7 @@ class ApplicantProfile extends Model
     public function currentApplication()
     {
         return $this->hasOne(Application::class, 'user_id', 'user_id')
-            ->select('applications.id', 'applications.user_id', 'applications.status', 'applications.submitted_at', 'applications.program_id', 'applications.second_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.created_at', 'applications.updated_at', 'applications.deleted_at')
+            ->select('applications.id', 'applications.user_id', 'applications.status', 'applications.submitted_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.created_at', 'applications.updated_at', 'applications.deleted_at')
             ->whereNull('applications.deleted_at')
             ->ofMany('id', 'max');
     }
@@ -66,7 +66,7 @@ class ApplicantProfile extends Model
     public function officiallyEnrolledApplication()
     {
         return $this->hasOne(Application::class, 'user_id', 'user_id')
-            ->select('applications.id', 'applications.user_id', 'applications.status', 'applications.submitted_at', 'applications.program_id', 'applications.second_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.created_at', 'applications.updated_at', 'applications.deleted_at')
+            ->select('applications.id', 'applications.user_id', 'applications.status', 'applications.submitted_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.created_at', 'applications.updated_at', 'applications.deleted_at')
             ->where('applications.enrollment_status', 'officially_enrolled')
             ->whereNull('applications.deleted_at')
             ->ofMany('id', 'max');

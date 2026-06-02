@@ -51,9 +51,34 @@ class ConfirmationService
 
         $files = $files->keyBy('type');
         $application = $user->currentApplication;
-        $profile = $user->applicantProfile()->with('graduateTypes')->first();
+        $profile = $user->applicantProfile()->with([
+            'graduateTypes',
+            'firstChoiceProgram',
+            'secondChoiceProgram',
+            'thirdChoiceProgram',
+        ])->first();
 
         $graduateType = $profile?->graduateTypes->first()?->label ?? null;
+
+        // Resolve program IDs and names from application (non-draft) or profile (draft/no app)
+        $isDraft = !$application || $application->status === 'draft';
+
+        if ($isDraft) {
+            $firstId   = $profile?->first_choice_program;
+            $secondId  = $profile?->second_choice_program;
+            $thirdId   = $profile?->third_choice_program;
+            $firstName  = $profile?->firstChoiceProgram?->name;
+            $secondName = $profile?->secondChoiceProgram?->name;
+            $thirdName  = $profile?->thirdChoiceProgram?->name;
+        } else {
+            $application->load(['program', 'secondChoice', 'thirdChoice']);
+            $firstId   = $application->program_id;
+            $secondId  = $application->second_choice_id;
+            $thirdId   = $application->third_choice_id;
+            $firstName  = $application->program?->name;
+            $secondName = $application->secondChoice?->name;
+            $thirdName  = $application->thirdChoice?->name;
+        }
 
         return [
             'firstname' => $user->firstname,
@@ -71,9 +96,12 @@ class ConfirmationService
             'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType),
             'processes' => $this->getApplicationProcesses($application),
             'enrollment_status' => $application?->enrollment_status ?? null,
-            'program_id' => ($application && $application->status !== 'draft') ? $application->program_id : $profile?->first_choice_program,
-            'second_choice_id' => ($application && $application->status !== 'draft') ? $application->second_choice_id : $profile?->second_choice_program,
-            'third_choice_id' => ($application && $application->status !== 'draft') ? $application->third_choice_id : $profile?->third_choice_program,
+            'program_id'       => $firstId,
+            'second_choice_id' => $secondId,
+            'third_choice_id'  => $thirdId,
+            'program_name'        => $firstName,
+            'second_choice_name'  => $secondName,
+            'third_choice_name'   => $thirdName,
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
         ];
     }
@@ -205,6 +233,16 @@ class ConfirmationService
                 'second_choice_id' => $validated['second_choice_id'] ?? null,
                 'third_choice_id' => $validated['third_choice_id'] ?? null,
             ]);
+
+            // Sync program choices back to applicant_profiles so all views
+            // that read from profile (e.g. firstChoiceProgram relationship) stay consistent.
+            if ($profile) {
+                $profile->update([
+                    'first_choice_program'  => $validated['program_id'],
+                    'second_choice_program' => $validated['second_choice_id'] ?? null,
+                    'third_choice_program'  => $validated['third_choice_id'] ?? null,
+                ]);
+            }
 
             // Create the next in-flight process (evaluator)
             $application->processes()->create([
