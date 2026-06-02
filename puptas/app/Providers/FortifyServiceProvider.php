@@ -33,7 +33,8 @@ class FortifyServiceProvider extends ServiceProvider
 
         // Redirect login view to IDP unless there are errors or bypass is requested
         Fortify::loginView(function () {
-            $isBypassAllowed = in_array(config('app.env'), ['local', 'staging']) && 
+            $env = strtolower(config('app.env'));
+            $isBypassAllowed = in_array($env, ['local', 'staging']) && 
                                (request()->has('local') || session('local_bypass'));
 
             if ($isBypassAllowed || session()->has('errors') || request()->has('idp_error')) {
