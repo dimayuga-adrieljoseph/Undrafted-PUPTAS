@@ -21,6 +21,11 @@ class RefreshIdpToken
             return $next($request);
         }
 
+        // Skip IDP checks completely if we are logged in via local bypass
+        if (session('local_bypass')) {
+            return $next($request);
+        }
+
         $user = Auth::user();
         $tokenData = \Illuminate\Support\Facades\Cache::store('redis')->get("idp_tokens:user_{$user->id}");
 
