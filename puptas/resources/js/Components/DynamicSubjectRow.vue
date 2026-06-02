@@ -40,6 +40,44 @@ function onGradeInput(event) {
         emit('update:grade', Number(value));
     }
 }
+
+function onGradeKeydown(event) {
+    const key = event.key;
+    const currentValue = event.target.value;
+
+    // Always allow control keys
+    if (
+        key === 'Backspace' || key === 'Delete' || key === 'Tab' ||
+        key === 'ArrowLeft' || key === 'ArrowRight' ||
+        key === 'ArrowUp' || key === 'ArrowDown' ||
+        key === 'Home' || key === 'End' ||
+        (event.ctrlKey && ['a','c','v','x'].includes(key))
+    ) return;
+
+    // Block minus sign
+    if (key === '-') { event.preventDefault(); return; }
+
+    // Allow one decimal point
+    if (key === '.') {
+        if (currentValue.includes('.')) event.preventDefault();
+        return;
+    }
+
+    // Only digits beyond this point
+    if (!/^\d$/.test(key)) { event.preventDefault(); return; }
+
+    // Block if future value would exceed 100 (only when no decimal point present)
+    const { selectionStart, selectionEnd } = event.target;
+    const futureValue = currentValue.substring(0, selectionStart) + key + currentValue.substring(selectionEnd);
+    // Block if more than 2 decimal places
+    const dotIndex = futureValue.indexOf('.');
+    if (dotIndex !== -1 && futureValue.length - dotIndex - 1 > 2) { event.preventDefault(); return; }
+    if (!futureValue.includes('.')) {
+        if (!isNaN(parseFloat(futureValue)) && parseFloat(futureValue) > 100) {
+            event.preventDefault();
+        }
+    }
+}
 </script>
 
 <template>
@@ -60,12 +98,14 @@ function onGradeInput(event) {
         <!-- Grade Input -->
         <div class="w-32">
             <input
-                type="number"
+                type="text"
+                inputmode="decimal"
                 :value="subject.grade"
                 @input="onGradeInput"
+                @keydown="onGradeKeydown"
                 min="0"
                 max="100"
-                step="1"
+                step="0.01"
                 :disabled="disabled"
                 :class="[
                     'w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed',

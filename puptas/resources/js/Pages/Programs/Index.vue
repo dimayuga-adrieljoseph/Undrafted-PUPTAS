@@ -3,12 +3,21 @@ import { ref, onMounted, computed, watch, nextTick } from "vue";
 const axios = window.axios;
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DeleteModal from "@/Components/DeleteModal.vue";
+import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
 import { Head, Link } from '@inertiajs/vue3';
 
 const programs = ref([]);
 const availableStrands = ref([]);
 const deleteModalOpen = ref(false);
 const programToDelete = ref(null);
+
+const confirmModalOpen = ref(false);
+const confirmActionType = ref(""); // 'save' or 'cancel'
+const confirmModalTitle = ref("");
+const confirmModalMessage = ref(""); // used as subtitle
+const confirmModalConfirmText = ref("Confirm");
+const confirmButtonClass = ref("");
+const confirmModalHideTable = ref(false);
 
 const searchQuery = ref("");
 const filterStrand = ref("");
@@ -126,6 +135,71 @@ const startEdit = async (program) => {
   await nextTick();
   const el = document.getElementById('edit-row-' + program.id) || document.getElementById('edit-row-mobile-' + program.id);
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+const computedChanges = computed(() => {
+  if (!editingProgram.value) return [];
+  const original = programs.value.find(p => p.id === editingProgram.value.id);
+  if (!original) return [];
+  
+  const changesList = [];
+  if (original.name !== editingProgram.value.name) {
+    changesList.push({ field: 'Name', oldValue: original.name, newValue: editingProgram.value.name });
+  }
+  if (original.code !== editingProgram.value.code) {
+    changesList.push({ field: 'Code', oldValue: original.code, newValue: editingProgram.value.code });
+  }
+  if (Number(original.slots || 0) !== Number(editingProgram.value.slots || 0)) {
+    changesList.push({ field: 'Slots', oldValue: original.slots || 0, newValue: editingProgram.value.slots || 0 });
+  }
+  if (Number(original.math || 0) !== Number(editingProgram.value.math || 0)) {
+    changesList.push({ field: 'Math Req', oldValue: original.math || 'None', newValue: editingProgram.value.math || 'None' });
+  }
+  if (Number(original.science || 0) !== Number(editingProgram.value.science || 0)) {
+    changesList.push({ field: 'Science Req', oldValue: original.science || 'None', newValue: editingProgram.value.science || 'None' });
+  }
+  if (Number(original.english || 0) !== Number(editingProgram.value.english || 0)) {
+    changesList.push({ field: 'English Req', oldValue: original.english || 'None', newValue: editingProgram.value.english || 'None' });
+  }
+  if (Number(original.gwa || 0) !== Number(editingProgram.value.gwa || 0)) {
+    changesList.push({ field: 'GWA Req', oldValue: original.gwa || 'None', newValue: editingProgram.value.gwa || 'None' });
+  }
+  
+  const origStrands = original.strands ? original.strands.map(s => s.id).sort().join(',') : '';
+  const newStrands = (editingProgram.value.strand_ids || []).slice().sort().join(',');
+  if (origStrands !== newStrands) {
+     changesList.push({ field: 'Strands', oldValue: 'Modified', newValue: 'Modified' });
+  }
+  return changesList;
+});
+
+const promptSave = () => {
+  confirmActionType.value = 'save';
+  confirmModalTitle.value = 'Save Changes?';
+  confirmModalMessage.value = 'Review the following changes before saving.';
+  confirmModalConfirmText.value = 'Save Changes';
+  confirmButtonClass.value = 'bg-green-600 hover:bg-green-700 text-white';
+  confirmModalHideTable.value = false;
+  confirmModalOpen.value = true;
+};
+
+const promptCancel = () => {
+  confirmActionType.value = 'cancel';
+  confirmModalTitle.value = 'Cancel Editing?';
+  confirmModalMessage.value = 'Are you sure you want to cancel? Any unsaved changes will be lost.';
+  confirmModalConfirmText.value = 'Yes, Cancel';
+  confirmButtonClass.value = 'bg-red-600 hover:bg-red-700 text-white';
+  confirmModalHideTable.value = true;
+  confirmModalOpen.value = true;
+};
+
+const executeConfirm = () => {
+  if (confirmActionType.value === 'save') {
+    saveEdit();
+  } else if (confirmActionType.value === 'cancel') {
+    editingProgram.value = null;
+  }
+  confirmModalOpen.value = false;
 };
 
 const saveEdit = async () => {
@@ -358,13 +432,13 @@ const toggleSortOrder = () => { sortAsc.value = !sortAsc.value; };
                       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Editing: {{ editingProgram.name }}</h3>
                         <div class="flex gap-2 flex-shrink-0">
-                          <button @click="saveEdit" class="flex-1 sm:flex-none px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-1">
+                          <button @click="promptSave" class="flex-1 sm:flex-none px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                             </svg>
                             Save
                           </button>
-                          <button @click="cancelEdit" class="flex-1 sm:flex-none px-3 py-2 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-1">
+                          <button @click="promptCancel" class="flex-1 sm:flex-none px-3 py-2 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -605,6 +679,19 @@ const toggleSortOrder = () => { sortAsc.value = !sortAsc.value; };
       :isOpen="deleteModalOpen"
       @confirm="confirmDeleteProgram"
       @close="closeDeleteModal"
+    />
+
+    <!-- Confirm Action Modal -->
+    <ChangesConfirmationModal
+      :show="confirmModalOpen"
+      :title="confirmModalTitle"
+      :subtitle="confirmModalMessage"
+      :confirmText="confirmModalConfirmText"
+      :confirmButtonClass="confirmButtonClass"
+      :hideTable="confirmModalHideTable"
+      :changes="computedChanges"
+      @confirm="executeConfirm"
+      @cancel="confirmModalOpen = false"
     />
 
   </AppLayout>

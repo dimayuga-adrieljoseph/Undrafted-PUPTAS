@@ -316,7 +316,6 @@
         @click.self="showSubmitConfirmation = false"
     >
         <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <!-- Header -->
             <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
                     <svg class="w-5 h-5 text-[#9E122C] dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
@@ -328,7 +327,6 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400">Please read carefully before proceeding</p>
                 </div>
             </div>
-            <!-- Body -->
             <div class="px-6 py-5 space-y-4">
                 <div class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
                     <p class="text-sm font-semibold text-red-700 dark:text-red-300 mb-2">Submitted information is considered final.</p>
@@ -340,7 +338,6 @@
                     Are you sure you want to submit your application? This action cannot be undone.
                 </p>
             </div>
-            <!-- Footer -->
             <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-end">
                 <button
                     @click="showSubmitConfirmation = false"
@@ -551,6 +548,22 @@ const confirmAndSubmit = async () => {
     showSubmitConfirmation.value = false;
     await submitApplication();
 };
+
+const submitApplication = async () => {
+    if (!selectedProgramId.value) {
+        submitError.value = "Please select a first choice program.";
+        return;
+    }
+    
+    if (!selectedSecondChoiceId.value) {
+        submitError.value = "Please select a second choice program.";
+        return;
+    }
+    
+    if (!selectedThirdChoiceId.value) {
+        submitError.value = "Please select a third choice program.";
+        return;
+    }
 
     // Capture names NOW from all programs (not just filtered lists) before any state changes
     const allPrograms = eligiblePrograms.value;

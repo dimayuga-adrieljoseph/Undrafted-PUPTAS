@@ -404,12 +404,24 @@ function preventInvalidGradeInput(event) {
     const key = event.key;
     const currentValue = input.value;
     if (key === 'Backspace' || key === 'Delete' || key === 'Tab' || key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown' || key === 'Home' || key === 'End' || (event.ctrlKey && (key === 'a' || key === 'c' || key === 'v' || key === 'x'))) return;
+    if (key === '-') { event.preventDefault(); return; }
+    // Allow decimal point (only one)
+    if (key === '.') {
+        if (currentValue.includes('.')) event.preventDefault();
+        return;
+    }
     if (!/^\d$/.test(key)) { event.preventDefault(); return; }
     const selectionStart = input.selectionStart;
     const selectionEnd = input.selectionEnd;
     const futureValue = currentValue.substring(0, selectionStart) + key + currentValue.substring(selectionEnd);
-    const futureNum = parseInt(futureValue, 10);
-    if (!isNaN(futureNum) && futureNum > 100) { event.preventDefault(); }
+    // Block if more than 2 decimal places
+    const dotIndex = futureValue.indexOf('.');
+    if (dotIndex !== -1 && futureValue.length - dotIndex - 1 > 2) { event.preventDefault(); return; }
+    // Only block if no decimal point — digits after a dot can never push value over 100
+    if (!futureValue.includes('.')) {
+        const futureNum = parseFloat(futureValue);
+        if (!isNaN(futureNum) && futureNum > 100) { event.preventDefault(); }
+    }
 }
 
 // Clamp known fields reactively
@@ -701,7 +713,7 @@ const roleColor = computed(() => {
                                     <span v-if="field.category" :class="['cat-badge', 'cat-badge--' + field.category]">{{ categoryLabel[field.category] }}</span>
                                     <label class="grade-edit-label">{{ field.label }}</label>
                                     <div class="grade-edit-right">
-                                        <input v-model="editableGrades[field.key]" type="number" @keydown="preventInvalidGradeInput" min="0" max="100" step="1" :disabled="readOnly" :class="['grade-edit-input', readOnly ? 'field-input--readonly' : '']" placeholder="—" />
+                                        <input v-model="editableGrades[field.key]" type="text" inputmode="decimal" @keydown="preventInvalidGradeInput" :disabled="readOnly" :class="['grade-edit-input', readOnly ? 'field-input--readonly' : '']" placeholder="—" />
                                         <span v-if="editableGrades[field.key] !== ''" :class="['grade-value', gradeColor(editableGrades[field.key])]">{{ Number(editableGrades[field.key]).toFixed(2) }}</span>
                                         <span v-else class="grade-value grade-neutral">—</span>
                                     </div>
@@ -721,7 +733,7 @@ const roleColor = computed(() => {
                                 <div v-for="subject in dynamicGradeSubjects" :key="subject.id" class="grade-dynamic-row">
                                     <select v-model="subject.category" :required="!readOnly" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--cat', readOnly ? 'field-input--readonly' : '']"><option value="math">Math</option><option value="english">English</option><option value="science">Science</option></select>
                                     <input v-model="subject.name" type="text" :required="!readOnly" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--name', readOnly ? 'field-input--readonly' : '']" placeholder="Subject name" maxlength="100" />
-                                    <input v-model="subject.grade" type="number" @keydown="preventInvalidGradeInput" min="0" max="100" step="1" :required="!readOnly" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--grade', readOnly ? 'field-input--readonly' : '']" placeholder="0–100" />
+                                    <input v-model="subject.grade" type="text" inputmode="decimal" @keydown="preventInvalidGradeInput" :required="!readOnly" :disabled="readOnly" :class="['grade-edit-input grade-edit-input--grade', readOnly ? 'field-input--readonly' : '']" placeholder="0–100" />
                                     <button v-if="!readOnly" type="button" class="grade-remove-btn" @click="removeDynamicSubject(subject.id)" title="Remove subject"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                                 </div>
                             </div>

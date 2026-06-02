@@ -142,13 +142,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Mathematics</label>
                                     <input
-                                        v-model.number="form.g11_general_mathematics"
-                                        type="number"
+                                        v-model="form.g11_general_mathematics"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
@@ -157,13 +157,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Business Mathematics</label>
                                     <input
-                                        v-model.number="form.g11_business_mathematics"
-                                        type="number"
+                                        v-model="form.g11_business_mathematics"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
@@ -172,13 +172,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statistics and Probability</label>
                                     <input
-                                        v-model.number="form.g11_statistics_probability"
-                                        type="number"
+                                        v-model="form.g11_statistics_probability"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
@@ -239,13 +239,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Oral Communication</label>
                                     <input
-                                        v-model.number="form.g11_oral_communication"
-                                        type="number"
+                                        v-model="form.g11_oral_communication"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
@@ -254,13 +254,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">English for Academic Purposes</label>
                                     <input
-                                        v-model.number="form.g11_academic_professional"
-                                        type="number"
+                                        v-model="form.g11_academic_professional"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
@@ -269,13 +269,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading and Writing</label>
                                     <input
-                                        v-model.number="form.g11_reading_writing"
-                                        type="number"
+                                        v-model="form.g11_reading_writing"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
@@ -292,13 +292,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">21st Century Literature</label>
                                     <input
-                                        v-model.number="form.g12_21st_century_lit"
-                                        type="number"
+                                        v-model="form.g12_21st_century_lit"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
@@ -359,13 +359,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Earth and Life Science</label>
                                     <input
-                                        v-model.number="form.g11_earth_life_science"
-                                        type="number"
+                                        v-model="form.g11_earth_life_science"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
@@ -374,13 +374,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Science</label>
                                     <input
-                                        v-model.number="form.g11_physical_science"
-                                        type="number"
+                                        v-model="form.g11_physical_science"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
@@ -440,13 +440,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">1st Semester</label>
                                     <input
-                                        v-model.number="form.g12_first_sem_gwa"
-                                        type="number"
+                                        v-model="form.g12_first_sem_gwa"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="0-100"
@@ -455,13 +455,13 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">2nd Semester</label>
                                     <input
-                                        v-model.number="form.g12_second_sem_gwa"
-                                        type="number"
+                                        v-model="form.g12_second_sem_gwa"
+                                        type="text" inputmode="decimal"
                                         @keydown="preventInvalidInput"
                                         @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                       
+                                       
+                                       
                                         :disabled="isLocked"
                                         class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="0-100"
