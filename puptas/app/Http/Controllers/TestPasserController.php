@@ -751,6 +751,44 @@ class TestPasserController extends Controller
         $passer->update($validatedData);
         $newValues = $passer->fresh()->toArray();
 
+        // Sync shared fields to linked User and ApplicantProfile records
+        $user = null;
+        if ($passer->user_id) {
+            $user = \App\Models\User::where('idp_user_id', $passer->user_id)
+                ->orWhere('id', $passer->user_id)
+                ->first();
+        }
+        // Fallback: find by email if no user_id link exists
+        if (!$user && $oldValues['email']) {
+            $user = \App\Models\User::where('email', $oldValues['email'])->first();
+        }
+        if ($user) {
+            // Sync name + email to User
+            $user->update([
+                'firstname' => $passer->first_name,
+                'lastname' => $passer->surname,
+                'middlename' => $passer->middle_name,
+                'email' => $passer->email,
+            ]);
+
+            // Sync all shared fields to ApplicantProfile
+            $profileData = [
+                'firstname' => $passer->first_name,
+                'lastname' => $passer->surname,
+                'middlename' => $passer->middle_name,
+                'email' => $passer->email,
+                'strand' => $passer->strand,
+                'school' => $passer->shs_school,
+            ];
+            // Map year_graduated to date_graduated if provided
+            if ($passer->year_graduated) {
+                $profileData['date_graduated'] = $passer->year_graduated . '-04-01';
+            }
+            \App\Models\ApplicantProfile::where('user_id', $user->id)
+                ->orWhere('user_id', $user->idp_user_id)
+                ->update($profileData);
+        }
+
         $this->auditLogService->logActivity(
             'UPDATE', 
             'Test Passers', 

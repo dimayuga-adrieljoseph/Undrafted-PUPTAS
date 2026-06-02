@@ -255,6 +255,9 @@ class UserController extends Controller
             'extension_name' => 'nullable|string|max:255',
             'email' => 'required|email|max:255',
             'role_id' => 'required|integer',
+            'strand' => 'nullable|string|max:255',
+            'school' => 'nullable|string|max:255',
+            'date_graduated' => 'nullable|date',
         ]);
 
         // If Role is 1 (Applicant), we find them in ApplicantProfile. Else StaffProfile.
@@ -281,13 +284,24 @@ class UserController extends Controller
             }
 
             if ($applicantProfile) {
-                $applicantProfile->update([
+                $profileData = [
                     'firstname' => $request->firstname,
                     'middlename' => $request->middlename,
                     'lastname' => $request->lastname,
                     'extension_name' => $request->extension_name,
                     'email' => $request->email,
-                ]);
+                ];
+                // Save academic fields if provided
+                if ($request->filled('strand')) {
+                    $profileData['strand'] = $request->strand;
+                }
+                if ($request->filled('school')) {
+                    $profileData['school'] = $request->school;
+                }
+                if ($request->filled('date_graduated')) {
+                    $profileData['date_graduated'] = $request->date_graduated;
+                }
+                $applicantProfile->update($profileData);
             }
 
             // Sync updated info to the linked test_passers record
@@ -295,11 +309,23 @@ class UserController extends Controller
                 ->orWhere('user_id', optional($user)->id)
                 ->first();
             if ($testPasser) {
-                $testPasser->update([
+                $tpData = [
                     'surname'    => $request->lastname,
                     'first_name' => $request->firstname,
                     'middle_name' => $request->middlename,
-                ]);
+                    'email'       => $request->email,
+                ];
+                // Sync academic fields to test passer
+                if ($request->filled('strand')) {
+                    $tpData['strand'] = $request->strand;
+                }
+                if ($request->filled('school')) {
+                    $tpData['shs_school'] = $request->school;
+                }
+                if ($request->filled('date_graduated')) {
+                    $tpData['year_graduated'] = substr($request->date_graduated, 0, 4);
+                }
+                $testPasser->update($tpData);
             }
 
             $userEmail = $request->email;
