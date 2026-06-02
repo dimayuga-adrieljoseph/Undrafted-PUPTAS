@@ -71,15 +71,19 @@ class FortifyServiceProvider extends ServiceProvider
                     );
                 }
 
-                // Inject IDP data into the session so the form renders properly
-                session([
-                    'pending_registration' => [
-                        'email' => $email,
-                        'sub' => 'mock-idp-sub-local-1',
-                    ]
-                ]);
+                $pendingReg = [
+                    'email' => $email,
+                    'sub' => 'mock-idp-sub-local-1',
+                ];
+
+                // Inject IDP data into the session so the form POST validation reads it
+                session(['pending_registration' => $pendingReg]);
                 
-                return \Inertia\Inertia::render('Auth/Register');
+                // Pass directly to Inertia to bypass middleware timing issue
+                return \Inertia\Inertia::render('Auth/Register', [
+                    'pending_registration' => $pendingReg,
+                    'test_passer_data' => \App\Models\TestPasser::where('email', $email)->first()
+                ]);
             }
             
             return redirect()->route('idp.redirect');
