@@ -21,10 +21,15 @@ class RefreshIdpToken
             return $next($request);
         }
 
-        // Skip IDP session verification/refresh entirely if Redis client classes are not available
-        if (!class_exists('Redis') && !class_exists('Predis\Client')) {
+        // Skip IDP checks completely if we are logged in via local bypass
+        if (session('local_bypass')) {
             return $next($request);
         }
+
+        // Skip IDP session verification/refresh entirely if Redis client classes are not available
+        // if (!class_exists('Redis') && !class_exists('Predis\Client')) {
+        //     return $next($request);
+        // }
 
         $user = Auth::user();
 
