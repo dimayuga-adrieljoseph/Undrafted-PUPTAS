@@ -255,6 +255,13 @@ class UserController extends Controller
             abort(404, 'User not found.');
         }
 
+        // Resolve linked TestPasser by IDP UUID first, fall back to numeric id
+        // This is necessary because test_passers.user_id may be an IDP UUID (string)
+        // rather than the numeric users.id, so ignoring by user_id = $userModel->id can fail.
+        $testPasser = \App\Models\TestPasser::where('user_id', $userModel->idp_user_id)
+            ->orWhere('user_id', (string) $userModel->id)
+            ->first();
+
         $request->validate([
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
@@ -265,7 +272,8 @@ class UserController extends Controller
                 'email', 
                 'max:255', 
                 \Illuminate\Validation\Rule::unique('users')->ignore($userModel->id),
-                \Illuminate\Validation\Rule::unique('test_passers', 'email')->ignore($userModel->id, 'user_id')
+                \Illuminate\Validation\Rule::unique('test_passers', 'email')
+                    ->ignore($testPasser?->test_passer_id, 'test_passer_id'),
             ],
             'role_id' => 'required|integer',
             'strand' => 'nullable|string|max:255',

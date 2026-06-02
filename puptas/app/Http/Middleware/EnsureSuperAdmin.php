@@ -30,7 +30,12 @@ class EnsureSuperAdmin
         $user = Auth::user();
         
         if ($user->role_id !== 7) {
-            // User is not a superadmin - return 403 Forbidden
+            // JSON/XHR callers (e.g. polling endpoints) expect a proper 403, not a 302 + HTML redirect
+            if ($request->expectsJson()) {
+                abort(403, 'Access denied. Superadmin privileges required.');
+            }
+
+            // Browser navigation: redirect to dashboard with an error flash
             return redirect()->route('dashboard')->with('error', 'Access denied. Superadmin privileges required.');
         }
 
