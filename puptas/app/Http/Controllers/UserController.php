@@ -167,7 +167,7 @@ class UserController extends Controller
                 'programs' => $userModel->programs,
             ];
         } else {
-            $applicant = \App\Models\ApplicantProfile::where('user_id', $id)->orWhere('user_id', $userModel->id)->firstOrFail();
+            $applicant = \App\Models\ApplicantProfile::where('user_id', (string) $id)->orWhere('user_id', (string) $userModel->id)->firstOrFail();
             $applicant->load(
                 'firstChoiceProgram',
                 'secondChoiceProgram',
@@ -287,7 +287,7 @@ class UserController extends Controller
         return DB::transaction(function () use ($request, $id, $roleId) {
             
             $user = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
-            $applicantProfile = \App\Models\ApplicantProfile::where('user_id', $id)->orWhere('user_id', optional($user)->id)->first();
+            $applicantProfile = \App\Models\ApplicantProfile::where('user_id', (string) $id)->orWhere('user_id', (string) optional($user)->id)->first();
             
             if ($user) {
                 $user->update([
@@ -320,7 +320,7 @@ class UserController extends Controller
             }
 
             // Sync updated info to the linked test_passers record
-            $testPasser = \App\Models\TestPasser::where('user_id', $id)
+            $testPasser = \App\Models\TestPasser::where('user_id', (string) $id)
                 ->orWhere('user_id', optional($user)->id)
                 ->first();
             if ($testPasser) {
@@ -463,7 +463,7 @@ class UserController extends Controller
         $user = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->firstOrFail();
 
         // Load applicant strand for category-aware average computation
-        $profile = \App\Models\ApplicantProfile::where('user_id', $user->id)->first();
+        $profile = \App\Models\ApplicantProfile::where('user_id', (string) $user->id)->first();
         $strand  = strtoupper($profile->strand ?? 'GAS');
 
         $validationService  = app(\App\Services\GradeValidationService::class);
@@ -529,7 +529,7 @@ class UserController extends Controller
         if ($staff) {
             $staff->delete();
         }
-        $app = \App\Models\ApplicantProfile::where('user_id', $id)->first();
+        $app = \App\Models\ApplicantProfile::where('user_id', (string) $id)->first();
         if ($app) {
             $app->delete();
         }

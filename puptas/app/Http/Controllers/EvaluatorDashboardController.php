@@ -132,7 +132,7 @@ class EvaluatorDashboardController extends Controller
             ]);
 
             // Update file statuses from 'returned' to 'approved' when passing the application
-            $updatedCount = UserFile::where('user_id', $userId)
+            $updatedCount = UserFile::where('user_id', (string) $userId)
                 ->where('status', 'returned')
                 ->update(['status' => 'approved', 'comment' => null]);
 

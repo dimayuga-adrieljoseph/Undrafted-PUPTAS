@@ -74,7 +74,7 @@ trait ManagesApplicationFiles
             }
 
             // Load files separately (not through relationship) for better performance
-            $files = UserFile::where('user_id', $id)->get()->keyBy('type');
+            $files = UserFile::where('user_id', (string) $id)->get()->keyBy('type');
 
             // Transform the response to map currentApplication to application for frontend compatibility
             $userData = [
@@ -226,7 +226,7 @@ trait ManagesApplicationFiles
         // Wrap all mutations in transaction
         try {
             DB::transaction(function () use ($userId, $fileTypes, $note, $application, $inProgress) {
-                UserFile::where('user_id', $userId)
+                UserFile::where('user_id', (string) $userId)
                     ->whereIn('type', $fileTypes)
                     ->update([
                         'status' => 'returned',
@@ -314,7 +314,7 @@ trait ManagesApplicationFiles
                 foreach ($files as $fileKey) {
                     $dbKey = $keyMap[$fileKey] ?? $fileKey;
 
-                    $file = UserFile::where('user_id', $userId)
+                    $file = UserFile::where('user_id', (string) $userId)
                         ->where('type', $dbKey)
                         ->first();
 

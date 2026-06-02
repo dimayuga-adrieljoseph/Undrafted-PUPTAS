@@ -34,7 +34,7 @@ class LazyLoadController extends Controller
             }
 
             // Find the file
-            $file = UserFile::where('user_id', $userId)
+            $file = UserFile::where('user_id', (string) $userId)
                 ->where('type', $fileType)
                 ->first();
 
@@ -103,7 +103,7 @@ class LazyLoadController extends Controller
             }
 
             // Fetch files
-            $files = UserFile::where('user_id', $userId)
+            $files = UserFile::where('user_id', (string) $userId)
                 ->whereIn('type', $fileTypes)
                 ->get()
                 ->keyBy('type');
