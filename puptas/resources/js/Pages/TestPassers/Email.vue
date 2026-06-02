@@ -289,23 +289,17 @@
                                         </svg>
                                         Previous
                                     </button>
-                                    <div class="flex items-center space-x-1">
-                                        <button
-                                            v-for="page in visiblePages"
-                                            :key="page"
-                                            @click.prevent="goToPage(page)"
-                                            :class="[
-                                                'px-3 py-1 rounded-lg text-sm font-medium transition',
-                                                currentPage === page 
-                                                    ? 'bg-[#9E122C] text-white' 
-                                                    : 'text-gray-700 hover:bg-gray-100'
-                                            ]"
-                                        >
-                                            {{ page }}
-                                        </button>
-                                        <span v-if="totalPages > 5 && currentPage < totalPages - 2" class="px-2 text-gray-500 dark:text-gray-300">
-                                            ...
-                                        </span>
+                                    <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
+                                        <span>Page</span>
+                                        <input
+                                            type="number"
+                                            :value="currentPage"
+                                            min="1"
+                                            :max="totalPages || 1"
+                                            @change="goToPage(Math.max(1, Math.min($event.target.value, totalPages || 1)))"
+                                            class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                                        />
+                                        <span>of <span class="font-semibold">{{ totalPages || 1 }}</span></span>
                                     </div>
                                     <button
                                         :disabled="currentPage === totalPages"
@@ -1787,16 +1781,20 @@ function getStatusAndBatchFromScore(score) {
         return { passer_status_id: "", batch_number: "" };
     }
 
-    if (numScore >= 85.00) {
+    // Updated thresholds as of May 29, 2026:
+    // 79+ = Qualified (Status 1), Batch 1
+    // 75-78 = Waitlisted (Status 2), Batch 2
+    // 55-74 = Waitlisted Below Cut Off (Status 4), Batch 3
+    // <55 = Unqualified (Status 3), Batch 4
+    
+    if (numScore >= 79.00) {
         return { passer_status_id: "1", batch_number: "Batch 1" };
-    } else if (numScore >= 79.00) {
-        return { passer_status_id: "1", batch_number: "Batch 2" };
     } else if (numScore >= 75.00) {
-        return { passer_status_id: "2", batch_number: "Batch 3" };
+        return { passer_status_id: "2", batch_number: "Batch 2" };
     } else if (numScore >= 55.00) {
-        return { passer_status_id: "2", batch_number: "Batch 4" };
+        return { passer_status_id: "4", batch_number: "Batch 3" };
     } else {
-        return { passer_status_id: "3", batch_number: "" };
+        return { passer_status_id: "3", batch_number: "Batch 4" };
     }
 }
 
@@ -1812,17 +1810,10 @@ watch(
     }
 );
 
-watch(
-    () => editingPasser.value?.pupcet_total_score,
-    (newScore) => {
-        if (!editingPasser.value) return;
-        const { passer_status_id, batch_number } = getStatusAndBatchFromScore(newScore);
-        if (passer_status_id !== "") {
-            editingPasser.value.passer_status_id = passer_status_id;
-        }
-        editingPasser.value.batch_number = batch_number;
-    }
-);
+// REMOVED: Automatic status recalculation when editing existing records
+// This was causing WBC (status 4) records to be incorrectly changed to Waitlisted (status 2)
+// when editing other fields like email. Status should only be auto-calculated for NEW records.
+// When editing, the admin must manually change the status if needed.
 
 function openAddModal() {
     newPasserData.value = {

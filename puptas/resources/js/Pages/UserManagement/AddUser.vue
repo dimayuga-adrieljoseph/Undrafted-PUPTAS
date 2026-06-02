@@ -150,7 +150,7 @@
                         </div>
                     </div>
 
-                    <form @submit.prevent="submitForm" class="form-content">
+                    <form @submit.prevent="submitForm" class="form-content" novalidate>
                         <!-- Account Details Section -->
                         <div class="form-section">
                             <h3 class="section-title">Account Details</h3>

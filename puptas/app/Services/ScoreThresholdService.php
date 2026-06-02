@@ -13,13 +13,18 @@ class ScoreThresholdService
     /**
      * Score threshold rules ordered from highest to lowest.
      * Each rule defines: min score (inclusive), max score (exclusive), passer_status_id, batch_number.
+     * 
+     * Updated thresholds as of May 29, 2026:
+     * - 79+ = Qualified (Status 1), Batch 1
+     * - 75-78 = Waitlisted (Status 2), Batch 2
+     * - 55-74 = Waitlisted Below Cut Off (Status 4), Batch 3
+     * - <55 = Unqualified (Status 3), Batch 4
      */
     private const THRESHOLDS = [
-        ['min' => 85.00, 'max' => null,   'passer_status_id' => 1, 'batch_number' => 'Batch 1'],
-        ['min' => 79.00, 'max' => 85.00,  'passer_status_id' => 1, 'batch_number' => 'Batch 2'],
-        ['min' => 75.00, 'max' => 79.00,  'passer_status_id' => 2, 'batch_number' => 'Batch 3'],
-        ['min' => 55.00, 'max' => 75.00,  'passer_status_id' => 2, 'batch_number' => 'Batch 4'],
-        ['min' => null,  'max' => 55.00,  'passer_status_id' => 3, 'batch_number' => null],
+        ['min' => 79.00, 'max' => null,   'passer_status_id' => 1, 'batch_number' => 'Batch 1'],
+        ['min' => 75.00, 'max' => 79.00,  'passer_status_id' => 2, 'batch_number' => 'Batch 2'],
+        ['min' => 55.00, 'max' => 75.00,  'passer_status_id' => 4, 'batch_number' => 'Batch 3'],
+        ['min' => null,  'max' => 55.00,  'passer_status_id' => 3, 'batch_number' => 'Batch 4'],
     ];
 
     /**
@@ -27,7 +32,7 @@ class ScoreThresholdService
      *
      * When $currentQualifiedWaitlistedCount is provided and >= CAPACITY_LIMIT,
      * scores that would normally be assigned "Waitlisted" (status 2) are instead
-     * assigned "Waitlisted Below Cut Off" (status 4) with a null batch_number.
+     * assigned "Waitlisted Below Cut Off" (status 4) with Batch 3.
      *
      * @param float $score Valid numeric score
      * @param int|null $currentQualifiedWaitlistedCount Current count of qualified+waitlisted records
@@ -40,7 +45,7 @@ class ScoreThresholdService
             $belowMax = $threshold['max'] === null || $score < $threshold['max'];
 
             if ($aboveMin && $belowMax) {
-                // If capacity limit reached and score falls in waitlisted range, assign status 4
+                // If capacity limit reached and score falls in waitlisted range, assign status 4 with Batch 3
                 if (
                     $threshold['passer_status_id'] === 2
                     && $currentQualifiedWaitlistedCount !== null
@@ -48,7 +53,7 @@ class ScoreThresholdService
                 ) {
                     return [
                         'passer_status_id' => 4,
-                        'batch_number' => null,
+                        'batch_number' => 'Batch 3',
                     ];
                 }
 
@@ -62,7 +67,7 @@ class ScoreThresholdService
         // Fallback (should not be reached with valid thresholds covering all ranges)
         return [
             'passer_status_id' => 3,
-            'batch_number' => null,
+            'batch_number' => 'Batch 4',
         ];
     }
 

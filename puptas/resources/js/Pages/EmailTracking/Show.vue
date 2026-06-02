@@ -199,65 +199,53 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="logs.data.length && logs.last_page > 1" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-        <div class="flex items-center justify-between">
-          <div class="text-sm text-gray-700 dark:text-gray-400">
-            Showing {{ logs.from }} to {{ logs.to }} of {{ logs.total }} results
+      <div v-if="logs.last_page > 1" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+              <div class="text-sm text-gray-700 dark:text-gray-400">
+                  <span v-if="!logs.total || logs.total === 0">
+                      Showing 0 to 0 of 0 results
+                  </span>
+                  <span v-else>
+                      Showing {{ logs.from || 0 }} 
+                      to {{ logs.to || 0 }} 
+                      of {{ logs.total }} results
+                  </span>
+              </div>
+              <div class="flex items-center space-x-2">
+                  <button
+                      :disabled="logs.current_page === 1"
+                      @click.prevent="router.visit(getPageUrl(logs.current_page - 1))"
+                      class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                  >
+                      <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Previous
+                  </button>
+                  <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
+                      <span>Page</span>
+                      <input
+                          type="number"
+                          :value="logs.current_page"
+                          min="1"
+                          :max="logs.last_page || 1"
+                          @change="router.visit(getPageUrl(Math.max(1, Math.min($event.target.value, logs.last_page || 1))))"
+                          class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                      />
+                      <span>of <span class="font-semibold">{{ logs.last_page || 1 }}</span></span>
+                  </div>
+                  <button
+                      :disabled="logs.current_page === logs.last_page"
+                      @click.prevent="router.visit(getPageUrl(logs.current_page + 1))"
+                      class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                  >
+                      Next
+                      <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                  </button>
+              </div>
           </div>
-          <div class="flex items-center space-x-2">
-            <Link
-              v-if="logs.prev_page_url"
-              :href="logs.prev_page_url"
-              class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
-            >
-              <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-              Previous
-            </Link>
-            <span v-else class="inline-flex items-center px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50">
-              <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-              Previous
-            </span>
-
-            <div class="flex items-center space-x-1">
-              <template v-for="page in visiblePages" :key="page">
-                <Link
-                  v-if="page !== '...'"
-                  :href="getPageUrl(page)"
-                  :class="[
-                    'px-3 py-1 rounded-lg text-sm font-medium transition',
-                    logs.current_page === page
-                      ? 'bg-[#9E122C] text-white'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  ]"
-                >
-                  {{ page }}
-                </Link>
-                <span v-else class="px-2 text-gray-500 dark:text-gray-400">...</span>
-              </template>
-            </div>
-
-            <Link
-              v-if="logs.next_page_url"
-              :href="logs.next_page_url"
-              class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
-            >
-              Next
-              <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-            <span v-else class="inline-flex items-center px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50">
-              Next
-              <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-              </svg>
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   </AppLayout>
