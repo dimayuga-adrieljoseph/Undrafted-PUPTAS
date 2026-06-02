@@ -106,7 +106,7 @@ class CreateNewUser implements CreatesNewUsers
                 'middlename' => $input['middlename'] ?? null,
                 'sex' => !empty($input['sex']) ? $input['sex'] : null,
                 'contactnumber' => !empty($input['contactnumber']) ? $input['contactnumber'] : 'N/A',
-                'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)),
+                'password' => \Illuminate\Support\Facades\Hash::make('Password123*'),
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
             ]);
