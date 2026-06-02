@@ -693,11 +693,11 @@ const clearFilters = () => {
                 <!-- Documents Section -->
                 <div class="mb-6">
                     <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div
                             v-for="(file, key) in selectedUserFiles"
                             :key="key"
-                            class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
+                            class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg overflow-hidden min-w-0"
                         >
                             <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate">
                                 {{ formatFileKey(key) }}
@@ -706,12 +706,12 @@ const clearFilters = () => {
                                 v-if="hasImagePreview(file)"
                                 :src="getFileUrl(file)"
                                 :alt="formatFileKey(key)"
-                                class="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
+                                class="w-full aspect-[4/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
                                 @click="openImageModal(file)"
                             />
                             <div
                                 v-else
-                                class="w-full h-24 flex items-center justify-center text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 rounded-lg dark:text-gray-200"
+                                class="w-full aspect-[4/3] flex items-center justify-center text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 rounded-lg dark:text-gray-200"
                             >
                                 No Image
                             </div>
