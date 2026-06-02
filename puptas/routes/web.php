@@ -96,6 +96,57 @@ Route::get('/setup-new-applicant', function () {
     return 'New applicant created successfully! Email: newapplicant@gmail.com | Password: password123. You can now go to /?local=1 and log in to test the registration/onboarding flow.';
 });
 
+// Temporary route to create staff accounts without CLI access
+Route::get('/setup-staff', function () {
+    if (!in_array(config('app.env'), ['local', 'staging'])) {
+        abort(404);
+    }
+    
+    $users = [
+        [
+            'firstname' => 'System',
+            'lastname' => 'Evaluator',
+            'contactnumber' => 'N/A',
+            'email' => 'evaluator122@gmail.com',
+            'password' => bcrypt('Evaluator4321!'),
+            'role_id' => 3,
+        ],
+        [
+            'firstname' => 'System',
+            'lastname' => 'Interviewer',
+            'contactnumber' => 'N/A',
+            'email' => 'interviewer133@gmail.com',
+            'password' => bcrypt('Interviewer4321!'),
+            'role_id' => 4,
+        ],
+        [
+            'firstname' => 'Radianne',
+            'lastname' => 'Seguro',
+            'contactnumber' => 'N/A',
+            'email' => 'seguroradianne@example.com',
+            'password' => bcrypt('UGCA4zWe1K7Sfl'),
+            'role_id' => 2,
+        ],
+        [
+            'firstname' => 'Mhel',
+            'lastname' => 'Garcia',
+            'contactnumber' => 'N/A',
+            'email' => 'garciamhel@example.com',
+            'password' => bcrypt('rKuFYl4jMmTI8&'),
+            'role_id' => 6,
+        ],
+    ];
+
+    foreach ($users as $userData) {
+        \App\Models\User::updateOrCreate(
+            ['email' => $userData['email']],
+            $userData
+        );
+    }
+
+    return 'Staff accounts created successfully! You can now go to /?local=1 and log in with their credentials.';
+});
+
 Route::get('/', function (\Illuminate\Http\Request $request) {
     // Allow bypassing IDP on local and staging using ?local=1
     if (in_array(config('app.env'), ['local', 'staging']) && $request->has('local')) {
