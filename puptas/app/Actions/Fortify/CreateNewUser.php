@@ -151,21 +151,26 @@ class CreateNewUser implements CreatesNewUsers
             }
 
             if (!empty($pendingReg['access_token'])) {
-                // Store IDP tokens server-side only — never expose them in browser cookies.
-                // Store IDP tokens server-side only in Redis.
-                // The refresh token lives longer than the access token. We keep it in Redis for 30 days.
-                $expiresAt = $pendingReg['expires_at'] ?? now()->addHour();
-                $ttl = 60 * 60 * 24 * 30; // 30 days
+                try {
+                    // Store IDP tokens server-side only in Redis.
+                    $expiresAt = $pendingReg['expires_at'] ?? now()->addHour();
+                    $ttl = 60 * 60 * 24 * 30; // 30 days
 
-                \Illuminate\Support\Facades\Cache::store('redis')->put(
-                    "idp_tokens:user_{$user->id}",
-                    [
-                        'access_token'  => $pendingReg['access_token'],
-                        'refresh_token' => $pendingReg['refresh_token'] ?? null,
-                        'expires_at'    => $expiresAt->timestamp,
-                    ],
-                    $ttl
-                );
+                    \Illuminate\Support\Facades\Cache::store('redis')->put(
+                        "idp_tokens:user_{$user->id}",
+                        [
+                            'access_token'  => $pendingReg['access_token'],
+                            'refresh_token' => $pendingReg['refresh_token'] ?? null,
+                            'expires_at'    => $expiresAt->timestamp,
+                        ],
+                        $ttl
+                    );
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to store IDP tokens in Redis during registration', [
+                        'error' => $e->getMessage()
+                    ]);
+                    // Continue registration even if Redis is unavailable locally
+                }
             }
 
             // Clear the pending registration from session
