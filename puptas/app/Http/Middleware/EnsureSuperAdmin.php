@@ -31,7 +31,7 @@ class EnsureSuperAdmin
         
         if ($user->role_id !== 7) {
             // User is not a superadmin - return 403 Forbidden
-            abort(403, 'Access denied. Superadmin privileges required.');
+            return redirect()->route('dashboard')->with('error', 'Access denied. Superadmin privileges required.');
         }
 
         return $next($request);

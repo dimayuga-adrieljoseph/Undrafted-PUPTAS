@@ -889,6 +889,14 @@ const applyAutofill = (result) => {
             const g11FormKey = G11_MAP[normalizedKey];
             if (g11FormKey && g11FormKey in form) {
                 form[g11FormKey] = numericGrade;
+            } else if (group === 'math' || group === 'english' || group === 'science') {
+                if (canAddSubject(group)) {
+                    dynamicSubjects.value[group].push({
+                        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+                        name: subjectKey,
+                        grade: numericGrade,
+                    });
+                }
             }
         }
     }
