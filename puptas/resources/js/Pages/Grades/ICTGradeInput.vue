@@ -519,7 +519,7 @@
 
                     <div class="p-6">
                         <!-- Approval Notice -->
-                        <div class="flex items-start gap-3 rounded-xl border-2 border-[#9E122C] bg-red-50 p-4 mb-6 dark:border-red-700 dark:bg-red-900/20">
+                        <div class="flex items-start gap-3 rounded-xl border-2 border-[#9E122C] bg-red-50 p-4 mb-4 dark:border-red-700 dark:bg-red-900/20">
                             <div class="flex-shrink-0 mt-0.5">
                                 <svg class="h-5 w-5 text-[#9E122C] dark:text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                                     <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
@@ -530,7 +530,15 @@
                                 <p class="mt-1 text-sm text-red-800 dark:text-red-300">This is subject to approval after the interview.</p>
                             </div>
                         </div>
-                        <!-- Program Choice Disabled Notice -->
+                        <!-- Finality Reminder -->
+                        <div class="flex items-start gap-3 rounded-xl border-2 border-red-500 bg-red-100 p-4 mb-6 dark:border-red-600 dark:bg-red-950/40">
+                            <svg class="h-5 w-5 flex-shrink-0 text-red-700 dark:text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                            </svg>
+                            <p class="text-sm font-semibold text-red-800 dark:text-red-300">
+                                Your selected programs should already be final. Changes after submission may only be accommodated during the interview schedule.
+                            </p>
+                        </div>
                         <div v-if="programChoiceDisabled" class="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2">
                             <svg class="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
