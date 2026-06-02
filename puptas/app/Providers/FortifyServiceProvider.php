@@ -63,6 +63,7 @@ class FortifyServiceProvider extends ServiceProvider
                     [
                         'first_name' => 'Local',
                         'surname' => 'Applicant',
+                        'email' => 'localapplicant@gmail.com',
                         'passer_status_id' => 1,
                     ]
                 );
