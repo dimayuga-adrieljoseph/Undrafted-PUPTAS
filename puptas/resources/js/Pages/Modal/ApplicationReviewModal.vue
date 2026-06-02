@@ -107,6 +107,15 @@
 
                         <!-- Draft: show selects -->
                         <div v-if="canSubmit" class="space-y-3">
+                            <!-- Program finality reminder -->
+                            <div class="flex items-start gap-3 rounded-xl border-2 border-red-400 bg-red-50 p-3 dark:border-red-700 dark:bg-red-900/20">
+                                <svg class="h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                </svg>
+                                <p class="text-xs font-semibold text-red-700 dark:text-red-300">
+                                    Your selected programs should already be final. Once submitted, changes may only be accommodated during the interview schedule.
+                                </p>
+                            </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                                     First Choice <span class="text-red-500">*</span>
@@ -238,7 +247,7 @@
 
                 <button
                     v-if="canSubmit"
-                    @click="submitApplication"
+                    @click="openSubmitConfirmation"
                     :disabled="!canSubmitApplication || submitting"
                     :class="[
                         'px-5 py-2 rounded-lg text-sm font-semibold transition',
@@ -284,6 +293,60 @@
             </button>
         </div>
     </div>
+
+    <!-- Submit Confirmation Modal -->
+    <div
+        v-if="showSubmitConfirmation"
+        class="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+        @click.self="showSubmitConfirmation = false"
+    >
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <!-- Header -->
+            <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-[#9E122C] dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-gray-900 dark:text-white">Confirm Application Submission</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Please read carefully before proceeding</p>
+                </div>
+            </div>
+            <!-- Body -->
+            <div class="px-6 py-5 space-y-4">
+                <div class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
+                    <p class="text-sm font-semibold text-red-700 dark:text-red-300 mb-2">Submitted information is considered final.</p>
+                    <p class="text-sm text-red-600 dark:text-red-400">
+                        Changes after submission may only be accommodated during the interview schedule. Once submitted, your selected programs and personal information cannot be modified.
+                    </p>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    Are you sure you want to submit your application? This action cannot be undone.
+                </p>
+            </div>
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-end">
+                <button
+                    @click="showSubmitConfirmation = false"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg transition"
+                >
+                    Go Back
+                </button>
+                <button
+                    @click="confirmAndSubmit"
+                    :disabled="submitting"
+                    class="px-5 py-2 text-sm font-semibold text-white bg-[#9E122C] hover:bg-[#7a0e22] rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                    <svg v-if="submitting" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    {{ submitting ? 'Submitting…' : 'Yes, Submit Application' }}
+                </button>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup>
@@ -314,6 +377,7 @@ const selectedThirdChoiceId = ref("");
 const submitting = ref(false);
 const submitError = ref("");
 const submitSuccess = ref("");
+const showSubmitConfirmation = ref(false);
 
 // Computed: Check if application can be submitted (draft status)
 const canSubmit = computed(() => {
@@ -464,22 +528,29 @@ const fetchEligiblePrograms = async () => {
 };
 
 // Submit application
-const submitApplication = async () => {
+const openSubmitConfirmation = () => {
     if (!selectedProgramId.value) {
         submitError.value = "Please select a first choice program.";
         return;
     }
-    
     if (!selectedSecondChoiceId.value) {
         submitError.value = "Please select a second choice program.";
         return;
     }
-    
     if (!selectedThirdChoiceId.value) {
         submitError.value = "Please select a third choice program.";
         return;
     }
+    submitError.value = "";
+    showSubmitConfirmation.value = true;
+};
 
+const confirmAndSubmit = async () => {
+    showSubmitConfirmation.value = false;
+    await submitApplication();
+};
+
+const submitApplication = async () => {
     submitting.value = true;
     submitError.value = "";
     submitSuccess.value = "";
