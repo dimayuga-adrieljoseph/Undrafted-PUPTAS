@@ -145,6 +145,7 @@
                 <td class="px-6 py-4">
                   <div v-if="canViewProfiles" class="flex justify-end gap-1">
                     <Link
+                      v-if="!isSuperAdmin"
                       :href="route('users.edit', user.id)"
                       class="p-2 text-gray-400 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                       title="View profile"
@@ -204,6 +205,7 @@
               </div>
               <div v-if="canViewProfiles" class="flex gap-1 flex-shrink-0">
                 <Link
+                  v-if="!isSuperAdmin"
                   :href="route('users.edit', user.id)"
                   class="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                   title="View profile"
