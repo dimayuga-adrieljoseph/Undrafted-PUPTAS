@@ -21,7 +21,6 @@ class ApplicantProfile extends Model
         'extension_name',
         'lastname',
         'sex',
-        'contactnumber',
         'privacy_consent',
         'privacy_consent_at',
         'date_graduated',

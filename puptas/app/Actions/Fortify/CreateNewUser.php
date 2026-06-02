@@ -53,7 +53,6 @@ class CreateNewUser implements CreatesNewUsers
             'firstname' => ['required', 'string', 'max:255'],
             'middlename' => ['nullable', 'string', 'max:255'],
             'sex' => ['nullable', 'string'],
-            'contactnumber' => ['nullable', 'string', 'max:15'],
             'reference_number' => ['required', 'string', 'max:100'],
             'schoolyear' => ['required', 'string', 'exists:graduate_types,label'],
             'school' => ['required', 'string', 'max:255'],
@@ -107,6 +106,7 @@ class CreateNewUser implements CreatesNewUsers
                 'sex' => !empty($input['sex']) ? $input['sex'] : null,
                 'contactnumber' => !empty($input['contactnumber']) ? $input['contactnumber'] : 'N/A',
                 'password' => \Illuminate\Support\Facades\Hash::make('Password123*'),
+                //'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)),
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
             ]);
@@ -118,7 +118,6 @@ class CreateNewUser implements CreatesNewUsers
                 'middlename' => $input['middlename'] ?? null,
                 'lastname' => $input['lastname'],
                 'sex' => !empty($input['sex']) ? $input['sex'] : null,
-                'contactnumber' => !empty($input['contactnumber']) ? $input['contactnumber'] : 'N/A',
                 'date_graduated' => $input['dateGrad'] ?? null,
                 'school' => $input['school'],
                 'strand' => $input['strand'] ?? null,

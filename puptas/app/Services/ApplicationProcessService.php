@@ -83,7 +83,9 @@ class ApplicationProcessService
                     "Application #{$application->id} passed stage '{$currentStage}'" .
                         ($nextStage ? ", moved to '{$nextStage}'." : ', final stage completed.'),
                     null,
-                    'ADMISSION_DATA'
+                    'ADMISSION_DATA',
+                    $oldState,
+                    $newState
                 );
             } catch (\Exception $e) {
                 logger()->error('Failed to write audit log for application stage progression', [
@@ -158,7 +160,9 @@ class ApplicationProcessService
                     'Applications',
                     "Application #{$application->id} returned at stage '{$stage}'. Reason: {$reason}",
                     null,
-                    'ADMISSION_DATA'
+                    'ADMISSION_DATA',
+                    $oldState,
+                    $newState
                 );
             } catch (\Exception $e) {
                 logger()->error('Failed to write audit log for application return', [

@@ -46,7 +46,6 @@ class User extends Authenticatable
         'lastname',
         'salutation',
         'sex',
-        'contactnumber',
         'privacy_consent',
         'privacy_consent_at',
     ];

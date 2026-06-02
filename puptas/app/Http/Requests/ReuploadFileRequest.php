@@ -37,9 +37,14 @@ class ReuploadFileRequest extends FormRequest
         $field = $this->input('field');
         $isImageOnly = in_array($field, self::IMAGE_ONLY_FIELDS, true);
 
-        $fileRules = $isImageOnly
-            ? ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120']
-            : ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,pdf', 'max:10240'];
+        // Relaxed validation for local testing — accept more types and larger files
+        if (app()->environment('local')) {
+            $fileRules = ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt', 'max:51200'];
+        } else {
+            $fileRules = $isImageOnly
+                ? ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120']
+                : ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif,pdf', 'max:10240'];
+        }
 
         return [
             'field' => [

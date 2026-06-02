@@ -132,7 +132,6 @@ class ExternalMedicalApiController extends Controller
             
             // Contact Information
             'email'                  => $profile->email,
-            'contactnumber'          => $profile->contactnumber,
             
             // Educational Background
             'date_graduated'         => $profile->date_graduated,

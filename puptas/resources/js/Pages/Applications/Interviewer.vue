@@ -412,11 +412,11 @@
                 <!-- Uploaded Documents -->
                 <div class="mb-8">
                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div
                             v-for="(file, key) in selectedUserFiles"
                             :key="key"
-                            class="group relative"
+                            class="group relative min-w-0"
                         >
                             <!-- Document Card -->
                             <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
@@ -428,11 +428,11 @@
                                         v-if="hasImagePreview(file)"
                                         :src="getFileUrl(file)"
                                         :alt="formatFileKey(key)"
-                                        class="w-full h-32 object-cover hover:opacity-90 transition pointer-events-none"
+                                        class="w-full aspect-[4/3] object-cover hover:opacity-90 transition pointer-events-none"
                                     />
                                     <div
                                         v-else
-                                        class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
+                                        class="w-full aspect-[4/3] flex items-center justify-center bg-gray-50 dark:bg-gray-800"
                                     >
                                         <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -441,7 +441,7 @@
                                 </div>
                                 
                                 <!-- Document Label -->
-                                <div class="p-2 border-t border-gray-200 dark:border-gray-700">
+                                <div class="p-2 border-t border-gray-200 dark:border-gray-700 min-w-0">
                                     <p class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate" :title="formatFileKey(key)">
                                         {{ formatFileKey(key) }}
                                     </p>

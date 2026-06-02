@@ -39,7 +39,12 @@ class UserFileController extends Controller
 
     public function uploadFiles(Request $request)
     {
-        $request->validate(ValidationRules::userFileUpload());
+        // Use relaxed validation for local testing environment
+        if (app()->environment('local')) {
+            $request->validate($this->getLocalTestValidationRules());
+        } else {
+            $request->validate(ValidationRules::userFileUpload());
+        }
 
         $user = $request->user();
 
@@ -150,6 +155,35 @@ class UserFileController extends Controller
         ]);
     }
 
+    /**
+     * Get relaxed validation rules for local testing environment
+     * Allows more file types and larger sizes for easier testing
+     */
+    protected function getLocalTestValidationRules(): array
+    {
+        return [
+            'application_id'  => 'nullable|exists:applications,id',
+
+            // Allow common file types with larger size limits for testing
+            'file10'      => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240', // 50MB
+            'file10Front' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+            'file11'      => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+            'file11Front' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+            'file12'      => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+            'file12Front' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+
+            // 2x2 photo
+            'filePhoto2x2' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+
+            // Official documents - already allowed images and PDF, just increase size
+            'fileId'        => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+            'fileNonEnroll' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+            'filePSA'       => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+            'fileGoodMoral' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+            'fileUnderOath' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,txt|max:50240',
+        ];
+    }
+
     public function getUserApplication()
     {
         $user = auth()->user();
@@ -196,9 +230,7 @@ class UserFileController extends Controller
             'middlename' => $user->middlename,
             'lastname' => $user->lastname,
             'sex' => $user->sex,
-            'contactnumber' => $user->contactnumber,
             'email' => $user->email,
-            'schoolyear' => $graduateType,
             'dateGrad' => $applicantProfile?->date_graduated?->format('Y-m-d'),
             'strand' => $applicantProfile?->strand,
             'track' => $applicantProfile?->track,

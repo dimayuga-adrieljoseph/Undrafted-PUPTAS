@@ -146,6 +146,6 @@ class ProgramService
         $actionType  = $actionTypeMap[strtolower($action)] ?? strtoupper($action);
         $description = ucfirst($action) . " program \"{$program->name}\" (ID: {$program->id}).";
 
-        app(\App\Services\AuditLogService::class)->logActivity($actionType, 'Programs', $description, null, 'SYSTEM_OPERATION');
+        app(\App\Services\AuditLogService::class)->logActivity($actionType, 'Programs', $description, null, 'SYSTEM_OPERATION', $oldValues, $newValues);
     }
 }

@@ -142,7 +142,6 @@ class DashboardController extends Controller
                         'status' => $applicant->currentApplication->status ?? null,
                         'email' => $applicant->email,
                         'username' => $applicant->email,
-                        'phone' => $applicant->contactnumber,
                         'company' => null,
                         'program' => $applicant->currentApplication->program ?? null,
                     ];
@@ -191,7 +190,6 @@ class DashboardController extends Controller
                 'firstname' => $applicant->firstname,
                 'lastname' => $applicant->lastname,
                 'email' => $applicant->email,
-                'contactnumber' => $applicant->contactnumber,
                 'sex' => $applicant->sex,
                 'created_at' => $applicant->created_at,
                 'grades' => $applicant->grades, // Include grades in response

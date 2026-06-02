@@ -102,23 +102,92 @@ const humanizeKey = (key) => key
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const displaySections = computed(() => {
-    if (props.sections.length) {
-        return props.sections;
+    // Start with the sections prop if provided, else empty array
+    let sections = props.sections.length ? [...props.sections] : [];
+
+    // If we have sections, we will collect their labels to avoid duplication
+    const sectionLabels = new Set();
+    sections.forEach(section => {
+        section.items.forEach(item => {
+            sectionLabels.add(item.label);
+        });
+    });
+
+    // Prepare extra items from formData
+    const extraItems = [];
+    const ignoredKeysPatterns = [
+        // Program choices
+        /_choice_program$/,
+        // Averages
+        /_average$/,
+        // GWA
+        /_gwa$/,
+        // Specific keys we know are not subjects
+        'first_choice_program',
+        'second_choice_program',
+        'third_choice_program',
+        'math_average',
+        'english_average',
+        'science_average',
+        'g12_gwa',
+        'g12_first_sem_gwa',
+        'g12_second_sem_gwa',
+    ];
+
+    for (const [key, value] of Object.entries(props.formData || {})) {
+        // Skip if value is empty (as in the original fallback)
+        if (value === null || value === undefined || value === '') {
+            continue;
+        }
+
+        // Check if key matches any ignored pattern
+        const isIgnored = ignoredKeysPatterns.some(pattern => {
+            if (typeof pattern === 'string') {
+                return key === pattern;
+            } else {
+                return pattern.test(key);
+            }
+        });
+
+        if (isIgnored) {
+            continue;
+        }
+
+        const label = humanizeKey(key);
+        // Avoid adding duplicates: if the label is already in sectionLabels, skip
+        if (!sectionLabels.has(label)) {
+            extraItems.push({ label, value });
+            // Add to sectionLabels to avoid duplicates within extraItems
+            sectionLabels.add(label);
+        }
     }
 
-    const items = Object.entries(props.formData || {})
-        .filter(([, value]) => value !== null && value !== undefined && value !== '')
-        .map(([key, value]) => ({
-            label: humanizeKey(key),
-            value,
-        }));
+    // If we have extra items, add them as a new section
+    if (extraItems.length > 0) {
+        sections.push({
+            title: 'Additional Subjects',
+            items: extraItems,
+        });
+    }
 
-    return [
-        {
-            title: 'Entered Values',
-            items,
-        },
-    ];
+    // If we still have no sections (i.e., no props.sections and no extraItems), then fall back to the old behavior
+    if (sections.length === 0) {
+        const items = Object.entries(props.formData || {})
+            .filter(([, value]) => value !== null && value !== undefined && value !== '')
+            .map(([key, value]) => ({
+                label: humanizeKey(key),
+                value,
+            }));
+
+        return [
+            {
+                title: 'Entered Values',
+                items,
+            },
+        ];
+    }
+
+    return sections;
 });
 
 const formatValue = (value) => {

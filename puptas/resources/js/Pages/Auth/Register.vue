@@ -47,7 +47,6 @@ const form = useForm({
     firstname: "",
     middlename: "",
     sex: "",
-    contactnumber: "",
     reference_number: "",
     school: "",
     schoolyear: "",

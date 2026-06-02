@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             DocumentStatusSeeder::class,
             ProgramSeeder::class,
             UserSeeder::class,
+            ApplicantSeeder::class,
         ]);
     }
 }

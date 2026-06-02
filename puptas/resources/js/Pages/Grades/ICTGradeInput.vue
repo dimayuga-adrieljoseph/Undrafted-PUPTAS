@@ -40,6 +40,23 @@
                 </p>
             </div>
 
+            <!-- Server Validation Errors Summary -->
+            <div v-if="Object.keys(errors).length > 0" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-red-700 dark:text-red-300">Please fix the following errors:</p>
+                        <ul class="mt-2 space-y-1">
+                            <li v-for="(message, field) in errors" :key="field" class="text-sm text-red-600 dark:text-red-400">
+                                • {{ Array.isArray(message) ? message[0] : message }}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
             <!-- Success Toast Notification - Fixed Position -->
             <Transition name="slide-down">
                 <div v-if="successMessage" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
@@ -53,9 +70,42 @@
                             <p class="text-sm font-semibold text-green-800 dark:text-green-200">Success!</p>
                             <p class="text-sm text-green-700 dark:text-green-300">{{ successMessage }}</p>
                         </div>
-                        <div class="flex-shrink-0">
-                            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-green-500 dark:border-green-400"></div>
+                    </div>
+                </div>
+            </Transition>
+
+            <!-- Error/Warning Toast Notification - Fixed Position -->
+            <Transition name="slide-down">
+                <div v-if="toastVisible" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
+                    <div :class="[
+                        'p-4 rounded-lg shadow-2xl flex items-start gap-3 border-l-4',
+                        toastType === 'error' ? 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 dark:border-amber-400'
+                    ]">
+                        <div class="flex-shrink-0 mt-0.5">
+                            <svg v-if="toastType === 'error'" class="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <svg v-else class="w-5 h-5 text-amber-500 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
                         </div>
+                        <div class="flex-1">
+                            <p :class="['text-sm font-medium', toastType === 'error' ? 'text-red-800 dark:text-red-200' : 'text-amber-800 dark:text-amber-200']">
+                                {{ toastMessage }}
+                            </p>
+                            <button
+                                v-if="showRetryOption"
+                                @click="retrySubmit"
+                                :class="['mt-2 text-sm font-semibold underline', toastType === 'error' ? 'text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100' : 'text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100']"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                        <button @click="dismissToast" class="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </Transition>
@@ -71,23 +121,16 @@
                     </div>
                     <button @click="bannerDismissed = true" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-xl leading-none flex-shrink-0">&times;</button>
                 </div>
-                <!-- Manual Input Notice (shown when document extraction was unavailable) -->
-                <div v-if="!extractionResult" class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center gap-2">
-                    <i class="fas fa-pencil-alt text-yellow-600 dark:text-yellow-400"></i>
-                    <p class="text-sm text-yellow-700 dark:text-yellow-300">
-                        Document extraction was unavailable. Please enter your grades manually below.
-                    </p>
-                </div>
+
                 <!-- Core Subjects Card -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
                         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Core Subjects</h2>
                     </div>
-                    
+
                     <div class="p-6">
                         <!-- Math Sub-section -->
                         <div class="mb-8">
-                            <!-- G11 Math Group -->
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#9E122C] text-white mr-2">G11</span>
@@ -99,42 +142,73 @@
                                     <input
                                         v-model.number="form.g11_general_mathematics"
                                         type="number"
-                        @keydown="preventInvalidInput" @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                        @keydown="preventInvalidInput" @input="validateGrade"
+                                        min="0" max="100" step="1"
                                         :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general mathematics') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('general mathematics')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                    <p v-if="isLowConfidence('general mathematics')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statistics and Probability</label>
                                     <input
                                         v-model.number="form.g11_statistics_probability"
                                         type="number"
-                        @keydown="preventInvalidInput" @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                        @keydown="preventInvalidInput" @input="validateGrade"
+                                        min="0" max="100" step="1"
                                         :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('statistics and probability') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('statistics and probability')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                    <p v-if="isLowConfidence('statistics and probability')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                </div>
                             </div>
-                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
-                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
-                                    Math Average: <span class="font-bold">{{ mathAverage || "—" }}</span>
+
+                            <!-- Dynamic Math Subjects -->
+                            <div v-if="dynamicSubjects.math.length > 0" class="mt-4 space-y-3">
+                                <h4 class="text-sm font-medium text-gray-600 dark:text-gray-400">Additional Math Subjects</h4>
+                                <DynamicSubjectRow
+                                    v-for="subject in dynamicSubjects.math"
+                                    :key="subject.id"
+                                    :subject="subject"
+                                    :disabled="isLocked"
+                                    category="math"
+                                    @update:name="subject.name = $event"
+                                    @update:grade="subject.grade = $event"
+                                    @remove="removeSubject('math', subject.id)"
+                                />
+                            </div>
+
+                            <!-- Add Math Subject Button -->
+                            <div class="mt-3">
+                                <button
+                                    v-if="canAddSubject('math')"
+                                    type="button"
+                                    :disabled="isLocked"
+                                    @click="addSubject('math')"
+                                    class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-[#9E122C] bg-red-50 dark:bg-red-900/20 border border-[#9E122C]/30 dark:border-red-700/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Add Subject
+                                </button>
+                                <p v-else class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                    <i class="fas fa-info-circle mr-1"></i>Maximum of 5 additional math subjects reached.
                                 </p>
                             </div>
 
-                            
+                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    Math Average: <span class="font-bold">{{ mathAverage || "—" }}</span>
+                                    <span class="text-xs ml-2">({{ mathCount }} subject{{ mathCount !== 1 ? 's' : '' }})</span>
+                                </p>
+                            </div>
                         </div>
 
                         <!-- English Sub-section -->
                         <div class="mb-8">
-                            <!-- G11 English Group -->
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#9E122C] text-white mr-2">G11</span>
@@ -146,70 +220,99 @@
                                     <input
                                         v-model.number="form.g11_oral_communication"
                                         type="number"
-                        @keydown="preventInvalidInput" @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                        @keydown="preventInvalidInput" @input="validateGrade"
+                                        min="0" max="100" step="1"
                                         :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('oral communication') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('oral communication')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                    <p v-if="isLowConfidence('oral communication')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">21st Century Literature</label>
                                     <input
                                         v-model.number="form.g11_21st_century_lit"
                                         type="number"
-                        @keydown="preventInvalidInput" @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                        @keydown="preventInvalidInput" @input="validateGrade"
+                                        min="0" max="100" step="1"
                                         :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('21st century literature') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('21st century literature')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                    <p v-if="isLowConfidence('21st century literature')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">English for Academic Purposes</label>
                                     <input
                                         v-model.number="form.g11_academic_professional"
                                         type="number"
-                        @keydown="preventInvalidInput" @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                        @keydown="preventInvalidInput" @input="validateGrade"
+                                        min="0" max="100" step="1"
                                         :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('english for academic purposes') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('english for academic purposes')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                    <p v-if="isLowConfidence('english for academic purposes')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading and Writing</label>
                                     <input
                                         v-model.number="form.g11_reading_writing"
                                         type="number"
-                        @keydown="preventInvalidInput" @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                        @keydown="preventInvalidInput" @input="validateGrade"
+                                        min="0" max="100" step="1"
                                         :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('reading and writing') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('reading and writing')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                    <p v-if="isLowConfidence('reading and writing')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                </div>
                             </div>
-                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
-                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
-                                    English Average: <span class="font-bold">{{ englishAverage || "—" }}</span>
+
+                            <!-- Dynamic English Subjects -->
+                            <div v-if="dynamicSubjects.english.length > 0" class="mt-4 space-y-3">
+                                <h4 class="text-sm font-medium text-gray-600 dark:text-gray-400">Additional English Subjects</h4>
+                                <DynamicSubjectRow
+                                    v-for="subject in dynamicSubjects.english"
+                                    :key="subject.id"
+                                    :subject="subject"
+                                    :disabled="isLocked"
+                                    category="english"
+                                    @update:name="subject.name = $event"
+                                    @update:grade="subject.grade = $event"
+                                    @remove="removeSubject('english', subject.id)"
+                                />
+                            </div>
+
+                            <!-- Add English Subject Button -->
+                            <div class="mt-3">
+                                <button
+                                    v-if="canAddSubject('english')"
+                                    type="button"
+                                    :disabled="isLocked"
+                                    @click="addSubject('english')"
+                                    class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-[#9E122C] bg-red-50 dark:bg-red-900/20 border border-[#9E122C]/30 dark:border-red-700/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Add Subject
+                                </button>
+                                <p v-else class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                    <i class="fas fa-info-circle mr-1"></i>Maximum of 5 additional English subjects reached.
                                 </p>
                             </div>
 
-                            
+                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    English Average: <span class="font-bold">{{ englishAverage || "—" }}</span>
+                                    <span class="text-xs ml-2">({{ englishCount }} subject{{ englishCount !== 1 ? 's' : '' }})</span>
+                                </p>
+                            </div>
                         </div>
 
                         <!-- Science Sub-section -->
                         <div class="mb-8">
-                            <!-- G11 Science Group -->
                             <h3 class="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
                                 <span class="w-1 h-5 bg-[#9E122C] rounded-full mr-2 dark:bg-gray-900"></span>
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-[#9E122C] text-white mr-2">G11</span>
@@ -221,37 +324,69 @@
                                     <input
                                         v-model.number="form.g11_earth_life_science"
                                         type="number"
-                        @keydown="preventInvalidInput" @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                        @keydown="preventInvalidInput" @input="validateGrade"
+                                        min="0" max="100" step="1"
                                         :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('earth and life science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('earth and life science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                    <p v-if="isLowConfidence('earth and life science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Physical Science</label>
                                     <input
                                         v-model.number="form.g11_physical_science"
                                         type="number"
-                        @keydown="preventInvalidInput" @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                        @keydown="preventInvalidInput" @input="validateGrade"
+                                        min="0" max="100" step="1"
                                         :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('physical science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('physical science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                    <p v-if="isLowConfidence('physical science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                </div>
                             </div>
-                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
-                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
-                                    Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
+
+                            <!-- Dynamic Science Subjects -->
+                            <div v-if="dynamicSubjects.science.length > 0" class="mt-4 space-y-3">
+                                <h4 class="text-sm font-medium text-gray-600 dark:text-gray-400">Additional Science Subjects</h4>
+                                <DynamicSubjectRow
+                                    v-for="subject in dynamicSubjects.science"
+                                    :key="subject.id"
+                                    :subject="subject"
+                                    :disabled="isLocked"
+                                    category="science"
+                                    @update:name="subject.name = $event"
+                                    @update:grade="subject.grade = $event"
+                                    @remove="removeSubject('science', subject.id)"
+                                />
+                            </div>
+
+                            <!-- Add Science Subject Button -->
+                            <div class="mt-3">
+                                <button
+                                    v-if="canAddSubject('science')"
+                                    type="button"
+                                    :disabled="isLocked"
+                                    @click="addSubject('science')"
+                                    class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-[#9E122C] bg-red-50 dark:bg-red-900/20 border border-[#9E122C]/30 dark:border-red-700/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Add Subject
+                                </button>
+                                <p v-else class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                    <i class="fas fa-info-circle mr-1"></i>Maximum of 5 additional science subjects reached.
                                 </p>
                             </div>
 
-                            
+                            <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg inline-block">
+                                <p class="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    Science Average: <span class="font-bold">{{ scienceAverage || "—" }}</span>
+                                    <span class="text-xs ml-2">({{ scienceCount }} subject{{ scienceCount !== 1 ? 's' : '' }})</span>
+                                </p>
+                            </div>
                         </div>
 
                         <!-- Grade 12 GWA -->
@@ -266,29 +401,27 @@
                                     <input
                                         v-model.number="form.g12_first_sem_gwa"
                                         type="number"
-                        @keydown="preventInvalidInput" @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                        @keydown="preventInvalidInput" @input="validateGrade"
+                                        min="0" max="100" step="1"
                                         :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('1st semester') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('1st semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                    <p v-if="isLowConfidence('1st semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">2nd Semester</label>
                                     <input
                                         v-model.number="form.g12_second_sem_gwa"
                                         type="number"
-                        @keydown="preventInvalidInput" @input="validateGrade"
-                                        min="0"
-                                        max="100"
-                                        step="1"
+                                        @keydown="preventInvalidInput" @input="validateGrade"
+                                        min="0" max="100" step="1"
                                         :disabled="isLocked"
                                         :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('2nd semester') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('2nd semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>                                </div>
+                                    <p v-if="isLowConfidence('2nd semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
+                                </div>
                             </div>
                         </div>
 
@@ -326,7 +459,7 @@
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
                         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Program Qualification</h2>
                     </div>
-                    
+
                     <div class="p-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <!-- Qualified Programs -->
@@ -339,26 +472,13 @@
                                 </h3>
                                 <div class="space-y-3">
                                     <div v-if="qualifiedPrograms.length > 0">
-                                        <div
-                                            v-for="program in qualifiedPrograms"
-                                            :key="program.id"
-                                            class="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
-                                        >
-                                            <p class="font-semibold text-sm text-gray-900 dark:text-white">
-                                                {{ program.code }} - {{ program.name }}
-                                            </p>
-                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                                Requirements: Math {{ program.math }}, English {{ program.english }}, 
-                                                Science {{ program.science }}, GWA {{ program.gwa }}
-                                            </p>
-                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                                <span class="font-medium">Strand:</span> {{ program.strand_names || 'Open to All' }}
-                                            </p>
+                                        <div v-for="program in qualifiedPrograms" :key="program.id" class="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                            <p class="font-semibold text-sm text-gray-900 dark:text-white">{{ program.code }} - {{ program.name }}</p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Requirements: Math {{ program.math }}, English {{ program.english }}, Science {{ program.science }}, GWA {{ program.gwa }}</p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">Strand:</span> {{ program.strand_names || 'Open to All' }}</p>
                                         </div>
                                     </div>
-                                    <p v-else class="text-sm text-gray-500 dark:text-gray-400 italic">
-                                        No qualified programs based on current grades
-                                    </p>
+                                    <p v-else class="text-sm text-gray-500 dark:text-gray-400 italic">No qualified programs based on current grades</p>
                                 </div>
                             </div>
 
@@ -372,26 +492,19 @@
                                 </h3>
                                 <div class="space-y-3">
                                     <div v-if="notQualifiedPrograms.length > 0">
-                                        <div
-                                            v-for="program in notQualifiedPrograms"
-                                            :key="program.id"
-                                            class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-                                        >
-                                            <p class="font-semibold text-sm text-gray-900 dark:text-white">
-                                                {{ program.code }} - {{ program.name }}
-                                            </p>
-                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                                Requirements: Math {{ program.math }}, English {{ program.english }}, 
-                                                Science {{ program.science }}, GWA {{ program.gwa }}
-                                            </p>
-                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                                <span class="font-medium">Strand:</span> {{ program.strand_names || 'Open to All' }}
-                                            </p>
+                                        <div v-for="program in notQualifiedPrograms" :key="program.id" class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                            <p class="font-semibold text-sm text-gray-900 dark:text-white">{{ program.code }} - {{ program.name }}</p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Requirements: Math {{ program.math }}, English {{ program.english }}, Science {{ program.science }}, GWA {{ program.gwa }}</p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1"><span class="font-medium">Strand:</span> {{ program.strand_names || 'Open to All' }}</p>
+                                            <div v-if="program.unmetRequirements && program.unmetRequirements.length > 0" class="mt-2">
+                                                <p class="text-xs font-medium text-red-600 dark:text-red-400">Unmet Requirements:</p>
+                                                <ul class="list-disc list-inside mt-1">
+                                                    <li v-for="(req, idx) in program.unmetRequirements" :key="idx" class="text-xs text-red-500 dark:text-red-400">{{ req }}</li>
+                                                </ul>
+                                            </div>
                                         </div>
                                     </div>
-                                    <p v-else class="text-sm text-gray-500 dark:text-gray-400 italic">
-                                        All programs are qualified
-                                    </p>
+                                    <p v-else class="text-sm text-gray-500 dark:text-gray-400 italic">All programs are qualified</p>
                                 </div>
                             </div>
                         </div>
@@ -403,7 +516,7 @@
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
                         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Program Choices <span class="text-red-500 dark:text-red-300">*</span></h2>
                     </div>
-                    
+
                     <div class="p-6">
                         <!-- Approval Notice -->
                         <div class="flex items-start gap-3 rounded-xl border-2 border-[#9E122C] bg-red-50 p-4 mb-6 dark:border-red-700 dark:bg-red-900/20">
@@ -414,99 +527,54 @@
                             </div>
                             <div>
                                 <p class="text-sm font-bold text-[#9E122C] dark:text-red-400">Important Notice</p>
-                                <p class="mt-1 text-sm text-red-800 dark:text-red-300">
-                                    This is subject to approval after the interview.
-                                </p>
+                                <p class="mt-1 text-sm text-red-800 dark:text-red-300">This is subject to approval after the interview.</p>
                             </div>
+                        </div>
+                        <!-- Program Choice Disabled Notice -->
+                        <div v-if="programChoiceDisabled" class="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2">
+                            <svg class="w-5 h-5 text-amber-500 dark:text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
+                            <p class="text-sm text-amber-700 dark:text-amber-300">
+                                Program selection is disabled. Please enter valid grades in all categories and G12 GWA to enable program choices.
+                            </p>
                         </div>
                         <div v-if="qualifiedPrograms.length > 0">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        First Choice Program <span class="text-red-500 dark:text-red-300">*</span>
-                                    </label>
-                                    <select
-                                        v-model="form.first_choice_program"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                        required
-                                    >
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">First Choice Program <span class="text-red-500 dark:text-red-300">*</span></label>
+                                    <select v-model="form.first_choice_program" :disabled="programChoiceDisabled || isLocked" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed" required>
                                         <option value="">-- Select First Choice --</option>
-                                        <option
-                                            v-for="program in qualifiedPrograms"
-                                            :key="program.id"
-                                            :value="program.id"
-                                            :disabled="program.id === form.second_choice_program || program.id === form.third_choice_program"
-                                        >
-                                            {{ program.code }} - {{ program.name }}
-                                        </option>
+                                        <option v-for="program in qualifiedPrograms" :key="program.id" :value="program.id" :disabled="program.id === form.second_choice_program || program.id === form.third_choice_program">{{ program.code }} - {{ program.name }}</option>
                                     </select>
-                                    <p v-if="errors.first_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300 break-words">
-                                        {{ errors.first_choice_program }}
-                                    </p>
+                                    <p v-if="errors.first_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300 break-words">{{ errors.first_choice_program }}</p>
                                 </div>
 
                                 <div v-if="qualifiedPrograms.length >= 2">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Second Choice Program <span v-if="qualifiedPrograms.length >= 2" class="text-red-500 dark:text-red-300">*</span>
-                                    </label>
-                                    <select
-                                        v-model="form.second_choice_program"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                        :required="qualifiedPrograms.length >= 2"
-                                    >
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Second Choice Program <span class="text-red-500 dark:text-red-300">*</span></label>
+                                    <select v-model="form.second_choice_program" :disabled="programChoiceDisabled || isLocked" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed" :required="qualifiedPrograms.length >= 2">
                                         <option value="">-- Select Second Choice --</option>
-                                        <option
-                                            v-for="program in qualifiedPrograms"
-                                            :key="program.id"
-                                            :value="program.id"
-                                            :disabled="program.id === form.first_choice_program || program.id === form.third_choice_program"
-                                        >
-                                            {{ program.code }} - {{ program.name }}
-                                        </option>
+                                        <option v-for="program in qualifiedPrograms" :key="program.id" :value="program.id" :disabled="program.id === form.first_choice_program || program.id === form.third_choice_program">{{ program.code }} - {{ program.name }}</option>
                                     </select>
-                                    <p v-if="errors.second_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300 break-words">
-                                        {{ errors.second_choice_program }}
-                                    </p>
+                                    <p v-if="errors.second_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300 break-words">{{ errors.second_choice_program }}</p>
                                 </div>
 
                                 <div v-if="qualifiedPrograms.length >= 3">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Third Choice Program <span v-if="qualifiedPrograms.length >= 3" class="text-red-500 dark:text-red-300">*</span>
-                                    </label>
-                                    <select
-                                        v-model="form.third_choice_program"
-                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                        :required="qualifiedPrograms.length >= 3"
-                                    >
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Third Choice Program <span class="text-red-500 dark:text-red-300">*</span></label>
+                                    <select v-model="form.third_choice_program" :disabled="programChoiceDisabled || isLocked" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed" :required="qualifiedPrograms.length >= 3">
                                         <option value="">-- Select Third Choice --</option>
-                                        <option
-                                            v-for="program in qualifiedPrograms"
-                                            :key="program.id"
-                                            :value="program.id"
-                                            :disabled="program.id === form.first_choice_program || program.id === form.second_choice_program"
-                                        >
-                                            {{ program.code }} - {{ program.name }}
-                                        </option>
+                                        <option v-for="program in qualifiedPrograms" :key="program.id" :value="program.id" :disabled="program.id === form.first_choice_program || program.id === form.second_choice_program">{{ program.code }} - {{ program.name }}</option>
                                     </select>
-                                    <p v-if="errors.third_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300 break-words">
-                                        {{ errors.third_choice_program }}
-                                    </p>
+                                    <p v-if="errors.third_choice_program" class="text-red-500 text-xs mt-1 dark:text-red-300 break-words">{{ errors.third_choice_program }}</p>
                                 </div>
                             </div>
 
                             <!-- Selected Programs Display -->
-                            <div v-if="form.first_choice_program || form.second_choice_program || form.third_choice_program" 
-                                 class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <div v-if="form.first_choice_program || form.second_choice_program || form.third_choice_program" class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                                 <p class="font-semibold text-sm text-gray-900 dark:text-white mb-2">Your Selected Programs:</p>
-                                <p v-if="form.first_choice_program" class="text-sm text-gray-700 dark:text-gray-300">
-                                    1st Choice: <strong>{{ getSelectedProgramName(form.first_choice_program) }}</strong>
-                                </p>
-                                <p v-if="form.second_choice_program" class="text-sm text-gray-700 dark:text-gray-300">
-                                    2nd Choice: <strong>{{ getSelectedProgramName(form.second_choice_program) }}</strong>
-                                </p>
-                                <p v-if="form.third_choice_program" class="text-sm text-gray-700 dark:text-gray-300">
-                                    3rd Choice: <strong>{{ getSelectedProgramName(form.third_choice_program) }}</strong>
-                                </p>
+                                <p v-if="form.first_choice_program" class="text-sm text-gray-700 dark:text-gray-300">1st Choice: <strong>{{ getSelectedProgramName(form.first_choice_program) }}</strong></p>
+                                <p v-if="form.second_choice_program" class="text-sm text-gray-700 dark:text-gray-300">2nd Choice: <strong>{{ getSelectedProgramName(form.second_choice_program) }}</strong></p>
+                                <p v-if="form.third_choice_program" class="text-sm text-gray-700 dark:text-gray-300">3rd Choice: <strong>{{ getSelectedProgramName(form.third_choice_program) }}</strong></p>
                             </div>
                         </div>
 
@@ -515,14 +583,10 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <p class="font-semibold text-red-600 dark:text-red-400">⚠️ No Qualified Programs</p>
-                            <p class="text-sm text-red-500 dark:text-red-400 mt-1">
-                                You need to enter all your grades to see which programs you qualify for.
-                            </p>
+                            <p class="text-sm text-red-500 dark:text-red-400 mt-1">You need to enter all your grades to see which programs you qualify for.</p>
                         </div>
 
-                        <p v-if="errors.programs" class="text-red-500 text-xs mt-2 dark:text-red-300 break-words">
-                            {{ errors.programs }}
-                        </p>
+                        <p v-if="errors.programs" class="text-red-500 text-xs mt-2 dark:text-red-300 break-words">{{ errors.programs }}</p>
                     </div>
                 </div>
 
@@ -551,10 +615,7 @@
 
                 <!-- Success Message -->
                 <transition name="fade">
-                    <div
-                        v-if="successMessage"
-                        class="mt-4 p-4 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg flex items-center"
-                    >
+                    <div v-if="successMessage" class="mt-4 p-4 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -575,13 +636,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from "vue";
-import { usePage, router } from "@inertiajs/vue3";
+import { ref, computed } from "vue";
 import { Head } from "@inertiajs/vue3";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import GradesReviewModal from "@/Components/GradesReviewModal.vue";
+import DynamicSubjectRow from "@/Components/DynamicSubjectRow.vue";
+import { useGradeForm } from "@/Composables/useGradeForm.js";
 
-const page = usePage();
 const props = defineProps({
     grade: Object,
     user: Object,
@@ -592,188 +653,54 @@ const props = defineProps({
     isLocked: { type: Boolean, default: false },
 });
 
-const loading = ref(false);
+// ICT-specific default subjects
+const defaultSubjects = {
+    math: ['g11_general_mathematics', 'g11_statistics_probability'],
+    english: ['g11_oral_communication', 'g11_21st_century_lit', 'g11_academic_professional', 'g11_reading_writing'],
+    science: ['g11_earth_life_science', 'g11_physical_science'],
+};
+
+// Use the shared composable
+const {
+    form,
+    dynamicSubjects,
+    mathAverage,
+    englishAverage,
+    scienceAverage,
+    g12GWA,
+    mathCount,
+    englishCount,
+    scienceCount,
+    addSubject,
+    removeSubject,
+    canAddSubject,
+    qualifiedPrograms,
+    notQualifiedPrograms,
+    programChoiceDisabled,
+    validateGrade,
+    preventInvalidInput,
+    errors,
+    submitForm,
+    retrySubmit,
+    loading,
+    toastMessage,
+    toastType,
+    toastVisible,
+    showRetryOption,
+    dismissToast,
+} = useGradeForm({
+    strand: props.strand || 'ICT',
+    defaultSubjects,
+    grade: props.grade,
+    programs: props.programs,
+    profile: props.profile,
+    isLocked: props.isLocked,
+});
+
 const successMessage = ref("");
-const errors = ref({});
 const confidenceMap = ref({});
 const bannerDismissed = ref(false);
 const showReviewModal = ref(false);
-
-const form = reactive({
-    g11_general_mathematics: null,
-    g11_statistics_probability: null,
-    g11_oral_communication: null,
-    g11_21st_century_lit: null,
-    g11_academic_professional: null,
-    g11_reading_writing: null,
-    g11_earth_life_science: null,
-    g11_physical_science: null,
-    // Grade 12 GWA
-    g12_first_sem_gwa: null,
-    g12_second_sem_gwa: null,
-    // Program choices
-    first_choice_program: "",
-    second_choice_program: "",
-    third_choice_program: "",
-});
-
-// Computed properties for averages
-const mathAverage = computed(() => {
-    const grades = [
-        form.g11_general_mathematics,
-        form.g11_statistics_probability,
-    ];
-    // Check if all required fields have valid values
-    if (grades.some((g) => g === null || g === "" || isNaN(g) || !isFinite(g))) {
-        return null;
-    }
-    const average = grades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / grades.length;
-    return isNaN(average) || !isFinite(average) ? null : average.toFixed(2);
-});
-
-const englishAverage = computed(() => {
-    const grades = [
-        form.g11_oral_communication,
-        form.g11_21st_century_lit,
-        form.g11_academic_professional,
-        form.g11_reading_writing,
-    ];
-    // Check if all required fields have valid values
-    if (grades.some((g) => g === null || g === "" || isNaN(g) || !isFinite(g))) {
-        return null;
-    }
-    const average = grades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / grades.length;
-    return isNaN(average) || !isFinite(average) ? null : average.toFixed(2);
-});
-
-const scienceAverage = computed(() => {
-    const grades = [
-        form.g11_earth_life_science,
-        form.g11_physical_science,
-    ];
-    // Check if all required fields have valid values
-    if (grades.some((g) => g === null || g === "" || isNaN(g) || !isFinite(g))) {
-        return null;
-    }
-    const average = grades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / grades.length;
-    return isNaN(average) || !isFinite(average) ? null : average.toFixed(2);
-});
-
-const g12GWA = computed(() => {
-    const requiredGrades = [form.g12_first_sem_gwa, form.g12_second_sem_gwa];
-    
-    // Check if all required fields have valid values
-    if (requiredGrades.some((g) => g === null || g === "" || isNaN(g) || !isFinite(g))) {
-        return null;
-    }
-
-    const average = requiredGrades.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / requiredGrades.length;
-    return isNaN(average) || !isFinite(average) ? null : average.toFixed(2);
-});
-
-const meetsRequirement = (studentValue, requiredValue) => {
-    if (requiredValue === null || requiredValue === undefined || requiredValue === "") {
-        return true;
-    }
-
-    const required = parseFloat(requiredValue);
-    if (Number.isNaN(required)) {
-        return true;
-    }
-
-    return parseFloat(studentValue) >= required;
-};
-
-// Program qualification logic
-const qualifiedPrograms = computed(() => {
-    if (
-        !props.programs ||
-        !mathAverage.value ||
-        !englishAverage.value ||
-        !scienceAverage.value ||
-        !g12GWA.value
-    ) {
-        return [];
-    }
-
-    return props.programs.filter((program) => {
-        if (!isStrandAllowed(program)) {
-            return false;
-        }
-        const meetsMath = meetsRequirement(mathAverage.value, program.math);
-        const meetsEnglish = meetsRequirement(englishAverage.value, program.english);
-        const meetsScience = meetsRequirement(scienceAverage.value, program.science);
-        const meetsGWA = meetsRequirement(g12GWA.value, program.gwa);
-
-        return meetsMath && meetsEnglish && meetsScience && meetsGWA;
-    });
-});
-
-const notQualifiedPrograms = computed(() => {
-    if (
-        !props.programs ||
-        !mathAverage.value ||
-        !englishAverage.value ||
-        !scienceAverage.value ||
-        !g12GWA.value
-    ) {
-        return props.programs || [];
-    }
-
-    return props.programs.filter((program) => {
-        if (!isStrandAllowed(program)) {
-            return true;
-        }
-        const meetsMath = meetsRequirement(mathAverage.value, program.math);
-        const meetsEnglish = meetsRequirement(englishAverage.value, program.english);
-        const meetsScience = meetsRequirement(scienceAverage.value, program.science);
-        const meetsGWA = meetsRequirement(g12GWA.value, program.gwa);
-
-        return !(meetsMath && meetsEnglish && meetsScience && meetsGWA);
-    });
-});
-
-const currentStrand = computed(() => (props.strand || "ICT").toUpperCase());
-
-const isStrandAllowed = (program) => {
-    const strandValue = (program.strand_names || "").toString().toUpperCase();
-    
-    // If no strand requirement specified, allow all
-    if (!strandValue) {
-        return true;
-    }
-    
-    // If explicitly open to all strands
-    if (strandValue.includes("OPEN TO ALL")) {
-        return true;
-    }
-
-    // Parse the allowed strands
-    const allowed = strandValue
-        .split(/[,/]/) // Split by comma or slash
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((s) => {
-            // Normalize strand names
-            if (s.includes("TECH-VOC") || s.includes("TVL")) return "TVL";
-            if (s.includes("STEM")) return "STEM";
-            if (s.includes("ABM")) return "ABM";
-            if (s.includes("HUMSS")) return "HUMSS";
-            if (s.includes("GAS")) return "GAS";
-            if (s.includes("ICT")) return "ICT";
-            return s;
-        });
-    
-    // Check if current strand is in the allowed list
-    const isAllowed = allowed.includes(currentStrand.value);
-    
-    // If not directly allowed, check if "other with bridging" is mentioned
-    if (!isAllowed && strandValue.includes("OTHER") && strandValue.includes("BRIDGING")) {
-        return true;
-    }
-    
-    return isAllowed;
-};
 
 // Helper function to get selected program name
 const getSelectedProgramName = (programId) => {
@@ -791,256 +718,56 @@ const isLowConfidence = (fieldKey) => {
     return c !== null && c < 0.80;
 };
 
-// Validate grade input to ensure it's between 0 and 100
-const validateGrade = (event) => {
-    const input = event.target;
-    const value = input.value;
-    
-    // Remove any negative signs
-    if (value.includes('-')) {
-        input.value = value.replace(/-/g, '');
-        return;
-    }
-    
-    // Parse the current value
-    const numValue = parseFloat(value);
-    
-    // If value exceeds 100, cap it at 100
-    if (!isNaN(numValue) && numValue > 100) {
-        input.value = '100';
-    }
-    
-    // If value is less than 0, set to empty
-    if (!isNaN(numValue) && numValue < 0) {
-        input.value = '';
-    }
-};
-
-const preventInvalidInput = (event) => {
-    const input = event.target;
-    const key = event.key;
-    const currentValue = input.value;
-    
-    // Prevent minus sign
-    if (key === '-') {
-        event.preventDefault();
-        return;
-    }
-    
-    // Allow control keys (backspace, delete, arrow keys, tab, etc.)
-    if (
-        key === 'Backspace' || 
-        key === 'Delete' || 
-        key === 'Tab' || 
-        key === 'ArrowLeft' || 
-        key === 'ArrowRight' ||
-        key === 'ArrowUp' ||
-        key === 'ArrowDown' ||
-        key === 'Home' ||
-        key === 'End' ||
-        (event.ctrlKey && (key === 'a' || key === 'c' || key === 'v' || key === 'x'))
-    ) {
-        return;
-    }
-    
-    // Only allow numbers and decimal point
-    if (!/^\d$/.test(key) && key !== '.') {
-        event.preventDefault();
-        return;
-    }
-    
-    // Prevent multiple decimal points
-    if (key === '.' && currentValue.includes('.')) {
-        event.preventDefault();
-        return;
-    }
-    
-    // Get the future value after this key press
-    const selectionStart = input.selectionStart;
-    const selectionEnd = input.selectionEnd;
-    const futureValue = 
-        currentValue.substring(0, selectionStart) + 
-        key + 
-        currentValue.substring(selectionEnd);
-    
-    // Check if future value would exceed 100
-    const futureNum = parseFloat(futureValue);
-    if (!isNaN(futureNum) && futureNum > 100) {
-        event.preventDefault();
-        return;
-    }
-};
-
-const G11_MAP = {
-    'general mathematics': 'g11_general_mathematics',
-    'statistics and probability': 'g11_statistics_probability',
-    'oral communication': 'g11_oral_communication',
-    'oral communication in context': 'g11_oral_communication',
-    '21st century literature': 'g11_21st_century_lit',
-    '21st century literature from the philippines and the world': 'g11_21st_century_lit',
-    'english for academic and professional purposes': 'g11_academic_professional',
-    'english for academic purposes': 'g11_academic_professional',
-    'eapp': 'g11_academic_professional',
-    'reading and writing': 'g11_reading_writing',
-    'reading and writing skills': 'g11_reading_writing',
-    'earth and life science': 'g11_earth_life_science',
-    'physical science': 'g11_physical_science',
-};
-
-const applyAutofill = (result) => {
-    if (!result || !result.subjects) return;
-    const newConfidenceMap = {};
-    
-    let mathIdx = 1;
-    let scienceIdx = 1;
-    let englishIdx = 1;
-    
-    for (const group of ['math', 'science', 'english', 'others']) {
-        if (!result.subjects[group]) continue;
-        for (const [subjectKey, gradeVal] of Object.entries(result.subjects[group])) {
-            const normalizedKey = subjectKey.toLowerCase().trim();
-            newConfidenceMap[normalizedKey] = 1.0; 
-            const numericGrade = parseFloat(gradeVal);
-            if (isNaN(numericGrade)) continue;
-
-            let matched = false;
-
-            const g11FormKey = G11_MAP[normalizedKey];
-            if (g11FormKey && g11FormKey in form) {
-                form[g11FormKey] = numericGrade;
-                matched = true;
-            }        }
-    }
-    confidenceMap.value = newConfidenceMap;
-};
-
-onMounted(() => {
-    // Load saved program choices from profile
-    if (props.profile) {
-        if (props.profile.first_choice_program) {
-            form.first_choice_program = props.profile.first_choice_program;
-        }
-        if (props.profile.second_choice_program) {
-            form.second_choice_program = props.profile.second_choice_program;
-        }
-        if (props.profile.third_choice_program) {
-            form.third_choice_program = props.profile.third_choice_program;
-        }
-    }
-    
-    // Load saved grades from database
-    if (props.grade && props.grade.id) {
-        // Load G12 GWA semesters
-        if (props.grade.g12_first_sem) {
-            form.g12_first_sem_gwa = props.grade.g12_first_sem;
-        }
-        if (props.grade.g12_second_sem) {
-            form.g12_second_sem_gwa = props.grade.g12_second_sem;
-        }
-        // Load individual G11 Math grades
-        if (props.grade.g11_general_mathematics) {
-            form.g11_general_mathematics = props.grade.g11_general_mathematics;
-        }
-        if (props.grade.g11_statistics_probability) {
-            form.g11_statistics_probability = props.grade.g11_statistics_probability;
-        }
-        // Load individual G11 English grades
-        if (props.grade.g11_oral_communication) {
-            form.g11_oral_communication = props.grade.g11_oral_communication;
-        }
-        if (props.grade.g11_21st_century_lit) {
-            form.g11_21st_century_lit = props.grade.g11_21st_century_lit;
-        }
-        if (props.grade.g11_academic_professional) {
-            form.g11_academic_professional = props.grade.g11_academic_professional;
-        }
-        if (props.grade.g11_reading_writing) {
-            form.g11_reading_writing = props.grade.g11_reading_writing;
-        }
-        // Load individual G11 Science grades
-        if (props.grade.g11_earth_life_science) {
-            form.g11_earth_life_science = props.grade.g11_earth_life_science;
-        }
-        if (props.grade.g11_physical_science) {
-            form.g11_physical_science = props.grade.g11_physical_science;
-        }
-    }
-    
-    // Apply autofill from extraction if available (takes precedence)
-    if (props.extractionResult) {
-        applyAutofill(props.extractionResult);
-    }
-});
-
-// Computed property for review data
-const reviewData = computed(() => ({
-    // G11 Math
-    g11_general_mathematics: form.g11_general_mathematics,
-    g11_statistics_probability: form.g11_statistics_probability,
-    // G11 English
-    g11_oral_communication: form.g11_oral_communication,
-    g11_21st_century_lit: form.g11_21st_century_lit,
-    g11_academic_professional: form.g11_academic_professional,
-    g11_reading_writing: form.g11_reading_writing,
-    // G11 Science
-    g11_earth_life_science: form.g11_earth_life_science,
-    g11_physical_science: form.g11_physical_science,
-    // Grade 12 GWA
-    g12_first_sem_gwa: form.g12_first_sem_gwa,
-    g12_second_sem_gwa: form.g12_second_sem_gwa,
-    // Program choices
-    first_choice_program: getSelectedProgramName(form.first_choice_program),
-    second_choice_program: getSelectedProgramName(form.second_choice_program),
-    third_choice_program: getSelectedProgramName(form.third_choice_program),
-    // Averages
-    math_average: mathAverage.value,
-    english_average: englishAverage.value,
-    science_average: scienceAverage.value,
-    g12_gwa: g12GWA.value,
-}));
-
 // Computed property for review modal sections
 const reviewSections = computed(() => [
     {
         title: 'Grade 11 Math Subjects',
         items: [
-            { label: 'General Mathematics', value: reviewData.value.g11_general_mathematics },
-            { label: 'Statistics and Probability', value: reviewData.value.g11_statistics_probability },
+            { label: 'General Mathematics', value: form.g11_general_mathematics },
+            { label: 'Statistics and Probability', value: form.g11_statistics_probability },
         ],
     },
     {
         title: 'Grade 11 English Subjects',
         items: [
-            { label: 'Oral Communication', value: reviewData.value.g11_oral_communication },
-            { label: '21st Century Literature', value: reviewData.value.g11_21st_century_lit },
-            { label: 'English for Academic Purposes', value: reviewData.value.g11_academic_professional },
-            { label: 'Reading and Writing', value: reviewData.value.g11_reading_writing },
+            { label: 'Oral Communication', value: form.g11_oral_communication },
+            { label: '21st Century Literature', value: form.g11_21st_century_lit },
+            { label: 'English for Academic Purposes', value: form.g11_academic_professional },
+            { label: 'Reading and Writing', value: form.g11_reading_writing },
         ],
     },
     {
         title: 'Grade 11 Science Subjects',
         items: [
-            { label: 'Earth and Life Science', value: reviewData.value.g11_earth_life_science },
-            { label: 'Physical Science', value: reviewData.value.g11_physical_science },
+            { label: 'Earth and Life Science', value: form.g11_earth_life_science },
+            { label: 'Physical Science', value: form.g11_physical_science },
         ],
     },
     {
         title: 'Grade 12 GWA',
         items: [
-            { label: '1st Semester', value: reviewData.value.g12_first_sem_gwa },
-            { label: '2nd Semester', value: reviewData.value.g12_second_sem_gwa },
+            { label: '1st Semester', value: form.g12_first_sem_gwa },
+            { label: '2nd Semester', value: form.g12_second_sem_gwa },
+        ],
+    },
+    {
+        title: 'Additional Subjects',
+        items: [
+            ...dynamicSubjects.value.math.filter(s => s.name && s.grade != null).map(s => ({ label: `Math: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.english.filter(s => s.name && s.grade != null).map(s => ({ label: `English: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.science.filter(s => s.name && s.grade != null).map(s => ({ label: `Science: ${s.name}`, value: s.grade })),
         ],
     },
     {
         title: 'Program Choices and Averages',
         items: [
-            { label: 'First Choice Program *', value: reviewData.value.first_choice_program || '—' },
-            { label: 'Second Choice Program *', value: reviewData.value.second_choice_program || '—' },
-            { label: 'Third Choice Program *', value: reviewData.value.third_choice_program || '—' },
-            { label: 'Math Average', value: reviewData.value.math_average },
-            { label: 'English Average', value: reviewData.value.english_average },
-            { label: 'Science Average', value: reviewData.value.science_average },
-            { label: 'G12 GWA', value: reviewData.value.g12_gwa },
+            { label: 'First Choice Program *', value: getSelectedProgramName(form.first_choice_program) || '—' },
+            { label: 'Second Choice Program *', value: getSelectedProgramName(form.second_choice_program) || '—' },
+            { label: 'Third Choice Program *', value: getSelectedProgramName(form.third_choice_program) || '—' },
+            { label: 'Math Average', value: mathAverage.value },
+            { label: 'English Average', value: englishAverage.value },
+            { label: 'Science Average', value: scienceAverage.value },
+            { label: 'G12 GWA', value: g12GWA.value },
         ],
     },
 ]);
@@ -1059,114 +786,6 @@ const closeReviewModal = () => {
 const confirmSaveGrades = () => {
     showReviewModal.value = false;
     submitForm();
-};
-
-const submitForm = async () => {
-    loading.value = true;
-    errors.value = {};
-
-    // Validate required grades
-    if (
-        !mathAverage.value ||
-        !englishAverage.value ||
-        !scienceAverage.value ||
-        !g12GWA.value
-    ) {
-        errors.value = {
-            programs:
-                "Please complete all subject grades and semester GWAs before submitting",
-        };
-        loading.value = false;
-        return;
-    }
-
-    // Validate that program choices are selected
-    // Dynamic validation based on qualified programs count
-    const qualifiedCount = qualifiedPrograms.value.length;
-    
-    // Validate first choice (always required)
-    if (!form.first_choice_program) {
-        errors.value = {
-            programs: "Please select your first choice program",
-        };
-        loading.value = false;
-        return;
-    }
-
-    // Validate second choice (required if 2+ qualified programs)
-    if (qualifiedCount >= 2 && !form.second_choice_program) {
-        errors.value = {
-            programs: "Please select your second choice program",
-        };
-        loading.value = false;
-        return;
-    }
-
-    // Validate third choice (required if 3+ qualified programs)
-    if (qualifiedCount >= 3 && !form.third_choice_program) {
-        errors.value = {
-            programs: "Please select your third choice program",
-        };
-        loading.value = false;
-        return;
-    }
-
-    // Validate that choices are different
-    const choices = [form.first_choice_program, form.second_choice_program, form.third_choice_program].filter(Boolean);
-    const uniqueChoices = new Set(choices);
-    if (choices.length !== uniqueChoices.size) {
-        errors.value = {
-            programs: "All program choices must be different",
-        };
-        loading.value = false;
-        return;
-    }
-
-    // Prepare data with computed averages AND individual grades
-    const payload = {
-        mathematics: parseFloat(mathAverage.value),
-        english: parseFloat(englishAverage.value),
-        science: parseFloat(scienceAverage.value),
-        g12_first_sem: parseFloat(form.g12_first_sem_gwa),
-        g12_second_sem: parseFloat(form.g12_second_sem_gwa),
-        // Individual G11 Math grades
-        g11_general_mathematics: parseFloat(form.g11_general_mathematics),
-        g11_statistics_probability: parseFloat(form.g11_statistics_probability),
-        // Individual G11 English grades
-        g11_oral_communication: parseFloat(form.g11_oral_communication),
-        g11_21st_century_lit: parseFloat(form.g11_21st_century_lit),
-        g11_academic_professional: parseFloat(form.g11_academic_professional),
-        g11_reading_writing: parseFloat(form.g11_reading_writing),
-        // Individual G11 Science grades
-        g11_earth_life_science: parseFloat(form.g11_earth_life_science),
-        g11_physical_science: parseFloat(form.g11_physical_science),
-        // Program choices
-        first_choice_program: form.first_choice_program,
-        second_choice_program: form.second_choice_program || null,
-        third_choice_program: form.third_choice_program || null,
-        qualified_programs_count: qualifiedCount,
-    };
-
-    router.post("/grades/ict", payload, {
-        onSuccess: (response) => {
-            // Redirect to dashboard with success message as query parameter
-            router.visit("/applicant-dashboard?success=grades_saved", {
-                preserveState: false,
-                preserveScroll: false,
-            });
-        },
-        onError: (errorResponse) => {
-            successMessage.value = ""; // Clear success message on error
-            errors.value = errorResponse;
-            const firstError = Object.values(errorResponse)[0];
-            alert(
-                "❌ " +
-                    (firstError ||
-                        "Failed to save grades. Please check the form.")
-            );
-            loading.value = false;
-        },
-    });
 };
 </script>
 

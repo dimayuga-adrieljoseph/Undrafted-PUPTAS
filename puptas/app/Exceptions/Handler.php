@@ -126,29 +126,43 @@ class Handler extends ExceptionHandler
         return parent::render($request, $e);
     }
 
+    private static bool $isLogging = false;
+
     /**
      * Write a structured log entry for the given exception and request.
      */
     private function logStructured(Throwable $e, Request $request): void
     {
-        // Auth facade may not be available if the app container isn't fully booted
-        // (e.g. during a ParseError), so we guard against that here.
-        try {
-            $userId = optional(Auth::user())->id;
-        } catch (Throwable) {
-            $userId = null;
+        if (self::$isLogging) {
+            return;
         }
 
-        Log::error('exception', [
-            'message'      => $e->getMessage(),
-            'exception'    => get_class($e),
-            'trace'        => $e->getTraceAsString(),
-            'timestamp'    => now()->utc()->toIso8601String(),
-            'method'       => $request->method(),
-            'endpoint'     => $request->path(),
-            'user_id'      => $userId,
-            'request_data' => $this->sanitize($request->all()),
-        ]);
+        self::$isLogging = true;
+
+        try {
+            // Auth facade may not be available if the app container isn't fully booted
+            // (e.g. during a ParseError), so we guard against that here.
+            try {
+                $userId = optional(Auth::user())->id;
+            } catch (Throwable) {
+                $userId = null;
+            }
+
+            Log::error('exception', [
+                'message'      => $e->getMessage(),
+                'exception'    => get_class($e),
+                'trace'        => $e->getTraceAsString(),
+                'timestamp'    => now()->utc()->toIso8601String(),
+                'method'       => $request->method(),
+                'endpoint'     => $request->path(),
+                'user_id'      => $userId,
+                'request_data' => $this->sanitize($request->all()),
+            ]);
+        } catch (Throwable) {
+            // Suppress secondary exceptions during logging to prevent infinite loops
+        } finally {
+            self::$isLogging = false;
+        }
     }
 
     /**
