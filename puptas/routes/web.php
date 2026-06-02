@@ -287,7 +287,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/grades/tvl', [GradesController::class, 'showTvlGradeForm'])->name('grades.tvl.form');
     Route::post('/grades/tvl', [GradesController::class, 'storeTvlGrades'])->name('grades.tvl.store');
 
-    // Unified grade store endpoint (dynamic grade input)
+    // Unified grade store — handles all strands including dynamic/additional subjects.
+    // The per-strand POST routes above are kept for backward compatibility but the
+    // grade input composable (useGradeForm.js) posts here to save dynamic_subjects.
     Route::post('/grades/store', [GradesController::class, 'storeGrades'])->name('grades.store');
 });
 
