@@ -360,6 +360,13 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
             showToast('Grades cannot be negative.', 'error');
         }
 
+        // Limit to 2 decimal places
+        const dotIndex = value.indexOf('.');
+        if (dotIndex !== -1 && value.length - dotIndex - 1 > 2) {
+            value = value.substring(0, dotIndex + 3);
+            changed = true;
+        }
+
         if (changed) {
             input.value = value;
             input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -409,7 +416,7 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
             return;
         }
 
-        // Check if future value would exceed 100
+        // Check if future value would exceed 100 or exceed 2 decimal places
         const selectionStart = input.selectionStart;
         const selectionEnd = input.selectionEnd;
         const futureValue =
@@ -417,10 +424,19 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
             key +
             currentValue.substring(selectionEnd);
 
-        const futureNum = parseFloat(futureValue);
-        if (!isNaN(futureNum) && futureNum > 100) {
+        // Block if more than 2 decimal places
+        const dotIndex = futureValue.indexOf('.');
+        if (dotIndex !== -1 && futureValue.length - dotIndex - 1 > 2) {
             event.preventDefault();
             return;
+        }
+
+        if (!futureValue.includes('.')) {
+            const futureNum = parseFloat(futureValue);
+            if (!isNaN(futureNum) && futureNum > 100) {
+                event.preventDefault();
+                return;
+            }
         }
     }
 
