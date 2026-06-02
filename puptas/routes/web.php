@@ -268,12 +268,12 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::post('/test-passers/upload', [TestPasserController::class, 'upload'])->name('upload');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
     Route::put('/test-passers/{test_passer}', [TestPasserController::class, 'update'])->name('test-passers.update');
     Route::post('/test-passers-store', [TestPasserController::class, 'store']);
     Route::delete('/test-passers/{test_passer}', [TestPasserController::class, 'destroy'])->name('test-passers.destroy');
     Route::post('/test-passers/bulk-destroy', [TestPasserController::class, 'bulkDestroy'])->name('test-passers.bulk-destroy');
-    Route::post('/test-passers/bulk-enroll', [TestPasserController::class, 'bulkEnroll'])->middleware('role:2,7')->name('test-passers.bulk-enroll');
+    Route::post('/test-passers/bulk-enroll', [TestPasserController::class, 'bulkEnroll'])->name('test-passers.bulk-enroll');
 });
 
 Route::middleware(['auth'])->group(function () {

@@ -149,8 +149,8 @@ function collectProfileChanges() {
         let oldDisplay = formatDisplayValue(key, oldVal);
         let newDisplay = formatDisplayValue(key, newVal);
 
-        const oldNorm = Array.isArray(oldVal) ? oldVal.sort().join(',') : String(oldVal ?? '');
-        const newNorm = Array.isArray(newVal) ? newVal.sort().join(',') : String(newVal ?? '');
+        const oldNorm = Array.isArray(oldVal) ? [...oldVal].sort().join(',') : String(oldVal ?? '');
+        const newNorm = Array.isArray(newVal) ? [...newVal].sort().join(',') : String(newVal ?? '');
 
         if (oldNorm !== newNorm) {
             changes.push({ section: 'Profile', field: profileFieldLabels[key] || key, oldValue: oldDisplay, newValue: newDisplay });

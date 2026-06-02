@@ -291,16 +291,10 @@ class UserController extends Controller
                     'extension_name' => $request->extension_name,
                     'email' => $request->email,
                 ];
-                // Save academic fields if provided
-                if ($request->filled('strand')) {
-                    $profileData['strand'] = $request->strand;
-                }
-                if ($request->filled('school')) {
-                    $profileData['school'] = $request->school;
-                }
-                if ($request->filled('date_graduated')) {
-                    $profileData['date_graduated'] = $request->date_graduated;
-                }
+                // Save academic fields (allow clearing via empty string → null)
+                $profileData['strand'] = $request->has('strand') ? ($request->strand !== '' ? $request->strand : null) : ($applicantProfile->strand ?? null);
+                $profileData['school'] = $request->has('school') ? ($request->school !== '' ? $request->school : null) : ($applicantProfile->school ?? null);
+                $profileData['date_graduated'] = $request->has('date_graduated') ? ($request->date_graduated !== '' ? $request->date_graduated : null) : ($applicantProfile->date_graduated ?? null);
                 $applicantProfile->update($profileData);
             }
 
@@ -315,15 +309,15 @@ class UserController extends Controller
                     'middle_name' => $request->middlename,
                     'email'       => $request->email,
                 ];
-                // Sync academic fields to test passer
-                if ($request->filled('strand')) {
-                    $tpData['strand'] = $request->strand;
+                // Sync academic fields to test passer (allow clearing via empty string → null)
+                if ($request->has('strand')) {
+                    $tpData['strand'] = $request->strand !== '' ? $request->strand : null;
                 }
-                if ($request->filled('school')) {
-                    $tpData['shs_school'] = $request->school;
+                if ($request->has('school')) {
+                    $tpData['shs_school'] = $request->school !== '' ? $request->school : null;
                 }
-                if ($request->filled('date_graduated')) {
-                    $tpData['year_graduated'] = substr($request->date_graduated, 0, 4);
+                if ($request->has('date_graduated')) {
+                    $tpData['year_graduated'] = $request->date_graduated !== '' ? substr($request->date_graduated, 0, 4) : null;
                 }
                 $testPasser->update($tpData);
             }
