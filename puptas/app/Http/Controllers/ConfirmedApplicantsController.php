@@ -54,6 +54,7 @@ class ConfirmedApplicantsController extends Controller
             'grades',
             'testPasser.passerStatus',
             'testPasser.sarGenerations',
+            'graduateTypes',
         ])
             ->whereHas('currentApplication.processes', function ($q) {
                 $q->where('stage', 'evaluator')
@@ -98,6 +99,7 @@ class ConfirmedApplicantsController extends Controller
                             ->where('email_sent_successfully', true)
                             ->isNotEmpty()
                         : false,
+                    'graduate_type' => $applicant->graduateTypes->first()?->label,
                 ];
             });
 

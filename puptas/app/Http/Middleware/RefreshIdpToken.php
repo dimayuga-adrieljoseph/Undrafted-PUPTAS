@@ -21,13 +21,18 @@ class RefreshIdpToken
             return $next($request);
         }
 
+        // Skip IDP session verification/refresh entirely if Redis client classes are not available
+        if (!class_exists('Redis') && !class_exists('Predis\Client')) {
+            return $next($request);
+        }
+
         $user = Auth::user();
 
-        // If Redis is not available locally, skip token refresh gracefully
         try {
             $tokenData = \Illuminate\Support\Facades\Cache::store('redis')->get("idp_tokens:user_{$user->id}");
         } catch (\Throwable $e) {
-            Log::debug('Redis unavailable, skipping IDP token refresh: ' . $e->getMessage());
+            // Redis unavailable locally (common in dev environments) - skip silently and proceed
+            Log::debug('Redis connection failed in RefreshIdpToken. Skipping token refresh: ' . $e->getMessage());
             return $next($request);
         }
 

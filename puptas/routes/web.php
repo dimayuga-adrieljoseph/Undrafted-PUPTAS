@@ -44,6 +44,10 @@ Route::get('/', function () {
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->name('idp.redirect');
 
+Route::get('/auth/idp/error', function () {
+    return Inertia::render('Auth/IdpError');
+})->name('idp.error');
+
 Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
     ->name('idp.callback');
 
@@ -97,8 +101,12 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
 
 Route::post('/check-reference-number', function (\Illuminate\Http\Request $request) {
     $request->validate(['reference_number' => 'required|string|max:100']);
-    $exists = \App\Models\TestPasser::where('reference_number', trim($request->reference_number))->exists();
-    return response()->json(['valid' => $exists]);
+    $testPasser = \App\Models\TestPasser::where('reference_number', trim($request->reference_number))->first();
+    
+    // Valid if it exists and status is not 3 (Unqualified) or 4 (Waitlisted Below Cutoff)
+    $valid = $testPasser && !in_array($testPasser->passer_status_id, [3, 4]);
+    
+    return response()->json(['valid' => $valid]);
 })->middleware('guest');
 
 // Email Link Redirects — hosted on our domain so email link URLs match the sending domain
@@ -262,12 +270,12 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::post('/test-passers/upload', [TestPasserController::class, 'upload'])->name('upload');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
     Route::put('/test-passers/{test_passer}', [TestPasserController::class, 'update'])->name('test-passers.update');
     Route::post('/test-passers-store', [TestPasserController::class, 'store']);
     Route::delete('/test-passers/{test_passer}', [TestPasserController::class, 'destroy'])->name('test-passers.destroy');
     Route::post('/test-passers/bulk-destroy', [TestPasserController::class, 'bulkDestroy'])->name('test-passers.bulk-destroy');
-    Route::post('/test-passers/bulk-enroll', [TestPasserController::class, 'bulkEnroll'])->middleware('role:2,7')->name('test-passers.bulk-enroll');
+    Route::post('/test-passers/bulk-enroll', [TestPasserController::class, 'bulkEnroll'])->name('test-passers.bulk-enroll');
 });
 
 Route::middleware(['auth'])->group(function () {

@@ -52,12 +52,12 @@ const initialFilters = computed(() => page.props.filters || {});
 // State
 const selectedLog = ref(null);
 const showModal = ref(false);
-const searchQuery = ref("");
 const filterAction = ref("");
 const serverFilters = ref({
     user_id: initialFilters.value.user_id ?? "",
     date: initialFilters.value.date ?? "",
     log_type: initialFilters.value.log_type ?? "",
+    search: initialFilters.value.search ?? "",
 });
 
 // Auto-polling state
@@ -85,6 +85,7 @@ const buildServerParams = () => {
     if (serverFilters.value.user_id) params.user_id = serverFilters.value.user_id;
     if (serverFilters.value.date) params.date = serverFilters.value.date;
     if (serverFilters.value.log_type) params.log_type = serverFilters.value.log_type;
+    if (serverFilters.value.search) params.search = serverFilters.value.search;
 
     return params;
 };
@@ -161,17 +162,6 @@ watch(
 const filteredLogs = computed(() => {
     let result = logs.value;
 
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase();
-        result = result.filter(
-            (log) =>
-                log.description?.toLowerCase().includes(query) ||
-                log.module_name?.toLowerCase().includes(query) ||
-                log.username?.toLowerCase().includes(query) ||
-                log.user_role?.toLowerCase().includes(query)
-        );
-    }
-
     if (filterAction.value) {
         result = result.filter((log) => log.action_type === filterAction.value);
     }
@@ -206,6 +196,7 @@ const clearServerFilters = () => {
         user_id: "",
         date: "",
         log_type: "",
+        search: "",
     };
 
     applyServerFilters();
@@ -378,9 +369,10 @@ const getPageUrl = (pageNum) => {
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Logs</label>
                             <div class="relative">
                                 <input
-                                    v-model="searchQuery"
+                                    v-model="serverFilters.search"
+                                    @keyup.enter="applyServerFilters"
                                     type="text"
-                                    placeholder="Search by description, module, user..."
+                                    placeholder="Search by email, description, module..."
                                     class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-600 focus:border-transparent"
                                 />
                                 <FontAwesomeIcon icon="search" class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" />
@@ -505,37 +497,52 @@ const getPageUrl = (pageNum) => {
     </div>
 
     <!-- Pagination -->
-    <div v-if="pagination.last_page > 1" class="flex flex-col sm:flex-row justify-between items-center gap-4 px-2">
-        <div class="text-sm text-gray-500 dark:text-gray-400">
-            Showing <span class="font-medium text-gray-700 dark:text-gray-300">{{ pagination.from || 0 }}</span> to 
-            <span class="font-medium text-gray-700 dark:text-gray-300">{{ pagination.to || 0 }}</span> of 
-            <span class="font-medium text-gray-700 dark:text-gray-300">{{ pagination.total }}</span> entries
-        </div>
-        
-        <div class="flex items-center gap-2">
-            <a
-                v-if="pagination.current_page > 1"
-                :href="getPageUrl(pagination.current_page - 1)"
-                class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition flex items-center gap-1"
-            >
-                <FontAwesomeIcon icon="chevron-left" class="w-3 h-3" />
-                <span>Previous</span>
-            </a>
-            
-            <div class="flex items-center gap-1">
-                <span class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium dark:text-gray-900">{{ pagination.current_page }}</span>
-                <span class="text-gray-400 dark:text-gray-500 text-sm">/</span>
-                <span class="px-3 py-1.5 text-gray-600 dark:text-gray-300 text-sm">{{ pagination.last_page }}</span>
+    <div v-if="pagination.last_page > 1" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-700 dark:text-gray-400">
+                <span v-if="!pagination.total || pagination.total === 0">
+                    Showing 0 to 0 of 0 results
+                </span>
+                <span v-else>
+                    Showing {{ pagination.from || 0 }} 
+                    to {{ pagination.to || 0 }} 
+                    of {{ pagination.total }} results
+                </span>
             </div>
-            
-            <a
-                v-if="pagination.current_page < pagination.last_page"
-                :href="getPageUrl(pagination.current_page + 1)"
-                class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition flex items-center gap-1"
-            >
-                <span>Next</span>
-                <FontAwesomeIcon icon="chevron-right" class="w-3 h-3" />
-            </a>
+            <div class="flex items-center space-x-2">
+                <button
+                    :disabled="pagination.current_page === 1"
+                    @click.prevent="router.visit(getPageUrl(pagination.current_page - 1))"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                >
+                    <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Previous
+                </button>
+                <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span>Page</span>
+                    <input
+                        type="number"
+                        :value="pagination.current_page"
+                        min="1"
+                        :max="pagination.last_page || 1"
+                        @change="router.visit(getPageUrl(Math.max(1, Math.min($event.target.value, pagination.last_page || 1))))"
+                        class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                    />
+                    <span>of <span class="font-semibold">{{ pagination.last_page || 1 }}</span></span>
+                </div>
+                <button
+                    :disabled="pagination.current_page === pagination.last_page"
+                    @click.prevent="router.visit(getPageUrl(pagination.current_page + 1))"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                >
+                    Next
+                    <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
         </div>

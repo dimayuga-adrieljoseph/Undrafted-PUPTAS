@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, nextTick } from "vue";
 const axios = window.axios;
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DeleteModal from "@/Components/DeleteModal.vue";
@@ -118,11 +118,14 @@ watch([searchQuery, filterStrand, sortKey, sortAsc], () => {
   currentPage.value = 1;
 });
 
-const startEdit = (program) => {
+const startEdit = async (program) => {
   editingProgram.value = {
     ...program,
     strand_ids: program.strands ? program.strands.map(s => s.id) : []
   };
+  await nextTick();
+  const el = document.getElementById('edit-row-' + program.id) || document.getElementById('edit-row-mobile-' + program.id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 
 const saveEdit = async () => {
@@ -289,72 +292,7 @@ const toggleSortOrder = () => { sortAsc.value = !sortAsc.value; };
 
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
 
-        <!-- Edit Panel (shared, shown above table/cards when editing) -->
-        <div v-if="editingProgram" class="p-4 md:p-6 bg-blue-50 dark:bg-blue-900/10 border-b border-blue-200 dark:border-blue-800">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Editing: {{ editingProgram.name }}</h3>
-            <div class="flex gap-2 flex-shrink-0">
-              <button @click="saveEdit" class="flex-1 sm:flex-none px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                Save
-              </button>
-              <button @click="cancelEdit" class="flex-1 sm:flex-none px-3 py-2 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Cancel
-              </button>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="space-y-3">
-              <div>
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Program Name</label>
-                <input v-model="editingProgram.name" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Program Code</label>
-                <input v-model="editingProgram.code" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Available Slots</label>
-                <input v-model="editingProgram.slots" type="number" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Eligible Strands</label>
-                <div class="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-                  <button v-for="strand in availableStrands" :key="strand.id" type="button" @click="toggleStrand(strand.id)"
-                    :class="['px-3 py-1 text-xs rounded-full transition flex-shrink-0', editingProgram.strand_ids.includes(strand.id) ? 'bg-[#9E122C] text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500']">
-                    {{ strand.code }}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Minimum Requirements</label>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Mathematics</label>
-                  <input v-model="editingProgram.math" type="number" placeholder="Score" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
-                </div>
-                <div>
-                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Science</label>
-                  <input v-model="editingProgram.science" type="number" placeholder="Score" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
-                </div>
-                <div>
-                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">English</label>
-                  <input v-model="editingProgram.english" type="number" placeholder="Score" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
-                </div>
-                <div>
-                  <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">GWA</label>
-                  <input v-model="editingProgram.gwa" type="number" step="0.01" placeholder="GWA" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         <!-- Desktop Table -->
         <div class="hidden md:block overflow-x-auto">
@@ -372,90 +310,232 @@ const toggleSortOrder = () => { sortAsc.value = !sortAsc.value; };
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-              <tr v-for="program in paginatedPrograms" :key="program.id"
-                :class="['transition', editingProgram?.id === program.id ? 'bg-blue-50/50 dark:bg-blue-900/5' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50']">
-                <td class="px-6 py-4">
-                  <input type="checkbox" v-model="selectedPrograms" :value="program.id" class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600" />
-                </td>
-                <td class="px-6 py-4">
-                  <p class="font-semibold text-gray-900 dark:text-white">{{ program.name }}</p>
-                </td>
-                <td class="px-6 py-4 font-mono text-[#9E122C] dark:text-red-400 font-semibold">{{ program.code }}</td>
-                <td class="px-6 py-4">
-                  <div class="flex flex-wrap gap-1">
-                    <span v-for="strand in program.strands" :key="strand.id"
-                      class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs font-medium">
-                      {{ strand.code }}
+              <template v-for="program in paginatedPrograms" :key="program.id">
+                <tr :id="'edit-row-' + program.id" :class="['transition', editingProgram?.id === program.id ? 'bg-blue-50/50 dark:bg-blue-900/5' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50']">
+                  <td class="px-6 py-4">
+                    <input type="checkbox" v-model="selectedPrograms" :value="program.id" class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <p class="font-semibold text-gray-900 dark:text-white">{{ program.name }}</p>
+                  </td>
+                  <td class="px-6 py-4 font-mono text-[#9E122C] dark:text-red-400 font-semibold">{{ program.code }}</td>
+                  <td class="px-6 py-4">
+                    <div class="flex flex-wrap gap-1">
+                      <span v-for="strand in program.strands" :key="strand.id"
+                        class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs font-medium">
+                        {{ strand.code }}
+                      </span>
+                      <span v-if="!program.strands || program.strands.length === 0"
+                        class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full text-xs">
+                        No Strand
+                      </span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                      {{ program.slots || 0 }}
                     </span>
-                    <span v-if="!program.strands || program.strands.length === 0"
-                      class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full text-xs">
-                      No Strand
-                    </span>
-                  </div>
-                </td>
-                <td class="px-6 py-4 text-center">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                    {{ program.slots || 0 }}
-                  </span>
-                </td>
-                <td class="px-6 py-4">
-                  <div class="flex justify-end gap-1">
-                    <button @click="startEdit(program)" class="p-2 text-gray-400 hover:text-[#9E122C] dark:text-gray-400 dark:hover:text-[#9E122C] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" title="Edit">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button @click="openDeleteModal(program.id)" class="p-2 text-gray-400 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" title="Delete">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="flex justify-end gap-1">
+                      <button @click="startEdit(program)" class="p-2 text-gray-400 hover:text-[#9E122C] dark:text-gray-400 dark:hover:text-[#9E122C] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" title="Edit">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button @click="openDeleteModal(program.id)" class="p-2 text-gray-400 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition" title="Delete">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="editingProgram?.id === program.id">
+                  <td colspan="6" class="p-0 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <transition name="dropdown" appear>
+                      <div class="p-4 md:p-6 bg-blue-50 dark:bg-blue-900/20 overflow-hidden relative shadow-inner border-t-2 border-[#9E122C]">
+                      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Editing: {{ editingProgram.name }}</h3>
+                        <div class="flex gap-2 flex-shrink-0">
+                          <button @click="saveEdit" class="flex-1 sm:flex-none px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Save
+                          </button>
+                          <button @click="cancelEdit" class="flex-1 sm:flex-none px-3 py-2 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-3">
+                          <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Program Name</label>
+                            <input v-model="editingProgram.name" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                          </div>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Program Code</label>
+                            <input v-model="editingProgram.code" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                          </div>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Available Slots</label>
+                            <input v-model="editingProgram.slots" type="number" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                          </div>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Eligible Strands</label>
+                            <div class="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                              <button v-for="strand in availableStrands" :key="strand.id" type="button" @click="toggleStrand(strand.id)"
+                                :class="['px-3 py-1 text-xs rounded-full transition flex-shrink-0', editingProgram.strand_ids.includes(strand.id) ? 'bg-[#9E122C] text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500']">
+                                {{ strand.code }}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Minimum Requirements</label>
+                          <div class="grid grid-cols-2 gap-3">
+                            <div>
+                              <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Mathematics</label>
+                              <input v-model="editingProgram.math" type="number" placeholder="Score" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                            </div>
+                            <div>
+                              <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Science</label>
+                              <input v-model="editingProgram.science" type="number" placeholder="Score" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                            </div>
+                            <div>
+                              <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">English</label>
+                              <input v-model="editingProgram.english" type="number" placeholder="Score" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                            </div>
+                            <div>
+                              <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">GWA</label>
+                              <input v-model="editingProgram.gwa" type="number" step="0.01" placeholder="GWA" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      </div>
+                    </transition>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
 
         <!-- Mobile Cards -->
         <div class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
-          <div v-for="program in paginatedPrograms" :key="program.id"
-            class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-3 min-w-0">
-                <input type="checkbox" v-model="selectedPrograms" :value="program.id" class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 flex-shrink-0" />
-                <div class="min-w-0">
-                  <p class="font-semibold text-gray-900 dark:text-white truncate">{{ program.name }}</p>
-                  <p class="text-xs font-mono text-[#9E122C] dark:text-red-400">{{ program.code }}</p>
+          <template v-for="program in paginatedPrograms" :key="program.id">
+            <div :id="'edit-row-mobile-' + program.id" class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                  <input type="checkbox" v-model="selectedPrograms" :value="program.id" class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 flex-shrink-0" />
+                  <div class="min-w-0">
+                    <p class="font-semibold text-gray-900 dark:text-white truncate">{{ program.name }}</p>
+                    <p class="text-xs font-mono text-[#9E122C] dark:text-red-400">{{ program.code }}</p>
+                  </div>
+                </div>
+                <div class="flex gap-1 flex-shrink-0">
+                  <button @click="startEdit(program)" class="p-2 text-gray-400 hover:text-[#9E122C] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button @click="openDeleteModal(program.id)" class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
               </div>
-              <div class="flex gap-1 flex-shrink-0">
-                <button @click="startEdit(program)" class="p-2 text-gray-400 hover:text-[#9E122C] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-                <button @click="openDeleteModal(program.id)" class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                  {{ program.slots || 0 }} slots
+                </span>
+                <span v-for="strand in program.strands" :key="strand.id"
+                  class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs font-medium">
+                  {{ strand.code }}
+                </span>
+                <span v-if="!program.strands || program.strands.length === 0"
+                  class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full text-xs">
+                  No Strand
+                </span>
               </div>
             </div>
-            <div class="mt-3 flex flex-wrap gap-2">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                {{ program.slots || 0 }} slots
-              </span>
-              <span v-for="strand in program.strands" :key="strand.id"
-                class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs font-medium">
-                {{ strand.code }}
-              </span>
-              <span v-if="!program.strands || program.strands.length === 0"
-                class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full text-xs">
-                No Strand
-              </span>
+            <div v-if="editingProgram?.id === program.id">
+              <transition name="dropdown" appear>
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border-t-2 border-[#9E122C] shadow-inner overflow-hidden relative">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 relative z-10">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Editing: {{ editingProgram.name }}</h3>
+                <div class="flex gap-2 flex-shrink-0">
+                  <button @click="saveEdit" class="flex-1 sm:flex-none px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Save
+                  </button>
+                  <button @click="cancelEdit" class="flex-1 sm:flex-none px-3 py-2 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Program Name</label>
+                    <input v-model="editingProgram.name" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Program Code</label>
+                    <input v-model="editingProgram.code" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Available Slots</label>
+                    <input v-model="editingProgram.slots" type="number" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Eligible Strands</label>
+                    <div class="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                      <button v-for="strand in availableStrands" :key="strand.id" type="button" @click="toggleStrand(strand.id)"
+                        :class="['px-3 py-1 text-xs rounded-full transition flex-shrink-0', editingProgram.strand_ids.includes(strand.id) ? 'bg-[#9E122C] text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500']">
+                        {{ strand.code }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Minimum Requirements</label>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Mathematics</label>
+                      <input v-model="editingProgram.math" type="number" placeholder="Score" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Science</label>
+                      <input v-model="editingProgram.science" type="number" placeholder="Score" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">English</label>
+                      <input v-model="editingProgram.english" type="number" placeholder="Score" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">GWA</label>
+                      <input v-model="editingProgram.gwa" type="number" step="0.01" placeholder="GWA" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+                </div>
+              </transition>
             </div>
-          </div>
+          </template>
         </div>
 
         <!-- Empty State -->
@@ -473,6 +553,8 @@ const toggleSortOrder = () => { sortAsc.value = !sortAsc.value; };
             Add New Program
           </Link>
         </div>
+
+
       </div>
 
       <!-- Pagination -->
@@ -487,7 +569,14 @@ const toggleSortOrder = () => { sortAsc.value = !sortAsc.value; };
             Previous
           </button>
           <div class="flex items-center gap-1 text-sm">
-            <span class="px-3 py-2 bg-[#9E122C] text-white rounded-lg font-medium">{{ currentPage }}</span>
+            <input
+                type="number"
+                v-model.number="currentPage"
+                min="1"
+                :max="totalPages || 1"
+                @change="currentPage = Math.max(1, Math.min($event.target.value, totalPages || 1))"
+                class="w-16 px-2 py-1.5 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium"
+            />
             <span class="text-gray-500 dark:text-gray-400 px-1">of</span>
             <span class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">{{ totalPages || 1 }}</span>
           </div>
@@ -526,4 +615,21 @@ const toggleSortOrder = () => { sortAsc.value = !sortAsc.value; };
 ::-webkit-scrollbar-track { background: #FBCB77; border-radius: 5px; }
 ::-webkit-scrollbar-thumb { background: #9E122C; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #EE6A43; }
+
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.3s ease-in-out;
+  max-height: 1000px;
+  opacity: 1;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
 </style>

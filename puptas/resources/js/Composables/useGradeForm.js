@@ -334,24 +334,35 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
      */
     function validateGrade(event) {
         const input = event.target;
-        const value = input.value;
+        let value = input.value;
+        let changed = false;
 
         // Remove any negative signs
         if (value.includes('-')) {
-            input.value = value.replace(/-/g, '');
-            return;
+            value = value.replace(/-/g, '');
+            changed = true;
+            showToast('Grades cannot be negative.', 'error');
         }
 
         const numValue = parseFloat(value);
 
         // Cap at 100
         if (!isNaN(numValue) && numValue > 100) {
-            input.value = '100';
+            value = '100';
+            changed = true;
+            showToast('Grade cannot exceed 100.', 'error');
         }
 
         // If value is less than 0, clear
         if (!isNaN(numValue) && numValue < 0) {
-            input.value = '';
+            value = '';
+            changed = true;
+            showToast('Grades cannot be negative.', 'error');
+        }
+
+        if (changed) {
+            input.value = value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
         }
     }
 
@@ -493,8 +504,23 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
         const dynamicSubjectsPayload = [];
         for (const category of ['math', 'english', 'science']) {
             for (const entry of dynamicSubjects.value[category]) {
+                const hasName = hasNonWhitespaceName(entry.name);
+                const hasGrade = isValidGradeValue(entry.grade);
+
+                if (hasGrade && !hasName) {
+                    loading.value = false;
+                    showToast(`Please enter a subject name for the additional ${category} grade of ${entry.grade}.`, 'error');
+                    return;
+                }
+
+                if (hasName && !hasGrade) {
+                    loading.value = false;
+                    showToast(`Please enter a valid grade for the additional subject "${entry.name}".`, 'error');
+                    return;
+                }
+
                 // Only include entries with non-whitespace names and valid grades
-                if (hasNonWhitespaceName(entry.name) && isValidGradeValue(entry.grade)) {
+                if (hasName && hasGrade) {
                     dynamicSubjectsPayload.push({
                         category,
                         name: entry.name.trim(),

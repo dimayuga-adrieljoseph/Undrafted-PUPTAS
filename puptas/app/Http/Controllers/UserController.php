@@ -32,8 +32,13 @@ class UserController extends Controller
     /**
      * Display the user addition form.
      */
-    public function create()
+    public function create(Request $request)
     {
+        // Only SuperAdmin (role_id 7) can access the Add User form
+        if ($request->user()->role_id !== 7) {
+            return redirect()->route('users.index')->with('error', 'You do not have permission to create users.');
+        }
+
         $userCountsByRole = $this->userService->getUserCountsByRole();
         $roles = $this->userService->getRoleDefinitions();
         $totalUsers = $this->userService->getTotalUserCount();
@@ -44,6 +49,7 @@ class UserController extends Controller
             'roles' => $roles,
             'totalUsers' => $totalUsers,
             'programs' => $programs,
+            'currentUserRoleId' => $request->user()->role_id,
         ]);
     }
 
@@ -54,6 +60,11 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        // Only SuperAdmin (role_id 7) can create users
+        if ($request->user()->role_id !== 7) {
+            return redirect()->route('users.index')->with('error', 'You do not have permission to create users.');
+        }
+
         $request->validate(ValidationRules::userStore());
 
         $user = $this->userService->createUser($request->all());
@@ -102,7 +113,7 @@ class UserController extends Controller
     /**
      * Display a listing of all users.
      */
-    public function index()
+    public function index(Request $request)
     {
         // Only load the first page here (15 records).
         // Subsequent pages and search results are fetched via GET /users/search (JSON).
@@ -110,6 +121,7 @@ class UserController extends Controller
         $userCountsByRole = $this->userService->getUserCountsByRole();
         $roles = $this->userService->getRoleDefinitions();
         $totalUsers = $this->userService->getTotalUserCount();
+        $currentUserRoleId = $request->user()->role_id;
 
         return Inertia::render('UserManagement/ManageUsers', [
             'users'           => $page1['data'],
@@ -122,16 +134,25 @@ class UserController extends Controller
             'userCountsByRole' => $userCountsByRole,
             'roles'            => $roles,
             'totalUsers'       => $totalUsers,
+            'currentUserRoleId' => $currentUserRoleId,
         ]);
     }
 
     /**
      * Show the form for editing the specified user.
      */
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
-        // Fetch the user model primarily to check role. Fallback to ID match.
-        $userModel = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->firstOrFail();
+        // SuperAdmin (7) can edit. Admin (2) can view read-only.
+        $currentRoleId = $request->user()->role_id;
+        if (!in_array($currentRoleId, [2, 7])) {
+            return redirect()->route('users.index')->with('error', 'You do not have permission to view this user.');
+        }
+
+        $userModel = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
+        if (!$userModel) {
+            abort(404, 'User not found.');
+        }
 
         if ($userModel->role_id > 1) {
             $userModel->load('programs');
@@ -208,10 +229,14 @@ class UserController extends Controller
         $programs = Program::all();
         $roles = $this->userService->getRoleDefinitions();
 
+        $isSuperAdmin = $currentRoleId === 7;
+
         return Inertia::render('UserManagement/EditUser', [
             'user'     => $user,
             'programs' => $programs,
             'roles'    => $roles,
+            'currentUserRoleId' => $currentRoleId,
+            'readOnly' => !$isSuperAdmin,
         ]);
     }
 
@@ -220,13 +245,40 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // Only SuperAdmin (role_id 7) can update users
+        if ($request->user()->role_id !== 7) {
+            return redirect()->route('users.index')->with('error', 'You do not have permission to update users.');
+        }
+
+        $userModel = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
+        if (!$userModel) {
+            abort(404, 'User not found.');
+        }
+
+        // Resolve linked TestPasser by IDP UUID first, fall back to numeric id
+        // This is necessary because test_passers.user_id may be an IDP UUID (string)
+        // rather than the numeric users.id, so ignoring by user_id = $userModel->id can fail.
+        $testPasser = \App\Models\TestPasser::where('user_id', $userModel->idp_user_id)
+            ->orWhere('user_id', (string) $userModel->id)
+            ->first();
+
         $request->validate([
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
             'middlename' => 'nullable|string|max:255',
             'extension_name' => 'nullable|string|max:255',
-            'email' => 'required|email|max:255',
+            'email' => [
+                'required', 
+                'email', 
+                'max:255', 
+                \Illuminate\Validation\Rule::unique('users')->ignore($userModel->id),
+                \Illuminate\Validation\Rule::unique('test_passers', 'email')
+                    ->ignore($testPasser?->test_passer_id, 'test_passer_id'),
+            ],
             'role_id' => 'required|integer',
+            'strand' => 'nullable|string|max:255',
+            'school' => 'nullable|string|max:255',
+            'date_graduated' => 'nullable|date',
         ]);
 
         // If Role is 1 (Applicant), we find them in ApplicantProfile. Else StaffProfile.
@@ -253,13 +305,18 @@ class UserController extends Controller
             }
 
             if ($applicantProfile) {
-                $applicantProfile->update([
+                $profileData = [
                     'firstname' => $request->firstname,
                     'middlename' => $request->middlename,
                     'lastname' => $request->lastname,
                     'extension_name' => $request->extension_name,
                     'email' => $request->email,
-                ]);
+                ];
+                // Save academic fields (allow clearing via empty string → null)
+                $profileData['strand'] = $request->has('strand') ? ($request->strand !== '' ? $request->strand : null) : ($applicantProfile->strand ?? null);
+                $profileData['school'] = $request->has('school') ? ($request->school !== '' ? $request->school : null) : ($applicantProfile->school ?? null);
+                $profileData['date_graduated'] = $request->has('date_graduated') ? ($request->date_graduated !== '' ? $request->date_graduated : null) : ($applicantProfile->date_graduated ?? null);
+                $applicantProfile->update($profileData);
             }
 
             // Sync updated info to the linked test_passers record
@@ -267,11 +324,23 @@ class UserController extends Controller
                 ->orWhere('user_id', optional($user)->id)
                 ->first();
             if ($testPasser) {
-                $testPasser->update([
+                $tpData = [
                     'surname'    => $request->lastname,
                     'first_name' => $request->firstname,
                     'middle_name' => $request->middlename,
-                ]);
+                    'email'       => $request->email,
+                ];
+                // Sync academic fields to test passer (allow clearing via empty string → null)
+                if ($request->has('strand')) {
+                    $tpData['strand'] = $request->strand !== '' ? $request->strand : null;
+                }
+                if ($request->has('school')) {
+                    $tpData['shs_school'] = $request->school !== '' ? $request->school : null;
+                }
+                if ($request->has('date_graduated')) {
+                    $tpData['year_graduated'] = $request->date_graduated !== '' ? substr($request->date_graduated, 0, 4) : null;
+                }
+                $testPasser->update($tpData);
             }
 
             $userEmail = $request->email;
@@ -354,7 +423,7 @@ class UserController extends Controller
                 'USER_MANAGEMENT'
             );
 
-            return redirect()->route('users.index')->with('status', 'User details updated successfully!');
+            return redirect()->route('users.index')->with('success', 'User details updated successfully!');
         });
     }
 
@@ -363,6 +432,11 @@ class UserController extends Controller
      */
     public function updateGrades(Request $request, $id)
     {
+        // Only SuperAdmin (role_id 7) can update grades
+        if ($request->user()->role_id !== 7) {
+            return redirect()->route('users.index')->with('error', 'You do not have permission to update grades.');
+        }
+
         $individualFields = [
             'g12_first_sem', 'g12_second_sem',
             'g11_oral_communication', 'g11_21st_century_lit', 'g11_academic_professional',
@@ -443,8 +517,13 @@ class UserController extends Controller
     /**
      * Remove the specified user from storage.
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
+        // Only SuperAdmin (role_id 7) can delete users
+        if ($request->user()->role_id !== 7) {
+            return redirect()->route('users.index')->with('error', 'You do not have permission to delete users.');
+        }
+
         // For IDP, users are not deleted locally, but we might want to drop their profiles locally
         $staff = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
         if ($staff && $staff->role_id > 1) {
@@ -463,7 +542,7 @@ class UserController extends Controller
             'USER_MANAGEMENT'
         );
 
-        return redirect()->route('users.index')->with('status', 'User localized details removed successfully!');
+        return redirect()->route('users.index')->with('success', 'User localized details removed successfully!');
     }
     /**
      * JSON search endpoint for ManageUsers.

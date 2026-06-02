@@ -142,7 +142,6 @@ class AppServiceProvider extends ServiceProvider
             if ($query->time > 500) {
                 Log::warning('Slow query detected', [
                     'sql' => $query->sql,
-                    'bindings' => $query->bindings,
                     'time_ms' => $query->time,
                 ]);
             }

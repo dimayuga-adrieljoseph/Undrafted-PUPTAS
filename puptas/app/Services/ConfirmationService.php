@@ -71,9 +71,9 @@ class ConfirmationService
             'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType),
             'processes' => $this->getApplicationProcesses($application),
             'enrollment_status' => $application?->enrollment_status ?? null,
-            'program_id' => $application?->program_id ?? $profile?->first_choice_program,
-            'second_choice_id' => $application?->second_choice_id ?? $profile?->second_choice_program,
-            'third_choice_id' => $application?->third_choice_id ?? $profile?->third_choice_program,
+            'program_id' => ($application && $application->status !== 'draft') ? $application->program_id : $profile?->first_choice_program,
+            'second_choice_id' => ($application && $application->status !== 'draft') ? $application->second_choice_id : $profile?->second_choice_program,
+            'third_choice_id' => ($application && $application->status !== 'draft') ? $application->third_choice_id : $profile?->third_choice_program,
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
         ];
     }

@@ -182,34 +182,52 @@
                 </table>
 
                 <!-- Pagination -->
-                <div class="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div class="text-sm text-gray-600 dark:text-gray-400">
-                        Showing <span class="font-medium">{{ paginatedUsers.length }}</span> of 
-                        <span class="font-medium">{{ filteredUsers.length }}</span> applicants
-                    </div>
-                    
-                    <div class="flex items-center space-x-2">
-                        <button 
-                            @click="currentPage--" 
-                            :disabled="currentPage === 1"
-                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                        >
-                            Previous
-                        </button>
-                        
-                        <div class="flex items-center space-x-2">
-                            <span class="px-4 py-2 bg-[#9E122C] text-white rounded-lg font-medium dark:bg-gray-900 dark:text-gray-900">{{ currentPage }}</span>
-                            <span class="text-gray-500 dark:text-gray-400">of</span>
-                            <span class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium">{{ totalPages || 1 }}</span>
+                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-700 dark:text-gray-400">
+                            <span v-if="!filteredUsers.length || filteredUsers.length === 0">
+                                Showing 0 to 0 of 0 results
+                            </span>
+                            <span v-else>
+                                Showing {{ (currentPage - 1) * itemsPerPage + 1 }} 
+                                to {{ Math.min(currentPage * itemsPerPage, filteredUsers.length) }} 
+                                of {{ filteredUsers.length }} results
+                            </span>
                         </div>
-                        
-                        <button 
-                            @click="currentPage++" 
-                            :disabled="currentPage === totalPages || totalPages === 0"
-                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                        >
-                            Next
-                        </button>
+                        <div class="flex items-center space-x-2">
+                            <button
+                                :disabled="currentPage === 1"
+                                @click.prevent="currentPage--"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                            >
+                                <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                Previous
+                            </button>
+                            <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
+                                <span>Page</span>
+                                <input
+                                    type="number"
+                                    :value="currentPage"
+                                    min="1"
+                                    :max="totalPages || 1"
+                                    @change="currentPage = Math.max(1, Math.min($event.target.value, totalPages || 1))"
+                                    class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                                />
+                                <span>of <span class="font-semibold">{{ totalPages || 1 }}</span></span>
+                            </div>
+                            <button
+                                :disabled="currentPage === totalPages || totalPages === 0"
+                                @click.prevent="currentPage++"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                            >
+                                Next
+                                <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -394,11 +412,11 @@
                 <!-- Uploaded Documents -->
                 <div class="mb-8">
                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div
                             v-for="(file, key) in selectedUserFiles"
                             :key="key"
-                            class="group relative"
+                            class="group relative min-w-0"
                         >
                             <!-- Document Card -->
                             <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
@@ -410,11 +428,11 @@
                                         v-if="hasImagePreview(file)"
                                         :src="getFileUrl(file)"
                                         :alt="formatFileKey(key)"
-                                        class="w-full h-32 object-cover hover:opacity-90 transition pointer-events-none"
+                                        class="w-full aspect-[4/3] object-cover hover:opacity-90 transition pointer-events-none"
                                     />
                                     <div
                                         v-else
-                                        class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
+                                        class="w-full aspect-[4/3] flex items-center justify-center bg-gray-50 dark:bg-gray-800"
                                     >
                                         <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -423,7 +441,7 @@
                                 </div>
                                 
                                 <!-- Document Label -->
-                                <div class="p-2 border-t border-gray-200 dark:border-gray-700">
+                                <div class="p-2 border-t border-gray-200 dark:border-gray-700 min-w-0">
                                     <p class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate" :title="formatFileKey(key)">
                                         {{ formatFileKey(key) }}
                                     </p>

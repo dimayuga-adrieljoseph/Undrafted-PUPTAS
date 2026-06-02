@@ -17,6 +17,9 @@ class SendCongratulationsEmail implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $tries = 15;
+    public $maxExceptions = 3;
+    public $backoff = [10, 30, 60];
     public $uniqueFor = 3600;
 
     public function middleware(): array

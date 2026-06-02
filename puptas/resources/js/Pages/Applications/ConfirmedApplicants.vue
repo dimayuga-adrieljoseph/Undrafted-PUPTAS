@@ -16,6 +16,7 @@ const filterBatch = ref("");
 const filterPasserStatus = ref([]);
 const showStatusDropdown = ref(false);
 const filterSarStatus = ref("");
+const filterGraduateType = ref("");
 const selectedIds = ref([]);
 
 // Template / action mode: 'sar' | 'custom'
@@ -88,6 +89,13 @@ const passerStatuses = computed(() => {
     return Array.from(statusSet).sort();
 });
 
+const graduateTypes = computed(() => {
+    const typeSet = new Set(
+        applicants.value.map((a) => a.graduate_type).filter(Boolean),
+    );
+    return Array.from(typeSet).sort();
+});
+
 const filtered = computed(() => {
     let list = applicants.value;
     const q = searchQuery.value.trim().toLowerCase();
@@ -109,6 +117,8 @@ const filtered = computed(() => {
     if (filterSarStatus.value === "sent") list = list.filter((a) => a.sar_sent);
     if (filterSarStatus.value === "pending")
         list = list.filter((a) => !a.sar_sent);
+    if (filterGraduateType.value)
+        list = list.filter((a) => a.graduate_type === filterGraduateType.value);
     return list;
 });
 
@@ -154,6 +164,7 @@ watch(
         filterBatch,
         filterPasserStatus,
         filterSarStatus,
+        filterGraduateType,
     ],
     () => {
         currentPage.value = 1;
@@ -238,6 +249,14 @@ const send = async () => {
             showSnack("Email body is required.", "error");
             return;
         }
+    }
+
+    const confirmMessage = templateMode.value === "sar" 
+        ? `Are you sure you want to send SAR forms to ${selectedIds.value.length} applicant(s)?`
+        : `Are you sure you want to send custom emails to ${selectedIds.value.length} applicant(s)?`;
+        
+    if (!window.confirm(confirmMessage)) {
+        return;
     }
 
     sending.value = true;
@@ -601,6 +620,15 @@ onMounted(() => {
                             <option value="sent">SAR Sent</option>
                             <option value="pending">SAR Pending</option>
                         </select>
+                        <select
+                            v-model="filterGraduateType"
+                            class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                        >
+                            <option value="">All Graduate Types</option>
+                            <option v-for="gt in graduateTypes" :key="gt" :value="gt">
+                                {{ gt }}
+                            </option>
+                        </select>
                         <button
                             @click="fetchApplicants"
                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
@@ -719,6 +747,11 @@ onMounted(() => {
                                     <th
                                         class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
+                                        Graduate Type
+                                    </th>
+                                    <th
+                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                    >
                                         SAR STATUS
                                     </th>
                                 </tr>
@@ -732,7 +765,7 @@ onMounted(() => {
                                     class="bg-gray-50 dark:bg-gray-900"
                                 >
                                     <td
-                                        colspan="6"
+                                        colspan="8"
                                         class="px-6 py-12 text-center"
                                     >
                                         <div
@@ -826,6 +859,11 @@ onMounted(() => {
                                             {{ a.passer_status_name }}
                                         </span>
                                     </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm text-gray-900 dark:text-gray-200">
+                                            {{ a.graduate_type || "—" }}
+                                        </div>
+                                    </td>
                                     <td
                                         class="px-6 py-4 whitespace-nowrap text-sm font-medium"
                                     >
@@ -898,29 +936,17 @@ onMounted(() => {
                                     </svg>
                                     Previous
                                 </button>
-                                <div class="flex items-center space-x-1">
-                                    <button
-                                        v-for="page in visiblePages"
-                                        :key="page"
-                                        @click.prevent="currentPage = page"
-                                        :class="[
-                                            'px-3 py-1 rounded-lg text-sm font-medium transition',
-                                            currentPage === page
-                                                ? 'bg-[#9E122C] text-white'
-                                                : 'text-gray-700 hover:bg-gray-100',
-                                        ]"
-                                    >
-                                        {{ page }}
-                                    </button>
-                                    <span
-                                        v-if="
-                                            totalPages > 5 &&
-                                            currentPage < totalPages - 2
-                                        "
-                                        class="px-2 text-gray-500 dark:text-gray-300"
-                                    >
-                                        ...
-                                    </span>
+                                <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
+                                    <span>Page</span>
+                                    <input
+                                        type="number"
+                                        :value="currentPage"
+                                        min="1"
+                                        :max="totalPages || 1"
+                                        @change="currentPage = Math.max(1, Math.min($event.target.value, totalPages || 1))"
+                                        class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                                    />
+                                    <span>of <span class="font-semibold">{{ totalPages || 1 }}</span></span>
                                 </div>
                                 <button
                                     :disabled="currentPage === totalPages"
@@ -1059,7 +1085,7 @@ onMounted(() => {
                         <div class="mt-4 space-y-2">
                             <button
                                 @click="previewSarEmailTemplate"
-                                :disabled="selectedIds.length === 0"
+                                :disabled="selectedIds.length !== 1"
                                 class="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition dark:text-gray-900"
                             >
                                 <svg
@@ -1081,7 +1107,7 @@ onMounted(() => {
                             <button
                                 @click="previewSarPdfForm"
                                 :disabled="
-                                    selectedIds.length === 0 ||
+                                    selectedIds.length !== 1 ||
                                     !sarEnrollmentDate ||
                                     !sarEnrollmentTime
                                 "
@@ -1363,19 +1389,18 @@ onMounted(() => {
                                     </svg>
                                     Prev
                                 </button>
-                                <button
-                                    v-for="page in sarVisiblePages"
-                                    :key="page"
-                                    @click.prevent="loadSarHistory(page)"
-                                    :class="[
-                                        'px-2 py-1 rounded-lg font-medium transition',
-                                        sarCurrentPage === page
-                                            ? 'bg-[#9E122C] text-white'
-                                            : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
-                                    ]"
-                                >
-                                    {{ page }}
-                                </button>
+                                <div class="flex items-center space-x-2 mx-2">
+                                    <input
+                                        type="number"
+                                        :value="sarCurrentPage"
+                                        min="1"
+                                        :max="sarTotalPages || 1"
+                                        @change="loadSarHistory(Math.max(1, Math.min($event.target.value, sarTotalPages || 1)))"
+                                        class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                                    />
+                                    <span class="text-gray-500 dark:text-gray-400 text-sm">of</span>
+                                    <span class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium text-sm">{{ sarTotalPages || 1 }}</span>
+                                </div>
                                 <button
                                     :disabled="sarCurrentPage === sarTotalPages"
                                     @click.prevent="loadSarHistory(sarCurrentPage + 1)"

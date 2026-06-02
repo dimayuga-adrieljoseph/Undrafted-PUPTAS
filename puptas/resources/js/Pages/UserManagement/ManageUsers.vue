@@ -9,6 +9,7 @@
           <p class="text-gray-600 dark:text-gray-400 mt-2">Manage user accounts, roles, and permissions</p>
         </div>
         <Link
+          v-if="isSuperAdmin"
           :href="route('users.create')"
           class="hidden md:inline-flex items-center gap-2 px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium"
         >
@@ -54,17 +55,17 @@
 
     <!-- Flash Messages -->
     <div class="px-4 md:px-8 mb-6">
-      <div v-if="page.props.flash.status" class="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-800 dark:text-green-300">
+      <div v-if="$page.props.flash.success || $page.props.flash.status" class="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-800 dark:text-green-300">
         <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
         </svg>
-        <p class="text-sm font-medium">{{ page.props.flash.status }}</p>
+        <p class="text-sm font-medium">{{ $page.props.flash.success || $page.props.flash.status }}</p>
       </div>
-      <div v-if="page.props.flash.error" class="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-800 dark:text-red-300">
+      <div v-if="$page.props.flash.error" class="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-800 dark:text-red-300">
         <svg class="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
         </svg>
-        <p class="text-sm font-medium">{{ page.props.flash.error }}</p>
+        <p class="text-sm font-medium">{{ $page.props.flash.error }}</p>
       </div>
     </div>
 
@@ -142,25 +143,38 @@
                 </td>
                 <td class="px-6 py-4 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">{{ formatDate(user.created_at) }}</td>
                 <td class="px-6 py-4">
-                  <div class="flex justify-end gap-1">
+                  <div v-if="canViewProfiles" class="flex justify-end gap-1">
                     <Link
+                      v-if="!isSuperAdmin"
                       :href="route('users.edit', user.id)"
-                      class="p-2 text-gray-400 hover:text-[#9E122C] dark:text-gray-400 dark:hover:text-[#9E122C] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                      title="Edit user"
+                      class="p-2 text-gray-400 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      title="View profile"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                       </svg>
                     </Link>
-                    <button
-                      @click="confirmDelete(user.id)"
-                      class="p-2 text-gray-400 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                      title="Delete user"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                      </svg>
-                    </button>
+                    <template v-if="isSuperAdmin">
+                      <Link
+                        :href="route('users.edit', user.id)"
+                        class="p-2 text-gray-400 hover:text-[#9E122C] dark:text-gray-400 dark:hover:text-[#9E122C] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        title="Edit user"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                      </Link>
+                      <button
+                        @click="confirmDelete(user.id)"
+                        class="p-2 text-gray-400 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-500 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        title="Delete user"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+                    </template>
                   </div>
                 </td>
               </tr>
@@ -189,23 +203,38 @@
                   <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ user.email }}</p>
                 </div>
               </div>
-              <div class="flex gap-1 flex-shrink-0">
+              <div v-if="canViewProfiles" class="flex gap-1 flex-shrink-0">
                 <Link
+                  v-if="!isSuperAdmin"
                   :href="route('users.edit', user.id)"
-                  class="p-2 text-gray-400 hover:text-[#9E122C] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                  class="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                  title="View profile"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                   </svg>
                 </Link>
-                <button
-                  @click="confirmDelete(user.id)"
-                  class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                  </svg>
-                </button>
+                <template v-if="isSuperAdmin">
+                  <Link
+                    :href="route('users.edit', user.id)"
+                    class="p-2 text-gray-400 hover:text-[#9E122C] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    title="Edit user"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                  </Link>
+                  <button
+                    @click="confirmDelete(user.id)"
+                    class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    title="Delete user"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                  </button>
+                </template>
               </div>
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
@@ -233,6 +262,7 @@
             <span v-else>Get started by adding your first user.</span>
           </p>
           <Link
+            v-if="isSuperAdmin"
             :href="route('users.create')"
             class="inline-flex items-center gap-2 px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium"
           >
@@ -245,55 +275,61 @@
         </div>
 
         <!-- Pagination Controls -->
-        <div
-          v-if="paginationInfo.last_page > 1"
-          class="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700"
-        >
-          <button
-            @click="changePage(paginationInfo.current_page - 1)"
-            :disabled="paginationInfo.current_page <= 1 || searching"
-            class="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Prev
-          </button>
-
-          <!-- Page numbers -->
-          <div class="flex items-center gap-1">
-            <button
-              v-for="p in visiblePages"
-              :key="p"
-              @click="changePage(p)"
-              :disabled="searching"
-              :class="[
-                'px-3 py-1.5 text-sm rounded-lg transition',
-                p === paginationInfo.current_page
-                  ? 'bg-[#9E122C] text-white font-semibold'
-                  : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-              ]"
-            >
-              {{ p }}
-            </button>
-          </div>
-
-          <button
-            @click="changePage(paginationInfo.current_page + 1)"
-            :disabled="paginationInfo.current_page >= paginationInfo.last_page || searching"
-            class="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-          >
-            Next
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </button>
+        <!-- Pagination Controls -->
+        <div v-if="paginationInfo.last_page > 1" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700 dark:text-gray-400">
+                    <span v-if="!paginationInfo.total || paginationInfo.total === 0">
+                        Showing 0 to 0 of 0 results
+                    </span>
+                    <span v-else>
+                        Showing {{ (paginationInfo.current_page - 1) * paginationInfo.per_page + 1 }} 
+                        to {{ Math.min(paginationInfo.current_page * paginationInfo.per_page, paginationInfo.total) }} 
+                        of {{ paginationInfo.total }} results
+                    </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button
+                        :disabled="paginationInfo.current_page === 1"
+                        @click.prevent="changePage(paginationInfo.current_page - 1)"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                    >
+                        <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Previous
+                    </button>
+                    <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
+                        <span>Page</span>
+                        <input
+                            type="number"
+                            :value="paginationInfo.current_page"
+                            min="1"
+                            :max="paginationInfo.last_page || 1"
+                            @change="changePage(Math.max(1, Math.min($event.target.value, paginationInfo.last_page || 1)))"
+                            class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                        />
+                        <span>of <span class="font-semibold">{{ paginationInfo.last_page || 1 }}</span></span>
+                    </div>
+                    <button
+                        :disabled="paginationInfo.current_page === paginationInfo.last_page"
+                        @click.prevent="changePage(paginationInfo.current_page + 1)"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                    >
+                        Next
+                        <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
       </div>
     </div>
 
     <!-- Floating Add Button (Mobile) -->
     <Link
+      v-if="isSuperAdmin"
       :href="route('users.create')"
       class="md:hidden fixed bottom-6 right-6 bg-[#9E122C] text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-[#b51834] transition hover:scale-110 z-40"
       title="Add New User"
@@ -318,9 +354,14 @@ const props = defineProps({
   userCountsByRole: Object,
   roles:            Object,
   totalUsers:       Number,
+  currentUserRoleId: Number,
 });
 
 const page = usePage();
+
+const isSuperAdmin = computed(() => props.currentUserRoleId === 7);
+const isAdmin = computed(() => props.currentUserRoleId === 2);
+const canViewProfiles = computed(() => isSuperAdmin.value || isAdmin.value);
 
 // ── State ──────────────────────────────────────────────────────────────────
 const searchTerm     = ref('');
