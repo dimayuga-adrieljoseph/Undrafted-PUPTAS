@@ -314,7 +314,7 @@ const uploadInlineFile = async () => {
             activeUploadTotal.value = progressEvent.total;
             const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
 
-            if (pct >= 100 && !waitingForServer) {
+            if (progressEvent.loaded >= progressEvent.total && !waitingForServer) {
               waitingForServer = true;
               activeUploadProgress.value = 95;
               // Start a 60-second timeout for server processing
@@ -344,6 +344,7 @@ const uploadInlineFile = async () => {
       activeUploadSuccess.value = false;
       await fetchData();
     } finally {
+      if (serverTimeout) clearTimeout(serverTimeout);
       activeUploadUploading.value = false;
     }
   };
