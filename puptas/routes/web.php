@@ -71,6 +71,31 @@ Route::get('/setup-test-applicant', function () {
     return 'Test applicant created successfully! Email: testapplicant@gmail.com | Password: password123. You can now go to /?local=1 and log in.';
 });
 
+// Temporary route to create a BRAND NEW applicant without a profile to test the onboarding flow
+Route::get('/setup-new-applicant', function () {
+    if (!in_array(config('app.env'), ['local', 'staging'])) {
+        abort(404);
+    }
+    
+    $user = \App\Models\User::updateOrCreate(
+        ['email' => 'newapplicant@gmail.com'], 
+        [
+            'password' => bcrypt('password123'), 
+            'role_id' => 1, 
+            'firstname' => 'Fresh', 
+            'lastname' => 'Applicant', 
+            'contactnumber' => '09999999999', 
+            'sex' => 'Male', 
+            'status' => 'active'
+        ]
+    );
+
+    // Ensure they have NO profile so they are forced into the onboarding flow
+    \App\Models\ApplicantProfile::where('user_id', $user->id)->delete();
+
+    return 'New applicant created successfully! Email: newapplicant@gmail.com | Password: password123. You can now go to /?local=1 and log in to test the registration/onboarding flow.';
+});
+
 Route::get('/', function (\Illuminate\Http\Request $request) {
     // Allow bypassing IDP on local and staging using ?local=1
     if (in_array(config('app.env'), ['local', 'staging']) && $request->has('local')) {
