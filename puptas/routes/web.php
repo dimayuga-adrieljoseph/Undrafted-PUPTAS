@@ -40,6 +40,7 @@ use App\Http\Controllers\EmailTrackingController;
 Route::get('/', function (\Illuminate\Http\Request $request) {
     // Allow bypassing IDP on local and staging using ?local=1
     if (in_array(config('app.env'), ['local', 'staging']) && $request->has('local')) {
+        session(['local_bypass' => true]);
         return redirect('/login?local=1');
     }
     
