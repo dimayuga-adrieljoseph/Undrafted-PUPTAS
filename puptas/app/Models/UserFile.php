@@ -27,12 +27,10 @@ class UserFile extends Model
         'original_name',
         'status',
         'comment',
-        'docling_json',
     ];
 
     protected $casts = [
         'uploadedFiles' => 'array',
-        'docling_json'  => 'array',
     ];
 
     /**
