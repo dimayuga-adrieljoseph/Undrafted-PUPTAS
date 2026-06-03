@@ -327,25 +327,6 @@ class ConfirmationService
             $updateData['docling_json'] = null;
         }
 
-        // Save new file record and capture the model
-        try {
-            $userFile = UserFile::updateOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'type' => $type,
-                ],
-                $updateData
-            );
-        } catch (\Throwable $e) {
-            // The Cleanup Safety Net:
-            // If DB fails (e.g. out of space due to token bloat), delete the orphaned file from bucket
-            try {
-                $this->fileService->delete($compressed['path']);
-            } catch (\Throwable $deleteError) {
-                // Suppress cleanup error to prioritize reporting the actual DB crash
-            }
-            throw $e;
-        }
         // Finalize the file record with the stored path and 'pending' status
         try {
             $userFile->update($updateData);
