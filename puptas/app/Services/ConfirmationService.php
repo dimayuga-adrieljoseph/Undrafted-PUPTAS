@@ -8,7 +8,6 @@ use App\Models\Program;
 use App\Models\User;
 use App\Models\UserFile;
 use App\Helpers\FileMapper;
-use App\Jobs\ProcessGradeOcr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -322,30 +321,6 @@ class ConfirmationService
             'status' => 'pending',
         ];
 
-        // Explicitly clear any existing OCR data on reupload
-        if (Schema::hasColumn('user_files', 'docling_json')) {
-            $updateData['docling_json'] = null;
-        }
-
-        // Save new file record and capture the model
-        try {
-            $userFile = UserFile::updateOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'type' => $type,
-                ],
-                $updateData
-            );
-        } catch (\Throwable $e) {
-            // The Cleanup Safety Net:
-            // If DB fails (e.g. out of space due to token bloat), delete the orphaned file from bucket
-            try {
-                $this->fileService->delete($compressed['path']);
-            } catch (\Throwable $deleteError) {
-                // Suppress cleanup error to prioritize reporting the actual DB crash
-            }
-            throw $e;
-        }
         // Finalize the file record with the stored path and 'pending' status
         try {
             $userFile->update($updateData);
@@ -421,11 +396,6 @@ class ConfirmationService
             'original_name' => $originalName,
             'status' => 'pending',
         ];
-
-        // Explicitly clear any existing OCR data on reupload
-        if (Schema::hasColumn('user_files', 'docling_json')) {
-            $updateData['docling_json'] = null;
-        }
 
         // Save new file record
         $userFile = UserFile::updateOrCreate(
