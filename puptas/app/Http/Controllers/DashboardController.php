@@ -177,11 +177,11 @@ class DashboardController extends Controller
                 'grades', // Include grades
                 'testPasser', // Include testPasser to get reference_number
             ])
-            ->where('user_id', $id)
+            ->where('user_id', (string) $id)
             ->firstOrFail();
 
             // Get files with full data
-            $files = UserFile::where('user_id', $id)->get()->keyBy('type');
+            $files = UserFile::where('user_id', (string) $id)->get()->keyBy('type');
 
             // Transform the response to use 'application' key for frontend compatibility
             $userData = [
@@ -262,7 +262,7 @@ class DashboardController extends Controller
 
             $applicant = ApplicantProfile::with('grades')
                 ->select('user_id')
-                ->where('user_id', $id)
+                ->where('user_id', (string) $id)
                 ->firstOrFail();
 
             return response()->json([

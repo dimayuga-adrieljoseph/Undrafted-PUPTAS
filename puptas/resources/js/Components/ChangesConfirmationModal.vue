@@ -5,6 +5,11 @@ defineProps({
     loading: { type: Boolean, default: false },
     title: { type: String, default: 'Confirm Changes' },
     subtitle: { type: String, default: 'Review the following changes before saving' },
+    confirmText: { type: String, default: 'Save Changes' },
+    cancelText: { type: String, default: 'Cancel' },
+    confirmButtonClass: { type: String, default: 'bg-[#9E122C] hover:bg-[#800918] text-white' },
+    hideTable: { type: Boolean, default: false },
+    disableChangesValidation: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['confirm', 'cancel']);
@@ -35,7 +40,8 @@ const emit = defineEmits(['confirm', 'cancel']);
                 </div>
 
                 <!-- Changes Table -->
-                <div class="overflow-y-auto flex-1 p-5">
+                <div v-if="!hideTable" class="overflow-y-auto flex-1 p-5">
+                    <slot name="content">
                     <div v-if="changes.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
                         <svg class="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -81,6 +87,7 @@ const emit = defineEmits(['confirm', 'cancel']);
                             </tbody>
                         </table>
                     </div>
+                    </slot>
                 </div>
 
                 <!-- Footer Actions -->
@@ -91,19 +98,22 @@ const emit = defineEmits(['confirm', 'cancel']);
                         :disabled="loading"
                         class="px-5 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50 text-sm font-medium"
                     >
-                        Cancel
+                        {{ cancelText }}
                     </button>
                     <button
                         type="button"
                         @click="emit('confirm')"
-                        :disabled="loading || changes.length === 0"
-                        class="px-5 py-2.5 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium flex items-center gap-2"
+                        :disabled="loading || (!hideTable && !disableChangesValidation && changes.length === 0)"
+                        :class="[
+                            'px-5 py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium flex items-center gap-2',
+                            confirmButtonClass
+                        ]"
                     >
                         <span v-if="loading" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                         <svg v-else class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        {{ loading ? 'Saving...' : 'Save Changes' }}
+                        {{ loading ? 'Processing...' : confirmText }}
                     </button>
                 </div>
             </div>

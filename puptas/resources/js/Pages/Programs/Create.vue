@@ -22,7 +22,7 @@
 
         <!-- Form Body -->
         <div class="p-6">
-          <form @submit.prevent="addProgram">
+          <form @submit.prevent="promptSave">
             <!-- Two Column Layout -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <!-- Left Column - Basic Info -->
@@ -175,12 +175,13 @@
 
             <!-- Form Actions -->
             <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end space-x-3">
-              <Link
-                href="/programs"
+              <button
+                type="button"
+                @click="promptCancel"
                 class="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium"
               >
                 Cancel
-              </Link>
+              </button>
               <button 
                 type="submit"
                 :disabled="isSubmitting"
@@ -212,6 +213,19 @@
         </div>
       </div>
     </div>
+
+    <!-- Confirm Action Modal -->
+    <ChangesConfirmationModal
+      :show="confirmModalOpen"
+      :title="confirmModalTitle"
+      :subtitle="confirmModalMessage"
+      :confirmText="confirmModalConfirmText"
+      :confirmButtonClass="confirmButtonClass"
+      :hideTable="confirmModalHideTable"
+      @confirm="executeConfirm"
+      @cancel="confirmModalOpen = false"
+    />
+
   </AppLayout>
 </template>
 
@@ -219,6 +233,7 @@
 import { ref, onMounted } from "vue";
 const axios = window.axios;
 import AppLayout from "@/Layouts/AppLayout.vue";
+import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
 import { Head, Link, router } from '@inertiajs/vue3';
 
 const newProgram = ref({
@@ -236,6 +251,43 @@ const availableStrands = ref([]);
 const showStrandDropdown = ref(false);
 const errorMessage = ref("");
 const isSubmitting = ref(false);
+
+const confirmModalOpen = ref(false);
+const confirmActionType = ref(""); // 'save' or 'cancel'
+const confirmModalTitle = ref("");
+const confirmModalMessage = ref("");
+const confirmModalConfirmText = ref("Confirm");
+const confirmButtonClass = ref("");
+const confirmModalHideTable = ref(true);
+
+const promptSave = () => {
+  confirmActionType.value = 'save';
+  confirmModalTitle.value = 'Add New Program?';
+  confirmModalMessage.value = 'Are you sure you want to add this program?';
+  confirmModalConfirmText.value = 'Add Program';
+  confirmButtonClass.value = 'bg-green-600 hover:bg-green-700 text-white';
+  confirmModalHideTable.value = true;
+  confirmModalOpen.value = true;
+};
+
+const promptCancel = () => {
+  confirmActionType.value = 'cancel';
+  confirmModalTitle.value = 'Cancel Adding Program?';
+  confirmModalMessage.value = 'Are you sure you want to cancel? All entered data will be lost.';
+  confirmModalConfirmText.value = 'Yes, Cancel';
+  confirmButtonClass.value = 'bg-red-600 hover:bg-red-700 text-white';
+  confirmModalHideTable.value = true;
+  confirmModalOpen.value = true;
+};
+
+const executeConfirm = () => {
+  if (confirmActionType.value === 'save') {
+    addProgram();
+  } else if (confirmActionType.value === 'cancel') {
+    router.get('/programs');
+  }
+  confirmModalOpen.value = false;
+};
 
 // Fetch available strands on mount
 onMounted(async () => {

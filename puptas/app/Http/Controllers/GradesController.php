@@ -47,7 +47,7 @@ class GradesController extends Controller
         }
 
         // Get applicant profile and strand
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        $profile = ApplicantProfile::where('user_id', (string) $user->id)->first();
 
         if (!$profile || !$profile->strand) {
             return back()->withErrors(['strand' => 'Applicant profile or strand not found.']);
@@ -211,14 +211,14 @@ class GradesController extends Controller
     public function showAbmGradeForm()
     {
         $user = Auth::user();
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        $profile = ApplicantProfile::where('user_id', (string) $user->id)->first();
         
         // Validate that user's strand matches the route
         if (!$profile || strtoupper($profile->strand) !== 'ABM') {
             abort(403, 'You are not authorized to access this grade input form.');
         }
         
-        $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
+        $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
@@ -242,14 +242,14 @@ class GradesController extends Controller
     public function showIctGradeForm()
     {
         $user = Auth::user();
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        $profile = ApplicantProfile::where('user_id', (string) $user->id)->first();
         
         // Validate that user's strand matches the route
         if (!$profile || strtoupper($profile->strand) !== 'ICT') {
             abort(403, 'You are not authorized to access this grade input form.');
         }
         
-        $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
+        $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
@@ -346,14 +346,14 @@ class GradesController extends Controller
     public function showHumssGradeForm()
     {
         $user = Auth::user();
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        $profile = ApplicantProfile::where('user_id', (string) $user->id)->first();
         
         // Validate that user's strand matches the route
         if (!$profile || strtoupper($profile->strand) !== 'HUMSS') {
             abort(403, 'You are not authorized to access this grade input form.');
         }
         
-        $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
+        $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
@@ -377,14 +377,14 @@ class GradesController extends Controller
     public function showGasGradeForm()
     {
         $user = Auth::user();
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        $profile = ApplicantProfile::where('user_id', (string) $user->id)->first();
         
         // Validate that user's strand matches the route
         if (!$profile || strtoupper($profile->strand) !== 'GAS') {
             abort(403, 'You are not authorized to access this grade input form.');
         }
         
-        $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
+        $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
@@ -408,14 +408,14 @@ class GradesController extends Controller
     public function showStemGradeForm()
     {
         $user = Auth::user();
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        $profile = ApplicantProfile::where('user_id', (string) $user->id)->first();
         
         // Validate that user's strand matches the route
         if (!$profile || strtoupper($profile->strand) !== 'STEM') {
             abort(403, 'You are not authorized to access this grade input form.');
         }
         
-        $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
+        $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
@@ -439,14 +439,14 @@ class GradesController extends Controller
     public function showTvlGradeForm()
     {
         $user = Auth::user();
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        $profile = ApplicantProfile::where('user_id', (string) $user->id)->first();
         
         // Validate that user's strand matches the route
         if (!$profile || strtoupper($profile->strand) !== 'TVL') {
             abort(403, 'You are not authorized to access this grade input form.');
         }
         
-        $grade = Grade::where('user_id', $user->id)->first() ?? new Grade();
+        $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
         $programs = Program::with('strands')->get()->each(function ($program) {
             $program->append('strand_names');
         });
@@ -506,7 +506,7 @@ class GradesController extends Controller
         $g12_gwa = ($validated['g12_first_sem'] + $validated['g12_second_sem']) / 2;
 
         // Perform Qualification Validation
-        $profile = ApplicantProfile::where('user_id', $user->id)->first();
+        $profile = ApplicantProfile::where('user_id', (string) $user->id)->first();
         $userStrand = strtoupper($profile?->strand ?? 'ABM');
 
         $firstProgram = Program::with('strands')->find($validated['first_choice_program']);
@@ -571,7 +571,7 @@ class GradesController extends Controller
 
     private function isEvaluatorLocked(User $user): bool
     {
-        $application = Application::where('user_id', $user->id)->first();
+        $application = Application::where('user_id', (string) $user->id)->first();
 
         if (!$application) {
             return false;
