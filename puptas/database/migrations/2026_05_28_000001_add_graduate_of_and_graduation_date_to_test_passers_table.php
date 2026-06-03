@@ -20,17 +20,31 @@ return new class extends Migration
         // Backfill existing test passers from their linked applicant profiles
         // graduate_of comes from graduate_types via the junction table
         // graduation_date comes from applicant_profiles.date_graduated
-        DB::statement("
-            UPDATE test_passers tp
-            JOIN applicant_profiles ap ON ap.user_id = tp.user_id
-            LEFT JOIN applicant_profile_graduate_type apgt ON apgt.applicant_profile_id = ap.id
-            LEFT JOIN graduate_types gt ON gt.id = apgt.graduate_type_id
-            SET
-                tp.graduate_of = gt.label,
-                tp.graduation_date = ap.date_graduated
-            WHERE tp.user_id IS NOT NULL
-              AND (tp.graduate_of IS NULL OR tp.graduation_date IS NULL)
-        ");
+        // Uses query builder instead of raw MySQL JOIN syntax for SQLite compatibility (tests)
+        $passers = DB::table('test_passers')
+            ->whereNotNull('user_id')
+            ->where(function ($q) {
+                $q->whereNull('graduate_of')->orWhereNull('graduation_date');
+            })
+            ->get(['id', 'user_id']);
+
+        foreach ($passers as $passer) {
+            $profile = DB::table('applicant_profiles')
+                ->where('user_id', $passer->user_id)
+                ->first(['id', 'date_graduated']);
+
+            if (!$profile) continue;
+
+            $graduateType = DB::table('applicant_profile_graduate_type as apgt')
+                ->join('graduate_types as gt', 'gt.id', '=', 'apgt.graduate_type_id')
+                ->where('apgt.applicant_profile_id', $profile->id)
+                ->value('gt.label');
+
+            DB::table('test_passers')->where('id', $passer->id)->update([
+                'graduate_of'     => $graduateType,
+                'graduation_date' => $profile->date_graduated,
+            ]);
+        }
     }
 
     /**

@@ -113,6 +113,23 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(60)
                     ->by($ipKey),
             ];
+            $refNumber = (string) $request->input('referenceNumber', '');
+            $refKey    = 'ref:' . hash('sha256', $refNumber);
+            $ipKey     = 'ip:' . $request->ip();
+
+            return [
+                // Layer 1: 10 checks/min per reference number
+                Limit::perMinute(10)
+                    ->by($refKey),
+
+                // Layer 2: 60 checks/day per reference number (slow enumeration prevention)
+                Limit::perDay(60)
+                    ->by($refKey . ':daily'),
+
+                // Layer 3: 60 requests/min per IP (flood backstop, safe for shared WiFi)
+                Limit::perMinute(60)
+                    ->by($ipKey),
+            ];
         });
 
         RateLimiter::for('emails', function () {
