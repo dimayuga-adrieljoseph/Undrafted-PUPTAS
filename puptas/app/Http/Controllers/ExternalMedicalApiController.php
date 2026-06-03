@@ -120,7 +120,7 @@ class ExternalMedicalApiController extends Controller
             // Basic Identity
             'id'                     => $profile->user_id,
             'idp_user_id'            => $profile->user?->idp_user_id,
-            'student_number'         => $profile->reference_number,
+            'reference_number'       => $profile->reference_number,
             
             // Personal Information
             'salutation'             => $profile->salutation,
@@ -219,17 +219,17 @@ class ExternalMedicalApiController extends Controller
     }
 
     /**
-     * Look up applicant by Student Number.
+     * Look up applicant by Reference Number.
      */
-    public function showByStudentNumber(Request $request, string $studentNumber): JsonResponse
+    public function showByReferenceNumber(Request $request, string $referenceNumber): JsonResponse
     {
         // Log the API call FIRST, before any potential errors
         $this->auditLogService->logActivity(
             'READ',
             'External Medical API',
             sprintf(
-                'API call to retrieve applicant by Student Number: %s from IP %s.',
-                $studentNumber,
+                'API call to retrieve applicant by Reference Number: %s from IP %s.',
+                $referenceNumber,
                 $request->ip() ?? 'unknown'
             ),
             null,
@@ -239,19 +239,19 @@ class ExternalMedicalApiController extends Controller
         try {
             // Look up by testPasser's reference_number
             $profile = $this->getEligibleApplicantQuery()
-                ->whereHas('testPasser', function ($q) use ($studentNumber) {
-                    $q->where('reference_number', $studentNumber);
+                ->whereHas('testPasser', function ($q) use ($referenceNumber) {
+                    $q->where('reference_number', $referenceNumber);
                 })->first();
             
-            return $this->formatResponse($profile, "Student Number: $studentNumber", $request);
+            return $this->formatResponse($profile, "Reference Number: $referenceNumber", $request);
         } catch (\Throwable $e) {
             // Log the error but still throw it
             $this->auditLogService->logActivity(
                 'READ_ERROR',
                 'External Medical API',
                 sprintf(
-                    'API call failed for Student Number: %s from IP %s. Error: %s',
-                    $studentNumber,
+                    'API call failed for Reference Number: %s from IP %s. Error: %s',
+                    $referenceNumber,
                     $request->ip() ?? 'unknown',
                     $e->getMessage()
                 ),
@@ -268,7 +268,7 @@ class ExternalMedicalApiController extends Controller
     public function webhookResult(Request $request): JsonResponse
     {
         // Map their field names to ours
-        $studentNumber = $request->input('student_number');
+        $referenceNumber = $request->input('reference_number');
         
         $idpUserId = $request->input('idp_user_id')
                   ?? $request->input('student_id');  // Their UUID field
@@ -279,11 +279,11 @@ class ExternalMedicalApiController extends Controller
         
         // Validate
         $validator = \Illuminate\Support\Facades\Validator::make([
-            'student_number' => $studentNumber,
+            'reference_number' => $referenceNumber,
             'idp_user_id' => $idpUserId,
             'is_health_profile_completed' => $isHealthProfileCompleted,
         ], [
-            'student_number' => 'nullable|string',
+            'reference_number' => 'nullable|string',
             'idp_user_id' => 'nullable|string',
             'is_health_profile_completed' => 'required|integer|in:0,1',
         ]);
@@ -296,9 +296,9 @@ class ExternalMedicalApiController extends Controller
         }
 
         // Ensure at least one identifier is provided
-        if (!$studentNumber && !$idpUserId) {
+        if (!$referenceNumber && !$idpUserId) {
             return response()->json([
-                'message' => 'Either student_number or student_id (idp_user_id) must be provided'
+                'message' => 'Either reference_number or student_id (idp_user_id) must be provided'
             ], 422);
         }
 
@@ -307,20 +307,20 @@ class ExternalMedicalApiController extends Controller
         $status = $isHealthProfileCompleted == 1 ? 'cleared' : 'failed';
         
         // Determine lookup identifier for logging
-        $lookupIdentifier = $studentNumber ?: $idpUserId;
-
-        // Try to find profile - prioritize student_number, fallback to idp_user_id
+        $lookupIdentifier = $referenceNumber ?: $idpUserId;
+        
+        // Try to find profile - prioritize reference_number, fallback to idp_user_id
         $profile = null;
         
         // First try: reference_number (if provided and not empty)
-        if ($studentNumber) {
+        if ($referenceNumber) {
             $profile = $this->getEligibleApplicantQuery()
-                ->whereHas('testPasser', function ($q) use ($studentNumber) {
-                    $q->where('reference_number', $studentNumber);
+                ->whereHas('testPasser', function ($q) use ($referenceNumber) {
+                    $q->where('reference_number', $referenceNumber);
                 })->first();
         }
         
-        // Second try: idp_user_id (if student_number failed or not provided)
+        // Second try: idp_user_id (if reference_number failed or not provided)
         if (!$profile && $idpUserId) {
             $profile = $this->getEligibleApplicantQuery()
                 ->whereHas('user', function ($q) use ($idpUserId) {
@@ -333,10 +333,10 @@ class ExternalMedicalApiController extends Controller
             $fallbackProfile = null;
             
             // Try fallback with reference_number
-            if ($studentNumber) {
+            if ($referenceNumber) {
                 $fallbackProfile = ApplicantProfile::with(['currentApplication.processes', 'testPasser'])
-                    ->whereHas('testPasser', function ($q) use ($studentNumber) {
-                        $q->where('reference_number', $studentNumber);
+                    ->whereHas('testPasser', function ($q) use ($referenceNumber) {
+                        $q->where('reference_number', $referenceNumber);
                     })->first();
             }
             
@@ -362,9 +362,9 @@ class ExternalMedicalApiController extends Controller
                 'WEBHOOK_MISS',
                 'External Medical API',
                 sprintf(
-                    'Webhook received for ineligible or unknown student: %s (student_number: %s, idp_user_id: %s) from IP %s.',
+                    'Webhook received for ineligible or unknown student: %s (reference_number: %s, idp_user_id: %s) from IP %s.',
                     $lookupIdentifier,
-                    $studentNumber ?: 'not provided',
+                    $referenceNumber ?: 'not provided',
                     $idpUserId ?: 'not provided',
                     $request->ip() ?? 'unknown'
                 ),
