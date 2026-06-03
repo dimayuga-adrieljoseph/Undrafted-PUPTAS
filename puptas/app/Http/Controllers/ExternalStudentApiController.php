@@ -28,21 +28,21 @@ class ExternalStudentApiController extends Controller
         );
 
         return response()->json([
-            'message' => 'This endpoint is deprecated. Use /api/v1/students/{studentNumber}.',
+            'message' => 'This endpoint is deprecated. Use /api/v1/students/{referenceNumber}.',
         ])->withHeaders([
             'Deprecation' => 'true',
             'Sunset' => 'Tue, 30 Jun 2026 23:59:59 GMT',
-            'Link' => '</api/v1/students/{studentNumber}>; rel="successor-version"',
+            'Link' => '</api/v1/students/{referenceNumber}>; rel="successor-version"',
         ])->setStatusCode(410);
     }
 
-    public function showByStudentNumber(Request $request, string $studentNumber): JsonResponse
+    public function showByReferenceNumber(Request $request, string $referenceNumber): JsonResponse
     {
         $application = Application::query()
             ->with(['user.grades', 'program', 'user.testPasser'])
             ->where('enrollment_status', 'officially_enrolled')
-            ->whereHas('user.testPasser', function ($query) use ($studentNumber) {
-                $query->where('reference_number', $studentNumber);
+            ->whereHas('user.testPasser', function ($query) use ($referenceNumber) {
+                $query->where('reference_number', $referenceNumber);
             })
             ->first();
 
@@ -51,8 +51,8 @@ class ExternalStudentApiController extends Controller
                 'READ_MISS',
                 'External API',
                 sprintf(
-                    'External student lookup miss for student_number %s from IP %s.',
-                    $studentNumber,
+                    'External student lookup miss for reference_number %s from IP %s.',
+                    $referenceNumber,
                     $request->ip() ?? 'unknown'
                 ),
                 null,
@@ -76,7 +76,7 @@ class ExternalStudentApiController extends Controller
 
         $payload = [
             'id' => $user->id,
-            'student_number' => $user->reference_number,
+            'reference_number' => $user->reference_number,
             'firstname' => $user->firstname,
             'middlename' => $user->middlename,
             'extension_name' => $user->extension_name,
@@ -104,8 +104,8 @@ class ExternalStudentApiController extends Controller
             'READ',
             'External API',
             sprintf(
-                'External student lookup success for student_number %s from IP %s.',
-                $studentNumber,
+                'External student lookup success for reference_number %s from IP %s.',
+                $referenceNumber,
                 $request->ip() ?? 'unknown'
             ),
             null,
@@ -161,7 +161,7 @@ class ExternalStudentApiController extends Controller
         $payload = [
             'id' => $account->id,
             'idp_user_id' => $account->idp_user_id,
-            'student_number' => $user->reference_number,
+            'reference_number' => $user->reference_number,
             'firstname' => $user->firstname,
             'middlename' => $user->middlename,
             'extension_name' => $user->extension_name,

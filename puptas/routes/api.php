@@ -20,7 +20,7 @@ Route::prefix('v1')
     ->group(function () {
         Route::get('/students', [ExternalStudentApiController::class, 'index']);
         Route::get('/students/idp/{idpUserId}', [ExternalStudentApiController::class, 'showByIdpUserId']);
-        Route::get('/students/{studentNumber}', [ExternalStudentApiController::class, 'showByStudentNumber']);
+        Route::get('/students/{referenceNumber}', [ExternalStudentApiController::class, 'showByReferenceNumber']);
     });
 
 Route::prefix('v1')
@@ -36,7 +36,7 @@ Route::prefix('v1')
     ->group(function () {
         Route::get('/medical/applicants', [ExternalMedicalApiController::class, 'index']);
         Route::get('/medical/applicants/idp/{idpUserId}', [ExternalMedicalApiController::class, 'showByIdpUserId']);
-        Route::get('/medical/applicants/{studentNumber}', [ExternalMedicalApiController::class, 'showByStudentNumber']);
+        Route::get('/medical/applicants/{referenceNumber}', [ExternalMedicalApiController::class, 'showByReferenceNumber']);
     });
 
 Route::prefix('v1')

@@ -42,14 +42,14 @@ Retrieve applicants who have successfully passed the Evaluator and Interviewer s
 
 - **GET** `/api/v1/medical/applicants` (Deprecated - Avoid bulk polling)
 - **GET** `/api/v1/medical/applicants/idp/{idpUserId}`
-- **GET** `/api/v1/medical/applicants/{studentNumber}`
+- **GET** `/api/v1/medical/applicants/{referenceNumber}`
 
 **Success Response (200 OK)**
 ```json
 {
     "data": {
         "idp_user_id": "a1b2c3d4...",
-        "student_number": "2026-MED-1234",
+        "reference_number": "2026-MED-1234",
         "email": "student@pup.edu.ph",
         "first_name": "Juan",
         "last_name": "Dela Cruz",
@@ -78,7 +78,7 @@ Calculate an `HMAC-SHA256` hash of the raw request body using the shared webhook
 **Payload Structure**
 ```json
 {
-    "student_number": "2026-MED-1234",
+    "reference_number": "2026-MED-1234",
     "medical_status": "cleared" // Can be "cleared" or "failed"
 }
 ```
@@ -89,7 +89,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 
 const payload = JSON.stringify({
-    student_number: "2026-MED-1234",
+    reference_number: "2026-MED-1234",
     medical_status: "cleared"
 });
 
