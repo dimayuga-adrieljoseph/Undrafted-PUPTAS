@@ -385,7 +385,7 @@
                         <!-- Send Button -->
                         <button
                             type="button"
-                            @click="sendEmails"
+                            @click="promptSendEmails"
                             :disabled="!selectedPassers.length || !emailTemplate"
                             :class="[
                                 'w-full mt-6 py-4 rounded-xl font-semibold text-lg transition-all duration-200',
@@ -657,31 +657,6 @@
                             </div>
                         </div>
 
-                        <!-- Graduate of & Graduation Date -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Graduate of: *</label>
-                                <select
-                                    v-model="editingPasser.graduate_of"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="" disabled>Select an option</option>
-                                    <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
-                                    <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Graduation Date *</label>
-                                <input
-                                    type="date"
-                                    v-model="editingPasser.graduation_date"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                                />
-                            </div>
-                        </div>
-
                         <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
@@ -877,31 +852,6 @@
                             </div>
                         </div>
 
-                        <!-- Graduate of & Graduation Date -->
-                        <div class="col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Graduate of: *</label>
-                                <select
-                                    v-model="newPasserData.graduate_of"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
-                                >
-                                    <option value="" disabled>Select an option</option>
-                                    <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
-                                    <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Graduation Date *</label>
-                                <input
-                                    type="date"
-                                    v-model="newPasserData.graduation_date"
-                                    required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                                />
-                            </div>
-                        </div>
-
                         <div class="col-span-2 grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
@@ -1055,6 +1005,59 @@
                 </div>
             </div>
 
+            <!-- Edit Confirmation Modal -->
+            <ChangesConfirmationModal
+                :show="showEditConfirmModal"
+                :changes="editChanges"
+                :loading="saving"
+                title="Confirm Passer Changes"
+                subtitle="Review the following changes before saving this passer's details"
+                @confirm="confirmEditSave"
+                @cancel="showEditConfirmModal = false"
+            />
+
+            <!-- Send Emails Confirmation Modal -->
+            <ChangesConfirmationModal
+                :show="showSendEmailsConfirmModal"
+                :title="templateType === 'sar' ? 'Send SAR Forms?' : 'Send Emails?'"
+                :subtitle="templateType === 'sar' ? 'Review the list of passers before sending SAR forms.' : 'Review the list of passers before sending emails.'"
+                :confirmText="templateType === 'sar' ? 'Send SAR Forms' : 'Send Emails'"
+                :hideTable="false"
+                :disableChangesValidation="true"
+                @confirm="executeSendEmails"
+                @cancel="showSendEmailsConfirmModal = false"
+            >
+                <template #content>
+                    <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 max-h-[50vh] overflow-y-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Passer</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Email</th>
+                                    <th v-if="templateType === 'sar'" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Schedule</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <tr v-for="passer in selectedPassersList" :key="passer.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition">
+                                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-200 whitespace-nowrap">
+                                        {{ passer.first_name }} {{ passer.surname }}
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                        {{ passer.email }}
+                                    </td>
+                                    <td v-if="templateType === 'sar'" class="px-4 py-3 text-gray-900 dark:text-gray-200 font-medium whitespace-nowrap">
+                                        <div class="flex flex-col">
+                                            <span>{{ sarEnrollmentDate }}</span>
+                                            <span class="text-xs text-gray-500">{{ sarEnrollmentTime }}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+            </ChangesConfirmationModal>
+
             <!-- Snackbar -->
             <div
                 v-if="snackbar.show"
@@ -1111,6 +1114,7 @@ import "@vueup/vue-quill/dist/vue-quill.snow.css";
 import { useGlobalLoading } from "@/Composables/useGlobalLoading";
 import { useSnackbar } from "@/Composables/useSnackbar";
 import EmailProgressBar from "@/Components/EmailProgressBar.vue";
+import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
 
 // Scroll functionality (unchanged)
 const scrollWrapper = ref(null);
@@ -1562,7 +1566,30 @@ watch([filterSchoolYear, filterBatchNumber], () => {
     allFilteredSelected.value = false;
 }, { deep: true });
 
-const sendEmails = async () => {
+const showSendEmailsConfirmModal = ref(false);
+
+const selectedPassersList = computed(() => {
+    return flatPassers.value.filter(p => selectedPassers.value.includes(p.test_passer_id));
+});
+
+const promptSendEmails = () => {
+    if (selectedPassers.value.length === 0) {
+        show('Please select at least one passer first.', 'error');
+        return;
+    }
+
+    if (templateType.value === 'sar') {
+        if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
+            show("Please set enrollment date and time for SAR forms.", "error");
+            return;
+        }
+    }
+
+    showSendEmailsConfirmModal.value = true;
+};
+
+const executeSendEmails = async () => {
+    showSendEmailsConfirmModal.value = false;
     let messageHtml;
 
     if (templateType.value === 'default') {
@@ -1612,6 +1639,25 @@ const sendEmails = async () => {
         finish();
     }
 };
+
+// ── Edit Confirmation State ──────────────────────────────
+const showEditConfirmModal = ref(false);
+const editChanges = ref([]);
+const originalPasserData = ref(null);
+
+const passerFieldLabels = {
+    surname: 'Surname',
+    first_name: 'First Name',
+    middle_name: 'Middle Name',
+    email: 'Email',
+    shs_school: 'High School',
+    strand: 'Strand',
+    school_year: 'School Year',
+    batch_number: 'Batch Number',
+    passer_status_id: 'Status',
+};
+
+const statusLabels = { '1': 'Qualified', '2': 'Waitlisted', '3': 'Unqualified', '4': 'Waitlisted Below Cut Off' };
 
 // Modal state (unchanged)
 const showEditModal = ref(false);
@@ -1681,18 +1727,72 @@ function openEditModal(passer) {
         pupcet_total_score: passer.pupcet_total_score != null ? passer.pupcet_total_score : '',
         year_graduated: yearGradVal,
         shs_school: passer.shs_school || '',
-        graduate_of: passer.graduate_of || '',
-        graduation_date: passer.graduation_date || '',
     };
+
+    // Snapshot original data for comparison
+    originalPasserData.value = {
+        surname: passer.surname ?? '',
+        first_name: passer.first_name ?? '',
+        middle_name: passer.middle_name ?? '',
+        email: passer.email ?? '',
+        shs_school: passer.shs_school ?? '',
+        strand: passer.strand ?? '',
+        school_year: passer.school_year ?? '',
+        batch_number: passer.batch_number ?? '',
+        passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
+    };
+
     showEditModal.value = true;
 }
 
 function closeEditModal() {
     showEditModal.value = false;
     editingPasser.value = null;
+    originalPasserData.value = null;
 }
 
 async function savePasser() {
+    // Build changes list from edit modal
+    const changes = [];
+    const fieldsToCheck = ['surname', 'first_name', 'middle_name', 'email', 'shs_school', 'strand', 'school_year', 'batch_number', 'passer_status_id'];
+
+    fieldsToCheck.forEach(key => {
+        const oldVal = originalPasserData.value?.[key] ?? '';
+        let newVal = editingPasser.value?.[key] ?? '';
+        if (newVal === '' || newVal == null) newVal = '';
+        else newVal = String(newVal);
+
+        const oldNorm = String(oldVal ?? '');
+        const newNorm = String(newVal ?? '');
+
+        if (oldNorm !== newNorm) {
+            let oldDisplay = oldNorm || '—';
+            let newDisplay = newNorm || '—';
+
+            if (key === 'passer_status_id') {
+                oldDisplay = statusLabels[oldNorm] || oldNorm || '—';
+                newDisplay = statusLabels[newNorm] || newNorm || '—';
+            }
+
+            changes.push({
+                field: passerFieldLabels[key] || key,
+                oldValue: oldDisplay,
+                newValue: newDisplay,
+            });
+        }
+    });
+
+    if (changes.length === 0) {
+        closeEditModal();
+        return;
+    }
+
+    editChanges.value = changes;
+    showEditConfirmModal.value = true;
+}
+
+async function confirmEditSave() {
+    showEditConfirmModal.value = false;
     saving.value = true;
     start();
     try {
@@ -1829,8 +1929,6 @@ function openAddModal() {
         school_year: "",
         pupcet_total_score: "",
         passer_status_id: "",
-        graduate_of: "",
-        graduation_date: "",
     };
     showAddModal.value = true;
 }

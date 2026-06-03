@@ -38,7 +38,6 @@ class UserService
                         'status' => $profile->currentApplication->status ?? null,
                         'email' => $profile->email,
                         'username' => $profile->email,
-                        'phone' => $profile->contactnumber,
                         'company' => $profile->company ?? null,
                         'program' => $profile->currentApplication->program ?? null,
                         'processes' => $profile->currentApplication->processes ?? [],
@@ -96,7 +95,6 @@ class UserService
                     'status' => $application->status ?? null,
                     'email' => $profile->email,
                     'username' => $profile->email,
-                    'phone' => $profile->contactnumber,
                     'company' => $profile->company ?? null,
                     'program' => $application && $application->program ? [
                         'id' => $application->program->id,
@@ -172,7 +170,6 @@ class UserService
                     'status' => $application->status ?? null,
                     'email' => $profile->email,
                     'username' => $profile->email,
-                    'phone' => $profile->contactnumber,
                     'company' => $profile->company ?? null,
                     'pipeline_status' => $this->derivePipelineStatus($application),
                     'program' => $application && $application->program ? [
@@ -326,8 +323,8 @@ class UserService
         }
 
         // Load only what we need - no deep eager loading
-        $profiles = ApplicantProfile::whereIn('user_id', $allUserIds)
-            ->get(['user_id', 'firstname', 'lastname', 'email', 'contactnumber', 'student_number']);
+        $allUserIdsStrings = array_map('strval', $allUserIds);
+        $profiles = ApplicantProfile::whereIn('user_id', $allUserIdsStrings)->get(['user_id', 'firstname', 'lastname', 'email', 'student_number']);
 
         // Load applications separately
         $applications = \App\Models\Application::whereIn('user_id', $allUserIds)
@@ -348,7 +345,6 @@ class UserService
                 'course'            => null,
                 'email'             => $profile->email,
                 'username'          => $profile->email,
-                'phone'             => $profile->contactnumber,
                 'company'           => null,
                 'status'            => $app?->status ?? null,
                 'enrollment_status' => $app?->enrollment_status ?? null,
@@ -395,7 +391,6 @@ class UserService
                     'lastname' => $staff->lastname,
                     'extension_name' => $staff->extension_name,
                     'email' => $staff->email,
-                    'contactnumber' => $staff->contactnumber,
                     'role_id' => $staff->role_id,
                     'created_at' => $staff->created_at,
                     'role' => (object) ['name' => $staff->role ? $staff->role->name : 'Staff'],
@@ -428,7 +423,6 @@ class UserService
                     'lastname' => $applicant->lastname,
                     'extension_name' => $applicant->extension_name,
                     'email' => $applicant->email,
-                    'contactnumber' => $applicant->contactnumber,
                     'role_id' => 1,
                     'created_at' => $applicant->created_at,
                     'role' => (object) ['name' => 'Applicant'],
@@ -495,7 +489,6 @@ class UserService
             'email' => $data['email'],
             'role_id' => $data['role_id'] ?? 1,
             'salutation' => $data['salutation'] ?? null,
-            'contactnumber' => $data['contactnumber'] ?? '0000000000',
             'sex' => $data['sex'] ?? null,
             'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)), // IDP handles real passwords
         ]);
@@ -583,7 +576,6 @@ class UserService
                 'lastname'       => $u->lastname,
                 'extension_name' => $u->extension_name,
                 'email'          => $u->email,
-                'contactnumber'  => $u->contactnumber,
                 'role_id'        => $u->role_id,
                 'created_at'     => $u->created_at,
                 'role'           => (object) ['name' => $u->role ? $u->role->name : 'Staff'],
@@ -602,7 +594,6 @@ class UserService
                 'lastname'       => $a->lastname,
                 'extension_name' => $a->extension_name,
                 'email'          => $a->email,
-                'contactnumber'  => $a->contactnumber,
                 'role_id'        => 1,
                 'created_at'     => $a->created_at,
                 'role'           => (object) ['name' => 'Applicant'],

@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Prunable;
 
 class AuditLog extends Model
 {
+    use Prunable;
+
     // Action type constants
     const ACTION_LOGIN  = 'LOGIN';
     const ACTION_LOGOUT = 'LOGOUT';
@@ -68,7 +71,7 @@ class AuditLog extends Model
      */
     public function scopeForUser(Builder $query, int $userId): Builder
     {
-        return $query->where('user_id', $userId);
+        return $query->where('user_id', (string) $userId);
     }
 
     /**
@@ -93,5 +96,13 @@ class AuditLog extends Model
     public function scopeForType(Builder $query, string $type): Builder
     {
         return $query->where('log_type', strtoupper($type));
+    }
+
+    /**
+     * Get the prunable query.
+     */
+    public function prunable(): Builder
+    {
+        return static::where('created_at', '<=', now()->subMonths(6));
     }
 }

@@ -153,7 +153,7 @@ class InterviewerDashboardController extends Controller
             ], 409);
         }
 
-        $grades = Grade::where('user_id', $userId)->first();
+        $grades = Grade::where('user_id', (string) $userId)->first();
 
         if (!$grades) {
             return response()->json(['message' => 'User has no grades recorded.'], 400);

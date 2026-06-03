@@ -39,7 +39,7 @@ class DoclingParser
      */
     public function extract(User $user): array
     {
-        $files = UserFile::where('user_id', $user->id)
+        $files = UserFile::where('user_id', (string) $user->id)
             ->whereNotNull('docling_json')
             ->orderBy('id', 'asc')
             ->get();

@@ -25,7 +25,6 @@ class ApiTestStudentsSeeder extends Seeder
                 [
                     'firstname' => "APITest{$num}",
                     'lastname' => 'Student',
-                    'contactnumber' => '09170000000',
                     'password' => Hash::make('password'),
                     'role_id' => 1,
                 ]

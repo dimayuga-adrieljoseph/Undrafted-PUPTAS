@@ -34,7 +34,7 @@ class GradeExtractionController extends Controller
 
     private function getStrandGradeUrl($user): string
     {
-        $profile = \App\Models\ApplicantProfile::where('user_id', $user->id)->first();
+        $profile = \App\Models\ApplicantProfile::where('user_id', (string) $user->id)->first();
         $strand = strtoupper($profile?->strand ?? 'ABM');
 
         return match ($strand) {

@@ -170,6 +170,9 @@ Route::middleware(['auth'])->group(function () {
     
     Route::get('/grades/tvl', [GradesController::class, 'showTvlGradeForm'])->name('grades.tvl.form');
     Route::post('/grades/tvl', [GradesController::class, 'storeTvlGrades'])->name('grades.tvl.store');
+
+    // Unified grade store endpoint (dynamic grade input)
+    Route::post('/grades/store', [GradesController::class, 'storeGrades'])->name('grades.store');
 });
 
 Route::get('/home', function () {
@@ -265,12 +268,12 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::post('/test-passers/upload', [TestPasserController::class, 'upload'])->name('upload');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
     Route::put('/test-passers/{test_passer}', [TestPasserController::class, 'update'])->name('test-passers.update');
     Route::post('/test-passers-store', [TestPasserController::class, 'store']);
     Route::delete('/test-passers/{test_passer}', [TestPasserController::class, 'destroy'])->name('test-passers.destroy');
     Route::post('/test-passers/bulk-destroy', [TestPasserController::class, 'bulkDestroy'])->name('test-passers.bulk-destroy');
-    Route::post('/test-passers/bulk-enroll', [TestPasserController::class, 'bulkEnroll'])->middleware('role:2,7')->name('test-passers.bulk-enroll');
+    Route::post('/test-passers/bulk-enroll', [TestPasserController::class, 'bulkEnroll'])->name('test-passers.bulk-enroll');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -279,6 +282,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/user/application/reupload', [ConfirmationController::class, 'reupload']);
     Route::post('/user/application/upload-url', [ConfirmationController::class, 'getUploadUrl']);
     Route::post('/user/application/confirm-upload', [ConfirmationController::class, 'confirmUpload']);
+    Route::get('/user/application/file-status', [ConfirmationController::class, 'fileStatus']);
     Route::get('/files/{file}/preview', [UserFileController::class, 'preview'])
         ->middleware('signed')
         ->name('files.preview');
@@ -379,6 +383,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::put('/users/{user}/grades', [UserController::class, 'updateGrades'])->name('users.grades.update');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     // Admin Reports

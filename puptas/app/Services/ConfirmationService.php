@@ -39,18 +39,52 @@ class ConfirmationService
      */
     public function getConfirmationData(User $user): array
     {
-        $files = $user->files()->get()->keyBy('type');
+        $files = $user->files()->get();
+
+        // Auto-expire stale 'uploading' statuses (stuck for >10 minutes = failed)
+        $staleThreshold = now()->subMinutes(10);
+        foreach ($files as $file) {
+            if ($file->status === 'uploading' && $file->updated_at < $staleThreshold) {
+                $file->update(['status' => 'failed']);
+            }
+        }
+
+        $files = $files->keyBy('type');
         $application = $user->currentApplication;
-        $profile = $user->applicantProfile()->with('graduateTypes')->first();
+        $profile = $user->applicantProfile()->with([
+            'graduateTypes',
+            'firstChoiceProgram',
+            'secondChoiceProgram',
+            'thirdChoiceProgram',
+        ])->first();
 
         $graduateType = $profile?->graduateTypes->first()?->label ?? null;
+
+        // Resolve program IDs and names from application (non-draft) or profile (draft/no app)
+        $isDraft = !$application || $application->status === 'draft';
+
+        if ($isDraft) {
+            $firstId   = $profile?->first_choice_program;
+            $secondId  = $profile?->second_choice_program;
+            $thirdId   = $profile?->third_choice_program;
+            $firstName  = $profile?->firstChoiceProgram?->name;
+            $secondName = $profile?->secondChoiceProgram?->name;
+            $thirdName  = $profile?->thirdChoiceProgram?->name;
+        } else {
+            $application->load(['program', 'secondChoice', 'thirdChoice']);
+            $firstId   = $application->program_id;
+            $secondId  = $application->second_choice_id;
+            $thirdId   = $application->third_choice_id;
+            $firstName  = $application->program?->name;
+            $secondName = $application->secondChoice?->name;
+            $thirdName  = $application->thirdChoice?->name;
+        }
 
         return [
             'firstname' => $user->firstname,
             'middlename' => $user->middlename,
             'lastname' => $user->lastname,
             'sex' => $user->sex,
-            'contactnumber' => $user->contactnumber,
             'email' => $user->email,
             'schoolyear' => $graduateType,
             'dateGrad' => $profile?->date_graduated
@@ -62,9 +96,12 @@ class ConfirmationService
             'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType),
             'processes' => $this->getApplicationProcesses($application),
             'enrollment_status' => $application?->enrollment_status ?? null,
-            'program_id' => $application?->program_id ?? $profile?->first_choice_program,
-            'second_choice_id' => $application?->second_choice_id ?? $profile?->second_choice_program,
-            'third_choice_id' => $application?->third_choice_id ?? $profile?->third_choice_program,
+            'program_id'       => $firstId,
+            'second_choice_id' => $secondId,
+            'third_choice_id'  => $thirdId,
+            'program_name'        => $firstName,
+            'second_choice_name'  => $secondName,
+            'third_choice_name'   => $thirdName,
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
         ];
     }
@@ -197,6 +234,16 @@ class ConfirmationService
                 'third_choice_id' => $validated['third_choice_id'] ?? null,
             ]);
 
+            // Sync program choices back to applicant_profiles so all views
+            // that read from profile (e.g. firstChoiceProgram relationship) stay consistent.
+            if ($profile) {
+                $profile->update([
+                    'first_choice_program'  => $validated['program_id'],
+                    'second_choice_program' => $validated['second_choice_id'] ?? null,
+                    'third_choice_program'  => $validated['third_choice_id'] ?? null,
+                ]);
+            }
+
             // Create the next in-flight process (evaluator)
             $application->processes()->create([
                 'stage' => 'evaluator',
@@ -232,12 +279,41 @@ class ConfirmationService
         }
 
         // Get existing file path before uploading (for cleanup after)
-        $existingFilePath = UserFile::where('user_id', $user->id)
+        $existingFile = UserFile::where('user_id', (string) $user->id)
             ->where('type', $type)
-            ->value('file_path');
+            ->first();
+
+        $existingFilePath = $existingFile?->file_path;
+
+        // Mark the file as "uploading" in the DB BEFORE the actual storage operation.
+        // This makes the backend authoritative — the frontend can poll this status
+        // instead of relying on localStorage to detect in-progress uploads.
+        $userFile = UserFile::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'type' => $type,
+            ],
+            [
+                'status' => 'uploading',
+                'original_name' => $uploadedFile->getClientOriginalName(),
+            ]
+        );
 
         // Use FileService to store the file (streaming, no memory bloat)
-        $compressed = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
+        try {
+            $compressed = $this->fileService->storeRaw($uploadedFile, 'uploads/files');
+        } catch (\Throwable $e) {
+            // Storage failed — mark as failed so frontend shows the correct state
+            $userFile->update(['status' => 'failed']);
+
+            Log::error('File storage failed during reupload', [
+                'user_id' => $user->id,
+                'field' => $field,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
 
         // Prepare update data
         $updateData = [
@@ -251,29 +327,25 @@ class ConfirmationService
             $updateData['docling_json'] = null;
         }
 
-        // Save new file record and capture the model
+        // Finalize the file record with the stored path and 'pending' status
         try {
-            $userFile = UserFile::updateOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'type' => $type,
-                ],
-                $updateData
-            );
+            $userFile->update($updateData);
         } catch (\Throwable $e) {
             // The Cleanup Safety Net:
-            // If DB fails (e.g. out of space due to token bloat), delete the orphaned file from bucket
+            // If DB fails, delete the orphaned file from bucket and mark as failed
             try {
                 $this->fileService->delete($compressed['path']);
             } catch (\Throwable $deleteError) {
                 // Suppress cleanup error to prioritize reporting the actual DB crash
             }
+
+            // Try to mark as failed (best-effort)
+            try {
+                $userFile->update(['status' => 'failed']);
+            } catch (\Throwable $ignored) {}
+
             throw $e;
         }
-
-        $savedFile = $userFile;
-
-        // OCR processing has been removed since the system shifted to manual grade entry.
 
         Log::info('File reuploaded', [
             'user_id' => $user->id,
@@ -293,9 +365,12 @@ class ConfirmationService
             }
         }
 
+        // Refresh the model to get the latest state
+        $userFile->refresh();
+
         return [
             'message' => 'File reuploaded successfully',
-            'file' => $savedFile ? FileMapper::buildFilePayload($savedFile, true) : null,
+            'file' => FileMapper::buildFilePayload($userFile, true),
         ];
     }
 
@@ -364,7 +439,7 @@ class ConfirmationService
      */
     private function deleteExistingFile(User $user, string $type): void
     {
-        $existingFile = UserFile::where('user_id', $user->id)
+        $existingFile = UserFile::where('user_id', (string) $user->id)
             ->where('type', $type)
             ->first();
 

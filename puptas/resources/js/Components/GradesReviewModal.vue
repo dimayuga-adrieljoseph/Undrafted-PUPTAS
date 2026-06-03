@@ -44,6 +44,21 @@
                     </div>
                 </div>
 
+                <!-- Finality Warning -->
+                <div class="rounded-xl border-2 border-red-300 bg-red-50 p-4 dark:border-red-700 dark:bg-red-900/20">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                        </svg>
+                        <div>
+                            <p class="text-sm font-bold text-red-700 dark:text-red-400">Important: Submitted information is considered final.</p>
+                            <p class="mt-1 text-sm text-red-600 dark:text-red-300">
+                                Once saved, your grades and program selections cannot be changed. Changes after submission may only be accommodated during the interview schedule. Make sure everything is correct before proceeding.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
                     Make sure everything is correct before you save. If there is a mistake, go back and edit it first.
                 </div>
@@ -102,23 +117,92 @@ const humanizeKey = (key) => key
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const displaySections = computed(() => {
-    if (props.sections.length) {
-        return props.sections;
+    // Start with the sections prop if provided, else empty array
+    let sections = props.sections.length ? [...props.sections] : [];
+
+    // If we have sections, we will collect their labels to avoid duplication
+    const sectionLabels = new Set();
+    sections.forEach(section => {
+        section.items.forEach(item => {
+            sectionLabels.add(item.label);
+        });
+    });
+
+    // Prepare extra items from formData
+    const extraItems = [];
+    const ignoredKeysPatterns = [
+        // Program choices
+        /_choice_program$/,
+        // Averages
+        /_average$/,
+        // GWA
+        /_gwa$/,
+        // Specific keys we know are not subjects
+        'first_choice_program',
+        'second_choice_program',
+        'third_choice_program',
+        'math_average',
+        'english_average',
+        'science_average',
+        'g12_gwa',
+        'g12_first_sem_gwa',
+        'g12_second_sem_gwa',
+    ];
+
+    for (const [key, value] of Object.entries(props.formData || {})) {
+        // Skip if value is empty (as in the original fallback)
+        if (value === null || value === undefined || value === '') {
+            continue;
+        }
+
+        // Check if key matches any ignored pattern
+        const isIgnored = ignoredKeysPatterns.some(pattern => {
+            if (typeof pattern === 'string') {
+                return key === pattern;
+            } else {
+                return pattern.test(key);
+            }
+        });
+
+        if (isIgnored) {
+            continue;
+        }
+
+        const label = humanizeKey(key);
+        // Avoid adding duplicates: if the label is already in sectionLabels, skip
+        if (!sectionLabels.has(label)) {
+            extraItems.push({ label, value });
+            // Add to sectionLabels to avoid duplicates within extraItems
+            sectionLabels.add(label);
+        }
     }
 
-    const items = Object.entries(props.formData || {})
-        .filter(([, value]) => value !== null && value !== undefined && value !== '')
-        .map(([key, value]) => ({
-            label: humanizeKey(key),
-            value,
-        }));
+    // If we have extra items, add them as a new section
+    if (extraItems.length > 0) {
+        sections.push({
+            title: 'Additional Subjects',
+            items: extraItems,
+        });
+    }
 
-    return [
-        {
-            title: 'Entered Values',
-            items,
-        },
-    ];
+    // If we still have no sections (i.e., no props.sections and no extraItems), then fall back to the old behavior
+    if (sections.length === 0) {
+        const items = Object.entries(props.formData || {})
+            .filter(([, value]) => value !== null && value !== undefined && value !== '')
+            .map(([key, value]) => ({
+                label: humanizeKey(key),
+                value,
+            }));
+
+        return [
+            {
+                title: 'Entered Values',
+                items,
+            },
+        ];
+    }
+
+    return sections;
 });
 
 const formatValue = (value) => {

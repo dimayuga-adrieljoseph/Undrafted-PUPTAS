@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["resources/js/*"]
+        },
+        "allowJs": true,
+        "noEmit": true,
+        "lib": ["ESNext", "DOM"],
+        "target": "ESNext",
+        "moduleResolution": "node"
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.d.ts",
+        "resources/js/**/*.vue"
+    ],
+    "exclude": ["node_modules", "public"]
+}

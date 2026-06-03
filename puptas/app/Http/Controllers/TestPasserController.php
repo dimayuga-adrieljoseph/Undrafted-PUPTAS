@@ -24,6 +24,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 class TestPasserController extends Controller
 {
@@ -717,6 +718,7 @@ class TestPasserController extends Controller
     {
         // Find the passer or fail
         $passer = TestPasser::findOrFail($id);
+        $oldValues = $passer->toArray();
 
         // Validate input
         $validatedData = $request->validate([
@@ -746,10 +748,82 @@ class TestPasserController extends Controller
             unset($validatedData['email']);
         }
 
-        // Update passer with validated data
-        $passer->update($validatedData);
+        // Resolve linked User record (read-only, outside transaction)
+        $user = null;
+        if ($passer->user_id) {
+            $user = \App\Models\User::where('idp_user_id', $passer->user_id)
+                ->orWhere('id', $passer->user_id)
+                ->first();
+        }
+        if (!$user && $oldValues['email']) {
+            $user = \App\Models\User::where('email', $oldValues['email'])->first();
+        }
 
-        $this->auditLogService->logActivity('UPDATE', 'Test Passers', "Updated passer: {$passer->first_name} {$passer->surname} (ID: {$passer->test_passer_id}).", null, 'ADMISSION_DATA');
+        $newValues = null;
+
+        try {
+            DB::transaction(function () use ($passer, $validatedData, $oldValues, $user, &$newValues) {
+                // Update passer with validated data
+                $passer->update($validatedData);
+                $newValues = $passer->fresh()->toArray();
+
+                // Only SuperAdmin (role_id 7) can sync identity/profile data into users and applicant_profiles
+                if ($user && auth()->user()->role_id === 7) {
+                    // Validate email uniqueness against users table before attempting the sync
+                    if ($passer->email !== $user->email) {
+                        $emailExists = \App\Models\User::where('email', $passer->email)
+                            ->where('id', '!=', $user->id)
+                            ->exists();
+                        if ($emailExists) {
+                            throw new \RuntimeException('Email is already in use by another user.');
+                        }
+                    }
+
+                    // Sync name + email to User
+                    $user->update([
+                        'firstname' => $passer->first_name,
+                        'lastname' => $passer->surname,
+                        'middlename' => $passer->middle_name,
+                        'email' => $passer->email,
+                    ]);
+
+                    // Sync all shared fields to ApplicantProfile (normalize empty strings to null for clearable fields)
+                    $profileData = [
+                        'firstname' => $passer->first_name,
+                        'lastname' => $passer->surname,
+                        'middlename' => $passer->middle_name,
+                        'email' => $passer->email,
+                        'strand' => $passer->strand !== '' ? $passer->strand : null,
+                        'school' => $passer->shs_school !== '' ? $passer->shs_school : null,
+                    ];
+                    // Map year_graduated to date_graduated (allow clearing when year_graduated is empty/null)
+                    $profileData['date_graduated'] = $passer->year_graduated
+                        ? ($passer->year_graduated . '-04-01')
+                        : null;
+                    
+                    $profileQuery = \App\Models\ApplicantProfile::where('user_id', (string) $user->id);
+                    if (!empty($user->idp_user_id)) {
+                        $profileQuery->orWhere('user_id', (string) $user->idp_user_id);
+                    }
+                    $profileQuery->update($profileData);
+                }
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => 'Failed to update passer: ' . $e->getMessage(),
+            ], 422);
+        }
+
+        // Audit log outside transaction — only executes after successful commit
+        $this->auditLogService->logActivity(
+            'UPDATE', 
+            'Test Passers', 
+            "Updated passer: {$passer->first_name} {$passer->surname} (ID: {$passer->test_passer_id}).", 
+            null, 
+            'ADMISSION_DATA',
+            $oldValues,
+            $newValues
+        );
 
         return response()->json([
             'message' => 'Passer updated successfully',
@@ -1293,7 +1367,6 @@ class TestPasserController extends Controller
                             'lastname'           => $passer->surname,
                             'salutation'         => 'Mr.',
                             'sex'                => 'Male',
-                            'contactnumber'      => '09000000000',
                             'role_id'            => 1,
                             'password'           => \Illuminate\Support\Facades\Hash::make('Password123'),
                             'privacy_consent'    => true,
@@ -1315,7 +1388,6 @@ class TestPasserController extends Controller
                             'lastname'             => $passer->surname,
                             'salutation'           => 'Mr.',
                             'sex'                  => 'Male',
-                            'contactnumber'        => '09000000000',
                             'privacy_consent'      => true,
                             'privacy_consent_at'   => now(),
                             'strand'               => $passer->strand ?? 'STEM',

@@ -47,6 +47,8 @@ class Grade extends Model
         // HUMSS specific - G12 Science
         'g12_earth_life_science',
         'g12_physical_science',
+        // Dynamic subjects JSON
+        'dynamic_subjects',
     ];
 
     protected $casts = [
@@ -55,7 +57,19 @@ class Grade extends Model
         'science' => 'decimal:2',
         'g12_first_sem' => 'decimal:2',
         'g12_second_sem' => 'decimal:2',
+        'dynamic_subjects' => 'array',
     ];
+
+    /**
+     * Get dynamic subjects for a specific category.
+     */
+    public function getDynamicSubjectsForCategory(string $category): array
+    {
+        return collect($this->dynamic_subjects ?? [])
+            ->where('category', $category)
+            ->values()
+            ->toArray();
+    }
 
     public function user()
     {

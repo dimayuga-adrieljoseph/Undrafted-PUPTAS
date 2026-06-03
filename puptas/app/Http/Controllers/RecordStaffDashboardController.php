@@ -198,7 +198,6 @@ class RecordStaffDashboardController extends Controller
                     'firstname' => $applicant->firstname,
                     'lastname' => $applicant->lastname,
                     'email' => $applicant->email,
-                    'phone' => $applicant->contactnumber,
                     'application' => $applicant->currentApplication,
                     'program' => $applicant->currentApplication->program ?? null,
                 ];
@@ -229,7 +228,7 @@ class RecordStaffDashboardController extends Controller
                 'graduateTypes:id,label',
                 'testPasser',
             ])
-            ->where('user_id', $id)
+            ->where('user_id', (string) $id)
             ->firstOrFail();
 
             $application = $user->currentApplication;
@@ -253,7 +252,7 @@ class RecordStaffDashboardController extends Controller
             }
 
             // Load files separately for better performance
-            $files = UserFile::where('user_id', $id)->get()->keyBy('type');
+            $files = UserFile::where('user_id', (string) $id)->get()->keyBy('type');
 
             $userData = [
                 'id' => $user->user_id,
@@ -261,7 +260,6 @@ class RecordStaffDashboardController extends Controller
                 'firstname' => $user->firstname,
                 'lastname' => $user->lastname,
                 'email' => $user->email,
-                'contactnumber' => $user->contactnumber,
                 'sex' => $user->sex,
                 'created_at' => $user->created_at,
                 'grades' => $user->grades,
@@ -376,7 +374,7 @@ class RecordStaffDashboardController extends Controller
     public function changeCourse(ChangeCourseRequest $request, string $applicantId): JsonResponse
     {
         // Retrieve Application by user_id matching $applicantId
-        $application = Application::where('user_id', $applicantId)->first();
+        $application = Application::where('user_id', (string) $applicantId)->first();
         
         // Return 404 JSON response if application not found
         if (!$application) {
@@ -501,7 +499,6 @@ class RecordStaffDashboardController extends Controller
                 $applicant->firstname,
                 $applicant->lastname,
                 $applicant->email,
-                $applicant->contactnumber,
                 $program ? $program->code : 'N/A',
                 $program ? $program->name : 'N/A',
                 $application->updated_at->format('Y-m-d H:i:s')
@@ -521,7 +518,7 @@ class RecordStaffDashboardController extends Controller
     {
         $this->ensureRole($this->getRoleId());
 
-        $application = Application::where('user_id', $id)->firstOrFail();
+        $application = Application::where('user_id', (string) $id)->firstOrFail();
 
         // Check if medical is completed
         $medicalCompleted = $application->processes()
@@ -578,7 +575,7 @@ class RecordStaffDashboardController extends Controller
     {
         $this->ensureRole($this->getRoleId());
 
-        $application = Application::where('user_id', $id)->firstOrFail();
+        $application = Application::where('user_id', (string) $id)->firstOrFail();
 
         if ($application->enrollment_status !== 'officially_enrolled') {
             return response()->json([
