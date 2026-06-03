@@ -120,6 +120,9 @@ watchEffect(() => {
 
                 <!-- Right Controls -->
                 <div class="flex items-center gap-4">
+                    <!-- Slot for per-page header actions (e.g. FAQ button) -->
+                    <slot name="header-actions" />
+
                     <!-- Dark Mode Toggle -->
                     <button
                         @click="toggleDarkMode"
