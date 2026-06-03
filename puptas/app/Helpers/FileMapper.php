@@ -85,7 +85,7 @@ class FileMapper
             $uploadedFiles = [];
             foreach (self::MAPPING as $apiKey => $databaseType) {
                 if (isset($files[$databaseType])) {
-                    $uploadedFiles[$apiKey] = self::buildFilePayload($files[$databaseType], true);
+                    $uploadedFiles[$apiKey] = self::buildFilePayload($files[$databaseType], $includeStatus);
                 }
             }
             return $uploadedFiles;
@@ -95,7 +95,7 @@ class FileMapper
         foreach ($requiredKeys as $apiKey) {
             $databaseType = self::MAPPING[$apiKey];
             $uploadedFiles[$apiKey] = isset($files[$databaseType])
-                ? self::buildFilePayload($files[$databaseType], true)
+                ? self::buildFilePayload($files[$databaseType], $includeStatus)
                 : null;
         }
 
@@ -199,21 +199,16 @@ class FileMapper
     {
         // Fast path: Use extension-based mime type detection only
         $mimeType = self::guessMimeTypeFromPath($file->file_path);
-
-        // Don't generate preview URLs for files still uploading or failed
-        $isReady = !in_array($file->status, ['uploading', 'failed'], true);
-
+        
         $payload = [
-            'url' => $isReady ? self::buildPreviewUrl($file) : null,
+            'url' => self::buildPreviewUrl($file),
             'mimeType' => $mimeType,
             'originalName' => self::sanitizeFilename($file->original_name),
             'isImage' => str_starts_with($mimeType, 'image/'),
-            'updatedAt' => $file->updated_at?->toIso8601String(),
         ];
 
         if ($includeStatus) {
             $payload['status'] = $file->status;
-            $payload['comment'] = $file->comment;
         }
 
         return $payload;
@@ -277,16 +272,18 @@ class FileMapper
     public static function resolveDiskForPath(string $path, bool &$found = false): string
     {
         $cacheKey = 'file_disk:' . md5($path);
-        
-        // Fast path: Check if we already resolved this file's disk recently
+
+        // Fast path: Check if we already resolved this file's disk recently.
+        // Use the default cache store (file/array/redis) — never hardcode 'redis'
+        // so this works in local environments without Redis installed.
         try {
-            $cachedDisk = \Illuminate\Support\Facades\Cache::store('redis')->get($cacheKey);
+            $cachedDisk = \Illuminate\Support\Facades\Cache::get($cacheKey);
             if ($cachedDisk) {
                 $found = true;
                 return $cachedDisk;
             }
         } catch (\Throwable $e) {
-            // Redis unavailable (common in local dev) — skip cache
+            // Cache unavailable — continue without it
         }
 
         $configuredDefault = config('filesystems.default', 'public');
@@ -298,9 +295,9 @@ class FileMapper
                     $found = true;
                     // Cache the result for 30 days to bypass slow S3 exists() checks
                     try {
-                        \Illuminate\Support\Facades\Cache::store('redis')->put($cacheKey, $diskName, now()->addDays(30));
+                        \Illuminate\Support\Facades\Cache::put($cacheKey, $diskName, now()->addDays(30));
                     } catch (\Throwable $e) {
-                        // Redis unavailable — skip caching
+                        // Cache write failed — non-fatal, continue
                     }
                     return $diskName;
                 }
