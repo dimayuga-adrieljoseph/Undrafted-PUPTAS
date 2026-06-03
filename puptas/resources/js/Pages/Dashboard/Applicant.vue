@@ -38,8 +38,8 @@ const showFaqModal = ref(false);
 
 const faqItems = [
   {
-    question: "What happens after I submit my application? What's the next step?",
-    answer: "Kindly wait for your SAR (Student Admission Record) Form, which will be sent to your registered email, and carefully follow the instructions indicated therein regarding the next steps in the admission process.",
+    question: "What happens after I submit my application? What is the next step?",
+    answer: "Kindly wait for your SAR (Student Admission Record) Form, which will be sent to your registered email. The SAR Form will include your interview schedule and other important instructions regarding the admission process. Please follow the instructions indicated in the email carefully and prepare all required documents for your scheduled interview.",
   },
   {
     question: "Can we change our registered name (and other necessary information) due to errors made during the PUPCET application through PUP iApply?",
@@ -67,17 +67,32 @@ const faqItems = [
     answer: "PUP-Taguig Campus will only request the F137-A with \"Copy for Polytechnic University of the Philippines-Taguig Campus\" once the applicant is officially accepted/enrolled in our university. The applicant should write their high school a formal request letter of the F137 or other grade records (for evaluation purposes only) personally if needed. You may attach a copy of your PUPCET evaluation result and the list of admission requirements as proof.",
   },
   {
-    question: "Can I replace or re-upload documents if I uploaded the wrong file?",
-    answer: "Yes. Applicants may replace or re-upload their documents through the Document Upload section before the application review process is completed.",
+    question: "What if I just ordered my PSA-authenticated birth certificate online and it won't be delivered before the interview date?",
+    answer: "PSA birth certificate delivery lead times depend on your location, taking 1-2 working days for processing plus the courier's transit time. Deliveries typically take next day delivery for Metro Manila addresses and 3-8 working days for provincial areas. Bring your receipt as proof that you have already requested for the document.",
   },
   {
-    question: "What should I do if I encounter issues with my grades, subjects, or document uploads?",
-    answer: null,
-    answerItems: [
-      "Enter grades exactly as they appear on your report card, including decimal grades if the system allows.",
-      "If a required subject is not listed in your report card, click the Add Subject button and enter the closest equivalent subject available in your curriculum.",
-      "If you are unable to upload a document, check the file format, file size, and internet connection before trying again.",
-    ],
+    question: "Can I replace or re-upload documents if I uploaded the wrong file?",
+    answer: "Yes. Applicants may replace or re-upload documents through the Document Upload section as long as the application review process is not yet completed.",
+  },
+  {
+    question: "I did not receive my SAR (Student Admission Record) Form in my email. What should I do?",
+    answer: "First, check your spam or junk folder. If it is still not found, verify that you used the correct registered email during application. If the issue continues, contact admissions support for verification and request assistance for re-sending your SAR Form.",
+  },
+  {
+    question: "I accidentally encoded incorrect grades in my application. Can I still correct them?",
+    answer: "If you have not yet submitted your application, you may still update or correct your encoded information by clicking \"Input Grades\" again. If the application has already been submitted and locked, you may seek assistance from Chat Support.",
+  },
+  {
+    question: "How should I properly encode my grades in the system?",
+    answer: "Enter grades exactly as they appear on your report card, including decimal grades if applicable. Accurate encoding is required for proper evaluation.",
+  },
+  {
+    question: "What should I do if a subject is not available in the system?",
+    answer: "If a required subject is not listed, click the \"Add Subject\" button and enter the closest equivalent subject based on your curriculum. Ensure that the subject entered accurately reflects your official record or its nearest equivalent.",
+  },
+  {
+    question: "What should I do if I cannot upload my documents?",
+    answer: "Check the file format and file size first to ensure they meet system requirements. You may also try refreshing the page, switching browsers, or using a different device if the issue persists.",
   },
 ];
 
