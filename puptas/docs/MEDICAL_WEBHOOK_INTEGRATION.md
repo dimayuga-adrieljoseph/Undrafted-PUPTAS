@@ -24,7 +24,7 @@ The webhook accepts the following payload:
 ```json
 {
   "student_id": "ade67dc4-50f0-4e32-bd80-84308c0f4e10",
-  "student_number": "2024-12345",
+  "reference_number": "2024-12345",
   "is_health_profile_completed": 1
 }
 ```
@@ -34,10 +34,10 @@ The webhook accepts the following payload:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `student_id` | string (UUID) | Yes* | The student's IDP user ID (UUID format) |
-| `student_number` | string | Yes* | The student's official student number |
+| `reference_number` | string | Yes* | The student's official reference number |
 | `is_health_profile_completed` | integer | Yes | Medical clearance status: `1` = cleared/passed, `0` = failed |
 
-**Note**: At least ONE of `student_id` or `student_number` must be provided. Providing both is recommended for better matching.
+**Note**: At least ONE of `student_id` or `reference_number` must be provided. Providing both is recommended for better matching.
 
 ---
 
@@ -48,7 +48,7 @@ The webhook accepts the following payload:
 | Your Field | PUPTAS Field | Notes |
 |------------|--------------|-------|
 | `student_id` | `idp_user_id` | UUID format, primary identifier |
-| `student_number` | `student_number` | Same field name, secondary identifier |
+| `reference_number` | `reference_number` | Same field name, secondary identifier |
 | `is_health_profile_completed` | `medical_status` | `1` = cleared, `0` = failed |
 
 ---
@@ -64,7 +64,7 @@ The webhook accepts the following payload:
 ### What Happens When You Send
 
 1. PUPTAS receives the webhook
-2. System looks up the student by `student_number` (priority) or `student_id` (fallback)
+2. System looks up the student by `reference_number` (priority) or `student_id` (fallback)
 3. Validates the student is at the medical stage
 4. Updates application status:
    - `is_health_profile_completed = 1` → Application status: `cleared_for_enrollment`
@@ -101,7 +101,7 @@ The webhook accepts the following payload:
 
 ```json
 {
-  "message": "Either student_number or student_id (idp_user_id) must be provided"
+  "message": "Either reference_number or student_id (idp_user_id) must be provided"
 }
 ```
 
@@ -130,7 +130,7 @@ curl -X POST https://puptas.example.com/api/v1/webhooks/medical-result \
   -H "Content-Type: application/json" \
   -d '{
     "student_id": "ade67dc4-50f0-4e32-bd80-84308c0f4e10",
-    "student_number": "2024-12345",
+    "reference_number": "2024-12345",
     "is_health_profile_completed": 1
   }'
 ```
@@ -147,14 +147,14 @@ curl -X POST https://puptas.example.com/api/v1/webhooks/medical-result \
   }'
 ```
 
-### Example 3: Using Only student_number
+### Example 3: Using Only reference_number
 
 ```bash
 curl -X POST https://puptas.example.com/api/v1/webhooks/medical-result \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "student_number": "2024-12345",
+    "reference_number": "2024-12345",
     "is_health_profile_completed": 1
   }'
 ```
@@ -192,7 +192,7 @@ Use the same endpoint for testing: `/api/v1/webhooks/medical-result`
 ```json
 {
   "student_id": "test-uuid-12345",
-  "student_number": "TEST-2024-001",
+  "reference_number": "TEST-2024-001",
   "is_health_profile_completed": 1
 }
 ```

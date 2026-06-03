@@ -42,7 +42,7 @@ The Guidance System requires granular read-access to student profiles. We suppor
 **Endpoints**:
 - **GET** `/api/v1/students` (List - Warning: Heavily paginated)
 - **GET** `/api/v1/students/idp/{idpUserId}` (Lookup by Central IDP)
-- **GET** `/api/v1/students/{studentNumber}` (Lookup by PUP Student Number)
+- **GET** `/api/v1/students/{referenceNumber}` (Lookup by Reference Number)
 
 ### Example Request
 ```http
@@ -57,7 +57,7 @@ Authorization: Bearer eyJ0eXA...
 {
     "data": {
         "idp_user_id": "b2c3d4e5...",
-        "student_number": "2026-GUI-5678",
+        "reference_number": "2026-GUI-5678",
         "email": "student@pup.edu.ph",
         "first_name": "Maria",
         "last_name": "Clara",
