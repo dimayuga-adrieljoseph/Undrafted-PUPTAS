@@ -2,7 +2,7 @@
 import { defineProps, ref, computed, onMounted } from "vue";
 import { router } from "@inertiajs/vue3";
 import { Head } from "@inertiajs/vue3";
-import Compressor from "compressorjs";
+import { Head } from "@inertiajs/vue3";
 const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
@@ -279,7 +279,6 @@ const uploadInlineFile = async () => {
   if (!key || !originalFile) return;
 
   // Backend-authoritative guard: check if the backend already reports this file as uploading.
-  // This replaces the old localStorage-based duplicate upload prevention.
   const backendFile = fileStatuses.value[key];
   if (backendFile?.status === 'uploading' && !activeUploadUploading.value) {
     activeUploadError.value = 'An upload for this document is already in progress. Please wait.';
@@ -293,81 +292,65 @@ const uploadInlineFile = async () => {
   activeUploadError.value = '';
   activeUploadSuccess.value = false;
 
-  // Track whether client→server transfer is done (waiting for server→S3)
   let waitingForServer = false;
-  // Set up abort controller for timeout
   const abortController = new AbortController();
-  let serverTimeout = null;
 
-  const doUpload = async (fileToUpload) => {
-    const filename = fileToUpload.name || originalFile.name;
-    try {
-      const form = new FormData();
-      form.append('file', fileToUpload, filename);
-      form.append('field', key);
+  try {
+    const filename = originalFile.name;
+    const extension = filename.split('.').pop().toLowerCase() || 'bin';
+    const contentType = originalFile.type || 'application/octet-stream';
 
-      const { data } = await axios.post('/user/application/reupload', form, {
-        signal: abortController.signal,
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            activeUploadLoaded.value = progressEvent.loaded;
-            activeUploadTotal.value = progressEvent.total;
-            const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+    // 1. Get Presigned URL
+    const { data: urlData } = await axios.post('/user/application/upload-url', {
+      field: key,
+      extension: extension,
+      content_type: contentType,
+    });
 
-            if (progressEvent.loaded >= progressEvent.total && !waitingForServer) {
-              waitingForServer = true;
-              activeUploadProgress.value = 95;
-              // Start a 180-second timeout for server processing (S3 uploads can take a while)
-              serverTimeout = setTimeout(() => {
-                abortController.abort();
-              }, 180000);
-            } else if (!waitingForServer) {
-              activeUploadProgress.value = Math.min(90, pct);
-            }
+    // 2. Direct S3 Upload via PUT
+    await axios.put(urlData.upload_url, originalFile, {
+      headers: {
+        'Content-Type': contentType,
+      },
+      signal: abortController.signal,
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          activeUploadLoaded.value = progressEvent.loaded;
+          activeUploadTotal.value = progressEvent.total;
+          const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+
+          if (progressEvent.loaded >= progressEvent.total && !waitingForServer) {
+            waitingForServer = true;
+            activeUploadProgress.value = 95;
+          } else if (!waitingForServer) {
+            activeUploadProgress.value = Math.min(90, pct);
           }
         }
-      });
-
-      if (serverTimeout) clearTimeout(serverTimeout);
-
-      fileStatuses.value[key] = data.file;
-      activeUploadProgress.value = 100;
-      activeUploadSuccess.value = true;
-      await fetchData();
-    } catch (err) {
-      if (serverTimeout) clearTimeout(serverTimeout);
-      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED' || axios.isCancel(err)) {
-        activeUploadError.value = 'Upload is taking longer than expected. It may still be processing in the background. Please refresh the page in a few minutes.';
-      } else {
-        activeUploadError.value = err.response?.data?.message || 'Failed to upload file. Please try again.';
       }
-      activeUploadSuccess.value = false;
-      await fetchData();
-    } finally {
-      if (serverTimeout) clearTimeout(serverTimeout);
-      activeUploadUploading.value = false;
+    });
+
+    // 3. Confirm Upload with Backend
+    const { data: confirmData } = await axios.post('/user/application/confirm-upload', {
+      field: key,
+      path: urlData.path,
+      original_name: filename
+    });
+
+    fileStatuses.value[key] = confirmData.file || {};
+    activeUploadProgress.value = 100;
+    activeUploadSuccess.value = true;
+    await fetchData();
+  } catch (err) {
+    if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED' || axios.isCancel(err)) {
+      activeUploadError.value = 'Upload was canceled or timed out.';
+    } else {
+      activeUploadError.value = err.response?.data?.message || 'Failed to upload file. Please try again.';
     }
-  };
-
-  // Non-image files (e.g. PDF) cannot be processed by Compressor — upload directly.
-  const isImage = originalFile.type.startsWith('image/');
-  if (!isImage) {
-    await doUpload(originalFile);
-    return;
+    activeUploadSuccess.value = false;
+    await fetchData();
+  } finally {
+    activeUploadUploading.value = false;
   }
-
-  new Compressor(originalFile, {
-    quality: 0.6,
-    maxWidth: 1200,
-    convertSize: 500000, // Convert to JPEG if over 500KB
-    mimeType: 'image/webp', // WebP is 30-50% smaller than JPEG
-    success: (compressedFile) => { doUpload(compressedFile); },
-    error(err) {
-      activeUploadError.value = err.message || 'Image compression failed.';
-      activeUploadUploading.value = false;
-      activeUploadSuccess.value = false;
-    },
-  });
 };
 
 const openImageModal = (file) => { 
