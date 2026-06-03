@@ -760,7 +760,7 @@ onMounted(() => {
                 </div>
               </div>
                <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                 Upload files (images, PDF, Word, text). Maximum file size: 50MB for testing.
+                 Upload files (images, PDF, Word, text). Maximum file size: 2MB.
                </p>
               
               <div v-if="loading && !stepKeys.length" class="text-center py-8">
