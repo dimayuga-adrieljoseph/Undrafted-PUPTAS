@@ -317,10 +317,10 @@ const uploadInlineFile = async () => {
             if (progressEvent.loaded >= progressEvent.total && !waitingForServer) {
               waitingForServer = true;
               activeUploadProgress.value = 95;
-              // Start a 60-second timeout for server processing
+              // Start a 180-second timeout for server processing (S3 uploads can take a while)
               serverTimeout = setTimeout(() => {
                 abortController.abort();
-              }, 60000);
+              }, 180000);
             } else if (!waitingForServer) {
               activeUploadProgress.value = Math.min(90, pct);
             }
@@ -337,7 +337,7 @@ const uploadInlineFile = async () => {
     } catch (err) {
       if (serverTimeout) clearTimeout(serverTimeout);
       if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED' || axios.isCancel(err)) {
-        activeUploadError.value = 'Server took too long to respond, please try again.';
+        activeUploadError.value = 'Upload is taking longer than expected. It may still be processing in the background. Please refresh the page in a few minutes.';
       } else {
         activeUploadError.value = err.response?.data?.message || 'Failed to upload file. Please try again.';
       }
