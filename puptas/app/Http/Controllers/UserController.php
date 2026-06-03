@@ -526,7 +526,7 @@ class UserController extends Controller
 
         // For IDP, users are not deleted locally, but we might want to drop their profiles locally
         $staff = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
-        if ($staff && $staff->role_id > 1) {
+        if ($staff) {
             $staff->delete();
         }
         $app = \App\Models\ApplicantProfile::where('user_id', (string) $id)->first();
