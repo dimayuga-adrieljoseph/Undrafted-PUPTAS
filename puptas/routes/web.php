@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\GradesController;
 use App\Http\Controllers\ApplicantDashboardController;
+use App\Http\Controllers\GradeVerificationSlipController;
 use App\Http\Controllers\TestPasserController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
@@ -263,6 +264,12 @@ Route::middleware(['auth'])->group(function () {
         ->name('applicant.dashboard');
     Route::get('/applicant-dashboard/qualified-programs', [ApplicantDashboardController::class, 'getQualifiedPrograms'])
         ->name('applicant.qualified-programs');
+
+    // Grade Verification Slip — applicant-initiated self-service download
+    // Security: uses the authenticated session as the sole data source.
+    // No reference number or user ID is accepted as a URL parameter.
+    Route::get('/applicant-dashboard/grade-verification-slip', [GradeVerificationSlipController::class, 'download'])
+        ->name('applicant.grade-verification-slip');
 
     Route::middleware(['throttle:grade-extraction'])
         ->post('/api/grades/extract', [GradeExtractionController::class, 'extract']);
