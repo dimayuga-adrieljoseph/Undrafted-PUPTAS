@@ -17,6 +17,21 @@ class AuthenticatedSessionController implements LoginResponse
         $roleId = $user->role_id;
 
         if ($roleId == 1) {
+            $testPasser = \App\Models\TestPasser::where('email', $user->email)->first();
+            if ($testPasser && in_array($testPasser->passer_status_id, [3, 4])) {
+                $message = $testPasser->passer_status_id === 3 
+                    ? 'Login is not available for Unqualified applicants.' 
+                    : 'Login is currently closed for Waitlisted applicants. Please wait for further announcements regarding open slots.';
+                
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect('/auth/idp/error')->withErrors([
+                    'idp' => $message,
+                ]);
+            }
+
             return redirect('/applicant-dashboard');
         }
 
