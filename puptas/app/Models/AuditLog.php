@@ -11,11 +11,12 @@ class AuditLog extends Model
     use Prunable;
 
     // Action type constants
-    const ACTION_LOGIN  = 'LOGIN';
-    const ACTION_LOGOUT = 'LOGOUT';
-    const ACTION_CREATE = 'CREATE';
-    const ACTION_UPDATE = 'UPDATE';
-    const ACTION_DELETE = 'DELETE';
+    const ACTION_LOGIN    = 'LOGIN';
+    const ACTION_LOGOUT   = 'LOGOUT';
+    const ACTION_CREATE   = 'CREATE';
+    const ACTION_UPDATE   = 'UPDATE';
+    const ACTION_DELETE   = 'DELETE';
+    const ACTION_DOWNLOAD = 'DOWNLOAD';
 
     // High-level log type constants (Mock 1 categories)
     const TYPE_SYSTEM = 'SYSTEM';

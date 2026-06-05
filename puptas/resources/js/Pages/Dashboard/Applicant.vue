@@ -17,6 +17,20 @@ const fileStatuses = ref({});
 const applicationStatus = ref("");
 const enrollmentStatus = ref("");
 const applicationProcesses = ref([]);
+
+// Reactively derived from live applicationStatus — updates immediately after the user
+// submits without requiring a page reload.
+// Mirrors the server-side canDownloadSlip logic:
+//   application is submitted (status !== 'draft') AND grades exist (props.canDownloadSlip
+//   covers the grades check from the initial server render; once the app is submitted
+//   during this session, applicationStatus will be non-draft so we just need that).
+const canDownloadSlipReactive = computed(() => {
+  // If the server already said yes at page load, keep it true
+  if (props.canDownloadSlip) return true;
+  // Otherwise, if the application just got submitted this session, show the button
+  // (grades must exist for applicationStatus to have advanced past draft)
+  return Boolean(applicationStatus.value && applicationStatus.value !== 'draft');
+});
 const showImageModal = ref(false);
 const previewSrc = ref("");
 const showMedicalRedirect = ref(false);
@@ -650,7 +664,7 @@ onMounted(() => {
 
           <!-- Download Grade Verification Slip — shown only when application is submitted AND grades exist -->
           <button
-            v-if="props.canDownloadSlip"
+            v-if="canDownloadSlipReactive"
             @click="downloadGradeVerificationSlip"
             :disabled="downloadingSlip"
             class="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg min-h-[44px] w-full sm:w-auto disabled:opacity-70"
@@ -810,10 +824,11 @@ onMounted(() => {
 
             <template v-for="(step, i) in [
               'Upload Grade 10, 11 &amp; 12 documents',
-              'Go to <code>Review Grades</code>, enter grades &amp; pick 3 programs',
+              'Go to <code>Input Grades</code>, enter grades &amp; pick 3 programs',
               'Review entries, then click <code>Save Grades</code>',
               'Go to <code>Review Application</code> &amp; verify info',
-              'Click <code class=\'submit\'>Submit Application</code>'
+              'Click <code class=\'submit\'>Submit Application</code>',
+              'Download your <code class=\'download\'>Grade Verification Slip</code> and bring it along with your <code>SAR Form</code> on your interview day.'
             ]" :key="i">
 
               <div class="relative z-10 flex flex-row sm:flex-col items-start sm:items-center gap-3 sm:gap-2 flex-1 py-2 sm:py-0">
@@ -824,9 +839,14 @@ onMounted(() => {
                   style="background-color:#9E122C"
                 >
                   <template v-if="i < 4">{{ i + 1 }}</template>
-                  <template v-else>
+                  <template v-else-if="i === 4">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </template>
+                  <template v-else>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1" />
                     </svg>
                   </template>
                 </div>
@@ -845,6 +865,9 @@ onMounted(() => {
                     [&_code.submit]:bg-red-50 dark:[&_code.submit]:bg-red-950/40
                     [&_code.submit]:border-red-200 dark:[&_code.submit]:border-red-900
                     [&_code.submit]:text-[#9E122C]
+                    [&_code.download]:bg-emerald-50 dark:[&_code.download]:bg-emerald-950/40
+                    [&_code.download]:border-emerald-200 dark:[&_code.download]:border-emerald-900
+                    [&_code.download]:text-emerald-700 dark:[&_code.download]:text-emerald-400
                   "
                   v-html="step"
                 ></p>
