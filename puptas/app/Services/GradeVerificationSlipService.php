@@ -364,19 +364,16 @@ class GradeVerificationSlipService
 
         $this->writeSubjectSection(
             $pdf, $x, $englishY, $w, $rowH, $fontSize,
-            'English Subjects',
             $data['english_subjects']
         );
 
         $this->writeSubjectSection(
             $pdf, $x, $mathY, $w, $rowH, $fontSize,
-            'Mathematics Subjects',
             $data['math_subjects']
         );
 
         $this->writeSubjectSection(
             $pdf, $x, $scienceY, $w, $rowH, $fontSize,
-            'Science Subjects',
             $data['science_subjects']
         );
 
@@ -430,7 +427,6 @@ class GradeVerificationSlipService
         float  $w,
         float  $rowH,
         int    $fontSize,
-        string $heading,
         array  $subjects
     ): float {
         // Page layout: 2 columns, equal width, small gap

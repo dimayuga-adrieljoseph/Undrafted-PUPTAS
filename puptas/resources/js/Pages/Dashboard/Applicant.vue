@@ -20,16 +20,21 @@ const applicationProcesses = ref([]);
 
 // Reactively derived from live applicationStatus — updates immediately after the user
 // submits without requiring a page reload.
-// Mirrors the server-side canDownloadSlip logic:
-//   application is submitted (status !== 'draft') AND grades exist (props.canDownloadSlip
-//   covers the grades check from the initial server render; once the app is submitted
-//   during this session, applicationStatus will be non-draft so we just need that).
+// Mirrors the server-side canDownloadSlip logic exactly:
+//   - application submitted (status !== 'draft')
+//   - grades exist (gradeUrl is set — the controller only sets it when grades are present)
+// Using both conditions prevents showing a button that would 403 on the server.
 const canDownloadSlipReactive = computed(() => {
-  // If the server already said yes at page load, keep it true
+  // If the server already confirmed eligibility at page load, keep it true
   if (props.canDownloadSlip) return true;
-  // Otherwise, if the application just got submitted this session, show the button
-  // (grades must exist for applicationStatus to have advanced past draft)
-  return Boolean(applicationStatus.value && applicationStatus.value !== 'draft');
+  // After in-session submission: require both a submitted status AND grades to exist
+  // (gradeUrl is only non-null when the applicant has grades for their strand)
+  return Boolean(
+    applicationStatus.value &&
+    applicationStatus.value !== 'draft' &&
+    props.gradeUrl !== null &&
+    props.gradeUrl !== undefined
+  );
 });
 const showImageModal = ref(false);
 const previewSrc = ref("");
@@ -524,7 +529,8 @@ const downloadGradeVerificationSlip = async () => {
       }
     }
 
-    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    // response.data is already a Blob (responseType: 'blob') — use directly
+    const url = window.URL.createObjectURL(response.data);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', filename);

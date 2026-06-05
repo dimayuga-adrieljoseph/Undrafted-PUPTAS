@@ -81,36 +81,34 @@ class GradeVerificationSlipController extends Controller
         // Save PDF to gvs_tmp disk (overwrites previous copy for this applicant)
         Storage::disk('gvs_tmp')->put($storagePath, $pdfContent);
 
-        // Upsert the gvs_generations record
-        $existing = GvsGeneration::where('user_id', $user->id)->first();
-
-        if ($existing) {
-            $existing->update([
-                'filename'           => $filename,
-                'file_path'          => $storagePath,
-                'reference_number'   => $referenceNumber,
-                'download_count'     => $existing->download_count + 1,
-                'last_downloaded_at' => now(),
-            ]);
-            $downloadCount = $existing->download_count;
-        } else {
-            GvsGeneration::create([
-                'user_id'            => $user->id,
+        // Atomic upsert — unique constraint on user_id prevents duplicate rows even
+        // under concurrent requests. increment() is atomic at the DB level.
+        $record = GvsGeneration::firstOrCreate(
+            ['user_id' => $user->id],
+            [
                 'reference_number'   => $referenceNumber,
                 'filename'           => $filename,
                 'file_path'          => $storagePath,
-                'download_count'     => 1,
+                'download_count'     => 0,
                 'last_downloaded_at' => now(),
-            ]);
-            $downloadCount = 1;
-        }
+            ]
+        );
 
-        // Write audit log entry
-        $fullName = trim(($user->firstname ?? '') . ' ' . ($user->lastname ?? ''));
+        $record->increment('download_count');
+        $record->update([
+            'filename'           => $filename,
+            'file_path'          => $storagePath,
+            'reference_number'   => $referenceNumber,
+            'last_downloaded_at' => now(),
+        ]);
+
+        $downloadCount = $record->fresh()->download_count;
+
+        // Write audit log — log user_id and action only, no PII in the message
         $this->auditLogService->logActivity(
             AuditLog::ACTION_DOWNLOAD,
             'Grade Verification Slip',
-            "Applicant {$fullName} downloaded their Grade Verification Slip (ref: {$referenceNumber}, download #{$downloadCount}).",
+            "Applicant (user_id: {$user->id}) downloaded their Grade Verification Slip (download #{$downloadCount}).",
             $user,
             AuditLog::CATEGORY_ADMISSION_DATA
         );

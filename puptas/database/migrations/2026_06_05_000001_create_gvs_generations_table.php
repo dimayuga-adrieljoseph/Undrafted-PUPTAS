@@ -21,8 +21,8 @@ return new class extends Migration
         Schema::create('gvs_generations', function (Blueprint $table) {
             $table->id();
 
-            // The applicant who generated the slip
-            $table->unsignedBigInteger('user_id')->index();
+            // The applicant who generated the slip — enforced unique: one row per applicant
+            $table->unsignedBigInteger('user_id')->unique();
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
 
             // Snapshot of the reference number at generation time

@@ -63,7 +63,7 @@ return [
         ],
 
         'gvs_tmp' => [
-            'driver' => env('SAR_TMP_DRIVER', 's3'),  // reuse same driver env var
+            'driver' => env('GVS_TMP_DRIVER', env('SAR_TMP_DRIVER', 'local')),
             'root' => storage_path('app/private'),
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
