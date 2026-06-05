@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Program;
 use App\Models\Grade;
+use App\Models\Application;
 
 class ApplicantDashboardController extends Controller
 {
@@ -30,9 +31,19 @@ class ApplicantDashboardController extends Controller
             'tvl'   => '/grades/tvl',
         ];
 
+        // Determine whether the "Download Grade Verification Slip" button should appear.
+        // Conditions:
+        //   1. Applicant has submitted their application (status !== 'draft')
+        //   2. Grades exist (qualification results have been computed)
+        $application = $user->currentApplication;
+        $hasSubmittedApplication = $application && $application->status !== 'draft';
+        $hasGrades = Grade::where('user_id', (string) $user->id)->exists();
+        $canDownloadSlip = $hasSubmittedApplication && $hasGrades;
+
         return Inertia::render('Dashboard/Applicant', [
-            'user' => $user,
-            'gradeUrl' => $strand ? ($gradeRouteMap[$strand] ?? null) : null,
+            'user'           => $user,
+            'gradeUrl'       => $strand ? ($gradeRouteMap[$strand] ?? null) : null,
+            'canDownloadSlip' => $canDownloadSlip,
         ]);
     }
 

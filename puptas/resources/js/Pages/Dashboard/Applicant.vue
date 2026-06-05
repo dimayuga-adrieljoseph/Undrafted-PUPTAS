@@ -7,7 +7,7 @@ const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
 
-const props = defineProps({ user: Object, gradeUrl: String });
+const props = defineProps({ user: Object, gradeUrl: String, canDownloadSlip: Boolean });
 
 const showModal = ref(false);
 const showSuccessNotification = ref(false);
@@ -17,6 +17,25 @@ const fileStatuses = ref({});
 const applicationStatus = ref("");
 const enrollmentStatus = ref("");
 const applicationProcesses = ref([]);
+
+// Reactively derived from live applicationStatus — updates immediately after the user
+// submits without requiring a page reload.
+// Mirrors the server-side canDownloadSlip logic exactly:
+//   - application submitted (status !== 'draft')
+//   - grades exist (gradeUrl is set — the controller only sets it when grades are present)
+// Using both conditions prevents showing a button that would 403 on the server.
+const canDownloadSlipReactive = computed(() => {
+  // If the server already confirmed eligibility at page load, keep it true
+  if (props.canDownloadSlip) return true;
+  // After in-session submission: require both a submitted status AND grades to exist
+  // (gradeUrl is only non-null when the applicant has grades for their strand)
+  return Boolean(
+    applicationStatus.value &&
+    applicationStatus.value !== 'draft' &&
+    props.gradeUrl !== null &&
+    props.gradeUrl !== undefined
+  );
+});
 const showImageModal = ref(false);
 const previewSrc = ref("");
 const showMedicalRedirect = ref(false);
@@ -35,6 +54,10 @@ const disqualifiedPrograms = ref([]);
 const loadingPrograms = ref(false);
 const openFaqItems = ref([]);
 const showFaqModal = ref(false);
+
+// Grade Verification Slip download state
+const downloadingSlip = ref(false);
+const slipDownloadError = ref('');
 
 const faqItems = [
   {
@@ -481,6 +504,52 @@ const toggleFaq = (index) => {
   }
 };
 
+/**
+ * Download the Grade Verification Slip by triggering a direct browser download.
+ * The route is authenticated — the server uses the session to identify the applicant.
+ * No applicant ID or reference number is passed as a URL parameter to prevent
+ * IDOR (Insecure Direct Object Reference) attacks.
+ */
+const downloadGradeVerificationSlip = async () => {
+  downloadingSlip.value = true;
+  slipDownloadError.value = '';
+
+  try {
+    const response = await axios.get('/applicant-dashboard/grade-verification-slip', {
+      responseType: 'blob',
+    });
+
+    // Derive filename from Content-Disposition header if present, otherwise fall back
+    let filename = 'Grade_Verification_Slip.pdf';
+    const disposition = response.headers['content-disposition'];
+    if (disposition) {
+      const match = disposition.match(/filename="?([^";\n]+)"?/);
+      if (match && match[1]) {
+        filename = match[1].trim();
+      }
+    }
+
+    // response.data is already a Blob (responseType: 'blob') — use directly
+    const url = window.URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    const message = err.response?.data?.message
+      || (err.response?.status === 403 ? 'Grade Verification Slip is not yet available. Please submit your application and complete your grade input first.' : null)
+      || 'Failed to download the Grade Verification Slip. Please try again.';
+    slipDownloadError.value = message;
+
+    setTimeout(() => { slipDownloadError.value = ''; }, 6000);
+  } finally {
+    downloadingSlip.value = false;
+  }
+};
+
 onMounted(() => { 
   // Clear all upload state locks so a refresh allows the user to retry
   try {
@@ -598,7 +667,35 @@ onMounted(() => {
             </svg>
             <span class="font-medium">{{ loadingPrograms ? 'Loading...' : 'View Qualified Programs' }}</span>
           </button>
+
+          <!-- Download Grade Verification Slip — shown only when application is submitted AND grades exist -->
+          <button
+            v-if="canDownloadSlipReactive"
+            @click="downloadGradeVerificationSlip"
+            :disabled="downloadingSlip"
+            class="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all hover:shadow-lg min-h-[44px] w-full sm:w-auto disabled:opacity-70"
+            title="Download your Grade Verification Slip"
+          >
+            <svg v-if="downloadingSlip" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span class="font-medium">{{ downloadingSlip ? 'Generating...' : 'Download Grade Verification Slip' }}</span>
+          </button>
           </div>
+
+          <!-- Slip download error toast -->
+          <Transition name="slide-down">
+            <div v-if="slipDownloadError" class="w-full mt-2 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              {{ slipDownloadError }}
+            </div>
+          </Transition>
         </div>
 
         <!-- Medical System Redirect Card -->
@@ -733,10 +830,11 @@ onMounted(() => {
 
             <template v-for="(step, i) in [
               'Upload Grade 10, 11 &amp; 12 documents',
-              'Go to <code>Review Grades</code>, enter grades &amp; pick 3 programs',
+              'Go to <code>Input Grades</code>, enter grades &amp; pick 3 programs',
               'Review entries, then click <code>Save Grades</code>',
               'Go to <code>Review Application</code> &amp; verify info',
-              'Click <code class=\'submit\'>Submit Application</code>'
+              'Click <code class=\'submit\'>Submit Application</code>',
+              'Download your <code class=\'download\'>Grade Verification Slip</code> and bring it along with your <code>SAR Form</code> on your interview day.'
             ]" :key="i">
 
               <div class="relative z-10 flex flex-row sm:flex-col items-start sm:items-center gap-3 sm:gap-2 flex-1 py-2 sm:py-0">
@@ -747,9 +845,14 @@ onMounted(() => {
                   style="background-color:#9E122C"
                 >
                   <template v-if="i < 4">{{ i + 1 }}</template>
-                  <template v-else>
+                  <template v-else-if="i === 4">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </template>
+                  <template v-else>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1" />
                     </svg>
                   </template>
                 </div>
@@ -768,6 +871,9 @@ onMounted(() => {
                     [&_code.submit]:bg-red-50 dark:[&_code.submit]:bg-red-950/40
                     [&_code.submit]:border-red-200 dark:[&_code.submit]:border-red-900
                     [&_code.submit]:text-[#9E122C]
+                    [&_code.download]:bg-emerald-50 dark:[&_code.download]:bg-emerald-950/40
+                    [&_code.download]:border-emerald-200 dark:[&_code.download]:border-emerald-900
+                    [&_code.download]:text-emerald-700 dark:[&_code.download]:text-emerald-400
                   "
                   v-html="step"
                 ></p>
