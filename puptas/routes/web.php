@@ -205,7 +205,17 @@ Route::get('/applications/user/{user}', function ($user) {
         abort(404);
     }
 
-    return Inertia::render('Applications/Index', [
+    $currentUser = Auth::user();
+    $roleId = $currentUser->role_id;
+
+    // Render the role-appropriate component
+    $component = match ((int) $roleId) {
+        3 => 'Applications/Evaluator',
+        4 => 'Applications/Interviewer',
+        default => 'Applications/Index',
+    };
+
+    return Inertia::render($component, [
         'selectedUserId' => (int) $user
     ]);
 })->middleware(['auth', 'role:2,3,4,7'])->whereNumber('user')->name('applications.show');
@@ -264,6 +274,12 @@ Route::middleware(['auth'])->group(function () {
         ->name('applicant.dashboard');
     Route::get('/applicant-dashboard/qualified-programs', [ApplicantDashboardController::class, 'getQualifiedPrograms'])
         ->name('applicant.qualified-programs');
+
+    Route::get('/applicant-qualified-programs', [ApplicantDashboardController::class, 'qualifiedProgramsPage'])
+        ->name('applicant.qualified-programs.page');
+
+    Route::get('/applicant-profile', [ApplicantDashboardController::class, 'profile'])
+        ->name('applicant.profile');
 
     // Grade Verification Slip — applicant-initiated self-service download
     // Security: uses the authenticated session as the sole data source.
@@ -404,6 +420,7 @@ Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/user/application', [ConfirmationController::class, 'show']);
     Route::post('/user/application/submit', [ConfirmationController::class, 'submit']);
+    Route::post('/user/application/resubmit', [ConfirmationController::class, 'resubmit']);
     Route::post('/user/application/reupload', [ConfirmationController::class, 'reupload']);
     Route::post('/user/application/upload-url', [ConfirmationController::class, 'getUploadUrl']);
     Route::post('/user/application/confirm-upload', [ConfirmationController::class, 'confirmUpload']);
@@ -569,4 +586,3 @@ Route::get('/callback-loading', [CallbackController::class, 'index']);
 
 // Public Admission Status Checker - No auth required
 Route::get('/admission-results', fn () => Inertia::render('Public/CheckStatus'))->name('public.check-status');
-

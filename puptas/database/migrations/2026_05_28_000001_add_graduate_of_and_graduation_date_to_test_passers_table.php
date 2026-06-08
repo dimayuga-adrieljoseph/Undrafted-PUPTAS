@@ -26,7 +26,7 @@ return new class extends Migration
             ->where(function ($q) {
                 $q->whereNull('graduate_of')->orWhereNull('graduation_date');
             })
-            ->get(['id', 'user_id']);
+            ->get(['test_passer_id', 'user_id']);
 
         foreach ($passers as $passer) {
             $profile = DB::table('applicant_profiles')
@@ -40,7 +40,7 @@ return new class extends Migration
                 ->where('apgt.applicant_profile_id', $profile->id)
                 ->value('gt.label');
 
-            DB::table('test_passers')->where('id', $passer->id)->update([
+            DB::table('test_passers')->where('test_passer_id', $passer->test_passer_id)->update([
                 'graduate_of'     => $graduateType,
                 'graduation_date' => $profile->date_graduated,
             ]);

@@ -538,6 +538,65 @@ class ConfirmationService
     }
 
     /**
+     * Resubmit a returned application back to the evaluator stage.
+     *
+     * @param User $user
+     * @return Application
+     * @throws \Exception
+     */
+    public function resubmitApplication(User $user): Application
+    {
+        $application = Application::where('user_id', $user->id)
+            ->where('status', 'returned')
+            ->first();
+
+        if (!$application) {
+            abort(400, 'No returned application found to resubmit.');
+        }
+
+        // Block resubmission if any file is rejected
+        if ($application->files()->where('status', 'rejected')->exists()) {
+            abort(422, 'Your application has rejected documents that must be fixed before resubmitting.');
+        }
+
+        return DB::transaction(function () use ($application) {
+            // Reset application status back to submitted
+            $application->status = 'submitted';
+            $application->save();
+
+            // Find the returned evaluator process and set it back to in_progress
+            $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
+                ->where('stage', 'evaluator')
+                ->where('status', 'returned')
+                ->first();
+
+            if ($evaluatorProcess) {
+                $evaluatorProcess->update([
+                    'status' => 'in_progress',
+                    'action' => null,
+                    'reviewer_notes' => null,
+                    'files_affected' => null,
+                ]);
+            }
+
+            // Reset all returned files back to pending
+            UserFile::where('user_id', (string) $application->user_id)
+                ->where('status', 'returned')
+                ->update([
+                    'status' => 'pending',
+                    'comment' => null,
+                ]);
+
+            Log::info('Application resubmitted to evaluator', [
+                'user_id' => $application->user_id,
+                'application_id' => $application->id,
+            ]);
+
+            return $application;
+        });
+    }
+
+    /**
      * Validate file field
      *
      * @param string $field

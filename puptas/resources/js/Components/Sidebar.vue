@@ -50,6 +50,7 @@ library.add(
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user ?? null);
+const showQualifiedProgramsNav = computed(() => page.props.showQualifiedProgramsNav ?? false);
 
 const props = defineProps({
     variant: {
@@ -95,6 +96,14 @@ const isDashboardActive = isActiveRouteFor([
     "interviewer.dashboard",
     "evaluator.dashboard",
     "applicant.dashboard",
+]);
+
+const isQualifiedProgramsActive = isActiveRouteFor([
+    "applicant.qualified-programs.page",
+]);
+
+const isProfileActive = isActiveRouteFor([
+    "applicant.profile",
 ]);
 
 const isApplicationsActive = isActiveRouteFor([
@@ -730,6 +739,48 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isSidebarOpen"
                                 class="nav-indicator"
                                 :class="{ active: isDashboardActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+                    <li v-if="showQualifiedProgramsNav">
+                        <NavLink
+                            :href="route('applicant.qualified-programs.page')"
+                            :active="isQualifiedProgramsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isQualifiedProgramsActive }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="graduation-cap" class="text-lg" />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Qualified Programs
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ active: isQualifiedProgramsActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+                    <li>
+                        <NavLink
+                            :href="route('applicant.profile')"
+                            :active="isProfileActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isProfileActive }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon icon="user-shield" class="text-lg" />
+                            </div>
+                            <span v-if="isSidebarOpen" class="nav-label">
+                                Profile
+                            </span>
+                            <div
+                                v-if="isSidebarOpen"
+                                class="nav-indicator"
+                                :class="{ active: isProfileActive }"
                             ></div>
                         </NavLink>
                     </li>

@@ -260,6 +260,29 @@
                     Close
                 </button>
 
+                <!-- Resubmit button (when application was returned) -->
+                <button
+                    v-if="canResubmit"
+                    @click="resubmitApplication"
+                    :disabled="submitting"
+                    :class="[
+                        'px-5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2',
+                        !submitting
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed',
+                    ]"
+                >
+                    <svg v-if="submitting" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    {{ submitting ? 'Resubmitting…' : 'Resubmit Application' }}
+                </button>
+
+                <!-- Submit button (when application is draft) -->
                 <button
                     v-if="canSubmit"
                     @click="openSubmitConfirmation"
@@ -397,6 +420,14 @@ const canSubmit = computed(() => {
         applicationData.value?.status === "draft" ||
         !applicationData.value?.status
     );
+});
+
+// Computed: Check if application can be resubmitted (returned status, no rejected files)
+const canResubmit = computed(() => {
+    if (applicationData.value?.status !== "returned") return false;
+    const files = applicationData.value?.uploadedFiles || {};
+    const hasRejectedFiles = Object.values(files).some(f => f?.status === 'rejected');
+    return !hasRejectedFiles;
 });
 
 // Computed: Check if all required documents are uploaded
@@ -613,6 +644,40 @@ const submitApplication = async () => {
         const message =
             e.response?.data?.message ||
             "Failed to submit application. Please try again.";
+        submitError.value = message;
+    } finally {
+        submitting.value = false;
+    }
+};
+
+// Resubmit application
+const resubmitApplication = async () => {
+    submitting.value = true;
+    submitError.value = "";
+    submitSuccess.value = "";
+
+    try {
+        const response = await window.axios.post("/user/application/resubmit");
+
+        submitSuccess.value =
+            response.data.message || "Application resubmitted for evaluation!";
+
+        // Update local application data
+        if (applicationData.value) {
+            applicationData.value.status = response.data.status || "submitted";
+        }
+
+        // Emit refresh event to parent
+        emit("refreshDashboard");
+
+        // Close modal after a short delay
+        setTimeout(() => {
+            closeModal();
+        }, 1500);
+    } catch (e) {
+        const message =
+            e.response?.data?.message ||
+            "Failed to resubmit application. Please try again.";
         submitError.value = message;
     } finally {
         submitting.value = false;

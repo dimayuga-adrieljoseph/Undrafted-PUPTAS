@@ -235,7 +235,7 @@ class DashboardService
         // Evaluators must be explicitly assigned to programs to see applicants.
         $pendingUsers = empty($programIds)
             ? collect()
-            : $this->userService->getApplicantsByStage('evaluator', $programIds);
+            : $this->userService->getAllApplicantsByStage('evaluator', $programIds);
 
         return [
             'pendingUsers' => $pendingUsers,
