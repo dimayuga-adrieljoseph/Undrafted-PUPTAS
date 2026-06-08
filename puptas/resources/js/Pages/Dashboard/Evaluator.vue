@@ -205,6 +205,50 @@ const getStatusClass = (status) => {
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
 };
 
+const getEvaluationStatusText = (pipelineStatus) => {
+    switch (pipelineStatus) {
+        case 'for_evaluation': return 'For Evaluation';
+        case 'evaluation_returned': return 'Returned for Revision';
+        case 'evaluation_passed': return 'Evaluation Passed';
+        case 'for_interview': return 'For Interview';
+        case 'interview_returned': return 'Returned for Revision';
+        case 'interview_passed': return 'Interview Passed';
+        case 'interview_transferred': return 'Course Transferred';
+        case 'for_medical': return 'For Medical';
+        case 'medical_cleared': return 'Medical Cleared';
+        case 'medical_rejected': return 'Medical Rejected';
+        case 'for_records': return 'For Records';
+        case 'officially_enrolled': return 'Officially Enrolled';
+        case 'rejected': return 'Rejected';
+        default: return 'Unknown';
+    }
+};
+
+const getEvaluationStatusClass = (pipelineStatus) => {
+    switch (pipelineStatus) {
+        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+        case 'for_medical': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+        case 'medical_cleared': return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
+        case 'medical_rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'for_records': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
+        case 'officially_enrolled': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold';
+        case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+};
+
+const isEvaluationCompleted = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
+    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === 'evaluator');
+    return evaluatorProcess && evaluatorProcess.status === 'completed';
+});
+
 const getButtonClass = (type) => {
     const classes = {
         primary: 'bg-[#9E122C] text-white hover:bg-[#b51834]',
@@ -255,12 +299,19 @@ const selectUser = async (user) => {
     try {
         const response = await axios.get(`/dashboard/user-files/${user.id}`);
 
+        const userData = response.data.user;
         selectedUser.value = {
             ...user,
+            ...userData,
             application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
+                ...userData.application,
+                processes: userData.application?.processes || [],
+                program: userData.application?.program || null,
+                second_choice: userData.application?.second_choice || null,
+                third_choice: userData.application?.third_choice || null,
             },
+            grades: userData.grades || null,
+            pipeline_status: user.pipeline_status,
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
@@ -560,16 +611,16 @@ const submitPass = async () => {
                                         </div>
                                         <div>
                                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Status</p>
-                                            <span :class="getStatusClass(selectedUser.application?.status)" 
+                                            <span :class="getEvaluationStatusClass(selectedUser.pipeline_status)" 
                                                   class="px-3 py-1 rounded-full text-sm font-semibold inline-block">
-                                                {{ selectedUser.application?.status || "Pending" }}
+                                                {{ getEvaluationStatusText(selectedUser.pipeline_status) }}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Quick Actions -->
-                                <div>
+                                <div v-if="!isEvaluationCompleted">
                                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h4>
                                     <div class="space-y-3">
                                         <button
@@ -591,6 +642,18 @@ const submitPass = async () => {
                                             View Full Details
                                         </Link>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Evaluation Completed Badge -->
+                            <div v-if="isEvaluationCompleted"
+                                class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl mb-5">
+                                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Evaluation Completed</p>
+                                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">You have already evaluated this application. Actions are no longer available.</p>
                                 </div>
                             </div>
 

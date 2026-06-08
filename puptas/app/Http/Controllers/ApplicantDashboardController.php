@@ -44,6 +44,59 @@ class ApplicantDashboardController extends Controller
             'user'           => $user,
             'gradeUrl'       => $strand ? ($gradeRouteMap[$strand] ?? null) : null,
             'canDownloadSlip' => $canDownloadSlip,
+            'showQualifiedProgramsNav' => $hasSubmittedApplication,
+        ]);
+    }
+
+    /**
+     * Render the Qualified Programs page
+     */
+    public function qualifiedProgramsPage()
+    {
+        $user = Auth::user();
+
+        if ($user->role_id !== 1) {
+            return redirect()->back()->with('error', 'Unauthorized access.');
+        }
+
+        $application = $user->currentApplication;
+        $hasSubmittedApplication = $application && $application->status !== 'draft';
+
+        return Inertia::render('Programs/Qualified', [
+            'user' => $user,
+            'showQualifiedProgramsNav' => $hasSubmittedApplication,
+        ]);
+    }
+
+    /**
+     * Render the Applicant's own Profile page (view-only)
+     */
+    public function profile()
+    {
+        $user = Auth::user();
+
+        if ($user->role_id !== 1) {
+            return redirect()->back()->with('error', 'Unauthorized access.');
+        }
+
+        $user->load(['applicantProfile', 'testPasser']);
+
+        $application = $user->currentApplication;
+        if ($application) {
+            $application->load(['program', 'processes', 'secondChoice', 'thirdChoice']);
+        }
+
+        $grades = Grade::where('user_id', (string) $user->id)->first();
+        $files = $user->files ?? collect();
+        $profile = $user->applicantProfile;
+
+        return Inertia::render('Profile/Applicant', [
+            'user'             => $user,
+            'applicantProfile' => $profile,
+            'grades'           => $grades,
+            'files'            => $files,
+            'application'      => $application,
+            'showQualifiedProgramsNav' => $application && $application->status !== 'draft',
         ]);
     }
 

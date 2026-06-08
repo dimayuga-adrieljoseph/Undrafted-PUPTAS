@@ -149,7 +149,7 @@ class UserService
                     ->whereNull('applications.deleted_at')
                     ->whereHas('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
-                            ->whereIn('status', ['in_progress', 'returned', 'completed']);
+                            ->whereIn('status', ['in_progress', 'completed']);
                     });
 
                 if (!empty($programIds)) {
