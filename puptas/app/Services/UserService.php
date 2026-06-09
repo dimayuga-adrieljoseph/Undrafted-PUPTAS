@@ -149,7 +149,7 @@ class UserService
                     ->whereNull('applications.deleted_at')
                     ->whereHas('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
-                            ->whereIn('status', ['in_progress', 'returned', 'completed']);
+                            ->whereIn('status', ['in_progress', 'completed']);
                     });
 
                 if (!empty($programIds)) {
@@ -323,8 +323,8 @@ class UserService
         }
 
         // Load only what we need - no deep eager loading
-        $profiles = ApplicantProfile::whereIn('user_id', $allUserIds)
-            ->get(['user_id', 'firstname', 'lastname', 'email', 'student_number']);
+        $allUserIdsStrings = array_map('strval', $allUserIds);
+        $profiles = ApplicantProfile::whereIn('user_id', $allUserIdsStrings)->get(['user_id', 'firstname', 'lastname', 'email', 'student_number']);
 
         // Load applications separately
         $applications = \App\Models\Application::whereIn('user_id', $allUserIds)

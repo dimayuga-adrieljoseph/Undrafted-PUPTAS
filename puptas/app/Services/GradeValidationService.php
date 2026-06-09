@@ -31,12 +31,30 @@ class GradeValidationService
     ];
 
     /**
+     * Full subject list overrides per strand per category.
+     * When defined, replaces the base list entirely instead of merging with it.
+     */
+    private const STRAND_OVERRIDES = [
+        'STEM' => [
+            // STEM uses G12 versions of 21st Century Lit and Academic/Professional Purposes,
+            // not the G11 versions in ENGLISH_BASE. Override the full list to avoid saving
+            // the wrong fields (g11_21st_century_lit / g11_academic_professional).
+            'english' => [
+                'g11_oral_communication',
+                'g11_reading_writing',
+                'g12_21st_century_lit',
+                'g12_academic_professional',
+            ],
+        ],
+    ];
+
+    /**
      * Additional strand-specific subjects per category.
      */
     private const STRAND_ADDITIONS = [
         'STEM' => [
             'math' => ['g11_pre_calculus', 'g11_basic_calculus'],
-            'english' => ['g12_academic_professional'],
+            'english' => [], // english is fully overridden via STRAND_OVERRIDES
             'science' => [
                 'g11_earth_science',
                 'g11_general_chemistry_1',
@@ -76,10 +94,17 @@ class GradeValidationService
 
     /**
      * Get the list of default subject fields for a given strand and category.
+     * If a full override is defined for the strand+category, it is used in place
+     * of the base list (STRAND_OVERRIDES takes precedence over STRAND_ADDITIONS).
      */
     public function getSubjectsForStrand(string $strand, string $category): array
     {
         $strand = strtoupper($strand);
+
+        // Full override replaces the base list entirely
+        if (isset(self::STRAND_OVERRIDES[$strand][$category])) {
+            return self::STRAND_OVERRIDES[$strand][$category];
+        }
 
         $base = match ($category) {
             'math' => self::MATH_BASE,

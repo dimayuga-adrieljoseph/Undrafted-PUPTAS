@@ -31,14 +31,61 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
-        // Redirect login view to IDP unless there are errors
+        // Redirect login view to IDP unless there are errors or bypass is requested
         Fortify::loginView(function () {
-            if (session()->has('errors') || request()->has('idp_error')) {
+            $env = strtolower(config('app.env'));
+            $isBypassAllowed = in_array($env, ['local', 'staging']) && 
+                               (request()->has('local') || session('local_bypass'));
+
+            if ($isBypassAllowed || session()->has('errors') || request()->has('idp_error')) {
                 return \Inertia\Inertia::render('Auth/Login', [
                     'canResetPassword' => \Illuminate\Support\Facades\Route::has('password.request'),
                     'status' => session('status'),
                 ]);
             }
+            return redirect()->route('idp.redirect');
+        });
+
+        // Redirect register view to IDP unless bypass is requested
+        Fortify::registerView(function () {
+            $env = strtolower(config('app.env'));
+            $isBypassAllowed = in_array($env, ['local', 'staging']) && 
+                               (request()->has('local') || session('local_bypass'));
+
+            if ($isBypassAllowed) {
+                session(['local_bypass' => true]);
+                
+                $email = request()->query('email', 'localapplicant@gmail.com');
+                $refNumber = request()->query('ref', '2026-LOCAL-TEST');
+                
+                // If they are using the default mock, ensure a dummy test passer exists so the form validation passes
+                if ($email === 'localapplicant@gmail.com') {
+                    \App\Models\TestPasser::firstOrCreate(
+                        ['reference_number' => $refNumber],
+                        [
+                            'first_name' => 'Local',
+                            'surname' => 'Applicant',
+                            'email' => $email,
+                            'passer_status_id' => 1,
+                        ]
+                    );
+                }
+
+                $pendingReg = [
+                    'email' => $email,
+                    'sub' => 'mock-idp-sub-local-1',
+                ];
+
+                // Inject IDP data into the session so the form POST validation reads it
+                session(['pending_registration' => $pendingReg]);
+                
+                // Pass directly to Inertia to bypass middleware timing issue
+                return \Inertia\Inertia::render('Auth/Register', [
+                    'pending_registration' => $pendingReg,
+                    'test_passer_data' => \App\Models\TestPasser::where('email', $email)->first()
+                ]);
+            }
+            
             return redirect()->route('idp.redirect');
         });
 

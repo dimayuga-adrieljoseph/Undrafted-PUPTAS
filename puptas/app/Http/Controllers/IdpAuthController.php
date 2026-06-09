@@ -256,6 +256,20 @@ class IdpAuthController extends Controller
                 return redirect('/register');
             }
 
+            // Check if existing user is an applicant with restricted status
+            if ((int) $localDbUser->role_id === 1) {
+                $testPasser = \App\Models\TestPasser::where('email', $idpEmail)->first();
+                if ($testPasser && in_array($testPasser->passer_status_id, [3, 4])) {
+                    $message = $testPasser->passer_status_id === 3 
+                        ? 'Login is not available for Unqualified applicants.' 
+                        : 'Login is currently closed for Waitlisted applicants. Please wait for further announcements regarding open slots.';
+                        
+                    return redirect('/auth/idp/error')->withErrors([
+                        'idp' => $message,
+                    ]);
+                }
+            }
+
             // Sync user data on login from IDP
             $updateData = [];
 

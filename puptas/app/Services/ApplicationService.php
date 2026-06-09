@@ -24,7 +24,11 @@ class ApplicationService
     {
         return [
             'total' => Application::count(),
-            'accepted' => Application::whereIn('status', ['accepted', 'cleared_for_enrollment'])->count(),
+            'accepted' => ApplicationProcess::where('stage', 'interviewer')
+                ->where('status', 'completed')
+                ->where('action', 'passed')
+                ->distinct('application_id')
+                ->count('application_id'),
             'pending' => Application::where('status', 'submitted')->count(),
             'returned' => Application::where('status', 'returned')->count(),
         ];
@@ -38,7 +42,7 @@ class ApplicationService
      */
     public function getApplicationByUserId(string $userId): Application
     {
-        return Application::where('user_id', $userId)->firstOrFail();
+        return Application::where('user_id', (string) $userId)->firstOrFail();
     }
 
     /**

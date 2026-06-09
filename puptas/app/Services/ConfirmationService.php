@@ -8,7 +8,6 @@ use App\Models\Program;
 use App\Models\User;
 use App\Models\UserFile;
 use App\Helpers\FileMapper;
-use App\Jobs\ProcessGradeOcr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -279,7 +278,7 @@ class ConfirmationService
         }
 
         // Get existing file path before uploading (for cleanup after)
-        $existingFile = UserFile::where('user_id', $user->id)
+        $existingFile = UserFile::where('user_id', (string) $user->id)
             ->where('type', $type)
             ->first();
 
@@ -321,11 +320,6 @@ class ConfirmationService
             'original_name' => $compressed['original_name'],
             'status' => 'pending',
         ];
-
-        // Explicitly clear any existing OCR data on reupload
-        if (Schema::hasColumn('user_files', 'docling_json')) {
-            $updateData['docling_json'] = null;
-        }
 
         // Finalize the file record with the stored path and 'pending' status
         try {
@@ -403,11 +397,6 @@ class ConfirmationService
             'status' => 'pending',
         ];
 
-        // Explicitly clear any existing OCR data on reupload
-        if (Schema::hasColumn('user_files', 'docling_json')) {
-            $updateData['docling_json'] = null;
-        }
-
         // Save new file record
         $userFile = UserFile::updateOrCreate(
             [
@@ -439,7 +428,7 @@ class ConfirmationService
      */
     private function deleteExistingFile(User $user, string $type): void
     {
-        $existingFile = UserFile::where('user_id', $user->id)
+        $existingFile = UserFile::where('user_id', (string) $user->id)
             ->where('type', $type)
             ->first();
 
@@ -546,6 +535,65 @@ class ConfirmationService
             !is_null($grades->english) &&
             !is_null($grades->mathematics) &&
             !is_null($grades->science);
+    }
+
+    /**
+     * Resubmit a returned application back to the evaluator stage.
+     *
+     * @param User $user
+     * @return Application
+     * @throws \Exception
+     */
+    public function resubmitApplication(User $user): Application
+    {
+        $application = Application::where('user_id', $user->id)
+            ->where('status', 'returned')
+            ->first();
+
+        if (!$application) {
+            abort(400, 'No returned application found to resubmit.');
+        }
+
+        // Block resubmission if any file is rejected
+        if ($application->files()->where('status', 'rejected')->exists()) {
+            abort(422, 'Your application has rejected documents that must be fixed before resubmitting.');
+        }
+
+        return DB::transaction(function () use ($application) {
+            // Reset application status back to submitted
+            $application->status = 'submitted';
+            $application->save();
+
+            // Find the returned evaluator process and set it back to in_progress
+            $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
+                ->where('stage', 'evaluator')
+                ->where('status', 'returned')
+                ->first();
+
+            if ($evaluatorProcess) {
+                $evaluatorProcess->update([
+                    'status' => 'in_progress',
+                    'action' => null,
+                    'reviewer_notes' => null,
+                    'files_affected' => null,
+                ]);
+            }
+
+            // Reset all returned files back to pending
+            UserFile::where('user_id', (string) $application->user_id)
+                ->where('status', 'returned')
+                ->update([
+                    'status' => 'pending',
+                    'comment' => null,
+                ]);
+
+            Log::info('Application resubmitted to evaluator', [
+                'user_id' => $application->user_id,
+                'application_id' => $application->id,
+            ]);
+
+            return $application;
+        });
     }
 
     /**

@@ -29,20 +29,21 @@ trait ManagesApplicationFiles
             // Load user with ONLY essential data (no files relationship)
             $user = User::with([
                 'currentApplication' => function ($query) {
-                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id');
+                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.submitted_at');
                 },
                 'currentApplication.program:id,code,name,slots',
                 'currentApplication.secondChoice:id,code,name,slots',
                 'currentApplication.thirdChoice:id,code,name,slots',
                 'currentApplication.processes' => function ($query) {
-                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'created_at', 'performed_by')
+                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'created_at', 'performed_by', 'reviewer_notes')
                         ->orderBy('created_at', 'desc')
                         ->limit(10)
                         ->with('performedBy:id,firstname,lastname');
                 },
                 'grades', // Include grades
-                'applicantProfile:user_id,student_number',
+                'applicantProfile:user_id,student_number,firstname,middlename,lastname,extension_name,salutation,sex,date_graduated,school,strand,track',
                 'applicantProfile.graduateTypes:id,label',
+                'applicantProfile.testPasser:user_id,reference_number',
             ])
             ->findOrFail($id);
 
@@ -74,16 +75,24 @@ trait ManagesApplicationFiles
             }
 
             // Load files separately (not through relationship) for better performance
-            $files = UserFile::where('user_id', $id)->get()->keyBy('type');
+            $files = UserFile::where('user_id', (string) $id)->get()->keyBy('type');
 
             // Transform the response to map currentApplication to application for frontend compatibility
             $userData = [
                 'id' => $user->id,
                 'student_number' => $user->applicantProfile?->student_number,
-                'firstname' => $user->firstname,
-                'lastname' => $user->lastname,
+                'firstname' => $user->applicantProfile?->firstname ?? $user->firstname,
+                'middlename' => $user->applicantProfile?->middlename,
+                'lastname' => $user->applicantProfile?->lastname ?? $user->lastname,
+                'extension_name' => $user->applicantProfile?->extension_name,
+                'salutation' => $user->applicantProfile?->salutation,
                 'email' => $user->email,
-                'sex' => $user->sex,
+                'sex' => $user->applicantProfile?->sex ?? $user->sex,
+                'date_graduated' => $user->applicantProfile?->date_graduated,
+                'school' => $user->applicantProfile?->school,
+                'strand' => $user->applicantProfile?->strand,
+                'track' => $user->applicantProfile?->track,
+                'reference_number' => $user->applicantProfile?->testPasser?->reference_number,
                 'created_at' => $user->created_at,
                 'grades' => $user->grades, // Include grades
                 // Map currentApplication to application for frontend compatibility
@@ -194,7 +203,7 @@ trait ManagesApplicationFiles
     public function returnFiles(Request $request, $userId)
     {
         $validated = $request->validate([
-            'files' => 'required|array',
+            'files' => 'array',
             'files.*' => 'string|in:' . \App\Helpers\FileMapper::getValidFileFields(),
             'note' => 'required|string|max:1000',
         ]);
@@ -226,12 +235,15 @@ trait ManagesApplicationFiles
         // Wrap all mutations in transaction
         try {
             DB::transaction(function () use ($userId, $fileTypes, $note, $application, $inProgress) {
-                UserFile::where('user_id', $userId)
-                    ->whereIn('type', $fileTypes)
-                    ->update([
-                        'status' => 'returned',
-                        'comment' => $note,
-                    ]);
+                // Only update files if specific files were selected
+                if (!empty($fileTypes)) {
+                    UserFile::where('user_id', (string) $userId)
+                        ->whereIn('type', $fileTypes)
+                        ->update([
+                            'status' => 'returned',
+                            'comment' => $note,
+                        ]);
+                }
 
                 $application->update([
                     'status' => 'returned',
@@ -241,7 +253,7 @@ trait ManagesApplicationFiles
                     'status' => 'returned',
                     'action' => 'returned',
                     'reviewer_notes' => $note,
-                    'files_affected' => $fileTypes,
+                    'files_affected' => !empty($fileTypes) ? $fileTypes : null,
                     'performed_by' => auth()->id(),
                 ]);
             });
@@ -263,7 +275,7 @@ trait ManagesApplicationFiles
     public function returnApplication(Request $request, $userId)
     {
         $request->validate([
-            'files' => 'required|array',
+            'files' => 'array',
             'files.*' => 'string|in:' . \App\Helpers\FileMapper::getValidFileFields(),
             'note' => 'required|string|min:3',
         ]);
@@ -314,7 +326,7 @@ trait ManagesApplicationFiles
                 foreach ($files as $fileKey) {
                     $dbKey = $keyMap[$fileKey] ?? $fileKey;
 
-                    $file = UserFile::where('user_id', $userId)
+                    $file = UserFile::where('user_id', (string) $userId)
                         ->where('type', $dbKey)
                         ->first();
 

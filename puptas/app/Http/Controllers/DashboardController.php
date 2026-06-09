@@ -47,28 +47,88 @@ class DashboardController extends Controller
             'returned' => Application::where('status', 'returned')->count(),
         ];
 
-        // Group applications by date and status (last 30 days)
+        // Group applications by date and status
         // Use single Carbon::now() reference to prevent midnight misalignment
         $now = Carbon::now();
-        $startDate = $now->copy()->subDays(29)->startOfDay();
-        $endDate = $now->copy()->endOfDay();
+        $request = request();
+        
+        $startDateParam = $request->input('start_date');
+        $endDateParam = $request->input('end_date');
 
-        $applications = DB::table('applications')
+        if ($startDateParam && $endDateParam) {
+            session(['dashboard_start_date' => $startDateParam, 'dashboard_end_date' => $endDateParam]);
+        } else {
+            $startDateParam = session('dashboard_start_date');
+            $endDateParam = session('dashboard_end_date');
+        }
+
+        if ($startDateParam && $endDateParam) {
+            try {
+                $startDate = Carbon::parse($startDateParam)->startOfDay();
+                $endDate = Carbon::parse($endDateParam)->endOfDay();
+                
+                if ($startDate->greaterThan($endDate)) {
+                    $temp = $startDate;
+                    $startDate = $endDate;
+                    $endDate = $temp;
+                }
+            } catch (\Exception $e) {
+                $startDate = $now->copy()->subDays(29)->startOfDay();
+                $endDate = $now->copy()->endOfDay();
+            }
+        } else {
+            $startDate = $now->copy()->subDays(29)->startOfDay();
+            $endDate = $now->copy()->endOfDay();
+        }
+        
+        $diffInDays = (int) $startDate->diffInDays($endDate->copy()->startOfDay());
+        if ($diffInDays > 365) {
+            $diffInDays = 365;
+            $startDate = $endDate->copy()->subDays(365)->startOfDay();
+        }
+
+        $submittedQuery = DB::table('applications')
             ->select(
                 DB::raw('DATE(created_at) as date'),
                 'status',
                 DB::raw('COUNT(*) as count')
             )
+            ->where('status', 'submitted')
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy(DB::raw('DATE(created_at)'), 'status')
-            ->orderBy('date')
+            ->groupBy(DB::raw('DATE(created_at)'), 'status');
+
+        $acceptedQuery = DB::table('application_processes')
+            ->select(
+                DB::raw('DATE(updated_at) as date'),
+                DB::raw("'accepted' as status"),
+                DB::raw('COUNT(DISTINCT application_id) as count')
+            )
+            ->where('stage', 'interviewer')
+            ->where('status', 'completed')
+            ->where('action', 'passed')
+            ->whereBetween('updated_at', [$startDate, $endDate])
+            ->groupBy(DB::raw('DATE(updated_at)'));
+
+        $returnedQuery = DB::table('applications')
+            ->select(
+                DB::raw('DATE(updated_at) as date'),
+                'status',
+                DB::raw('COUNT(*) as count')
+            )
+            ->where('status', 'returned')
+            ->whereBetween('updated_at', [$startDate, $endDate])
+            ->groupBy(DB::raw('DATE(updated_at)'), 'status');
+
+        $applications = $submittedQuery
+            ->unionAll($acceptedQuery)
+            ->unionAll($returnedQuery)
             ->get();
 
-        // Build a list of dates for the last 30 days
+        // Build a list of dates
         $dates = [];
         $dateLabels = [];
-        for ($i = 29; $i >= 0; $i--) {
-            $date = $now->copy()->subDays($i);
+        for ($i = $diffInDays; $i >= 0; $i--) {
+            $date = $endDate->copy()->subDays($i);
             $dates[] = $date->format('Y-m-d');
             $dateLabels[] = $date->format('M j');
         }
@@ -118,6 +178,10 @@ class DashboardController extends Controller
                 'accepted' => $accepted,
                 'returned' => $returned,
             ],
+            'filters' => [
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+            ]
         ]);
     }
 
@@ -177,11 +241,11 @@ class DashboardController extends Controller
                 'grades', // Include grades
                 'testPasser', // Include testPasser to get reference_number
             ])
-            ->where('user_id', $id)
+            ->where('user_id', (string) $id)
             ->firstOrFail();
 
             // Get files with full data
-            $files = UserFile::where('user_id', $id)->get()->keyBy('type');
+            $files = UserFile::where('user_id', (string) $id)->get()->keyBy('type');
 
             // Transform the response to use 'application' key for frontend compatibility
             $userData = [
@@ -262,7 +326,7 @@ class DashboardController extends Controller
 
             $applicant = ApplicantProfile::with('grades')
                 ->select('user_id')
-                ->where('user_id', $id)
+                ->where('user_id', (string) $id)
                 ->firstOrFail();
 
             return response()->json([

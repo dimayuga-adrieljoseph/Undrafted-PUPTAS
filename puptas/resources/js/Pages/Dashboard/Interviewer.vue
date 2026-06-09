@@ -47,7 +47,26 @@ const props = defineProps({
         type: Object,
         default: () => ({ submitted: [], accepted: [], returned: [], labels: [] }),
     },
+    filters: {
+        type: Object,
+        default: () => ({ start_date: '', end_date: '' })
+    }
 });
+
+const startDateFilter = ref(props.filters?.start_date || '');
+const endDateFilter = ref(props.filters?.end_date || '');
+const showDateFilter = ref(false);
+
+const applyFilters = () => {
+    router.get(window.location.pathname, {
+        start_date: startDateFilter.value,
+        end_date: endDateFilter.value
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true
+    });
+};
 
 const selectedUser = ref(null);
 const isLoading = ref(true);
@@ -55,7 +74,6 @@ const errorMessage = ref("");
 const searchQuery = ref("");
 const selectedUserFiles = ref({});
 const selectedProgramId = ref("");
-const requiresPromissoryNote = ref(false);
 const snackbar = ref({
     visible: false,
     message: "",
@@ -357,13 +375,11 @@ const acceptApplication = async () => {
             `/interviewer-dashboard/accept/${selectedUser.value.id}`,
             {
                 program_id: selectedProgramId.value,
-                requires_promissory_note: requiresPromissoryNote.value,
             }
         );
         showSnackbar("Application accepted successfully", "success");
         selectedUser.value = null;
         selectedProgramId.value = "";
-        requiresPromissoryNote.value = false;
         router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
         console.error("Accept failed:", e);
@@ -473,9 +489,63 @@ const fetchPrograms = async () => {
             <!-- Left Column: Chart -->
             <div class="lg:col-span-2">
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                    <div class="mb-6">
-                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">Daily interview trends (Last 30 days)</p>
+                    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm">Daily interview trends</p>
+                        </div>
+            <div class="relative">
+              <button 
+                @click="showDateFilter = !showDateFilter"
+                class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50"
+              >
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Date Filter
+                <svg class="w-4 h-4 ml-1 text-gray-400 transition-transform duration-200" :class="{'rotate-180': showDateFilter}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <div 
+                v-if="showDateFilter" 
+                class="absolute right-0 mt-2 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl z-10 w-72 origin-top-right transition-all"
+              >
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Custom Range</h4>
+                  <button @click="showDateFilter = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Start Date</label>
+                    <input 
+                      type="date" 
+                      v-model="startDateFilter"
+                      class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">End Date</label>
+                    <input 
+                      type="date" 
+                      v-model="endDateFilter"
+                      class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
+                    />
+                  </div>
+                  <div class="pt-2">
+                    <button 
+                      @click="applyFilters(); showDateFilter = false;"
+                      class="w-full inline-flex justify-center items-center gap-1.5 px-4 py-2.5 bg-[#9E122C] text-white text-sm font-semibold rounded-lg hover:bg-[#b51834] transition-all shadow-md active:scale-95"
+                    >
+                      Apply Filter
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
                     </div>
                     
                     <div class="flex flex-wrap gap-4 mb-6">
@@ -562,24 +632,30 @@ const fetchPrograms = async () => {
             </div>
         </div>
 
-        <!-- Applicant Detail Modal (Side Panel like Admin) -->
+        <!-- Applicant Detail Modal -->
         <transition name="fade">
-            <div
-                v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl transition duration-300 ease-in-out overflow-y-auto"
-            >
-                <!-- Modal Header -->
-                <div class="flex items-center justify-between mb-6">
-                    <div>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Interview Details</h3>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
-                    </div>
-                    <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
-                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
+            <div v-if="selectedUser" class="fixed inset-0 z-50">
+                <div class="fixed inset-0 bg-black/50" @click="closeUserCard"></div>
+
+                <div class="relative min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <!-- Modal Header -->
+                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Interview Details</h3>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
+                                </div>
+                                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
+                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Modal Content -->
+                        <div class="p-6 overflow-y-auto flex-1">
 
                 <!-- Applicant Info Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -649,23 +725,6 @@ const fetchPrograms = async () => {
                             </option>
                         </select>
 
-                        <!-- Promissory Note Checkbox -->
-                        <div class="mb-4">
-                            <label class="flex items-start space-x-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    v-model="requiresPromissoryNote"
-                                    class="mt-1 w-4 h-4 text-[#9E122C] border-gray-300 dark:border-gray-600 rounded focus:ring-[#9E122C] focus:ring-2"
-                                />
-                                <div>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white">Requires Promissory Note</span>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                        Check if applicant is approved but lacks optional documents
-                                    </p>
-                                </div>
-                            </label>
-                        </div>
-
                         <div class="flex space-x-2">
                             <button
                                 @click="acceptApplication"
@@ -682,6 +741,10 @@ const fetchPrograms = async () => {
                                 ✗ Reject
                             </button>
                         </div>
+                        <Link :href="`/applications/user/${selectedUser.id}`"
+                              :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block mt-3']">
+                            View Full Details
+                        </Link>
                     </div>
 
                     <!-- Interview Completed Summary -->
@@ -818,6 +881,9 @@ const fetchPrograms = async () => {
                                     {{ formatDate(process.created_at) }}
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                </div>
                         </div>
                     </div>
                 </div>

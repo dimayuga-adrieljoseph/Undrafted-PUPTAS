@@ -42,7 +42,26 @@ const props = defineProps({
         type: Object,
         default: () => ({ submitted: [], accepted: [], returned: [], labels: [] }),
     },
+    filters: {
+        type: Object,
+        default: () => ({ start_date: '', end_date: '' })
+    }
 });
+
+const startDateFilter = ref(props.filters?.start_date || '');
+const endDateFilter = ref(props.filters?.end_date || '');
+const showDateFilter = ref(false);
+
+const applyFilters = () => {
+    router.get(window.location.pathname, {
+        start_date: startDateFilter.value,
+        end_date: endDateFilter.value
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true
+    });
+};
 
 // State
 const selectedUser = ref(null);
@@ -205,6 +224,50 @@ const getStatusClass = (status) => {
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
 };
 
+const getEvaluationStatusText = (pipelineStatus) => {
+    switch (pipelineStatus) {
+        case 'for_evaluation': return 'For Evaluation';
+        case 'evaluation_returned': return 'Returned for Revision';
+        case 'evaluation_passed': return 'Evaluation Passed';
+        case 'for_interview': return 'For Interview';
+        case 'interview_returned': return 'Returned for Revision';
+        case 'interview_passed': return 'Interview Passed';
+        case 'interview_transferred': return 'Course Transferred';
+        case 'for_medical': return 'For Medical';
+        case 'medical_cleared': return 'Medical Cleared';
+        case 'medical_rejected': return 'Medical Rejected';
+        case 'for_records': return 'For Records';
+        case 'officially_enrolled': return 'Officially Enrolled';
+        case 'rejected': return 'Rejected';
+        default: return 'Unknown';
+    }
+};
+
+const getEvaluationStatusClass = (pipelineStatus) => {
+    switch (pipelineStatus) {
+        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+        case 'for_medical': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+        case 'medical_cleared': return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
+        case 'medical_rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'for_records': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
+        case 'officially_enrolled': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold';
+        case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+};
+
+const isEvaluationCompleted = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
+    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === 'evaluator');
+    return evaluatorProcess && evaluatorProcess.status === 'completed';
+});
+
 const getButtonClass = (type) => {
     const classes = {
         primary: 'bg-[#9E122C] text-white hover:bg-[#b51834]',
@@ -255,12 +318,19 @@ const selectUser = async (user) => {
     try {
         const response = await axios.get(`/dashboard/user-files/${user.id}`);
 
+        const userData = response.data.user;
         selectedUser.value = {
             ...user,
+            ...userData,
             application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
+                ...userData.application,
+                processes: userData.application?.processes || [],
+                program: userData.application?.program || null,
+                second_choice: userData.application?.second_choice || null,
+                third_choice: userData.application?.third_choice || null,
             },
+            grades: userData.grades || null,
+            pipeline_status: user.pipeline_status,
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
@@ -425,9 +495,63 @@ const submitPass = async () => {
             <!-- Left Column: Chart -->
             <div class="lg:col-span-2">
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                    <div class="mb-6">
-                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">Daily evaluation trends (Last 30 days)</p>
+                    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm">Daily evaluation trends</p>
+                        </div>
+            <div class="relative">
+              <button 
+                @click="showDateFilter = !showDateFilter"
+                class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50"
+              >
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Date Filter
+                <svg class="w-4 h-4 ml-1 text-gray-400 transition-transform duration-200" :class="{'rotate-180': showDateFilter}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <div 
+                v-if="showDateFilter" 
+                class="absolute right-0 mt-2 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl z-10 w-72 origin-top-right transition-all"
+              >
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Custom Range</h4>
+                  <button @click="showDateFilter = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Start Date</label>
+                    <input 
+                      type="date" 
+                      v-model="startDateFilter"
+                      class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">End Date</label>
+                    <input 
+                      type="date" 
+                      v-model="endDateFilter"
+                      class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
+                    />
+                  </div>
+                  <div class="pt-2">
+                    <button 
+                      @click="applyFilters(); showDateFilter = false;"
+                      class="w-full inline-flex justify-center items-center gap-1.5 px-4 py-2.5 bg-[#9E122C] text-white text-sm font-semibold rounded-lg hover:bg-[#b51834] transition-all shadow-md active:scale-95"
+                    >
+                      Apply Filter
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
                     </div>
                     
                     <div class="flex flex-wrap gap-4 mb-6">
@@ -560,16 +684,16 @@ const submitPass = async () => {
                                         </div>
                                         <div>
                                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Status</p>
-                                            <span :class="getStatusClass(selectedUser.application?.status)" 
+                                            <span :class="getEvaluationStatusClass(selectedUser.pipeline_status)" 
                                                   class="px-3 py-1 rounded-full text-sm font-semibold inline-block">
-                                                {{ selectedUser.application?.status || "Pending" }}
+                                                {{ getEvaluationStatusText(selectedUser.pipeline_status) }}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Quick Actions -->
-                                <div>
+                                <div v-if="!isEvaluationCompleted">
                                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h4>
                                     <div class="space-y-3">
                                         <button
@@ -591,6 +715,18 @@ const submitPass = async () => {
                                             View Full Details
                                         </Link>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Evaluation Completed Badge -->
+                            <div v-if="isEvaluationCompleted"
+                                class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl mb-5">
+                                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Evaluation Completed</p>
+                                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">You have already evaluated this application. Actions are no longer available.</p>
                                 </div>
                             </div>
 

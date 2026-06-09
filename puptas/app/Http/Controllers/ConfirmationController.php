@@ -172,7 +172,7 @@ class ConfirmationController extends Controller
             return response()->json(['status' => null]);
         }
 
-        $file = \App\Models\UserFile::where('user_id', $user->id)
+        $file = \App\Models\UserFile::where('user_id', (string) $user->id)
             ->where('type', $type)
             ->first();
 
@@ -238,6 +238,36 @@ class ConfirmationController extends Controller
             return response()->json([
                 'message' => 'Unable to prepare upload. Please try again.',
             ], 500);
+        }
+    }
+
+    /**
+     * Resubmit a returned application back to the evaluator stage.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function resubmit()
+    {
+        $user = Auth::user();
+
+        try {
+            $application = $this->confirmationService->resubmitApplication($user);
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} resubmitted application #{$application->id} for evaluation.", $user, 'ADMISSION_DATA');
+
+            return response()->json([
+                'message' => 'Application resubmitted for evaluation.',
+                'status' => $application->status,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Application resubmit failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 400);
         }
     }
 

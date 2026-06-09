@@ -107,6 +107,7 @@ class EvaluatorDashboardController extends Controller
     {
         $request->validate([
             'note' => 'nullable|string|max:1000',
+            'requires_promissory_note' => 'nullable|boolean',
         ]);
 
         $this->ensureRole(3);
@@ -132,17 +133,23 @@ class EvaluatorDashboardController extends Controller
             ]);
 
             // Update file statuses from 'returned' to 'approved' when passing the application
-            $updatedCount = UserFile::where('user_id', $userId)
+            $updatedCount = UserFile::where('user_id', (string) $userId)
                 ->where('status', 'returned')
                 ->update(['status' => 'approved', 'comment' => null]);
 
             \Log::info("Updated {$updatedCount} files from 'returned' to 'approved' for user {$userId}");
 
-            // Update application status back to submitted
-            $statusUpdated = Application::where('id', $application->id)
-                ->update(['status' => 'submitted']);
+            // Persist promissory note requirement if set by evaluator
+            if ($request->has('requires_promissory_note')) {
+                $application->requires_promissory_note = (bool) $request->requires_promissory_note;
+                $application->save();
+            }
 
-            \Log::info("Updated application status to 'submitted' for application {$application->id}, result: {$statusUpdated}");
+            // Update application status back to submitted
+            $application->status = 'submitted';
+            $application->save();
+
+            \Log::info("Updated application status to 'submitted' for application {$application->id}");
 
             // Create next stage process
             ApplicationProcess::create([

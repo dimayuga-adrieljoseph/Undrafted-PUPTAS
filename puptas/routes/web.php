@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\GradesController;
 use App\Http\Controllers\ApplicantDashboardController;
+use App\Http\Controllers\GradeVerificationSlipController;
 use App\Http\Controllers\TestPasserController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
@@ -37,7 +38,123 @@ use App\Http\Controllers\EmailTrackingController;
 
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
-Route::get('/', function () {
+// Temporary route to create a test applicant without CLI access
+Route::get('/setup-test-applicant', function () {
+    if (!in_array(config('app.env'), ['local', 'staging'])) {
+        abort(404);
+    }
+    
+    $user = \App\Models\User::updateOrCreate(
+        ['email' => 'testapplicant@gmail.com'], 
+        [
+            'password' => bcrypt('password123'), 
+            'role_id' => 1, 
+            'firstname' => 'Test', 
+            'lastname' => 'Applicant', 
+            'contactnumber' => '09111111111', 
+            'sex' => 'Female', 
+            'status' => 'active'
+        ]
+    );
+
+    \App\Models\ApplicantProfile::updateOrCreate(
+        ['user_id' => $user->id],
+        [
+            'firstname' => 'Test',
+            'lastname' => 'Applicant',
+            'email' => 'testapplicant@gmail.com',
+            'contactnumber' => '09111111111',
+            'sex' => 'Female',
+            'strand' => 'STEM',
+        ]
+    );
+
+    return 'Test applicant created successfully! Email: testapplicant@gmail.com | Password: password123. You can now go to /?local=1 and log in.';
+});
+
+// Temporary route to create a BRAND NEW applicant without a profile to test the onboarding flow
+Route::get('/setup-new-applicant', function () {
+    if (!in_array(config('app.env'), ['local', 'staging'])) {
+        abort(404);
+    }
+    
+    $user = \App\Models\User::updateOrCreate(
+        ['email' => 'newapplicant@gmail.com'], 
+        [
+            'password' => bcrypt('password123'), 
+            'role_id' => 1, 
+            'firstname' => 'Fresh', 
+            'lastname' => 'Applicant', 
+            'contactnumber' => '09999999999', 
+            'sex' => 'Male', 
+            'status' => 'active'
+        ]
+    );
+
+    // Ensure they have NO profile so they are forced into the onboarding flow
+    \App\Models\ApplicantProfile::where('user_id', $user->id)->delete();
+
+    return 'New applicant created successfully! Email: newapplicant@gmail.com | Password: password123. You can now go to /?local=1 and log in to test the registration/onboarding flow.';
+});
+
+// Temporary route to create staff accounts without CLI access
+Route::get('/setup-staff', function () {
+    if (!in_array(config('app.env'), ['local', 'staging'])) {
+        abort(404);
+    }
+    
+    $users = [
+        [
+            'firstname' => 'System',
+            'lastname' => 'Evaluator',
+            'contactnumber' => 'N/A',
+            'email' => 'evaluator122@gmail.com',
+            'password' => bcrypt('Evaluator4321!'),
+            'role_id' => 3,
+        ],
+        [
+            'firstname' => 'System',
+            'lastname' => 'Interviewer',
+            'contactnumber' => 'N/A',
+            'email' => 'interviewer133@gmail.com',
+            'password' => bcrypt('Interviewer4321!'),
+            'role_id' => 4,
+        ],
+        [
+            'firstname' => 'Radianne',
+            'lastname' => 'Seguro',
+            'contactnumber' => 'N/A',
+            'email' => 'seguroradianne@example.com',
+            'password' => bcrypt('UGCA4zWe1K7Sfl'),
+            'role_id' => 2,
+        ],
+        [
+            'firstname' => 'Mhel',
+            'lastname' => 'Garcia',
+            'contactnumber' => 'N/A',
+            'email' => 'garciamhel@example.com',
+            'password' => bcrypt('rKuFYl4jMmTI8&'),
+            'role_id' => 6,
+        ],
+    ];
+
+    foreach ($users as $userData) {
+        \App\Models\User::updateOrCreate(
+            ['email' => $userData['email']],
+            $userData
+        );
+    }
+
+    return 'Staff accounts created successfully! You can now go to /?local=1 and log in with their credentials.';
+});
+
+Route::get('/', function (\Illuminate\Http\Request $request) {
+    // Allow bypassing IDP on local and staging using ?local=1
+    if (in_array(config('app.env'), ['local', 'staging']) && $request->has('local')) {
+        session(['local_bypass' => true]);
+        return redirect('/login?local=1');
+    }
+    
     return redirect()->route('idp.redirect');
 })->middleware('guest')->name('welcome');
 
@@ -88,7 +205,17 @@ Route::get('/applications/user/{user}', function ($user) {
         abort(404);
     }
 
-    return Inertia::render('Applications/Index', [
+    $currentUser = Auth::user();
+    $roleId = $currentUser->role_id;
+
+    // Render the role-appropriate component
+    $component = match ((int) $roleId) {
+        3 => 'Applications/Evaluator',
+        4 => 'Applications/Interviewer',
+        default => 'Applications/Index',
+    };
+
+    return Inertia::render($component, [
         'selectedUserId' => (int) $user
     ]);
 })->middleware(['auth', 'role:2,3,4,7'])->whereNumber('user')->name('applications.show');
@@ -148,6 +275,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/applicant-dashboard/qualified-programs', [ApplicantDashboardController::class, 'getQualifiedPrograms'])
         ->name('applicant.qualified-programs');
 
+    Route::get('/applicant-qualified-programs', [ApplicantDashboardController::class, 'qualifiedProgramsPage'])
+        ->name('applicant.qualified-programs.page');
+
+    Route::get('/applicant-profile', [ApplicantDashboardController::class, 'profile'])
+        ->name('applicant.profile');
+
+    // Grade Verification Slip — applicant-initiated self-service download
+    // Security: uses the authenticated session as the sole data source.
+    // No reference number or user ID is accepted as a URL parameter.
+    Route::get('/applicant-dashboard/grade-verification-slip', [GradeVerificationSlipController::class, 'download'])
+        ->name('applicant.grade-verification-slip');
+
     Route::middleware(['throttle:grade-extraction'])
         ->post('/api/grades/extract', [GradeExtractionController::class, 'extract']);
 
@@ -171,7 +310,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/grades/tvl', [GradesController::class, 'showTvlGradeForm'])->name('grades.tvl.form');
     Route::post('/grades/tvl', [GradesController::class, 'storeTvlGrades'])->name('grades.tvl.store');
 
-    // Unified grade store endpoint (dynamic grade input)
+    // Unified grade store — handles all strands including dynamic/additional subjects.
+    // The per-strand POST routes above are kept for backward compatibility but the
+    // grade input composable (useGradeForm.js) posts here to save dynamic_subjects.
     Route::post('/grades/store', [GradesController::class, 'storeGrades'])->name('grades.store');
 });
 
@@ -279,6 +420,7 @@ Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/user/application', [ConfirmationController::class, 'show']);
     Route::post('/user/application/submit', [ConfirmationController::class, 'submit']);
+    Route::post('/user/application/resubmit', [ConfirmationController::class, 'resubmit']);
     Route::post('/user/application/reupload', [ConfirmationController::class, 'reupload']);
     Route::post('/user/application/upload-url', [ConfirmationController::class, 'getUploadUrl']);
     Route::post('/user/application/confirm-upload', [ConfirmationController::class, 'confirmUpload']);
@@ -444,4 +586,3 @@ Route::get('/callback-loading', [CallbackController::class, 'index']);
 
 // Public Admission Status Checker - No auth required
 Route::get('/admission-results', fn () => Inertia::render('Public/CheckStatus'))->name('public.check-status');
-

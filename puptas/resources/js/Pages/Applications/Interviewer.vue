@@ -114,7 +114,6 @@
             <div v-if="isLoading" class="text-center text-gray-500 py-8 dark:text-gray-300">Loading applicants…</div>
             <div v-else-if="errorMessage" class="text-center text-red-500 py-8 dark:text-red-300">Error: {{ errorMessage }}</div>
 
-            <!-- Users Table -->
             <div v-else class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
                 <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Showing {{ paginatedUsers.length }} of {{ filteredUsers.length }} users
@@ -125,19 +124,13 @@
                         <tr class="text-left font-semibold text-black dark:text-white">
                             <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('lastname')">
                                 Name
-                                <span v-if="sortKey === 'lastname'" class="ml-1">
-                                    {{ sortAsc ? '↑' : '↓' }}
-                                </span>
+                                <span v-if="sortKey === 'lastname'" class="ml-1">{{ sortAsc ? '↑' : '↓' }}</span>
                             </th>
                             <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('program.name')">
                                 Course
-                                <span v-if="sortKey === 'program.name'" class="ml-1">
-                                    {{ sortAsc ? '↑' : '↓' }}
-                                </span>
+                                <span v-if="sortKey === 'program.name'" class="ml-1">{{ sortAsc ? '↑' : '↓' }}</span>
                             </th>
-                            <th class="pb-2">
-                                Status
-                            </th>
+                            <th class="pb-2">Status</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -161,22 +154,15 @@
                                     </span>
                                 </div>
                             </td>
-                            <td class="py-3 text-gray-700 dark:text-gray-300">
-                                {{ user.application?.program?.name || "—" }}
-                            </td>
+                            <td class="py-3 text-gray-700 dark:text-gray-300">{{ user.program?.name || "—" }}</td>
                             <td class="py-3">
-                                <span
-                                    :class="getEvaluationStatusClass(user)"
-                                    class="px-2.5 py-1 rounded-full text-xs font-medium"
-                                >
+                                <span :class="getEvaluationStatusClass(user)" class="px-2.5 py-1 rounded-full text-xs font-medium">
                                     {{ getEvaluationStatusText(user) }}
                                 </span>
                             </td>
                         </tr>
                         <tr v-if="paginatedUsers.length === 0">
-                            <td colspan="3" class="py-8 text-center text-gray-500 dark:text-gray-400">
-                                No applicants found matching your criteria.
-                            </td>
+                            <td colspan="3" class="py-8 text-center text-gray-500 dark:text-gray-400">No applicants found matching your criteria.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -195,11 +181,8 @@
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <button
-                                :disabled="currentPage === 1"
-                                @click.prevent="currentPage--"
-                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
-                            >
+                            <button :disabled="currentPage === 1" @click.prevent="currentPage--"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900">
                                 <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                                 </svg>
@@ -207,21 +190,13 @@
                             </button>
                             <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
                                 <span>Page</span>
-                                <input
-                                    type="number"
-                                    :value="currentPage"
-                                    min="1"
-                                    :max="totalPages || 1"
+                                <input type="number" :value="currentPage" min="1" :max="totalPages || 1"
                                     @change="currentPage = Math.max(1, Math.min($event.target.value, totalPages || 1))"
-                                    class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
-                                />
+                                    class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm" />
                                 <span>of <span class="font-semibold">{{ totalPages || 1 }}</span></span>
                             </div>
-                            <button
-                                :disabled="currentPage === totalPages || totalPages === 0"
-                                @click.prevent="currentPage++"
-                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
-                            >
+                            <button :disabled="currentPage === totalPages || totalPages === 0" @click.prevent="currentPage++"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900">
                                 Next
                                 <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -233,267 +208,345 @@
             </div>
         </div>
 
-        <!-- Applicant Details Panel -->
-        <transition name="slide-fade">
-            <div
-                v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl transition duration-300 ease-in-out overflow-y-auto"
-            >
-                <!-- Modal Header -->
-                <div class="flex items-center justify-between mb-6">
-                    <div>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Interview Details</h3>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
-                    </div>
-                    <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
-                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Applicant Info Grid -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <!-- Personal Info -->
-                    <div class="lg:col-span-2">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Applicant Information</h4>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Full Name</p>
-                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
+        <!-- Applicant Details Modal -->
+        <transition name="fade">
+            <div v-if="selectedUser" class="fixed inset-0 z-50">
+                <div class="fixed inset-0 bg-black/50" @click="closeUserCard"></div>
+                <div class="relative min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-7xl my-4 sm:my-8 flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] overflow-hidden">
+                        <!-- Modal Header -->
+                        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-lg font-bold shrink-0">
+                                    {{ (selectedUser.firstname || selectedUser.email || '?').charAt(0).toUpperCase() }}{{ (selectedUser.lastname || '').charAt(0).toUpperCase() }}
+                                </div>
+                                <div>
+                                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                        {{ [selectedUser.firstname, selectedUser.middlename, selectedUser.lastname].filter(Boolean).join(' ') }}
+                                    </h2>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        App #{{ selectedUser.application?.id || 'N/A' }} · {{ selectedUser.reference_number || 'No ref' }} · {{ selectedUser.email }}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Email Address</p>
-                                <p class="text-gray-900 dark:text-white break-words">{{ selectedUser.email }}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Program (1st Choice)</p>
-                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.program?.name || "—" }}</p>
-                                <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.program?.code || "" }}</p>
-                                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.program?.slots || 0 }} slots remaining</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Second Choice Program</p>
-                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.second_choice?.name || "—" }}</p>
-                                <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.second_choice?.code || "" }}</p>
-                                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.second_choice?.slots || 0 }} slots remaining</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Third Choice Program</p>
-                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.third_choice?.name || "—" }}</p>
-                                <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.third_choice?.code || "" }}</p>
-                                <p class="text-gray-500 dark:text-gray-400 text-xs mt-1">{{ selectedUser.application?.third_choice?.slots || 0 }} slots remaining</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
-                                <span :class="getStatusClass(selectedUser.status)" 
-                                      class="px-3 py-1 rounded-full text-sm font-semibold inline-block">
-                                    {{ selectedUser.status || "Pending" }}
+                            <div class="flex items-center gap-3">
+                                <span :class="getStatusBadgeClass(selectedUser)" class="px-3 py-1 rounded-full text-xs font-semibold">
+                                    {{ getEvaluationStatusText(selectedUser) }}
                                 </span>
-                            </div>
-                            <div v-if="selectedUser.application?.requires_promissory_note">
-                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Special Requirements</p>
-                                <span class="px-3 py-1 rounded-full text-sm font-semibold inline-block bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
-                                    📝 Promissory Note Required
-                                </span>
+                                <button @click="closeUserCard"
+                                    class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="Close">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Program Selection for Accept/Reject -->
-                    <div v-if="!isEvaluationCompleted">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Your Program</h4>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                            Choose the program you are interviewing for:
-                        </p>
-                        <select
-                            v-model="selectedProgramId"
-                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                        >
-                            <option disabled value="">Select Program</option>
-                            <option
-                                v-for="p in props.assignedPrograms"
-                                :key="p.id"
-                                :value="p.id"
-                            >
-                                {{ p.code }} - {{ p.name }}
-                            </option>
-                        </select>
-
-                        <!-- Promissory Note Checkbox -->
-                        <div class="mb-4">
-                            <label class="flex items-start space-x-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    v-model="requiresPromissoryNote"
-                                    class="mt-1 w-4 h-4 text-[#9E122C] border-gray-300 dark:border-gray-600 rounded focus:ring-[#9E122C] focus:ring-2"
-                                />
+                        <!-- Modal Body: 2-column layout -->
+                        <div class="flex-1 overflow-y-auto px-6 py-5">
+                            <!-- Interview Completed Badge -->
+                            <div v-if="isEvaluationCompleted"
+                                class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl mb-5">
+                                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
                                 <div>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white">Requires Promissory Note</span>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                        Check if applicant is approved but lacks optional documents
-                                    </p>
-                                </div>
-                            </label>
-                        </div>
-
-                        <div class="flex space-x-2">
-                            <button
-                                @click="acceptApplication"
-                                :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                :disabled="!selectedProgramId"
-                            >
-                                ✓ Accept
-                            </button>
-                            <button
-                                @click="rejectApplication"
-                                :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                :disabled="!selectedProgramId"
-                            >
-                                ✗ Reject
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Interview Completed Summary -->
-                    <div v-else>
-                        <div class="p-8 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
-                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Interview Completed</h4>
-                            
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
-                                This interview has been completed.
-                            </p>
-                            
-                            <div class="border-t border-gray-300 dark:border-gray-600 my-8"></div>
-                            
-                            <div class="space-y-3 text-left">
-                                <div>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Program:</p>
-                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                        {{ selectedUser.application?.program?.code || "—" }}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Interviewer:</p>
-                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                        {{ getInterviewerName() }}
+                                    <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Interview Completed</p>
+                                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                                        This interview has been completed
+                                        <span v-if="getInterviewerName() !== '—'"> by {{ getInterviewerName() }}</span>.
+                                        Actions are no longer available.
                                     </p>
                                 </div>
                             </div>
-                            
-                            <div v-if="selectedUser.application?.requires_promissory_note" class="mt-8 pt-8 border-t border-gray-300 dark:border-gray-600">
-                                <div class="flex items-center justify-center gap-2 text-orange-700 dark:text-orange-300">
-                                    <span class="text-sm font-medium">Promissory Note: Required</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Grades Section -->
-                <div class="mb-8">
-                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Academic Grades</h4>
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
-                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics || "—" }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Science</p>
-                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.science || "—" }}</p>
-                        </div>
-                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">English</p>
-                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.english || "—" }}</p>
-                        </div>
-                    </div>
-                </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <!-- Left Column: Info & Grades -->
+                                <div class="lg:col-span-7 space-y-5">
 
-                <!-- Uploaded Documents -->
-                <div class="mb-8">
-                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div
-                            v-for="(file, key) in selectedUserFiles"
-                            :key="key"
-                            class="group relative min-w-0"
-                        >
-                            <!-- Document Card -->
-                            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-                                <div 
-                                    class="relative cursor-pointer"
-                                    @click="hasImagePreview(file) ? openImageModal(file) : null"
-                                >
-                                    <img
-                                        v-if="hasImagePreview(file)"
-                                        :src="getFileUrl(file)"
-                                        :alt="formatFileKey(key)"
-                                        class="w-full aspect-[4/3] object-cover hover:opacity-90 transition pointer-events-none"
-                                    />
-                                    <div
-                                        v-else
-                                        class="w-full aspect-[4/3] flex items-center justify-center bg-gray-50 dark:bg-gray-800"
-                                    >
-                                        <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                
-                                <!-- Document Label -->
-                                <div class="p-2 border-t border-gray-200 dark:border-gray-700 min-w-0">
-                                    <p class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate" :title="formatFileKey(key)">
-                                        {{ formatFileKey(key) }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Application History -->
-                <div v-if="selectedUser?.application?.processes?.length">
-                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Timeline</h4>
-                    <div class="space-y-3">
-                        <div
-                            v-for="(process, index) in selectedUser.application.processes"
-                            :key="index"
-                            class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-                        >
-                            <div :class="[
-                                'w-3 h-3 rounded-full mt-1.5 flex-shrink-0',
-                                process.status === 'completed' ? 'bg-green-500' :
-                                process.status === 'in_progress' ? 'bg-yellow-500' :
-                                'bg-red-500'
-                            ]"></div>
-                            <div class="flex-1">
-                                <div class="flex justify-between items-start">
+                                    <!-- Personal & Educational Info -->
                                     <div>
-                                        <p class="font-semibold text-gray-900 dark:text-white">
-                                            {{ capitalize(process.stage) }}
-                                        </p>
-                                        <p v-if="process.notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                            {{ process.notes }}
-                                        </p>
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Personal Information</h4>
+                                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Sex</p>
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white capitalize">{{ selectedUser.sex || '—' }}</p>
+                                            </div>
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School</p>
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ selectedUser.school || '—' }}</p>
+                                            </div>
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Strand</p>
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ selectedUser.strand || '—' }}</p>
+                                            </div>
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Track</p>
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ selectedUser.track || '—' }}</p>
+                                            </div>
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Date Graduated</p>
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDateOnly(selectedUser.date_graduated) }}</p>
+                                            </div>
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">G12 1st Sem</p>
+                                                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.grades?.g12_first_sem ?? '—' }}</p>
+                                            </div>
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">G12 2nd Sem</p>
+                                                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.grades?.g12_second_sem ?? '—' }}</p>
+                                            </div>
+                                            <div v-if="selectedUser.application?.requires_promissory_note" class="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-700">
+                                                <p class="text-xs text-orange-600 dark:text-orange-400 mb-0.5">Special Requirements</p>
+                                                <p class="text-sm font-medium text-orange-700 dark:text-orange-300">📝 Promissory Note Required</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <span :class="[
-                                        'px-2 py-1 rounded-full text-xs font-semibold',
-                                        process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
-                                        process.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                    ]">
-                                        {{ capitalize(process.status) }}
-                                    </span>
+
+                                    <!-- Program Choices -->
+                                    <div>
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Program Choices</h4>
+                                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">1st Choice</p>
+                                                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.application?.program?.name || "—" }}</p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedUser.application?.program?.code || "" }} · {{ selectedUser.application?.program?.slots ?? 0 }} slots</p>
+                                            </div>
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">2nd Choice</p>
+                                                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.application?.second_choice?.name || "—" }}</p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedUser.application?.second_choice?.code || "" }} · {{ selectedUser.application?.second_choice?.slots ?? 0 }} slots</p>
+                                            </div>
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">3rd Choice</p>
+                                                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.application?.third_choice?.name || "—" }}</p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedUser.application?.third_choice?.code || "" }} · {{ selectedUser.application?.third_choice?.slots ?? 0 }} slots</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Subject Grades -->
+                                    <div v-if="hasIndividualSubjects">
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Subject Grades</h4>
+                                        
+                                        <!-- Mathematics -->
+                                        <div v-if="mathSubjects.length" class="mb-4">
+                                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Mathematics</p>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div v-for="subj in mathSubjects" :key="subj.key" class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                                    <span class="text-xs text-gray-600 dark:text-gray-400">{{ subj.label }}</span>
+                                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ subj.value ?? '—' }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Science -->
+                                        <div v-if="scienceSubjects.length" class="mb-4">
+                                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Science</p>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div v-for="subj in scienceSubjects" :key="subj.key" class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                                    <span class="text-xs text-gray-600 dark:text-gray-400">{{ subj.label }}</span>
+                                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ subj.value ?? '—' }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- English -->
+                                        <div v-if="englishSubjects.length" class="mb-4">
+                                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">English</p>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div v-for="subj in englishSubjects" :key="subj.key" class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                                    <span class="text-xs text-gray-600 dark:text-gray-400">{{ subj.label }}</span>
+                                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ subj.value ?? '—' }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Dynamic Subjects -->
+                                        <div v-if="dynamicSubjectList.length" class="mb-4">
+                                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Additional Subjects</p>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div v-for="(subj, idx) in dynamicSubjectList" :key="'dyn-'+idx" class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                                    <span class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ subj.label }}</span>
+                                                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ subj.value ?? '—' }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Category Averages -->
+                                        <div class="grid grid-cols-3 gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Math Avg</p>
+                                                <p class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.mathematics ?? '—' }}</p>
+                                            </div>
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Science Avg</p>
+                                                <p class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.science ?? '—' }}</p>
+                                            </div>
+                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">English Avg</p>
+                                                <p class="text-lg font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.english ?? '—' }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Fallback: averages only -->
+                                    <div v-else-if="selectedUser?.grades">
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Academic Grades</h4>
+                                        <div class="grid grid-cols-3 gap-3">
+                                            <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
+                                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.mathematics ?? '—' }}</p>
+                                            </div>
+                                            <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Science</p>
+                                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.science ?? '—' }}</p>
+                                            </div>
+                                            <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">English</p>
+                                                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.english ?? '—' }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Application History -->
+                                    <div v-if="selectedUser?.application?.processes?.length">
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Application History</h4>
+                                        <div class="space-y-2">
+                                            <div v-for="(process, index) in selectedUser.application.processes" :key="index"
+                                                class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <div :class="[
+                                                    'w-2.5 h-2.5 rounded-full mt-1.5 shrink-0',
+                                                    process.status === 'completed' ? 'bg-green-500' :
+                                                    process.status === 'returned' ? 'bg-red-500' : 'bg-yellow-500'
+                                                ]"></div>
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="flex justify-between items-start">
+                                                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ capitalize(process.stage) }}</p>
+                                                        <span :class="[
+                                                            'px-2 py-0.5 rounded-full text-xs font-medium',
+                                                            process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                                                            process.status === 'returned' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                                                            'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                                        ]">{{ capitalize(process.status) }}</span>
+                                                    </div>
+                                                    <p v-if="process.reviewer_notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.reviewer_notes }}</p>
+                                                    <p v-else-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.notes }}</p>
+                                                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(process.created_at) }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                    {{ formatDate(process.created_at) }}
-                                </p>
+
+                                <!-- Right Column: Actions & Documents -->
+                                <div class="lg:col-span-5 space-y-5">
+
+                                    <!-- Interviewer Actions -->
+                                    <div v-if="!isEvaluationCompleted" class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Interview Actions</h4>
+                                        <div class="space-y-3">
+                                            <div>
+                                                <label for="programSelect" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                                                    Select Program for Interview
+                                                </label>
+                                                <select
+                                                    id="programSelect"
+                                                    v-model="selectedProgramId"
+                                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                                >
+                                                    <option disabled value="">Select Program</option>
+                                                    <option
+                                                        v-for="p in props.assignedPrograms"
+                                                        :key="p.id"
+                                                        :value="p.id"
+                                                    >
+                                                        {{ p.code }} - {{ p.name }}
+                                                    </option>
+                                                </select>
+                                            </div>
+
+                                            <div class="flex gap-2 pt-1">
+                                                <button
+                                                    @click="acceptApplication"
+                                                    :class="[getButtonClass('success'), 'flex-1 px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2']"
+                                                    :disabled="!selectedProgramId"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    Accept
+                                                </button>
+                                                <button
+                                                    @click="rejectApplication"
+                                                    :class="[getButtonClass('danger'), 'flex-1 px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2']"
+                                                    :disabled="!selectedProgramId"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Interview Completed Summary (when already evaluated) -->
+                                    <div v-else class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Interview Result</h4>
+                                        <div class="space-y-2 text-sm">
+                                            <div>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">Program</p>
+                                                <p class="font-medium text-gray-900 dark:text-white">{{ selectedUser.application?.program?.code || "—" }}</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">Interviewer</p>
+                                                <p class="font-medium text-gray-900 dark:text-white">{{ getInterviewerName() }}</p>
+                                            </div>
+                                            <div v-if="selectedUser.application?.requires_promissory_note" class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                                                    📝 Promissory Note Required
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Uploaded Documents -->
+                                    <div>
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Uploaded Documents</h4>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div v-for="(file, key) in selectedUserFiles" :key="key"
+                                                class="p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                                                <div class="flex items-center gap-1.5 mb-1.5 min-w-0">
+                                                    <label :for="key" class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{{ formatFileKey(key) }}</label>
+                                                </div>
+                                                <img v-if="hasImagePreview(file)" :src="getFileUrl(file)" alt="Document"
+                                                    class="w-full aspect-[4/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
+                                                    @click="openImageModal(file)" />
+                                                <div v-else class="w-full aspect-[4/3] flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                                                    No file
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </transition>
+
+        <!-- Image Preview Modal -->
+        <div v-if="showImageModal"
+            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60]"
+            @click.self="closeImageModal">
+            <img :src="previewImage" alt="Preview" class="max-w-full max-h-full rounded shadow-lg" />
+            <button @click="closeImageModal"
+                class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300" aria-label="Close preview">
+                &times;
+            </button>
+        </div>
 
         <!-- Snackbar Notification -->
         <transition name="fade">
@@ -530,11 +583,6 @@ import {
     Legend,
 } from "chart.js";
 
-const props = defineProps({
-    user: Object,
-    assignedPrograms: Array,
-});
-
 ChartJS.register(
     LineController,
     LineElement,
@@ -548,10 +596,19 @@ ChartJS.register(
 
 import { usePage } from "@inertiajs/vue3";
 
+const props = defineProps({
+    user: Object,
+    assignedPrograms: Array,
+    selectedUserId: {
+        type: [Number, String],
+        default: null
+    }
+});
+
 const currentPage = ref(1);
 const itemsPerPage = 10;
-const sortKey = ref("lastname"); // default to lastname
-const evaluationStatusFilter = ref(""); // Filter for evaluation completion status
+const sortKey = ref("lastname");
+const evaluationStatusFilter = ref("");
 const sortAsc = ref(true);
 const showStatusDropdown = ref(false);
 const filterDropdownRef = ref(null);
@@ -559,7 +616,6 @@ const filterDropdownRef = ref(null);
 const page = usePage();
 const users = ref(page.props.users || []);
 
-//const users = ref([]);
 const selectedUser = ref(null);
 const isLoading = ref(true);
 const errorMessage = ref("");
@@ -580,34 +636,69 @@ const showSnackbar = (msg, type = "success", duration = 3000) => {
     }, duration);
 };
 
-const chartData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-        {
-            label: "Submitted",
-            data: [5, 20, 35, 50, 70, 90],
-            borderColor: "#2563EB",
-            backgroundColor: "rgba(37, 99, 235, 0.2)",
-            tension: 0.4,
-        },
-        {
-            label: "Accepted",
-            data: [2, 10, 15, 25, 40, 60],
-            borderColor: "#10B981",
-            backgroundColor: "rgba(16, 185, 129, 0.2)",
-            tension: 0.4,
-        },
-    ],
+// Subject label mapping
+const SUBJECT_LABELS = {
+    g11_general_mathematics: 'G11 General Mathematics',
+    g11_statistics_probability: 'G11 Statistics & Probability',
+    g11_business_mathematics: 'G11 Business Mathematics',
+    g11_pre_calculus: 'G11 Pre-Calculus',
+    g11_basic_calculus: 'G11 Basic Calculus',
+    g11_earth_life_science: 'G11 Earth & Life Science',
+    g11_physical_science: 'G11 Physical Science',
+    g11_earth_science: 'G11 Earth Science',
+    g11_general_chemistry_1: 'G11 General Chemistry 1',
+    g12_general_physics_1: 'G12 General Physics 1',
+    g12_general_biology_1: 'G12 General Biology 1',
+    g12_general_physics_2: 'G12 General Physics 2',
+    g12_general_biology_2: 'G12 General Biology 2',
+    g12_general_chemistry_2: 'G12 General Chemistry 2',
+    g12_earth_life_science: 'G12 Earth & Life Science',
+    g12_physical_science: 'G12 Physical Science',
+    g11_oral_communication: 'G11 Oral Communication',
+    'g11_21st_century_lit': 'G11 21st Century Literature',
+    g11_academic_professional: 'G11 Academic & Professional',
+    g11_reading_writing: 'G11 Reading & Writing',
+    'g12_21st_century_lit': 'G12 21st Century Literature',
+    g12_academic_professional: 'G12 Academic & Professional',
+};
+
+const MATH_KEYS = ['g11_general_mathematics', 'g11_statistics_probability', 'g11_business_mathematics', 'g11_pre_calculus', 'g11_basic_calculus'];
+const SCIENCE_KEYS = ['g11_earth_life_science', 'g11_physical_science', 'g11_earth_science', 'g11_general_chemistry_1', 'g12_general_physics_1', 'g12_general_biology_1', 'g12_general_physics_2', 'g12_general_biology_2', 'g12_general_chemistry_2', 'g12_earth_life_science', 'g12_physical_science'];
+const ENGLISH_KEYS = ['g11_oral_communication', 'g11_21st_century_lit', 'g11_academic_professional', 'g11_reading_writing', 'g12_21st_century_lit', 'g12_academic_professional'];
+
+function buildSubjectList(keys, grades) {
+    return keys.filter(key => grades?.[key] != null && grades[key] !== '').map(key => ({ key, label: SUBJECT_LABELS[key] || key, value: grades[key] }));
+}
+
+const mathSubjects = computed(() => buildSubjectList(MATH_KEYS, selectedUser.value?.grades));
+const scienceSubjects = computed(() => buildSubjectList(SCIENCE_KEYS, selectedUser.value?.grades));
+const englishSubjects = computed(() => buildSubjectList(ENGLISH_KEYS, selectedUser.value?.grades));
+
+const dynamicSubjectList = computed(() => {
+    const dyn = selectedUser.value?.grades?.dynamic_subjects;
+    if (!dyn || !Array.isArray(dyn)) return [];
+    return dyn.map(s => ({ label: s.name || 'Dynamic Subject', value: s.grade }));
+});
+
+const hasIndividualSubjects = computed(() => mathSubjects.value.length > 0 || scienceSubjects.value.length > 0 || englishSubjects.value.length > 0);
+
+const getStatusBadgeClass = (user) => {
+    switch (user.pipeline_status) {
+        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
 };
 
 const getStatusClass = (status) => {
     const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700";
-    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700";
-    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700";
-    if (s === "rejected") return "bg-red-100 text-red-700";
-    if (s === "returned") return "bg-red-100 text-red-700";
-    return "bg-gray-100 text-gray-600";
+    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "rejected") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
 };
 
 const getButtonClass = (type) => {
@@ -620,41 +711,41 @@ const getButtonClass = (type) => {
     return classes[type] || classes.secondary;
 };
 
-// Get evaluation-specific status text
 const getEvaluationStatusText = (user) => {
     switch (user.pipeline_status) {
-        case 'for_evaluation':       return 'For Evaluation';
-        case 'evaluation_returned':  return 'Returned for Revision';
-        case 'evaluation_passed':    return 'Evaluation Passed';
-        case 'for_interview':        return 'For Interview';
-        case 'interview_returned':   return 'Returned for Revision';
-        case 'interview_passed':     return 'Interview Passed';
-        case 'for_medical':          return 'For Medical';
-        case 'medical_cleared':      return 'Medical Cleared';
-        case 'medical_rejected':     return 'Medical Rejected';
-        case 'for_records':          return 'For Records';
-        case 'officially_enrolled':  return 'Officially Enrolled';
-        case 'rejected':             return 'Rejected';
-        default:                     return 'Unknown';
+        case 'for_evaluation': return 'For Evaluation';
+        case 'evaluation_returned': return 'Returned for Revision';
+        case 'evaluation_passed': return 'Evaluation Passed';
+        case 'for_interview': return 'For Interview';
+        case 'interview_returned': return 'Returned for Revision';
+        case 'interview_passed': return 'Interview Passed';
+        case 'interview_transferred': return 'Course Transferred';
+        case 'for_medical': return 'For Medical';
+        case 'medical_cleared': return 'Medical Cleared';
+        case 'medical_rejected': return 'Medical Rejected';
+        case 'for_records': return 'For Records';
+        case 'officially_enrolled': return 'Officially Enrolled';
+        case 'rejected': return 'Rejected';
+        default: return 'Unknown';
     }
 };
 
-// Get evaluation-specific status styling
 const getEvaluationStatusClass = (user) => {
     switch (user.pipeline_status) {
-        case 'for_evaluation':        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'evaluation_returned':   return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'evaluation_passed':     return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        case 'for_interview':         return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'interview_returned':    return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'interview_passed':      return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        case 'for_medical':           return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
-        case 'medical_cleared':       return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
-        case 'medical_rejected':      return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'for_records':           return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
-        case 'officially_enrolled':   return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold';
-        case 'rejected':              return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        default:                      return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+        case 'for_medical': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+        case 'medical_cleared': return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
+        case 'medical_rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'for_records': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
+        case 'officially_enrolled': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold';
+        case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
     }
 };
 
@@ -668,6 +759,14 @@ const fetchUsers = async () => {
         });
         if (!response.ok) throw new Error("Failed to fetch users");
         users.value = await response.json();
+
+        // Auto-select user if selectedUserId prop was provided
+        if (props.selectedUserId && !selectedUser.value) {
+            const user = users.value.find(u => u.id == props.selectedUserId);
+            if (user) {
+                await selectUser(user);
+            }
+        }
     } catch (error) {
         errorMessage.value = error.message;
     } finally {
@@ -719,11 +818,6 @@ const filteredUsers = computed(() => {
         });
 });
 
-const displayedUsers = computed(() => {
-    if (searchQuery.value.trim()) return filteredUsers.value;
-    return users.value.slice(0, 4);
-});
-
 const selectUser = async (user) => {
     try {
         // Open panel immediately with basic user data
@@ -756,10 +850,10 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
+        await fetchPrograms();
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         
-        // Display user-friendly error notification
         if (error.response && error.response.status === 403) {
             showSnackbar("Unauthorized access. Application is not at the interviewer stage.", "error");
         } else {
@@ -805,86 +899,24 @@ const formatFileKey = (key) => {
 };
 
 const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
-
-const hasImagePreview = (file) =>
-    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
+const hasImagePreview = (file) => Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
 
 const previewImage = ref(null);
 const showImageModal = ref(false);
 
 const openImageModal = (file) => {
     const src = getFileUrl(file);
-    if (!src || !hasImagePreview(file)) {
-        return;
-    }
-
+    if (!src || !hasImagePreview(file)) return;
     previewImage.value = src;
     showImageModal.value = true;
 };
 
-const closeImageModal = () => {
-    showImageModal.value = false;
-};
-
-const isEvaluating = ref(false);
-const filesToReturn = ref({});
-
-const returnNote = ref("");
-
-const startEvaluation = () => {
-    isEvaluating.value = true;
-    filesToReturn.value = [];
-    returnNote.value = "";
-};
-
-const cancelEvaluation = () => {
-    isEvaluating.value = false;
-    filesToReturn.value = [];
-    returnNote.value = "";
-};
-
-const submitReturn = async () => {
-    const selected = Object.keys(filesToReturn.value).filter(
-        (k) => filesToReturn.value[k]
-    );
-    if (selected.length === 0 || !returnNote.value.trim()) {
-        alert("Please select files and enter a return note.");
-        return;
-    }
-
-    try {
-        const currentUserId = selectedUser.value.id;
-        
-        await axios.post(`/dashboard/return-files/${currentUserId}`, {
-            files: selected,
-            note: returnNote.value.trim(),
-        });
-
-        alert("Files returned and application status logged.");
-
-        isEvaluating.value = false;
-        filesToReturn.value = {};
-        returnNote.value = "";
-
-        // ✅ Refetch updated user list & status counts
-        await fetchUsers();
-        
-        // Find and select the updated user from the fresh list
-        const updatedUser = users.value.find(u => u.id === currentUserId);
-        if (updatedUser) {
-            await selectUser(updatedUser);
-        }
-    } catch (error) {
-        console.error(error);
-        alert("Return failed.");
-    }
-};
+const closeImageModal = () => { showImageModal.value = false; };
 
 const capitalize = (str) =>
     typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
 
 const getInterviewerName = () => {
-    // Find the completed interviewer process with passed action
     const interviewerProcess = selectedUser.value?.application?.processes?.find(
         p => p.stage === 'interviewer' && p.status === 'completed' && p.action === 'passed'
     );
@@ -893,24 +925,20 @@ const getInterviewerName = () => {
         return '—';
     }
     
-    // Check if performed_by is an object with user data
     if (typeof interviewerProcess.performed_by === 'object' && interviewerProcess.performed_by !== null) {
         if (interviewerProcess.performed_by.firstname && interviewerProcess.performed_by.lastname) {
             return `${interviewerProcess.performed_by.firstname} ${interviewerProcess.performed_by.lastname}`;
         }
     }
     
-    // Check if we have the performedBy relationship loaded (camelCase from Laravel)
     if (interviewerProcess.performedBy?.firstname && interviewerProcess.performedBy?.lastname) {
         return `${interviewerProcess.performedBy.firstname} ${interviewerProcess.performedBy.lastname}`;
     }
     
-    // Check performed_by_user
     if (interviewerProcess.performed_by_user?.firstname && interviewerProcess.performed_by_user?.lastname) {
         return `${interviewerProcess.performed_by_user.firstname} ${interviewerProcess.performed_by_user.lastname}`;
     }
     
-    // If performed_by is just a number (ID)
     if (typeof interviewerProcess.performed_by === 'number') {
         return `User ID: ${interviewerProcess.performed_by}`;
     }
@@ -920,7 +948,13 @@ const getInterviewerName = () => {
 
 const formatDate = (date) => {
     const d = new Date(date);
-    return d.toLocaleString(); // or .toLocaleDateString() if you prefer
+    return d.toLocaleString();
+};
+
+const formatDateOnly = (date) => {
+    if (!date) return '—';
+    const d = new Date(date);
+    return d.toLocaleDateString('en-GB'); // DD/MM/YYYY
 };
 
 const selectedProgramId = ref("");
@@ -948,7 +982,6 @@ const acceptApplication = async () => {
         
         await fetchUsers();
         
-        // Find and select the updated user from the fresh list
         const updatedUser = users.value.find(u => u.id === currentUserId);
         if (updatedUser) {
             await selectUser(updatedUser);
@@ -984,7 +1017,6 @@ const rejectApplication = async () => {
         
         await fetchUsers();
         
-        // Find and select the updated user from the fresh list
         const updatedUser = users.value.find(u => u.id === currentUserId);
         if (updatedUser) {
             await selectUser(updatedUser);
@@ -1000,7 +1032,14 @@ const rejectApplication = async () => {
     }
 };
 
+const availablePrograms = ref([]);
 
+const fetchPrograms = async () => {
+    try {
+        const response = await axios.get("/interviewer-dashboard/programs");
+        availablePrograms.value = response.data.programs;
+    } catch (e) { console.error("Failed to load programs", e); }
+};
 
 const totalPages = computed(() =>
     Math.ceil(filteredUsers.value.length / itemsPerPage)
@@ -1011,8 +1050,6 @@ const paginatedUsers = computed(() => {
     return filteredUsers.value.slice(start, start + itemsPerPage);
 });
 
-// Reset page when filters/search change
-// Reset page when filters/search change
 watch([searchQuery, evaluationStatusFilter, sortKey, sortAsc], () => {
     currentPage.value = 1;
 });
@@ -1037,16 +1074,6 @@ const clearFilters = () => {
 </script>
 
 <style scoped>
-.slide-fade-enter-active,
-.slide-fade-leave-active {
-    transition: all 0.3s ease;
-}
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-    transform: translateX(100%);
-    opacity: 0;
-}
-
 .fade-enter-active,
 .fade-leave-active {
     transition: opacity 0.3s ease;

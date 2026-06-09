@@ -71,34 +71,93 @@ class DashboardService
     }
 
     /**
-     * Get application chart data grouped by date (last 30 days)
+     * Get application chart data grouped by date
      *
      * @return array
      */
     public function getApplicationChartData(): array
     {
-        // Group applications by date and status (last 30 days)
-        // Use single Carbon::now() reference to prevent midnight misalignment
         $now = \Carbon\Carbon::now();
-        $startDate = $now->copy()->subDays(29)->startOfDay();
-        $endDate = $now->copy()->endOfDay();
+        $request = request();
+        
+        $startDateParam = $request->input('start_date');
+        $endDateParam = $request->input('end_date');
 
-        $applications = DB::table('applications')
+        if ($startDateParam && $endDateParam) {
+            session(['dashboard_start_date' => $startDateParam, 'dashboard_end_date' => $endDateParam]);
+        } else {
+            $startDateParam = session('dashboard_start_date');
+            $endDateParam = session('dashboard_end_date');
+        }
+        \Log::info('Dashboard dates:', ['start' => $startDateParam, 'end' => $endDateParam]);
+
+        if ($startDateParam && $endDateParam) {
+            try {
+                $startDate = \Carbon\Carbon::parse($startDateParam)->startOfDay();
+                $endDate = \Carbon\Carbon::parse($endDateParam)->endOfDay();
+                
+                if ($startDate->greaterThan($endDate)) {
+                    $temp = $startDate;
+                    $startDate = $endDate;
+                    $endDate = $temp;
+                }
+            } catch (\Exception $e) {
+                $startDate = $now->copy()->subDays(29)->startOfDay();
+                $endDate = $now->copy()->endOfDay();
+            }
+        } else {
+            $startDate = $now->copy()->subDays(29)->startOfDay();
+            $endDate = $now->copy()->endOfDay();
+        }
+        
+        $diffInDays = (int) $startDate->diffInDays($endDate->copy()->startOfDay());
+        if ($diffInDays > 365) {
+            $diffInDays = 365;
+            $startDate = $endDate->copy()->subDays(365)->startOfDay();
+        }
+
+        $submittedQuery = DB::table('applications')
             ->select(
                 DB::raw('DATE(created_at) as date'),
                 'status',
                 DB::raw('COUNT(*) as count')
             )
+            ->where('status', 'submitted')
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy(DB::raw('DATE(created_at)'), 'status')
-            ->orderBy('date')
+            ->groupBy(DB::raw('DATE(created_at)'), 'status');
+
+        $acceptedQuery = DB::table('application_processes')
+            ->select(
+                DB::raw('DATE(updated_at) as date'),
+                DB::raw("'accepted' as status"),
+                DB::raw('COUNT(DISTINCT application_id) as count')
+            )
+            ->where('stage', 'interviewer')
+            ->where('status', 'completed')
+            ->where('action', 'passed')
+            ->whereBetween('updated_at', [$startDate, $endDate])
+            ->groupBy(DB::raw('DATE(updated_at)'));
+
+        $returnedQuery = DB::table('applications')
+            ->select(
+                DB::raw('DATE(updated_at) as date'),
+                'status',
+                DB::raw('COUNT(*) as count')
+            )
+            ->where('status', 'returned')
+            ->whereBetween('updated_at', [$startDate, $endDate])
+            ->groupBy(DB::raw('DATE(updated_at)'), 'status');
+
+        $applications = $submittedQuery
+            ->unionAll($acceptedQuery)
+            ->unionAll($returnedQuery)
             ->get();
 
-        // Build a list of dates for the last 30 days
+        // Build a list of dates
         $dates = [];
         $dateLabels = [];
-        for ($i = 29; $i >= 0; $i--) {
-            $date = $now->copy()->subDays($i);
+        for ($i = $diffInDays; $i >= 0; $i--) {
+            $date = $endDate->copy()->subDays($i);
             $dates[] = $date->format('Y-m-d');
             $dateLabels[] = $date->format('M j');
         }
@@ -120,58 +179,21 @@ class DashboardService
             'submitted' => $submitted,
             'accepted' => $accepted,
             'returned' => $returned,
+            'filters' => [
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+            ],
         ];
     }
 
     /**
-     * Get application chart data grouped by date (last 30 days)
+     * Get application chart data grouped by date
      *
      * @return array
      */
     public function getDailyApplicationChartData(): array
     {
-        $now = \Carbon\Carbon::now();
-        $startDate = $now->copy()->subDays(29)->startOfDay();
-        $endDate = $now->copy()->endOfDay();
-
-        $applications = DB::table('applications')
-            ->select(
-                DB::raw('DATE(created_at) as date'),
-                'status',
-                DB::raw('COUNT(*) as count')
-            )
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy(DB::raw('DATE(created_at)'), 'status')
-            ->orderBy('date')
-            ->get();
-
-        // Build a list of dates for the last 30 days
-        $dates = [];
-        $dateLabels = [];
-        for ($i = 29; $i >= 0; $i--) {
-            $date = $now->copy()->subDays($i);
-            $dates[] = $date->format('Y-m-d');
-            $dateLabels[] = $date->format('M j');
-        }
-
-        // Initialize status arrays
-        $submitted = [];
-        $accepted = [];
-        $returned = [];
-
-        foreach ($dates as $date) {
-            $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
-            $accepted[]  = $applications->where('date', $date)->whereIn('status', ['accepted', 'cleared_for_enrollment'])->sum('count');
-            $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
-        }
-
-        return [
-            'labels' => $dateLabels,
-            'years' => $dateLabels,  // For backward compatibility
-            'submitted' => $submitted,
-            'accepted' => $accepted,
-            'returned' => $returned,
-        ];
+        return $this->getApplicationChartData();
     }
 
     /**
@@ -235,7 +257,7 @@ class DashboardService
         // Evaluators must be explicitly assigned to programs to see applicants.
         $pendingUsers = empty($programIds)
             ? collect()
-            : $this->userService->getApplicantsByStage('evaluator', $programIds);
+            : $this->userService->getAllApplicantsByStage('evaluator', $programIds);
 
         return [
             'pendingUsers' => $pendingUsers,

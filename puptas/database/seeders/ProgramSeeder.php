@@ -136,7 +136,10 @@ class ProgramSeeder extends Seeder
             $programData['updated_at'] = now();
 
             // Insert program
-            DB::table('programs')->insert($programData);
+            DB::table('programs')->updateOrInsert(
+                ['code' => $programData['code']],
+                $programData
+            );
 
             // Get the program ID
             $program = DB::table('programs')->where('code', $programData['code'])->first();
