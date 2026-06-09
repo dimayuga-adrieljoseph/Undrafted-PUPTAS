@@ -222,7 +222,8 @@ Route::get('/applications/user/{user}', function ($user) {
 
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $request->validate(['email' => 'required|email']);
-    $exists = \App\Models\User::where('email', $request->email)->exists();
+    $exists = \App\Models\User::where('email', $request->email)->exists() || 
+              \App\Models\TestPasser::where('email', $request->email)->exists();
     return response()->json(['taken' => $exists]);
 })->middleware('auth');
 
