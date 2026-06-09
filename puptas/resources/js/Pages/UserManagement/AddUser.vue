@@ -151,6 +151,19 @@
                     </div>
 
                     <form @submit.prevent="submitForm" class="form-content" novalidate>
+                        <!-- Global Error Banner -->
+                        <div v-if="Object.keys(errors).length" class="error-banner">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                            </svg>
+                            <div>
+                                <p class="error-banner-title">Please fix the following errors:</p>
+                                <ul class="error-list">
+                                    <li v-for="(err, key) in errors" :key="key">{{ err }}</li>
+                                </ul>
+                            </div>
+                        </div>
+
                         <!-- Personal Details Section -->
                         <div class="form-section">
                             <h3 class="section-title">Personal Details</h3>
@@ -547,6 +560,9 @@ const submitForm = async () => {
             },
             onError: (serverErrors) => {
                 errors.value = serverErrors;
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            },
+            onFinish: () => {
                 isSubmitting.value = false;
             },
         });
@@ -790,6 +806,37 @@ const submitForm = async () => {
 
 .form-section {
     margin-bottom: 2.5rem;
+}
+
+/* Error Banner */
+.error-banner {
+    background-color: #fee2e2;
+    border: 1px solid #f87171;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    color: #991b1b;
+}
+
+.error-banner svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.error-banner-title {
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+
+.error-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.9rem;
 }
 
 .section-title {
