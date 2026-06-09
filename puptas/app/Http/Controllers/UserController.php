@@ -271,9 +271,9 @@ class UserController extends Controller
                 'required', 
                 'email', 
                 'max:255', 
-                \Illuminate\Validation\Rule::unique('users')->ignore($userModel->id),
+                \Illuminate\Validation\Rule::unique('users', 'email')->ignore($userModel->id),
                 \Illuminate\Validation\Rule::unique('test_passers', 'email')
-                    ->ignore($testPasser?->test_passer_id, 'test_passer_id'),
+                    ->ignore($testPasser ? $testPasser->test_passer_id : null, 'test_passer_id'),
             ],
             'role_id' => 'required|integer',
             'strand' => 'nullable|string|max:255',
