@@ -235,7 +235,10 @@ async function confirmAllSave() {
                 form.put(route('users.update', props.user.id), {
                     preserveScroll: true,
                     onSuccess: () => resolve(),
-                    onError: (errors) => reject(errors),
+                    onError: (errors) => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        reject(errors);
+                    },
                 });
             });
         }
@@ -250,7 +253,10 @@ async function confirmAllSave() {
                 router.put(route('users.grades.update', props.user.id), payload, {
                     preserveScroll: true,
                     onSuccess: () => { gradesSaved.value = true; setTimeout(() => { gradesSaved.value = false; }, 3000); resolve(); },
-                    onError: (errors) => reject(errors),
+                    onError: (errors) => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        reject(errors);
+                    },
                 });
             });
         }
