@@ -584,8 +584,8 @@ onMounted(() => {
       </h2>
     </template>
 
-    <div class="py-8">
-      <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div class="py-4 sm:py-8">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 space-y-6">
         
         <!-- Success Notification -->
         <Transition name="slide-down">
@@ -613,8 +613,8 @@ onMounted(() => {
          </div>
 
         <!-- Medical System Redirect Card -->
-        <div v-if="showMedicalRedirect" class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl shadow-md border-2 border-green-300 dark:border-green-700 p-6">
-          <div class="flex items-start gap-4">
+        <div v-if="showMedicalRedirect" class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl shadow-md border-2 border-green-300 dark:border-green-700 p-4 sm:p-6">
+          <div class="flex flex-col sm:flex-row items-start gap-4">
             <div class="flex-shrink-0">
               <div class="w-14 h-14 rounded-full bg-green-600 flex items-center justify-center">
                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -730,11 +730,11 @@ onMounted(() => {
             <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Quick Actions</p>
           </div>
 
-          <div class="flex flex-wrap gap-3 justify-center">
+          <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:justify-center">
             <!-- Review Application Button -->
             <button
               @click="showModal = true"
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
               style="background-color: #9E122C;"
               onmouseover="this.style.backgroundColor='#7a0e22'"
               onmouseout="this.style.backgroundColor='#9E122C'"
@@ -749,7 +749,7 @@ onMounted(() => {
             <button
               v-if="allDocumentsUploaded"
               @click="goToGrades"
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
               style="background-color: #D97706;"
               onmouseover="this.style.backgroundColor='#b65f06'"
               onmouseout="this.style.backgroundColor='#D97706'"
@@ -765,7 +765,7 @@ onMounted(() => {
               v-if="canDownloadSlipReactive"
               @click="downloadGradeVerificationSlip"
               :disabled="downloadingSlip"
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
               style="background-color: #059669;"
               onmouseover="if(!disabled) this.style.backgroundColor='#047857'"
               onmouseout="this.style.backgroundColor='#059669'"
@@ -1168,24 +1168,24 @@ onMounted(() => {
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showFaqModal = false"></div>
 
         <!-- Modal Panel -->
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden mx-2 sm:mx-4">
 
           <!-- Header -->
-          <div class="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0" style="background-color:#9E122C;">
-            <div class="flex items-center gap-3">
+          <div class="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0" style="background-color:#9E122C;">
+            <div class="flex items-center gap-3 min-w-0">
               <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div>
-                <h2 id="faq-modal-title" class="text-lg font-bold text-white leading-tight">Frequently Asked Questions</h2>
+              <div class="min-w-0">
+                <h2 id="faq-modal-title" class="text-base sm:text-lg font-bold text-white leading-tight truncate">Frequently Asked Questions</h2>
                 <p class="text-xs text-red-100 mt-0.5">Applicant Dashboard FAQs</p>
               </div>
             </div>
             <button
               @click="showFaqModal = false"
-              class="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors min-h-[44px] min-w-[44px]"
+              class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors min-h-[44px] min-w-[44px]"
               aria-label="Close FAQ"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1195,7 +1195,7 @@ onMounted(() => {
           </div>
 
           <!-- Scrollable Content -->
-          <div class="overflow-y-auto flex-1 px-6 py-5 space-y-2 scrollbar-hide">
+          <div class="overflow-y-auto flex-1 px-4 sm:px-6 py-5 space-y-2 scrollbar-hide">
 
             <!-- FAQ Items -->
             <div
@@ -1257,7 +1257,7 @@ onMounted(() => {
           </div>
 
           <!-- Footer -->
-          <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex-shrink-0">
+          <div class="px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex-shrink-0">
             <div class="flex justify-end">
               <button
                 @click="showFaqModal = false"
