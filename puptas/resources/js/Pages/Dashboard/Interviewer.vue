@@ -510,7 +510,7 @@ const fetchPrograms = async () => {
 
               <div 
                 v-if="showDateFilter" 
-                class="absolute right-0 mt-2 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl z-10 w-72 origin-top-right transition-all"
+                class="absolute left-0 sm:left-auto sm:right-0 mt-2 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl z-10 w-72 max-w-[calc(100vw-2rem)] origin-top-left sm:origin-top-right transition-all"
               >
                 <div class="flex justify-between items-center mb-4">
                   <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Custom Range</h4>
@@ -637,16 +637,16 @@ const fetchPrograms = async () => {
             <div v-if="selectedUser" class="fixed inset-0 z-50">
                 <div class="fixed inset-0 bg-black/50" @click="closeUserCard"></div>
 
-                <div class="relative min-h-screen flex items-center justify-center p-4">
+                <div class="relative min-h-screen flex items-center justify-center p-2 sm:p-4">
                     <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
                         <!-- Modal Header -->
-                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Interview Details</h3>
+                        <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">Interview Details</h3>
                                     <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
                                 </div>
-                                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
+                                <button @click="closeUserCard" class="flex-shrink-0 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
                                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
@@ -655,14 +655,14 @@ const fetchPrograms = async () => {
                         </div>
 
                         <!-- Modal Content -->
-                        <div class="p-6 overflow-y-auto flex-1">
+                        <div class="p-4 sm:p-6 overflow-y-auto flex-1">
 
                 <!-- Applicant Info Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     <!-- Personal Info -->
                     <div class="lg:col-span-2">
                         <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Applicant Information</h4>
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Full Name</p>
                                 <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
@@ -725,7 +725,7 @@ const fetchPrograms = async () => {
                             </option>
                         </select>
 
-                        <div class="flex space-x-2">
+                        <div class="flex flex-col sm:flex-row gap-2">
                             <button
                                 @click="acceptApplication"
                                 :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
@@ -785,7 +785,7 @@ const fetchPrograms = async () => {
                 <!-- Grades Section -->
                 <div class="mb-8">
                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Academic Grades</h4>
-                    <div class="grid grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
                             <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics || "—" }}</p>

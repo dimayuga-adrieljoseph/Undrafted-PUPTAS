@@ -95,7 +95,7 @@ watchEffect(() => {
         >
             <!-- Top Bar -->
             <header
-                class="sticky top-0 z-40 h-16 px-6 flex items-center justify-between bg-white/80 backdrop-blur border-b border-gray-200 dark:bg-gray-900/80 dark:border-gray-800"
+                class="sticky top-0 z-40 h-16 px-3 sm:px-6 flex items-center justify-between bg-white/80 backdrop-blur border-b border-gray-200 dark:bg-gray-900/80 dark:border-gray-800"
             >
                 <!-- Title -->
                 <div class="flex items-center gap-4">
@@ -158,9 +158,9 @@ watchEffect(() => {
             </header>
 
             <!-- Content -->
-            <main class="flex-1 p-6 overflow-y-auto">
+            <main class="flex-1 p-3 sm:p-6 overflow-y-auto">
                 <div
-                    class="w-full rounded-2xl p-6 bg-white min-h-[calc(100vh-12rem)] shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800"
+                    class="w-full rounded-2xl p-4 sm:p-6 bg-white min-h-[calc(100vh-12rem)] shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800"
                 >
                     <slot />
                 </div>
