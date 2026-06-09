@@ -151,6 +151,7 @@
                     </div>
 
                     <form @submit.prevent="submitForm" class="form-content" novalidate>
+
                         <!-- Personal Details Section -->
                         <div class="form-section">
                             <h3 class="section-title">Personal Details</h3>
@@ -250,7 +251,8 @@
                                         <input
                                             id="email"
                                             v-model="form.email"
-                                            @blur="validateField('email')"
+                                            @blur="checkEmailUnique"
+                                            @input="errors.email = ''"
                                             :class="[
                                                 'form-input w-full',
                                                 { error: errors.email },
@@ -260,7 +262,10 @@
                                             placeholder="user@example.com"
                                         />
                                     </div>
-                                    <div v-if="errors.email" class="form-error">
+                                    <div v-if="isCheckingEmail" class="form-hint" style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
+                                        Checking email availability...
+                                    </div>
+                                    <div v-else-if="errors.email" class="form-error">
                                         <svg
                                             class="error-icon"
                                             viewBox="0 0 24 24"
@@ -438,7 +443,7 @@
                             <button
                                 type="submit"
                                 class="submit-btn"
-                                :disabled="isSubmitting"
+                                :disabled="isSubmitting || isCheckingEmail || hasAnyError"
                             >
                                 <span
                                     v-if="isSubmitting"
@@ -470,6 +475,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
+import axios from "axios";
 import AppLayout from "@/Layouts/AppLayout.vue";
 
 const props = defineProps({
@@ -495,6 +501,9 @@ const form = ref({
 
 const errors = ref({});
 const isSubmitting = ref(false);
+const isCheckingEmail = ref(false);
+
+const hasAnyError = computed(() => Object.values(errors.value).some((error) => error !== ""));
 
 const showProgramAssignment = computed(() => {
     return ["3", "4"].includes(form.value.role_id); // Evaluator (3) and Interviewer (4)
@@ -515,11 +524,31 @@ const onRoleChange = () => {
 };
 
 const validateField = (fieldName) => {
-    errors.value[fieldName] = "";
+    // Only clear if we aren't handling email asynchronously here
+    if (fieldName !== "email") {
+        errors.value[fieldName] = "";
+    }
+};
 
-    if (fieldName === "email" && form.value.email) {
-        // Validation temporarily removed for testing purposes.
-        // Will bring back gmail requirement when done testing.
+const checkEmailUnique = async () => {
+    if (!form.value.email) {
+        errors.value.email = "";
+        return;
+    }
+    
+    isCheckingEmail.value = true;
+    try {
+        const response = await axios.post("/check-email", { email: form.value.email });
+        if (response.data.taken) {
+            errors.value.email = "The email has already been taken.";
+        } else {
+            errors.value.email = "";
+        }
+    } catch (error) {
+        // Fallback to checking via POST validation later if this fails
+        console.error("Error checking email uniqueness:", error);
+    } finally {
+        isCheckingEmail.value = false;
     }
 };
 
@@ -527,9 +556,13 @@ const submitForm = async () => {
     // Validate all fields
     Object.keys(form.value).forEach((key) => validateField(key));
 
+    // Await email check if not already checked or in progress
+    if (form.value.email && !errors.value.email) {
+        await checkEmailUnique();
+    }
+
     // Check for errors
-    const hasErrors = Object.values(errors.value).some((error) => error !== "");
-    if (hasErrors) return;
+    if (hasAnyError.value) return;
 
     isSubmitting.value = true;
 
@@ -547,6 +580,9 @@ const submitForm = async () => {
             },
             onError: (serverErrors) => {
                 errors.value = serverErrors;
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            },
+            onFinish: () => {
                 isSubmitting.value = false;
             },
         });
@@ -790,6 +826,37 @@ const submitForm = async () => {
 
 .form-section {
     margin-bottom: 2.5rem;
+}
+
+/* Error Banner */
+.error-banner {
+    background-color: #fee2e2;
+    border: 1px solid #f87171;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    color: #991b1b;
+}
+
+.error-banner svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.error-banner-title {
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+
+.error-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.9rem;
 }
 
 .section-title {
