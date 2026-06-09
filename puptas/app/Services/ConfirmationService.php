@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use App\Services\CutoffSettingsService;
 
 /**
  * Confirmation Service
@@ -27,6 +28,7 @@ class ConfirmationService
      */
     public function __construct(
         protected FileService $fileService,
+        protected CutoffSettingsService $cutoffSettingsService,
     ) {}
 
 
@@ -102,6 +104,10 @@ class ConfirmationService
             'second_choice_name'  => $secondName,
             'third_choice_name'   => $thirdName,
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
+            'cutoff' => [
+                'is_passed' => $this->cutoffSettingsService->isCutoffPassed(),
+                'display'   => $this->cutoffSettingsService->formatForDisplay(),
+            ],
         ];
     }
 
@@ -206,6 +212,10 @@ class ConfirmationService
     public function submitApplication(User $user, array $validated): Application
     {
         return DB::transaction(function () use ($user, $validated) {
+            if ($this->cutoffSettingsService->isCutoffPassed()) {
+                abort(422, 'The application submission period has closed.');
+            }
+
             $profile = $user->applicantProfile;
 
             $application = Application::firstOrCreate(
@@ -546,6 +556,10 @@ class ConfirmationService
      */
     public function resubmitApplication(User $user): Application
     {
+        if ($this->cutoffSettingsService->isCutoffPassed()) {
+            abort(422, 'The application submission period has closed.');
+        }
+
         $application = Application::where('user_id', $user->id)
             ->where('status', 'returned')
             ->first();

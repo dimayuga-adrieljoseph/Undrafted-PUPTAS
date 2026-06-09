@@ -557,6 +557,11 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/api-clients', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'store'])->name('api-clients.store');
     Route::delete('/admin/api-clients/{id}', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'destroy'])->name('api-clients.destroy');
     Route::post('/admin/api-clients/{id}/regenerate', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'regenerate'])->name('api-clients.regenerate');
+
+    // Cutoff Settings
+    Route::get('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'index'])->name('cutoff-settings.index');
+    Route::post('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'store'])->name('cutoff-settings.store');
+    Route::delete('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'destroy'])->name('cutoff-settings.destroy');
 });
 
 // Temporary debug route for SAR PDF generation
