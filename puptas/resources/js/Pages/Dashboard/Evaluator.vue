@@ -42,7 +42,26 @@ const props = defineProps({
         type: Object,
         default: () => ({ submitted: [], accepted: [], returned: [], labels: [] }),
     },
+    filters: {
+        type: Object,
+        default: () => ({ start_date: '', end_date: '' })
+    }
 });
+
+const startDateFilter = ref(props.filters?.start_date || '');
+const endDateFilter = ref(props.filters?.end_date || '');
+const showDateFilter = ref(false);
+
+const applyFilters = () => {
+    router.get(window.location.pathname, {
+        start_date: startDateFilter.value,
+        end_date: endDateFilter.value
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true
+    });
+};
 
 // State
 const selectedUser = ref(null);
@@ -476,9 +495,63 @@ const submitPass = async () => {
             <!-- Left Column: Chart -->
             <div class="lg:col-span-2">
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                    <div class="mb-6">
-                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">Daily evaluation trends (Last 30 days)</p>
+                    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm">Daily evaluation trends</p>
+                        </div>
+            <div class="relative">
+              <button 
+                @click="showDateFilter = !showDateFilter"
+                class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50"
+              >
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Date Filter
+                <svg class="w-4 h-4 ml-1 text-gray-400 transition-transform duration-200" :class="{'rotate-180': showDateFilter}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <div 
+                v-if="showDateFilter" 
+                class="absolute right-0 mt-2 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl z-10 w-72 origin-top-right transition-all"
+              >
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Custom Range</h4>
+                  <button @click="showDateFilter = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Start Date</label>
+                    <input 
+                      type="date" 
+                      v-model="startDateFilter"
+                      class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">End Date</label>
+                    <input 
+                      type="date" 
+                      v-model="endDateFilter"
+                      class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
+                    />
+                  </div>
+                  <div class="pt-2">
+                    <button 
+                      @click="applyFilters(); showDateFilter = false;"
+                      class="w-full inline-flex justify-center items-center gap-1.5 px-4 py-2.5 bg-[#9E122C] text-white text-sm font-semibold rounded-lg hover:bg-[#b51834] transition-all shadow-md active:scale-95"
+                    >
+                      Apply Filter
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
                     </div>
                     
                     <div class="flex flex-wrap gap-4 mb-6">
