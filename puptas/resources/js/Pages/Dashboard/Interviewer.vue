@@ -55,7 +55,6 @@ const errorMessage = ref("");
 const searchQuery = ref("");
 const selectedUserFiles = ref({});
 const selectedProgramId = ref("");
-const requiresPromissoryNote = ref(false);
 const snackbar = ref({
     visible: false,
     message: "",
@@ -357,13 +356,11 @@ const acceptApplication = async () => {
             `/interviewer-dashboard/accept/${selectedUser.value.id}`,
             {
                 program_id: selectedProgramId.value,
-                requires_promissory_note: requiresPromissoryNote.value,
             }
         );
         showSnackbar("Application accepted successfully", "success");
         selectedUser.value = null;
         selectedProgramId.value = "";
-        requiresPromissoryNote.value = false;
         router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
         console.error("Accept failed:", e);
@@ -562,24 +559,30 @@ const fetchPrograms = async () => {
             </div>
         </div>
 
-        <!-- Applicant Detail Modal (Side Panel like Admin) -->
+        <!-- Applicant Detail Modal -->
         <transition name="fade">
-            <div
-                v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-2/5 h-full bg-white dark:bg-gray-900 p-6 z-50 shadow-xl transition duration-300 ease-in-out overflow-y-auto"
-            >
-                <!-- Modal Header -->
-                <div class="flex items-center justify-between mb-6">
-                    <div>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Interview Details</h3>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
-                    </div>
-                    <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
-                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
+            <div v-if="selectedUser" class="fixed inset-0 z-50">
+                <div class="fixed inset-0 bg-black/50" @click="closeUserCard"></div>
+
+                <div class="relative min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <!-- Modal Header -->
+                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Interview Details</h3>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
+                                </div>
+                                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
+                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Modal Content -->
+                        <div class="p-6 overflow-y-auto flex-1">
 
                 <!-- Applicant Info Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -649,23 +652,6 @@ const fetchPrograms = async () => {
                             </option>
                         </select>
 
-                        <!-- Promissory Note Checkbox -->
-                        <div class="mb-4">
-                            <label class="flex items-start space-x-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    v-model="requiresPromissoryNote"
-                                    class="mt-1 w-4 h-4 text-[#9E122C] border-gray-300 dark:border-gray-600 rounded focus:ring-[#9E122C] focus:ring-2"
-                                />
-                                <div>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white">Requires Promissory Note</span>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                        Check if applicant is approved but lacks optional documents
-                                    </p>
-                                </div>
-                            </label>
-                        </div>
-
                         <div class="flex space-x-2">
                             <button
                                 @click="acceptApplication"
@@ -682,6 +668,10 @@ const fetchPrograms = async () => {
                                 ✗ Reject
                             </button>
                         </div>
+                        <Link :href="`/applications/user/${selectedUser.id}`"
+                              :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block mt-3']">
+                            View Full Details
+                        </Link>
                     </div>
 
                     <!-- Interview Completed Summary -->
@@ -818,6 +808,9 @@ const fetchPrograms = async () => {
                                     {{ formatDate(process.created_at) }}
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                </div>
                         </div>
                     </div>
                 </div>
