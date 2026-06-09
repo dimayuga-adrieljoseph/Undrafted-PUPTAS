@@ -83,8 +83,12 @@ const isAnyDropdownOpen = computed(
 );
 
 const sidebarWidthClass = computed(() =>
-    isSidebarOpen.value ? "w-72 px-6 py-8" : "w-20 px-4 py-8"
+    (isSidebarOpen.value || props.isMobileOpen) ? "w-72 px-6 py-8" : "w-20 px-4 py-8"
 );
+
+// True whenever the sidebar should show labels/full content —
+// either expanded by hover/pin on desktop, or opened by the hamburger on mobile.
+const isExpanded = computed(() => isSidebarOpen.value || props.isMobileOpen);
 
 /* ---------------- ROUTE ACTIVE ---------------- */
 const isActiveRouteFor = (routeNames = []) =>
@@ -221,11 +225,12 @@ watch(isSidebarOpen, (val) => {
 
     <div
         ref="sidebarRef"
-        class="sidebar fixed left-0 top-0 h-screen z-[9999] overflow-hidden text-white shadow-2xl transition-all duration-300 ease-out dark:text-gray-900"
+        class="sidebar fixed left-0 top-0 h-screen z-[9999] flex flex-col text-white shadow-2xl transition-all duration-300 ease-out dark:text-gray-900"
         :class="[
             sidebarWidthClass,
             'transition-transform duration-300',
             props.isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+            !props.isMobileOpen ? 'max-md:invisible' : 'max-md:visible',
         ]"
         :role="props.isMobileOpen ? 'dialog' : undefined"
         :aria-modal="props.isMobileOpen ? 'true' : undefined"
@@ -235,20 +240,11 @@ watch(isSidebarOpen, (val) => {
     >
         <!-- Header Section -->
         <div class="sidebar-header mb-8 flex items-center justify-between">
-            <!-- Close button (mobile only) -->
-            <button
-                @click="emit('close')"
-                class="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
-                aria-label="Close navigation menu"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-            <div class="hidden md:flex items-center gap-3">
-                <div class="sidebar-logo-container">
+            <!-- Logo + Title (always shown when expanded) -->
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="sidebar-logo-container flex-shrink-0">
                     <NavLink :href="route('dashboard')" class="block">
-                        <ApplicationMark v-if="isSidebarOpen" class="h-8" />
+                        <ApplicationMark v-if="isExpanded" class="h-8" />
                         <div
                             v-else
                             class="w-8 h-8 rounded-full bg-gradient-to-br from-[#FFD700] to-[#FBCB77] flex items-center justify-center"
@@ -259,13 +255,24 @@ watch(isSidebarOpen, (val) => {
                         </div>
                     </NavLink>
                 </div>
-                <div v-if="isSidebarOpen" class="flex-1">
+                <div v-if="isExpanded" class="flex-1 min-w-0">
                     <h1 class="text-lg font-bold text-white">PUP Portal</h1>
                     <p class="text-xs text-gray-300 mt-0.5">
                         Management System
                     </p>
                 </div>
             </div>
+
+            <!-- Close button (mobile only) -->
+            <button
+                @click="emit('close')"
+                class="md:hidden flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition"
+                aria-label="Close navigation menu"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
         <!-- Navigation Content -->
@@ -297,11 +304,11 @@ watch(isSidebarOpen, (val) => {
                                     class="text-lg"
                                 />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Dashboard
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isDashboardActive }"
                             ></div>
@@ -324,13 +331,13 @@ watch(isSidebarOpen, (val) => {
                             <div class="nav-icon">
                                 <FontAwesomeIcon icon="users" class="text-lg" />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Passers
                             </span>
                             <div class="flex items-center gap-2">
 
                                 <FontAwesomeIcon
-                                    v-if="isSidebarOpen"
+                                    v-if="isExpanded"
                                     :icon="
                                         isPasserDropdownOpen
                                             ? 'caret-down'
@@ -356,7 +363,7 @@ watch(isSidebarOpen, (val) => {
                             leave-to-class="opacity-0 max-h-0"
                         >
                             <div
-                                v-show="isPasserDropdownOpen && isSidebarOpen"
+                                v-show="isPasserDropdownOpen && isExpanded"
                                 class="dropdown-content ml-10 mt-1 space-y-1"
                             >
                                 <Link
@@ -423,11 +430,11 @@ watch(isSidebarOpen, (val) => {
                                     class="text-lg"
                                 />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Applications
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isApplicationsActive }"
                             ></div>
@@ -449,11 +456,11 @@ watch(isSidebarOpen, (val) => {
                                     class="text-lg"
                                 />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Programs
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isProgramsActive }"
                             ></div>
@@ -477,12 +484,12 @@ watch(isSidebarOpen, (val) => {
                             <div class="nav-icon">
                                 <FontAwesomeIcon icon="chart-pie" class="text-lg" />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Reports
                             </span>
                             <div class="flex items-center gap-2">
                                 <FontAwesomeIcon
-                                    v-if="isSidebarOpen"
+                                    v-if="isExpanded"
                                     :icon="
                                         isReportsDropdownOpen
                                             ? 'caret-down'
@@ -506,7 +513,7 @@ watch(isSidebarOpen, (val) => {
                             leave-to-class="opacity-0 max-h-0"
                         >
                             <div
-                                v-show="isReportsDropdownOpen && isSidebarOpen"
+                                v-show="isReportsDropdownOpen && isExpanded"
                                 class="dropdown-content ml-10 mt-1 space-y-1"
                             >
                                 <Link
@@ -589,11 +596,11 @@ watch(isSidebarOpen, (val) => {
                                     class="text-lg"
                                 />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Manage Users
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isManageActive }"
                             ></div>
@@ -617,11 +624,11 @@ watch(isSidebarOpen, (val) => {
                                     class="text-lg"
                                 />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Audit Logs
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isAuditLogsActive }"
                             ></div>
@@ -642,11 +649,11 @@ watch(isSidebarOpen, (val) => {
                                     class="text-lg"
                                 />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 API Clients
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isApiClientsActive }"
                             ></div>
@@ -679,11 +686,11 @@ watch(isSidebarOpen, (val) => {
                                     class="text-lg"
                                 />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Dashboard
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isDashboardActive }"
                             ></div>
@@ -705,11 +712,11 @@ watch(isSidebarOpen, (val) => {
                                     class="text-lg"
                                 />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Applications
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isApplicationsActive }"
                             ></div>
@@ -732,11 +739,11 @@ watch(isSidebarOpen, (val) => {
                             <div class="nav-icon">
                                 <FontAwesomeIcon icon="home" class="text-lg" />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Dashboard
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isDashboardActive }"
                             ></div>
@@ -753,11 +760,11 @@ watch(isSidebarOpen, (val) => {
                             <div class="nav-icon">
                                 <FontAwesomeIcon icon="graduation-cap" class="text-lg" />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Qualified Programs
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isQualifiedProgramsActive }"
                             ></div>
@@ -774,11 +781,11 @@ watch(isSidebarOpen, (val) => {
                             <div class="nav-icon">
                                 <FontAwesomeIcon icon="user-shield" class="text-lg" />
                             </div>
-                            <span v-if="isSidebarOpen" class="nav-label">
+                            <span v-if="isExpanded" class="nav-label">
                                 Profile
                             </span>
                             <div
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isProfileActive }"
                             ></div>
@@ -805,7 +812,7 @@ watch(isSidebarOpen, (val) => {
                                 />
                             </div>
                             <span
-                                v-if="isSidebarOpen"
+                                v-if="isExpanded"
                                 class="nav-label text-red-300"
                             >
                                 Logout
