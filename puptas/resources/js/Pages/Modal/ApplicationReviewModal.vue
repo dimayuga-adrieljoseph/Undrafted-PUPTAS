@@ -61,6 +61,19 @@
                 <!-- Content -->
                 <div v-else-if="applicationData" class="space-y-6">
 
+                    <!-- Returned Alert -->
+                    <div v-if="applicationData.status === 'returned'" class="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl">
+                        <svg class="w-5 h-5 text-orange-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <div>
+                            <p class="text-sm font-semibold text-orange-800 dark:text-orange-200">Application Returned</p>
+                            <p class="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                                Please ensure you have addressed all the evaluator's remarks before resubmitting your application. If your grades were rejected, please double-check and correct them.
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Personal Information -->
                     <div>
                         <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Personal Information</h3>
@@ -285,27 +298,32 @@
                     Close
                 </button>
 
-                <!-- Resubmit button (when application was returned) -->
-                <button
-                    v-if="canResubmit"
-                    @click="resubmitApplication"
-                    :disabled="submitting || cutoffPassed"
-                    :class="[
-                        'px-5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2',
-                        !submitting && !cutoffPassed
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed',
-                    ]"
-                >
-                    <svg v-if="submitting" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    {{ submitting ? 'Resubmitting…' : 'Resubmit Application' }}
-                </button>
+                <!-- Resubmit button (when application was returned or rejected) -->
+                <div v-if="['returned', 'rejected'].includes(applicationData?.status)" class="flex items-center gap-3">
+                    <span v-if="!canResubmit" class="text-xs text-red-500 dark:text-red-400 font-medium hidden sm:inline-block">
+                        Please re-upload returned documents first
+                    </span>
+                    <button
+                        @click="resubmitApplication"
+                        :disabled="!canResubmit || submitting"
+                        :title="!canResubmit ? 'Please re-upload all returned or rejected documents first.' : ''"
+                        :class="[
+                            'px-5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2',
+                            canResubmit && !submitting
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
+                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed',
+                        ]"
+                    >
+                        <svg v-if="submitting" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        {{ submitting ? 'Resubmitting…' : 'Resubmit Application' }}
+                    </button>
+                </div>
 
                 <!-- Submit button (when application is draft) -->
                 <button
@@ -447,12 +465,12 @@ const canSubmit = computed(() => {
     );
 });
 
-// Computed: Check if application can be resubmitted (returned status, no rejected files)
+// Computed: Check if application can be resubmitted (returned or rejected status, no rejected/returned files)
 const canResubmit = computed(() => {
-    if (applicationData.value?.status !== "returned") return false;
+    if (!["returned", "rejected"].includes(applicationData.value?.status)) return false;
     const files = applicationData.value?.uploadedFiles || {};
-    const hasRejectedFiles = Object.values(files).some(f => f?.status === 'rejected');
-    return !hasRejectedFiles;
+    const hasUnresolvedFiles = Object.values(files).some(f => f?.status === 'rejected' || f?.status === 'returned');
+    return !hasUnresolvedFiles;
 });
 
 // Computed: Check if all required documents are uploaded

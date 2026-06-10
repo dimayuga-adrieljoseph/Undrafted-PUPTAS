@@ -64,18 +64,17 @@ class UserService
                 ->orderBy('created_at', 'desc')
                 ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
         }])
-            ->whereHas('applications', function ($query) use ($stage, $programIds) {
+            ->whereHas('currentApplication', function ($query) use ($stage, $programIds) {
                 $query->whereNotIn('status', ['accepted', 'cleared_for_enrollment'])
                     ->whereHas('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
-                            ->whereIn('status', ['in_progress', 'returned']);
+                            ->where('status', 'in_progress');
                     })
                     ->whereDoesntHave('processes', function ($q) use ($stage) {
                         $q->where('stage', $stage)
                             ->where('status', 'completed')
                             ->whereIn('action', ['passed', 'transferred']);
-                    })
-                    ->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)');
+                    });
 
                 if (!empty($programIds)) {
                     $query->whereIn('program_id', $programIds);
@@ -141,16 +140,14 @@ class UserService
                 $query->orderBy('created_at', 'desc')
                     ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
             }])
-            ->whereHas('applications', function ($query) use ($stage, $programIds) {
-                // Pin to the latest non-deleted application only.
+            ->whereHas('currentApplication', function ($query) use ($stage, $programIds) {
+                // Pin to the latest non-deleted application only using the built-in ofMany relationship.
                 // This prevents matching old applications for students who have since
                 // been enrolled or moved past this stage on a newer application.
-                $query->whereRaw('applications.id = (SELECT MAX(a.id) FROM applications a WHERE a.user_id = applications.user_id AND a.deleted_at IS NULL)')
-                    ->whereNull('applications.deleted_at')
-                    ->whereHas('processes', function ($q) use ($stage) {
-                        $q->where('stage', $stage)
-                            ->whereIn('status', ['in_progress', 'completed']);
-                    });
+                $query->whereHas('processes', function ($q) use ($stage) {
+                    $q->where('stage', $stage)
+                        ->whereIn('status', ['in_progress', 'completed']);
+                });
 
                 if (!empty($programIds)) {
                     $query->whereIn('program_id', $programIds);
@@ -274,7 +271,29 @@ class UserService
             return 'for_interview';
         }
 
-        // Evaluator stage
+        // Grade Evaluator stage
+        $gradeEvaluator = $processes->get('grade_evaluator');
+        if ($gradeEvaluator) {
+            if ($gradeEvaluator->status === 'completed') {
+                if ($gradeEvaluator->action === 'passed') return 'evaluation_passed';
+                return 'evaluation_passed';
+            }
+            if ($gradeEvaluator->status === 'returned') return 'evaluation_returned';
+            return 'for_evaluation';
+        }
+
+        // Document Evaluator stage
+        $docEvaluator = $processes->get('document_evaluator');
+        if ($docEvaluator) {
+            if ($docEvaluator->status === 'completed') {
+                if ($docEvaluator->action === 'passed') return 'evaluation_passed';
+                return 'evaluation_passed';
+            }
+            if ($docEvaluator->status === 'returned') return 'evaluation_returned';
+            return 'for_evaluation';
+        }
+
+        // Legacy Evaluator stage (fallback)
         $evaluator = $processes->get('evaluator');
         if ($evaluator) {
             if ($evaluator->status === 'completed') {
@@ -302,7 +321,12 @@ class UserService
             ->whereNull('a.deleted_at')
             ->where('p.stage', 'medical')
             ->where('p.status', 'completed')
-            ->whereRaw('a.id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = a.user_id AND a2.deleted_at IS NULL)')
+            ->whereIn('a.id', function ($q) {
+                $q->selectRaw('MAX(id)')
+                  ->from('applications')
+                  ->whereNull('deleted_at')
+                  ->groupBy('user_id');
+            })
             ->pluck('a.user_id')
             ->map(fn($id) => (string) $id)
             ->toArray();
@@ -311,7 +335,12 @@ class UserService
         $enrolledIds = \Illuminate\Support\Facades\DB::table('applications')
             ->whereNull('deleted_at')
             ->where('enrollment_status', 'officially_enrolled')
-            ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
+            ->whereIn('id', function ($q) {
+                $q->selectRaw('MAX(id)')
+                  ->from('applications')
+                  ->whereNull('deleted_at')
+                  ->groupBy('user_id');
+            })
             ->pluck('user_id')
             ->map(fn($id) => (string) $id)
             ->toArray();
@@ -329,7 +358,12 @@ class UserService
         // Load applications separately
         $applications = \App\Models\Application::whereIn('user_id', $allUserIds)
             ->whereNull('deleted_at')
-            ->whereRaw('id = (SELECT MAX(a2.id) FROM applications a2 WHERE a2.user_id = applications.user_id AND a2.deleted_at IS NULL)')
+            ->whereIn('id', function ($q) {
+                $q->selectRaw('MAX(id)')
+                  ->from('applications')
+                  ->whereNull('deleted_at')
+                  ->groupBy('user_id');
+            })
             ->with(['program:id,code,name', 'processes:id,application_id,stage,status,action,created_at'])
             ->get()
             ->keyBy('user_id');
@@ -505,11 +539,12 @@ class UserService
         return [
             1 => 'Applicant',
             2 => 'Admin',
-            3 => 'Evaluator',
+            3 => 'Document Evaluator',
             4 => 'Interviewer',
             5 => 'Medical',
             6 => 'Registrar',
             7 => 'Superadmin',
+            8 => 'Grade Evaluator',
         ];
     }
     /**

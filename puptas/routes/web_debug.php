@@ -28,7 +28,7 @@ Route::get('/dev-login', function (Request $request) {
             $redirect = match ((int) $user->role_id) {
                 1 => '/applicant-dashboard',
                 2, 7 => '/dashboard',
-                3 => '/evaluator-dashboard',
+                3, 8 => '/evaluator-dashboard',
                 4 => '/interviewer-dashboard',
                 6 => '/record-dashboard',
                 default => '/dashboard',
@@ -47,11 +47,12 @@ Route::get('/dev-login', function (Request $request) {
     $roleNames = [
         1 => 'Applicant',
         2 => 'Admin',
-        3 => 'Evaluator',
+        3 => 'Document Evaluator',
         4 => 'Interviewer',
         5 => 'Nurse',
         6 => 'Registrar',
         7 => 'Super Admin',
+        8 => 'Grade Evaluator',
     ];
 
     // Quick-access test applicant accounts
@@ -122,7 +123,7 @@ Route::get('/dev-login/{id}', function ($id) {
     $redirect = match ((int) $user->role_id) {
         1 => '/applicant-dashboard',
         2, 7 => '/dashboard',
-        3 => '/evaluator-dashboard',
+        3, 8 => '/evaluator-dashboard',
         4 => '/interviewer-dashboard',
         6 => '/record-dashboard',
         default => '/dashboard',

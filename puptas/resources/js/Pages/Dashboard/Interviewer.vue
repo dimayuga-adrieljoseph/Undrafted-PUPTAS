@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import { LineChart } from "vue-chart-3";
 import { Head, Link, router } from "@inertiajs/vue3";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
+import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue';
 import {
     Chart as ChartJS,
     LineController,
@@ -74,6 +75,9 @@ const errorMessage = ref("");
 const searchQuery = ref("");
 const selectedUserFiles = ref({});
 const selectedProgramId = ref("");
+const showAcceptModal = ref(false);
+const showRejectModal = ref(false);
+const isSubmitting = ref(false);
 const snackbar = ref({
     visible: false,
     message: "",
@@ -318,6 +322,16 @@ const closeImageModal = () => {
 const capitalize = (str) =>
     typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ') : "";
 
+const formatStage = (stage) => {
+    const map = {
+        'evaluator': 'DE, GE',
+        'interviewer': 'Interviewer',
+        'medical': 'Medical',
+        'record_staff': 'Record Staff'
+    };
+    return map[stage] || (stage ? stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ") : "");
+};
+
 const getInterviewerName = () => {
     // Find the completed interviewer process with passed action
     const interviewerProcess = selectedUser.value?.application?.processes?.find(
@@ -364,12 +378,16 @@ const formatDate = (date) => {
     });
 };
 
-const acceptApplication = async () => {
+const promptAccept = () => {
     if (!selectedProgramId.value) {
         showSnackbar("Please select a program to accept the applicant into", "error");
         return;
     }
+    showAcceptModal.value = true;
+};
 
+const acceptApplication = async () => {
+    isSubmitting.value = true;
     try {
         await axios.post(
             `/interviewer-dashboard/accept/${selectedUser.value.id}`,
@@ -380,20 +398,27 @@ const acceptApplication = async () => {
         showSnackbar("Application accepted successfully", "success");
         selectedUser.value = null;
         selectedProgramId.value = "";
+        showAcceptModal.value = false;
         router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
         console.error("Accept failed:", e);
         const msg = e.response?.data?.message || "Failed to accept application";
         showSnackbar(msg, "error");
+    } finally {
+        isSubmitting.value = false;
     }
 };
 
-const rejectApplication = async () => {
+const promptReject = () => {
     if (!selectedProgramId.value) {
         showSnackbar("Please select a program to reject the applicant from", "error");
         return;
     }
+    showRejectModal.value = true;
+};
 
+const rejectApplication = async () => {
+    isSubmitting.value = true;
     try {
         await axios.post(
             `/interviewer-dashboard/reject/${selectedUser.value.id}`,
@@ -404,11 +429,14 @@ const rejectApplication = async () => {
         showSnackbar("Application rejected successfully", "success");
         selectedUser.value = null;
         selectedProgramId.value = "";
+        showRejectModal.value = false;
         router.reload({ only: ['pendingUsers', 'summary'] });
     } catch (e) {
         console.error("Reject failed:", e);
         const msg = e.response?.data?.message || "Failed to reject application";
         showSnackbar(msg, "error");
+    } finally {
+        isSubmitting.value = false;
     }
 };
 
@@ -432,6 +460,8 @@ const fetchPrograms = async () => {
                 </div>
                 <div class="relative w-full md:w-64">
                     <input
+                        id="searchQuery"
+                        name="searchQuery"
                         v-model="searchQuery"
                         type="text"
                         placeholder="Search applicants..."
@@ -520,16 +550,20 @@ const fetchPrograms = async () => {
                 </div>
                 <div class="space-y-4">
                   <div>
-                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Start Date</label>
+                    <label for="startDateFilter" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Start Date</label>
                     <input 
+                      id="startDateFilter"
+                      name="startDateFilter"
                       type="date" 
                       v-model="startDateFilter"
                       class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">End Date</label>
+                    <label for="endDateFilter" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">End Date</label>
                     <input 
+                      id="endDateFilter"
+                      name="endDateFilter"
                       type="date" 
                       v-model="endDateFilter"
                       class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
@@ -727,16 +761,14 @@ const fetchPrograms = async () => {
 
                         <div class="flex flex-col sm:flex-row gap-2">
                             <button
-                                @click="acceptApplication"
-                                :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                :disabled="!selectedProgramId"
+                                @click="promptAccept"
+                                :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2']"
                             >
                                 ✓ Accept
                             </button>
                             <button
-                                @click="rejectApplication"
-                                :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                :disabled="!selectedProgramId"
+                                @click="promptReject"
+                                :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2']"
                             >
                                 ✗ Reject
                             </button>
@@ -862,7 +894,7 @@ const fetchPrograms = async () => {
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <p class="font-semibold text-gray-900 dark:text-white">
-                                            {{ capitalize(process.stage) }}
+                                            {{ formatStage(process.stage) }}
                                         </p>
                                         <p v-if="process.notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                             {{ process.notes }}
@@ -927,6 +959,31 @@ const fetchPrograms = async () => {
             </div>
         </div>
     </transition>
+
+    <!-- Confirmation Modals -->
+    <ChangesConfirmationModal
+        :show="showAcceptModal"
+        :loading="isSubmitting"
+        title="Accept Application"
+        subtitle="Accept this application to the selected program? This cannot be undone."
+        confirm-text="Confirm Accept"
+        confirm-button-class="bg-green-600 hover:bg-green-700 text-white"
+        :hide-table="true"
+        @cancel="showAcceptModal = false"
+        @confirm="acceptApplication"
+    />
+
+    <ChangesConfirmationModal
+        :show="showRejectModal"
+        :loading="isSubmitting"
+        title="Reject Application"
+        subtitle="Reject this application for the selected program? This cannot be undone."
+        confirm-text="Confirm Reject"
+        confirm-button-class="bg-red-600 hover:bg-red-700 text-white"
+        :hide-table="true"
+        @cancel="showRejectModal = false"
+        @confirm="rejectApplication"
+    />
 </template>
 
 <style scoped>

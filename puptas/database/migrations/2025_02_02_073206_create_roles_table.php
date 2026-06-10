@@ -18,11 +18,12 @@ return new class extends Migration
         DB::table('roles')->insert([
             ['id' => 1, 'name' => 'Applicant'],
             ['id' => 2, 'name' => 'Admin'],
-            ['id' => 3, 'name' => 'Evaluator'],
+            ['id' => 3, 'name' => 'Document Evaluator'],
             ['id' => 4, 'name' => 'Interviewer'],
             ['id' => 5, 'name' => 'Medical'],
             ['id' => 6, 'name' => 'Record Staff'],
             ['id' => 7, 'name' => 'Superadmin'],
+            ['id' => 8, 'name' => 'Grade Evaluator'],
         ]);
 
         // Add the FK constraint now that roles table exists

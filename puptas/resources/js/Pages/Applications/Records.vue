@@ -323,7 +323,7 @@
                             >
                                 <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#9E122C] border-2 border-white dark:border-gray-900"></div>
                                 <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                                    {{ capitalize(process.stage) }}
+                                    {{ formatStage(process.stage) }}
                                     <span :class="{
                                         'text-green-600 dark:text-green-400': process.status === 'completed',
                                         'text-yellow-600 dark:text-yellow-400': process.status === 'in_progress',

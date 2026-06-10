@@ -20,11 +20,12 @@ class AuditLogService
     private const ROLE_NAMES = [
         1 => 'Applicant',
         2 => 'Admin',
-        3 => 'Evaluator',
+        3 => 'Document Evaluator',
         4 => 'Interviewer',
         5 => 'Medical',
         6 => 'Registrar',
         7 => 'Superadmin',
+        8 => 'Grade Evaluator',
     ];
 
     // ─── Public helpers ─────────────────────────────────────────────

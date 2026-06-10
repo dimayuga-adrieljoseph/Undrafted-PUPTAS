@@ -21,6 +21,8 @@
                         />
                     </svg>
                     <input
+                        id="searchApplications"
+                        name="searchApplications"
                         v-model="searchQuery"
                         type="text"
                         placeholder="Search by name..."
@@ -184,7 +186,7 @@
                             </button>
                             <div class="flex items-center space-x-2 mx-1 text-sm text-gray-700 dark:text-gray-300">
                                 <span class="hidden sm:inline">Page</span>
-                                <input type="number" :value="currentPage" min="1" :max="totalPages || 1"
+                                <input type="number" id="pageNumberInput" name="pageNumberInput" :value="currentPage" min="1" :max="totalPages || 1"
                                     @change="currentPage = Math.max(1, Math.min($event.target.value, totalPages || 1))"
                                     class="w-14 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm" />
                                 <span>of <span class="font-semibold">{{ totalPages || 1 }}</span></span>
@@ -411,18 +413,20 @@
                                                 class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                                 <div :class="[
                                                     'w-2.5 h-2.5 rounded-full mt-1.5 shrink-0',
+                                                    process.action === 'rejected' ? 'bg-red-500' :
                                                     process.status === 'completed' ? 'bg-green-500' :
                                                     process.status === 'returned' ? 'bg-red-500' : 'bg-yellow-500'
                                                 ]"></div>
                                                 <div class="flex-1 min-w-0">
                                                     <div class="flex justify-between items-start">
-                                                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ capitalize(process.stage) }}</p>
+                                                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ formatStage(process.stage) }}</p>
                                                         <span :class="[
                                                             'px-2 py-0.5 rounded-full text-xs font-medium',
+                                                            process.action === 'rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
                                                             process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
                                                             process.status === 'returned' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
                                                             'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                                        ]">{{ capitalize(process.status) }}</span>
+                                                        ]">{{ process.action === 'rejected' ? 'Rejected' : capitalize(process.status) }}</span>
                                                     </div>
                                                     <p v-if="process.reviewer_notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.reviewer_notes }}</p>
                                                     <p v-else-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.notes }}</p>
@@ -462,9 +466,8 @@
 
                                             <div class="flex gap-2 pt-1">
                                                 <button
-                                                    @click="acceptApplication"
+                                                    @click="promptAccept"
                                                     :class="[getButtonClass('success'), 'flex-1 px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2']"
-                                                    :disabled="!selectedProgramId"
                                                 >
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -472,9 +475,8 @@
                                                     Accept
                                                 </button>
                                                 <button
-                                                    @click="rejectApplication"
+                                                    @click="promptReject"
                                                     :class="[getButtonClass('danger'), 'flex-1 px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2']"
-                                                    :disabled="!selectedProgramId"
                                                 >
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -512,7 +514,7 @@
                                             <div v-for="(file, key) in selectedUserFiles" :key="key"
                                                 class="p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
                                                 <div class="flex items-center gap-1.5 mb-1.5 min-w-0">
-                                                    <label :for="key" class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{{ formatFileKey(key) }}</label>
+                                                    <span class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate" :title="formatFileKey(key)">{{ formatFileKey(key) }}</span>
                                                 </div>
                                                 <img v-if="hasImagePreview(file)" :src="getFileUrl(file)" alt="Document"
                                                     class="w-full aspect-[4/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
@@ -557,6 +559,31 @@
                 {{ snackbar.message }}
             </div>
         </transition>
+        <!-- Confirmation Modals -->
+        <ChangesConfirmationModal
+            :show="showAcceptModal"
+            :loading="isSubmitting"
+            title="Accept Application"
+            subtitle="Accept this application to the selected program? This cannot be undone."
+            confirm-text="Confirm Accept"
+            confirm-button-class="bg-green-600 hover:bg-green-700 text-white"
+            :hide-table="true"
+            @cancel="showAcceptModal = false"
+            @confirm="acceptApplication"
+        />
+
+        <ChangesConfirmationModal
+            :show="showRejectModal"
+            :loading="isSubmitting"
+            title="Reject Application"
+            subtitle="Reject this application for the selected program? This cannot be undone."
+            confirm-text="Confirm Reject"
+            confirm-button-class="bg-red-600 hover:bg-red-700 text-white"
+            :hide-table="true"
+            @cancel="showRejectModal = false"
+            @confirm="rejectApplication"
+        />
+
     </InterviewerLayout>
 </template>
 
@@ -564,6 +591,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
+import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue';
 
 import {
     Chart as ChartJS,
@@ -616,6 +644,9 @@ const isLoading = ref(true);
 const errorMessage = ref("");
 const searchQuery = ref("");
 const selectedUserFiles = ref({});
+const showAcceptModal = ref(false);
+const showRejectModal = ref(false);
+const isSubmitting = ref(false);
 const snackbar = ref({
     visible: false,
     message: "",
@@ -777,7 +808,7 @@ const handleOutsideClick = (e) => {
 
 onMounted(() => {
     fetchUsers();
-    fetchPrograms();
+    // fetchPrograms(); removed since assignedPrograms comes from props
     document.addEventListener('click', handleOutsideClick);
 });
 
@@ -845,7 +876,7 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-        await fetchPrograms();
+        // await fetchPrograms(); removed
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         
@@ -911,6 +942,16 @@ const closeImageModal = () => { showImageModal.value = false; };
 const capitalize = (str) =>
     typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
 
+const formatStage = (stage) => {
+    const map = {
+        'evaluator': 'DE, GE',
+        'interviewer': 'Interviewer',
+        'medical': 'Medical',
+        'record_staff': 'Record Staff'
+    };
+    return map[stage] || (stage ? stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ") : "");
+};
+
 const getInterviewerName = () => {
     const interviewerProcess = selectedUser.value?.application?.processes?.find(
         p => p.stage === 'interviewer' && p.status === 'completed' && p.action === 'passed'
@@ -955,15 +996,18 @@ const formatDateOnly = (date) => {
 const selectedProgramId = ref("");
 const requiresPromissoryNote = ref(false);
 
-const acceptApplication = async () => {
+const promptAccept = () => {
     if (!selectedProgramId.value) {
         showSnackbar("Please select a program to accept the applicant into", "error");
         return;
     }
+    showAcceptModal.value = true;
+};
 
+const acceptApplication = async () => {
+    isSubmitting.value = true;
+    const currentUserId = selectedUser.value.id;
     try {
-        const currentUserId = selectedUser.value.id;
-        
         await axios.post(
             `/interviewer-dashboard/accept/${currentUserId}`,
             {
@@ -974,6 +1018,7 @@ const acceptApplication = async () => {
         showSnackbar("Application accepted successfully", "success");
         selectedProgramId.value = "";
         requiresPromissoryNote.value = false;
+        showAcceptModal.value = false;
         
         await fetchUsers();
         
@@ -989,18 +1034,23 @@ const acceptApplication = async () => {
             e.response?.data?.message ||
             "Failed to accept application due to an unexpected error.";
         showSnackbar(msg, "error");
+    } finally {
+        isSubmitting.value = false;
     }
 };
 
-const rejectApplication = async () => {
+const promptReject = () => {
     if (!selectedProgramId.value) {
         showSnackbar("Please select a program to reject the applicant from", "error");
         return;
     }
+    showRejectModal.value = true;
+};
 
+const rejectApplication = async () => {
+    isSubmitting.value = true;
+    const currentUserId = selectedUser.value.id;
     try {
-        const currentUserId = selectedUser.value.id;
-        
         await axios.post(
             `/interviewer-dashboard/reject/${currentUserId}`,
             {
@@ -1009,6 +1059,7 @@ const rejectApplication = async () => {
         );
         showSnackbar("Application rejected successfully", "success");
         selectedProgramId.value = "";
+        showRejectModal.value = false;
         
         await fetchUsers();
         
@@ -1024,17 +1075,12 @@ const rejectApplication = async () => {
             e.response?.data?.message ||
             "Failed to reject application due to an unexpected error.";
         showSnackbar(msg, "error");
+    } finally {
+        isSubmitting.value = false;
     }
 };
 
-const availablePrograms = ref([]);
 
-const fetchPrograms = async () => {
-    try {
-        const response = await axios.get("/interviewer-dashboard/programs");
-        availablePrograms.value = response.data.programs;
-    } catch (e) { console.error("Failed to load programs", e); }
-};
 
 const totalPages = computed(() =>
     Math.ceil(filteredUsers.value.length / itemsPerPage)

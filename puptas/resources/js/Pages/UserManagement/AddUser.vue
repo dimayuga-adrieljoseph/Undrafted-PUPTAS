@@ -300,6 +300,7 @@
                                             <option value="1">Applicant</option>
                                             <option value="2">Admin</option>
                                             <option value="3">Evaluator</option>
+                                            <option value="8">Grade Evaluator</option>
                                             <option value="4">
                                                 Interviewer
                                             </option>
@@ -361,7 +362,7 @@
                                             </option>
                                         </select>
                                         <div class="program-hint">
-                                            Evaluators and Interviewers must be
+                                            Evaluators, Grade Evaluators, and Interviewers must be
                                             assigned to at least one program.
                                             Hold Ctrl/Cmd to select multiple.
                                         </div>
@@ -506,7 +507,7 @@ const isCheckingEmail = ref(false);
 const hasAnyError = computed(() => Object.values(errors.value).some((error) => error !== ""));
 
 const showProgramAssignment = computed(() => {
-    return ["3", "4"].includes(form.value.role_id); // Evaluator (3) and Interviewer (4)
+    return ["3", "4", "8"].includes(form.value.role_id); // Evaluator (3), Interviewer (4), Grade Evaluator (8)
 });
 
 const showApplicantProgram = computed(() => {

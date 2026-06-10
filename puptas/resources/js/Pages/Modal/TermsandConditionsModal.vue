@@ -89,8 +89,10 @@
 
                     <!-- Consent Checkbox -->
                     <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <label class="flex items-start cursor-pointer">
+                        <label for="terms_consent" class="flex items-start cursor-pointer">
                             <input 
+                                id="terms_consent"
+                                name="terms_consent"
                                 type="checkbox" 
                                 v-model="isChecked"
                                 class="w-5 h-5 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] mt-0.5 mr-3 dark:border-gray-600 dark:text-white"

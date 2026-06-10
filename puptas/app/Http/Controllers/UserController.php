@@ -74,7 +74,7 @@ class UserController extends Controller
         $roleId = $user->role_id;
 
         // Assign to multiple programs for staff
-        if (in_array($roleId, [3, 4]) && $request->filled('program') && is_array($request->program)) {
+        if (in_array($roleId, [3, 4, 8]) && $request->filled('program') && is_array($request->program)) {
             $programs = Program::whereIn('code', $request->program)->get();
             $syncData = [];
             foreach ($programs as $prog) {
@@ -395,8 +395,8 @@ class UserController extends Controller
                         . ($secondProgram ? ", 2nd choice to {$secondProgram->code}" : '')
                         . ($thirdProgram  ? ", 3rd choice to {$thirdProgram->code}"  : '');
                 }
-            } elseif (in_array($roleId, [3, 4]) && $request->filled('program') && is_array($request->program) && $user) {
-                // For Evaluators (3) and Interviewers (4): handle program arrays (using program code)
+            } elseif (in_array($roleId, [3, 4, 8]) && $request->filled('program') && is_array($request->program) && $user) {
+                // For Evaluators (3), Interviewers (4), and Grade Evaluators (8): handle program arrays (using program code)
                 $programs = Program::whereIn('code', $request->program)->get();
                 if ($programs->count() > 0) {
                     $syncData = [];
