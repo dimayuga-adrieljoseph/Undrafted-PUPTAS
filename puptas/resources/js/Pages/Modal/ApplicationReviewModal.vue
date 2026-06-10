@@ -226,6 +226,31 @@
                         </div>
                     </div>
 
+                    <!-- Cutoff: closed banner (Requirement 4.2) -->
+                    <div
+                        v-if="cutoffPassed"
+                        class="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl"
+                    >
+                        <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p class="text-sm font-semibold text-red-700 dark:text-red-300">The submission period has closed.</p>
+                    </div>
+
+                    <!-- Cutoff: deadline indicator (Requirement 4.1) -->
+                    <div
+                        v-else-if="cutoffDisplay"
+                        class="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-xl"
+                    >
+                        <svg class="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold text-yellow-700 dark:text-yellow-300 uppercase tracking-wide mb-0.5">Submission Deadline:</p>
+                            <p class="text-sm font-medium text-yellow-800 dark:text-yellow-200">{{ cutoffDisplay }}</p>
+                        </div>
+                    </div>
+
                     <!-- Alerts -->
                     <div v-if="submitError" class="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
                         <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -264,10 +289,10 @@
                 <button
                     v-if="canResubmit"
                     @click="resubmitApplication"
-                    :disabled="submitting"
+                    :disabled="submitting || cutoffPassed"
                     :class="[
                         'px-5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2',
-                        !submitting
+                        !submitting && !cutoffPassed
                             ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed',
                     ]"
@@ -437,8 +462,14 @@ const allDocumentsUploaded = computed(() => {
     return Object.values(files).every((file) => file?.url);
 });
 
+// Computed: Cutoff data from application response
+const cutoff = computed(() => applicationData.value?.cutoff ?? null);
+const cutoffPassed = computed(() => cutoff.value?.is_passed === true);
+const cutoffDisplay = computed(() => cutoff.value?.display ?? null);
+
 // Computed: Check if application can be submitted (all conditions)
 const canSubmitApplication = computed(() => {
+    if (cutoffPassed.value) return false;
     return (
         canSubmit.value &&
         allDocumentsUploaded.value &&
