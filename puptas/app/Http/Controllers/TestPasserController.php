@@ -441,7 +441,7 @@ class TestPasserController extends Controller
 
         // Pre-filter: only passers with a linked confirmed applicant (for_evaluation)
         $confirmedPasserIds = \App\Models\ApplicantProfile::whereHas('currentApplication.processes', function ($q) {
-            $q->where('stage', 'evaluator')
+            $q->where('stage', 'document_evaluator')
                 ->whereIn('status', ['in_progress', 'returned']);
         })
             ->whereHas('testPasser')
@@ -1347,7 +1347,7 @@ class TestPasserController extends Controller
             return response()->json(['error' => 'No programs found in the database. Please seed programs first.'], 422);
         }
 
-        $stages  = ['evaluator', 'interviewer', 'medical', 'records'];
+        $stages  = ['document_evaluator', 'grade_evaluator', 'interviewer', 'medical', 'records'];
         $results = ['enrolled' => [], 'skipped' => [], 'errors' => []];
 
         foreach ($passers as $passer) {

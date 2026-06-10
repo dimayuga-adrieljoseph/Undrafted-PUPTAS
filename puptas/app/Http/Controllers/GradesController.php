@@ -577,7 +577,22 @@ class GradesController extends Controller
             return false;
         }
 
-        // Lock grades once application is submitted (status is not 'draft')
+        // Lock grades once application is submitted
+        if ($application->status === 'returned') {
+            $returnedProcess = $application->processes()->where('status', 'returned')->latest()->first();
+            if ($returnedProcess && $returnedProcess->stage === 'document_evaluator') {
+                return true; // Lock grades if returned by Document Evaluator
+            }
+            return false; // Unlock if returned by Grade Evaluator (or no process found)
+        }
+        
+        if ($application->status === 'rejected') {
+            $rejectedProcess = $application->processes()->where('status', 'completed')->where('action', 'rejected')->latest()->first();
+            if ($rejectedProcess && $rejectedProcess->stage === 'grade_evaluator') {
+                return false; // Unlock grades if rejected by Grade Evaluator
+            }
+        }
+
         return $application->status !== 'draft';
     }
 

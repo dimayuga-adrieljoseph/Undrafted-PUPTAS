@@ -79,7 +79,7 @@ class InterviewerDashboardController extends Controller
         // Check if evaluator stage is completed
         $this->applicationService->ensureStageCompleted(
             $application,
-            'evaluator',
+            'grade_evaluator',
             "Cannot proceed - prerequisite verification not completed."
         );
     }
@@ -129,7 +129,7 @@ class InterviewerDashboardController extends Controller
         // Check if evaluator stage is completed
         $this->applicationService->ensureStageCompleted(
             $application,
-            'evaluator',
+            'grade_evaluator',
             "Cannot accept - evaluator stage not completed."
         );
 
@@ -247,7 +247,7 @@ class InterviewerDashboardController extends Controller
         // Check if evaluator stage is completed
         $this->applicationService->ensureStageCompleted(
             $application,
-            'evaluator',
+            'grade_evaluator',
             "Cannot reject - evaluator stage not completed."
         );
 

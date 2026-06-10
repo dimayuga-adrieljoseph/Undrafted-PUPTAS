@@ -60,7 +60,7 @@ const form = useForm({
     date_graduated:          formatDateForInput(props.user.date_graduated),
 });
 
-const showProgramAssignment = computed(() => ['3', '4'].includes(form.role_id.toString()));
+const showProgramAssignment = computed(() => ['3', '4', '8'].includes(form.role_id.toString()));
 const showApplicantProgram  = computed(() => form.role_id.toString() === '1');
 
 const onRoleChange = () => {
@@ -971,7 +971,7 @@ REPLACE
 .grade-edit-row:last-child { border-bottom:none; }
 .grade-edit-label { font-size:.8rem; color:#4b5563; flex:1; }
 .grade-edit-right { display:flex; align-items:center; gap:.6rem; }
-.grade-edit-input { width:90px; padding:.35rem .6rem; border-radius:8px; border:1.5px solid #e5e7eb; background:#f9fafb; font-size:.82rem; color:#111827; text-align:right; outline:none; transition:border-color .15s,box-shadow .15s; -moz-appearance:textfield; }
+.grade-edit-input { width:90px; padding:.35rem .6rem; border-radius:8px; border:1.5px solid #e5e7eb; background:#f9fafb; font-size:.82rem; color:#111827; text-align:right; outline:none; transition:border-color .15s,box-shadow .15s; -moz-appearance:textfield; appearance:textfield; }
 .grade-edit-input::-webkit-outer-spin-button, .grade-edit-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 .grade-edit-input:focus { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-dim); background:#fff; }
 .grade-edit-input--name { width:auto; flex:1; text-align:left; }

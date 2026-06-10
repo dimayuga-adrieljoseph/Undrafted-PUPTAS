@@ -29,7 +29,7 @@ trait ManagesApplicationFiles
             // Load user with ONLY essential data (no files relationship)
             $user = User::with([
                 'currentApplication' => function ($query) {
-                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.submitted_at');
+                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.submitted_at', 'applications.requires_promissory_note');
                 },
                 'currentApplication.program:id,code,name,slots',
                 'currentApplication.secondChoice:id,code,name,slots',
@@ -45,7 +45,13 @@ trait ManagesApplicationFiles
                 'applicantProfile.graduateTypes:id,label',
                 'applicantProfile.testPasser:user_id,reference_number',
             ])
-            ->findOrFail($id);
+            ->where(function($q) use ($id) {
+                $q->where('idp_user_id', $id);
+                if (is_numeric($id)) {
+                    $q->orWhere('id', $id);
+                }
+            })
+            ->firstOrFail();
 
             if (!$user) {
                 return response()->json(['message' => 'User not found'], 404);
@@ -103,6 +109,7 @@ trait ManagesApplicationFiles
                     'program' => $user->currentApplication->program,
                     'second_choice' => $user->currentApplication->secondChoice,
                     'third_choice' => $user->currentApplication->thirdChoice,
+                    'requires_promissory_note' => $user->currentApplication->requires_promissory_note,
                     'processes' => $user->currentApplication->processes,
                 ] : null,
             ];
@@ -169,7 +176,14 @@ trait ManagesApplicationFiles
                 $this->ensureRole($this->getRoleId());
             }
 
-            $user = User::with('grades')->select('id')->findOrFail($id);
+            $user = User::with('grades')->select('id', 'idp_user_id')
+                ->where(function($q) use ($id) {
+                    $q->where('idp_user_id', $id);
+                    if (is_numeric($id)) {
+                        $q->orWhere('id', $id);
+                    }
+                })
+                ->firstOrFail();
 
             return response()->json([
                 'grades' => $user->grades,
@@ -275,9 +289,10 @@ trait ManagesApplicationFiles
     public function returnApplication(Request $request, $userId)
     {
         $request->validate([
-            'files' => 'array',
+            'files' => 'nullable|array',
             'files.*' => 'string|in:' . \App\Helpers\FileMapper::getValidFileFields(),
-            'note' => 'required|string|min:3',
+            'note' => 'nullable|string|max:1000',
+            'requires_promissory_note' => 'nullable|boolean',
         ]);
 
         $this->ensureRole($this->getRoleId());
@@ -312,6 +327,9 @@ trait ManagesApplicationFiles
         // Wrap all mutations in transaction
         try {
             DB::transaction(function () use ($application, $inProgress, $request, $files, $userId, $keyMap, &$updatedFiles, &$notFoundFiles) {
+                if ($request->has('requires_promissory_note')) {
+                    $application->requires_promissory_note = (bool) $request->requires_promissory_note;
+                }
                 $application->status = 'returned';
                 $application->save();
 
@@ -393,5 +411,5 @@ trait ManagesApplicationFiles
      * Get the role ID for this controller
      * Must be implemented by each controller
      */
-    abstract protected function getRoleId(): int;
+    abstract protected function getRoleId(): int|array;
 }

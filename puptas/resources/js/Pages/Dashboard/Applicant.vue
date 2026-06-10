@@ -17,6 +17,7 @@ const fileStatuses = ref({});
 const applicationStatus = ref("");
 const enrollmentStatus = ref("");
 const applicationProcesses = ref([]);
+const requiresPromissoryNote = ref(false);
 
 // Reactively derived from live applicationStatus — updates immediately after the user
 // submits without requiring a page reload.
@@ -36,6 +37,27 @@ const canDownloadSlipReactive = computed(() => {
     props.gradeUrl !== undefined
   );
 });
+
+const canEditGrades = computed(() => {
+    if (!['returned', 'rejected'].includes(applicationStatus.value)) return false;
+    
+    if (applicationStatus.value === 'returned') {
+        const returnedProcesses = applicationProcesses.value.filter(p => p.status === 'returned');
+        if (!returnedProcesses.length) return false;
+        const latestReturned = returnedProcesses[returnedProcesses.length - 1];
+        return latestReturned.stage !== 'document_evaluator';
+    }
+    
+    if (applicationStatus.value === 'rejected') {
+        const rejectedProcesses = applicationProcesses.value.filter(p => p.status === 'completed' && p.action === 'rejected');
+        if (!rejectedProcesses.length) return false;
+        const latestRejected = rejectedProcesses[rejectedProcesses.length - 1];
+        return latestRejected.stage === 'grade_evaluator';
+    }
+    
+    return false;
+});
+
 const showImageModal = ref(false);
 const previewSrc = ref("");
 const showMedicalRedirect = ref(false);
@@ -147,7 +169,15 @@ const formatKey = (key) => {
 
   return labels[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
 };
-const formatStage = (stage) => stage.charAt(0).toUpperCase() + stage.slice(1).replace("_", " ");
+const formatStage = (stage) => {
+    const map = {
+        'evaluator': 'DE, GE',
+        'interviewer': 'Interviewer',
+        'medical': 'Medical',
+        'record_staff': 'Record Staff'
+    };
+    return map[stage] || (stage ? stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ") : "");
+};
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const formatTimestamp = (ts) => ts ? new Date(ts).toLocaleString(undefined, { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" }) : "";
 const getFileUrl = (file) => file?.url || "";
@@ -222,6 +252,7 @@ const fetchData = async () => {
     enrollmentStatus.value = data.enrollment_status || "";
     applicationProcesses.value = data.processes || [];
     showMedicalRedirect.value = data.show_medical_redirect || false;
+    requiresPromissoryNote.value = data.requires_promissory_note || false;
   } catch {
     error.value = "Could not load application data.";
   } finally {
@@ -612,6 +643,26 @@ onMounted(() => {
           
          </div>
 
+        <!-- Promissory Note Alert -->
+        <div v-if="requiresPromissoryNote" class="bg-orange-50 dark:bg-orange-900/20 rounded-xl shadow-md border-l-4 border-orange-500 p-6">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 mt-1">
+              <svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-orange-900 dark:text-orange-100 mb-2">
+                Action Required: Promissory Note
+              </h3>
+              <p class="text-orange-800 dark:text-orange-200">
+                The evaluator has indicated that you need to submit a <strong>Promissory Note</strong>. 
+                Please prepare this document as it is required to proceed with your enrollment process.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Medical System Redirect Card -->
         <div v-if="showMedicalRedirect" class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl shadow-md border-2 border-green-300 dark:border-green-700 p-4 sm:p-6">
           <div class="flex flex-col sm:flex-row items-start gap-4">
@@ -667,7 +718,8 @@ onMounted(() => {
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Application Status</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                <div v-if="loading && !applicationStatus" class="mt-2 h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <p v-else class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                   {{ applicationStatus ? capitalize(applicationStatus) : 'Not Started' }}
                 </p>
               </div>
@@ -684,7 +736,8 @@ onMounted(() => {
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Enrollment Status</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                <div v-if="loading && !enrollmentStatus" class="mt-2 h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <p v-else class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                   {{ enrollmentStatus ? capitalize(enrollmentStatus.replace(/_/g, " ")) : 'Pending' }}
                 </p>
               </div>
@@ -701,7 +754,8 @@ onMounted(() => {
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Documents Uploaded</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                <div v-if="loading && !stepKeys.length" class="mt-2 h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <p v-else class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                   {{ uploadedCount }}/{{ stepKeys.length }}
                 </p>
               </div>
@@ -730,7 +784,11 @@ onMounted(() => {
             <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Quick Actions</p>
           </div>
 
-          <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:justify-center">
+          <div v-if="loading && !applicationStatus && !stepKeys.length" class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:justify-center">
+            <div class="h-11 w-full sm:w-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+            <div class="h-11 w-full sm:w-40 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+          </div>
+          <div v-else class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:justify-center">
             <!-- Review Application Button -->
             <button
               @click="showModal = true"
@@ -757,7 +815,7 @@ onMounted(() => {
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              {{ applicationStatus && applicationStatus !== 'draft' ? 'View Grades' : 'Input Grades' }}
+              {{ applicationStatus && applicationStatus !== 'draft' ? (canEditGrades ? 'Edit Grades' : 'View Grades') : 'Input Grades' }}
             </button>
 
             <!-- Download Grade Verification Slip -->
@@ -896,26 +954,26 @@ onMounted(() => {
               <div class="space-y-4">
                 <div v-for="(proc, idx) in applicationProcesses" :key="idx" class="flex gap-3">
                   <div class="relative">
-                    <div :class="`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs ${getBadgeClass(proc.status)}`">
+                    <div :class="`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs ${getBadgeClass(proc.action === 'rejected' ? 'rejected' : proc.status)}`">
                       {{ idx + 1 }}
                     </div>
                     <div v-if="idx < applicationProcesses.length - 1" class="absolute top-8 left-1/2 w-0.5 h-8 bg-gray-200 dark:bg-gray-700 -translate-x-1/2"></div>
                   </div>
-                  <div class="flex-1 pb-4">
+                  <div class="flex-1 pb-4 min-w-0">
                     <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2 flex-wrap">
                       {{ formatStage(proc.stage) }}
-                      <span :class="`text-xs px-1.5 py-0.5 rounded-full text-white ${getBadgeClass(proc.status)}`">
-                        {{ capitalize(proc.status.replace(/_/g, ' ')) }}
+                      <span :class="`text-xs px-1.5 py-0.5 rounded-full text-white ${getBadgeClass(proc.action === 'rejected' ? 'rejected' : proc.status)}`">
+                        {{ proc.action === 'rejected' ? 'Rejected' : capitalize(proc.status.replace(/_/g, ' ')) }}
                       </span>
                     </h4>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                       {{ formatTimestamp(proc.created_at) }}
                     </p>
-                    <div v-if="proc.status === 'returned' && proc.reviewer_notes"
-                         class="mt-1 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-400">
-                      <span class="font-semibold">Return reason: </span>{{ proc.reviewer_notes }}
+                    <div v-if="(proc.status === 'returned' || proc.action === 'rejected') && proc.reviewer_notes"
+                         class="mt-1 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-400 break-all whitespace-pre-wrap">
+                      <span class="font-semibold">{{ proc.action === 'rejected' ? 'Reject reason:' : 'Return reason:' }} </span>{{ proc.reviewer_notes }}
                     </div>
-                    <p v-else-if="proc.reviewer_notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                    <p v-else-if="proc.reviewer_notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic break-all whitespace-pre-wrap">
                       {{ proc.reviewer_notes }}
                     </p>
                   </div>
