@@ -22,6 +22,7 @@ import {
     faChartPie,
     faChartLine,
     faFileAlt,
+    faClock,
 } from "@fortawesome/free-solid-svg-icons";
 
 import NavLink from "@/Components/NavLink.vue";
@@ -45,7 +46,8 @@ library.add(
     faNetworkWired,
     faChartPie,
     faChartLine,
-    faFileAlt
+    faFileAlt,
+    faClock,
 );
 
 const page = usePage();
@@ -137,6 +139,7 @@ const isAdminOrSuperAdmin = computed(() => {
 const isAuditLogsActive = isActiveRouteFor(["audit-logs.index"]);
 const isApiClientsActive = isActiveRouteFor(["api-clients.index"]);
 const isEmailTrackingActive = isActiveRouteFor(["email-tracking.index"]);
+const isCutoffSettingsActive = isActiveRouteFor(["cutoff-settings.index"]);
 
 /* ---------------- INTERACTION ---------------- */
 const onSidebarEnter = () => (isSidebarOpen.value = true);
@@ -656,6 +659,32 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isApiClientsActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Cutoff Settings (Superadmin Only) -->
+                    <li v-if="isSuperAdmin">
+                        <NavLink
+                            :href="route('cutoff-settings.index')"
+                            :active="isCutoffSettingsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isCutoffSettingsActive }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="clock"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isExpanded" class="nav-label">
+                                Cutoff Settings
+                            </span>
+                            <div
+                                v-if="isExpanded"
+                                class="nav-indicator"
+                                :class="{ active: isCutoffSettingsActive }"
                             ></div>
                         </NavLink>
                     </li>

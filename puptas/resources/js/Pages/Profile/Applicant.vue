@@ -80,6 +80,7 @@ const docStatusBadge = (status) => {
 const gradeGroups = computed(() => {
   const g = props.grades;
   if (!g) return [];
+  const strand = (props.applicantProfile?.strand || '').toUpperCase();
   const groups = [];
   const core = [];
   if (g.english != null) core.push({ label: 'English (Average)', value: g.english });
@@ -89,33 +90,43 @@ const gradeGroups = computed(() => {
   if (g.g12_second_sem != null) core.push({ label: 'G12 Second Semester Average', value: g.g12_second_sem });
   if (core.length) groups.push({ title: 'Core Averages', subjects: core });
 
+  // G11 english fields vary by strand — STEM uses G12 versions instead of G11
+  const g11EnglishFields = strand === 'STEM'
+    ? [
+        { key: 'g11_oral_communication', label: 'Oral Communication' },
+        { key: 'g11_reading_writing', label: 'Reading & Writing' },
+      ]
+    : [
+        { key: 'g11_oral_communication', label: 'Oral Communication' },
+        { key: 'g11_21st_century_lit', label: '21st Century Literature' },
+        { key: 'g11_academic_professional', label: 'Academic & Professional Literacy' },
+        { key: 'g11_reading_writing', label: 'Reading & Writing' },
+      ];
+
   const g11 = [
-    { key: 'g11_oral_communication', label: 'Oral Communication' },
-    { key: 'g11_21st_century_lit', label: '21st Century Literature' },
-    { key: 'g11_academic_professional', label: 'Academic & Professional Literacy' },
-    { key: 'g11_reading_writing', label: 'Reading & Writing' },
+    ...g11EnglishFields,
     { key: 'g11_general_mathematics', label: 'General Mathematics' },
     { key: 'g11_statistics_probability', label: 'Statistics & Probability' },
     { key: 'g11_earth_life_science', label: 'Earth & Life Science' },
     { key: 'g11_physical_science', label: 'Physical Science' },
-    { key: 'g11_business_mathematics', label: 'Business Mathematics (ABM)' },
-    { key: 'g11_pre_calculus', label: 'Pre-Calculus (STEM)' },
-    { key: 'g11_basic_calculus', label: 'Basic Calculus (STEM)' },
-    { key: 'g11_earth_science', label: 'Earth Science (STEM)' },
-    { key: 'g11_general_chemistry_1', label: 'General Chemistry 1 (STEM)' },
+    { key: 'g11_business_mathematics', label: 'Business Mathematics' },
+    { key: 'g11_pre_calculus', label: 'Pre-Calculus' },
+    { key: 'g11_basic_calculus', label: 'Basic Calculus' },
+    { key: 'g11_earth_science', label: 'Earth Science' },
+    { key: 'g11_general_chemistry_1', label: 'General Chemistry 1' },
   ].filter(s => g[s.key] != null).map(s => ({ label: s.label, value: g[s.key] }));
   if (g11.length) groups.push({ title: 'Grade 11 Subjects', subjects: g11 });
 
   const g12 = [
-    { key: 'g12_21st_century_lit', label: '21st Century Literature (ABM)' },
-    { key: 'g12_academic_professional', label: 'Academic & Professional Literacy (STEM)' },
-    { key: 'g12_general_physics_1', label: 'General Physics 1 (STEM)' },
-    { key: 'g12_general_physics_2', label: 'General Physics 2 (STEM)' },
-    { key: 'g12_general_biology_1', label: 'General Biology 1 (STEM)' },
-    { key: 'g12_general_biology_2', label: 'General Biology 2 (STEM)' },
-    { key: 'g12_general_chemistry_2', label: 'General Chemistry 2 (STEM)' },
-    { key: 'g12_earth_life_science', label: 'Earth & Life Science (HUMSS)' },
-    { key: 'g12_physical_science', label: 'Physical Science (HUMSS)' },
+    { key: 'g12_21st_century_lit', label: '21st Century Literature' },
+    { key: 'g12_academic_professional', label: 'Academic & Professional Literacy' },
+    { key: 'g12_general_physics_1', label: 'General Physics 1' },
+    { key: 'g12_general_physics_2', label: 'General Physics 2' },
+    { key: 'g12_general_biology_1', label: 'General Biology 1' },
+    { key: 'g12_general_biology_2', label: 'General Biology 2' },
+    { key: 'g12_general_chemistry_2', label: 'General Chemistry 2' },
+    { key: 'g12_earth_life_science', label: 'Earth & Life Science' },
+    { key: 'g12_physical_science', label: 'Physical Science' },
   ].filter(s => g[s.key] != null).map(s => ({ label: s.label, value: g[s.key] }));
   if (g12.length) groups.push({ title: 'Grade 12 Subjects', subjects: g12 });
 
