@@ -89,6 +89,10 @@ class DashboardService
             $startDateParam = session('dashboard_start_date');
             $endDateParam = session('dashboard_end_date');
         }
+
+        $cacheKey = 'dashboard_chart_data_' . ($startDateParam ?: 'default') . '_' . ($endDateParam ?: 'default');
+
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 600, function () use ($now, $startDateParam, $endDateParam) {
         \Log::info('Dashboard dates:', ['start' => $startDateParam, 'end' => $endDateParam]);
 
         if ($startDateParam && $endDateParam) {
@@ -184,6 +188,7 @@ class DashboardService
                 'end_date' => $endDate->format('Y-m-d'),
             ],
         ];
+        });
     }
 
     /**
@@ -233,7 +238,7 @@ class DashboardService
             ->whereHas('currentApplication', function ($query) use ($stage) {
                 $query->whereHas('processes', function ($q) use ($stage) {
                     $q->where('stage', $stage)
-                        ->whereIn('status', ['in_progress', 'returned']);
+                        ->where('status', 'in_progress');
                 });
             })
             ->get();
@@ -246,7 +251,7 @@ class DashboardService
      *
      * @return array
      */
-    public function getEvaluatorDashboardData(): array
+    public function getEvaluatorDashboardData(string $stage = 'document_evaluator'): array
     {
         $programIds = Auth::user()
             ->programs()
@@ -257,7 +262,7 @@ class DashboardService
         // Evaluators must be explicitly assigned to programs to see applicants.
         $pendingUsers = empty($programIds)
             ? collect()
-            : $this->userService->getAllApplicantsByStage('evaluator', $programIds);
+            : $this->userService->getApplicantsByStage($stage, $programIds);
 
         return [
             'pendingUsers' => $pendingUsers,

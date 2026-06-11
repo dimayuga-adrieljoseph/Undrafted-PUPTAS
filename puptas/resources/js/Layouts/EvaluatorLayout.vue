@@ -114,7 +114,7 @@ watchEffect(() => {
                         <h1
                             class="text-lg md:text-xl font-semibold text-gray-800 dark:text-gray-100"
                         >
-                            Evaluator Workspace
+                            {{ user?.role_id === 3 ? 'Document Evaluator' : 'Grade Evaluator' }} Workspace
                         </h1>
                     </slot>
                 </div>
@@ -149,7 +149,7 @@ watchEffect(() => {
                                 {{ user?.firstname }} {{ user?.lastname }}
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
-                                Evaluator
+                                {{ user?.role_id === 3 ? 'Document Evaluator' : 'Grade Evaluator' }}
                             </p>
                         </div>
                     </div>

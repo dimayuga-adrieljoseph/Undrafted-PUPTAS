@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use App\Services\CutoffSettingsService;
 
 /**
  * Confirmation Service
@@ -27,6 +28,7 @@ class ConfirmationService
      */
     public function __construct(
         protected FileService $fileService,
+        protected CutoffSettingsService $cutoffSettingsService,
     ) {}
 
 
@@ -101,7 +103,12 @@ class ConfirmationService
             'program_name'        => $firstName,
             'second_choice_name'  => $secondName,
             'third_choice_name'   => $thirdName,
+            'requires_promissory_note' => (bool) ($application?->requires_promissory_note ?? false),
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
+            'cutoff' => [
+                'is_passed' => $this->cutoffSettingsService->isCutoffPassed(),
+                'display'   => $this->cutoffSettingsService->formatForDisplay(),
+            ],
         ];
     }
 
@@ -141,7 +148,7 @@ class ConfirmationService
 
         // Check if evaluator stage is completed
         $evaluatorCompleted = $application->processes()
-            ->where('stage', 'evaluator')
+            ->where('stage', 'grade_evaluator')
             ->where('status', 'completed')
             ->exists();
 
@@ -206,6 +213,10 @@ class ConfirmationService
     public function submitApplication(User $user, array $validated): Application
     {
         return DB::transaction(function () use ($user, $validated) {
+            if ($this->cutoffSettingsService->isCutoffPassed()) {
+                abort(422, 'The application submission period has closed.');
+            }
+
             $profile = $user->applicantProfile;
 
             $application = Application::firstOrCreate(
@@ -243,9 +254,9 @@ class ConfirmationService
                 ]);
             }
 
-            // Create the next in-flight process (evaluator)
+            // Create new process for document_evaluator
             $application->processes()->create([
-                'stage' => 'evaluator',
+                'stage' => 'document_evaluator',
                 'status' => 'in_progress',
                 'performed_by' => null,
             ]);
@@ -546,17 +557,21 @@ class ConfirmationService
      */
     public function resubmitApplication(User $user): Application
     {
+        if ($this->cutoffSettingsService->isCutoffPassed()) {
+            abort(422, 'The application submission period has closed.');
+        }
+
         $application = Application::where('user_id', $user->id)
-            ->where('status', 'returned')
+            ->whereIn('status', ['returned', 'rejected'])
             ->first();
 
         if (!$application) {
-            abort(400, 'No returned application found to resubmit.');
+            abort(400, 'No returned or rejected application found to resubmit.');
         }
 
-        // Block resubmission if any file is rejected
-        if ($application->files()->where('status', 'rejected')->exists()) {
-            abort(422, 'Your application has rejected documents that must be fixed before resubmitting.');
+        // Block resubmission if any file is rejected or returned
+        if ($application->files()->whereIn('status', ['rejected', 'returned'])->exists()) {
+            abort(422, 'Your application has rejected or returned documents that must be fixed before resubmitting.');
         }
 
         return DB::transaction(function () use ($application) {
@@ -564,14 +579,41 @@ class ConfirmationService
             $application->status = 'submitted';
             $application->save();
 
-            // Find the returned evaluator process and set it back to in_progress
-            $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
-                ->where('stage', 'evaluator')
-                ->where('status', 'returned')
+            // Find the latest process that is 'returned' or 'rejected'
+            $latestProcess = $application->processes()
+                ->where(function($q) {
+                    $q->where('status', 'returned')
+                      ->orWhere(function($subq) {
+                          $subq->where('status', 'completed')->where('action', 'rejected');
+                      });
+                })
+                ->latest()
                 ->first();
-
-            if ($evaluatorProcess) {
-                $evaluatorProcess->update([
+            
+            // If it was returned/rejected by grade evaluator, we need to restart from document evaluator
+            if ($latestProcess && $latestProcess->stage === 'grade_evaluator') {
+                // Delete the grade evaluator process so it doesn't override the document evaluator status
+                $application->processes()->where('stage', 'grade_evaluator')->delete();
+                
+                // Find document_evaluator process and reset it
+                $docProcess = $application->processes()->where('stage', 'document_evaluator')->latest()->first();
+                if ($docProcess) {
+                    $docProcess->update([
+                        'status' => 'in_progress',
+                        'action' => null,
+                        'reviewer_notes' => null,
+                        'files_affected' => null,
+                        'performed_by' => null,
+                    ]);
+                } else {
+                    $application->processes()->create([
+                        'stage' => 'document_evaluator',
+                        'status' => 'in_progress',
+                        'performed_by' => null,
+                    ]);
+                }
+            } else if ($latestProcess && $latestProcess->stage === 'document_evaluator') {
+                $latestProcess->update([
                     'status' => 'in_progress',
                     'action' => null,
                     'reviewer_notes' => null,

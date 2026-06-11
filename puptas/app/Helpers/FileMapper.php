@@ -287,7 +287,19 @@ class FileMapper
         }
 
         $configuredDefault = config('filesystems.default', 'public');
-        $candidateDisks = array_unique([$configuredDefault, 'public', 'local', 's3']);
+        $candidateDisks = [$configuredDefault];
+        
+        if ($configuredDefault !== 'public') $candidateDisks[] = 'public';
+        if ($configuredDefault !== 'local') $candidateDisks[] = 'local';
+        
+        // Only check S3 as a fallback if not in local environment,
+        // to prevent massive timeouts when factories generate fake file paths
+        // that don't actually exist on disk.
+        if (!app()->environment('local') && $configuredDefault !== 's3') {
+            $candidateDisks[] = 's3';
+        }
+
+        $candidateDisks = array_unique($candidateDisks);
 
         foreach ($candidateDisks as $diskName) {
             try {

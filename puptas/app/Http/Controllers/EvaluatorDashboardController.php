@@ -45,11 +45,11 @@ class EvaluatorDashboardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->dashboardService->verifyRoleAccess($user, 3)) {
+        if (!$this->dashboardService->verifyRoleAccess($user, [3, 8])) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $dashboardData = $this->dashboardService->getEvaluatorDashboardData();
+        $dashboardData = $this->dashboardService->getEvaluatorDashboardData($this->getCurrentStage());
 
         return Inertia::render('Dashboard/Evaluator', [
             'user' => $user,
@@ -61,12 +61,12 @@ class EvaluatorDashboardController extends Controller
 
     protected function getCurrentStage(): string
     {
-        return 'evaluator';
+        return Auth::user()->role_id == 3 ? 'document_evaluator' : 'grade_evaluator';
     }
 
-    protected function getRoleId(): int
+    protected function getRoleId(): array
     {
-        return 3;
+        return [3, 8];
     }
 
     // returnFiles() method provided by ManagesApplicationFiles trait
@@ -95,7 +95,7 @@ class EvaluatorDashboardController extends Controller
             return response()->json([]);
         }
 
-        $results = $this->userService->getAllApplicantsByStage('evaluator', $programIds);
+        $results = $this->userService->getAllApplicantsByStage($this->getCurrentStage(), $programIds);
 
         \Log::info('EvaluatorDashboard::getUsers results', ['count' => count($results)]);
 
@@ -110,14 +110,14 @@ class EvaluatorDashboardController extends Controller
             'requires_promissory_note' => 'nullable|boolean',
         ]);
 
-        $this->ensureRole(3);
+        $this->ensureRole([3, 8]);
 
         $application = $this->applicationService->getApplicationByUserId($userId);
 
         DB::transaction(function () use ($application, $userId, $request) {
             // Update existing evaluator process (can be in_progress or returned status)
             $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
-                ->where('stage', 'evaluator')
+                ->where('stage', $this->getCurrentStage())
                 ->whereIn('status', ['in_progress', 'returned'])
                 ->first();
 
@@ -152,9 +152,10 @@ class EvaluatorDashboardController extends Controller
             \Log::info("Updated application status to 'submitted' for application {$application->id}");
 
             // Create next stage process
+            $nextStage = Auth::user()->role_id == 3 ? 'grade_evaluator' : 'interviewer';
             ApplicationProcess::create([
                 'application_id' => $application->id,
-                'stage' => 'interviewer',
+                'stage' => $nextStage,
                 'status' => 'in_progress',
                 'performed_by' => null,
             ]);
@@ -167,9 +168,57 @@ class EvaluatorDashboardController extends Controller
         ]);
     }
 
-    private function ensureRole(int $roleId): void
+    public function rejectApplication(Request $request, $userId)
     {
-        if (!Auth::user() || Auth::user()->role_id !== $roleId) {
+        $this->ensureRole([3, 8]);
+
+        $request->validate([
+            'note' => 'nullable|string|max:1000',
+        ]);
+
+        $application = $this->applicationService->getApplicationByUserId($userId);
+
+        if (!$application) {
+            return response()->json(['message' => 'Application not found'], 404);
+        }
+
+        $inProgress = ApplicationProcess::where('application_id', $application->id)
+            ->where('stage', $this->getCurrentStage())
+            ->whereIn('status', ['in_progress', 'returned'])
+            ->first();
+
+        if (!$inProgress) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        try {
+            DB::transaction(function () use ($application, $inProgress, $request, $userId) {
+                $application->status = 'rejected';
+                $application->save();
+
+                $inProgress->update([
+                    'status' => 'completed',
+                    'action' => 'rejected',
+                    'reviewer_notes' => $request->note,
+                    'performed_by' => auth()->id(),
+                ]);
+            });
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Application rejected for applicant ID {$userId}.", null, 'ADMISSION_DATA');
+
+            return response()->json(['message' => 'Application successfully rejected.']);
+        } catch (\Throwable $e) {
+            \Log::error("❌ Reject failed: " . $e->getMessage());
+            return response()->json(['message' => 'An error occurred while rejecting the application.'], 500);
+        }
+    }
+
+    private function ensureRole(int|array $roleId): void
+    {
+        $roleIds = is_array($roleId) ? $roleId : [$roleId];
+        if (!Auth::user() || !in_array(Auth::user()->role_id, $roleIds)) {
             abort(403, 'Unauthorized access.');
         }
     }

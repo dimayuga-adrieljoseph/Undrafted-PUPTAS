@@ -210,7 +210,7 @@ Route::get('/applications/user/{user}', function ($user) {
 
     // Render the role-appropriate component
     $component = match ((int) $roleId) {
-        3 => 'Applications/Evaluator',
+        3, 8 => 'Applications/Evaluator',
         4 => 'Applications/Interviewer',
         default => 'Applications/Index',
     };
@@ -218,7 +218,7 @@ Route::get('/applications/user/{user}', function ($user) {
     return Inertia::render($component, [
         'selectedUserId' => (int) $user
     ]);
-})->middleware(['auth', 'role:2,3,4,7'])->whereNumber('user')->name('applications.show');
+})->middleware(['auth', 'role:2,3,4,7,8'])->whereNumber('user')->name('applications.show');
 
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $request->validate(['email' => 'required|email']);
@@ -356,7 +356,7 @@ Route::get('/home', function () {
     }
 
     if ($roleId == 2) return redirect('/dashboard');
-    if ($roleId == 3) return redirect('/evaluator-dashboard');
+    if (in_array($roleId, [3, 8])) return redirect('/evaluator-dashboard');
     if ($roleId == 4) return redirect('/interviewer-dashboard');
     if ($roleId == 6) return redirect('/record-dashboard');
     if ($roleId == 7) return redirect('/dashboard');
@@ -438,13 +438,14 @@ Route::get('/user/eligible-programs', [ConfirmationController::class, 'getEligib
     ->middleware('auth');
 
 // Evaluator Routes
-Route::middleware(['auth', 'role:3'])->group(function () {
+Route::middleware(['auth', 'role:3,8'])->group(function () {
     Route::get('/evaluator-dashboard', [EvaluatorDashboardController::class, 'index'])->name('evaluator.dashboard');
     Route::get('/evaluator-applications', function () {
         return Inertia::render('Applications/Evaluator', ['user' => Auth::user()]);
     })->name('evaluator.applications');
     Route::get('/evaluator-dashboard/applicants', [EvaluatorDashboardController::class, 'getUsers']);
     Route::post('/evaluator/pass-application/{userId}', [EvaluatorDashboardController::class, 'passApplication']);
+    Route::post('/evaluator/reject-application/{userId}', [EvaluatorDashboardController::class, 'rejectApplication']);
     Route::get('/dashboard/user-files/{id}', [EvaluatorDashboardController::class, 'getUserFiles']);
     Route::post('/dashboard/return-files/{user}', [EvaluatorDashboardController::class, 'returnApplication'])->name('return.files');
 });
@@ -480,15 +481,14 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
 });
 
-// Lazy Loading Routes for Staff (Evaluator, Interviewer, Record Staff, Admin)
-Route::middleware(['auth', 'role:2,3,4,6'])->group(function () {
+Route::middleware(['auth', 'role:2,3,4,6,8'])->group(function () {
     Route::get('/api/lazy-load/document/{userId}/{fileType}', [\App\Http\Controllers\LazyLoadController::class, 'loadDocument']);
     Route::post('/api/lazy-load/documents-batch/{userId}', [\App\Http\Controllers\LazyLoadController::class, 'loadDocumentsBatch']);
     Route::get('/api/lazy-load/grades/{userId}', [\App\Http\Controllers\LazyLoadController::class, 'loadGrades']);
 });
 
 // Add grades endpoint to each role's trait-based controllers
-Route::middleware(['auth', 'role:3'])->group(function () {
+Route::middleware(['auth', 'role:3,8'])->group(function () {
     Route::get('/dashboard/user-grades/{id}', [EvaluatorDashboardController::class, 'getUserGrades']);
 });
 
@@ -504,7 +504,7 @@ Route::middleware(['auth', 'role:2,7'])->group(function () {
     Route::get('/admin-dashboard/user-grades/{id}', [DashboardController::class, 'getUserGrades']);
 });
 
-Route::middleware(['auth', 'role:2,3,4,7'])->group(function () {
+Route::middleware(['auth', 'role:2,3,4,7,8'])->group(function () {
     Route::get('/dashboard/users', [DashboardController::class, 'getUsers']);
 });
 
@@ -558,6 +558,11 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/api-clients', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'store'])->name('api-clients.store');
     Route::delete('/admin/api-clients/{id}', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'destroy'])->name('api-clients.destroy');
     Route::post('/admin/api-clients/{id}/regenerate', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'regenerate'])->name('api-clients.regenerate');
+
+    // Cutoff Settings
+    Route::get('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'index'])->name('cutoff-settings.index');
+    Route::post('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'store'])->name('cutoff-settings.store');
+    Route::delete('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'destroy'])->name('cutoff-settings.destroy');
 });
 
 // Temporary debug route for SAR PDF generation

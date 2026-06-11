@@ -124,7 +124,7 @@ class Handler extends ExceptionHandler
 
         // If it's a standard web request, let Laravel handle it normally 
         // (so it correctly redirects unauthenticated users back to the login page!).
-        return parent::render($request, $e);
+        return null;
     }
 
     private static bool $isLogging = false;

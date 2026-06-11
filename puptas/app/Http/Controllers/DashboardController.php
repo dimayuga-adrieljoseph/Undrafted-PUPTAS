@@ -33,7 +33,7 @@ class DashboardController extends Controller
         if (! in_array($user->role_id, [2, 7])) {
             return match ((int) $user->role_id) {
                 1 => redirect('/applicant-dashboard'),
-                3 => redirect('/evaluator-dashboard'),
+                3, 8 => redirect('/evaluator-dashboard'),
                 4 => redirect('/interviewer-dashboard'),
                 6 => redirect('/record-dashboard'),
                 default => redirect()->route('login'),
@@ -189,7 +189,7 @@ class DashboardController extends Controller
     {
         // Defense in depth: Verify authentication and authorized role (admin, evaluator, interviewer)
         $user = Auth::user();
-        if (!$user || !in_array($user->role_id, [2, 3, 4, 7])) {
+        if (!$user || !in_array($user->role_id, [2, 3, 4, 7, 8])) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 

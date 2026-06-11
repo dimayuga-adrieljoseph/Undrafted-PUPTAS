@@ -64,7 +64,7 @@ class ExternalMedicalApiController extends Controller
         ->whereHas('currentApplication', function ($query) {
             $query->join('application_processes as eval_proc', function ($join) {
                 $join->on('eval_proc.application_id', '=', 'applications.id')
-                    ->where('eval_proc.stage', '=', 'evaluator')
+                    ->where('eval_proc.stage', '=', 'grade_evaluator')
                     ->where('eval_proc.status', '=', 'completed')
                     ->whereIn('eval_proc.action', ['passed', 'transferred']);
             })
