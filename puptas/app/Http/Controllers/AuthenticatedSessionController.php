@@ -16,6 +16,12 @@ class AuthenticatedSessionController implements LoginResponse
         $user = Auth::user();
         $roleId = $user->role_id;
 
+        // Re-persist local_bypass after login so RefreshIdpToken skips Redis on the next request
+        $env = strtolower(config('app.env'));
+        if (in_array($env, ['local', 'staging']) && $request->session()->get('local_bypass')) {
+            $request->session()->put('local_bypass', true);
+        }
+
         if ($roleId == 1) {
             $testPasser = \App\Models\TestPasser::where('email', $user->email)->first();
             if ($testPasser && in_array($testPasser->passer_status_id, [3, 4])) {
