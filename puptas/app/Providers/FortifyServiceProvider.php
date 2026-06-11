@@ -38,6 +38,10 @@ class FortifyServiceProvider extends ServiceProvider
                                (request()->has('local') || session('local_bypass'));
 
             if ($isBypassAllowed || session()->has('errors') || request()->has('idp_error')) {
+                if ($isBypassAllowed) {
+                    session(['local_bypass' => true]);
+                }
+                
                 return \Inertia\Inertia::render('Auth/Login', [
                     'canResetPassword' => \Illuminate\Support\Facades\Route::has('password.request'),
                     'status' => session('status'),
