@@ -114,6 +114,13 @@ class EvaluatorDashboardController extends Controller
 
         $application = $this->applicationService->getApplicationByUserId($userId);
 
+        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        if (!in_array($application->program_id, $assignedProgramIds)) {
+            return response()->json([
+                'message' => 'You are not authorized to evaluate applicants for this program.',
+            ], 403);
+        }
+
         DB::transaction(function () use ($application, $userId, $request) {
             // Update existing evaluator process (can be in_progress or returned status)
             $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
@@ -180,6 +187,13 @@ class EvaluatorDashboardController extends Controller
 
         if (!$application) {
             return response()->json(['message' => 'Application not found'], 404);
+        }
+
+        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        if (!in_array($application->program_id, $assignedProgramIds)) {
+            return response()->json([
+                'message' => 'You are not authorized to evaluate applicants for this program.',
+            ], 403);
         }
 
         $inProgress = ApplicationProcess::where('application_id', $application->id)

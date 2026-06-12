@@ -304,6 +304,13 @@ trait ManagesApplicationFiles
             return response()->json(['message' => 'Application not found'], 404);
         }
 
+        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        if (!in_array($application->program_id, $assignedProgramIds)) {
+            return response()->json([
+                'message' => 'You are not authorized to return applicants for this program.',
+            ], 403);
+        }
+
         // Check prerequisite stage if needed
         $this->checkPrerequisiteStage($application);
 
