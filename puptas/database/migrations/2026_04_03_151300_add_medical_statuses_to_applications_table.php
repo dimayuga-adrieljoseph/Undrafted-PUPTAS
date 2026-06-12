@@ -15,7 +15,9 @@ return new class extends Migration
         // Adding 'cleared_for_enrollment' to the status ENUM
         // Using raw SQL for MySQL compatibility with ENUM updates
         if (DB::getDriverName() === 'mysql') {
+        if (DB::getDriverName() !== 'sqlite') {
             DB::statement("ALTER TABLE applications MODIFY COLUMN status ENUM('draft', 'submitted', 'returned', 'accepted', 'rejected', 'waitlist', 'transferred', 'cleared_for_enrollment') DEFAULT 'draft'");
+        }
         }
     }
 
@@ -25,7 +27,9 @@ return new class extends Migration
     public function down(): void
     {
         if (DB::getDriverName() === 'mysql') {
+        if (DB::getDriverName() !== 'sqlite') {
             DB::statement("ALTER TABLE applications MODIFY COLUMN status ENUM('draft', 'submitted', 'returned', 'accepted', 'rejected', 'waitlist', 'transferred') DEFAULT 'draft'");
+        }
         }
     }
 };
