@@ -74,11 +74,13 @@ class CutoffSettingsService
             throw new ValidationException($validator);
         }
 
+        $utcDateTime = $parsed->clone()->utc()->toDateTimeString();
+
         $record = CutoffSettings::first();
         if (!$record) {
-            $record = CutoffSettings::create(['cutoff_at' => $parsed->toDateTimeString()]);
+            $record = CutoffSettings::create(['cutoff_at' => $utcDateTime]);
         } else {
-            $record->update(['cutoff_at' => $parsed->toDateTimeString()]);
+            $record->update(['cutoff_at' => $utcDateTime]);
         }
 
         return $record->refresh();

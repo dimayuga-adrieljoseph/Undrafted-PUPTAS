@@ -46,6 +46,12 @@ class CreateNewUser implements CreatesNewUsers
             'has_access_token' => !empty($pendingReg['access_token']),
         ]);
 
+        $cutoffService = app(\App\Services\CutoffSettingsService::class);
+        if ($cutoffService->isCutoffPassed()) {
+            \Log::warning('Registration blocked: Cutoff has passed.', ['email' => $pendingReg['email'] ?? 'UNKNOWN']);
+            abort(403, 'Registration is closed. The deadline for admissions has already passed.');
+        }
+
         $rules = [
             'email' => ['nullable', 'string', 'email', 'max:255'],
 
