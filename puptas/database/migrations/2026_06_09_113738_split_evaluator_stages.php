@@ -12,7 +12,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE application_processes MODIFY COLUMN stage ENUM('evaluator', 'document_evaluator', 'grade_evaluator', 'interviewer', 'medical', 'records') NOT NULL");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE application_processes MODIFY COLUMN stage ENUM('evaluator', 'document_evaluator', 'grade_evaluator', 'interviewer', 'medical', 'records') NOT NULL");
+        }
 
         DB::table('application_processes')
             ->where('stage', 'evaluator')
@@ -28,6 +30,8 @@ return new class extends Migration
             ->whereIn('stage', ['document_evaluator', 'grade_evaluator'])
             ->update(['stage' => 'evaluator']);
 
-        DB::statement("ALTER TABLE application_processes MODIFY COLUMN stage ENUM('evaluator', 'interviewer', 'medical', 'records') NOT NULL");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE application_processes MODIFY COLUMN stage ENUM('evaluator', 'interviewer', 'medical', 'records') NOT NULL");
+        }
     }
 };

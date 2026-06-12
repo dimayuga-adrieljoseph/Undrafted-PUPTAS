@@ -18,7 +18,7 @@ return new class extends Migration
     {
         // MySQL requires ALTER to change enum values.
         // SQLite (used in tests) stores strings and doesn't enforce enums — no-op is safe.
-        if (DB::getDriverName() === 'mysql' || DB::getDriverName() === 'mariadb') {
+        if (DB::getDriverName() !== 'sqlite') {
             DB::statement("ALTER TABLE user_files MODIFY COLUMN status ENUM('uploading', 'pending', 'approved', 'returned', 'failed') DEFAULT 'pending'");
         }
     }
@@ -32,7 +32,7 @@ return new class extends Migration
         DB::table('user_files')->where('status', 'uploading')->update(['status' => 'pending']);
         DB::table('user_files')->where('status', 'failed')->update(['status' => 'pending']);
 
-        if (DB::getDriverName() === 'mysql' || DB::getDriverName() === 'mariadb') {
+        if (DB::getDriverName() !== 'sqlite') {
             DB::statement("ALTER TABLE user_files MODIFY COLUMN status ENUM('pending', 'approved', 'returned') DEFAULT 'pending'");
         }
     }
