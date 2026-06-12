@@ -20,9 +20,9 @@ class AuthenticatedSessionController implements LoginResponse
             return redirect('/applicant-dashboard');
         }
 
-        return redirect(match ($roleId) {
-            2 => '/dashboard',
-            3 => '/evaluator-dashboard',
+        return redirect(match ((int) $roleId) {
+            2, 7 => '/dashboard',
+            3, 8 => '/evaluator-dashboard',
             4 => '/interviewer-dashboard',
             6 => '/record-dashboard',
             default => '/',

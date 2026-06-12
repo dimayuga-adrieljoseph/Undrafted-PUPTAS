@@ -29,22 +29,29 @@ trait ManagesApplicationFiles
             // Load user with ONLY essential data (no files relationship)
             $user = User::with([
                 'currentApplication' => function ($query) {
-                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id');
+                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.submitted_at', 'applications.requires_promissory_note');
                 },
                 'currentApplication.program:id,code,name,slots',
                 'currentApplication.secondChoice:id,code,name,slots',
                 'currentApplication.thirdChoice:id,code,name,slots',
                 'currentApplication.processes' => function ($query) {
-                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'created_at', 'performed_by')
+                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'created_at', 'performed_by', 'reviewer_notes')
                         ->orderBy('created_at', 'desc')
                         ->limit(10)
                         ->with('performedBy:id,firstname,lastname');
                 },
                 'grades', // Include grades
-                'applicantProfile:user_id,student_number',
+                'applicantProfile:user_id,student_number,firstname,middlename,lastname,extension_name,salutation,sex,date_graduated,school,strand,track',
                 'applicantProfile.graduateTypes:id,label',
+                'applicantProfile.testPasser:user_id,reference_number',
             ])
-            ->findOrFail($id);
+            ->where(function($q) use ($id) {
+                $q->where('idp_user_id', $id);
+                if (is_numeric($id)) {
+                    $q->orWhere('id', $id);
+                }
+            })
+            ->firstOrFail();
 
             if (!$user) {
                 return response()->json(['message' => 'User not found'], 404);
@@ -80,10 +87,18 @@ trait ManagesApplicationFiles
             $userData = [
                 'id' => $user->id,
                 'student_number' => $user->applicantProfile?->student_number,
-                'firstname' => $user->firstname,
-                'lastname' => $user->lastname,
+                'firstname' => $user->applicantProfile?->firstname ?? $user->firstname,
+                'middlename' => $user->applicantProfile?->middlename,
+                'lastname' => $user->applicantProfile?->lastname ?? $user->lastname,
+                'extension_name' => $user->applicantProfile?->extension_name,
+                'salutation' => $user->applicantProfile?->salutation,
                 'email' => $user->email,
-                'sex' => $user->sex,
+                'sex' => $user->applicantProfile?->sex ?? $user->sex,
+                'date_graduated' => $user->applicantProfile?->date_graduated,
+                'school' => $user->applicantProfile?->school,
+                'strand' => $user->applicantProfile?->strand,
+                'track' => $user->applicantProfile?->track,
+                'reference_number' => $user->applicantProfile?->testPasser?->reference_number,
                 'created_at' => $user->created_at,
                 'grades' => $user->grades, // Include grades
                 // Map currentApplication to application for frontend compatibility
@@ -94,6 +109,7 @@ trait ManagesApplicationFiles
                     'program' => $user->currentApplication->program,
                     'second_choice' => $user->currentApplication->secondChoice,
                     'third_choice' => $user->currentApplication->thirdChoice,
+                    'requires_promissory_note' => $user->currentApplication->requires_promissory_note,
                     'processes' => $user->currentApplication->processes,
                 ] : null,
             ];
@@ -160,7 +176,14 @@ trait ManagesApplicationFiles
                 $this->ensureRole($this->getRoleId());
             }
 
-            $user = User::with('grades')->select('id')->findOrFail($id);
+            $user = User::with('grades')->select('id', 'idp_user_id')
+                ->where(function($q) use ($id) {
+                    $q->where('idp_user_id', $id);
+                    if (is_numeric($id)) {
+                        $q->orWhere('id', $id);
+                    }
+                })
+                ->firstOrFail();
 
             return response()->json([
                 'grades' => $user->grades,
@@ -194,7 +217,7 @@ trait ManagesApplicationFiles
     public function returnFiles(Request $request, $userId)
     {
         $validated = $request->validate([
-            'files' => 'required|array',
+            'files' => 'array',
             'files.*' => 'string|in:' . \App\Helpers\FileMapper::getValidFileFields(),
             'note' => 'required|string|max:1000',
         ]);
@@ -226,12 +249,15 @@ trait ManagesApplicationFiles
         // Wrap all mutations in transaction
         try {
             DB::transaction(function () use ($userId, $fileTypes, $note, $application, $inProgress) {
-                UserFile::where('user_id', (string) $userId)
-                    ->whereIn('type', $fileTypes)
-                    ->update([
-                        'status' => 'returned',
-                        'comment' => $note,
-                    ]);
+                // Only update files if specific files were selected
+                if (!empty($fileTypes)) {
+                    UserFile::where('user_id', (string) $userId)
+                        ->whereIn('type', $fileTypes)
+                        ->update([
+                            'status' => 'returned',
+                            'comment' => $note,
+                        ]);
+                }
 
                 $application->update([
                     'status' => 'returned',
@@ -241,7 +267,7 @@ trait ManagesApplicationFiles
                     'status' => 'returned',
                     'action' => 'returned',
                     'reviewer_notes' => $note,
-                    'files_affected' => $fileTypes,
+                    'files_affected' => !empty($fileTypes) ? $fileTypes : null,
                     'performed_by' => auth()->id(),
                 ]);
             });
@@ -263,9 +289,10 @@ trait ManagesApplicationFiles
     public function returnApplication(Request $request, $userId)
     {
         $request->validate([
-            'files' => 'required|array',
+            'files' => 'nullable|array',
             'files.*' => 'string|in:' . \App\Helpers\FileMapper::getValidFileFields(),
-            'note' => 'required|string|min:3',
+            'note' => 'nullable|string|max:1000',
+            'requires_promissory_note' => 'nullable|boolean',
         ]);
 
         $this->ensureRole($this->getRoleId());
@@ -275,6 +302,13 @@ trait ManagesApplicationFiles
 
         if (!$application) {
             return response()->json(['message' => 'Application not found'], 404);
+        }
+
+        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        if (!in_array($application->program_id, $assignedProgramIds)) {
+            return response()->json([
+                'message' => 'You are not authorized to return applicants for this program.',
+            ], 403);
         }
 
         // Check prerequisite stage if needed
@@ -300,6 +334,9 @@ trait ManagesApplicationFiles
         // Wrap all mutations in transaction
         try {
             DB::transaction(function () use ($application, $inProgress, $request, $files, $userId, $keyMap, &$updatedFiles, &$notFoundFiles) {
+                if ($request->has('requires_promissory_note')) {
+                    $application->requires_promissory_note = (bool) $request->requires_promissory_note;
+                }
                 $application->status = 'returned';
                 $application->save();
 
@@ -381,5 +418,5 @@ trait ManagesApplicationFiles
      * Get the role ID for this controller
      * Must be implemented by each controller
      */
-    abstract protected function getRoleId(): int;
+    abstract protected function getRoleId(): int|array;
 }

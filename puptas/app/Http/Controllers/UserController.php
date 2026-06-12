@@ -74,7 +74,7 @@ class UserController extends Controller
         $roleId = $user->role_id;
 
         // Assign to multiple programs for staff
-        if (in_array($roleId, [3, 4]) && $request->filled('program') && is_array($request->program)) {
+        if (in_array($roleId, [3, 4, 8]) && $request->filled('program') && is_array($request->program)) {
             $programs = Program::whereIn('code', $request->program)->get();
             $syncData = [];
             foreach ($programs as $prog) {
@@ -271,9 +271,9 @@ class UserController extends Controller
                 'required', 
                 'email', 
                 'max:255', 
-                \Illuminate\Validation\Rule::unique('users')->ignore($userModel->id),
+                \Illuminate\Validation\Rule::unique('users', 'email')->ignore($userModel->id),
                 \Illuminate\Validation\Rule::unique('test_passers', 'email')
-                    ->ignore($testPasser?->test_passer_id, 'test_passer_id'),
+                    ->ignore($testPasser ? $testPasser->test_passer_id : null, 'test_passer_id'),
             ],
             'role_id' => 'required|integer',
             'strand' => 'nullable|string|max:255',
@@ -395,8 +395,8 @@ class UserController extends Controller
                         . ($secondProgram ? ", 2nd choice to {$secondProgram->code}" : '')
                         . ($thirdProgram  ? ", 3rd choice to {$thirdProgram->code}"  : '');
                 }
-            } elseif (in_array($roleId, [3, 4]) && $request->filled('program') && is_array($request->program) && $user) {
-                // For Evaluators (3) and Interviewers (4): handle program arrays (using program code)
+            } elseif (in_array($roleId, [3, 4, 8]) && $request->filled('program') && is_array($request->program) && $user) {
+                // For Evaluators (3), Interviewers (4), and Grade Evaluators (8): handle program arrays (using program code)
                 $programs = Program::whereIn('code', $request->program)->get();
                 if ($programs->count() > 0) {
                     $syncData = [];
@@ -526,7 +526,7 @@ class UserController extends Controller
 
         // For IDP, users are not deleted locally, but we might want to drop their profiles locally
         $staff = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
-        if ($staff && $staff->role_id > 1) {
+        if ($staff) {
             $staff->delete();
         }
         $app = \App\Models\ApplicantProfile::where('user_id', (string) $id)->first();

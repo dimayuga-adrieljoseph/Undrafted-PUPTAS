@@ -300,15 +300,21 @@ class IdpAuthController extends Controller
             $expiresAt = now()->addSeconds($expiresIn - 60);
             $ttl = 60 * 60 * 24 * 30; // Keep in Redis for 30 days
 
-            \Illuminate\Support\Facades\Cache::store('redis')->put(
-                "idp_tokens:user_{$localDbUser->id}",
-                [
-                    'access_token'  => $accessToken,
-                    'refresh_token' => $refreshToken,
-                    'expires_at'    => $expiresAt->timestamp,
-                ],
-                $ttl
-            );
+            try {
+                \Illuminate\Support\Facades\Cache::store('redis')->put(
+                    "idp_tokens:user_{$localDbUser->id}",
+                    [
+                        'access_token'  => $accessToken,
+                        'refresh_token' => $refreshToken,
+                        'expires_at'    => $expiresAt->timestamp,
+                    ],
+                    $ttl
+                );
+            } catch (\Exception $e) {
+                \Log::warning('Failed to store IDP tokens in Redis during login', [
+                    'error' => $e->getMessage()
+                ]);
+            }
 
             $roleId = (int) $localDbUser->role_id;
 

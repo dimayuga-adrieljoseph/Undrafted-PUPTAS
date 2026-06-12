@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { LineChart } from "vue-chart-3";
 import { Head, Link, router } from "@inertiajs/vue3";
 import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
+import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
 import { 
     Chart as ChartJS, 
     LineController, 
@@ -42,7 +43,26 @@ const props = defineProps({
         type: Object,
         default: () => ({ submitted: [], accepted: [], returned: [], labels: [] }),
     },
+    filters: {
+        type: Object,
+        default: () => ({ start_date: '', end_date: '' })
+    }
 });
+
+const startDateFilter = ref(props.filters?.start_date || '');
+const endDateFilter = ref(props.filters?.end_date || '');
+const showDateFilter = ref(false);
+
+const applyFilters = () => {
+    router.get(window.location.pathname, {
+        start_date: startDateFilter.value,
+        end_date: endDateFilter.value
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true
+    });
+};
 
 // State
 const selectedUser = ref(null);
@@ -53,6 +73,7 @@ const showImageModal = ref(false);
 const isEvaluating = ref(false);
 const filesToReturn = ref({});
 const returnNote = ref("");
+const requiresPromissoryNote = ref(false);
 const autoRefreshTimer = ref(null);
 const POLL_INTERVAL_MS = 10000;
 
@@ -205,6 +226,55 @@ const getStatusClass = (status) => {
     return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
 };
 
+const getEvaluationStatusText = (pipelineStatus) => {
+    switch (pipelineStatus) {
+        case 'for_evaluation': return 'For Evaluation';
+        case 'evaluation_returned': return 'Returned for Revision';
+        case 'evaluation_passed': return 'Evaluation Passed';
+        case 'for_interview': return 'For Interview';
+        case 'interview_returned': return 'Returned for Revision';
+        case 'interview_passed': return 'Interview Passed';
+        case 'interview_transferred': return 'Course Transferred';
+        case 'for_medical': return 'For Medical';
+        case 'medical_cleared': return 'Medical Cleared';
+        case 'medical_rejected': return 'Medical Rejected';
+        case 'for_records': return 'For Records';
+        case 'officially_enrolled': return 'Officially Enrolled';
+        case 'rejected': return 'Rejected';
+        case 'submitted': return 'Submitted';
+        case 'returned': return 'Returned';
+        default: return pipelineStatus ? (pipelineStatus.charAt(0).toUpperCase() + pipelineStatus.slice(1).replace(/_/g, ' ')) : 'Unknown';
+    }
+};
+
+const getEvaluationStatusClass = (pipelineStatus) => {
+    switch (pipelineStatus) {
+        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+        case 'for_medical': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+        case 'medical_cleared': return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
+        case 'medical_rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'for_records': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
+        case 'officially_enrolled': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300';
+        case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'submitted': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+        case 'returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+    }
+};
+
+const isEvaluationCompleted = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
+    const targetStage = props.user?.role_id === 8 ? 'grade_evaluator' : 'document_evaluator';
+    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
+    return evaluatorProcess && evaluatorProcess.status === 'completed';
+});
+
 const getButtonClass = (type) => {
     const classes = {
         primary: 'bg-[#9E122C] text-white hover:bg-[#b51834]',
@@ -222,6 +292,14 @@ const formatDate = (dateString) => {
         day: 'numeric', 
         year: 'numeric' 
     });
+};
+
+const formatStage = (stage) => {
+    if (!stage) return 'Unknown Stage';
+    return stage
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
 };
 
 const formatFileKey = (key) => {
@@ -255,17 +333,25 @@ const selectUser = async (user) => {
     try {
         const response = await axios.get(`/dashboard/user-files/${user.id}`);
 
+        const userData = response.data.user;
         selectedUser.value = {
             ...user,
+            ...userData,
             application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
+                ...userData.application,
+                processes: userData.application?.processes || [],
+                program: userData.application?.program || null,
+                second_choice: userData.application?.second_choice || null,
+                third_choice: userData.application?.third_choice || null,
             },
+            grades: userData.grades || null,
+            pipeline_status: user.pipeline_status,
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
     } catch (error) {
         console.error("Failed to fetch user data:", error);
+        alert("An error occurred while loading the applicant profile. Please check the Developer Console (F12) for details. Error: " + error.message);
         selectedUserFiles.value = {};
         selectedUser.value = null;
     }
@@ -276,6 +362,8 @@ const closeUserCard = () => {
     isEvaluating.value = false;
     filesToReturn.value = {};
     returnNote.value = "";
+    requiresPromissoryNote.value = false;
+    refreshDashboard();
 };
 
 // Image modal
@@ -293,9 +381,16 @@ const closeImageModal = () => {
     showImageModal.value = false;
 };
 
+const evaluationError = ref("");
+
+const returnNoteCharCount = computed(() => {
+    return returnNote.value.length;
+});
+
 // Evaluation controls
 const startEvaluation = () => {
     isEvaluating.value = true;
+    evaluationError.value = "";
     filesToReturn.value = {};
     returnNote.value = "";
 };
@@ -306,67 +401,149 @@ const cancelEvaluation = () => {
     returnNote.value = "";
 };
 
+const isSubmitting = ref(false);
+
+const promptReturn = () => {
+    const selected = Object.keys(filesToReturn.value).filter((k) => filesToReturn.value[k]);
+    if (props.user?.role_id === 8 && !returnNote.value.trim()) {
+        evaluationError.value = "Please provide a reject reason.";
+        showToast("Please provide a reject reason.", "error");
+        return;
+    } else if (props.user?.role_id !== 8 && selected.length === 0 && !returnNote.value.trim()) {
+        evaluationError.value = "Please select at least one file or provide a return reason.";
+        showToast("Please select at least one file or provide a return reason.", "error");
+        return;
+    }
+    showReturnModal.value = true;
+};
+
 const submitReturn = async () => {
+    evaluationError.value = "";
     const selected = Object.keys(filesToReturn.value).filter(
         (k) => filesToReturn.value[k]
     );
     const note = returnNote.value.trim();
-    if (selected.length === 0) {
-        alert("Please select at least one file to return.");
-        return;
-    }
-    if (note.length < 3) {
-        alert("Please enter a return reason before submitting.");
+
+    if (returnNoteCharCount.value > 400) {
+        evaluationError.value = "The reason cannot exceed 400 characters.";
+        showReturnModal.value = false;
         return;
     }
 
+    isSubmitting.value = true;
     try {
-        await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
-            files: selected,
-            note,
-        });
+        if (props.user?.role_id === 8) {
+            await axios.post(`/evaluator/reject-application/${selectedUser.value.id}`, {
+                note: returnNote.value
+            });
+            showToast("Application rejected successfully!");
+        } else {
+            await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
+                files: Object.keys(filesToReturn.value).filter(k => filesToReturn.value[k]),
+                note: returnNote.value,
+                requires_promissory_note: requiresPromissoryNote.value
+            });
+            showToast("Application returned successfully!");
+        }
 
-        alert("Files returned successfully.");
+        showReturnModal.value = false;
         closeUserCard();
     } catch (error) {
         console.error(error);
+        showReturnModal.value = false;
         const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0];
-        alert(msg || "Return failed. Please try again.");
+        evaluationError.value = msg || (props.user?.role_id === 8 ? "Reject failed. Please try again." : "Return failed. Please try again.");
+    } finally {
+        isSubmitting.value = false;
     }
 };
 
 const submitPass = async () => {
-    if (!confirm("Pass this application to the interviewer stage? This cannot be undone.")) return;
+    evaluationError.value = "";
+    isSubmitting.value = true;
     try {
         await axios.post(
             `/evaluator/pass-application/${selectedUser.value.id}`,
             {
                 note: "",
+                requires_promissory_note: requiresPromissoryNote.value
             }
         );
 
-        alert("Application successfully passed to the next step.");
+        showPassModal.value = false;
         closeUserCard();
+        showToast("Applicant passed successfully!");
     } catch (error) {
         console.error("Error passing application:", error);
-        alert("Failed to pass application.");
+        showPassModal.value = false;
+        evaluationError.value = error.response?.data?.message || "Failed to pass application.";
+    } finally {
+        isSubmitting.value = false;
     }
+};
+
+const showPassModal = ref(false);
+const showReturnModal = ref(false);
+
+// Toast notification state
+const toastMessage = ref('');
+const toastType = ref('success');
+const toastVisible = ref(false);
+let toastTimeout = null;
+
+const showToast = (message, type = 'success') => {
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastMessage.value = message;
+    toastType.value = type;
+    toastVisible.value = true;
+    toastTimeout = setTimeout(() => {
+        toastVisible.value = false;
+    }, 3000);
 };
 </script>
 
 <template>
-    <Head title="Evaluator Dashboard" />
+    <Head :title="user?.role_id === 8 ? 'Grade Evaluator Dashboard' : 'Document Evaluator Dashboard'" />
     <EvaluatorLayout>
+        <!-- Success Toast Notification -->
+        <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
+            <div v-if="toastVisible" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
+                <div :class="['rounded-lg shadow-lg overflow-hidden border', toastType === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400']">
+                    <div class="p-4 flex items-start">
+                        <svg v-if="toastType === 'success'" class="w-5 h-5 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <svg v-else class="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div class="ml-3 w-0 flex-1 pt-0.5">
+                            <p :class="['text-sm font-medium', toastType === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200']">{{ toastMessage }}</p>
+                        </div>
+                        <div class="ml-4 flex-shrink-0 flex">
+                            <button @click="toastVisible = false" :class="['rounded-md inline-flex focus:outline-none', toastType === 'success' ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600']">
+                                <span class="sr-only">Close</span>
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
         <!-- Header Section -->
         <div class="px-4 md:px-8 mb-8">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Evaluator Dashboard</h1>
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{{ user?.role_id === 8 ? 'Grade Evaluator Dashboard' : 'Document Evaluator Dashboard' }}</h1>
                     <p class="text-gray-600 dark:text-gray-400 mt-2">Review and evaluate application submissions.</p>
                 </div>
                 <div class="flex items-center space-x-3">
                     <div class="relative w-full md:w-64">
                         <input
+                            id="searchQuery"
+                            name="searchQuery"
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search applicants..."
@@ -425,9 +602,67 @@ const submitPass = async () => {
             <!-- Left Column: Chart -->
             <div class="lg:col-span-2">
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                    <div class="mb-6">
-                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">Daily evaluation trends (Last 30 days)</p>
+                    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm">Daily evaluation trends</p>
+                        </div>
+            <div class="relative">
+              <button 
+                @click="showDateFilter = !showDateFilter"
+                class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50"
+              >
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Date Filter
+                <svg class="w-4 h-4 ml-1 text-gray-400 transition-transform duration-200" :class="{'rotate-180': showDateFilter}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <div 
+                v-if="showDateFilter" 
+                class="absolute right-0 mt-2 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl z-10 w-72 origin-top-right transition-all"
+              >
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Custom Range</h4>
+                  <button @click="showDateFilter = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+                <div class="space-y-4">
+                  <div>
+                    <label for="startDateFilter" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Start Date</label>
+                    <input 
+                      id="startDateFilter"
+                      name="startDateFilter"
+                      type="date" 
+                      v-model="startDateFilter"
+                      class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label for="endDateFilter" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">End Date</label>
+                    <input 
+                      id="endDateFilter"
+                      name="endDateFilter"
+                      type="date" 
+                      v-model="endDateFilter"
+                      class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
+                    />
+                  </div>
+                  <div class="pt-2">
+                    <button 
+                      @click="applyFilters(); showDateFilter = false;"
+                      class="w-full inline-flex justify-center items-center gap-1.5 px-4 py-2.5 bg-[#9E122C] text-white text-sm font-semibold rounded-lg hover:bg-[#b51834] transition-all shadow-md active:scale-95"
+                    >
+                      Apply Filter
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
                     </div>
                     
                     <div class="flex flex-wrap gap-4 mb-6">
@@ -560,28 +795,45 @@ const submitPass = async () => {
                                         </div>
                                         <div>
                                             <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Status</p>
-                                            <span :class="getStatusClass(selectedUser.application?.status)" 
+                                            <span :class="getEvaluationStatusClass(selectedUser.pipeline_status || selectedUser.application?.status)" 
                                                   class="px-3 py-1 rounded-full text-sm font-semibold inline-block">
-                                                {{ selectedUser.application?.status || "Pending" }}
+                                                {{ getEvaluationStatusText(selectedUser.pipeline_status || selectedUser.application?.status) }}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Quick Actions -->
-                                <div>
+                                <div v-if="!isEvaluationCompleted">
                                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h4>
+                                    
+                                    <!-- Promissory Note Checkbox -->
+                                    <div class="mb-4" v-if="user?.role_id !== 8">
+                                        <label class="flex items-center space-x-3 cursor-pointer p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                            <input 
+                                                id="requires_promissory_note_dash"
+                                                name="requires_promissory_note"
+                                                type="checkbox" 
+                                                v-model="requiresPromissoryNote" 
+                                                class="w-5 h-5 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:bg-gray-700"
+                                            >
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                Require applicant to submit a Promissory Note
+                                            </span>
+                                        </label>
+                                    </div>
+
                                     <div class="space-y-3">
                                         <button
                                             v-if="!isEvaluating"
                                             @click="startEvaluation"
                                             :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
                                         >
-                                            Return Documents
+                                            {{ user?.role_id === 8 ? 'Reject Application' : 'Return Documents' }}
                                         </button>
                                         <button
                                             v-if="!isEvaluating"
-                                            @click="submitPass"
+                                            @click="showPassModal = true"
                                             :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
                                         >
                                             Pass Application
@@ -594,32 +846,71 @@ const submitPass = async () => {
                                 </div>
                             </div>
 
+                            <!-- Promissory Note Badge -->
+                            <div v-if="selectedUser?.application?.requires_promissory_note"
+                                class="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl mb-5">
+                                <svg class="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-semibold text-orange-700 dark:text-orange-300">Requires Promissory Note</p>
+                                    <p class="text-xs text-orange-600 dark:text-orange-400 mt-0.5">This applicant has been tagged to require a Promissory Note.</p>
+                                </div>
+                            </div>
+
+                            <!-- Evaluation Completed Badge -->
+                            <div v-if="isEvaluationCompleted"
+                                class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl mb-5">
+                                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Evaluation Completed</p>
+                                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">You have already evaluated this application. Actions are no longer available.</p>
+                                </div>
+                            </div>
+
                             <!-- Evaluation Section -->
                             <div v-if="isEvaluating" class="mb-8 p-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Return Documents</h4>
-                                <p class="text-sm text-amber-700 dark:text-amber-400 mb-4">Select the documents to return and provide a reason. The applicant will be notified.</p>
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">{{ user?.role_id === 8 ? 'Reject Application' : 'Return Documents' }}</h4>
+                                <p class="text-sm text-amber-700 dark:text-amber-400 mb-4">{{ user?.role_id === 8 ? 'Provide a reason for rejecting this application.' : 'Select the documents to return and provide a reason. The applicant will be notified.' }}</p>
+                                
+                                <div v-if="evaluationError" class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded relative" role="alert">
+                                    <span class="block sm:inline">{{ evaluationError }}</span>
+                                </div>
                                 
                                 <!-- Return Note -->
                                 <div class="mb-4">
                                     <label for="returnNote" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Return Reason <span class="text-red-500 dark:text-red-300">*</span>
+                                        {{ user?.role_id === 8 ? 'Reject Reason' : 'Return Reason' }} <span class="text-red-500 dark:text-red-300">*</span>
                                     </label>
                                     <textarea
                                         id="returnNote"
+                                        name="returnNote"
                                         v-model="returnNote"
                                         rows="3"
-                                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                        maxlength="400"
+                                        :class="[
+                                            'w-full border rounded-lg p-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent',
+                                            returnNoteCharCount > 400 ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]'
+                                        ]"
                                         placeholder="Explain what the applicant needs to fix or resubmit..."
                                     ></textarea>
+                                    <div class="text-right mt-1">
+                                        <span :class="{'text-red-500': returnNoteCharCount > 400, 'text-gray-500': returnNoteCharCount <= 400}" class="text-xs">
+                                            {{ returnNoteCharCount }} / 400 characters
+                                        </span>
+                                    </div>
                                 </div>
+
 
                                 <!-- Action Buttons -->
                                 <div class="flex space-x-3">
-                                    <button
-                                        @click="submitReturn"
-                                        :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                    <button 
+                                        @click="promptReturn"
+                                        class="flex-1 px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white text-sm font-semibold rounded-lg transition"
                                     >
-                                        Confirm Return
+                                        {{ user?.role_id === 8 ? 'Confirm Reject' : 'Confirm Return' }}
                                     </button>
                                     <button
                                         @click="cancelEvaluation"
@@ -659,10 +950,11 @@ const submitPass = async () => {
                                                 </div>
                                                 
                                                 <!-- Checkbox overlay for evaluation mode -->
-                                                <div v-if="isEvaluating && hasImagePreview(file)" class="absolute top-2 left-2">
+                                                <div v-if="isEvaluating && hasImagePreview(file) && user?.role_id !== 8" class="absolute top-2 left-2">
                                                     <input
                                                         type="checkbox"
                                                         :id="key"
+                                                        :name="key"
                                                         v-model="filesToReturn[key]"
                                                         class="h-4 w-4 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:text-white"
                                                     />
@@ -670,14 +962,13 @@ const submitPass = async () => {
                                             </div>
                                             
                                             <!-- Document Label -->
-                                            <div class="p-2 border-t border-gray-200 dark:border-gray-700">
-                                                <label 
-                                                    :for="key"
-                                                    class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate"
-                                                    :title="formatFileKey(key)"
-                                                >
+                                            <div class="bg-gray-50 dark:bg-gray-800 p-3 border-t border-gray-200 dark:border-gray-700">
+                                                <label v-if="isEvaluating && hasImagePreview(file) && user?.role_id !== 8" :for="key" class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">
                                                     {{ formatFileKey(key) }}
                                                 </label>
+                                                <span v-else class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">
+                                                    {{ formatFileKey(key) }}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -695,6 +986,7 @@ const submitPass = async () => {
                                     >
                                         <div :class="[
                                             'w-3 h-3 rounded-full mt-1.5 flex-shrink-0',
+                                            process.action === 'rejected' ? 'bg-red-500' :
                                             process.status === 'completed' ? 'bg-green-500' :
                                             process.status === 'in_progress' ? 'bg-yellow-500' :
                                             'bg-red-500'
@@ -703,7 +995,7 @@ const submitPass = async () => {
                                             <div class="flex justify-between items-start">
                                                 <div>
                                                     <p class="font-semibold text-gray-900 dark:text-white">
-                                                        {{ capitalize(process.stage) }}
+                                                        {{ formatStage(process.stage) }}
                                                     </p>
                                                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                                         {{ process.notes || 'No notes provided' }}
@@ -711,11 +1003,12 @@ const submitPass = async () => {
                                                 </div>
                                                 <span :class="[
                                                     'px-2 py-1 rounded-full text-xs font-semibold',
+                                                    process.action === 'rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
                                                     process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
                                                     process.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
                                                     'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                                                 ]">
-                                                    {{ capitalize(process.status) }}
+                                                    {{ process.action === 'rejected' ? 'Rejected' : capitalize(process.status) }}
                                                 </span>
                                             </div>
                                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -752,6 +1045,30 @@ const submitPass = async () => {
                 </div>
             </div>
         </transition>
+
+        <ChangesConfirmationModal
+            :show="showPassModal"
+            title="Pass Application"
+            subtitle="Pass this application to the next stage? This cannot be undone."
+            confirmText="Confirm Pass"
+            confirmButtonClass="bg-green-600 hover:bg-green-700 text-white"
+            :hideTable="true"
+            :loading="isSubmitting"
+            @confirm="submitPass"
+            @cancel="showPassModal = false"
+        />
+
+        <ChangesConfirmationModal
+            :show="showReturnModal"
+            title="Return Application"
+            subtitle="Return this application to the applicant for corrections? This cannot be undone."
+            confirmText="Confirm Return"
+            confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
+            :hideTable="true"
+            :loading="isSubmitting"
+            @confirm="submitReturn"
+            @cancel="showReturnModal = false"
+        />
     </EvaluatorLayout>
 </template>
 

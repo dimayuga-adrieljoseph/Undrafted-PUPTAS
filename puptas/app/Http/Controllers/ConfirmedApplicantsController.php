@@ -57,7 +57,7 @@ class ConfirmedApplicantsController extends Controller
             'graduateTypes',
         ])
             ->whereHas('currentApplication.processes', function ($q) {
-                $q->where('stage', 'evaluator')
+                $q->where('stage', 'document_evaluator')
                     ->whereIn('status', ['in_progress', 'returned']);
             })
             ->orderBy('lastname')
@@ -132,7 +132,7 @@ class ConfirmedApplicantsController extends Controller
         $applicants = ApplicantProfile::with(['currentApplication', 'testPasser'])
             ->whereIn('user_id', $applicantIds)
             ->whereHas('currentApplication.processes', function ($q) {
-                $q->where('stage', 'evaluator')
+                $q->where('stage', 'document_evaluator')
                     ->whereIn('status', ['in_progress', 'returned']);
             })
             ->get()
@@ -303,7 +303,7 @@ class ConfirmedApplicantsController extends Controller
         $applicants = ApplicantProfile::with(['currentApplication', 'testPasser'])
             ->whereIn('user_id', $applicantIds)
             ->whereHas('currentApplication.processes', function ($q) {
-                $q->where('stage', 'evaluator')
+                $q->where('stage', 'document_evaluator')
                     ->whereIn('status', ['in_progress', 'returned']);
             })
             ->get();

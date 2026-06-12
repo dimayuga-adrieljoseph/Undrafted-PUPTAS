@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\DoclingParser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class GradeExtractionController extends Controller
 {
-    public function __construct(
-        private DoclingParser $doclingParser
-    ) {}
+    public function __construct() {}
 
     /**
      * Extract grades from uploaded images and store the result in the session,

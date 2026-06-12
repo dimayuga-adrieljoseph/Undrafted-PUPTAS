@@ -242,6 +242,36 @@ class ConfirmationController extends Controller
     }
 
     /**
+     * Resubmit a returned application back to the evaluator stage.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function resubmit()
+    {
+        $user = Auth::user();
+
+        try {
+            $application = $this->confirmationService->resubmitApplication($user);
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} resubmitted application #{$application->id} for evaluation.", $user, 'ADMISSION_DATA');
+
+            return response()->json([
+                'message' => 'Application resubmitted for evaluation.',
+                'status' => $application->status,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Application resubmit failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
      * Confirm a direct-to-S3 upload by recording the file in the database.
      * Called after the client successfully uploads directly to S3.
      *

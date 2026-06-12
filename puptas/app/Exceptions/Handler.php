@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
+use Symfony\Component\ErrorHandler\Error\FatalError;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
@@ -43,8 +44,11 @@ class Handler extends ExceptionHandler
         // Must be checked BEFORE wantsJson() since Inertia also sends Accept: application/json.
         if ($request->header('X-Inertia')) {
             if ($e instanceof ValidationException) {
-                // Let Fortify/Inertia handle validation errors natively (field-level errors)
-                return parent::render($request, $e);
+                // Safely redirect back with validation errors instead of relying on parent::render()
+                // which might cause infinite loops or crashes in some environments.
+                return back()
+                    ->withInput($request->except($this->dontFlash ?? []))
+                    ->withErrors($e->errors(), $e->errorBag ?? 'default');
             }
 
             if ($e instanceof AuthenticationException) {
@@ -123,7 +127,7 @@ class Handler extends ExceptionHandler
 
         // If it's a standard web request, let Laravel handle it normally 
         // (so it correctly redirects unauthenticated users back to the login page!).
-        return parent::render($request, $e);
+        return null;
     }
 
     private static bool $isLogging = false;

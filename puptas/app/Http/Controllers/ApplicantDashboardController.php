@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Program;
 use App\Models\Grade;
+use App\Models\Application;
 
 class ApplicantDashboardController extends Controller
 {
@@ -30,9 +31,72 @@ class ApplicantDashboardController extends Controller
             'tvl'   => '/grades/tvl',
         ];
 
+        // Determine whether the "Download Grade Verification Slip" button should appear.
+        // Conditions:
+        //   1. Applicant has submitted their application (status !== 'draft')
+        //   2. Grades exist (qualification results have been computed)
+        $application = $user->currentApplication;
+        $hasSubmittedApplication = $application && $application->status !== 'draft';
+        $hasGrades = Grade::where('user_id', (string) $user->id)->exists();
+        $canDownloadSlip = $hasSubmittedApplication && $hasGrades;
+
         return Inertia::render('Dashboard/Applicant', [
+            'user'           => $user,
+            'gradeUrl'       => $strand ? ($gradeRouteMap[$strand] ?? null) : null,
+            'canDownloadSlip' => $canDownloadSlip,
+            'showQualifiedProgramsNav' => $hasSubmittedApplication,
+        ]);
+    }
+
+    /**
+     * Render the Qualified Programs page
+     */
+    public function qualifiedProgramsPage()
+    {
+        $user = Auth::user();
+
+        if ($user->role_id !== 1) {
+            return redirect()->back()->with('error', 'Unauthorized access.');
+        }
+
+        $application = $user->currentApplication;
+        $hasSubmittedApplication = $application && $application->status !== 'draft';
+
+        return Inertia::render('Programs/Qualified', [
             'user' => $user,
-            'gradeUrl' => $strand ? ($gradeRouteMap[$strand] ?? null) : null,
+            'showQualifiedProgramsNav' => $hasSubmittedApplication,
+        ]);
+    }
+
+    /**
+     * Render the Applicant's own Profile page (view-only)
+     */
+    public function profile()
+    {
+        $user = Auth::user();
+
+        if ($user->role_id !== 1) {
+            return redirect()->back()->with('error', 'Unauthorized access.');
+        }
+
+        $user->load(['applicantProfile', 'testPasser']);
+
+        $application = $user->currentApplication;
+        if ($application) {
+            $application->load(['program', 'processes', 'secondChoice', 'thirdChoice']);
+        }
+
+        $grades = Grade::where('user_id', (string) $user->id)->first();
+        $files = $user->files ?? collect();
+        $profile = $user->applicantProfile;
+
+        return Inertia::render('Profile/Applicant', [
+            'user'             => $user,
+            'applicantProfile' => $profile,
+            'grades'           => $grades,
+            'files'            => $files,
+            'application'      => $application,
+            'showQualifiedProgramsNav' => $application && $application->status !== 'draft',
         ]);
     }
 

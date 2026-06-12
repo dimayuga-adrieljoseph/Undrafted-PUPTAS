@@ -60,7 +60,7 @@ const form = useForm({
     date_graduated:          formatDateForInput(props.user.date_graduated),
 });
 
-const showProgramAssignment = computed(() => ['3', '4'].includes(form.role_id.toString()));
+const showProgramAssignment = computed(() => ['3', '4', '8'].includes(form.role_id.toString()));
 const showApplicantProgram  = computed(() => form.role_id.toString() === '1');
 
 const onRoleChange = () => {
@@ -164,7 +164,7 @@ function collectGradeChanges() {
     const originalGrades = props.user.grades ?? {};
 
     // Check known grade fields
-    knownGradeFields.forEach(f => {
+    knownGradeFields.value.forEach(f => {
         const oldRaw = originalGrades[f.key];
         const newRaw = editableGrades.value[f.key];
         const oldVal = oldRaw != null ? String(oldRaw) : '';
@@ -235,7 +235,10 @@ async function confirmAllSave() {
                 form.put(route('users.update', props.user.id), {
                     preserveScroll: true,
                     onSuccess: () => resolve(),
-                    onError: (errors) => reject(errors),
+                    onError: (errors) => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        reject(errors);
+                    },
                 });
             });
         }
@@ -243,14 +246,17 @@ async function confirmAllSave() {
         // Save grades second
         if (hasGradeChanges) {
             const payload = {};
-            knownGradeFields.forEach(f => { const v = editableGrades.value[f.key]; payload[f.key] = v !== '' && v != null ? parseFloat(v) : null; });
+            knownGradeFields.value.forEach(f => { const v = editableGrades.value[f.key]; payload[f.key] = v !== '' && v != null ? parseFloat(v) : null; });
             payload.dynamic_subjects = dynamicGradeSubjects.value.filter(s => s.name.trim() !== '').map(s => ({ subject: s.name.trim(), grade: s.grade !== '' && s.grade != null ? parseFloat(s.grade) : null, category: s.category }));
 
             await new Promise((resolve, reject) => {
                 router.put(route('users.grades.update', props.user.id), payload, {
                     preserveScroll: true,
                     onSuccess: () => { gradesSaved.value = true; setTimeout(() => { gradesSaved.value = false; }, 3000); resolve(); },
-                    onError: (errors) => reject(errors),
+                    onError: (errors) => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        reject(errors);
+                    },
                 });
             });
         }
@@ -292,6 +298,7 @@ const docStatusBadge = (status) => {
 const gradeGroups = computed(() => {
     const g = props.user.grades;
     if (!g) return [];
+    const strand = (props.user.strand || '').toUpperCase();
     const groups = [];
     const core = [];
     if (g.english != null) core.push({ label: 'English (Average)', value: g.english });
@@ -300,22 +307,44 @@ const gradeGroups = computed(() => {
     if (g.g12_first_sem != null) core.push({ label: 'G12 First Semester Average', value: g.g12_first_sem });
     if (g.g12_second_sem != null) core.push({ label: 'G12 Second Semester Average', value: g.g12_second_sem });
     if (core.length) groups.push({ title: 'Core Averages', subjects: core });
+
+    // G11 english fields vary by strand — STEM uses G12 versions instead of G11
+    const g11EnglishFields = strand === 'STEM'
+        ? [
+            { key: 'g11_oral_communication', label: 'Oral Communication' },
+            { key: 'g11_reading_writing', label: 'Reading & Writing' },
+          ]
+        : [
+            { key: 'g11_oral_communication', label: 'Oral Communication' },
+            { key: 'g11_21st_century_lit', label: '21st Century Literature' },
+            { key: 'g11_academic_professional', label: 'Academic & Professional Literacy' },
+            { key: 'g11_reading_writing', label: 'Reading & Writing' },
+          ];
+
     const g11 = [
-        { key: 'g11_oral_communication', label: 'Oral Communication' }, { key: 'g11_21st_century_lit', label: '21st Century Literature' },
-        { key: 'g11_academic_professional', label: 'Academic & Professional Literacy' }, { key: 'g11_reading_writing', label: 'Reading & Writing' },
-        { key: 'g11_general_mathematics', label: 'General Mathematics' }, { key: 'g11_statistics_probability', label: 'Statistics & Probability' },
-        { key: 'g11_earth_life_science', label: 'Earth & Life Science' }, { key: 'g11_physical_science', label: 'Physical Science' },
-        { key: 'g11_business_mathematics', label: 'Business Mathematics (ABM)' }, { key: 'g11_pre_calculus', label: 'Pre-Calculus (STEM)' },
-        { key: 'g11_basic_calculus', label: 'Basic Calculus (STEM)' }, { key: 'g11_earth_science', label: 'Earth Science (STEM)' },
-        { key: 'g11_general_chemistry_1', label: 'General Chemistry 1 (STEM)' },
+        ...g11EnglishFields,
+        { key: 'g11_general_mathematics', label: 'General Mathematics' },
+        { key: 'g11_statistics_probability', label: 'Statistics & Probability' },
+        { key: 'g11_earth_life_science', label: 'Earth & Life Science' },
+        { key: 'g11_physical_science', label: 'Physical Science' },
+        { key: 'g11_business_mathematics', label: 'Business Mathematics' },
+        { key: 'g11_pre_calculus', label: 'Pre-Calculus' },
+        { key: 'g11_basic_calculus', label: 'Basic Calculus' },
+        { key: 'g11_earth_science', label: 'Earth Science' },
+        { key: 'g11_general_chemistry_1', label: 'General Chemistry 1' },
     ].filter(s => g[s.key] != null).map(s => ({ label: s.label, value: g[s.key] }));
     if (g11.length) groups.push({ title: 'Grade 11 Subjects', subjects: g11 });
+
     const g12 = [
-        { key: 'g12_21st_century_lit', label: '21st Century Literature (ABM)' }, { key: 'g12_academic_professional', label: 'Academic & Professional Literacy (STEM)' },
-        { key: 'g12_general_physics_1', label: 'General Physics 1 (STEM)' }, { key: 'g12_general_physics_2', label: 'General Physics 2 (STEM)' },
-        { key: 'g12_general_biology_1', label: 'General Biology 1 (STEM)' }, { key: 'g12_general_biology_2', label: 'General Biology 2 (STEM)' },
-        { key: 'g12_general_chemistry_2', label: 'General Chemistry 2 (STEM)' }, { key: 'g12_earth_life_science', label: 'Earth & Life Science (HUMSS)' },
-        { key: 'g12_physical_science', label: 'Physical Science (HUMSS)' },
+        { key: 'g12_21st_century_lit', label: '21st Century Literature' },
+        { key: 'g12_academic_professional', label: 'Academic & Professional Literacy' },
+        { key: 'g12_general_physics_1', label: 'General Physics 1' },
+        { key: 'g12_general_physics_2', label: 'General Physics 2' },
+        { key: 'g12_general_biology_1', label: 'General Biology 1' },
+        { key: 'g12_general_biology_2', label: 'General Biology 2' },
+        { key: 'g12_general_chemistry_2', label: 'General Chemistry 2' },
+        { key: 'g12_earth_life_science', label: 'Earth & Life Science' },
+        { key: 'g12_physical_science', label: 'Physical Science' },
     ].filter(s => g[s.key] != null).map(s => ({ label: s.label, value: g[s.key] }));
     if (g12.length) groups.push({ title: 'Grade 12 Subjects', subjects: g12 });
     const dynamic = g.dynamic_subjects ?? [];
@@ -332,37 +361,66 @@ const gradeColor = (val) => {
     return 'grade-low';
 };
 
-const knownGradeFields = [
-    { key: 'g12_first_sem', label: 'G12 First Semester Average', group: 'Core Averages', category: null },
-    { key: 'g12_second_sem', label: 'G12 Second Semester Average', group: 'Core Averages', category: null },
-    { key: 'g11_oral_communication', label: 'Oral Communication', group: 'Grade 11 Subjects', category: 'english' },
-    { key: 'g11_21st_century_lit', label: '21st Century Literature', group: 'Grade 11 Subjects', category: 'english' },
-    { key: 'g11_academic_professional', label: 'Academic & Professional Literacy', group: 'Grade 11 Subjects', category: 'english' },
-    { key: 'g11_reading_writing', label: 'Reading & Writing', group: 'Grade 11 Subjects', category: 'english' },
-    { key: 'g11_general_mathematics', label: 'General Mathematics', group: 'Grade 11 Subjects', category: 'math' },
-    { key: 'g11_statistics_probability', label: 'Statistics & Probability', group: 'Grade 11 Subjects', category: 'math' },
-    { key: 'g11_earth_life_science', label: 'Earth & Life Science', group: 'Grade 11 Subjects', category: 'science' },
-    { key: 'g11_physical_science', label: 'Physical Science', group: 'Grade 11 Subjects', category: 'science' },
-    { key: 'g11_business_mathematics', label: 'Business Mathematics (ABM)', group: 'Grade 11 Subjects', category: 'math' },
-    { key: 'g11_pre_calculus', label: 'Pre-Calculus (STEM)', group: 'Grade 11 Subjects', category: 'math' },
-    { key: 'g11_basic_calculus', label: 'Basic Calculus (STEM)', group: 'Grade 11 Subjects', category: 'math' },
-    { key: 'g11_earth_science', label: 'Earth Science (STEM)', group: 'Grade 11 Subjects', category: 'science' },
-    { key: 'g11_general_chemistry_1', label: 'General Chemistry 1 (STEM)', group: 'Grade 11 Subjects', category: 'science' },
-    { key: 'g12_21st_century_lit', label: '21st Century Literature (ABM)', group: 'Grade 12 Subjects', category: 'english' },
-    { key: 'g12_academic_professional', label: 'Academic & Professional Literacy (STEM)', group: 'Grade 12 Subjects', category: 'english' },
-    { key: 'g12_general_physics_1', label: 'General Physics 1 (STEM)', group: 'Grade 12 Subjects', category: 'science' },
-    { key: 'g12_general_physics_2', label: 'General Physics 2 (STEM)', group: 'Grade 12 Subjects', category: 'science' },
-    { key: 'g12_general_biology_1', label: 'General Biology 1 (STEM)', group: 'Grade 12 Subjects', category: 'science' },
-    { key: 'g12_general_biology_2', label: 'General Biology 2 (STEM)', group: 'Grade 12 Subjects', category: 'science' },
-    { key: 'g12_general_chemistry_2', label: 'General Chemistry 2 (STEM)', group: 'Grade 12 Subjects', category: 'science' },
-    { key: 'g12_earth_life_science', label: 'Earth & Life Science (HUMSS)', group: 'Grade 12 Subjects', category: 'science' },
-    { key: 'g12_physical_science', label: 'Physical Science (HUMSS)', group: 'Grade 12 Subjects', category: 'science' },
-];
+const knownGradeFields = computed(() => {
+    const strand = (props.user.strand || '').toUpperCase();
+
+    // English fields differ by strand — STEM uses G12 versions, everyone else uses G11 versions
+    const englishG11Fields = strand === 'STEM'
+        ? [
+            { key: 'g11_oral_communication', label: 'Oral Communication', group: 'Grade 11 Subjects', category: 'english' },
+            { key: 'g11_reading_writing', label: 'Reading & Writing', group: 'Grade 11 Subjects', category: 'english' },
+          ]
+        : [
+            { key: 'g11_oral_communication', label: 'Oral Communication', group: 'Grade 11 Subjects', category: 'english' },
+            { key: 'g11_21st_century_lit', label: '21st Century Literature', group: 'Grade 11 Subjects', category: 'english' },
+            { key: 'g11_academic_professional', label: 'Academic & Professional Literacy', group: 'Grade 11 Subjects', category: 'english' },
+            { key: 'g11_reading_writing', label: 'Reading & Writing', group: 'Grade 11 Subjects', category: 'english' },
+          ];
+
+    const englishG12Fields = strand === 'STEM'
+        ? [
+            { key: 'g12_21st_century_lit', label: '21st Century Literature', group: 'Grade 12 Subjects', category: 'english' },
+            { key: 'g12_academic_professional', label: 'Academic & Professional Literacy', group: 'Grade 12 Subjects', category: 'english' },
+          ]
+        : strand === 'ABM'
+        ? [
+            { key: 'g12_21st_century_lit', label: '21st Century Literature', group: 'Grade 12 Subjects', category: 'english' },
+          ]
+        : [];
+
+    return [
+        { key: 'g12_first_sem', label: 'G12 First Semester Average', group: 'Core Averages', category: null },
+        { key: 'g12_second_sem', label: 'G12 Second Semester Average', group: 'Core Averages', category: null },
+        // G11 English — strand-aware
+        ...englishG11Fields,
+        // G11 Math
+        { key: 'g11_general_mathematics', label: 'General Mathematics', group: 'Grade 11 Subjects', category: 'math' },
+        { key: 'g11_statistics_probability', label: 'Statistics & Probability', group: 'Grade 11 Subjects', category: 'math' },
+        { key: 'g11_business_mathematics', label: 'Business Mathematics', group: 'Grade 11 Subjects', category: 'math' },
+        { key: 'g11_pre_calculus', label: 'Pre-Calculus', group: 'Grade 11 Subjects', category: 'math' },
+        { key: 'g11_basic_calculus', label: 'Basic Calculus', group: 'Grade 11 Subjects', category: 'math' },
+        // G11 Science
+        { key: 'g11_earth_life_science', label: 'Earth & Life Science', group: 'Grade 11 Subjects', category: 'science' },
+        { key: 'g11_physical_science', label: 'Physical Science', group: 'Grade 11 Subjects', category: 'science' },
+        { key: 'g11_earth_science', label: 'Earth Science', group: 'Grade 11 Subjects', category: 'science' },
+        { key: 'g11_general_chemistry_1', label: 'General Chemistry 1', group: 'Grade 11 Subjects', category: 'science' },
+        // G12 English — strand-aware
+        ...englishG12Fields,
+        // G12 Science
+        { key: 'g12_general_physics_1', label: 'General Physics 1', group: 'Grade 12 Subjects', category: 'science' },
+        { key: 'g12_general_physics_2', label: 'General Physics 2', group: 'Grade 12 Subjects', category: 'science' },
+        { key: 'g12_general_biology_1', label: 'General Biology 1', group: 'Grade 12 Subjects', category: 'science' },
+        { key: 'g12_general_biology_2', label: 'General Biology 2', group: 'Grade 12 Subjects', category: 'science' },
+        { key: 'g12_general_chemistry_2', label: 'General Chemistry 2', group: 'Grade 12 Subjects', category: 'science' },
+        { key: 'g12_earth_life_science', label: 'Earth & Life Science', group: 'Grade 12 Subjects', category: 'science' },
+        { key: 'g12_physical_science', label: 'Physical Science', group: 'Grade 12 Subjects', category: 'science' },
+    ];
+});
 
 const buildInitialGrades = () => {
     const g = props.user.grades ?? {};
     const result = {};
-    knownGradeFields.forEach(f => { result[f.key] = g[f.key] != null ? String(g[f.key]) : ''; });
+    knownGradeFields.value.forEach(f => { result[f.key] = g[f.key] != null ? String(g[f.key]) : ''; });
     return result;
 };
 const editableGrades = ref(buildInitialGrades());
@@ -379,13 +437,13 @@ const removeDynamicSubject = (id) => { dynamicGradeSubjects.value = dynamicGrade
 
 const knownGradeGroups = computed(() => {
     const groups = {};
-    knownGradeFields.forEach(f => { if (!groups[f.group]) groups[f.group] = []; groups[f.group].push(f); });
+    knownGradeFields.value.forEach(f => { if (!groups[f.group]) groups[f.group] = []; groups[f.group].push(f); });
     return Object.entries(groups).map(([title, fields]) => ({ title, fields }));
 });
 
 const computeAvg = (category) => {
     const values = [];
-    knownGradeFields.forEach(f => { if (f.category === category) { const v = parseFloat(editableGrades.value[f.key]); if (!isNaN(v) && v >= 0 && v <= 100) values.push(v); } });
+    knownGradeFields.value.forEach(f => { if (f.category === category) { const v = parseFloat(editableGrades.value[f.key]); if (!isNaN(v) && v >= 0 && v <= 100) values.push(v); } });
     dynamicGradeSubjects.value.forEach(s => { if (s.category === category && s.name.trim() !== '') { const v = parseFloat(s.grade); if (!isNaN(v) && v >= 0 && v <= 100) values.push(v); } });
     if (!values.length) return null;
     return (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
@@ -965,7 +1023,7 @@ REPLACE
 .grade-edit-row:last-child { border-bottom:none; }
 .grade-edit-label { font-size:.8rem; color:#4b5563; flex:1; }
 .grade-edit-right { display:flex; align-items:center; gap:.6rem; }
-.grade-edit-input { width:90px; padding:.35rem .6rem; border-radius:8px; border:1.5px solid #e5e7eb; background:#f9fafb; font-size:.82rem; color:#111827; text-align:right; outline:none; transition:border-color .15s,box-shadow .15s; -moz-appearance:textfield; }
+.grade-edit-input { width:90px; padding:.35rem .6rem; border-radius:8px; border:1.5px solid #e5e7eb; background:#f9fafb; font-size:.82rem; color:#111827; text-align:right; outline:none; transition:border-color .15s,box-shadow .15s; -moz-appearance:textfield; appearance:textfield; }
 .grade-edit-input::-webkit-outer-spin-button, .grade-edit-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 .grade-edit-input:focus { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-dim); background:#fff; }
 .grade-edit-input--name { width:auto; flex:1; text-align:left; }
