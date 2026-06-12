@@ -74,11 +74,12 @@ class CutoffSettingsService
             throw new ValidationException($validator);
         }
 
-        $record = CutoffSettings::findOrFail(self::SINGLETON_ID);
+        $record = CutoffSettings::updateOrCreate(
+            ['id' => self::SINGLETON_ID],
+            ['cutoff_at' => $parsed->toDateTimeString()]
+        );
 
-        $record->update(['cutoff_at' => $parsed->toDateTimeString()]);
-
-        return $record->refresh();
+        return $record;
     }
 
     /**
@@ -91,7 +92,10 @@ class CutoffSettingsService
      */
     public function clearCutoff(): CutoffSettings
     {
-        $record = CutoffSettings::findOrFail(self::SINGLETON_ID);
+        $record = CutoffSettings::firstOrCreate(
+            ['id' => self::SINGLETON_ID],
+            ['cutoff_at' => null]
+        );
 
         // No-op when already null — skip the write.
         if ($record->cutoff_at !== null) {
