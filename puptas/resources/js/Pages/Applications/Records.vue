@@ -704,6 +704,16 @@ const submitReturn = async () => {
 const capitalize = (str) =>
     typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
 
+const formatStage = (stage) => {
+    const map = {
+        'evaluator': 'DE, GE',
+        'interviewer': 'Interviewer',
+        'medical': 'Medical',
+        'record_staff': 'Record Staff'
+    };
+    return map[stage] || (stage ? stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ") : "");
+};
+
 const formatDate = (date) => {
     const d = new Date(date);
     return d.toLocaleString(); // or .toLocaleDateString() if you prefer
