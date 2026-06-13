@@ -35,13 +35,13 @@ trait ManagesApplicationFiles
                 'currentApplication.secondChoice:id,code,name,slots',
                 'currentApplication.thirdChoice:id,code,name,slots',
                 'currentApplication.processes' => function ($query) {
-                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'created_at', 'performed_by', 'reviewer_notes')
+                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'started_at', 'reviewed_by', 'created_at', 'performed_by', 'reviewer_notes')
                         ->orderBy('created_at', 'desc')
                         ->limit(10)
                         ->with('performedBy:id,firstname,lastname');
                 },
                 'grades', // Include grades
-                'applicantProfile:user_id,student_number,firstname,middlename,lastname,extension_name,salutation,sex,date_graduated,school,strand,track',
+                'applicantProfile:user_id,firstname,middlename,lastname,extension_name,salutation,sex,date_graduated,school,strand,track',
                 'applicantProfile.graduateTypes:id,label',
                 'applicantProfile.testPasser:user_id,reference_number',
             ])

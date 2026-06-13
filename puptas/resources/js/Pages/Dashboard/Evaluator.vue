@@ -275,6 +275,71 @@ const isEvaluationCompleted = computed(() => {
     return evaluatorProcess && evaluatorProcess.status === 'completed';
 });
 
+const hasStartedReview = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
+    const targetStage = props.user?.role_id === 8 ? 'grade_evaluator' : 'document_evaluator';
+    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
+    return evaluatorProcess && !!evaluatorProcess.started_at;
+});
+
+const isStartingReview = ref(false);
+
+const startReview = async () => {
+    const targetStage = props.user?.role_id === 8 ? 'grade_evaluator' : 'document_evaluator';
+    const processes = selectedUser.value.application.processes;
+    const processIndex = processes.findIndex(p => p.stage === targetStage);
+    
+    if (processIndex === -1) {
+        showToast("Error finding application process.", "error");
+        return;
+    }
+
+    const evaluatorProcess = processes[processIndex];
+    isStartingReview.value = true;
+    try {
+        const response = await axios.post(`/evaluator/start-review/${evaluatorProcess.id}`);
+        // Rebuild selectedUser.value to trigger Vue reactivity
+        selectedUser.value = {
+            ...selectedUser.value,
+            application: {
+                ...selectedUser.value.application,
+                processes: processes.map((p, i) =>
+                    i === processIndex ? { ...p, started_at: response.data.started_at } : p
+                ),
+            },
+        };
+        showToast("Review started successfully.");
+    } catch (error) {
+        if (error.response?.status === 409) {
+            // Already started — re-fetch user to sync UI with DB state
+            try {
+                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}`);
+                const userData = refetch.data.user;
+                selectedUser.value = {
+                    ...selectedUser.value,
+                    ...userData,
+                    application: {
+                        ...userData.application,
+                        processes: userData.application?.processes || [],
+                        program: userData.application?.program || null,
+                        second_choice: userData.application?.second_choice || null,
+                        third_choice: userData.application?.third_choice || null,
+                    },
+                    grades: userData.grades || null,
+                };
+                showToast("Review was already started.");
+            } catch (refetchErr) {
+                console.error("Refetch failed:", refetchErr);
+            }
+        } else {
+            console.error("Error starting review:", error);
+            showToast(error.response?.data?.message || "Failed to start review.", "error");
+        }
+    } finally {
+        isStartingReview.value = false;
+    }
+};
+
 const getButtonClass = (type) => {
     const classes = {
         primary: 'bg-[#9E122C] text-white hover:bg-[#b51834]',
@@ -807,41 +872,63 @@ const showToast = (message, type = 'success') => {
                                 <div v-if="!isEvaluationCompleted">
                                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h4>
                                     
-                                    <!-- Promissory Note Checkbox -->
-                                    <div class="mb-4" v-if="user?.role_id !== 8">
-                                        <label class="flex items-center space-x-3 cursor-pointer p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                            <input 
-                                                id="requires_promissory_note_dash"
-                                                name="requires_promissory_note"
-                                                type="checkbox" 
-                                                v-model="requiresPromissoryNote" 
-                                                class="w-5 h-5 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:bg-gray-700"
+                                    <div v-if="!hasStartedReview" class="mb-4">
+                                        <div class="space-y-3">
+                                            <button
+                                                @click="startReview"
+                                                :disabled="isStartingReview"
+                                                class="w-full px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white rounded-lg transition font-medium min-h-[44px] flex justify-center items-center disabled:opacity-50"
                                             >
-                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                                Require applicant to submit a Promissory Note
-                                            </span>
-                                        </label>
+                                                <svg v-if="isStartingReview" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                <span>{{ isStartingReview ? 'Starting...' : 'Begin Review' }}</span>
+                                            </button>
+                                            <Link :href="`/applications/user/${selectedUser.id}`"
+                                                  :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
+                                                View Full Details
+                                            </Link>
+                                        </div>
                                     </div>
+                                    
+                                    <div v-else>
+                                        <!-- Promissory Note Checkbox -->
+                                        <div class="mb-4" v-if="user?.role_id !== 8">
+                                            <label class="flex items-center space-x-3 cursor-pointer p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                                                <input 
+                                                    id="requires_promissory_note_dash"
+                                                    name="requires_promissory_note"
+                                                    type="checkbox" 
+                                                    v-model="requiresPromissoryNote" 
+                                                    class="w-5 h-5 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:bg-gray-700"
+                                                >
+                                                <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                    Require applicant to submit a Promissory Note
+                                                </span>
+                                            </label>
+                                        </div>
 
-                                    <div class="space-y-3">
-                                        <button
-                                            v-if="!isEvaluating"
-                                            @click="startEvaluation"
-                                            :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                        >
-                                            {{ user?.role_id === 8 ? 'Reject Application' : 'Return Documents' }}
-                                        </button>
-                                        <button
-                                            v-if="!isEvaluating"
-                                            @click="showPassModal = true"
-                                            :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                        >
-                                            Pass Application
-                                        </button>
-                                        <Link :href="`/applications/user/${selectedUser.id}`"
-                                              :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
-                                            View Full Details
-                                        </Link>
+                                        <div class="space-y-3">
+                                            <button
+                                                v-if="!isEvaluating"
+                                                @click="startEvaluation"
+                                                :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                            >
+                                                {{ user?.role_id === 8 ? 'Reject Application' : 'Return Documents' }}
+                                            </button>
+                                            <button
+                                                v-if="!isEvaluating"
+                                                @click="showPassModal = true"
+                                                :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                            >
+                                                Pass Application
+                                            </button>
+                                            <Link :href="`/applications/user/${selectedUser.id}`"
+                                                  :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
+                                                View Full Details
+                                            </Link>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
