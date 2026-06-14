@@ -229,6 +229,22 @@ class EvaluatorDashboardController extends Controller
         }
     }
 
+    public function startReview(ApplicationProcess $applicationProcess)
+    {
+        $this->ensureRole([3, 8]);
+
+        if ($applicationProcess->started_at !== null) {
+            return response()->json(['message' => 'Review already started.'], 409);
+        }
+
+        $applicationProcess->update([
+            'started_at'  => now(),
+            'reviewed_by' => auth()->id(),
+        ]);
+
+        return response()->json(['started_at' => $applicationProcess->started_at]);
+    }
+
     private function ensureRole(int|array $roleId): void
     {
         $roleIds = is_array($roleId) ? $roleId : [$roleId];

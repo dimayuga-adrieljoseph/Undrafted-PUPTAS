@@ -33,6 +33,8 @@ use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TestPasserReportController;
+use App\Http\Controllers\AdmissionLogbookController;
+use App\Http\Controllers\ControlListController;
 use App\Http\Controllers\ConfirmedApplicantsController;
 use App\Http\Controllers\EmailTrackingController;
 
@@ -445,6 +447,7 @@ Route::middleware(['auth', 'role:3,8'])->group(function () {
     })->name('evaluator.applications');
     Route::get('/evaluator-dashboard/applicants', [EvaluatorDashboardController::class, 'getUsers']);
     Route::post('/evaluator/pass-application/{userId}', [EvaluatorDashboardController::class, 'passApplication']);
+    Route::post('/evaluator/start-review/{applicationProcess}', [EvaluatorDashboardController::class, 'startReview']);
     Route::post('/evaluator/reject-application/{userId}', [EvaluatorDashboardController::class, 'rejectApplication']);
     Route::get('/dashboard/user-files/{id}', [EvaluatorDashboardController::class, 'getUserFiles']);
     Route::post('/dashboard/return-files/{user}', [EvaluatorDashboardController::class, 'returnApplication'])->name('return.files');
@@ -455,7 +458,7 @@ Route::middleware(['auth', 'role:4'])->group(function () {
     Route::get('/interviewer-dashboard', [InterviewerDashboardController::class, 'index'])->name('interviewer.dashboard');
     Route::get('/interviewer-applications', function () {
         $user = Auth::user();
-        $assignedPrograms = $user->programs()->get(['id', 'code', 'name']);
+        $assignedPrograms = $user->programs()->get(['programs.id', 'programs.code', 'programs.name', 'programs.slots']);
         return Inertia::render('Applications/Interviewer', [
             'user' => $user,
             'assignedPrograms' => $assignedPrograms,
@@ -463,6 +466,7 @@ Route::middleware(['auth', 'role:4'])->group(function () {
     })->name('interviewer.applications');
     Route::get('/interviewer-dashboard/applicants', [InterviewerDashboardController::class, 'getUsers']);
     Route::get('/interviewer-dashboard/application/{id}', [InterviewerDashboardController::class, 'getUserFiles']);
+    Route::post('/interviewer-dashboard/start/{id}', [InterviewerDashboardController::class, 'start']);
     Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
     Route::post('/interviewer-dashboard/reject/{id}', [InterviewerDashboardController::class, 'reject']);
 });
@@ -545,6 +549,12 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/admin/reports/masterlist/data', [ReportController::class, 'masterlistData'])->name('reports.masterlist.data');
     Route::get('/admin/reports/masterlist/export/pdf', [ReportController::class, 'masterlistExportPdf'])->name('reports.masterlist.export.pdf');
     Route::get('/admin/reports/masterlist/export/excel', [ReportController::class, 'masterlistExportExcel'])->name('reports.masterlist.export.excel');
+
+    // Logbook Reports
+    Route::get('/admin/logbook', [AdmissionLogbookController::class, 'index'])->name('reports.logbook.index');
+    Route::get('/admin/logbook/export/pdf', [AdmissionLogbookController::class, 'exportPdf'])->name('reports.logbook.export.pdf');
+    Route::get('/admin/control-list', [ControlListController::class, 'index'])->name('reports.control-list.index');
+    Route::get('/admin/control-list/export', [ControlListController::class, 'export'])->name('reports.control-list.export');
 });
 
 // Audit log routes - Protected by Superadmin middleware

@@ -451,7 +451,22 @@
                             <!-- Evaluation Actions -->
                             <div v-if="!isEvaluationCompleted" class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                 <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Evaluation Actions</h4>
-                                <div class="space-y-3">
+                                
+                                <div v-if="!hasStartedReview" class="mb-4">
+                                    <button
+                                        @click="startReview"
+                                        :disabled="isStartingReview"
+                                        class="w-full px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white rounded-lg transition font-medium min-h-[44px] flex justify-center items-center disabled:opacity-50"
+                                    >
+                                        <svg v-if="isStartingReview" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>{{ isStartingReview ? 'Starting...' : 'Begin Review' }}</span>
+                                    </button>
+                                </div>
+                                
+                                <div v-else class="space-y-3">
                                     <div class="flex gap-2">
                                         <button v-if="!isEvaluating" @click="showPassModal = true"
                                             class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 shadow-sm">
@@ -866,10 +881,75 @@ const selectUser = async (user) => {
 
 const isEvaluationCompleted = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = usePage().props.auth?.user?.role_id === 8 ? 'grade_evaluator' : 'document_evaluator';
+    const targetStage = page.props.auth?.user?.role_id === 8 ? 'grade_evaluator' : 'document_evaluator';
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess && evaluatorProcess.status === 'completed';
 });
+
+const hasStartedReview = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
+    const targetStage = page.props.auth?.user?.role_id === 8 ? 'grade_evaluator' : 'document_evaluator';
+    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
+    return evaluatorProcess && !!evaluatorProcess.started_at;
+});
+
+const isStartingReview = ref(false);
+
+const startReview = async () => {
+    const targetStage = page.props.auth?.user?.role_id === 8 ? 'grade_evaluator' : 'document_evaluator';
+    const processes = selectedUser.value.application.processes;
+    const processIndex = processes.findIndex(p => p.stage === targetStage);
+
+    if (processIndex === -1) {
+        showToast("Error finding application process.", "error");
+        return;
+    }
+
+    const evaluatorProcess = processes[processIndex];
+    isStartingReview.value = true;
+    try {
+        const response = await axios.post(`/evaluator/start-review/${evaluatorProcess.id}`);
+        // Rebuild selectedUser.value to trigger Vue reactivity
+        selectedUser.value = {
+            ...selectedUser.value,
+            application: {
+                ...selectedUser.value.application,
+                processes: processes.map((p, i) =>
+                    i === processIndex ? { ...p, started_at: response.data.started_at } : p
+                ),
+            },
+        };
+        showToast("Review started successfully.", "success");
+    } catch (error) {
+        if (error.response?.status === 409) {
+            // Already started — re-fetch user to sync UI with DB state
+            try {
+                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}`);
+                const userData = refetch.data.user;
+                selectedUser.value = {
+                    ...selectedUser.value,
+                    ...userData,
+                    application: {
+                        ...userData.application,
+                        processes: userData.application?.processes || [],
+                        program: userData.application?.program || null,
+                        second_choice: userData.application?.second_choice || null,
+                        third_choice: userData.application?.third_choice || null,
+                    },
+                    grades: userData.grades || null,
+                };
+                showToast("Review was already started.", "success");
+            } catch (refetchErr) {
+                console.error("Refetch failed:", refetchErr);
+            }
+        } else {
+            console.error("Error starting review:", error);
+            showToast(error.response?.data?.message || "Failed to start review.", "error");
+        }
+    } finally {
+        isStartingReview.value = false;
+    }
+};
 
 const closeUserCard = () => { selectedUser.value = null; };
 

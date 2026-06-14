@@ -23,6 +23,7 @@ import {
     faChartLine,
     faFileAlt,
     faClock,
+    faClipboardList,
 } from "@fortawesome/free-solid-svg-icons";
 
 import NavLink from "@/Components/NavLink.vue";
@@ -48,6 +49,7 @@ library.add(
     faChartLine,
     faFileAlt,
     faClock,
+    faClipboardList
 );
 
 const page = usePage();
@@ -125,6 +127,8 @@ const isProgramsActive = isActiveRouteFor(["programs.index"]);
 const isReportsActive = isActiveRouteFor(["reports.index"]);
 const isTestPasserReportsActive = isActiveRouteFor(["reports.test-passers.index"]);
 const isMasterlistReportsActive = isActiveRouteFor(["reports.masterlist.index"]);
+const isLogbookReportsActive = isActiveRouteFor(["reports.logbook.index"]);
+const isControlListActive = isActiveRouteFor(["reports.control-list.index"]);
 const isConfirmedApplicantsActive = isActiveRouteFor(["confirmed-applicants.index"]);
 const isManageActive = isActiveRouteFor(["users.index"]);
 
@@ -186,7 +190,7 @@ watch(
         isPasserDropdownOpen.value =
             isUploadFormActive.value || isListPassersActive.value || isConfirmedApplicantsActive.value;
         isReportsDropdownOpen.value = 
-            isReportsActive.value || isTestPasserReportsActive.value || isMasterlistReportsActive.value || isEmailTrackingActive.value;
+            isReportsActive.value || isTestPasserReportsActive.value || isMasterlistReportsActive.value || isLogbookReportsActive.value || isControlListActive.value || isEmailTrackingActive.value;
     },
     { immediate: true }
 );
@@ -481,6 +485,7 @@ watch(isSidebarOpen, (val) => {
                                     isReportsActive ||
                                     isTestPasserReportsActive ||
                                     isMasterlistReportsActive ||
+                                    isControlListActive ||
                                     isEmailTrackingActive,
                             }"
                         >
@@ -563,6 +568,36 @@ watch(isSidebarOpen, (val) => {
                                         class="text-xs mr-2"
                                     />
                                     Accepted Masterlist
+                                </Link>
+                                <Link
+                                    :href="route('reports.logbook.index')"
+                                    class="dropdown-item"
+                                    :class="{
+                                        'dropdown-item-active':
+                                            isLogbookReportsActive,
+                                    }"
+                                    @click="emit('close')"
+                                >
+                                    <FontAwesomeIcon
+                                        icon="file-alt"
+                                        class="text-xs mr-2"
+                                    />
+                                    Official Logbook
+                                </Link>
+                                <Link
+                                    :href="route('reports.control-list.index')"
+                                    class="dropdown-item"
+                                    :class="{
+                                        'dropdown-item-active':
+                                            isControlListActive,
+                                    }"
+                                    @click="emit('close')"
+                                >
+                                    <FontAwesomeIcon
+                                        icon="clipboard-list"
+                                        class="text-xs mr-2"
+                                    />
+                                    Control List
                                 </Link>
                                 <Link
                                     v-if="isAdminOrSuperAdmin"

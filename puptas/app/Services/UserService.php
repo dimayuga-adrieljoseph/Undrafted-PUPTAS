@@ -353,7 +353,7 @@ class UserService
 
         // Load only what we need - no deep eager loading
         $allUserIdsStrings = array_map('strval', $allUserIds);
-        $profiles = ApplicantProfile::whereIn('user_id', $allUserIdsStrings)->get(['user_id', 'firstname', 'lastname', 'email', 'student_number']);
+        $profiles = ApplicantProfile::whereIn('user_id', $allUserIdsStrings)->get(['user_id', 'firstname', 'lastname', 'email']);
 
         // Load applications separately
         $applications = \App\Models\Application::whereIn('user_id', $allUserIds)
