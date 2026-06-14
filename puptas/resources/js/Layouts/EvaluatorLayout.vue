@@ -2,7 +2,7 @@
 import Sidebar from '@/Components/Sidebar.vue'
 import Footer from '@/Components/Footer.vue'
 import { useGlobalLoading } from '@/Composables/useGlobalLoading'
-import { usePage, router } from '@inertiajs/vue3'
+import { usePage, router, Link } from '@inertiajs/vue3'
 import { computed, ref, onMounted, watch, watchEffect } from 'vue'
 import TermsandConditionsModal from '@/Pages/Modal/TermsandConditionsModal.vue'
 
@@ -121,6 +121,18 @@ watchEffect(() => {
 
                 <!-- Controls -->
                 <div class="flex items-center gap-4">
+
+                    <!-- Back to Admin Button (Only for Admins/SuperAdmins) -->
+                    <Link
+                        v-if="user?.role_id === 2 || user?.role_id === 7"
+                        href="/dashboard"
+                        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-[#9E122C] bg-[#9E122C]/10 hover:bg-[#9E122C]/20 transition dark:text-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Admin
+                    </Link>
 
                     <button
                         @click="toggleDarkMode"

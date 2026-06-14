@@ -709,6 +709,11 @@ const formatDate = (date) => {
     return d.toLocaleString(); // or .toLocaleDateString() if you prefer
 };
 
+const formatStage = (stage) => {
+    if (!stage) return 'Unknown Stage';
+    return stage.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
 const acceptApplication = async () => {
     try {
         const response = await axios.post(`/record-dashboard/tag/${selectedUser.value.id}`);
