@@ -679,7 +679,7 @@ onMounted(() => {
               </h3>
               <p class="text-blue-800 dark:text-blue-200">
                 The evaluator has indicated that you need to go to the <strong>Admissions Office</strong>. 
-                Please proceed to the Admissions Office and you may resubmit your grades.
+                Please proceed to the Admissions Office for further instructions regarding your application.
               </p>
             </div>
           </div>
