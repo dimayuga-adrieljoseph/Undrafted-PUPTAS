@@ -628,10 +628,10 @@
                                                         }}
                                                     </p>
                                                     <p
-                                                        v-if="process.notes"
+                                                        v-if="process.reviewer_notes"
                                                         class="text-sm text-gray-600 dark:text-gray-400 mt-1"
                                                     >
-                                                        {{ process.notes }}
+                                                        {{ process.reviewer_notes }}
                                                     </p>
                                                 </div>
                                                 <span

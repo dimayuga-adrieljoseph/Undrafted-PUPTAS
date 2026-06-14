@@ -23,6 +23,7 @@ import {
     faChartLine,
     faFileAlt,
     faClock,
+    faClipboardList,
 } from "@fortawesome/free-solid-svg-icons";
 
 import NavLink from "@/Components/NavLink.vue";
@@ -48,6 +49,7 @@ library.add(
     faChartLine,
     faFileAlt,
     faClock,
+    faClipboardList
 );
 
 const page = usePage();
@@ -119,12 +121,20 @@ const isApplicationsActive = isActiveRouteFor([
     "evaluator.applications",
 ]);
 
+const isStaffProgramsActive = isActiveRouteFor([
+    "evaluator.programs",
+    "interviewer.programs",
+    "record.programs",
+]);
+
 const isUploadFormActive = isActiveRouteFor(["upload.form"]);
 const isListPassersActive = isActiveRouteFor(["lists"]);
 const isProgramsActive = isActiveRouteFor(["programs.index"]);
 const isReportsActive = isActiveRouteFor(["reports.index"]);
 const isTestPasserReportsActive = isActiveRouteFor(["reports.test-passers.index"]);
 const isMasterlistReportsActive = isActiveRouteFor(["reports.masterlist.index"]);
+const isLogbookReportsActive = isActiveRouteFor(["reports.logbook.index"]);
+const isControlListActive = isActiveRouteFor(["reports.control-list.index"]);
 const isConfirmedApplicantsActive = isActiveRouteFor(["confirmed-applicants.index"]);
 const isManageActive = isActiveRouteFor(["users.index"]);
 
@@ -186,7 +196,7 @@ watch(
         isPasserDropdownOpen.value =
             isUploadFormActive.value || isListPassersActive.value || isConfirmedApplicantsActive.value;
         isReportsDropdownOpen.value = 
-            isReportsActive.value || isTestPasserReportsActive.value || isMasterlistReportsActive.value || isEmailTrackingActive.value;
+            isReportsActive.value || isTestPasserReportsActive.value || isMasterlistReportsActive.value || isLogbookReportsActive.value || isControlListActive.value || isEmailTrackingActive.value;
     },
     { immediate: true }
 );
@@ -288,7 +298,7 @@ watch(isSidebarOpen, (val) => {
                         'interviewer',
                         'evaluator',
                         'applicant',
-                    ].includes(props.variant) || isSuperAdmin
+                    ].includes(props.variant)
                 "
             >
                 <ul class="space-y-2">
@@ -444,6 +454,32 @@ watch(isSidebarOpen, (val) => {
                         </NavLink>
                     </li>
 
+                    <!-- Evaluate Grades (Admin) -->
+                    <li>
+                        <NavLink
+                            :href="route('evaluator.dashboard')"
+                            :active="isActiveRoute('evaluator.dashboard')"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isActiveRoute('evaluator.dashboard') }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="clipboard-list"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isExpanded" class="nav-label">
+                                Evaluate Grades
+                            </span>
+                            <div
+                                v-if="isExpanded"
+                                class="nav-indicator"
+                                :class="{ active: isActiveRoute('evaluator.dashboard') }"
+                            ></div>
+                        </NavLink>
+                    </li>
+
                     <!-- Programs -->
                     <li>
                         <NavLink
@@ -481,6 +517,7 @@ watch(isSidebarOpen, (val) => {
                                     isReportsActive ||
                                     isTestPasserReportsActive ||
                                     isMasterlistReportsActive ||
+                                    isControlListActive ||
                                     isEmailTrackingActive,
                             }"
                         >
@@ -563,6 +600,36 @@ watch(isSidebarOpen, (val) => {
                                         class="text-xs mr-2"
                                     />
                                     Accepted Masterlist
+                                </Link>
+                                <Link
+                                    :href="route('reports.logbook.index')"
+                                    class="dropdown-item"
+                                    :class="{
+                                        'dropdown-item-active':
+                                            isLogbookReportsActive,
+                                    }"
+                                    @click="emit('close')"
+                                >
+                                    <FontAwesomeIcon
+                                        icon="file-alt"
+                                        class="text-xs mr-2"
+                                    />
+                                    Official Logbook
+                                </Link>
+                                <Link
+                                    :href="route('reports.control-list.index')"
+                                    class="dropdown-item"
+                                    :class="{
+                                        'dropdown-item-active':
+                                            isControlListActive,
+                                    }"
+                                    @click="emit('close')"
+                                >
+                                    <FontAwesomeIcon
+                                        icon="clipboard-list"
+                                        class="text-xs mr-2"
+                                    />
+                                    Control List
                                 </Link>
                                 <Link
                                     v-if="isAdminOrSuperAdmin"
@@ -748,6 +815,32 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isApplicationsActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Programs -->
+                    <li>
+                        <NavLink
+                            :href="route(props.variant + '.programs')"
+                            :active="isStaffProgramsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isStaffProgramsActive }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="clipboard-list"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isExpanded" class="nav-label">
+                                Programs
+                            </span>
+                            <div
+                                v-if="isExpanded"
+                                class="nav-indicator"
+                                :class="{ active: isStaffProgramsActive }"
                             ></div>
                         </NavLink>
                     </li>

@@ -62,19 +62,17 @@ class GradeComputationService
     /**
      * Check if a user qualifies for a program given their averages and strand.
      *
-     * Returns true if:
-     * 1. The strand is in the program's allowed strands (or program allows all strands)
-     * 2. Each average meets or exceeds the corresponding program threshold
-     *    (null/zero threshold means no requirement for that category)
-     *
-     * If any average is null, the program is not qualified.
+     * Mirrors the Qualified Programs page logic exactly so both surfaces always agree:
+     * - GWA is recomputed from semester fields (not the stored gwa column)
+     * - Null averages are treated as 0 (PHP loose comparison, same as QP page)
+     * - Threshold of null/0 means no requirement
      *
      * @param Program $program
      * @param string $strand
      * @param float|null $mathAvg
      * @param float|null $englishAvg
      * @param float|null $scienceAvg
-     * @param float|null $gwa
+     * @param float|null $gwa   GWA recomputed from (g12_first_sem + g12_second_sem) / 2
      * @return bool
      */
     public function isQualified(
@@ -85,34 +83,19 @@ class GradeComputationService
         ?float $scienceAvg,
         ?float $gwa
     ): bool {
-        // If any average is null, the program is not qualified
-        if ($mathAvg === null || $englishAvg === null || $scienceAvg === null || $gwa === null) {
-            return false;
-        }
-
         // Check strand eligibility
         if (!$this->isStrandAllowed($program, $strand)) {
             return false;
         }
 
-        // Check each threshold - null/zero threshold means no requirement
-        if (!empty($program->math) && $program->math > 0 && $mathAvg < $program->math) {
-            return false;
-        }
+        // Grade threshold checks — null treated as 0 (matches Qualified Programs page).
+        // ($value ?? 0) on the program side handles null/missing thresholds.
+        $meetsGrades = ($mathAvg    ?? 0) >= ($program->math    ?? 0) &&
+                       ($scienceAvg ?? 0) >= ($program->science ?? 0) &&
+                       ($englishAvg ?? 0) >= ($program->english ?? 0) &&
+                       ($gwa        ?? 0) >= ($program->gwa     ?? 0);
 
-        if (!empty($program->english) && $program->english > 0 && $englishAvg < $program->english) {
-            return false;
-        }
-
-        if (!empty($program->science) && $program->science > 0 && $scienceAvg < $program->science) {
-            return false;
-        }
-
-        if (!empty($program->gwa) && $program->gwa > 0 && $gwa < $program->gwa) {
-            return false;
-        }
-
-        return true;
+        return $meetsGrades;
     }
 
     /**
@@ -144,23 +127,53 @@ class GradeComputationService
     /**
      * Check if the given strand is allowed for the program.
      *
-     * A program allows a strand if:
-     * - The program has no strand restrictions (empty strands relationship means open to all)
-     * - OR the strand code is in the program's associated strands
+     * Uses the strand_names accessor (derived from the strands pivot) as a
+     * comma/slash-separated string — the same logic as the Qualified Programs
+     * page — so both surfaces always agree.
+     *
+     * Rules (in order):
+     * 1. No strand info on the applicant → allow all
+     * 2. No strand requirement on the program (empty strand_names) → allow all
+     * 3. Program explicitly says "OPEN TO ALL" → allow all
+     * 4. "OTHER" + "BRIDGING" in strand_names → allow all
+     * 5. Applicant strand must appear in the comma/slash-separated allowed list
+     *    (TVL / TECH-VOC are normalised to "TVL" before comparison)
      */
     private function isStrandAllowed(Program $program, string $strand): bool
     {
-        $allowedStrands = $program->strands;
-
-        // If no strands are defined, the program is open to all
-        if ($allowedStrands->isEmpty()) {
+        if (!$strand) {
             return true;
         }
 
-        $strandCode = strtoupper($strand);
+        // strand_names is the accessor that joins strand codes from the pivot
+        $strandNames = strtoupper($program->strand_names ?? '');
 
-        return $allowedStrands->contains(function ($s) use ($strandCode) {
-            return strtoupper($s->code) === $strandCode;
-        });
+        if (empty($strandNames)) {
+            return true;
+        }
+
+        if (str_contains($strandNames, 'OPEN TO ALL')) {
+            return true;
+        }
+
+        $userStrand = strtoupper($strand);
+
+        $allowedStrands = array_map('trim', preg_split('/[,\/]/', $strandNames));
+
+        foreach ($allowedStrands as $allowed) {
+            if (str_contains($allowed, 'TECH-VOC') || str_contains($allowed, 'TVL')) {
+                $allowed = 'TVL';
+            }
+
+            if ($allowed === $userStrand) {
+                return true;
+            }
+        }
+
+        if (str_contains($strandNames, 'OTHER') && str_contains($strandNames, 'BRIDGING')) {
+            return true;
+        }
+
+        return false;
     }
 }

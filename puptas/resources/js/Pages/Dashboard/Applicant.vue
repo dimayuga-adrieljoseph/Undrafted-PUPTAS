@@ -18,6 +18,8 @@ const applicationStatus = ref("");
 const enrollmentStatus = ref("");
 const applicationProcesses = ref([]);
 const requiresPromissoryNote = ref(false);
+const requiresGuidanceOffice = ref(false);
+const requiresAdmissionOffice = ref(false);
 
 // Reactively derived from live applicationStatus — updates immediately after the user
 // submits without requiring a page reload.
@@ -253,6 +255,8 @@ const fetchData = async () => {
     applicationProcesses.value = data.processes || [];
     showMedicalRedirect.value = data.show_medical_redirect || false;
     requiresPromissoryNote.value = data.requires_promissory_note || false;
+    requiresGuidanceOffice.value = data.requires_guidance_office || false;
+    requiresAdmissionOffice.value = data.requires_admission_office || false;
   } catch {
     error.value = "Could not load application data.";
   } finally {
@@ -658,6 +662,46 @@ onMounted(() => {
               <p class="text-orange-800 dark:text-orange-200">
                 The evaluator has indicated that you need to submit a <strong>Promissory Note</strong>. 
                 Please prepare this document as it is required to proceed with your enrollment process.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guidance Office Alert -->
+        <div v-if="requiresGuidanceOffice" class="bg-orange-50 dark:bg-orange-900/20 rounded-xl shadow-md border-l-4 border-orange-500 p-6 mb-6">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 mt-1">
+              <svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-orange-900 dark:text-orange-100 mb-2">
+                Action Required: Go to Guidance Office
+              </h3>
+              <p class="text-orange-800 dark:text-orange-200">
+                The evaluator has indicated that you need to go to the <strong>Guidance Office</strong>. 
+                Please proceed to the Guidance Office for further instructions regarding your application.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admissions Office Alert -->
+        <div v-if="requiresAdmissionOffice" class="bg-blue-50 dark:bg-blue-900/20 rounded-xl shadow-md border-l-4 border-blue-500 p-6 mb-6">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 mt-1">
+              <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">
+                Action Required: Go to Admissions Office
+              </h3>
+              <p class="text-blue-800 dark:text-blue-200">
+                The evaluator has indicated that you need to go to the <strong>Admissions Office</strong>. 
+                Please proceed to the Admissions Office for further instructions regarding your application.
               </p>
             </div>
           </div>

@@ -111,7 +111,7 @@ class RecordStaffDashboardController extends Controller
 
         $summary = $this->applicationService->getApplicationSummary();
 
-        // Count officially enrolled per program
+        // Count officially enrolled and accepted per program
         $programs = Program::select('id', 'code', 'name', 'slots')
             ->withCount([
                 'applications as enrolled_count' => function ($q) {
@@ -123,6 +123,13 @@ class RecordStaffDashboardController extends Controller
                         $p->where('stage', 'medical')->where('status', 'completed');
                     })->whereNull('deleted_at');
                 },
+                'applications as accepted_count' => function ($q) {
+                    $q->whereHas('processes', function ($p) {
+                        $p->where('stage', 'interviewer')
+                          ->where('status', 'completed')
+                          ->where('action', 'passed');
+                    })->whereNull('deleted_at');
+                },
             ])
             ->get()
             ->map(function ($program) {
@@ -131,7 +138,7 @@ class RecordStaffDashboardController extends Controller
                     'code'                  => $program->code,
                     'name'                  => $program->name,
                     'slots'                 => $program->slots,
-                    'applications_count'    => $program->enrolled_count,
+                    'applications_count'    => $program->accepted_count,
                     'enrolled_count'        => $program->enrolled_count,
                     'medical_cleared_count' => $program->medical_cleared_count,
                 ];

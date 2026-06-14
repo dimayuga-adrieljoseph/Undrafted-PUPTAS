@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\ConfirmationController;
 use App\Http\Controllers\UserFileController;
 use App\Http\Controllers\EvaluatorDashboardController;
+use App\Http\Controllers\StaffProgramController;
 use App\Http\Controllers\InterviewerDashboardController;
 use App\Http\Controllers\RecordStaffDashboardController;
 use App\Http\Controllers\UserController;
@@ -33,6 +34,8 @@ use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TestPasserReportController;
+use App\Http\Controllers\AdmissionLogbookController;
+use App\Http\Controllers\ControlListController;
 use App\Http\Controllers\ConfirmedApplicantsController;
 use App\Http\Controllers\EmailTrackingController;
 
@@ -190,13 +193,13 @@ Route::get('/api/callback', [IdpAuthController::class, 'callback'])
 
 // View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
-    // Validate ID is numeric
-    if (!is_numeric($user)) {
-        abort(404);
-    }
-
     // Verify user exists and is an applicant
-    $applicant = \App\Models\User::where('id', $user)
+    $applicant = \App\Models\User::where(function($q) use ($user) {
+            $q->where('idp_user_id', $user);
+            if (is_numeric($user)) {
+                $q->orWhere('id', $user);
+            }
+        })
         ->where('role_id', 1)
         ->whereHas('currentApplication')
         ->first();
@@ -208,17 +211,19 @@ Route::get('/applications/user/{user}', function ($user) {
     $currentUser = Auth::user();
     $roleId = $currentUser->role_id;
 
+    $context = request('context');
+
     // Render the role-appropriate component
     $component = match ((int) $roleId) {
         3, 8 => 'Applications/Evaluator',
         4 => 'Applications/Interviewer',
-        default => 'Applications/Index',
+        default => ($context === 'evaluator' && in_array($roleId, [2, 7])) ? 'Applications/Evaluator' : 'Applications/Index',
     };
 
     return Inertia::render($component, [
-        'selectedUserId' => (int) $user
+        'selectedUserId' => (string) $user
     ]);
-})->middleware(['auth', 'role:2,3,4,7,8'])->whereNumber('user')->name('applications.show');
+})->middleware(['auth', 'role:2,3,4,7,8'])->name('applications.show');
 
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
     $request->validate(['email' => 'required|email']);
@@ -438,16 +443,19 @@ Route::get('/user/eligible-programs', [ConfirmationController::class, 'getEligib
     ->middleware('auth');
 
 // Evaluator Routes
-Route::middleware(['auth', 'role:3,8'])->group(function () {
+Route::middleware(['auth', 'role:2,3,7,8'])->group(function () {
     Route::get('/evaluator-dashboard', [EvaluatorDashboardController::class, 'index'])->name('evaluator.dashboard');
     Route::get('/evaluator-applications', function () {
         return Inertia::render('Applications/Evaluator', ['user' => Auth::user()]);
     })->name('evaluator.applications');
     Route::get('/evaluator-dashboard/applicants', [EvaluatorDashboardController::class, 'getUsers']);
     Route::post('/evaluator/pass-application/{userId}', [EvaluatorDashboardController::class, 'passApplication']);
+    Route::post('/evaluator/start-review/{applicationProcess}', [EvaluatorDashboardController::class, 'startReview']);
     Route::post('/evaluator/reject-application/{userId}', [EvaluatorDashboardController::class, 'rejectApplication']);
+    Route::post('/evaluator/flag-application/{userId}', [EvaluatorDashboardController::class, 'flagApplication']);
     Route::get('/dashboard/user-files/{id}', [EvaluatorDashboardController::class, 'getUserFiles']);
     Route::post('/dashboard/return-files/{user}', [EvaluatorDashboardController::class, 'returnApplication'])->name('return.files');
+    Route::get('/evaluator-programs', [StaffProgramController::class, 'index'])->name('evaluator.programs');
 });
 
 // Interviewer Routes
@@ -455,7 +463,7 @@ Route::middleware(['auth', 'role:4'])->group(function () {
     Route::get('/interviewer-dashboard', [InterviewerDashboardController::class, 'index'])->name('interviewer.dashboard');
     Route::get('/interviewer-applications', function () {
         $user = Auth::user();
-        $assignedPrograms = $user->programs()->get(['id', 'code', 'name']);
+        $assignedPrograms = $user->programs()->get(['programs.id', 'programs.code', 'programs.name', 'programs.slots']);
         return Inertia::render('Applications/Interviewer', [
             'user' => $user,
             'assignedPrograms' => $assignedPrograms,
@@ -463,8 +471,10 @@ Route::middleware(['auth', 'role:4'])->group(function () {
     })->name('interviewer.applications');
     Route::get('/interviewer-dashboard/applicants', [InterviewerDashboardController::class, 'getUsers']);
     Route::get('/interviewer-dashboard/application/{id}', [InterviewerDashboardController::class, 'getUserFiles']);
+    Route::post('/interviewer-dashboard/start/{id}', [InterviewerDashboardController::class, 'start']);
     Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
     Route::post('/interviewer-dashboard/reject/{id}', [InterviewerDashboardController::class, 'reject']);
+    Route::get('/interviewer-programs', [StaffProgramController::class, 'index'])->name('interviewer.programs');
 });
 
 // Record Staff Routes
@@ -479,6 +489,7 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::post('/record-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
     Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
+    Route::get('/record-programs', [StaffProgramController::class, 'index'])->name('record.programs');
 });
 
 Route::middleware(['auth', 'role:2,3,4,6,8'])->group(function () {
@@ -488,8 +499,13 @@ Route::middleware(['auth', 'role:2,3,4,6,8'])->group(function () {
 });
 
 // Add grades endpoint to each role's trait-based controllers
-Route::middleware(['auth', 'role:3,8'])->group(function () {
+Route::middleware(['auth', 'role:2,3,7,8'])->group(function () {
     Route::get('/dashboard/user-grades/{id}', [EvaluatorDashboardController::class, 'getUserGrades']);
+});
+
+// Common Staff Routes
+Route::middleware(['auth', 'role:2,3,4,6,7,8'])->group(function () {
+    Route::get('/api/staff/programs/slots', [StaffProgramController::class, 'getPrograms']);
 });
 
 Route::middleware(['auth', 'role:4'])->group(function () {
@@ -545,6 +561,12 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/admin/reports/masterlist/data', [ReportController::class, 'masterlistData'])->name('reports.masterlist.data');
     Route::get('/admin/reports/masterlist/export/pdf', [ReportController::class, 'masterlistExportPdf'])->name('reports.masterlist.export.pdf');
     Route::get('/admin/reports/masterlist/export/excel', [ReportController::class, 'masterlistExportExcel'])->name('reports.masterlist.export.excel');
+
+    // Logbook Reports
+    Route::get('/admin/logbook', [AdmissionLogbookController::class, 'index'])->name('reports.logbook.index');
+    Route::get('/admin/logbook/export/pdf', [AdmissionLogbookController::class, 'exportPdf'])->name('reports.logbook.export.pdf');
+    Route::get('/admin/control-list', [ControlListController::class, 'index'])->name('reports.control-list.index');
+    Route::get('/admin/control-list/export', [ControlListController::class, 'export'])->name('reports.control-list.export');
 });
 
 // Audit log routes - Protected by Superadmin middleware

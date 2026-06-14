@@ -371,11 +371,17 @@ class IdpAuthController extends Controller
         if (Auth::check()) {
             $user = Auth::user();
 
-            // Get IDP access token from Redis and remove the record
-            $tokenData = \Illuminate\Support\Facades\Cache::store('redis')->get("idp_tokens:user_{$user->id}");
-            if ($tokenData) {
-                $accessToken = $tokenData['access_token'] ?? null;
-                \Illuminate\Support\Facades\Cache::store('redis')->forget("idp_tokens:user_{$user->id}");
+            try {
+                // Get IDP access token from Redis and remove the record
+                $tokenData = \Illuminate\Support\Facades\Cache::store('redis')->get("idp_tokens:user_{$user->id}");
+                if ($tokenData) {
+                    $accessToken = $tokenData['access_token'] ?? null;
+                    \Illuminate\Support\Facades\Cache::store('redis')->forget("idp_tokens:user_{$user->id}");
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Failed to remove IDP tokens from Redis during logout', [
+                    'error' => $e->getMessage()
+                ]);
             }
 
             if (method_exists($user, 'tokens')) {

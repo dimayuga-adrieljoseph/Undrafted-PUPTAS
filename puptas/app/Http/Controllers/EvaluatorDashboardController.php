@@ -45,7 +45,7 @@ class EvaluatorDashboardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->dashboardService->verifyRoleAccess($user, [3, 8])) {
+        if (!$this->dashboardService->verifyRoleAccess($user, $this->getRoleId())) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
@@ -66,7 +66,7 @@ class EvaluatorDashboardController extends Controller
 
     protected function getRoleId(): array
     {
-        return [3, 8];
+        return [2, 3, 7, 8];
     }
 
     // returnFiles() method provided by ManagesApplicationFiles trait
@@ -78,19 +78,22 @@ class EvaluatorDashboardController extends Controller
         // Ensure user has evaluator role
         $this->ensureRole($this->getRoleId());
 
+        $user = Auth::user();
+        
         // Resolve this evaluator's assigned program IDs from the pivot table
-        $programIds = Auth::user()
-            ->programs()
-            ->pluck('programs.id')
-            ->toArray();
+        $programIds = $user->programs()->pluck('programs.id')->toArray();
+
+        // Admin bypass: Admins can evaluate all programs
+        if ($user->role_id == 2 || $user->role_id == 7 || $user->role_id == 8) {
+            $programIds = \App\Models\Program::pluck('id')->toArray();
+        }
 
         \Log::info('EvaluatorDashboard::getUsers', [
-            'user_id'     => Auth::user()->id,
+            'user_id'     => $user->id,
             'program_ids' => $programIds,
         ]);
 
         // If the evaluator has no assigned programs, return an empty list.
-        // Evaluators must be explicitly assigned to programs to see applicants.
         if (empty($programIds)) {
             return response()->json([]);
         }
@@ -107,77 +110,89 @@ class EvaluatorDashboardController extends Controller
     {
         $request->validate([
             'note' => 'nullable|string|max:1000',
-            'requires_promissory_note' => 'nullable|boolean',
         ]);
 
-        $this->ensureRole([3, 8]);
+        $this->ensureRole($this->getRoleId());
 
         $application = $this->applicationService->getApplicationByUserId($userId);
+        $user = Auth::user();
 
-        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        $assignedProgramIds = $user->programs()->pluck('programs.id')->toArray();
+        if ($user->role_id == 2 || $user->role_id == 7 || $user->role_id == 8) {
+            $assignedProgramIds = \App\Models\Program::pluck('id')->toArray();
+        }
+        
         if (!in_array($application->program_id, $assignedProgramIds)) {
             return response()->json([
                 'message' => 'You are not authorized to evaluate applicants for this program.',
             ], 403);
         }
 
-        DB::transaction(function () use ($application, $userId, $request) {
-            // Update existing evaluator process (can be in_progress or returned status)
-            $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
-                ->where('stage', $this->getCurrentStage())
-                ->whereIn('status', ['in_progress', 'returned'])
-                ->first();
+        $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
+            ->where('stage', $this->getCurrentStage())
+            ->whereIn('status', ['in_progress', 'returned'])
+            ->first();
 
-            if (!$evaluatorProcess) {
-                throw new \Exception('This action has already been completed or is not available.');
-            }
+        if (!$evaluatorProcess) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
 
-            $evaluatorProcess->update([
-                'status' => 'completed',
-                'action' => 'passed',
-                'reviewer_notes' => $request->note,
-                'performed_by' => auth()->id(),
-            ]);
+        try {
+            DB::transaction(function () use ($application, $evaluatorProcess, $userId, $request) {
+                $evaluatorProcess->update([
+                    'status' => 'completed',
+                    'action' => 'passed',
+                    'reviewer_notes' => $request->note,
+                    'performed_by' => auth()->id(),
+                ]);
 
-            // Update file statuses from 'returned' to 'approved' when passing the application
-            $updatedCount = UserFile::where('user_id', (string) $userId)
-                ->where('status', 'returned')
-                ->update(['status' => 'approved', 'comment' => null]);
+                // Update file statuses from 'returned' to 'approved' when passing the application
+                $updatedCount = UserFile::where('user_id', (string) $userId)
+                    ->where('status', 'returned')
+                    ->update(['status' => 'approved', 'comment' => null]);
 
-            \Log::info("Updated {$updatedCount} files from 'returned' to 'approved' for user {$userId}");
+                \Log::info("Updated {$updatedCount} files from 'returned' to 'approved' for user {$userId}");
 
-            // Persist promissory note requirement if set by evaluator
-            if ($request->has('requires_promissory_note')) {
-                $application->requires_promissory_note = (bool) $request->requires_promissory_note;
+                // Clear office flags if passing
+                $application->requires_promissory_note = false;
+                $application->requires_guidance_office = false;
+                $application->requires_admission_office = false;
                 $application->save();
-            }
 
-            // Update application status back to submitted
-            $application->status = 'submitted';
-            $application->save();
+                // Update application status back to submitted
+                $application->status = 'submitted';
+                $application->save();
 
-            \Log::info("Updated application status to 'submitted' for application {$application->id}");
+                \Log::info("Updated application status to 'submitted' for application {$application->id}");
 
-            // Create next stage process
-            $nextStage = Auth::user()->role_id == 3 ? 'grade_evaluator' : 'interviewer';
-            ApplicationProcess::create([
-                'application_id' => $application->id,
-                'stage' => $nextStage,
-                'status' => 'in_progress',
-                'performed_by' => null,
+                // Create next stage process
+                $nextStage = $this->getCurrentStage() === 'document_evaluator' ? 'grade_evaluator' : 'interviewer';
+                ApplicationProcess::create([
+                    'application_id' => $application->id,
+                    'stage' => $nextStage,
+                    'status' => 'in_progress',
+                    'performed_by' => null,
+                ]);
+            });
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Evaluator passed application for applicant ID {$userId} to interviewer stage.", null, 'ADMISSION_DATA');
+
+            return response()->json([
+                'message' => 'Application successfully passed to the next step.',
             ]);
-        });
-
-        $this->auditLogService->logActivity('UPDATE', 'Applications', "Evaluator passed application for applicant ID {$userId} to interviewer stage.", null, 'ADMISSION_DATA');
-
-        return response()->json([
-            'message' => 'Application successfully passed to the next step.',
-        ]);
+        } catch (\Throwable $e) {
+            \Log::error("❌ Pass failed: " . $e->getMessage());
+            return response()->json([
+                'message' => 'An error occurred while passing the application: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function rejectApplication(Request $request, $userId)
     {
-        $this->ensureRole([3, 8]);
+        $this->ensureRole($this->getRoleId());
 
         $request->validate([
             'note' => 'nullable|string|max:1000',
@@ -189,7 +204,12 @@ class EvaluatorDashboardController extends Controller
             return response()->json(['message' => 'Application not found'], 404);
         }
 
-        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        $user = Auth::user();
+        $assignedProgramIds = $user->programs()->pluck('programs.id')->toArray();
+        if ($user->role_id == 2 || $user->role_id == 7 || $user->role_id == 8) {
+            $assignedProgramIds = \App\Models\Program::pluck('id')->toArray();
+        }
+
         if (!in_array($application->program_id, $assignedProgramIds)) {
             return response()->json([
                 'message' => 'You are not authorized to evaluate applicants for this program.',
@@ -227,6 +247,91 @@ class EvaluatorDashboardController extends Controller
             \Log::error("❌ Reject failed: " . $e->getMessage());
             return response()->json(['message' => 'An error occurred while rejecting the application.'], 500);
         }
+    }
+
+    public function flagApplication(Request $request, $userId)
+    {
+        $this->ensureRole($this->getRoleId());
+
+        $request->validate([
+            'note' => 'nullable|string|max:1000',
+            'requires_promissory_note' => 'nullable|boolean',
+            'requires_guidance_office' => 'nullable|boolean',
+            'requires_admission_office' => 'nullable|boolean',
+        ]);
+
+        $application = $this->applicationService->getApplicationByUserId($userId);
+
+        if (!$application) {
+            return response()->json(['message' => 'Application not found'], 404);
+        }
+
+        $user = Auth::user();
+        $assignedProgramIds = $user->programs()->pluck('programs.id')->toArray();
+        if ($user->role_id == 2 || $user->role_id == 7 || $user->role_id == 8) {
+            $assignedProgramIds = \App\Models\Program::pluck('id')->toArray();
+        }
+
+        if (!in_array($application->program_id, $assignedProgramIds)) {
+            return response()->json([
+                'message' => 'You are not authorized to evaluate applicants for this program.',
+            ], 403);
+        }
+
+        $inProgress = ApplicationProcess::where('application_id', $application->id)
+            ->where('stage', $this->getCurrentStage())
+            ->whereIn('status', ['in_progress', 'returned'])
+            ->first();
+
+        if (!$inProgress) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
+
+        try {
+            DB::transaction(function () use ($application, $inProgress, $request, $userId) {
+                if ($request->has('requires_promissory_note')) {
+                    $application->requires_promissory_note = (bool) $request->requires_promissory_note;
+                }
+                if ($request->has('requires_guidance_office')) {
+                    $application->requires_guidance_office = (bool) $request->requires_guidance_office;
+                }
+                if ($request->has('requires_admission_office')) {
+                    $application->requires_admission_office = (bool) $request->requires_admission_office;
+                }
+                $application->save();
+
+                // Keep status in_progress but log reviewer notes
+                $inProgress->update([
+                    'reviewer_notes' => $request->note,
+                    'performed_by' => auth()->id(),
+                ]);
+            });
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Application flagged for applicant ID {$userId}.", null, 'ADMISSION_DATA');
+
+            return response()->json(['message' => 'Application successfully flagged.']);
+        } catch (\Throwable $e) {
+            \Log::error("❌ Flagging failed: " . $e->getMessage());
+            return response()->json(['message' => 'An error occurred while flagging the application.'], 500);
+        }
+    }
+
+    public function startReview(ApplicationProcess $applicationProcess)
+    {
+        $this->ensureRole($this->getRoleId());
+
+        if ($applicationProcess->started_at !== null) {
+            return response()->json(['message' => 'Review already started.'], 409);
+        }
+
+        $applicationProcess->update([
+            'started_at'  => now(),
+            'reviewed_by' => auth()->id(),
+        ]);
+
+        return response()->json(['started_at' => $applicationProcess->started_at]);
     }
 
     private function ensureRole(int|array $roleId): void
