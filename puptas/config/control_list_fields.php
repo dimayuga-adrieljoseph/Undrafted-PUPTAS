@@ -34,7 +34,7 @@ return [
         'letter_spacing'=> 0.5, // Adjust this value to increase/decrease space between letters
         'mask'          => [
             'x'      => 163.5, // Center X position for the white box ((355.6 - 100) / 2)
-            'y'      => 52,    // Y position for the white box
+            'y'      => 51.5,    // Y position for the white box
             'width'  => 50,   // Width of the white box
             'height' => 8,    // Height of the white box
         ],
