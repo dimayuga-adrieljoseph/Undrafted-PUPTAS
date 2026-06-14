@@ -128,57 +128,65 @@ class EvaluatorDashboardController extends Controller
             ], 403);
         }
 
-        DB::transaction(function () use ($application, $userId, $request) {
-            // Update existing evaluator process (can be in_progress or returned status)
-            $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
-                ->where('stage', $this->getCurrentStage())
-                ->whereIn('status', ['in_progress', 'returned'])
-                ->first();
+        $evaluatorProcess = ApplicationProcess::where('application_id', $application->id)
+            ->where('stage', $this->getCurrentStage())
+            ->whereIn('status', ['in_progress', 'returned'])
+            ->first();
 
-            if (!$evaluatorProcess) {
-                throw new \Exception('This action has already been completed or is not available.');
-            }
+        if (!$evaluatorProcess) {
+            return response()->json([
+                'message' => 'This action has already been completed or is not available.',
+            ], 409);
+        }
 
-            $evaluatorProcess->update([
-                'status' => 'completed',
-                'action' => 'passed',
-                'reviewer_notes' => $request->note,
-                'performed_by' => auth()->id(),
+        try {
+            DB::transaction(function () use ($application, $evaluatorProcess, $userId, $request) {
+                $evaluatorProcess->update([
+                    'status' => 'completed',
+                    'action' => 'passed',
+                    'reviewer_notes' => $request->note,
+                    'performed_by' => auth()->id(),
+                ]);
+
+                // Update file statuses from 'returned' to 'approved' when passing the application
+                $updatedCount = UserFile::where('user_id', (string) $userId)
+                    ->where('status', 'returned')
+                    ->update(['status' => 'approved', 'comment' => null]);
+
+                \Log::info("Updated {$updatedCount} files from 'returned' to 'approved' for user {$userId}");
+
+                // Clear office flags if passing
+                $application->requires_guidance_office = false;
+                $application->requires_admission_office = false;
+                $application->save();
+
+                // Update application status back to submitted
+                $application->status = 'submitted';
+                $application->save();
+
+                \Log::info("Updated application status to 'submitted' for application {$application->id}");
+
+                // Create next stage process
+                $nextStage = $this->getCurrentStage() === 'document_evaluator' ? 'grade_evaluator' : 'interviewer';
+                ApplicationProcess::create([
+                    'application_id' => $application->id,
+                    'stage' => $nextStage,
+                    'status' => 'in_progress',
+                    'performed_by' => null,
+                ]);
+            });
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', "Evaluator passed application for applicant ID {$userId} to interviewer stage.", null, 'ADMISSION_DATA');
+
+            return response()->json([
+                'message' => 'Application successfully passed to the next step.',
             ]);
-
-            // Update file statuses from 'returned' to 'approved' when passing the application
-            $updatedCount = UserFile::where('user_id', (string) $userId)
-                ->where('status', 'returned')
-                ->update(['status' => 'approved', 'comment' => null]);
-
-            \Log::info("Updated {$updatedCount} files from 'returned' to 'approved' for user {$userId}");
-
-            // Clear office flags if passing
-            $application->requires_guidance_office = false;
-            $application->requires_admission_office = false;
-            $application->save();
-
-            // Update application status back to submitted
-            $application->status = 'submitted';
-            $application->save();
-
-            \Log::info("Updated application status to 'submitted' for application {$application->id}");
-
-            // Create next stage process
-            $nextStage = $this->getCurrentStage() === 'document_evaluator' ? 'grade_evaluator' : 'interviewer';
-            ApplicationProcess::create([
-                'application_id' => $application->id,
-                'stage' => $nextStage,
-                'status' => 'in_progress',
-                'performed_by' => null,
-            ]);
-        });
-
-        $this->auditLogService->logActivity('UPDATE', 'Applications', "Evaluator passed application for applicant ID {$userId} to interviewer stage.", null, 'ADMISSION_DATA');
-
-        return response()->json([
-            'message' => 'Application successfully passed to the next step.',
-        ]);
+        } catch (\Throwable $e) {
+            \Log::error("❌ Pass failed: " . $e->getMessage());
+            return response()->json([
+                'message' => 'An error occurred while passing the application: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function rejectApplication(Request $request, $userId)
