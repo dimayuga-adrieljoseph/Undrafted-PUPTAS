@@ -293,7 +293,6 @@ trait ManagesApplicationFiles
             'files' => 'nullable|array',
             'files.*' => 'string|in:' . \App\Helpers\FileMapper::getValidFileFields(),
             'note' => 'nullable|string|max:1000',
-            'requires_promissory_note' => 'nullable|boolean',
         ]);
 
         $this->ensureRole($this->getRoleId());
@@ -335,9 +334,6 @@ trait ManagesApplicationFiles
         // Wrap all mutations in transaction
         try {
             DB::transaction(function () use ($application, $inProgress, $request, $files, $userId, $keyMap, &$updatedFiles, &$notFoundFiles) {
-                if ($request->has('requires_promissory_note')) {
-                    $application->requires_promissory_note = (bool) $request->requires_promissory_note;
-                }
                 $application->status = 'returned';
                 $application->save();
 
