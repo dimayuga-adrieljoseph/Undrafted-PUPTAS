@@ -13,9 +13,24 @@ class ControlListService
         string $academicYear
     ): string {
         $config = config('control_list_fields');
-        $templatePath = storage_path(
-            'app/templates/CONTROL-LIST-INTERVIEW-AND-SUBMISSION-OF-ENTRANCE-CREDENTIALS.pdf'
-        );
+        $filename = 'CONTROL-LIST-INTERVIEW-AND-SUBMISSION-OF-ENTRANCE-CREDENTIALS.pdf';
+        
+        $paths = [
+            base_path('docs/' . $filename),
+            storage_path('app/templates/' . $filename),
+        ];
+
+        $templatePath = null;
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                $templatePath = $path;
+                break;
+            }
+        }
+
+        if (!$templatePath) {
+            throw new \Exception("Control list template PDF not found at docs/ or storage/app/templates/: {$filename}");
+        }
 
         $pdf = new Fpdi();
         $pdf->SetAutoPageBreak(false);
