@@ -22,7 +22,8 @@ class Application extends Model
         'third_choice_id',
         'enrollment_status',
         'enrollment_position',
-        'requires_promissory_note',
+        'requires_guidance_office',
+        'requires_admission_office',
     ];
 
     protected $casts = [

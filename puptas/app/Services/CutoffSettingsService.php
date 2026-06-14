@@ -30,7 +30,7 @@ class CutoffSettingsService
      */
     public function getCutoff(): ?CarbonImmutable
     {
-        $record = CutoffSettings::find(self::SINGLETON_ID);
+        $record = CutoffSettings::first();
 
         if (! $record || $record->cutoff_at === null) {
             return null;
@@ -74,9 +74,14 @@ class CutoffSettingsService
             throw new ValidationException($validator);
         }
 
-        $record = CutoffSettings::findOrFail(self::SINGLETON_ID);
+        $utcDateTime = $parsed->clone()->utc()->toDateTimeString();
 
-        $record->update(['cutoff_at' => $parsed->toDateTimeString()]);
+        $record = CutoffSettings::first();
+        if (!$record) {
+            $record = CutoffSettings::create(['cutoff_at' => $utcDateTime]);
+        } else {
+            $record->update(['cutoff_at' => $utcDateTime]);
+        }
 
         return $record->refresh();
     }
@@ -91,7 +96,11 @@ class CutoffSettingsService
      */
     public function clearCutoff(): CutoffSettings
     {
-        $record = CutoffSettings::findOrFail(self::SINGLETON_ID);
+        $record = CutoffSettings::first();
+        
+        if (!$record) {
+            return CutoffSettings::create(['cutoff_at' => null]);
+        }
 
         // No-op when already null — skip the write.
         if ($record->cutoff_at !== null) {

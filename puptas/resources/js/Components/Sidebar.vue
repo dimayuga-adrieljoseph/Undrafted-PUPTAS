@@ -121,6 +121,12 @@ const isApplicationsActive = isActiveRouteFor([
     "evaluator.applications",
 ]);
 
+const isStaffProgramsActive = isActiveRouteFor([
+    "evaluator.programs",
+    "interviewer.programs",
+    "record.programs",
+]);
+
 const isUploadFormActive = isActiveRouteFor(["upload.form"]);
 const isListPassersActive = isActiveRouteFor(["lists"]);
 const isProgramsActive = isActiveRouteFor(["programs.index"]);
@@ -292,7 +298,7 @@ watch(isSidebarOpen, (val) => {
                         'interviewer',
                         'evaluator',
                         'applicant',
-                    ].includes(props.variant) || isSuperAdmin
+                    ].includes(props.variant)
                 "
             >
                 <ul class="space-y-2">
@@ -444,6 +450,32 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isApplicationsActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Evaluate Grades (Admin) -->
+                    <li>
+                        <NavLink
+                            :href="route('evaluator.dashboard')"
+                            :active="isActiveRoute('evaluator.dashboard')"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isActiveRoute('evaluator.dashboard') }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="clipboard-list"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isExpanded" class="nav-label">
+                                Evaluate Grades
+                            </span>
+                            <div
+                                v-if="isExpanded"
+                                class="nav-indicator"
+                                :class="{ active: isActiveRoute('evaluator.dashboard') }"
                             ></div>
                         </NavLink>
                     </li>
@@ -783,6 +815,32 @@ watch(isSidebarOpen, (val) => {
                                 v-if="isExpanded"
                                 class="nav-indicator"
                                 :class="{ active: isApplicationsActive }"
+                            ></div>
+                        </NavLink>
+                    </li>
+
+                    <!-- Programs -->
+                    <li>
+                        <NavLink
+                            :href="route(props.variant + '.programs')"
+                            :active="isStaffProgramsActive"
+                            class="nav-item group"
+                            :class="{ 'nav-item-active': isStaffProgramsActive }"
+                            @click="emit('close')"
+                        >
+                            <div class="nav-icon">
+                                <FontAwesomeIcon
+                                    icon="clipboard-list"
+                                    class="text-lg"
+                                />
+                            </div>
+                            <span v-if="isExpanded" class="nav-label">
+                                Programs
+                            </span>
+                            <div
+                                v-if="isExpanded"
+                                class="nav-indicator"
+                                :class="{ active: isStaffProgramsActive }"
                             ></div>
                         </NavLink>
                     </li>

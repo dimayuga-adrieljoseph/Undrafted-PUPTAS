@@ -29,7 +29,7 @@ trait ManagesApplicationFiles
             // Load user with ONLY essential data (no files relationship)
             $user = User::with([
                 'currentApplication' => function ($query) {
-                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.submitted_at', 'applications.requires_promissory_note');
+                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.submitted_at', 'applications.requires_guidance_office', 'applications.requires_admission_office');
                 },
                 'currentApplication.program:id,code,name,slots',
                 'currentApplication.secondChoice:id,code,name,slots',
@@ -109,7 +109,8 @@ trait ManagesApplicationFiles
                     'program' => $user->currentApplication->program,
                     'second_choice' => $user->currentApplication->secondChoice,
                     'third_choice' => $user->currentApplication->thirdChoice,
-                    'requires_promissory_note' => $user->currentApplication->requires_promissory_note,
+                    'requires_guidance_office' => $user->currentApplication->requires_guidance_office,
+                    'requires_admission_office' => $user->currentApplication->requires_admission_office,
                     'processes' => $user->currentApplication->processes,
                 ] : null,
             ];
@@ -302,6 +303,13 @@ trait ManagesApplicationFiles
 
         if (!$application) {
             return response()->json(['message' => 'Application not found'], 404);
+        }
+
+        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        if (!in_array($application->program_id, $assignedProgramIds)) {
+            return response()->json([
+                'message' => 'You are not authorized to return applicants for this program.',
+            ], 403);
         }
 
         // Check prerequisite stage if needed

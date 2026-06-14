@@ -253,10 +253,13 @@ class DashboardService
      */
     public function getEvaluatorDashboardData(string $stage = 'document_evaluator'): array
     {
-        $programIds = Auth::user()
-            ->programs()
-            ->pluck('programs.id')
-            ->toArray();
+        $user = Auth::user();
+        $programIds = $user->programs()->pluck('programs.id')->toArray();
+
+        // Admin bypass: Admins and SuperAdmins can evaluate all programs
+        if ($user->role_id == 2 || $user->role_id == 7 || $user->role_id == 8) {
+            $programIds = \App\Models\Program::pluck('id')->toArray();
+        }
 
         // If the evaluator has no assigned programs, pendingUsers is empty.
         // Evaluators must be explicitly assigned to programs to see applicants.

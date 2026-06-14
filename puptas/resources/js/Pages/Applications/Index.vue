@@ -214,6 +214,11 @@ const formatDate = (date) => {
     return d.toLocaleString();
 };
 
+const formatStage = (stage) => {
+    if (!stage) return 'Unknown Stage';
+    return stage.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
 const formatGrade = (value) => {
     if (value === null || value === undefined) return "—";
     const num = parseFloat(value);
@@ -739,8 +744,8 @@ const clearFilters = () => {
                                     • {{ capitalize(process.status) }}
                                 </span>
                             </p>
-                            <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
-                                {{ process.notes }}
+                            <p v-if="process.reviewer_notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                                {{ process.reviewer_notes }}
                             </p>
                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
                                 {{ formatDate(process.created_at) }}

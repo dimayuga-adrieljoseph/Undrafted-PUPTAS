@@ -44,8 +44,11 @@ class Handler extends ExceptionHandler
         // Must be checked BEFORE wantsJson() since Inertia also sends Accept: application/json.
         if ($request->header('X-Inertia')) {
             if ($e instanceof ValidationException) {
-                // Let Fortify/Inertia handle validation errors natively (field-level errors)
-                return parent::render($request, $e);
+                // Safely redirect back with validation errors instead of relying on parent::render()
+                // which might cause infinite loops or crashes in some environments.
+                return back()
+                    ->withInput($request->except($this->dontFlash ?? []))
+                    ->withErrors($e->errors(), $e->errorBag ?? 'default');
             }
 
             if ($e instanceof AuthenticationException) {

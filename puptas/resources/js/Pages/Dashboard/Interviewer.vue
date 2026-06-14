@@ -942,8 +942,8 @@ const fetchPrograms = async () => {
                                         <p class="font-semibold text-gray-900 dark:text-white">
                                             {{ formatStage(process.stage) }}
                                         </p>
-                                        <p v-if="process.notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                            {{ process.notes }}
+                                        <p v-if="process.reviewer_notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            {{ process.reviewer_notes }}
                                         </p>
                                     </div>
                                     <span :class="[

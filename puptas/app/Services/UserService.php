@@ -128,7 +128,7 @@ class UserService
     public function getAllApplicantsByStage(string $stage, ?array $programIds = null): Collection
     {
         return ApplicantProfile::with(['currentApplication' => function ($query) {
-                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.requires_promissory_note');
+                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.requires_guidance_office', 'applications.requires_admission_office');
             }, 'currentApplication.program' => function ($query) {
                 $query->select('id', 'code', 'name', 'slots');
             }, 'currentApplication.secondChoice' => function ($query) {
@@ -179,7 +179,8 @@ class UserService
                         'status' => $application->status,
                         'enrollment_status' => $application->enrollment_status,
                         'created_at' => $application->created_at,
-                        'requires_promissory_note' => $application->requires_promissory_note ?? false,
+                        'requires_guidance_office' => $application->requires_guidance_office ?? false,
+                        'requires_admission_office' => $application->requires_admission_office ?? false,
                         'program' => $application->program ? [
                             'id' => $application->program->id,
                             'code' => $application->program->code,
