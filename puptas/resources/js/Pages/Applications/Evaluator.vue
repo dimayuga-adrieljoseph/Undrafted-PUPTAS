@@ -1063,7 +1063,8 @@ const submitPass = async () => {
     } catch (error) {
         console.error("Error passing application:", error);
         showPassModal.value = false;
-        evaluationError.value = error.response?.data?.message || "Failed to pass application.";
+        const msg = error.response?.data?.message || "Failed to pass application.";
+        showToast(msg, "error");
     } finally {
         isSubmitting.value = false;
     }

@@ -42,7 +42,9 @@ class ApplicationService
      */
     public function getApplicationByUserId(string $userId): Application
     {
-        return Application::where('user_id', (string) $userId)->firstOrFail();
+        return Application::where('user_id', (string) $userId)
+            ->latest('id')
+            ->firstOrFail();
     }
 
     /**
