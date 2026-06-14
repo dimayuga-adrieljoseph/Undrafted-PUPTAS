@@ -76,7 +76,9 @@ class LogbookService
             $value = $entry[$field] ?? '';
 
             $pdf->SetXY($coords['x'], $y);
-            $pdf->Cell($coords['width'], 5, (string) $value, 0, 0, 'L');
+            $align = $coords['align'] ?? 'L';
+            $height = $coords['height'] ?? 5;
+            $pdf->Cell($coords['width'], $height, (string) $value, 0, 0, $align);
         }
     }
 }
