@@ -480,7 +480,7 @@
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
                                             </svg>
-                                            {{ ($page.props.auth?.user?.role_id === 8 || $page.props.auth?.user?.role_id === 2) ? 'Go to Admissions Office' : 'Go to Guidance Office' }}
+                                            {{ $page.props.auth?.user?.role_id !== 3 ? 'Go to Admission Office' : 'Go to Guidance Office' }}
                                         </button>
                                         <button v-if="isEvaluating" @click="cancelEvaluation"
                                             class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition">
@@ -1001,7 +1001,7 @@ const submitFlag = async () => {
     isSubmitting.value = true;
     try {
         const currentUserId = selectedUser.value.id;
-        const isGradeEvaluator = page.props.auth?.user?.role_id === 8 || page.props.auth?.user?.role_id === 2;
+        const isGradeEvaluator = page.props.auth?.user?.role_id !== 3;
 
         await axios.post(`/evaluator/flag-application/${currentUserId}`, {
             note,
@@ -1063,7 +1063,8 @@ const submitPass = async () => {
     } catch (error) {
         console.error("Error passing application:", error);
         showPassModal.value = false;
-        evaluationError.value = error.response?.data?.message || "Failed to pass application.";
+        const msg = error.response?.data?.message || "Failed to pass application.";
+        showToast(msg, "error");
     } finally {
         isSubmitting.value = false;
     }
