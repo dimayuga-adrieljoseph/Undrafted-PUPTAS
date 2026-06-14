@@ -45,7 +45,7 @@ class EvaluatorDashboardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->dashboardService->verifyRoleAccess($user, [2, 3, 7, 8])) {
+        if (!$this->dashboardService->verifyRoleAccess($user, $this->getRoleId())) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
@@ -112,7 +112,7 @@ class EvaluatorDashboardController extends Controller
             'note' => 'nullable|string|max:1000',
         ]);
 
-        $this->ensureRole([2, 3, 8]);
+        $this->ensureRole($this->getRoleId());
 
         $application = $this->applicationService->getApplicationByUserId($userId);
         $user = Auth::user();
@@ -191,7 +191,7 @@ class EvaluatorDashboardController extends Controller
 
     public function rejectApplication(Request $request, $userId)
     {
-        $this->ensureRole([2, 3, 7, 8]);
+        $this->ensureRole($this->getRoleId());
 
         $request->validate([
             'note' => 'nullable|string|max:1000',
@@ -250,7 +250,7 @@ class EvaluatorDashboardController extends Controller
 
     public function flagApplication(Request $request, $userId)
     {
-        $this->ensureRole([2, 3, 7, 8]);
+        $this->ensureRole($this->getRoleId());
 
         $request->validate([
             'note' => 'nullable|string|max:1000',
@@ -315,7 +315,7 @@ class EvaluatorDashboardController extends Controller
 
     public function startReview(ApplicationProcess $applicationProcess)
     {
-        $this->ensureRole([2, 3, 7, 8]);
+        $this->ensureRole($this->getRoleId());
 
         if ($applicationProcess->started_at !== null) {
             return response()->json(['message' => 'Review already started.'], 409);
