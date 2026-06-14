@@ -96,15 +96,29 @@ class ControlListService
         $t = $config['title'];
         if ($t['x'] === null || $t['y'] === null) return;
         
-        // Hide baked-in template text using a white rectangle (center 150mm area)
-        $pdf->SetFillColor(255, 255, 255);
         $pageWidth = $pdf->GetPageWidth();
-        $pdf->Rect(($pageWidth - 150) / 2, $t['y'] - 2, 150, 12, 'F');
+
+        // Hide baked-in template text using a white rectangle (center 150mm area by default or use mask config)
+        $pdf->SetFillColor(255, 255, 255);
+        if (isset($t['mask'])) {
+            $pdf->Rect($t['mask']['x'], $t['mask']['y'], $t['mask']['width'], $t['mask']['height'], 'F');
+        } else {
+            $pdf->Rect(($pageWidth - 150) / 2, $t['y'] - 2, 150, 12, 'F');
+        }
 
         $pdf->SetFont($t['font'], $t['font_style'], $t['font_size']);
-        $pdf->SetTextColor(192, 0, 0); // #c00000
-        $pdf->SetXY(0, $t['y']);
-        $pdf->Cell($pageWidth, 10, $title, 0, 0, 'C');
+        
+        if (isset($t['color']) && is_array($t['color'])) {
+            $pdf->SetTextColor($t['color'][0], $t['color'][1], $t['color'][2]);
+        } else {
+            $pdf->SetTextColor(192, 0, 0); // fallback #c00000
+        }
+
+        $pdf->SetXY($t['x'] ?: 0, $t['y']);
+        $width = isset($t['width']) && $t['width'] > 0 ? $t['width'] : $pageWidth;
+        $align = $t['align'] ?? 'C';
+        
+        $pdf->Cell($width, 10, $title, 0, 0, $align);
         $pdf->SetTextColor(0, 0, 0); // reset to black
     }
 
@@ -113,15 +127,29 @@ class ControlListService
         $a = $config['academic_year'];
         if ($a['x'] === null || $a['y'] === null) return;
         
+        $pageWidth = $pdf->GetPageWidth();
+
         // Hide baked-in template text using a white rectangle
         $pdf->SetFillColor(255, 255, 255);
-        $pageWidth = $pdf->GetPageWidth();
-        $pdf->Rect(($pageWidth - 100) / 2, $a['y'] - 1, 100, 10, 'F');
+        if (isset($a['mask'])) {
+            $pdf->Rect($a['mask']['x'], $a['mask']['y'], $a['mask']['width'], $a['mask']['height'], 'F');
+        } else {
+            $pdf->Rect(($pageWidth - 100) / 2, $a['y'] - 1, 100, 10, 'F');
+        }
 
         $pdf->SetFont($a['font'], $a['font_style'], $a['font_size']);
-        $pdf->SetTextColor(192, 0, 0); // #c00000
-        $pdf->SetXY(0, $a['y']);
-        $pdf->Cell($pageWidth, 8, $year, 0, 0, 'C');
+        
+        if (isset($a['color']) && is_array($a['color'])) {
+            $pdf->SetTextColor($a['color'][0], $a['color'][1], $a['color'][2]);
+        } else {
+            $pdf->SetTextColor(192, 0, 0); // fallback #c00000
+        }
+
+        $pdf->SetXY($a['x'] ?: 0, $a['y']);
+        $width = isset($a['width']) && $a['width'] > 0 ? $a['width'] : $pageWidth;
+        $align = $a['align'] ?? 'C';
+        
+        $pdf->Cell($width, 8, $year, 0, 0, $align);
         $pdf->SetTextColor(0, 0, 0); // reset to black
     }
 
@@ -132,7 +160,9 @@ class ControlListService
             if ($coords['x'] === null || $coords['width'] === null) continue;
             
             $pdf->SetXY($coords['x'], $y);
-            $pdf->Cell($coords['width'], 5, $entry[$field] ?? '', 0, 0, 'L');
+            $align = $coords['align'] ?? 'L';
+            $height = $coords['height'] ?? 5;
+            $pdf->Cell($coords['width'], $height, $entry[$field] ?? '', 0, 0, $align);
         }
     }
 }
