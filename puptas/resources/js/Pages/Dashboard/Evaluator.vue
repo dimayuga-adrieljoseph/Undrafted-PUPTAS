@@ -270,10 +270,75 @@ const getEvaluationStatusClass = (pipelineStatus) => {
 
 const isEvaluationCompleted = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = props.user?.role_id === 8 ? 'grade_evaluator' : 'document_evaluator';
+    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess && evaluatorProcess.status === 'completed';
 });
+
+const hasStartedReview = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
+    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
+    return evaluatorProcess && !!evaluatorProcess.started_at;
+});
+
+const isStartingReview = ref(false);
+
+const startReview = async () => {
+    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const processes = selectedUser.value.application.processes;
+    const processIndex = processes.findIndex(p => p.stage === targetStage);
+    
+    if (processIndex === -1) {
+        showToast("Error finding application process.", "error");
+        return;
+    }
+
+    const evaluatorProcess = processes[processIndex];
+    isStartingReview.value = true;
+    try {
+        const response = await axios.post(`/evaluator/start-review/${evaluatorProcess.id}`);
+        // Rebuild selectedUser.value to trigger Vue reactivity
+        selectedUser.value = {
+            ...selectedUser.value,
+            application: {
+                ...selectedUser.value.application,
+                processes: processes.map((p, i) =>
+                    i === processIndex ? { ...p, started_at: response.data.started_at } : p
+                ),
+            },
+        };
+        showToast("Review started successfully.");
+    } catch (error) {
+        if (error.response?.status === 409) {
+            // Already started — re-fetch user to sync UI with DB state
+            try {
+                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}`);
+                const userData = refetch.data.user;
+                selectedUser.value = {
+                    ...selectedUser.value,
+                    ...userData,
+                    application: {
+                        ...userData.application,
+                        processes: userData.application?.processes || [],
+                        program: userData.application?.program || null,
+                        second_choice: userData.application?.second_choice || null,
+                        third_choice: userData.application?.third_choice || null,
+                    },
+                    grades: userData.grades || null,
+                };
+                showToast("Review was already started.");
+            } catch (refetchErr) {
+                console.error("Refetch failed:", refetchErr);
+            }
+        } else {
+            console.error("Error starting review:", error);
+            showToast(error.response?.data?.message || "Failed to start review.", "error");
+        }
+    } finally {
+        isStartingReview.value = false;
+    }
+};
 
 const getButtonClass = (type) => {
     const classes = {
@@ -362,7 +427,6 @@ const closeUserCard = () => {
     isEvaluating.value = false;
     filesToReturn.value = {};
     returnNote.value = "";
-    requiresPromissoryNote.value = false;
     refreshDashboard();
 };
 
@@ -405,7 +469,7 @@ const isSubmitting = ref(false);
 
 const promptReturn = () => {
     const selected = Object.keys(filesToReturn.value).filter((k) => filesToReturn.value[k]);
-    if (props.user?.role_id === 8 && !returnNote.value.trim()) {
+    if (props.user?.role_id !== 3 && !returnNote.value.trim()) {
         evaluationError.value = "Please provide a reject reason.";
         showToast("Please provide a reject reason.", "error");
         return;
@@ -419,9 +483,6 @@ const promptReturn = () => {
 
 const submitReturn = async () => {
     evaluationError.value = "";
-    const selected = Object.keys(filesToReturn.value).filter(
-        (k) => filesToReturn.value[k]
-    );
     const note = returnNote.value.trim();
 
     if (returnNoteCharCount.value > 400) {
@@ -432,18 +493,18 @@ const submitReturn = async () => {
 
     isSubmitting.value = true;
     try {
-        if (props.user?.role_id === 8) {
-            await axios.post(`/evaluator/reject-application/${selectedUser.value.id}`, {
-                note: returnNote.value
-            });
-            showToast("Application rejected successfully!");
-        } else {
-            await axios.post(`/dashboard/return-files/${selectedUser.value.id}`, {
-                files: Object.keys(filesToReturn.value).filter(k => filesToReturn.value[k]),
+        if (props.user?.role_id !== 3) {
+            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}`, {
                 note: returnNote.value,
-                requires_promissory_note: requiresPromissoryNote.value
+                requires_admission_office: true
             });
-            showToast("Application returned successfully!");
+            showToast("Applicant flagged for Admissions Office!");
+        } else {
+            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}`, {
+                note: returnNote.value,
+                requires_guidance_office: true
+            });
+            showToast("Applicant flagged for Guidance Office!");
         }
 
         showReturnModal.value = false;
@@ -452,7 +513,7 @@ const submitReturn = async () => {
         console.error(error);
         showReturnModal.value = false;
         const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0];
-        evaluationError.value = msg || (props.user?.role_id === 8 ? "Reject failed. Please try again." : "Return failed. Please try again.");
+        evaluationError.value = msg || "Action failed. Please try again.";
     } finally {
         isSubmitting.value = false;
     }
@@ -465,8 +526,7 @@ const submitPass = async () => {
         await axios.post(
             `/evaluator/pass-application/${selectedUser.value.id}`,
             {
-                note: "",
-                requires_promissory_note: requiresPromissoryNote.value
+                note: ""
             }
         );
 
@@ -503,7 +563,7 @@ const showToast = (message, type = 'success') => {
 </script>
 
 <template>
-    <Head :title="user?.role_id === 8 ? 'Grade Evaluator Dashboard' : 'Document Evaluator Dashboard'" />
+    <Head :title="user?.role_id === 3 ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'" />
     <EvaluatorLayout>
         <!-- Success Toast Notification -->
         <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
@@ -536,7 +596,7 @@ const showToast = (message, type = 'success') => {
         <div class="px-4 md:px-8 mb-8">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{{ user?.role_id === 8 ? 'Grade Evaluator Dashboard' : 'Document Evaluator Dashboard' }}</h1>
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{{ user?.role_id === 3 ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard' }}</h1>
                     <p class="text-gray-600 dark:text-gray-400 mt-2">Review and evaluate application submissions.</p>
                 </div>
                 <div class="flex items-center space-x-3">
@@ -807,41 +867,47 @@ const showToast = (message, type = 'success') => {
                                 <div v-if="!isEvaluationCompleted">
                                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h4>
                                     
-                                    <!-- Promissory Note Checkbox -->
-                                    <div class="mb-4" v-if="user?.role_id !== 8">
-                                        <label class="flex items-center space-x-3 cursor-pointer p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                            <input 
-                                                id="requires_promissory_note_dash"
-                                                name="requires_promissory_note"
-                                                type="checkbox" 
-                                                v-model="requiresPromissoryNote" 
-                                                class="w-5 h-5 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:bg-gray-700"
+                                    <div v-if="!hasStartedReview" class="mb-4">
+                                        <div class="space-y-3">
+                                            <button
+                                                @click="startReview"
+                                                :disabled="isStartingReview"
+                                                class="w-full px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white rounded-lg transition font-medium min-h-[44px] flex justify-center items-center disabled:opacity-50"
                                             >
-                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                                Require applicant to submit a Promissory Note
-                                            </span>
-                                        </label>
+                                                <svg v-if="isStartingReview" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                <span>{{ isStartingReview ? 'Starting...' : 'Begin Review' }}</span>
+                                            </button>
+                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator`"
+                                                  :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
+                                                View Full Details
+                                            </Link>
+                                        </div>
                                     </div>
-
-                                    <div class="space-y-3">
-                                        <button
-                                            v-if="!isEvaluating"
-                                            @click="startEvaluation"
-                                            :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                        >
-                                            {{ user?.role_id === 8 ? 'Reject Application' : 'Return Documents' }}
-                                        </button>
-                                        <button
-                                            v-if="!isEvaluating"
-                                            @click="showPassModal = true"
-                                            :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                        >
-                                            Pass Application
-                                        </button>
-                                        <Link :href="`/applications/user/${selectedUser.id}`"
-                                              :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
-                                            View Full Details
-                                        </Link>
+                                    
+                                    <div v-else>
+                                        <div class="space-y-3">
+                                            <button
+                                                v-if="!isEvaluating"
+                                                @click="startEvaluation"
+                                                :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                            >
+                                                {{ user?.role_id === 3 ? 'Go to Guidance Office' : 'Go to Admissions Office' }}
+                                            </button>
+                                            <button
+                                                v-if="!isEvaluating"
+                                                @click="showPassModal = true"
+                                                :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
+                                            >
+                                                Pass Application
+                                            </button>
+                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator`"
+                                                  :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
+                                                View Full Details
+                                            </Link>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -872,8 +938,8 @@ const showToast = (message, type = 'success') => {
 
                             <!-- Evaluation Section -->
                             <div v-if="isEvaluating" class="mb-8 p-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">{{ user?.role_id === 8 ? 'Reject Application' : 'Return Documents' }}</h4>
-                                <p class="text-sm text-amber-700 dark:text-amber-400 mb-4">{{ user?.role_id === 8 ? 'Provide a reason for rejecting this application.' : 'Select the documents to return and provide a reason. The applicant will be notified.' }}</p>
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">{{ user?.role_id === 3 ? 'Guidance Office Referral' : 'Admissions Office Referral' }}</h4>
+                                <p class="text-sm text-amber-700 dark:text-amber-400 mb-4">{{ user?.role_id === 3 ? 'Provide a reason for sending this applicant to the Guidance Office.' : 'Provide a reason for sending this applicant to the Admissions Office.' }}</p>
                                 
                                 <div v-if="evaluationError" class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded relative" role="alert">
                                     <span class="block sm:inline">{{ evaluationError }}</span>
@@ -882,7 +948,7 @@ const showToast = (message, type = 'success') => {
                                 <!-- Return Note -->
                                 <div class="mb-4">
                                     <label for="returnNote" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        {{ user?.role_id === 8 ? 'Reject Reason' : 'Return Reason' }} <span class="text-red-500 dark:text-red-300">*</span>
+                                        Reason <span class="text-red-500 dark:text-red-300">*</span>
                                     </label>
                                     <textarea
                                         id="returnNote"
@@ -894,7 +960,7 @@ const showToast = (message, type = 'success') => {
                                             'w-full border rounded-lg p-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent',
                                             returnNoteCharCount > 400 ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]'
                                         ]"
-                                        placeholder="Explain what the applicant needs to fix or resubmit..."
+                                        placeholder="Explain what the applicant needs to do..."
                                     ></textarea>
                                     <div class="text-right mt-1">
                                         <span :class="{'text-red-500': returnNoteCharCount > 400, 'text-gray-500': returnNoteCharCount <= 400}" class="text-xs">
@@ -910,7 +976,7 @@ const showToast = (message, type = 'success') => {
                                         @click="promptReturn"
                                         class="flex-1 px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white text-sm font-semibold rounded-lg transition"
                                     >
-                                        {{ user?.role_id === 8 ? 'Confirm Reject' : 'Confirm Return' }}
+                                        Confirm
                                     </button>
                                     <button
                                         @click="cancelEvaluation"
@@ -949,24 +1015,11 @@ const showToast = (message, type = 'success') => {
                                                     </svg>
                                                 </div>
                                                 
-                                                <!-- Checkbox overlay for evaluation mode -->
-                                                <div v-if="isEvaluating && hasImagePreview(file) && user?.role_id !== 8" class="absolute top-2 left-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        :id="key"
-                                                        :name="key"
-                                                        v-model="filesToReturn[key]"
-                                                        class="h-4 w-4 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:text-white"
-                                                    />
-                                                </div>
                                             </div>
                                             
                                             <!-- Document Label -->
                                             <div class="bg-gray-50 dark:bg-gray-800 p-3 border-t border-gray-200 dark:border-gray-700">
-                                                <label v-if="isEvaluating && hasImagePreview(file) && user?.role_id !== 8" :for="key" class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">
-                                                    {{ formatFileKey(key) }}
-                                                </label>
-                                                <span v-else class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">
+                                                <span class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">
                                                     {{ formatFileKey(key) }}
                                                 </span>
                                             </div>
@@ -998,7 +1051,7 @@ const showToast = (message, type = 'success') => {
                                                         {{ formatStage(process.stage) }}
                                                     </p>
                                                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                        {{ process.notes || 'No notes provided' }}
+                                                        {{ process.reviewer_notes || 'No notes provided' }}
                                                     </p>
                                                 </div>
                                                 <span :class="[

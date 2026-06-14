@@ -64,6 +64,13 @@ class ShareInertiaData
                     ->mapWithKeys(fn ($bag, $key) => [$key => $bag->messages()])
                     ->all();
             },
+            'cutoff' => function () {
+                $service = app(\App\Services\CutoffSettingsService::class);
+                return [
+                    'is_passed' => $service->isCutoffPassed(),
+                    'display' => $service->formatForDisplay(),
+                ];
+            },
         ]);
 
         return $next($request);

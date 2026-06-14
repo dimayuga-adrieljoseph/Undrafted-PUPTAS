@@ -169,6 +169,22 @@ const handleTermsCancel = () => {
 
             <!-- Registration Form -->
             <div class="p-8 md:p-10">
+                <!-- Cutoff Banner -->
+                <div
+                    v-if="$page.props.cutoff?.is_passed"
+                    class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg flex items-start gap-3"
+                >
+                    <svg class="w-6 h-6 text-red-500 dark:text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <p class="text-sm font-bold text-red-800 dark:text-red-300">Registration is closed.</p>
+                        <p class="text-sm text-red-700 dark:text-red-400 mt-0.5">
+                            The deadline for admissions ({{ $page.props.cutoff?.display }}) has already passed. You can no longer create a new account.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Server error banner -->
                 <div
                     v-if="flashError"
@@ -560,7 +576,7 @@ const handleTermsCancel = () => {
 
                                 <button
                                     type="submit"
-                                    :disabled="form.processing"
+                                    :disabled="form.processing || $page.props.cutoff?.is_passed"
                                     class="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-red-700 via-red-600 to-yellow-600 hover:from-red-800 hover:via-red-700 hover:to-yellow-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none dark:text-gray-900"
                                 >
                                     <div
@@ -588,9 +604,9 @@ const handleTermsCancel = () => {
                                             ></path>
                                         </svg>
                                         <span>{{
-                                            form.processing
-                                                ? "Creating Account..."
-                                                : "Complete Registration"
+                                            $page.props.cutoff?.is_passed
+                                                ? "Registration Closed"
+                                                : (form.processing ? "Creating Account..." : "Complete Registration")
                                         }}</span>
                                     </div>
                                 </button>

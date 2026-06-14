@@ -259,6 +259,19 @@ const selectUser = async (user) => {
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
         
+        // Check if there is an interview already in progress
+        const interviewerInProgress = selectedUser.value.application?.processes?.find(
+            p => p.stage === 'interviewer' && p.status === 'in_progress'
+        );
+        if (interviewerInProgress && interviewerInProgress.started_at) {
+            // Append Z if it's not present to ensure it's treated as UTC if the backend sends UTC
+            interviewStartTime.value = interviewerInProgress.started_at.endsWith('Z') 
+                ? interviewerInProgress.started_at 
+                : interviewerInProgress.started_at + 'Z';
+        } else {
+            interviewStartTime.value = null;
+        }
+        
         await fetchPrograms();
     } catch (error) {
         console.error("Failed to fetch user data:", error);
@@ -266,11 +279,6 @@ const selectUser = async (user) => {
         selectedUser.value = null;
         showSnackbar("Failed to load applicant data", "error");
     }
-};
-
-const closeUserCard = () => {
-    selectedUser.value = null;
-    selectedProgramId.value = "";
 };
 
 const formatFileKey = (key) => {
@@ -378,6 +386,27 @@ const formatDate = (date) => {
     });
 };
 
+const interviewStartTime = ref(null);
+
+const beginInterview = async () => {
+    try {
+        const response = await axios.post(`/interviewer-dashboard/start/${selectedUser.value.id}`);
+        const startedAt = response.data.started_at;
+        // Ensure proper UTC parsing
+        interviewStartTime.value = startedAt.endsWith('Z') ? startedAt : startedAt + 'Z';
+    } catch (e) {
+        console.error("Failed to start interview:", e);
+        const msg = e.response?.data?.message || "Failed to start interview";
+        showSnackbar(msg, "error");
+    }
+};
+
+const closeUserCard = () => {
+    selectedUser.value = null;
+    selectedProgramId.value = "";
+    interviewStartTime.value = null;
+};
+
 const promptAccept = () => {
     if (!selectedProgramId.value) {
         showSnackbar("Please select a program to accept the applicant into", "error");
@@ -393,13 +422,13 @@ const acceptApplication = async () => {
             `/interviewer-dashboard/accept/${selectedUser.value.id}`,
             {
                 program_id: selectedProgramId.value,
+                start_time: interviewStartTime.value
             }
         );
         showSnackbar("Application accepted successfully", "success");
-        selectedUser.value = null;
-        selectedProgramId.value = "";
+        closeUserCard();
         showAcceptModal.value = false;
-        router.reload({ only: ['pendingUsers', 'summary'] });
+        router.reload({ only: ['pendingUsers', 'summary', 'assignedPrograms'] });
     } catch (e) {
         console.error("Accept failed:", e);
         const msg = e.response?.data?.message || "Failed to accept application";
@@ -424,13 +453,13 @@ const rejectApplication = async () => {
             `/interviewer-dashboard/reject/${selectedUser.value.id}`,
             {
                 program_id: selectedProgramId.value,
+                start_time: interviewStartTime.value
             }
         );
         showSnackbar("Application rejected successfully", "success");
-        selectedUser.value = null;
-        selectedProgramId.value = "";
+        closeUserCard();
         showRejectModal.value = false;
-        router.reload({ only: ['pendingUsers', 'summary'] });
+        router.reload({ only: ['pendingUsers', 'summary', 'assignedPrograms'] });
     } catch (e) {
         console.error("Reject failed:", e);
         const msg = e.response?.data?.message || "Failed to reject application";
@@ -739,45 +768,62 @@ const fetchPrograms = async () => {
                         </div>
                     </div>
 
-                    <!-- Program Selection for Accept/Reject -->
-                    <div v-if="!selectedUser.is_evaluation_completed">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Your Program</h4>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                            Choose the program you are interviewing for:
-                        </p>
-                        <select
-                            v-model="selectedProgramId"
-                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                        >
-                            <option disabled value="">Select Program</option>
-                            <option
-                                v-for="p in props.assignedPrograms"
-                                :key="p.id"
-                                :value="p.id"
+                        <!-- Program Selection for Accept/Reject -->
+                        <div v-if="!selectedUser.is_evaluation_completed">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Your Program</h4>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                Choose the program you are interviewing for:
+                            </p>
+                            <select
+                                v-model="selectedProgramId"
+                                class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                :disabled="!interviewStartTime"
                             >
-                                {{ p.code }} - {{ p.name }}
-                            </option>
-                        </select>
+                                <option disabled value="">Select Program</option>
+                                <option
+                                    v-for="p in props.assignedPrograms"
+                                    :key="p.id"
+                                    :value="p.id"
+                                >
+                                    {{ p.code }} - {{ p.name }}
+                                </option>
+                            </select>
 
-                        <div class="flex flex-col sm:flex-row gap-2">
-                            <button
-                                @click="promptAccept"
-                                :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2']"
-                            >
-                                ✓ Accept
-                            </button>
-                            <button
-                                @click="promptReject"
-                                :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2']"
-                            >
-                                ✗ Reject
-                            </button>
+                            <div v-if="!interviewStartTime">
+                                <button
+                                    @click="beginInterview"
+                                    class="w-full px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 bg-[#9E122C] text-white hover:bg-[#b51834]"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    Begin Interview
+                                </button>
+                            </div>
+                            <div v-else>
+                                <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center gap-2 border border-blue-200 dark:border-blue-800">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    Interview in progress since {{ new Date(interviewStartTime).toLocaleTimeString() }}
+                                </div>
+                                <div class="flex flex-col sm:flex-row gap-2">
+                                    <button
+                                        @click="promptAccept"
+                                        :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2']"
+                                    >
+                                        ✓ Accept
+                                    </button>
+                                    <button
+                                        @click="promptReject"
+                                        :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2']"
+                                    >
+                                        ✗ Reject
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <Link :href="`/applications/user/${selectedUser.id}`"
+                                  :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block mt-3']">
+                                View Full Details
+                            </Link>
                         </div>
-                        <Link :href="`/applications/user/${selectedUser.id}`"
-                              :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block mt-3']">
-                            View Full Details
-                        </Link>
-                    </div>
 
                     <!-- Interview Completed Summary -->
                     <div v-else>
@@ -896,8 +942,8 @@ const fetchPrograms = async () => {
                                         <p class="font-semibold text-gray-900 dark:text-white">
                                             {{ formatStage(process.stage) }}
                                         </p>
-                                        <p v-if="process.notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                            {{ process.notes }}
+                                        <p v-if="process.reviewer_notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            {{ process.reviewer_notes }}
                                         </p>
                                     </div>
                                     <span :class="[

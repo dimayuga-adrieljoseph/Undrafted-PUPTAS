@@ -27,19 +27,22 @@ class InterviewerDashboardController extends Controller
     protected DashboardService $dashboardService;
     protected UserService $userService;
     protected AuditLogService $auditLogService;
+    protected \App\Services\LogbookService $logbookService;
 
     public function __construct(
         ApplicationService $applicationService,
         ApplicationProcessService $processService,
         DashboardService $dashboardService,
         UserService $userService,
-        AuditLogService $auditLogService
+        AuditLogService $auditLogService,
+        \App\Services\LogbookService $logbookService
     ) {
         $this->applicationService = $applicationService;
         $this->processService = $processService;
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
         $this->auditLogService = $auditLogService;
+        $this->logbookService = $logbookService;
     }
 
     public function index()
@@ -102,18 +105,59 @@ class InterviewerDashboardController extends Controller
         return response()->json($results);
     }
 
+    public function start(Request $request, $userId)
+    {
+        $this->ensureRole(4);
+
+        $application = $this->applicationService->getApplicationByUserId($userId);
+
+        // Ensure evaluator stage is completed
+        $this->applicationService->ensureStageCompleted(
+            $application,
+            'grade_evaluator',
+            "Cannot start interview - evaluator stage not completed."
+        );
+
+        $interviewerInProgress = $application->processes()
+            ->where('stage', 'interviewer')
+            ->where('status', 'in_progress')
+            ->latest()
+            ->first();
+
+        if (!$interviewerInProgress) {
+            return response()->json([
+                'message' => 'Interview process is not available or already completed.',
+            ], 409);
+        }
+
+        // Only start if not already started
+        if (!$interviewerInProgress->started_at) {
+            $interviewerInProgress->update([
+                'started_at' => now(),
+                'performed_by' => auth()->id(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Interview started successfully.',
+            'started_at' => $interviewerInProgress->started_at
+        ]);
+    }
+
     public function accept(Request $request, $userId)
     {
         $this->ensureRole(4);
 
-        // Validate that program_id is provided and optional requires_promissory_note
+        // Validate that program_id is provided, start_time, and optional requires_promissory_note
         $validated = $request->validate([
             'program_id' => 'required|exists:programs,id',
             'requires_promissory_note' => 'nullable|boolean',
+            'start_time' => 'nullable|date',
         ]);
 
         $programId = $validated['program_id'];
         $requiresPromissoryNote = $validated['requires_promissory_note'] ?? false;
+        $startTime = $validated['start_time'] ?? null;
 
         // Check if interviewer is assigned to this program
         $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
@@ -160,7 +204,7 @@ class InterviewerDashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress, $programId, $requiresPromissoryNote) {
+            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress, $programId, $requiresPromissoryNote, $startTime) {
                 $program = Program::lockForUpdate()->findOrFail($programId);
 
                 if ($program->slots <= 0) {
@@ -178,7 +222,6 @@ class InterviewerDashboardController extends Controller
                 }
 
                 // Update application to the interviewer's assigned program
-                $oldProgramId = $application->program_id;
                 $application->program_id = $programId;
                 $application->requires_promissory_note = $requiresPromissoryNote;
                 $application->save();
@@ -187,20 +230,13 @@ class InterviewerDashboardController extends Controller
                 $program->slots -= 1;
                 $program->save();
 
-                // Increment old program slots if different
-                if ($oldProgramId && $oldProgramId != $programId) {
-                    $oldProgram = Program::find($oldProgramId);
-                    if ($oldProgram) {
-                        $oldProgram->slots += 1;
-                        $oldProgram->save();
-                    }
-                }
+                $notes = "Accepted by interviewer for program: {$program->code}";
 
                 // Close current interviewer in-progress process
                 $interviewerInProgress->update([
                     'status' => 'completed',
                     'action' => 'passed',
-                    'reviewer_notes' => "Accepted by interviewer for program: {$program->code}",
+                    'reviewer_notes' => $notes,
                     'performed_by' => auth()->id(),
                 ]);
 
@@ -229,9 +265,11 @@ class InterviewerDashboardController extends Controller
         // Validate that program_id is provided
         $validated = $request->validate([
             'program_id' => 'required|exists:programs,id',
+            'start_time' => 'nullable|date',
         ]);
 
         $programId = $validated['program_id'];
+        $startTime = $validated['start_time'] ?? null;
 
         // Check if interviewer is assigned to this program
         $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
@@ -272,14 +310,16 @@ class InterviewerDashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($application, $interviewerInProgress, $userId, $programId) {
+            DB::transaction(function () use ($application, $interviewerInProgress, $userId, $programId, $startTime) {
                 $program = Program::findOrFail($programId);
+
+                $notes = "Rejected by interviewer (ID: " . auth()->id() . ") for program: {$program->code}";
 
                 // Record the rejection but keep the interviewer process in_progress
                 // so the applicant can still be interviewed by another interviewer
                 // for a different program.
                 $interviewerInProgress->update([
-                    'reviewer_notes' => "Rejected by interviewer (ID: " . auth()->id() . ") for program: {$program->code}",
+                    'reviewer_notes' => $notes,
                 ]);
             });
 

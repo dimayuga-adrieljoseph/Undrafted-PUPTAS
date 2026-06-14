@@ -29,19 +29,19 @@ trait ManagesApplicationFiles
             // Load user with ONLY essential data (no files relationship)
             $user = User::with([
                 'currentApplication' => function ($query) {
-                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.submitted_at', 'applications.requires_promissory_note');
+                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.submitted_at', 'applications.requires_guidance_office', 'applications.requires_admission_office');
                 },
                 'currentApplication.program:id,code,name,slots',
                 'currentApplication.secondChoice:id,code,name,slots',
                 'currentApplication.thirdChoice:id,code,name,slots',
                 'currentApplication.processes' => function ($query) {
-                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'created_at', 'performed_by', 'reviewer_notes')
+                    $query->select('id', 'application_id', 'stage', 'status', 'action', 'started_at', 'reviewed_by', 'created_at', 'performed_by', 'reviewer_notes')
                         ->orderBy('created_at', 'desc')
                         ->limit(10)
                         ->with('performedBy:id,firstname,lastname');
                 },
                 'grades', // Include grades
-                'applicantProfile:user_id,student_number,firstname,middlename,lastname,extension_name,salutation,sex,date_graduated,school,strand,track',
+                'applicantProfile:user_id,firstname,middlename,lastname,extension_name,salutation,sex,date_graduated,school,strand,track',
                 'applicantProfile.graduateTypes:id,label',
                 'applicantProfile.testPasser:user_id,reference_number',
             ])
@@ -109,7 +109,8 @@ trait ManagesApplicationFiles
                     'program' => $user->currentApplication->program,
                     'second_choice' => $user->currentApplication->secondChoice,
                     'third_choice' => $user->currentApplication->thirdChoice,
-                    'requires_promissory_note' => $user->currentApplication->requires_promissory_note,
+                    'requires_guidance_office' => $user->currentApplication->requires_guidance_office,
+                    'requires_admission_office' => $user->currentApplication->requires_admission_office,
                     'processes' => $user->currentApplication->processes,
                 ] : null,
             ];

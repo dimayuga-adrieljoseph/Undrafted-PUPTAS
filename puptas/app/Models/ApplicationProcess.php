@@ -24,10 +24,15 @@ class ApplicationProcess extends Model
         'reviewer_notes',
         'files_affected',
         'ip_address',
+        'started_at',
+        'reviewed_by',
     ];
 
     protected $casts = [
         'files_affected' => 'array',
+        'started_at'     => 'datetime',
+        'created_at'     => 'datetime',
+        'updated_at'     => 'datetime',
     ];
 
     public function application()
