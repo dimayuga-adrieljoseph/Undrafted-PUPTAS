@@ -28,20 +28,16 @@ class GradeVerificationSlipService
     protected string $templatePath;
     protected GradeComputationService $gradeComputation;
 
-    /** Programs listed on the slip in display order */
-    protected array $programOrder = [
-        'BSME',
-        'BSPSYCH',
-        'BSECE',
-        'BSED-ENGLISH',
-        'BSBA-HRM',
-        'BSED-MATH',
-        'BSBA-MM',
-        'DIT',
-        'BSIT',
-        'BSOA',
-        'DOMT',
-    ];
+    /**
+     * Programs listed on the slip in display order.
+     * Codes for Psychology and DOMT vary between environments
+     * (e.g. BSPSYCH vs BSPSY, DOMT vs DOMT-LOM).
+     * We resolve the actual codes from the DB at runtime in resolveProgramCodes().
+     */
+    protected array $programOrder = [];
+
+    /** Resolved DB codes, keyed by canonical slot name */
+    protected array $resolvedCodes = [];
 
     public function __construct(GradeComputationService $gradeComputation)
     {
@@ -70,6 +66,41 @@ class GradeVerificationSlipService
 
         $data = $this->buildData($user);
         return $this->renderPdf($data);
+    }
+
+    /**
+     * Resolve actual DB program codes for slots whose codes differ between
+     * environments (e.g. BSPSYCH on local vs BSPSY on staging).
+     * Matching is done by substring of the program name — robust to code changes.
+     */
+    protected function resolveProgramCodes(\Illuminate\Support\Collection $programs): void
+    {
+        // Find Psychology program — name contains 'Psychology'
+        $psych = $programs->first(fn($p) => stripos($p->name, 'Psychology') !== false);
+        $psychCode = $psych?->code ?? 'BSPSYCH';
+
+        // Find DOMT program — name contains 'Office Management Technology'
+        $domt = $programs->first(fn($p) => stripos($p->name, 'Office Management Technology') !== false);
+        $domtCode = $domt?->code ?? 'DOMT';
+
+        $this->resolvedCodes = [
+            'PSYCH' => $psychCode,
+            'DOMT'  => $domtCode,
+        ];
+
+        $this->programOrder = [
+            'BSME',
+            $psychCode,
+            'BSECE',
+            'BSED-ENGLISH',
+            'BSBA-HRM',
+            'BSED-MATH',
+            'BSBA-MM',
+            'DIT',
+            'BSIT',
+            'BSOA',
+            $domtCode,
+        ];
     }
 
     /**
@@ -104,10 +135,10 @@ class GradeVerificationSlipService
         // --- Strand / Track ---
         $strand = strtoupper(trim($profile?->strand ?? ''));
 
-        // --- GWA ---
+        // --- GWA — recomputed from semester fields, same as Qualified Programs page ---
         $gwa = null;
         if ($grades->g12_first_sem !== null && $grades->g12_second_sem !== null) {
-            $gwa = round(((float) $grades->g12_first_sem + (float) $grades->g12_second_sem) / 2, 2);
+            $gwa = ($grades->g12_first_sem + $grades->g12_second_sem) / 2;
         }
 
         // --- Category averages ---
@@ -122,6 +153,10 @@ class GradeVerificationSlipService
 
         // --- Program qualifications ---
         $programs = Program::with('strands')->get();
+
+        // Resolve environment-specific codes once (handles BSPSYCH vs BSPSY, DOMT vs DOMT-LOM)
+        $this->resolveProgramCodes($programs);
+
         $qualifications = [];
 
         foreach ($this->programOrder as $code) {
@@ -505,10 +540,12 @@ class GradeVerificationSlipService
 
     protected function writeQualifications(Fpdi $pdf, array $qualifications): void
     {
+        // Use resolved codes so this works regardless of whether the DB has
+        // BSPSYCH/DOMT (local) or BSPSY/DOMT-LOM (staging).
+        $psychCode = $this->resolvedCodes['PSYCH'] ?? 'BSPSYCH';
+        $domtCode  = $this->resolvedCodes['DOMT']  ?? 'DOMT';
+
         // [program_code, x, y]
-        // Adjust x/y to align the mark inside the template's □ checkbox.
-        // Left col:  decrease y to move up, increase x to move right.
-        // Right col: decrease x to move left, decrease y to move up.
         $programBoxes = [
             // ── Left column ───────────────────────────────────────────────────
             ['BSME',     27, 204.0],
@@ -518,11 +555,11 @@ class GradeVerificationSlipService
             ['BSOA',     27, 237.0],
             ['BSIT',     27, 246.0],
             // ── Right column ──────────────────────────────────────────────────
-            ['BSPSYCH',      109, 205.0],
+            [$psychCode,     109, 205.0],
             ['BSED-ENGLISH', 109, 213.0],
             ['BSED-MATH',    109, 221.0],
             ['DIT',          109, 229.0],
-            ['DOMT',         109, 237.0],
+            [$domtCode,      109, 237.0],
         ];
 
         $pdf->SetTextColor(0, 0, 0);
