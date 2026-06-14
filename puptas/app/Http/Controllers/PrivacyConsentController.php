@@ -13,22 +13,29 @@ class PrivacyConsentController extends Controller
      */
     public function accept(Request $request)
     {
-        $user = Auth::user();
-        
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            $user->privacy_consent = true;
+            $user->privacy_consent_at = now();
+            $user->save();
+
+            session([
+                'privacy_consent_accepted' => true,
+                'privacy_consent_at' => now()->toDateTimeString(),
+            ]);
+
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
         }
-
-        $user->privacy_consent = true;
-        $user->privacy_consent_at = now();
-        $user->save();
-
-        session([
-            'privacy_consent_accepted' => true,
-            'privacy_consent_at' => now()->toDateTimeString(),
-        ]);
-
-        return response()->json(['success' => true]);
     }
 
     /**

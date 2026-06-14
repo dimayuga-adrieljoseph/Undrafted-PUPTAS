@@ -55,7 +55,7 @@ const handlePrivacyAccept = () => {
             router.reload({ only: ['privacy_consent'] })
         })
         .catch((error) => {
-            console.error('Failed to accept privacy consent:', error)
+            console.error('Failed to accept privacy consent:', error, error.response?.data)
         })
 }
 
