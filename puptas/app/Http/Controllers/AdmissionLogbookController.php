@@ -14,7 +14,7 @@ class AdmissionLogbookController extends Controller
      * Build an entry array from an ApplicationProcess model.
      * Application::user() returns ApplicantProfile directly.
      */
-    private function buildEntry(ApplicationProcess $e, string $concernText): array
+    private function buildEntry(ApplicationProcess $e, int $step): array
     {
         // FIX 2: Use abs() and cast to int to avoid negative floats
         $minutes = '';
@@ -28,7 +28,13 @@ class AdmissionLogbookController extends Controller
 
         // Application::user() returns ApplicantProfile (not User)
         $profile = $e->application->user ?? null;
-        $program  = $e->application->program ?? null;
+        
+        $programCode = '';
+        if ($step === 1 || $step === 2) {
+            $programCode = $profile && $profile->firstChoiceProgram ? $profile->firstChoiceProgram->code : '';
+        } else {
+            $programCode = $e->application->program ? $e->application->program->code : '';
+        }
 
         $fullName = '';
         if ($profile) {
@@ -44,14 +50,13 @@ class AdmissionLogbookController extends Controller
                 ? $e->started_at->format('m/d/Y h:i A')
                 : ($e->created_at ? $e->created_at->format('m/d/Y h:i A') : ''),
             'client_name'       => $fullName,
-            'program'           => $program ? $program->code : '',
+            'program'           => $programCode,
             'sex'               => $profile ? ($profile->sex ?? '') : '',
             'email'             => $profile ? ($profile->email ?? '') : '',
-            // FIX 3: concern is always the nature of the client's request — hardcoded
-            'concern'           => 'FIRST YEAR INTERVIEW',
+            'concern'           => $this->getConcernText($step),
             'processed_at'      => $e->updated_at ? $e->updated_at->format('m/d/Y h:i A') : '',
             'minutes_processed' => $minutes,
-            'claimed_at'        => '',
+            'claimed_at'        => today()->format('m/d/Y'), // Always show current date for date claimed/signature
         ];
     }
 
@@ -78,7 +83,8 @@ class AdmissionLogbookController extends Controller
     private function fetchEntriesQuery(string $stage, string $date)
     {
         // Application::user() -> ApplicantProfile (no further nesting needed)
-        return ApplicationProcess::with(['application.user', 'application.program'])
+        // Include firstChoiceProgram for step 1 & 2 program mapping
+        return ApplicationProcess::with(['application.user.firstChoiceProgram', 'application.program'])
             ->where('stage', $stage)
             ->where('status', 'completed')
             ->whereIn('action', ['passed', 'accepted', 'course_changed'])
@@ -94,7 +100,7 @@ class AdmissionLogbookController extends Controller
         // Use pagination for the UI to prevent slow loading
         $paginator = $this->fetchEntriesQuery($this->getStage($step), $date)
             ->paginate(10)
-            ->through(fn ($e) => $this->buildEntry($e, $this->getConcernText($step)));
+            ->through(fn ($e) => $this->buildEntry($e, $step));
 
         $programs = Program::orderBy('name')->get();
 
@@ -114,7 +120,7 @@ class AdmissionLogbookController extends Controller
         // PDF Export needs all entries for the given date, not paginated
         $entries = $this->fetchEntriesQuery($this->getStage($step), $date)
             ->get()
-            ->map(fn ($e) => $this->buildEntry($e, $this->getConcernText($step)));
+            ->map(fn ($e) => $this->buildEntry($e, $step));
 
         $pdf = app(LogbookService::class)->generate($entries, $step);
 
