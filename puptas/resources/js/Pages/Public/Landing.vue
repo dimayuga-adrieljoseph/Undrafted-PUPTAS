@@ -163,11 +163,9 @@ const cardRadii = [
       <div class="bg-white/70 backdrop-blur-md border border-[#DED8CF]/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.15)] rounded-full px-4 sm:px-6 h-16 flex items-center justify-between">
         <!-- Logo -->
         <div class="flex items-center gap-3">
-          <div class="h-10 w-10 rounded-full bg-[#9E122C] flex items-center justify-center shadow-[0_4px_12px_rgba(158,18,44,0.3)] flex-shrink-0">
-            <span class="text-white font-bold text-xs tracking-tight">PUP</span>
-          </div>
+          <img src="/assets/images/pup_logo.png" alt="PUP Taguig Logo" class="h-10 w-10 object-contain flex-shrink-0" />
           <div class="leading-tight hidden sm:block">
-            <p class="text-sm font-bold text-[#9E122C] ">PUPTAS</p>
+            <p class="text-sm font-bold text-[#9E122C]">PUPTAS</p>
             <p class="text-xs text-[#78786C]">Admission Portal</p>
           </div>
         </div>
@@ -501,48 +499,32 @@ const cardRadii = [
     </section>
 
     <!-- ── FOOTER ─────────────────────────────────────────────── -->
-    <footer class="bg-[#2C2C24] text-[#78786C] py-14 sm:py-16">
-      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid sm:grid-cols-2 gap-10 mb-10">
-          <!-- Brand -->
-          <div>
-            <div class="flex items-center gap-3 mb-5">
-              <div class="h-11 w-11 rounded-full bg-[#9E122C] flex items-center justify-center shadow-[0_4px_12px_rgba(158,18,44,0.3)] flex-shrink-0">
-                <span class="text-white font-bold text-xs">PUP</span>
-              </div>
-              <div class="leading-tight">
-                <p class="text-sm font-bold text-white ">PUPTAS</p>
-                <p class="text-xs text-[#78786C]">Admission System</p>
-              </div>
-            </div>
-            <p class="text-sm text-[#78786C] max-w-xs leading-relaxed">The official admission portal for the Polytechnic University of the Philippines — Taguig Campus.</p>
-          </div>
+    <footer class="bg-white border-t border-gray-200 py-4 px-6">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4">
+        <!-- Copyright -->
+        <p class="text-sm text-gray-500">
+          © 1998-{{ currentYear }} PUP Taguig. All rights reserved.
+        </p>
 
-          <!-- Links -->
-          <div class="flex flex-col gap-3 text-sm">
-            <a href="/admission-results" class="inline-flex items-center gap-2 text-[#78786C] hover:text-white transition-colors duration-300">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              Check Admission Status
-            </a>
-            <a href="https://www.facebook.com/PUPTOFFICIAL" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-[#78786C] hover:text-white transition-colors duration-300">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-              Follow us on Facebook
-            </a>
-            <a href="https://drive.google.com/file/d/153oJlLhvU9UDjJ5JzFgA04aWurQ_PBbE/view" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-[#78786C] hover:text-white transition-colors duration-300">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Admission Criteria
-            </a>
-            <p class="inline-flex items-center gap-2 text-[#78786C] text-xs mt-1">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
-              taguig@pup.edu.ph
-            </p>
-          </div>
-        </div>
-
-        <div class="border-t border-white/10 pt-8">
-          <p class="text-xs text-center text-[#78786C]/60">
-            © {{ currentYear }} PUP Taguig Admission and Registration Office. All rights reserved.
-          </p>
+        <!-- Links -->
+        <div class="flex items-center gap-6">
+          <a
+            href="https://www.pup.edu.ph/terms/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-sm text-gray-600 hover:text-[#9E122C] transition-colors duration-200"
+          >
+            Terms of Use
+          </a>
+          <span class="text-gray-300">|</span>
+          <a
+            href="https://www.pup.edu.ph/privacy/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-sm text-gray-600 hover:text-[#9E122C] transition-colors duration-200"
+          >
+            Privacy Statement
+          </a>
         </div>
       </div>
     </footer>
