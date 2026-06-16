@@ -327,6 +327,7 @@ class InterviewerDashboardController extends Controller
                 // for a different program.
                 $interviewerInProgress->update([
                     'reviewer_notes' => $notes,
+                    'started_at'     => null,
                 ]);
             });
 

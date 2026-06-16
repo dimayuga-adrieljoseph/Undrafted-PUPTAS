@@ -301,6 +301,7 @@ class EvaluatorDashboardController extends Controller
                 $inProgress->update([
                     'reviewer_notes' => $request->note,
                     'performed_by' => auth()->id(),
+                    'started_at'   => null,
                 ]);
             });
 
