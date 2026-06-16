@@ -6,74 +6,20 @@ import { useLayout } from '@/Composables/useLayout'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
+import { ref } from 'vue'
 
 library.add(faMoon, faSun)
 
-const { isLoading } = useGlobalLoading()
-
-// User
-const page = usePage()
-const user = computed(() => page.props.auth?.user ?? null)
-
-// Dark mode
-const isDarkMode = ref(false)
-
-onMounted(() => {
-    const saved = localStorage.getItem('darkMode') === 'true'
-    isDarkMode.value = saved
-    document.documentElement.classList.toggle('dark', saved)
-})
-
-const toggleDarkMode = () => {
-    isDarkMode.value = !isDarkMode.value
-    document.documentElement.classList.toggle('dark', isDarkMode.value)
-    localStorage.setItem('darkMode', String(isDarkMode.value))
-}
-
-// Privacy consent
-const privacyConsent = computed(() => page.props.privacy_consent ?? { required: false })
-const showPrivacyModal = ref(false)
-
-watch(() => [page.props.auth?.user, privacyConsent.value], ([user, consent]) => {
-    if (user && consent && consent.required) {
-        showPrivacyModal.value = true
-    } else if (!consent || !consent.required) {
-        showPrivacyModal.value = false
-    }
-}, { immediate: true })
-
-const handlePrivacyAccept = () => {
-    window.axios.post('/privacy-consent/accept')
-        .then(() => {
-            showPrivacyModal.value = false
-            router.reload({ only: ['privacy_consent'] })
-        })
-        .catch((error) => {
-            console.error('Failed to accept privacy consent:', error)
-        })
-}
-
-const handlePrivacyCancel = () => {
-    router.post(route('idp.logout'), {}, {
-        onSuccess: () => {
-            showPrivacyModal.value = false
-        },
-        onError: (error) => {
-            console.error('Failed to log out:', error)
-        }
-    })
-}
-
-// Mobile sidebar
-const isMobileSidebarOpen = ref(false)
-
-watchEffect(() => {
-    if (isMobileSidebarOpen.value) {
-        document.body.classList.add('overflow-hidden')
-    } else {
-        document.body.classList.remove('overflow-hidden')
-    }
-})
+const {
+    user,
+    isLoading,
+    isDarkMode,
+    toggleDarkMode,
+    showPrivacyModal,
+    handlePrivacyAccept,
+    handlePrivacyCancel,
+    sidebarOpen,
+} = useLayout()
 
 // FAQ
 const showFaqModal = ref(false)
