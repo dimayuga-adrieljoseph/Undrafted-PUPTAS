@@ -78,6 +78,7 @@ const showFaqModal = ref(false);
 // Grade Verification Slip download state
 const downloadingSlip = ref(false);
 const slipDownloadError = ref('');
+const showSchedule = ref(false);
 
 const faqItems = [
   {
@@ -706,49 +707,223 @@ onMounted(() => {
         </div>
 
         <!-- Medical System Redirect Card -->
-        <div v-if="showMedicalRedirect" class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl shadow-md border-2 border-green-300 dark:border-green-700 p-4 sm:p-6">
-          <div class="flex flex-col sm:flex-row items-start gap-4">
-            <div class="flex-shrink-0">
-              <div class="w-14 h-14 rounded-full bg-green-600 flex items-center justify-center">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
+        <div v-if="showMedicalRedirect" class="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-green-50/50 to-teal-50 dark:from-emerald-950/40 dark:via-gray-900 dark:to-teal-950/40 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(16,185,129,0.1)] border border-emerald-200/60 dark:border-emerald-800/60 p-6 sm:p-8 transition-all duration-500 hover:shadow-[0_8px_30px_rgba(16,185,129,0.15)] group/card">
+          <!-- Decorative background blur -->
+          <div class="absolute -top-24 -right-24 w-64 h-64 bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-3xl pointer-events-none transition-transform duration-700 group-hover/card:scale-110"></div>
+          <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-3xl pointer-events-none transition-transform duration-700 group-hover/card:scale-110"></div>
+
+          <div class="relative flex flex-col items-start gap-6">
+            <div class="flex-1 w-full">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                  <!-- Pulsing outer ring -->
+                  <div class="absolute inset-0 bg-emerald-400 dark:bg-emerald-500 rounded-full animate-ping opacity-25"></div>
+                  <!-- Inner circle -->
+                  <div class="relative w-full h-full bg-gradient-to-tr from-emerald-600 to-green-500 rounded-full flex items-center justify-center shadow-md shadow-emerald-500/30 border border-white/20">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <h3 class="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-teal-600 dark:from-emerald-400 dark:to-teal-300 tracking-tight">
+                  Evaluation & Interview Complete!
+                </h3>
               </div>
-            </div>
-            <div class="flex-1">
-              <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                Evaluation & Interview Complete!
-              </h3>
-              <p class="text-gray-700 dark:text-gray-300 mb-4">
-                Congratulations! You've successfully completed the evaluation and interview stages. 
+              <p class="text-gray-700 dark:text-gray-300 mb-6 text-base leading-relaxed">
+                <span class="font-semibold text-emerald-700 dark:text-emerald-400">Congratulations!</span> You've successfully completed the evaluation and interview stages. 
                 Your next step is to create a Health Record in the Medical System.
               </p>
-              <div class="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border border-green-200 dark:border-green-700">
-                <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2">📋 Instructions:</p>
-                <ol class="text-sm text-gray-700 dark:text-gray-300 space-y-1 list-decimal list-inside">
-                  <li>Click the button below to go to the Medical System</li>
-                  <li>Log in with your credentials</li>
-                  <li>Go to <strong>My Account</strong> dropdown menu</li>
-                  <li>Click <strong>Health Record</strong></li>
-                  <li>Click <strong>Complete Form Now</strong></li>
-                  <li>Fill up the information sheet completely</li>
-                  <li>When you are done filling up the sheets you may now proceed to the clinic for the medical assessment</li>
-                </ol>
+              
+              <!-- Stepper Instructions (Full Width) -->
+              <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-emerald-100/50 dark:border-emerald-800/30 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-6 transition-all hover:shadow-[0_8px_30px_rgba(16,185,129,0.1)] group/stepper">
+                <div class="flex items-center gap-2 mb-6 opacity-80">
+                  <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                  <p class="text-sm font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">INSTRUCTION</p>
+                </div>
+                
+                <div class="relative w-full max-w-4xl mx-auto">
+                  <!-- Connecting Line (Desktop) -->
+                  <div class="hidden sm:block absolute top-[19px] left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-emerald-100 via-emerald-300 to-emerald-100 dark:from-gray-700 dark:via-emerald-600/50 dark:to-gray-700 rounded-full">
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400 to-transparent w-full h-full opacity-0 group-hover/stepper:opacity-100 group-hover/stepper:animate-[shimmer_2s_infinite]"></div>
+                  </div>
+                  
+                  <!-- Connecting Line (Mobile) -->
+                  <div class="sm:hidden absolute top-[19px] bottom-[19px] left-[20px] w-[2px] -translate-x-1/2 bg-gradient-to-b from-emerald-100 via-emerald-300 to-emerald-100 dark:from-gray-700 dark:via-emerald-600/50 dark:to-gray-700 rounded-full">
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-400 to-transparent w-full h-full opacity-0 group-hover/stepper:opacity-100 group-hover/stepper:animate-[shimmer_2s_infinite]"></div>
+                  </div>
+                  
+                  <div class="flex flex-col sm:flex-row gap-6 sm:gap-0 justify-between relative z-10">
+                    
+                    <!-- Step 1 -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-center flex-1 group/step w-full">
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 border-[2px] border-emerald-100 dark:border-gray-700 flex items-center justify-center shadow-sm sm:mb-3 transition-all duration-300 group-hover/step:-translate-y-1 group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-600 relative overflow-hidden group-hover/step:shadow-emerald-500/20 z-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-teal-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"></div>
+                        <span class="text-base font-bold text-emerald-700 dark:text-emerald-400">1</span>
+                      </div>
+                      <div class="text-left sm:text-center ml-4 sm:ml-0 px-0 sm:px-2 flex-1">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed transition-colors group-hover/step:text-gray-900 dark:group-hover/step:text-gray-200">
+                          Click the button below to go to the <span class="font-bold text-gray-800 dark:text-gray-200 border-b border-dashed border-gray-300 dark:border-gray-600">Medical System</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-center flex-1 group/step w-full">
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 border-[2px] border-emerald-100 dark:border-gray-700 flex items-center justify-center shadow-sm sm:mb-3 transition-all duration-300 group-hover/step:-translate-y-1 group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-600 relative overflow-hidden group-hover/step:shadow-emerald-500/20 z-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-teal-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"></div>
+                        <span class="text-base font-bold text-emerald-700 dark:text-emerald-400">2</span>
+                      </div>
+                      <div class="text-left sm:text-center ml-4 sm:ml-0 px-0 sm:px-2 flex-1">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed transition-colors group-hover/step:text-gray-900 dark:group-hover/step:text-gray-200">
+                          Click <span class="font-bold text-gray-800 dark:text-gray-200">Log In Via One Portal</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-center flex-1 group/step w-full">
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 border-[2px] border-emerald-100 dark:border-gray-700 flex items-center justify-center shadow-sm sm:mb-3 transition-all duration-300 group-hover/step:-translate-y-1 group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-600 relative overflow-hidden group-hover/step:shadow-emerald-500/20 z-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-teal-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"></div>
+                        <span class="text-base font-bold text-emerald-700 dark:text-emerald-400">3</span>
+                      </div>
+                      <div class="text-left sm:text-center ml-4 sm:ml-0 px-0 sm:px-2 flex-1">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed transition-colors group-hover/step:text-gray-900 dark:group-hover/step:text-gray-200">
+                          Log in with your <span class="font-bold text-gray-800 dark:text-gray-200">credentials</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-center flex-1 group/step w-full">
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 border-[2px] border-emerald-100 dark:border-gray-700 flex items-center justify-center shadow-sm sm:mb-3 transition-all duration-300 group-hover/step:-translate-y-1 group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-600 relative overflow-hidden group-hover/step:shadow-emerald-500/20 z-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-teal-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"></div>
+                        <span class="text-base font-bold text-emerald-700 dark:text-emerald-400">4</span>
+                      </div>
+                      <div class="text-left sm:text-center ml-4 sm:ml-0 px-0 sm:px-2 flex-1 flex flex-row sm:flex-col items-center sm:items-center justify-start sm:justify-center">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed transition-colors group-hover/step:text-gray-900 dark:group-hover/step:text-gray-200 mr-2 sm:mr-0 sm:mb-1.5">
+                          Click 
+                        </p>
+                        <span class="px-2 py-0.5 bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 rounded border border-gray-200 dark:border-gray-600 shadow-sm font-mono text-[10px] font-bold tracking-tight uppercase whitespace-nowrap group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-500 transition-colors">Fill Up Form</span>
+                      </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-center flex-1 group/step w-full">
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 border-[2px] border-emerald-100 dark:border-gray-700 flex items-center justify-center shadow-sm sm:mb-3 transition-all duration-300 group-hover/step:-translate-y-1 group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-600 relative overflow-hidden group-hover/step:shadow-emerald-500/20 z-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-teal-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"></div>
+                        <span class="text-base font-bold text-emerald-700 dark:text-emerald-400">5</span>
+                      </div>
+                      <div class="text-left sm:text-center ml-4 sm:ml-0 px-0 sm:px-2 flex-1 flex flex-row sm:flex-col items-center sm:items-center justify-start sm:justify-center">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed transition-colors group-hover/step:text-gray-900 dark:group-hover/step:text-gray-200 sm:mb-1.5">
+                          Fill up the information sheet completely
+                        </p>
+                      </div>
+                    </div>
+                    
+                  </div>
+                </div>
               </div>
-              <a
-                href="https://clinic-ms.inaebsit2027.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-md transition-all hover:shadow-lg font-medium min-h-[44px]"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                </svg>
-                Go to Medical System
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </a>
+
+              <!-- Schedule Panel (Now Full Width below Stepper) -->
+              <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md hover:bg-white/90 dark:hover:bg-gray-800/90 hover:-translate-y-0.5 mb-8">
+                <div class="p-4 sm:p-5 pb-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700/50 cursor-pointer group" @click="showSchedule = !showSchedule">
+                  <div class="flex items-center gap-3 pr-2">
+                    <div class="p-2 flex-shrink-0 bg-blue-100 dark:bg-blue-900/50 rounded-lg shadow-sm group-hover:bg-blue-200 dark:group-hover:bg-blue-800/60 transition-colors">
+                      <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <p class="text-[15px] sm:text-lg leading-tight font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-700 dark:group-hover:text-emerald-400">Schedule of Issuance of medical clearance</p>
+                  </div>
+                  <button type="button" class="flex-shrink-0 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 focus:outline-none transition-transform duration-300" :class="{ 'rotate-180': showSchedule }">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                  </button>
+                </div>
+                <div v-show="showSchedule" class="transition-all duration-500 origin-top">
+                  <div class="overflow-x-auto flex-1 custom-scrollbar">
+                    <table class="min-w-full text-xs sm:text-sm text-left text-gray-700 dark:text-gray-300 h-full">
+                    <thead class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50/80 dark:bg-gray-800/50">
+                      <tr>
+                        <th scope="col" class="px-4 sm:px-5 py-3 font-semibold whitespace-nowrap min-w-[100px]">Date</th>
+                        <th scope="col" class="px-4 sm:px-5 py-3 font-semibold whitespace-nowrap min-w-[140px]">Time</th>
+                        <th scope="col" class="px-4 sm:px-5 py-3 font-semibold whitespace-nowrap min-w-[150px]">Program</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100/50 dark:divide-gray-700/50 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors group cursor-default">
+                      <tr>
+                        <td class="px-5 py-3 font-medium align-top group-hover:text-emerald-900 dark:group-hover:text-emerald-300 transition-colors" rowspan="3">July 1, 2026<br><span class="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium">Wednesday</span></td>
+                        <td class="px-5 py-3 whitespace-nowrap">8:00AM - 11:00AM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSBA-MM</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">12:00PM - 3:00PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSIT</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">3:30PM - 6:30PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BS PSYCHOLOGY</td>
+                      </tr>
+                    </tbody>
+                    <tbody class="divide-y divide-gray-100/50 dark:divide-gray-700/50 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/40 dark:bg-gray-800/20 group cursor-default">
+                      <tr>
+                        <td class="px-5 py-3 font-medium align-top group-hover:text-emerald-900 dark:group-hover:text-emerald-300 transition-colors" rowspan="3">July 2, 2026<br><span class="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium">Thursday</span></td>
+                        <td class="px-5 py-3 whitespace-nowrap">8:00AM - 11:00AM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSBA-HRM</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">12:00PM - 3:00PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSOA</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">3:30PM - 6:30PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSED-MATH</td>
+                      </tr>
+                    </tbody>
+                    <tbody class="divide-y divide-gray-100/50 dark:divide-gray-700/50 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors border-t border-gray-100 dark:border-gray-700/50 group cursor-default">
+                      <tr>
+                        <td class="px-5 py-3 font-medium align-top group-hover:text-emerald-900 dark:group-hover:text-emerald-300 transition-colors" rowspan="3">July 3, 2026<br><span class="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium">Friday</span></td>
+                        <td class="px-5 py-3 whitespace-nowrap">8:00AM - 11:00AM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSECE</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">12:00PM - 3:00PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSED-ENGLISH</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">3:30PM - 6:30PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSME</td>
+                      </tr>
+                    </tbody>
+                    <tbody class="divide-y divide-gray-100/50 dark:divide-gray-700/50 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/40 dark:bg-gray-800/20 group cursor-default">
+                      <tr>
+                        <td class="px-5 py-3 font-medium align-top group-hover:text-emerald-900 dark:group-hover:text-emerald-300 transition-colors" rowspan="2">July 8, 2026<br><span class="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium">Wednesday</span></td>
+                        <td class="px-5 py-3 whitespace-nowrap">9:00AM - 12:00PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">DIT</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">1:00PM - 4:00PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">DOMT-LOM</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                </div>
+              </div>
+
+              <div class="flex items-center pt-2">
+                <a
+                  href="https://clinic-ms.inaebsit2027.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="group inline-flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-8 py-4 rounded-xl shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:-translate-y-1 font-bold text-base ring-2 ring-transparent hover:ring-emerald-300/50"
+                >
+                  <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                  </svg>
+                  <span>Go to Medical System</span>
+                  <svg class="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                  </svg>
+                </a>
+              </div>
             </div>
           </div>
         </div>
