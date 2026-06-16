@@ -152,10 +152,12 @@ class InterviewerDashboardController extends Controller
         $validated = $request->validate([
             'program_id' => 'required|exists:programs,id',
             'start_time' => 'nullable|date',
+            'notes'      => 'nullable|string|max:1000',
         ]);
 
         $programId = $validated['program_id'];
         $startTime = $validated['start_time'] ?? null;
+        $customNotes = $validated['notes'] ?? '';
 
         // Check if interviewer is assigned to this program
         $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
@@ -202,7 +204,7 @@ class InterviewerDashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress, $programId, $startTime) {
+            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress, $programId, $startTime, $customNotes) {
                 $program = Program::lockForUpdate()->findOrFail($programId);
 
                 if ($program->slots <= 0) {
@@ -228,6 +230,9 @@ class InterviewerDashboardController extends Controller
                 $program->save();
 
                 $notes = "Accepted by interviewer for program: {$program->code}";
+                if ($customNotes) {
+                    $notes .= " - Notes: " . $customNotes;
+                }
 
                 // Close current interviewer in-progress process
                 $interviewerInProgress->update([
@@ -263,10 +268,12 @@ class InterviewerDashboardController extends Controller
         $validated = $request->validate([
             'program_id' => 'required|exists:programs,id',
             'start_time' => 'nullable|date',
+            'notes'      => 'nullable|string|max:1000',
         ]);
 
         $programId = $validated['program_id'];
         $startTime = $validated['start_time'] ?? null;
+        $customNotes = $validated['notes'] ?? '';
 
         // Check if interviewer is assigned to this program
         $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
@@ -307,10 +314,13 @@ class InterviewerDashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($application, $interviewerInProgress, $userId, $programId, $startTime) {
+            DB::transaction(function () use ($application, $interviewerInProgress, $userId, $programId, $startTime, $customNotes) {
                 $program = Program::findOrFail($programId);
 
                 $notes = "Rejected by interviewer (ID: " . auth()->id() . ") for program: {$program->code}";
+                if ($customNotes) {
+                    $notes .= " - Notes: " . $customNotes;
+                }
 
                 // Record the rejection but keep the interviewer process in_progress
                 // so the applicant can still be interviewed by another interviewer

@@ -1,25 +1,30 @@
-# Medical System Developer Handoff
+# Medical System Developer Handoff (STAGING ENVIRONMENT)
 
-Welcome to the PUPTAS Medical API integration guide. This document contains everything you need to connect your Medical Application to the PUPTAS Core System securely using a Zero-Trust M2M (Machine-to-Machine) architecture.
+> [!WARNING]  
+> **THIS IS FOR THE STAGING ENVIRONMENT.**  
+> Please use this environment strictly for testing and development purposes. All data in this environment is mocked or test data. Do not send real applicant data to these endpoints.
+
+Welcome to the PUPTAS Medical API integration guide for the **Staging Environment**. This document contains everything you need to connect your Medical Application to the PUPTAS Staging Core System securely using a Zero-Trust M2M (Machine-to-Machine) architecture.
 
 ## Overview
 - **Authentication**: OAuth 2.0 (Client Credentials Grant)
 - **Base URL**: `/api/v1/`
+- **Host**: `pup-admission-system-staging.up.railway.app`
 - **Required Scopes**: `medical-read` (for fetching data), `medical-write` (for sending webhooks)
 - **Rate Limits**: 5 req/sec, 80 req/min, 100 req/day
 
 ---
 
 ## 1. Authentication (OAuth 2.0)
-Before making any requests, you must obtain a short-lived access token. You will be provided a `client_id` (a UUID) and a `client_secret` by the PUPTAS Admin.
+Before making any requests, you must obtain a short-lived access token. You will be provided a staging `client_id` (a UUID) and a `client_secret` by the PUPTAS Admin.
 
 **Requesting a Token**
 ```http
 POST /oauth/token
-Host: puptas.undraftedbsit2027.com
+Host: pup-admission-system-staging.up.railway.app
 Content-Type: application/x-www-form-urlencoded
 
-grant_type=client_credentials&client_id={YOUR_UUID}&client_secret={YOUR_SECRET}&scope=medical-read medical-write
+grant_type=client_credentials&client_id={YOUR_STAGING_UUID}&client_secret={YOUR_STAGING_SECRET}&scope=medical-read medical-write
 ```
 
 **Response**
@@ -66,14 +71,14 @@ Retrieve applicants who have successfully passed the Evaluator and Interviewer s
 
 ## 3. Writing Data: Medical Webhook (`medical-write` scope)
 
-Once a medical evaluation is complete, you will push the result back to PUPTAS.
+Once a medical evaluation is complete, you will push the result back to PUPTAS staging.
 
 **Endpoint**: `POST /api/v1/webhooks/medical-result`
 
 ### Security Requirement: HMAC-SHA256
-In addition to the OAuth Bearer token, you **must** crytographically sign the JSON body using a shared webhook secret provided by the PUPTAS Admin. 
+In addition to the OAuth Bearer token, you **must** crytographically sign the JSON body using a shared webhook secret provided by the PUPTAS Admin for the **staging environment**. 
 
-Calculate an `HMAC-SHA256` hash of the raw request body using the shared webhook secret, and send it in the `X-Medical-Signature` header.
+Calculate an `HMAC-SHA256` hash of the raw request body using the staging shared webhook secret, and send it in the `X-Medical-Signature` header.
 
 **Payload Structure**
 ```json
@@ -103,14 +108,15 @@ const payload = JSON.stringify({
     nonce: crypto.randomBytes(16).toString('hex')
 });
 
-const secret = "YOUR_WEBHOOK_SECRET";
+// IMPORTANT: Use the STAGING webhook secret here
+const secret = "YOUR_STAGING_WEBHOOK_SECRET";
 const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 
-axios.post('https://puptas.undraftedbsit2027.com/api/v1/webhooks/medical-result', payload, {
+axios.post('https://pup-admission-system-staging.up.railway.app/api/v1/webhooks/medical-result', payload, {
     headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer YOUR_OAUTH_TOKEN',
+        'Authorization': 'Bearer YOUR_STAGING_OAUTH_TOKEN',
         'X-Medical-Signature': signature
     }
 });
@@ -127,4 +133,4 @@ axios.post('https://puptas.undraftedbsit2027.com/api/v1/webhooks/medical-result'
 ---
 
 ## Developer Support Flow
-If you encounter `404` errors for a student, verify they have successfully passed the Interviewer phase in PUPTAS. Our strict admission pipeline rejects medical records for unverified students.
+If you encounter `404` errors for a student, verify they have successfully passed the Interviewer phase in PUPTAS Staging. Our strict admission pipeline rejects medical records for unverified students.

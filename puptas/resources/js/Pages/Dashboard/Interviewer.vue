@@ -79,6 +79,7 @@ const selectedProgramId = ref("");
 const showAcceptModal = ref(false);
 const showRejectModal = ref(false);
 const isSubmitting = ref(false);
+const interviewNotes = ref("");
 const snackbar = ref({
     visible: false,
     message: "",
@@ -406,6 +407,7 @@ const closeUserCard = () => {
     selectedUser.value = null;
     selectedProgramId.value = "";
     interviewStartTime.value = null;
+    interviewNotes.value = "";
 };
 
 const promptAccept = () => {
@@ -423,7 +425,8 @@ const acceptApplication = async () => {
             `/interviewer-dashboard/accept/${selectedUser.value.id}`,
             {
                 program_id: selectedProgramId.value,
-                start_time: interviewStartTime.value
+                start_time: interviewStartTime.value,
+                notes: interviewNotes.value
             }
         );
         showSnackbar("Application accepted successfully", "success");
@@ -454,7 +457,8 @@ const rejectApplication = async () => {
             `/interviewer-dashboard/reject/${selectedUser.value.id}`,
             {
                 program_id: selectedProgramId.value,
-                start_time: interviewStartTime.value
+                start_time: interviewStartTime.value,
+                notes: interviewNotes.value
             }
         );
         showSnackbar("Application rejected successfully", "success");
@@ -749,6 +753,10 @@ const fetchPrograms = async () => {
                                 <p class="text-gray-900 dark:text-white">{{ selectedUser.email }}</p>
                             </div>
                             <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">SHS Strand</p>
+                                <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.strand || "—" }}</p>
+                            </div>
+                            <div>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Program (1st Choice)</p>
                                 <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.application?.program?.name || "—" }}</p>
                                 <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedUser.application?.program?.code || "" }}</p>
@@ -802,6 +810,16 @@ const fetchPrograms = async () => {
                                     {{ p.code }} - {{ p.name }}
                                 </option>
                             </select>
+
+                            <div v-if="interviewStartTime" class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comments/Notes (Optional)</label>
+                                <textarea
+                                    v-model="interviewNotes"
+                                    rows="3"
+                                    placeholder="Add any additional notes or comments here..."
+                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent resize-none"
+                                ></textarea>
+                            </div>
 
                             <div v-if="!interviewStartTime">
                                 <button
