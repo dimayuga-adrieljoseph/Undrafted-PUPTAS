@@ -227,6 +227,8 @@ class GradesController extends Controller
         // This prevents overwriting user's manual edits with extraction data
         $extractionResult = $grade->exists ? null : session()->get('extraction_result');
 
+        $application = Application::where('user_id', (string) $user->id)->first();
+
         return inertia('Grades/ABMGradeInput', [
             'grade' => $grade,
             'user' => $user,
@@ -236,6 +238,7 @@ class GradesController extends Controller
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
+            'showQualifiedProgramsNav' => $application && $application->status !== 'draft',
         ]);
     }
 
@@ -267,6 +270,7 @@ class GradesController extends Controller
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
+            'showQualifiedProgramsNav' => Application::where('user_id', (string) $user->id)->whereNotIn('status', ['draft'])->exists(),
         ]);
     }
 
@@ -371,6 +375,7 @@ class GradesController extends Controller
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
+            'showQualifiedProgramsNav' => Application::where('user_id', (string) $user->id)->whereNotIn('status', ['draft'])->exists(),
         ]);
     }
 
@@ -402,6 +407,7 @@ class GradesController extends Controller
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
+            'showQualifiedProgramsNav' => Application::where('user_id', (string) $user->id)->whereNotIn('status', ['draft'])->exists(),
         ]);
     }
 
@@ -433,6 +439,7 @@ class GradesController extends Controller
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
+            'showQualifiedProgramsNav' => Application::where('user_id', (string) $user->id)->whereNotIn('status', ['draft'])->exists(),
         ]);
     }
 
@@ -464,6 +471,7 @@ class GradesController extends Controller
             'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
+            'showQualifiedProgramsNav' => Application::where('user_id', (string) $user->id)->whereNotIn('status', ['draft'])->exists(),
         ]);
     }
 

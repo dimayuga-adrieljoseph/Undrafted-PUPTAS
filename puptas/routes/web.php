@@ -158,8 +158,10 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
         return redirect('/login?local=1');
     }
     
-    return redirect()->route('idp.redirect');
-})->middleware('guest')->name('welcome');
+    return Inertia::render('Public/Landing', [
+        'appEnv' => config('app.env'),
+    ]);
+})->name('welcome');
 
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->name('idp.redirect');
