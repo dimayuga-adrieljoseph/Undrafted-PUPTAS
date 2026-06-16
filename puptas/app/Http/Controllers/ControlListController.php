@@ -25,7 +25,7 @@ class ControlListController extends Controller
         if ($request->filled('program_id')) {
             $programId = $request->input('program_id');
             
-            $applicants = Application::with(['user.grades'])
+            $applicants = Application::with(['user.grades', 'processes'])
                 ->where('program_id', $programId)
                 ->whereHas('processes', function ($q) {
                     $q->where('stage', 'interviewer')
@@ -46,7 +46,7 @@ class ControlListController extends Controller
                     'math_gwa'    => $app->user->grades->mathematics ?? '',
                     'science_gwa' => $app->user->grades->science ?? '',
                     'english_gwa' => $app->user->grades->english ?? '',
-                    'notes'       => '',
+                    'notes'       => explode(' - Notes: ', $app->processes->where('stage', 'interviewer')->where('status', 'completed')->whereIn('action', ['passed', 'accepted'])->last()?->reviewer_notes ?? '')[1] ?? '',
                 ])->withQueryString();
         }
 
@@ -68,7 +68,7 @@ class ControlListController extends Controller
 
         // Pull accepted applicants for this program
         // "Accepted" = passed the interview (Step 3 completed)
-        $entries = Application::with(['user.grades'])
+        $entries = Application::with(['user.grades', 'processes'])
             ->where('program_id', $program->id)
             ->whereHas('processes', function ($q) {
                 // Adjust this depending on the exact stage name for Step 3 in DB
@@ -90,7 +90,7 @@ class ControlListController extends Controller
                 'math_gwa'    => $app->user->grades->mathematics ?? '',
                 'science_gwa' => $app->user->grades->science ?? '',
                 'english_gwa' => $app->user->grades->english ?? '',
-                'notes'       => '',
+                'notes'       => explode(' - Notes: ', $app->processes->where('stage', 'interviewer')->where('status', 'completed')->whereIn('action', ['passed', 'accepted'])->last()?->reviewer_notes ?? '')[1] ?? '',
             ]);
 
         $pdf = app(ControlListService::class)->generate(
