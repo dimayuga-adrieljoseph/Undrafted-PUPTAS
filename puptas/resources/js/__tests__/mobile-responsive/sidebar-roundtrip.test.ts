@@ -35,6 +35,7 @@ vi.mock('@fortawesome/free-solid-svg-icons', () => ({
     faGraduationCap: {},
     faPencilAlt: {},
     faEnvelopeOpenText: {},
+    faEnvelope: {},
     faCalendarCheck: {},
     faUserGroup: {},
     faMoon: {},
@@ -47,6 +48,12 @@ vi.mock('@fortawesome/free-solid-svg-icons', () => ({
     faHome: {},
     faUserCircle: {},
     faHistory: {},
+    faNetworkWired: {},
+    faChartPie: {},
+    faChartLine: {},
+    faFileAlt: {},
+    faClock: {},
+    faClipboardList: {},
 }))
 
 // --- Sub-component stubs ---
@@ -97,14 +104,17 @@ const globalStubs = {
  * the sidebar to its hidden state (-translate-x-full).
  */
 describe('Property 5: Sidebar open/close round trip', () => {
-    it('open state: sidebar has translate-x-0 when isMobileOpen is true (100 iterations)', () => {
+    it('open state: sidebar has translate-x-0 when open is true (100 iterations)', () => {
         fc.assert(
             fc.property(
                 fc.constantFrom(...sidebarVariants),
                 fc.integer({ min: 320, max: 767 }),
-                (variant, _viewportWidth) => {
+                (variant, viewportWidth) => {
+                    // Simulate mobile viewport so v-model:open controls the drawer
+                    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: viewportWidth })
+
                     const wrapper = mount(Sidebar, {
-                        props: { variant, isMobileOpen: true },
+                        props: { variant, open: true },
                         global: globalStubs,
                     })
 
@@ -121,7 +131,7 @@ describe('Property 5: Sidebar open/close round trip', () => {
 
                     if (!hasTranslateOpen) {
                         throw new Error(
-                            `[variant="${variant}", viewport=${_viewportWidth}px] Sidebar is NOT in open state.\n` +
+                            `[variant="${variant}", viewport=${viewportWidth}px] Sidebar is NOT in open state.\n` +
                             `  Expected: "translate-x-0" class to be present\n` +
                             `  Actual classes: "${classes.join(' ')}"`
                         )
@@ -134,14 +144,17 @@ describe('Property 5: Sidebar open/close round trip', () => {
         )
     })
 
-    it('closed state: sidebar has -translate-x-full when isMobileOpen is false (100 iterations)', () => {
+    it('closed state: sidebar has -translate-x-full when open is false (100 iterations)', () => {
         fc.assert(
             fc.property(
                 fc.constantFrom(...sidebarVariants),
                 fc.integer({ min: 320, max: 767 }),
-                (variant, _viewportWidth) => {
+                (variant, viewportWidth) => {
+                    // Simulate mobile viewport
+                    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: viewportWidth })
+
                     const wrapper = mount(Sidebar, {
-                        props: { variant, isMobileOpen: false },
+                        props: { variant, open: false },
                         global: globalStubs,
                     })
 
@@ -154,12 +167,12 @@ describe('Property 5: Sidebar open/close round trip', () => {
                     }
 
                     const classes = root.classes()
-                    // Design doc: when isMobileOpen is false → '-translate-x-full md:translate-x-0'
+                    // Design doc: when open is false on mobile → '-translate-x-full md:translate-x-0'
                     const hasTranslateClosed = classes.includes('-translate-x-full')
 
                     if (!hasTranslateClosed) {
                         throw new Error(
-                            `[variant="${variant}", viewport=${_viewportWidth}px] Sidebar is NOT in closed/hidden state.\n` +
+                            `[variant="${variant}", viewport=${viewportWidth}px] Sidebar is NOT in closed/hidden state.\n` +
                             `  Expected: "-translate-x-full" class to be present\n` +
                             `  Actual classes: "${classes.join(' ')}"`
                         )

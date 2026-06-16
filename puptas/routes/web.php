@@ -33,7 +33,6 @@ use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
 use App\Http\Controllers\GradeExtractionController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\TestPasserReportController;
 use App\Http\Controllers\AdmissionLogbookController;
 use App\Http\Controllers\ControlListController;
 use App\Http\Controllers\ConfirmedApplicantsController;
@@ -158,8 +157,10 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
         return redirect('/login?local=1');
     }
     
-    return redirect()->route('idp.redirect');
-})->middleware('guest')->name('welcome');
+    return Inertia::render('Public/Landing', [
+        'appEnv' => config('app.env'),
+    ]);
+})->name('welcome');
 
 Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
     ->name('idp.redirect');
@@ -556,17 +557,6 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/admin/reports/data', [ReportController::class, 'getReportData'])->name('reports.data');
     Route::get('/admin/reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.export.pdf');
     Route::get('/admin/reports/export/excel', [ReportController::class, 'exportExcel'])->name('reports.export.excel');
-
-    Route::get('/admin/reports/test-passers', [TestPasserReportController::class, 'index'])->name('reports.test-passers.index');
-    Route::get('/admin/reports/test-passers/data', [TestPasserReportController::class, 'getReportData'])->name('reports.test-passers.data');
-    Route::get('/admin/reports/test-passers/export/pdf', [TestPasserReportController::class, 'exportPdf'])->name('reports.test-passers.export.pdf');
-    Route::get('/admin/reports/test-passers/export/excel', [TestPasserReportController::class, 'exportExcel'])->name('reports.test-passers.export.excel');
-
-    // Accepted Masterlist Reports
-    Route::get('/admin/reports/masterlist', [ReportController::class, 'masterlistIndex'])->name('reports.masterlist.index');
-    Route::get('/admin/reports/masterlist/data', [ReportController::class, 'masterlistData'])->name('reports.masterlist.data');
-    Route::get('/admin/reports/masterlist/export/pdf', [ReportController::class, 'masterlistExportPdf'])->name('reports.masterlist.export.pdf');
-    Route::get('/admin/reports/masterlist/export/excel', [ReportController::class, 'masterlistExportExcel'])->name('reports.masterlist.export.excel');
 
     // Logbook Reports
     Route::get('/admin/logbook', [AdmissionLogbookController::class, 'index'])->name('reports.logbook.index');

@@ -3,6 +3,7 @@ import { ref, computed, watch } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
 import { LineChart } from "vue-chart-3";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import BlurText from "@/Components/BlurText.vue";
 import { 
   Chart as ChartJS, 
   LineController, 
@@ -208,8 +209,21 @@ const closeUserCard = () => {
     <div class="px-4 md:px-8 mb-8">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Admissions Dashboard</h1>
-          <p class="text-gray-600 dark:text-gray-400 mt-2">Welcome back! Here's an overview of your application data.</p>
+          <BlurText
+            text="Admissions Dashboard"
+            :delay="100"
+            animate-by="words"
+            direction="top"
+            class-name="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white"
+          />
+          <BlurText
+            text="Welcome back! Here's an overview of your application data."
+            :delay="60"
+            animate-by="words"
+            direction="top"
+            :step-duration="0.3"
+            class-name="text-gray-600 dark:text-gray-400 mt-2"
+          />
         </div>
       </div>
     </div>
