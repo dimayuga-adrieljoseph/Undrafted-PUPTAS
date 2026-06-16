@@ -464,7 +464,7 @@
                                                 </select>
                                             </div>
 
-                                            <div>
+                                            <div v-if="interviewStartTime">
                                                 <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                                                     Comments/Notes (Optional)
                                                 </label>
@@ -476,7 +476,22 @@
                                                 ></textarea>
                                             </div>
 
-                                            <div class="flex gap-2 pt-1">
+                                            <div v-if="!interviewStartTime">
+                                                <button
+                                                    @click="beginInterview"
+                                                    class="w-full px-4 py-2.5 rounded-lg font-medium transition flex items-center justify-center gap-2 bg-[#9E122C] text-white hover:bg-[#b51834]"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                    Begin Interview
+                                                </button>
+                                            </div>
+
+                                            <div v-else class="space-y-3">
+                                                <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center gap-2 border border-blue-200 dark:border-blue-800">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                    Interview in progress since {{ new Date(interviewStartTime).toLocaleTimeString() }}
+                                                </div>
+                                                <div class="flex gap-2 pt-1">
                                                 <button
                                                     @click="promptAccept"
                                                     :class="[getButtonClass('success'), 'flex-1 px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2']"
@@ -495,6 +510,7 @@
                                                     </svg>
                                                     Reject
                                                 </button>
+                                            </div>
                                             </div>
                                         </div>
                                     </div>
@@ -660,6 +676,7 @@ const showAcceptModal = ref(false);
 const showRejectModal = ref(false);
 const isSubmitting = ref(false);
 const interviewNotes = ref("");
+const interviewStartTime = ref(null);
 const snackbar = ref({
     visible: false,
     message: "",
@@ -889,7 +906,19 @@ const selectUser = async (user) => {
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
-        // await fetchPrograms(); removed
+
+        // Check if there is an interview already in progress
+        const interviewerInProgress = selectedUser.value.application?.processes?.find(
+            p => p.stage === 'interviewer' && p.status === 'in_progress'
+        );
+        if (interviewerInProgress && interviewerInProgress.started_at) {
+            interviewStartTime.value = interviewerInProgress.started_at.endsWith('Z') 
+                ? interviewerInProgress.started_at 
+                : interviewerInProgress.started_at + 'Z';
+        } else {
+            interviewStartTime.value = null;
+        }
+
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         
@@ -907,6 +936,19 @@ const selectUser = async (user) => {
 const closeUserCard = () => {
     selectedUser.value = null;
     interviewNotes.value = "";
+    interviewStartTime.value = null;
+};
+
+const beginInterview = async () => {
+    try {
+        const response = await axios.post(`/interviewer-dashboard/start/${selectedUser.value.id}`);
+        const startedAt = response.data.started_at;
+        interviewStartTime.value = startedAt.endsWith('Z') ? startedAt : startedAt + 'Z';
+    } catch (e) {
+        console.error("Failed to start interview:", e);
+        const msg = e.response?.data?.message || "Failed to start interview";
+        showSnackbar(msg, "error");
+    }
 };
 
 // Check if the current user's interviewer process is completed
@@ -1028,6 +1070,7 @@ const acceptApplication = async () => {
                 program_id: selectedProgramId.value,
                 requires_promissory_note: requiresPromissoryNote.value,
                 notes: interviewNotes.value,
+                start_time: interviewStartTime.value,
             }
         );
         showSnackbar("Application accepted successfully", "success");
@@ -1071,6 +1114,7 @@ const rejectApplication = async () => {
             {
                 program_id: selectedProgramId.value,
                 notes: interviewNotes.value,
+                start_time: interviewStartTime.value,
             }
         );
         showSnackbar("Application rejected successfully", "success");

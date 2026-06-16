@@ -220,9 +220,15 @@ Route::get('/applications/user/{user}', function ($user) {
         default => ($context === 'evaluator' && in_array($roleId, [2, 7])) ? 'Applications/Evaluator' : 'Applications/Index',
     };
 
-    return Inertia::render($component, [
+    $props = [
         'selectedUserId' => (string) $user
-    ]);
+    ];
+
+    if ($roleId == 4) {
+        $props['assignedPrograms'] = $currentUser->programs()->get(['id', 'code', 'name']);
+    }
+
+    return Inertia::render($component, $props);
 })->middleware(['auth', 'role:2,3,4,7,8'])->name('applications.show');
 
 Route::post('/check-email', function (\Illuminate\Http\Request $request) {
