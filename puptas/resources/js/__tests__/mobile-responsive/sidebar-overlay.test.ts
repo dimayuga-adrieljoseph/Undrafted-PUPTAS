@@ -35,6 +35,7 @@ vi.mock('@fortawesome/free-solid-svg-icons', () => ({
     faGraduationCap: {},
     faPencilAlt: {},
     faEnvelopeOpenText: {},
+    faEnvelope: {},
     faCalendarCheck: {},
     faUserGroup: {},
     faMoon: {},
@@ -47,6 +48,12 @@ vi.mock('@fortawesome/free-solid-svg-icons', () => ({
     faHome: {},
     faUserCircle: {},
     faHistory: {},
+    faNetworkWired: {},
+    faChartPie: {},
+    faChartLine: {},
+    faFileAlt: {},
+    faClock: {},
+    faClipboardList: {},
 }))
 
 // --- Sub-component stubs ---
@@ -111,7 +118,7 @@ describe('Property 3: Sidebar is an overlay on mobile', () => {
                     const wrapper = mount(Sidebar, {
                         props: {
                             variant,
-                            isMobileOpen: true,
+                            open: true,
                         },
                         global: {
                             stubs: {
