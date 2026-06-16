@@ -6,6 +6,7 @@ import Compressor from "compressorjs";
 const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
+import BlurText from "@/Components/BlurText.vue";
 
 const props = defineProps({ user: Object, gradeUrl: String, canDownloadSlip: Boolean });
 
@@ -524,6 +525,8 @@ const toggleFaq = (index) => {
  * No applicant ID or reference number is passed as a URL parameter to prevent
  * IDOR (Insecure Direct Object Reference) attacks.
  */
+const welcomeText = computed(() => `Welcome back, ${props.user?.firstname || 'Applicant'}!`);
+
 const downloadGradeVerificationSlip = async () => {
   downloadingSlip.value = true;
   slipDownloadError.value = '';
@@ -612,9 +615,13 @@ onMounted(() => {
     </template>
 
     <template #header>
-      <h2 class="font-bold text-2xl text-gray-900 dark:text-gray-100">
-        Applicant Dashboard
-      </h2>
+      <BlurText
+        text="Applicant Dashboard"
+        :delay="100"
+        animate-by="words"
+        direction="top"
+        class-name="font-bold text-2xl text-gray-900 dark:text-gray-100"
+      />
     </template>
 
     <div class="py-4 sm:py-8">
@@ -639,8 +646,21 @@ onMounted(() => {
         <!-- Welcome Header -->
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white break-words">Welcome back, {{ props.user?.firstname || 'Applicant' }}!</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-1">Manage your application and track your progress</p>
+            <BlurText
+              :text="welcomeText"
+              :delay="100"
+              animate-by="words"
+              direction="top"
+              class-name="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
+            />
+            <BlurText
+              text="Manage your application and track your progress"
+              :delay="60"
+              animate-by="words"
+              direction="top"
+              :step-duration="0.3"
+              class-name="text-gray-600 dark:text-gray-400 mt-1"
+            />
           </div>
           
          </div>

@@ -1,7 +1,7 @@
 // Feature: mobile-responsive-ui, Property 6: Body scroll is locked when sidebar is open on mobile
 
 import { describe, it, vi, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import * as fc from 'fast-check'
 
 // --- Inertia stubs ---
@@ -34,7 +34,10 @@ vi.mock('@fortawesome/free-solid-svg-icons', () => ({
 
 // --- Component stubs ---
 vi.mock('@/Components/Sidebar.vue', () => ({
-    default: { template: '<div class="sidebar-stub" />' },
+    default: {
+        template: '<div class="sidebar-stub"><button aria-label="Close navigation menu" @click="$emit(\'update:open\', false)">X</button></div>',
+        emits: ['update:open'],
+    },
 }))
 vi.mock('@/Components/Footer.vue', () => ({
     default: { template: '<footer class="footer-stub" />' },
@@ -82,7 +85,7 @@ describe('Property 6: Body scroll is locked when sidebar is open on mobile', () 
                         attachTo: document.body,
                         global: {
                             stubs: {
-                                Sidebar: { template: '<div class="sidebar-stub" />' },
+                                // Let the Sidebar stub from vi.mock() be used (has close button)
                                 Footer: { template: '<footer />' },
                                 TermsandConditionsModal: { template: '<div />' },
                                 FontAwesomeIcon: { template: '<span />' },
@@ -103,6 +106,7 @@ describe('Property 6: Body scroll is locked when sidebar is open on mobile', () 
 
                     await hamburger.trigger('click')
                     await wrapper.vm.$nextTick()
+                    await flushPromises()
 
                     // --- Step 2: Assert body has overflow-hidden after opening ---
                     const lockedAfterOpen = document.body.classList.contains('overflow-hidden')
@@ -118,22 +122,13 @@ describe('Property 6: Body scroll is locked when sidebar is open on mobile', () 
                         )
                     }
 
-                    // --- Step 3: Close the sidebar via the backdrop or close button ---
-                    // Try backdrop first (a div with bg-black/50 or similar), then close button
-                    const backdrop = wrapper.find('[aria-label="Close navigation menu"]')
-                        || wrapper.find('.bg-black\\/50')
-
-                    if (backdrop && backdrop.exists()) {
-                        await backdrop.trigger('click')
-                    } else {
-                        // Fallback: directly set isMobileSidebarOpen to false via vm
-                        const vm = wrapper.vm as Record<string, unknown>
-                        if (typeof vm.isMobileSidebarOpen !== 'undefined') {
-                            (vm as { isMobileSidebarOpen: boolean }).isMobileSidebarOpen = false
-                        }
+                    // --- Step 3: Close the sidebar via the close button in the sidebar stub ---
+                    const closeBtn = wrapper.find('[aria-label="Close navigation menu"]')
+                    if (closeBtn.exists()) {
+                        await closeBtn.trigger('click')
                     }
-
                     await wrapper.vm.$nextTick()
+                    await flushPromises()
 
                     // --- Step 4: Assert body no longer has overflow-hidden after closing ---
                     const unlockedAfterClose = !document.body.classList.contains('overflow-hidden')

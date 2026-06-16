@@ -4,6 +4,7 @@ import { LineChart } from "vue-chart-3";
 import { Head, Link, router } from "@inertiajs/vue3";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
 import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue';
+import BlurText from "@/Components/BlurText.vue";
 import {
     Chart as ChartJS,
     LineController,
@@ -484,8 +485,21 @@ const fetchPrograms = async () => {
         <div class="px-4 md:px-8 mb-8">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Interviewer Dashboard</h1>
-                    <p class="text-gray-600 dark:text-gray-400 mt-2">Conduct interviews and evaluate applicant responses.</p>
+                    <BlurText
+                        text="Interviewer Dashboard"
+                        :delay="100"
+                        animate-by="words"
+                        direction="top"
+                        class-name="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white"
+                    />
+                    <BlurText
+                        text="Conduct interviews and evaluate applicant responses."
+                        :delay="60"
+                        animate-by="words"
+                        direction="top"
+                        :step-duration="0.3"
+                        class-name="text-gray-600 dark:text-gray-400 mt-2"
+                    />
                 </div>
                 <div class="relative w-full md:w-64">
                     <input
