@@ -97,7 +97,7 @@ export function useSidebarNavigation() {
             key: 'reports',
             label: 'Reports',
             icon: 'chart-pie',
-            activeRoutes: ['reports.index', 'reports.test-passers.index', 'reports.masterlist.index', 'reports.logbook.index', 'reports.control-list.index', 'email-tracking.index'],
+            activeRoutes: ['reports.index', 'reports.logbook.index', 'reports.control-list.index', 'email-tracking.index'],
             children: computed(() => [
                 {
                     key: 'applicant-reports',
@@ -105,20 +105,6 @@ export function useSidebarNavigation() {
                     icon: 'chart-line',
                     route: 'reports.index',
                     activeRoutes: ['reports.index'],
-                },
-                {
-                    key: 'passers-reports',
-                    label: 'Passers Reports',
-                    icon: 'file-alt',
-                    route: 'reports.test-passers.index',
-                    activeRoutes: ['reports.test-passers.index'],
-                },
-                {
-                    key: 'masterlist',
-                    label: 'Accepted Masterlist',
-                    icon: 'list',
-                    route: 'reports.masterlist.index',
-                    activeRoutes: ['reports.masterlist.index'],
                 },
                 {
                     key: 'logbook',
