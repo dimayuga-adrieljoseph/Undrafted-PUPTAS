@@ -76,6 +76,7 @@ Route::get('/dev-login', function (Request $request) {
         . '</style></head><body>';
     $html .= '<h1>🔓 Dev Login Bypass</h1>';
     $html .= '<p style="color:#dc2626;font-weight:600">⚠️ DEBUG MODE ONLY — This page is not available in production.</p>';
+    $html .= '<p><a href="/dev-logout-and-redirect" style="display:inline-block;padding:8px 16px;background:#9E122C;color:#fff;border-radius:6px;font-weight:600;font-size:14px;">🏠 Go to Landing Page (local bypass)</a></p>';
 
     // Quick-access applicant cards
     $html .= '<h2>🎓 Test Applicants <span style="font-size:13px;color:#6b7280">(Password: Password.1234)</span></h2>';
@@ -110,6 +111,18 @@ Route::get('/dev-login', function (Request $request) {
 
     $html .= '</body></html>';
     return response($html);
+})->middleware('web');
+
+Route::get('/dev-logout-and-redirect', function (\Illuminate\Http\Request $request) {
+    if (!config('app.debug')) {
+        abort(404);
+    }
+
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/');
 })->middleware('web');
 
 Route::get('/dev-login/{id}', function ($id) {

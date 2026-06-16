@@ -65,6 +65,7 @@ class HandleInertiaRequests extends Middleware
             'privacy_consent' => [
                 'required' => $request->user() ? !$request->user()->privacy_consent : false,
             ],
+            'appEnv' => config('app.env'),
         ]);
     }
 }
