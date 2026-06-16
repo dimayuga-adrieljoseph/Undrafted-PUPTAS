@@ -492,6 +492,7 @@
                                                     Interview in progress since {{ new Date(interviewStartTime).toLocaleTimeString() }}
                                                 </div>
                                                 <div class="flex gap-2 pt-1">
+                                            <div class="flex gap-2 pt-1">
                                                 <button
                                                     @click="promptAccept"
                                                     :class="[getButtonClass('success'), 'flex-1 px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2']"
