@@ -8,8 +8,17 @@ use App\Models\ApplicationProcess;
 use App\Models\Program;
 use App\Services\LogbookService;
 
+use App\Models\AuditLog;
+use App\Services\AuditLogService;
+
 class AdmissionLogbookController extends Controller
 {
+    protected AuditLogService $auditLogService;
+
+    public function __construct(AuditLogService $auditLogService)
+    {
+        $this->auditLogService = $auditLogService;
+    }
     /**
      * Build an entry array from an ApplicationProcess model.
      * Application::user() returns ApplicantProfile directly.
@@ -123,6 +132,17 @@ class AdmissionLogbookController extends Controller
             ->map(fn ($e) => $this->buildEntry($e, $step));
 
         $pdf = app(LogbookService::class)->generate($entries, $step);
+
+        $user = auth()->user();
+        if ($user) {
+            $this->auditLogService->logActivity(
+                AuditLog::ACTION_DOWNLOAD,
+                'Reports',
+                "Exported Admission Logbook PDF for step {$step} on {$date}",
+                $user,
+                AuditLog::CATEGORY_SYSTEM_OPERATION
+            );
+        }
 
         return response($pdf, 200, [
             'Content-Type'        => 'application/pdf',
