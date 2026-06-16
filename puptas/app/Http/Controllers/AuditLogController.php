@@ -30,8 +30,30 @@ class AuditLogController extends Controller
             'search' => ['nullable', 'string'],
         ]);
 
-        $logsQuery = AuditLog::query();
-        $this->applyFilters($logsQuery, $filters);
+        $baseQuery = AuditLog::query();
+        
+        // Apply all filters EXCEPT log_type for the counts
+        $filtersForCounts = $filters;
+        unset($filtersForCounts['log_type']);
+        $this->applyFilters($baseQuery, $filtersForCounts);
+
+        $typeCounts = (clone $baseQuery)
+            ->selectRaw('log_type, count(*) as total')
+            ->groupBy('log_type')
+            ->pluck('total', 'log_type')
+            ->toArray();
+
+        $logCounts = [
+            'SYSTEM' => $typeCounts[AuditLog::TYPE_SYSTEM] ?? 0,
+            'AUDIT' => $typeCounts[AuditLog::TYPE_AUDIT] ?? 0,
+            'SECURITY' => $typeCounts[AuditLog::TYPE_SECURITY] ?? 0,
+        ];
+
+        // Now apply log_type filter for the actual list
+        $logsQuery = clone $baseQuery;
+        if (!empty($filters['log_type'])) {
+            $logsQuery->where('log_type', $filters['log_type']);
+        }
 
         $logs = $logsQuery
             ->latestFirst()
@@ -66,6 +88,7 @@ class AuditLogController extends Controller
 
         return Inertia::render('SuperAdmin/Logs', [
             'logs' => $logs,
+            'logCounts' => $logCounts,
             'users' => $users,
             'logTypes' => [
                 AuditLog::TYPE_SYSTEM,
