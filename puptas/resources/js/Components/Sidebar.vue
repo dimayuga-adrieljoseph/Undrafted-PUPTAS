@@ -571,36 +571,7 @@ watch(isSidebarOpen, (val) => {
                                     />
                                     Applicant Reports
                                 </Link>
-                                <Link
-                                    :href="route('reports.test-passers.index')"
-                                    class="dropdown-item"
-                                    :class="{
-                                        'dropdown-item-active':
-                                            isTestPasserReportsActive,
-                                    }"
-                                    @click="emit('close')"
-                                >
-                                    <FontAwesomeIcon
-                                        icon="file-alt"
-                                        class="text-xs mr-2"
-                                    />
-                                    Passers Reports
-                                </Link>
-                                <Link
-                                    :href="route('reports.masterlist.index')"
-                                    class="dropdown-item"
-                                    :class="{
-                                        'dropdown-item-active':
-                                            isMasterlistReportsActive,
-                                    }"
-                                    @click="emit('close')"
-                                >
-                                    <FontAwesomeIcon
-                                        icon="list"
-                                        class="text-xs mr-2"
-                                    />
-                                    Accepted Masterlist
-                                </Link>
+
                                 <Link
                                     :href="route('reports.logbook.index')"
                                     class="dropdown-item"
