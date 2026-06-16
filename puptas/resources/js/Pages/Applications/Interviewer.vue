@@ -464,6 +464,18 @@
                                                 </select>
                                             </div>
 
+                                            <div>
+                                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                                                    Comments/Notes (Optional)
+                                                </label>
+                                                <textarea
+                                                    v-model="interviewNotes"
+                                                    rows="3"
+                                                    placeholder="Add any additional notes or comments here..."
+                                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent resize-none"
+                                                ></textarea>
+                                            </div>
+
                                             <div class="flex gap-2 pt-1">
                                                 <button
                                                     @click="promptAccept"
@@ -647,6 +659,7 @@ const selectedUserFiles = ref({});
 const showAcceptModal = ref(false);
 const showRejectModal = ref(false);
 const isSubmitting = ref(false);
+const interviewNotes = ref("");
 const snackbar = ref({
     visible: false,
     message: "",
@@ -893,6 +906,7 @@ const selectUser = async (user) => {
 
 const closeUserCard = () => {
     selectedUser.value = null;
+    interviewNotes.value = "";
 };
 
 // Check if the current user's interviewer process is completed
@@ -1013,6 +1027,7 @@ const acceptApplication = async () => {
             {
                 program_id: selectedProgramId.value,
                 requires_promissory_note: requiresPromissoryNote.value,
+                notes: interviewNotes.value,
             }
         );
         showSnackbar("Application accepted successfully", "success");
@@ -1055,6 +1070,7 @@ const rejectApplication = async () => {
             `/interviewer-dashboard/reject/${currentUserId}`,
             {
                 program_id: selectedProgramId.value,
+                notes: interviewNotes.value,
             }
         );
         showSnackbar("Application rejected successfully", "success");
