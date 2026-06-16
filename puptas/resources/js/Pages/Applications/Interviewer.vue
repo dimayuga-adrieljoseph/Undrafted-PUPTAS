@@ -492,25 +492,25 @@
                                                     Interview in progress since {{ new Date(interviewStartTime).toLocaleTimeString() }}
                                                 </div>
                                                 <div class="flex gap-2 pt-1">
-                                                    <button
-                                                        @click="promptAccept"
-                                                        :class="[getButtonClass('success'), 'flex-1 px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2']"
-                                                    >
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                        Accept
-                                                    </button>
-                                                    <button
-                                                        @click="promptReject"
-                                                        :class="[getButtonClass('danger'), 'flex-1 px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2']"
-                                                    >
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                        Reject
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    @click="promptAccept"
+                                                    :class="[getButtonClass('success'), 'flex-1 px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2']"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    Accept
+                                                </button>
+                                                <button
+                                                    @click="promptReject"
+                                                    :class="[getButtonClass('danger'), 'flex-1 px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2']"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                    Reject
+                                                </button>
+                                            </div>
                                             </div>
                                         </div>
                                     </div>
