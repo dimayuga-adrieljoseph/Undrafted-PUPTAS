@@ -13,11 +13,12 @@ return [
                 // 'concern' is intentionally omitted — it is pre-printed on every row of the template
                 'requested_at'      => ['x' => 18,  'width' => 23],
                 'client_name'       => ['x' => 54,  'width' => 55],
-                // 'program' and 'sex' are intentionally omitted to leave them blank
+                'program'           => ['x' => 106.5, 'width' => 25],
+                // 'sex' is intentionally omitted to leave them blank
                 'email'             => ['x' => 148, 'width' => 55],
                 'processed_at'      => ['x' => 235, 'width' => 30],
                 'minutes_processed' => ['x' => 278, 'width' => 15],
-                'claimed_at'        => ['x' => 310, 'width' => 30],
+                'claimed_at'        => ['x' => 307, 'width' => 30],
             ],
         ],
         // 2: GRADE COMPUTATION AND VERIFICATION
@@ -30,11 +31,12 @@ return [
                 // 'concern' is intentionally omitted — it is pre-printed on every row of the template
                 'requested_at'      => ['x' => 18,  'width' => 23],
                 'client_name'       => ['x' => 54,  'width' => 55],
-                // 'program' and 'sex' are intentionally omitted to leave them blank
+                'program'           => ['x' => 106.5, 'width' => 25],
+                // 'sex' is intentionally omitted to leave them blank
                 'email'             => ['x' => 148, 'width' => 55],
                 'processed_at'      => ['x' => 235, 'width' => 30],
                 'minutes_processed' => ['x' => 278, 'width' => 15],
-                'claimed_at'        => ['x' => 310, 'width' => 30],
+                'claimed_at'        => ['x' => 307, 'width' => 30],
             ],
         ],
         // 3: INTERVIEW AND SUBMISSION OF ENTRANCE CREDENTIALS
@@ -47,11 +49,12 @@ return [
                 // 'concern' is intentionally omitted — it is pre-printed on every row of the template
                 'requested_at'      => ['x' => 18,  'width' => 23],
                 'client_name'       => ['x' => 54,  'width' => 55],
-                // 'program' and 'sex' are intentionally omitted to leave them blank
+                'program'           => ['x' => 106.5, 'width' => 25],
+                // 'sex' is intentionally omitted to leave them blank
                 'email'             => ['x' => 148, 'width' => 55],
                 'processed_at'      => ['x' => 235, 'width' => 30],
                 'minutes_processed' => ['x' => 278, 'width' => 15],
-                'claimed_at'        => ['x' => 310, 'width' => 30],
+                'claimed_at'        => ['x' => 307, 'width' => 30],
             ],
         ],
     ],

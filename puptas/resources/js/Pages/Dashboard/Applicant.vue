@@ -6,6 +6,7 @@ import Compressor from "compressorjs";
 const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
+import BlurText from "@/Components/BlurText.vue";
 
 const props = defineProps({ user: Object, gradeUrl: String, canDownloadSlip: Boolean });
 
@@ -72,72 +73,10 @@ const activeUploadLoaded = ref(0);
 const activeUploadTotal = ref(0);
 const activeUploadError = ref("");
 const activeUploadSuccess = ref(false);
-const openFaqItems = ref([]);
-const showFaqModal = ref(false);
-
 // Grade Verification Slip download state
 const downloadingSlip = ref(false);
 const slipDownloadError = ref('');
-
-const faqItems = [
-  {
-    question: "What happens after I submit my application? What is the next step?",
-    answer: "Kindly wait for your SAR (Student Admission Record) Form, which will be sent to your registered email. The SAR Form will include your interview schedule and other important instructions regarding the admission process. Please follow the instructions indicated in the email carefully and prepare all required documents for your scheduled interview.",
-  },
-  {
-    question: "Can we change our registered name (and other necessary information) due to errors made during the PUPCET application through PUP iApply?",
-    answer: "Once you pass the interview and secure a confirmed slot in any of the programs, submit a notarized Affidavit of Discrepancy explaining the erroneous entry/application and proceed to the Office of the Campus Registrar to obtain the list of supporting documents required for the request to correct your name entry in the Student Information System (SIS).",
-  },
-  {
-    question: "Our graduation comes after the date of the interview, so the Grade 12 report card is not yet available.",
-    answer: null,
-    answerItems: [
-      "Submit the following requirements:",
-      "Certification from your school principal/registrar (with school dry seal and authorized signatures) about the date of the graduation and that you belong to the graduating batch/class.",
-      "Certificate of Grades (Grade 12) with school dry seal and printed name and signature of the school principal/registrar or any authorized school personnel.",
-    ],
-  },
-  {
-    question: "The portal does not reflect the programs that I am qualified for.",
-    answer: "Please ensure that you uploaded the required initial documents in the portal and you encoded the complete Senior High School English, Mathematics, and Science subjects. If no program offering was reflected after making sure of this step, please contact us or visit our campus for further checking.",
-  },
-  {
-    question: "Can I change my email address for future communications, announcements, etc.?",
-    answer: "For your Identity Provider portal account, you may seek assistance from the Chat Support upon login. Once you are officially enrolled and already have a PUP SIS account, proceed to the Office of the Campus Registrar to obtain the list of supporting documents required for the request to update your information in the Student Information System (SIS).",
-  },
-  {
-    question: "My high school registrar advised that PUP-Taguig must send a formal request for the issuance of my report cards.",
-    answer: "PUP-Taguig Campus will only request the F137-A with \"Copy for Polytechnic University of the Philippines-Taguig Campus\" once the applicant is officially accepted/enrolled in our university. The applicant should write their high school a formal request letter of the F137 or other grade records (for evaluation purposes only) personally if needed. You may attach a copy of your PUPCET evaluation result and the list of admission requirements as proof.",
-  },
-  {
-    question: "What if I just ordered my PSA-authenticated birth certificate online and it won't be delivered before the interview date?",
-    answer: "PSA birth certificate delivery lead times depend on your location, taking 1-2 working days for processing plus the courier's transit time. Deliveries typically take next day delivery for Metro Manila addresses and 3-8 working days for provincial areas. Bring your receipt as proof that you have already requested for the document.",
-  },
-  {
-    question: "Can I replace or re-upload documents if I uploaded the wrong file?",
-    answer: "Yes. Applicants may replace or re-upload documents through the Document Upload section as long as the application review process is not yet completed.",
-  },
-  {
-    question: "I did not receive my SAR (Student Admission Record) Form in my email. What should I do?",
-    answer: "First, check your spam or junk folder. If it is still not found, verify that you used the correct registered email during application. If the issue continues, contact admissions support for verification and request assistance for re-sending your SAR Form.",
-  },
-  {
-    question: "I accidentally encoded incorrect grades in my application. Can I still correct them?",
-    answer: "If you have not yet submitted your application, you may still update or correct your encoded information by clicking \"Input Grades\" again. If the application has already been submitted and locked, you may seek assistance from Chat Support.",
-  },
-  {
-    question: "How should I properly encode my grades in the system?",
-    answer: "Enter grades exactly as they appear on your report card, including decimal grades if applicable. Accurate encoding is required for proper evaluation.",
-  },
-  {
-    question: "What should I do if a subject is not available in the system?",
-    answer: "If a required subject is not listed, click the \"Add Subject\" button and enter the closest equivalent subject based on your curriculum. Ensure that the subject entered accurately reflects your official record or its nearest equivalent.",
-  },
-  {
-    question: "What should I do if I cannot upload my documents?",
-    answer: "Check the file format and file size first to ensure they meet system requirements. You may also try refreshing the page, switching browsers, or using a different device if the issue persists.",
-  },
-];
+const showSchedule = ref(false);
 
 // checks if all documents have been uploaded (i.e. all fileStatuses have a completed status with a url)
 const allDocumentsUploaded = computed(() => {
@@ -511,21 +450,14 @@ const goToQualifiedPrograms = () => {
   router.visit(route('applicant.qualified-programs.page'));
 };
 
-const toggleFaq = (index) => {
-  const pos = openFaqItems.value.indexOf(index);
-  if (pos === -1) {
-    openFaqItems.value.push(index);
-  } else {
-    openFaqItems.value.splice(pos, 1);
-  }
-};
-
 /**
  * Download the Grade Verification Slip by triggering a direct browser download.
  * The route is authenticated — the server uses the session to identify the applicant.
  * No applicant ID or reference number is passed as a URL parameter to prevent
  * IDOR (Insecure Direct Object Reference) attacks.
  */
+const welcomeText = computed(() => `Welcome back, ${props.user?.firstname || 'Applicant'}!`);
+
 const downloadGradeVerificationSlip = async () => {
   downloadingSlip.value = true;
   slipDownloadError.value = '';
@@ -599,24 +531,15 @@ onMounted(() => {
 <template>
   <Head title="Applicant Dashboard" />
   <ApplicantLayout title="Applicant Dashboard">
-    <!-- FAQ button injected into the top-bar beside the dark mode toggle -->
-    <template #header-actions>
-      <button
-        @click="showFaqModal = true"
-        class="w-9 h-9 rounded-lg flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition min-h-[44px] min-w-[44px]"
-        title="Frequently Asked Questions"
-        aria-label="Open FAQ"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-700 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </button>
-    </template>
 
     <template #header>
-      <h2 class="font-bold text-2xl text-gray-900 dark:text-gray-100">
-        Applicant Dashboard
-      </h2>
+      <BlurText
+        text="Applicant Dashboard"
+        :delay="100"
+        animate-by="words"
+        direction="top"
+        class-name="font-bold text-2xl text-gray-900 dark:text-gray-100"
+      />
     </template>
 
     <div class="py-4 sm:py-8">
@@ -641,8 +564,21 @@ onMounted(() => {
         <!-- Welcome Header -->
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white break-words">Welcome back, {{ props.user?.firstname || 'Applicant' }}!</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-1">Manage your application and track your progress</p>
+            <BlurText
+              :text="welcomeText"
+              :delay="100"
+              animate-by="words"
+              direction="top"
+              class-name="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white"
+            />
+            <BlurText
+              text="Manage your application and track your progress"
+              :delay="60"
+              animate-by="words"
+              direction="top"
+              :step-duration="0.3"
+              class-name="text-gray-600 dark:text-gray-400 mt-1"
+            />
           </div>
           
          </div>
@@ -708,49 +644,223 @@ onMounted(() => {
         </div>
 
         <!-- Medical System Redirect Card -->
-        <div v-if="showMedicalRedirect" class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl shadow-md border-2 border-green-300 dark:border-green-700 p-4 sm:p-6">
-          <div class="flex flex-col sm:flex-row items-start gap-4">
-            <div class="flex-shrink-0">
-              <div class="w-14 h-14 rounded-full bg-green-600 flex items-center justify-center">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
+        <div v-if="showMedicalRedirect" class="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-green-50/50 to-teal-50 dark:from-emerald-950/40 dark:via-gray-900 dark:to-teal-950/40 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(16,185,129,0.1)] border border-emerald-200/60 dark:border-emerald-800/60 p-6 sm:p-8 transition-all duration-500 hover:shadow-[0_8px_30px_rgba(16,185,129,0.15)] group/card">
+          <!-- Decorative background blur -->
+          <div class="absolute -top-24 -right-24 w-64 h-64 bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-3xl pointer-events-none transition-transform duration-700 group-hover/card:scale-110"></div>
+          <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-3xl pointer-events-none transition-transform duration-700 group-hover/card:scale-110"></div>
+
+          <div class="relative flex flex-col items-start gap-6">
+            <div class="flex-1 w-full">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                  <!-- Pulsing outer ring -->
+                  <div class="absolute inset-0 bg-emerald-400 dark:bg-emerald-500 rounded-full animate-ping opacity-25"></div>
+                  <!-- Inner circle -->
+                  <div class="relative w-full h-full bg-gradient-to-tr from-emerald-600 to-green-500 rounded-full flex items-center justify-center shadow-md shadow-emerald-500/30 border border-white/20">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <h3 class="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-teal-600 dark:from-emerald-400 dark:to-teal-300 tracking-tight">
+                  Evaluation & Interview Complete!
+                </h3>
               </div>
-            </div>
-            <div class="flex-1">
-              <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                Evaluation & Interview Complete!
-              </h3>
-              <p class="text-gray-700 dark:text-gray-300 mb-4">
-                Congratulations! You've successfully completed the evaluation and interview stages. 
+              <p class="text-gray-700 dark:text-gray-300 mb-6 text-base leading-relaxed">
+                <span class="font-semibold text-emerald-700 dark:text-emerald-400">Congratulations!</span> You've successfully completed the evaluation and interview stages. 
                 Your next step is to create a Health Record in the Medical System.
               </p>
-              <div class="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border border-green-200 dark:border-green-700">
-                <p class="text-sm font-semibold text-gray-900 dark:text-white mb-2">📋 Instructions:</p>
-                <ol class="text-sm text-gray-700 dark:text-gray-300 space-y-1 list-decimal list-inside">
-                  <li>Click the button below to go to the Medical System</li>
-                  <li>Log in with your credentials</li>
-                  <li>Go to <strong>My Account</strong> dropdown menu</li>
-                  <li>Click <strong>Health Record</strong></li>
-                  <li>Click <strong>Complete Form Now</strong></li>
-                  <li>Fill up the information sheet completely</li>
-                  <li>When you are done filling up the sheets you may now proceed to the clinic for the medical assessment</li>
-                </ol>
+              
+              <!-- Stepper Instructions (Full Width) -->
+              <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-emerald-100/50 dark:border-emerald-800/30 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-6 transition-all hover:shadow-[0_8px_30px_rgba(16,185,129,0.1)] group/stepper">
+                <div class="flex items-center gap-2 mb-6 opacity-80">
+                  <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                  <p class="text-sm font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">INSTRUCTION</p>
+                </div>
+                
+                <div class="relative w-full max-w-4xl mx-auto">
+                  <!-- Connecting Line (Desktop) -->
+                  <div class="hidden sm:block absolute top-[19px] left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-emerald-100 via-emerald-300 to-emerald-100 dark:from-gray-700 dark:via-emerald-600/50 dark:to-gray-700 rounded-full">
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400 to-transparent w-full h-full opacity-0 group-hover/stepper:opacity-100 group-hover/stepper:animate-[shimmer_2s_infinite]"></div>
+                  </div>
+                  
+                  <!-- Connecting Line (Mobile) -->
+                  <div class="sm:hidden absolute top-[19px] bottom-[19px] left-[20px] w-[2px] -translate-x-1/2 bg-gradient-to-b from-emerald-100 via-emerald-300 to-emerald-100 dark:from-gray-700 dark:via-emerald-600/50 dark:to-gray-700 rounded-full">
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-400 to-transparent w-full h-full opacity-0 group-hover/stepper:opacity-100 group-hover/stepper:animate-[shimmer_2s_infinite]"></div>
+                  </div>
+                  
+                  <div class="flex flex-col sm:flex-row gap-6 sm:gap-0 justify-between relative z-10">
+                    
+                    <!-- Step 1 -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-center flex-1 group/step w-full">
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 border-[2px] border-emerald-100 dark:border-gray-700 flex items-center justify-center shadow-sm sm:mb-3 transition-all duration-300 group-hover/step:-translate-y-1 group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-600 relative overflow-hidden group-hover/step:shadow-emerald-500/20 z-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-teal-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"></div>
+                        <span class="text-base font-bold text-emerald-700 dark:text-emerald-400">1</span>
+                      </div>
+                      <div class="text-left sm:text-center ml-4 sm:ml-0 px-0 sm:px-2 flex-1">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed transition-colors group-hover/step:text-gray-900 dark:group-hover/step:text-gray-200">
+                          Click the button below to go to the <span class="font-bold text-gray-800 dark:text-gray-200 border-b border-dashed border-gray-300 dark:border-gray-600">Medical System</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-center flex-1 group/step w-full">
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 border-[2px] border-emerald-100 dark:border-gray-700 flex items-center justify-center shadow-sm sm:mb-3 transition-all duration-300 group-hover/step:-translate-y-1 group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-600 relative overflow-hidden group-hover/step:shadow-emerald-500/20 z-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-teal-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"></div>
+                        <span class="text-base font-bold text-emerald-700 dark:text-emerald-400">2</span>
+                      </div>
+                      <div class="text-left sm:text-center ml-4 sm:ml-0 px-0 sm:px-2 flex-1">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed transition-colors group-hover/step:text-gray-900 dark:group-hover/step:text-gray-200">
+                          Click <span class="font-bold text-gray-800 dark:text-gray-200">Log In Via One Portal</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-center flex-1 group/step w-full">
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 border-[2px] border-emerald-100 dark:border-gray-700 flex items-center justify-center shadow-sm sm:mb-3 transition-all duration-300 group-hover/step:-translate-y-1 group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-600 relative overflow-hidden group-hover/step:shadow-emerald-500/20 z-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-teal-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"></div>
+                        <span class="text-base font-bold text-emerald-700 dark:text-emerald-400">3</span>
+                      </div>
+                      <div class="text-left sm:text-center ml-4 sm:ml-0 px-0 sm:px-2 flex-1">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed transition-colors group-hover/step:text-gray-900 dark:group-hover/step:text-gray-200">
+                          Log in with your <span class="font-bold text-gray-800 dark:text-gray-200">credentials</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-center flex-1 group/step w-full">
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 border-[2px] border-emerald-100 dark:border-gray-700 flex items-center justify-center shadow-sm sm:mb-3 transition-all duration-300 group-hover/step:-translate-y-1 group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-600 relative overflow-hidden group-hover/step:shadow-emerald-500/20 z-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-teal-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"></div>
+                        <span class="text-base font-bold text-emerald-700 dark:text-emerald-400">4</span>
+                      </div>
+                      <div class="text-left sm:text-center ml-4 sm:ml-0 px-0 sm:px-2 flex-1 flex flex-row sm:flex-col items-center sm:items-center justify-start sm:justify-center">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed transition-colors group-hover/step:text-gray-900 dark:group-hover/step:text-gray-200 mr-2 sm:mr-0 sm:mb-1.5">
+                          Click 
+                        </p>
+                        <span class="px-2 py-0.5 bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 rounded border border-gray-200 dark:border-gray-600 shadow-sm font-mono text-[10px] font-bold tracking-tight uppercase whitespace-nowrap group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-500 transition-colors">Fill Up Form</span>
+                      </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-center flex-1 group/step w-full">
+                      <div class="w-10 h-10 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 border-[2px] border-emerald-100 dark:border-gray-700 flex items-center justify-center shadow-sm sm:mb-3 transition-all duration-300 group-hover/step:-translate-y-1 group-hover/step:border-emerald-300 dark:group-hover/step:border-emerald-600 relative overflow-hidden group-hover/step:shadow-emerald-500/20 z-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/10 to-teal-500/10 opacity-0 group-hover/step:opacity-100 transition-opacity"></div>
+                        <span class="text-base font-bold text-emerald-700 dark:text-emerald-400">5</span>
+                      </div>
+                      <div class="text-left sm:text-center ml-4 sm:ml-0 px-0 sm:px-2 flex-1 flex flex-row sm:flex-col items-center sm:items-center justify-start sm:justify-center">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed transition-colors group-hover/step:text-gray-900 dark:group-hover/step:text-gray-200 sm:mb-1.5">
+                          Fill up the information sheet completely
+                        </p>
+                      </div>
+                    </div>
+                    
+                  </div>
+                </div>
               </div>
-              <a
-                href="https://clinic-ms.inaebsit2027.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-md transition-all hover:shadow-lg font-medium min-h-[44px]"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                </svg>
-                Go to Medical System
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </a>
+
+              <!-- Schedule Panel (Now Full Width below Stepper) -->
+              <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md hover:bg-white/90 dark:hover:bg-gray-800/90 hover:-translate-y-0.5 mb-8">
+                <div class="p-4 sm:p-5 pb-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700/50 cursor-pointer group" @click="showSchedule = !showSchedule">
+                  <div class="flex items-center gap-3 pr-2">
+                    <div class="p-2 flex-shrink-0 bg-blue-100 dark:bg-blue-900/50 rounded-lg shadow-sm group-hover:bg-blue-200 dark:group-hover:bg-blue-800/60 transition-colors">
+                      <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <p class="text-[15px] sm:text-lg leading-tight font-bold text-gray-900 dark:text-white transition-colors group-hover:text-emerald-700 dark:group-hover:text-emerald-400">Schedule of Issuance of medical clearance</p>
+                  </div>
+                  <button type="button" class="flex-shrink-0 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 focus:outline-none transition-transform duration-300" :class="{ 'rotate-180': showSchedule }">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                  </button>
+                </div>
+                <div v-show="showSchedule" class="transition-all duration-500 origin-top">
+                  <div class="overflow-x-auto flex-1 custom-scrollbar">
+                    <table class="min-w-full text-xs sm:text-sm text-left text-gray-700 dark:text-gray-300 h-full">
+                    <thead class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50/80 dark:bg-gray-800/50">
+                      <tr>
+                        <th scope="col" class="px-4 sm:px-5 py-3 font-semibold whitespace-nowrap min-w-[100px]">Date</th>
+                        <th scope="col" class="px-4 sm:px-5 py-3 font-semibold whitespace-nowrap min-w-[140px]">Time</th>
+                        <th scope="col" class="px-4 sm:px-5 py-3 font-semibold whitespace-nowrap min-w-[150px]">Program</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100/50 dark:divide-gray-700/50 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors group cursor-default">
+                      <tr>
+                        <td class="px-5 py-3 font-medium align-top group-hover:text-emerald-900 dark:group-hover:text-emerald-300 transition-colors" rowspan="3">July 1, 2026<br><span class="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium">Wednesday</span></td>
+                        <td class="px-5 py-3 whitespace-nowrap">8:00AM - 11:00AM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSBA-MM</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">12:00PM - 3:00PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSIT</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">3:30PM - 6:30PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BS PSYCHOLOGY</td>
+                      </tr>
+                    </tbody>
+                    <tbody class="divide-y divide-gray-100/50 dark:divide-gray-700/50 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/40 dark:bg-gray-800/20 group cursor-default">
+                      <tr>
+                        <td class="px-5 py-3 font-medium align-top group-hover:text-emerald-900 dark:group-hover:text-emerald-300 transition-colors" rowspan="3">July 2, 2026<br><span class="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium">Thursday</span></td>
+                        <td class="px-5 py-3 whitespace-nowrap">8:00AM - 11:00AM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSBA-HRM</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">12:00PM - 3:00PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSOA</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">3:30PM - 6:30PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSED-MATH</td>
+                      </tr>
+                    </tbody>
+                    <tbody class="divide-y divide-gray-100/50 dark:divide-gray-700/50 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors border-t border-gray-100 dark:border-gray-700/50 group cursor-default">
+                      <tr>
+                        <td class="px-5 py-3 font-medium align-top group-hover:text-emerald-900 dark:group-hover:text-emerald-300 transition-colors" rowspan="3">July 3, 2026<br><span class="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium">Friday</span></td>
+                        <td class="px-5 py-3 whitespace-nowrap">8:00AM - 11:00AM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSECE</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">12:00PM - 3:00PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSED-ENGLISH</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">3:30PM - 6:30PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">BSME</td>
+                      </tr>
+                    </tbody>
+                    <tbody class="divide-y divide-gray-100/50 dark:divide-gray-700/50 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors border-t border-gray-100 dark:border-gray-700/50 bg-gray-50/40 dark:bg-gray-800/20 group cursor-default">
+                      <tr>
+                        <td class="px-5 py-3 font-medium align-top group-hover:text-emerald-900 dark:group-hover:text-emerald-300 transition-colors" rowspan="2">July 8, 2026<br><span class="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium">Wednesday</span></td>
+                        <td class="px-5 py-3 whitespace-nowrap">9:00AM - 12:00PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">DIT</td>
+                      </tr>
+                      <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">1:00PM - 4:00PM</td>
+                        <td class="px-5 py-3 font-semibold text-gray-900 dark:text-gray-200">DOMT-LOM</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                </div>
+              </div>
+
+              <div class="flex items-center pt-2">
+                <a
+                  href="https://clinic-ms.inaebsit2027.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="group inline-flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-8 py-4 rounded-xl shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 hover:-translate-y-1 font-bold text-base ring-2 ring-transparent hover:ring-emerald-300/50"
+                >
+                  <svg class="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                  </svg>
+                  <span>Go to Medical System</span>
+                  <svg class="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                  </svg>
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -1256,126 +1366,6 @@ onMounted(() => {
         </button>
       </div>
     </div>
-
-    <!-- FAQ Modal -->
-    <transition name="modal-fade">
-      <div
-        v-if="showFaqModal"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="faq-modal-title"
-      >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showFaqModal = false"></div>
-
-        <!-- Modal Panel -->
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden mx-2 sm:mx-4">
-
-          <!-- Header -->
-          <div class="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0" style="background-color:#9E122C;">
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div class="min-w-0">
-                <h2 id="faq-modal-title" class="text-base sm:text-lg font-bold text-white leading-tight truncate">Frequently Asked Questions</h2>
-                <p class="text-xs text-red-100 mt-0.5">Applicant Dashboard FAQs</p>
-              </div>
-            </div>
-            <button
-              @click="showFaqModal = false"
-              class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors min-h-[44px] min-w-[44px]"
-              aria-label="Close FAQ"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <!-- Scrollable Content -->
-          <div class="overflow-y-auto flex-1 px-4 sm:px-6 py-5 space-y-2 scrollbar-hide">
-
-            <!-- FAQ Items -->
-            <div
-              v-for="(faq, index) in faqItems"
-              :key="index"
-              class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all"
-            >
-              <button
-                type="button"
-                class="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9E122C]"
-                :aria-expanded="openFaqItems.includes(index)"
-                @click="toggleFaq(index)"
-              >
-                <span class="text-sm font-medium text-gray-800 dark:text-gray-100 leading-snug pr-2">{{ faq.question }}</span>
-                <svg
-                  class="w-4 h-4 flex-shrink-0 text-gray-400 dark:text-gray-400 transition-transform duration-200"
-                  :class="openFaqItems.includes(index) ? 'rotate-180' : ''"
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <transition
-                enter-active-class="transition-all duration-200 ease-out"
-                leave-active-class="transition-all duration-150 ease-in"
-                enter-from-class="opacity-0 max-h-0"
-                enter-to-class="opacity-100 max-h-96"
-                leave-from-class="opacity-100 max-h-96"
-                leave-to-class="opacity-0 max-h-0"
-              >
-                <div v-show="openFaqItems.includes(index)" class="px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
-                  <p v-if="faq.answer" class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{{ faq.answer }}</p>
-                  <div v-else-if="faq.answerItems" class="space-y-2">
-                    <p v-for="(item, idx) in faq.answerItems" :key="idx" class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed" :class="{ 'font-medium': idx === 0, 'pl-4': idx > 0 }">
-                      <span v-if="idx > 0" class="mr-2">•</span>{{ item }}
-                    </p>
-                  </div>
-                </div>
-              </transition>
-            </div>
-
-            <!-- Important Reminder -->
-            <div class="mt-4 rounded-xl border-2 border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 p-4">
-              <div class="flex items-start gap-3">
-                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-amber-400 dark:bg-amber-600 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <div>
-                  <p class="text-sm font-bold text-amber-800 dark:text-amber-200 mb-1">Important Reminder</p>
-                  <p class="text-sm text-amber-700 dark:text-amber-300 leading-relaxed">
-                    Before clicking <strong>Submit Application</strong>, ensure that all information, program choices, grades, and uploaded documents are complete and correct. Once submitted, your application will be treated as final.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Footer -->
-          <div class="px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex-shrink-0">
-            <div class="flex justify-end">
-              <button
-                @click="showFaqModal = false"
-                class="px-6 py-2.5 text-white rounded-lg transition font-medium min-h-[44px]"
-                style="background-color:#9E122C;"
-                onmouseover="this.style.backgroundColor='#7a0e22'"
-                onmouseout="this.style.backgroundColor='#9E122C'"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </transition>
 
   </ApplicantLayout>
 </template>

@@ -48,6 +48,7 @@ const pagination = computed(() => page.props.logs || {});
 const users = computed(() => page.props.users || []);
 const logTypes = computed(() => page.props.logTypes || ["SYSTEM", "AUDIT", "SECURITY"]);
 const initialFilters = computed(() => page.props.filters || {});
+const logCounts = computed(() => page.props.logCounts || { SYSTEM: 0, AUDIT: 0, SECURITY: 0 });
 
 // State
 const selectedLog = ref(null);
@@ -177,7 +178,7 @@ const actionTypes = computed(() => {
     return Array.from(types);
 });
 
-const totalByType = (type) => logs.value.filter((log) => log.log_type === type).length;
+const totalByType = (type) => logCounts.value[type] || 0;
 
 const applyServerFilters = () => {
     router.get(route("audit-logs.index"), buildServerParams(), {

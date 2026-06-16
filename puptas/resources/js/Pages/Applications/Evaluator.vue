@@ -311,20 +311,38 @@
                             <div>
                                 <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Program Choices</h4>
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">1st Choice</p>
-                                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.application?.program?.name || "—" }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedUser.application?.program?.code || "" }} · {{ selectedUser.application?.program?.slots ?? 0 }} slots</p>
+                                    <!-- 1st Choice -->
+                                    <div class="p-3 rounded-xl border border-[#9E122C]/30 bg-[#9E122C]/5 dark:bg-[#9E122C]/10">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="w-5 h-5 rounded-full bg-[#9E122C] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+                                            <p class="text-xs font-semibold text-[#9E122C] dark:text-red-400 uppercase tracking-wide">1st Choice</p>
+                                        </div>
+                                        <p class="text-sm font-semibold text-gray-900 dark:text-white leading-snug">{{ selectedUser.application?.program?.name || "—" }}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ selectedUser.application?.program?.code || "" }} · {{ selectedUser.application?.program?.slots ?? 0 }} slots</p>
                                     </div>
-                                    <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">2nd Choice</p>
-                                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.application?.second_choice?.name || "—" }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedUser.application?.second_choice?.code || "" }} · {{ selectedUser.application?.second_choice?.slots ?? 0 }} slots</p>
+                                    <!-- 2nd Choice -->
+                                    <div class="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" :class="{ 'opacity-40': !selectedUser.application?.second_choice }">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="w-5 h-5 rounded-full bg-gray-400 dark:bg-gray-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+                                            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">2nd Choice</p>
+                                        </div>
+                                        <template v-if="selectedUser.application?.second_choice">
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-white leading-snug">{{ selectedUser.application.second_choice.name }}</p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ selectedUser.application.second_choice.code }} · {{ selectedUser.application.second_choice.slots ?? 0 }} slots</p>
+                                        </template>
+                                        <p v-else class="text-sm text-gray-400 dark:text-gray-500">Not specified</p>
                                     </div>
-                                    <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">3rd Choice</p>
-                                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.application?.third_choice?.name || "—" }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedUser.application?.third_choice?.code || "" }} · {{ selectedUser.application?.third_choice?.slots ?? 0 }} slots</p>
+                                    <!-- 3rd Choice -->
+                                    <div class="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" :class="{ 'opacity-40': !selectedUser.application?.third_choice }">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="w-5 h-5 rounded-full bg-gray-400 dark:bg-gray-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+                                            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">3rd Choice</p>
+                                        </div>
+                                        <template v-if="selectedUser.application?.third_choice">
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-white leading-snug">{{ selectedUser.application.third_choice.name }}</p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ selectedUser.application.third_choice.code }} · {{ selectedUser.application.third_choice.slots ?? 0 }} slots</p>
+                                        </template>
+                                        <p v-else class="text-sm text-gray-400 dark:text-gray-500">Not specified</p>
                                     </div>
                                 </div>
                             </div>

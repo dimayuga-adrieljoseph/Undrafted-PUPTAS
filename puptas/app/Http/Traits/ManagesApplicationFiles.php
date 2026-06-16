@@ -271,6 +271,7 @@ trait ManagesApplicationFiles
                     'reviewer_notes' => $note,
                     'files_affected' => !empty($fileTypes) ? $fileTypes : null,
                     'performed_by' => auth()->id(),
+                    'started_at' => null,
                 ]);
             });
 
@@ -344,6 +345,7 @@ trait ManagesApplicationFiles
                     'reviewer_notes' => $request->note,
                     'files_affected' => $files,
                     'performed_by' => auth()->id(),
+                    'started_at' => null,
                 ]);
 
                 foreach ($files as $fileKey) {

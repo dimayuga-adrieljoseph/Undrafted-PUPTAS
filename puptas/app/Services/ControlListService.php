@@ -72,6 +72,9 @@ class ControlListService
                 $y = $config['row_start_y'] + ($index * $config['row_height']);
                 $this->writeRow($pdf, $entry, $y, $config['columns']);
             }
+
+            // Add system generated footer
+            $this->writeFooter($pdf);
         }
 
         // Always append the signature page last
@@ -85,10 +88,25 @@ class ControlListService
         $this->writeTitle($pdf, $programCode . ' 1-1', $config);
         $this->writeAcademicYear($pdf, 'A.Y. ' . $academicYear, $config);
 
+        // Add system generated footer
+        $this->writeFooter($pdf);
+
         // "Prepared by" left blank — written manually
         // "Verified by" and "Noted by" are pre-printed on template
 
         return $pdf->Output('', 'S');
+    }
+
+    private function writeFooter($pdf): void
+    {
+        $pageWidth = $pdf->GetPageWidth();
+        $pageHeight = $pdf->GetPageHeight();
+        
+        $pdf->SetFont('helvetica', 'I', 8);
+        $pdf->SetTextColor(100, 100, 100);
+        $pdf->SetXY(0, $pageHeight - 10);
+        $pdf->Cell($pageWidth, 10, 'This is a system generated report.', 0, 0, 'C');
+        $pdf->SetTextColor(0, 0, 0); // reset
     }
 
     private function writeTitle($pdf, string $title, array $config): void
