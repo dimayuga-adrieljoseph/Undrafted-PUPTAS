@@ -193,17 +193,29 @@
 
                         <!-- Submitted: display choices -->
                         <div v-else-if="applicationData.program_id" class="grid grid-cols-3 gap-3">
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">First Choice</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.program_name || getProgramName(applicationData.program_id) || 'Not selected' }}</p>
+                            <!-- 1st Choice -->
+                            <div class="p-3 rounded-xl border border-[#9E122C]/30 bg-[#9E122C]/5 dark:bg-[#9E122C]/10">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="w-5 h-5 rounded-full bg-[#9E122C] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+                                    <p class="text-xs font-semibold text-[#9E122C] dark:text-red-400 uppercase tracking-wide">1st Choice</p>
+                                </div>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug">{{ applicationData.program_name || getProgramName(applicationData.program_id) || 'Not selected' }}</p>
                             </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Second Choice</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.second_choice_name || getProgramName(applicationData.second_choice_id) || 'Not selected' }}</p>
+                            <!-- 2nd Choice -->
+                            <div class="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" :class="{ 'opacity-40': !applicationData.second_choice_id }">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="w-5 h-5 rounded-full bg-gray-400 dark:bg-gray-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+                                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">2nd Choice</p>
+                                </div>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug">{{ applicationData.second_choice_name || getProgramName(applicationData.second_choice_id) || 'Not selected' }}</p>
                             </div>
-                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Third Choice</p>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ applicationData.third_choice_name || getProgramName(applicationData.third_choice_id) || 'Not selected' }}</p>
+                            <!-- 3rd Choice -->
+                            <div class="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" :class="{ 'opacity-40': !applicationData.third_choice_id }">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="w-5 h-5 rounded-full bg-gray-400 dark:bg-gray-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+                                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">3rd Choice</p>
+                                </div>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug">{{ applicationData.third_choice_name || getProgramName(applicationData.third_choice_id) || 'Not selected' }}</p>
                             </div>
                         </div>
 
