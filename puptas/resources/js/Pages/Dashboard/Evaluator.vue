@@ -4,6 +4,7 @@ import { LineChart } from "vue-chart-3";
 import { Head, Link, router } from "@inertiajs/vue3";
 import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
 import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
+import BlurText from "@/Components/BlurText.vue";
 import { 
     Chart as ChartJS, 
     LineController, 
@@ -596,8 +597,21 @@ const showToast = (message, type = 'success') => {
         <div class="px-4 md:px-8 mb-8">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{{ user?.role_id === 3 ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard' }}</h1>
-                    <p class="text-gray-600 dark:text-gray-400 mt-2">Review and evaluate application submissions.</p>
+                    <BlurText
+                        :text="user?.role_id === 3 ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'"
+                        :delay="100"
+                        animate-by="words"
+                        direction="top"
+                        class-name="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white"
+                    />
+                    <BlurText
+                        text="Review and evaluate application submissions."
+                        :delay="60"
+                        animate-by="words"
+                        direction="top"
+                        :step-duration="0.3"
+                        class-name="text-gray-600 dark:text-gray-400 mt-2"
+                    />
                 </div>
                 <div class="flex items-center space-x-3">
                     <div class="relative w-full md:w-64">
