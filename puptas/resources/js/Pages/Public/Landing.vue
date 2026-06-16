@@ -151,7 +151,7 @@ const cardRadii = [
 
 <template>
   <Head title="PUP-T Admission System" />
-  <div class="min-h-screen bg-[#FDFCF8] font-sans text-[#2C2C24] relative">
+  <div class="min-h-screen bg-[#FDFCF8] font-sans text-[#2C2C24] relative overflow-x-hidden">
 
     <!-- ── GLOBAL GRAIN TEXTURE ──────────────────────────────── -->
     <div class="pointer-events-none fixed inset-0 z-[100] opacity-[0.035] mix-blend-multiply"
@@ -484,7 +484,7 @@ const cardRadii = [
             </svg>
           </button>
           <a href="/admission-results"
-            class="inline-flex items-center justify-center gap-2.5 px-9 py-4 rounded-full font-bold text-base text-white border-2 border-white/40 hover:bg-white/10 hover:border-white/60 transition-all duration-300">
+            class="inline-flex items-center justify-center gap-2.5 px-9 py-4 rounded-full font-bold text-base text-white border-2 border-white/40 hover:bg-white/10 hover:border-white/60 transition-all duration-300 w-full sm:w-auto">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
