@@ -4,6 +4,7 @@ import { usePage, router } from "@inertiajs/vue3";
 import { Head } from "@inertiajs/vue3";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout.vue";
 import AuditLogDetailsModal from "@/Pages/Modal/AuditLogDetailsModal.vue";
+import AuditLogAiModal from "@/Pages/Modal/AuditLogAiModal.vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -22,6 +23,8 @@ import {
     faCode,
     faServer,
     faShieldAlt,
+    faBolt,
+    faCircleNotch,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -39,7 +42,9 @@ library.add(
     faGlobe,
     faCode,
     faServer,
-    faShieldAlt
+    faShieldAlt,
+    faBolt,
+    faCircleNotch
 );
 
 const page = usePage();
@@ -53,6 +58,7 @@ const logCounts = computed(() => page.props.logCounts || { SYSTEM: 0, AUDIT: 0, 
 // State
 const selectedLog = ref(null);
 const showModal = ref(false);
+const showAiModal = ref(false);
 const filterAction = ref("");
 const serverFilters = ref({
     user_id: initialFilters.value.user_id ?? "",
@@ -259,14 +265,24 @@ const getPageUrl = (pageNum) => {
         <div class="px-4 md:px-8 py-8 w-full">
             <!-- Header Section -->
             <div class="mb-8">
-                <div class="flex items-center gap-4">
-                    <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
-                        <FontAwesomeIcon icon="history" class="h-6 w-6 text-purple-600 dark:text-purple-300" />
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+                            <FontAwesomeIcon icon="history" class="h-6 w-6 text-purple-600 dark:text-purple-300" />
+                        </div>
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">System Logs</h1>
+                            <p class="text-gray-600 dark:text-gray-400 mt-1">Monitor System, Audit, and Security events</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">System Logs</h1>
-                        <p class="text-gray-600 dark:text-gray-400 mt-1">Monitor System, Audit, and Security events</p>
-                    </div>
+                    
+                    <button
+                        @click="showAiModal = true"
+                        class="px-5 py-2.5 bg-[#9E122C] hover:bg-red-900 text-white font-medium rounded-xl shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
+                    >
+                        <FontAwesomeIcon icon="bolt" class="w-4 h-4 text-yellow-300" />
+                        <span>AI Analytics</span>
+                    </button>
                 </div>
             </div>
 
@@ -553,6 +569,12 @@ const getPageUrl = (pageNum) => {
             :show="showModal"
             :log="selectedLog"
             @close="closeModal"
+        />
+
+        <!-- AI Analytics Modal -->
+        <AuditLogAiModal
+            :show="showAiModal"
+            @close="showAiModal = false"
         />
     </SuperAdminLayout>
 </template>

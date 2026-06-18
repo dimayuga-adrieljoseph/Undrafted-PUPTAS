@@ -45,25 +45,55 @@ grant_type=client_credentials&client_id={YOUR_STAGING_UUID}&client_secret={YOUR_
 ### Fetch Eligible Applicants
 Retrieve applicants who have successfully passed the Evaluator and Interviewer stages and are ready for medical evaluation.
 
-- **GET** `/api/v1/medical/applicants` (Deprecated - Avoid bulk polling)
-- **GET** `/api/v1/medical/applicants/idp/{idpUserId}`
-- **GET** `/api/v1/medical/applicants/{referenceNumber}`
+- **GET** `/api/v1/medical/applicants` (Deprecated — returns `410 Gone`)
+- **GET** `/api/v1/medical/applicants/idp/{idpUserId}` — Lookup by IDP User ID (UUID)
+- **GET** `/api/v1/medical/applicants/{referenceNumber}` — Lookup by Reference Number
+
+> [!IMPORTANT]
+> Only applicants who meet **all** of these conditions will be returned:
+> - Passed or transferred in the **Grade Evaluator** stage
+> - Passed or transferred in the **Interviewer** stage
+> - Have an active medical process (`in_progress` or `returned`)
+> - Have **not** already completed the medical stage
+>
+> If any condition is not met, the API returns `404`.
 
 **Success Response (200 OK)**
 ```json
 {
     "data": {
-        "idp_user_id": "a1b2c3d4...",
-        "reference_number": "2026-MED-1234",
+        "id": 8,
+        "idp_user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "reference_number": "2026-8889-8828",
+        "salutation": null,
+        "firstname": "Juan",
+        "middlename": "D",
+        "extension_name": null,
+        "lastname": "Dela Cruz",
+        "sex": "Male",
         "email": "student@pup.edu.ph",
-        "first_name": "Juan",
-        "last_name": "Dela Cruz",
+        "date_graduated": "2026-04-01T00:00:00.000000Z",
+        "strand": "STEM",
+        "track": "Academic",
+        "application": {
+            "id": 3,
+            "status": "submitted",
+            "created_at": "2026-06-14T07:28:29.000000Z"
+        },
         "program": {
+            "id": 1,
             "code": "BSCS",
             "name": "Bachelor of Science in Computer Science"
         },
-        "lifecycle_status": "Ready for Medical Phase"
+        "medical_process_status": "in_progress"
     }
+}
+```
+
+**Error Response (404 Not Found)**
+```json
+{
+    "message": "Applicant not found or not eligible for medical yet."
 }
 ```
 
@@ -76,19 +106,29 @@ Once a medical evaluation is complete, you will push the result back to PUPTAS s
 **Endpoint**: `POST /api/v1/webhooks/medical-result`
 
 ### Security Requirement: HMAC-SHA256
-In addition to the OAuth Bearer token, you **must** crytographically sign the JSON body using a shared webhook secret provided by the PUPTAS Admin for the **staging environment**. 
+In addition to the OAuth Bearer token, you **must** cryptographically sign the JSON body using a shared webhook secret provided by the PUPTAS Admin for the **staging environment**. 
 
 Calculate an `HMAC-SHA256` hash of the raw request body using the staging shared webhook secret, and send it in the `X-Medical-Signature` header.
 
-**Payload Structure**
+### Payload Structure
+
 ```json
 {
-    "reference_number": "2026-MED-1234",
-    "medical_status": "cleared", // Can be "cleared" or "failed"
-    "timestamp": 1718464200, // Unix timestamp in seconds (must be within 5 minutes)
-    "nonce": "unique_string_123" // A unique string to prevent replay attacks
+    "reference_number": "2026-8889-8828",
+    "idp_user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "is_health_profile_completed": 1,
+    "timestamp": 1718464200,
+    "nonce": "unique_string_123"
 }
 ```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `reference_number` | string | Conditional | The applicant's reference number. At least one of `reference_number` or `idp_user_id` must be provided. |
+| `idp_user_id` | string | Conditional | The applicant's IDP UUID. Can also be sent as `student_id`. At least one of `reference_number` or `idp_user_id` must be provided. |
+| `is_health_profile_completed` | integer | **Required** | `1` = cleared/passed, `0` = failed. |
+| `timestamp` | integer | **Required** | Unix timestamp in seconds. Must be within 5 minutes of the server's current time. |
+| `nonce` | string | **Required** | A unique, cryptographically random string to prevent replay attacks. |
 
 > [!IMPORTANT]
 > **Anti-Replay Attack Measures**
@@ -96,14 +136,18 @@ Calculate an `HMAC-SHA256` hash of the raw request body using the staging shared
 > - **`timestamp`**: Must be a Unix timestamp (in seconds) within 5 minutes of the server's current time. Older requests will be rejected with `403 Request expired`.
 > - **`nonce`**: Must be a unique, cryptographically random string for every request. If a request is sent within the 5-minute window with a previously used nonce, it will be rejected as a duplicate.
 
+> [!WARNING]
+> **Common Mistake**: Do NOT send `medical_status: "cleared"`. The correct field name is `is_health_profile_completed` with an integer value of `1` (cleared) or `0` (failed). Sending the wrong field will result in a `422 Validation Error`.
+
 **Example Implementation (Node.js)**
 ```javascript
 const crypto = require('crypto');
 const axios = require('axios');
 
 const payload = JSON.stringify({
-    reference_number: "2026-MED-1234",
-    medical_status: "cleared",
+    reference_number: "2026-8889-8828",
+    idp_user_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    is_health_profile_completed: 1,
     timestamp: Math.floor(Date.now() / 1000),
     nonce: crypto.randomBytes(16).toString('hex')
 });
@@ -126,11 +170,18 @@ axios.post('https://pup-admission-system-staging.up.railway.app/api/v1/webhooks/
 
 **Response Codes**
 - `200 OK`: `{"message": "Medical result recorded successfully"}`
+- `400 Bad Request`: Missing `timestamp` or `nonce` in payload.
 - `401 Unauthorized`: Missing or invalid OAuth Token.
-- `403 Forbidden`: Invalid HMAC Signature.
+- `403 Forbidden`: Invalid HMAC Signature, expired timestamp, or duplicate nonce.
 - `404 Not Found`: Applicant not found, already passed, or missing prerequisite evaluator/interviewer stages.
+- `422 Unprocessable Entity`: Validation error — check that `is_health_profile_completed` is present and is `0` or `1`, and that at least one identifier (`reference_number` or `idp_user_id`) is provided.
 
 ---
 
 ## Developer Support Flow
-If you encounter `404` errors for a student, verify they have successfully passed the Interviewer phase in PUPTAS Staging. Our strict admission pipeline rejects medical records for unverified students.
+If you encounter `404` errors for a student, verify:
+1. They have successfully passed the **Grade Evaluator** phase in PUPTAS Staging.
+2. They have successfully passed the **Interviewer** phase in PUPTAS Staging.
+3. Their medical process is currently **in progress** (not already completed).
+
+Our strict admission pipeline rejects medical records for unverified students.
