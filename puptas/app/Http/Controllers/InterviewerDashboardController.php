@@ -59,7 +59,7 @@ class InterviewerDashboardController extends Controller
         $assignedPrograms = $user->programs()->get(['id', 'code', 'name']);
 
         return Inertia::render('Dashboard/Interviewer', [
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'pendingUsers' => $dashboardData['pendingUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
