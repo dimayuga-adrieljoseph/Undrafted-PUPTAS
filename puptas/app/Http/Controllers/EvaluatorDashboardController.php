@@ -52,7 +52,7 @@ class EvaluatorDashboardController extends Controller
         $dashboardData = $this->dashboardService->getEvaluatorDashboardData($this->getCurrentStage());
 
         return Inertia::render('Dashboard/Evaluator', [
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'pendingUsers' => $dashboardData['pendingUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
@@ -156,6 +156,7 @@ class EvaluatorDashboardController extends Controller
                 \Log::info("Updated {$updatedCount} files from 'returned' to 'approved' for user {$userId}");
 
                 // Clear office flags if passing
+                $application->requires_promissory_note = false;
                 $application->requires_guidance_office = false;
                 $application->requires_admission_office = false;
                 $application->save();
@@ -254,6 +255,7 @@ class EvaluatorDashboardController extends Controller
 
         $request->validate([
             'note' => 'nullable|string|max:1000',
+            'requires_promissory_note' => 'nullable|boolean',
             'requires_guidance_office' => 'nullable|boolean',
             'requires_admission_office' => 'nullable|boolean',
         ]);
@@ -289,6 +291,9 @@ class EvaluatorDashboardController extends Controller
 
         try {
             DB::transaction(function () use ($application, $inProgress, $request, $userId) {
+                if ($request->has('requires_promissory_note')) {
+                    $application->requires_promissory_note = (bool) $request->requires_promissory_note;
+                }
                 if ($request->has('requires_guidance_office')) {
                     $application->requires_guidance_office = (bool) $request->requires_guidance_office;
                 }

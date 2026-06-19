@@ -38,17 +38,28 @@ class IdpAuthController extends Controller
             ]);
         }
 
-        // Generate state for CSRF protection
-        $state = Str::random(40);
-        session(['idp_oauth_state' => $state]);
+        // Generate state for CSRF protection.
+        // Only create a new state if one is not already pending in the session.
+        // Re-using the existing state prevents a race condition where multiple
+        // page refreshes each overwrite the state, causing the callback from the
+        // original redirect to fail validation and letting the user retry until
+        // a stateless callback is accepted.
+        if (!session()->has('idp_oauth_state')) {
+            session(['idp_oauth_state' => Str::random(40)]);
+        }
+        $state = session('idp_oauth_state');
 
         // Build authorization query parameters
-        // Removed prompt=login to support Update #3 (SSO Session Checker)
+        // prompt=login forces the IDP to always show its login page,
+        // even if the user has an existing IDP SSO session cookie.
+        // This prevents users from bypassing OTP by waiting and refreshing the page.
+        // Note: this means users already logged in to the IDP will still be prompted.
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
             'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
             'state'         => $state,
+            'prompt'        => 'login',
         ];
 
         // Construct the full authorization URL using configurable path
@@ -94,17 +105,23 @@ class IdpAuthController extends Controller
         $sessionState = session('idp_oauth_state');
 
         if (empty($receivedState)) {
-            \Log::warning('IDP callback received without state parameter. Bypassing check as IDP may not support it.', [
-                'ip' => $request->ip(),
+            // State is required for CSRF protection. Reject the callback if
+            // the IDP did not return it — never silently bypass this check.
+            \Log::error('IDP callback rejected: missing state parameter (possible CSRF or replay attack)', [
+                'ip'         => $request->ip(),
+                'user_agent' => $request->userAgent(),
             ]);
-            // Cannot enforce state if IDP doesn't return it
+
+            return redirect('/auth/idp/error')->withErrors([
+                'idp' => 'Authentication failed: invalid callback. Please try logging in again.',
+            ]);
         } elseif ($receivedState !== $sessionState) {
             \Log::warning('IDP callback state mismatch', [
-                'ip' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'has_session_state' => !empty($sessionState),
+                'ip'                  => $request->ip(),
+                'user_agent'          => $request->userAgent(),
+                'has_session_state'   => !empty($sessionState),
                 'received_state_hash' => substr(hash('sha256', $receivedState), 0, 12),
-                'session_state_hash' => !empty($sessionState) ? substr(hash('sha256', $sessionState), 0, 12) : null,
+                'session_state_hash'  => !empty($sessionState) ? substr(hash('sha256', $sessionState), 0, 12) : null,
             ]);
 
             return response('Forbidden: Invalid state parameter', 403);
@@ -216,16 +233,18 @@ class IdpAuthController extends Controller
                 ->get($userUrl);
 
             if (!$userResponse->successful()) {
-                $errorBody = $userResponse->body();
+                $errorBody   = $userResponse->body();
                 $errorStatus = $userResponse->status();
 
+                // Log full IDP error details internally — never expose raw server
+                // responses to the user (may contain internal IDP error messages or stack traces).
                 \Log::error('Failed to fetch user info from IDP', [
                     'status' => $errorStatus,
-                    'body' => $errorBody,
+                    'body'   => $errorBody,
                 ]);
 
                 return redirect('/auth/idp/error')->withErrors([
-                    'idp' => "IDP User Info Failed (Status: $errorStatus) - $errorBody",
+                    'idp' => 'Unable to retrieve your account information. Please try logging in again.',
                 ]);
             }
 
@@ -270,19 +289,19 @@ class IdpAuthController extends Controller
                 }
             }
 
-            // Sync user data on login from IDP
+            // Sync user data on login from IDP.
+            // Values are trimmed and length-capped before being written to the DB to prevent
+            // oversized or malformed IDP payloads from corrupting local records.
             $updateData = [];
 
-            // Map the exact IDP field names to our database schema
-            // IDP -> DB
             if (isset($idpUser['first_name'])) {
-                $updateData['firstname'] = $idpUser['first_name'];
+                $updateData['firstname'] = substr(trim((string) $idpUser['first_name']), 0, 100);
             }
             if (isset($idpUser['last_name'])) {
-                $updateData['lastname'] = $idpUser['last_name'];
+                $updateData['lastname'] = substr(trim((string) $idpUser['last_name']), 0, 100);
             }
             if (isset($idpUser['middle_name'])) {
-                $updateData['middlename'] = $idpUser['middle_name'];
+                $updateData['middlename'] = substr(trim((string) $idpUser['middle_name']), 0, 100);
             }
 
             if ($localDbUser->idp_user_id !== ($idpUser['id'] ?? null)) {
@@ -341,8 +360,6 @@ class IdpAuthController extends Controller
             }
 
             return $response;
-            // Removed manual cookie setting based on IDP change #5 (Remove readable refresh_tokens in cookies)
-            // The SSO Session Checker (#3) and Auth header will manage the session now.
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             \Log::error('IDP connection error', [
                 'error' => $e->getMessage(),
@@ -408,12 +425,15 @@ class IdpAuthController extends Controller
                 \Log::info('Sending logout request to IDP', ['url' => $logoutUrl]);
 
                 // We try a POST request first as per previous spec
-                $response = Http::withToken($accessToken)
+                // Short timeout — the user is already logged out locally.
+                // We deliberately do not await or inspect the response so a slow
+                // IDP cannot block the user's logout redirect.
+                Http::withToken($accessToken)
                     ->acceptJson()
-                    ->timeout(15)
+                    ->timeout(3)
                     ->post($logoutUrl, [
-                        'client_id'    => $idpConfig['client_id'],
-                        'base_url'     => config('app.url')
+                        'client_id' => $idpConfig['client_id'],
+                        'base_url'  => config('app.url'),
                     ]);
 
                 // If they've implemented a redirect-based logout fix, we might need to hit it differently,
@@ -423,20 +443,23 @@ class IdpAuthController extends Controller
             }
         }
 
-        // Use Inertia::location() to force a full-page redirect to the IDP OAuth authorize endpoint
-        // This is necessary because the logout is triggered via Inertia POST request
-        // Regular redirects don't work properly with Inertia's XHR-based navigation
-        
-        // Build the full OAuth authorize URL with all required parameters
+        // Redirect user back to IDP for a fresh login after logout.
+        // Use Inertia::location() for a full-page redirect since logout is triggered via Inertia POST.
+        // The session was regenerated above, so we can safely write a new CSRF state into it.
+        $postLogoutState = Str::random(40);
+        session(['idp_oauth_state' => $postLogoutState]);
+
         $authorizePath = $idpConfig['authorize_path'] ?? '/login';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
             'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
+            'state'         => $postLogoutState,
+            'prompt'        => 'login',
         ];
-        
+
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
-        
+
         return \Inertia\Inertia::location($authorizeUrl);
     }
 
@@ -470,15 +493,23 @@ class IdpAuthController extends Controller
             }
         }
 
+        // Generate CSRF state for the post-cancel redirect to IDP
+        if (!session()->has('idp_oauth_state')) {
+            session(['idp_oauth_state' => Str::random(40)]);
+        }
+        $cancelState = session('idp_oauth_state');
+
         $authorizePath = $idpConfig['authorize_path'] ?? '/login';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
             'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
+            'state'         => $cancelState,
+            'prompt'        => 'login',
         ];
-        
+
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
-        
+
         return redirect()->away($authorizeUrl);
     }
 }

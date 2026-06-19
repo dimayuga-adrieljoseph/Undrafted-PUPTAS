@@ -41,7 +41,7 @@ class ApplicantDashboardController extends Controller
         $canDownloadSlip = $hasSubmittedApplication && $hasGrades;
 
         return Inertia::render('Dashboard/Applicant', [
-            'user'           => $user,
+            'user'           => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'gradeUrl'       => $strand ? ($gradeRouteMap[$strand] ?? null) : null,
             'canDownloadSlip' => $canDownloadSlip,
             'showQualifiedProgramsNav' => $hasSubmittedApplication,
@@ -63,7 +63,7 @@ class ApplicantDashboardController extends Controller
         $hasSubmittedApplication = $application && $application->status !== 'draft';
 
         return Inertia::render('Programs/Qualified', [
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'showQualifiedProgramsNav' => $hasSubmittedApplication,
         ]);
     }
@@ -91,7 +91,7 @@ class ApplicantDashboardController extends Controller
         $profile = $user->applicantProfile;
 
         return Inertia::render('Profile/Applicant', [
-            'user'             => $user,
+            'user'             => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'applicantProfile' => $profile,
             'grades'           => $grades,
             'files'            => $files,

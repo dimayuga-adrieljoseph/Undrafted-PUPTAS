@@ -89,8 +89,10 @@ class RefreshIdpToken
                     60 * 60 * 24 * 30 // 30 days
                 );
 
-                \Illuminate\Support\Facades\Cookie::queue('access_token', $newTokenData['access_token'] ?? $tokenData['access_token'], $expiresIn / 60, null, null, false, false);
-                \Illuminate\Support\Facades\Cookie::queue('refresh_token', $newTokenData['refresh_token'] ?? $tokenData['refresh_token'], 60 * 24 * 30, null, null, false, false);
+                // Set tokens as HttpOnly + Secure cookies so they cannot be read
+                // by JavaScript or seen in DevTools. This closes the XSS token-theft vector.
+                \Illuminate\Support\Facades\Cookie::queue('access_token', $newTokenData['access_token'] ?? $tokenData['access_token'], $expiresIn / 60, '/', null, true, true);
+                \Illuminate\Support\Facades\Cookie::queue('refresh_token', $newTokenData['refresh_token'] ?? $tokenData['refresh_token'], 60 * 24 * 30, '/', null, true, true);
                 
                 Log::info('Successfully refreshed IDP access token via Redis storage');
             } else {

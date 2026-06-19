@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('applications', function (Blueprint $table) {
-            $table->dropColumn('requires_promissory_note');
+            // $table->dropColumn('requires_promissory_note'); // Restored feature
             $table->boolean('requires_guidance_office')->default(false)->after('enrollment_position');
             $table->boolean('requires_admission_office')->default(false)->after('requires_guidance_office');
         });
@@ -26,7 +26,7 @@ return new class extends Migration
         Schema::table('applications', function (Blueprint $table) {
             $table->dropColumn('requires_guidance_office');
             $table->dropColumn('requires_admission_office');
-            $table->boolean('requires_promissory_note')->default(false)->after('enrollment_position');
+            // $table->boolean('requires_promissory_note')->default(false)->after('enrollment_position');
         });
     }
 };

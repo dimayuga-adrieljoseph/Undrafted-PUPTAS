@@ -145,7 +145,7 @@ class DashboardController extends Controller
         }
 
         return Inertia::render('Dashboard/Admin', [
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             // Limit to 10: the sidebar widget only shows 5 rows (Admin.vue slices to 5).
             // Loading the full table here is wasteful — the full list is available via /dashboard/users.
             'allUsers' => ApplicantProfile::with(['currentApplication.program'])

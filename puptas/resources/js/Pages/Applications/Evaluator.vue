@@ -522,10 +522,17 @@
                                                 returnNoteCharCount > 400 ? 'border-red-500 focus:ring-red-500' : 'border-red-200 dark:border-red-700 focus:ring-red-500'
                                             ]"
                                             placeholder="Explain what the applicant needs to fix or resubmit..."></textarea>
-                                        <div class="text-right mt-1">
+                                        <div class="text-right mt-1 mb-2">
                                             <span :class="{'text-red-500': returnNoteCharCount > 400, 'text-gray-500': returnNoteCharCount <= 400}" class="text-xs">
                                                 {{ returnNoteCharCount }} / 400 characters
                                             </span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mb-3 px-1">
+                                            <input type="checkbox" id="promissoryNote" v-model="requiresPromissoryNote" 
+                                                class="w-4 h-4 text-red-600 bg-white border-gray-300 rounded focus:ring-red-500 dark:focus:ring-red-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
+                                            <label for="promissoryNote" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Require Promissory Note
+                                            </label>
                                         </div>
                                         <div class="flex gap-2">
                                             <button @click="promptFlag"
@@ -1023,6 +1030,7 @@ const submitFlag = async () => {
 
         await axios.post(`/evaluator/flag-application/${currentUserId}`, {
             note,
+            requires_promissory_note: requiresPromissoryNote.value,
             requires_guidance_office: !isGradeEvaluator,
             requires_admission_office: isGradeEvaluator
         });

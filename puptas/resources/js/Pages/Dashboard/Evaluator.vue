@@ -497,12 +497,14 @@ const submitReturn = async () => {
         if (props.user?.role_id !== 3) {
             await axios.post(`/evaluator/flag-application/${selectedUser.value.id}`, {
                 note: returnNote.value,
+                requires_promissory_note: requiresPromissoryNote.value,
                 requires_admission_office: true
             });
             showToast("Applicant flagged for Admissions Office!");
         } else {
             await axios.post(`/evaluator/flag-application/${selectedUser.value.id}`, {
                 note: returnNote.value,
+                requires_promissory_note: requiresPromissoryNote.value,
                 requires_guidance_office: true
             });
             showToast("Applicant flagged for Guidance Office!");
@@ -1014,13 +1016,19 @@ const showToast = (message, type = 'success') => {
                                         ]"
                                         placeholder="Explain what the applicant needs to do..."
                                     ></textarea>
-                                    <div class="text-right mt-1">
+                                    <div class="text-right mt-1 mb-2">
                                         <span :class="{'text-red-500': returnNoteCharCount > 400, 'text-gray-500': returnNoteCharCount <= 400}" class="text-xs">
                                             {{ returnNoteCharCount }} / 400 characters
                                         </span>
                                     </div>
+                                    <div class="flex items-center gap-2 mb-3 px-1">
+                                        <input type="checkbox" id="promissoryNoteDashboard" v-model="requiresPromissoryNote" 
+                                            class="w-4 h-4 text-[#9E122C] bg-white border-gray-300 rounded focus:ring-[#9E122C] dark:focus:ring-[#9E122C] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
+                                        <label for="promissoryNoteDashboard" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            Require Promissory Note
+                                        </label>
+                                    </div>
                                 </div>
-
 
                                 <!-- Action Buttons -->
                                 <div class="flex space-x-3">
