@@ -52,3 +52,8 @@ router.on('navigate', (event) => {
         window.axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
     }
 });
+
+// Auto-reload on stale Vite chunks after deployment
+window.addEventListener('vite:preloadError', () => {
+    window.location.reload();
+});
