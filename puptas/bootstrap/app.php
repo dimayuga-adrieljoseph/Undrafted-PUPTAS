@@ -49,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'client' => \Laravel\Passport\Http\Middleware\CheckClientCredentials::class,
             'medical.webhook' => \App\Http\Middleware\VerifyMedicalWebhookSignature::class,
             'refresh.idp' => \App\Http\Middleware\RefreshIdpToken::class,
+            'idp.maintenance' => \App\Http\Middleware\IdpMaintenanceMode::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
