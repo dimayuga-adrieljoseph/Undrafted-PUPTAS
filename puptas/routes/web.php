@@ -162,20 +162,33 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
     ]);
 })->name('welcome');
 
-Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
-    ->name('idp.redirect');
+Route::middleware(['idp.maintenance'])->group(function () {
+    Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
+        ->name('idp.redirect');
+
+    Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
+        ->middleware('throttle:10,1')
+        ->name('idp.callback');
+
+    Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
+        ->middleware('throttle:10,1')
+        ->name('idp.callback.alias');
+
+    // Backward-compatible callback aliases — kept for IDP redirect_uri compatibility.
+    // TODO: Remove these routes once the IDP is updated to use /auth/idp/callback exclusively.
+    Route::get('/callback', [IdpAuthController::class, 'callback'])
+        ->middleware(['guest', 'throttle:10,1'])
+        ->name('idp.callback.legacy');
+
+    Route::get('/api/callback', [IdpAuthController::class, 'callback'])
+        ->middleware(['guest', 'throttle:10,1'])
+        ->name('idp.callback.api-legacy');
+});
 
 Route::get('/auth/idp/error', function () {
     return Inertia::render('Auth/IdpError');
 })->name('idp.error');
 
-Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
-    ->middleware('throttle:10,1')
-    ->name('idp.callback');
-
-Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
-    ->middleware('throttle:10,1')
-    ->name('idp.callback.alias');
 
 Route::get('/auth/idp/cancel-registration', [IdpAuthController::class, 'cancelRegistration'])
     ->name('idp.cancel-registration');
@@ -184,16 +197,6 @@ Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
     ->middleware('auth')
     ->name('idp.logout');
 
-
-// Backward-compatible callback aliases — kept for IDP redirect_uri compatibility.
-// TODO: Remove these routes once the IDP is updated to use /auth/idp/callback exclusively.
-Route::get('/callback', [IdpAuthController::class, 'callback'])
-    ->middleware(['guest', 'throttle:10,1'])
-    ->name('idp.callback.legacy');
-
-Route::get('/api/callback', [IdpAuthController::class, 'callback'])
-    ->middleware(['guest', 'throttle:10,1'])
-    ->name('idp.callback.api-legacy');
 
 // View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
