@@ -49,6 +49,13 @@ class IdpAuthController extends Controller
         }
         $state = session('idp_oauth_state');
 
+        // WORKAROUND: The IDP has a bug where adding `prompt=login` causes it to drop
+        // the `state` parameter from the callback URL. We still need `prompt=login` 
+        // to prevent premature SSO (OTP bypass). To preserve CSRF protection, we 
+        // embed the state as a custom query parameter inside the `redirect_uri` itself.
+        $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
+        $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($state);
+
         // Build authorization query parameters
         // prompt=login forces the IDP to always show its login page,
         // even if the user has an existing IDP SSO session cookie.
@@ -57,8 +64,7 @@ class IdpAuthController extends Controller
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
-            'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
-            'state'         => $state,
+            'redirect_uri'  => $customRedirectUri,
             'prompt'        => 'login',
         ];
 
@@ -101,7 +107,8 @@ class IdpAuthController extends Controller
         ]);
 
         // Validate state parameter for CSRF protection
-        $receivedState = $request->query('state');
+        // WORKAROUND: We use `custom_state` instead of `state` because the IDP drops `state`
+        $receivedState = $request->query('custom_state') ?? $request->query('state');
         $sessionState = session('idp_oauth_state');
 
         if (empty($receivedState)) {
@@ -168,11 +175,17 @@ class IdpAuthController extends Controller
                 'client_id' => $idpConfig['client_id'],
             ]);
 
+            // Reconstruct the exact redirect_uri used in the authorization request,
+            // including the custom_state, as required by OAuth2 spec.
+            $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
+            $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($sessionState);
+
             // Prepare the token request payload
             $tokenPayload = [
                 'client_id'     => $idpConfig['client_id'],
                 'client_secret' => $idpConfig['client_secret'],
                 'code'          => $code,
+                'redirect_uri'  => $customRedirectUri,
             ];
 
             // Send POST request to IDP token endpoint
@@ -449,12 +462,15 @@ class IdpAuthController extends Controller
         $postLogoutState = Str::random(40);
         session(['idp_oauth_state' => $postLogoutState]);
 
+        $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
+        $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($postLogoutState);
+
         $authorizePath = $idpConfig['authorize_path'] ?? '/login';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
-            'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
-            'state'         => $postLogoutState,
+            'redirect_uri'  => $customRedirectUri,
+            'prompt'        => 'login',
         ];
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
@@ -498,12 +514,15 @@ class IdpAuthController extends Controller
         }
         $state = session('idp_oauth_state');
 
+        $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
+        $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($state);
+
         $authorizePath = $idpConfig['authorize_path'] ?? '/login';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
-            'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
-            'state'         => $state,
+            'redirect_uri'  => $customRedirectUri,
+            'prompt'        => 'login',
         ];
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
