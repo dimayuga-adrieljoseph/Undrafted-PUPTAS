@@ -26,7 +26,8 @@ class UserService
         // Cache for 5 minutes (300 seconds) to avoid re-running this heavy query
         // on every dashboard page load. Uses the default file cache driver.
         return Cache::remember('applicants_with_applications', 300, function () {
-            return ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
+            return ApplicantProfile::select(['user_id', 'firstname', 'lastname', 'email'])
+                ->with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
                 ->whereHas('currentApplication')
                 ->get()
                 ->map(function ($profile) {
@@ -55,7 +56,8 @@ class UserService
      */
     public function getApplicantsByStage(string $stage, ?array $programIds = null): Collection
     {
-        return ApplicantProfile::with(['currentApplication' => function ($query) {
+        return ApplicantProfile::select(['user_id', 'firstname', 'lastname', 'email'])
+            ->with(['currentApplication' => function ($query) {
             $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
         }, 'currentApplication.program' => function ($query) {
             $query->select('id', 'code', 'name');
@@ -127,7 +129,8 @@ class UserService
      */
     public function getAllApplicantsByStage(string $stage, ?array $programIds = null): Collection
     {
-        return ApplicantProfile::with(['currentApplication' => function ($query) {
+        return ApplicantProfile::select(['user_id', 'firstname', 'lastname', 'email'])
+            ->with(['currentApplication' => function ($query) {
                 $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.requires_guidance_office', 'applications.requires_admission_office');
             }, 'currentApplication.program' => function ($query) {
                 $query->select('id', 'code', 'name', 'slots');

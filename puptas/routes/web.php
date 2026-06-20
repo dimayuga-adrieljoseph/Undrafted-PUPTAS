@@ -189,12 +189,14 @@ Route::get('/auth/idp/error', function () {
     return Inertia::render('Auth/IdpError');
 })->name('idp.error');
 
+
 Route::get('/auth/idp/cancel-registration', [IdpAuthController::class, 'cancelRegistration'])
     ->name('idp.cancel-registration');
 
 Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
     ->middleware('auth')
     ->name('idp.logout');
+
 
 // View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
