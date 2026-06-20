@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="/assets/images/pup_logo.png" />
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/js/app.js'])
 </head>
 <body class="font-sans antialiased bg-gray-100 text-gray-900 flex items-center justify-center min-h-screen">
     <div class="max-w-xl w-full px-6 py-12 bg-white shadow-xl rounded-2xl text-center relative overflow-hidden">
