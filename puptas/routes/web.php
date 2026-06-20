@@ -170,9 +170,11 @@ Route::get('/auth/idp/error', function () {
 })->name('idp.error');
 
 Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
+    ->middleware('throttle:10,1')
     ->name('idp.callback');
 
 Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
+    ->middleware('throttle:10,1')
     ->name('idp.callback.alias');
 
 Route::get('/auth/idp/cancel-registration', [IdpAuthController::class, 'cancelRegistration'])
@@ -183,13 +185,14 @@ Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
     ->name('idp.logout');
 
 
-// Backward-compatible callback aliases in case IDP client is configured with older paths.
+// Backward-compatible callback aliases — kept for IDP redirect_uri compatibility.
+// TODO: Remove these routes once the IDP is updated to use /auth/idp/callback exclusively.
 Route::get('/callback', [IdpAuthController::class, 'callback'])
-    ->middleware('guest')
+    ->middleware(['guest', 'throttle:10,1'])
     ->name('idp.callback.legacy');
 
 Route::get('/api/callback', [IdpAuthController::class, 'callback'])
-    ->middleware('guest')
+    ->middleware(['guest', 'throttle:10,1'])
     ->name('idp.callback.api-legacy');
 
 // View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
@@ -569,6 +572,9 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
 Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     Route::get('/admin/audit-logs/check-new', [AuditLogController::class, 'checkNew'])->name('audit-logs.check-new');
+    Route::post('/admin/audit-logs/analyze', [AuditLogController::class, 'analyze'])->name('audit-logs.analyze');
+    Route::get('/admin/audit-logs/analytics-history', [AuditLogController::class, 'getHistory'])->name('audit-logs.history');
+    Route::delete('/admin/audit-logs/analytics-history/{id}', [AuditLogController::class, 'deleteHistory'])->name('audit-logs.history.delete');
     Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit-logs.show');
 
     // API Client Management (M2M / Passport)

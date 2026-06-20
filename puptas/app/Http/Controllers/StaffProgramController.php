@@ -23,7 +23,7 @@ class StaffProgramController extends Controller
         }
 
         return Inertia::render('Programs/StaffPrograms', [
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
         ]);
     }
 

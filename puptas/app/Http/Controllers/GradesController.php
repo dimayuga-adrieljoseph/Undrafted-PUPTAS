@@ -231,7 +231,7 @@ class GradesController extends Controller
 
         return inertia('Grades/ABMGradeInput', [
             'grade' => $grade,
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile, // Pass full profile for program choices
@@ -263,7 +263,7 @@ class GradesController extends Controller
 
         return inertia('Grades/ICTGradeInput', [
             'grade' => $grade,
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
@@ -368,7 +368,7 @@ class GradesController extends Controller
 
         return inertia('Grades/HUMSSGradeInput', [
             'grade' => $grade,
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
@@ -400,7 +400,7 @@ class GradesController extends Controller
 
         return inertia('Grades/GASGradeInput', [
             'grade' => $grade,
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
@@ -432,7 +432,7 @@ class GradesController extends Controller
 
         return inertia('Grades/STEMGradeInput', [
             'grade' => $grade,
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
@@ -464,7 +464,7 @@ class GradesController extends Controller
 
         return inertia('Grades/TVLGradeInput', [
             'grade' => $grade,
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,

@@ -52,7 +52,7 @@ class EvaluatorDashboardController extends Controller
         $dashboardData = $this->dashboardService->getEvaluatorDashboardData($this->getCurrentStage());
 
         return Inertia::render('Dashboard/Evaluator', [
-            'user' => $user,
+            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'pendingUsers' => $dashboardData['pendingUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
