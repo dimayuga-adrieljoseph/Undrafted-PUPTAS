@@ -455,7 +455,6 @@ class IdpAuthController extends Controller
             'response_type' => 'code',
             'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
             'state'         => $postLogoutState,
-            'prompt'        => 'login',
         ];
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
@@ -497,15 +496,14 @@ class IdpAuthController extends Controller
         if (!session()->has('idp_oauth_state')) {
             session(['idp_oauth_state' => Str::random(40)]);
         }
-        $cancelState = session('idp_oauth_state');
+        $state = session('idp_oauth_state');
 
         $authorizePath = $idpConfig['authorize_path'] ?? '/login';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
             'redirect_uri'  => $idpConfig['redirect_uri'] ?? route('idp.callback'),
-            'state'         => $cancelState,
-            'prompt'        => 'login',
+            'state'         => $state,
         ];
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
