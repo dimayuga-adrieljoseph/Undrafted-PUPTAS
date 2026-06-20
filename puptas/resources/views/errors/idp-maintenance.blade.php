@@ -47,5 +47,6 @@
             </p>
         </div>
     </div>
+    <!-- Detected IP: {{ $detectedIp ?? 'unknown' }} -->
 </body>
 </html>

@@ -20,7 +20,7 @@ class IdpMaintenanceMode
         $allowedIps = array_filter(array_map('trim', explode(',', (string) $allowedIpsConfig)));
 
         if (empty($allowedIps) || !in_array($request->ip(), $allowedIps, true)) {
-            return response()->view('errors.idp-maintenance', [], 503);
+            return response()->view('errors.idp-maintenance', ['detectedIp' => $request->ip()], 503);
         }
 
         return $next($request);
