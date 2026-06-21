@@ -274,13 +274,23 @@ class IdpAuthController extends Controller
                 // Email not found in local DB -> treat as new user/applicant
                 \Log::info('Intercepting first-time IDP applicant for registration flow (email not in DB)', ['email' => $idpEmail]);
 
+                $pendingRegUuid = \Illuminate\Support\Str::uuid()->toString();
+
+                \Illuminate\Support\Facades\Cache::store('redis')->put(
+                    "pending_tokens:{$pendingRegUuid}",
+                    [
+                        'access_token'  => $accessToken,
+                        'refresh_token' => $refreshToken,
+                        'expires_at'    => now()->addSeconds($expiresIn - 60)->timestamp,
+                    ],
+                    now()->addMinutes(30)
+                );
+
                 session(['pending_registration' => [
+                    'uuid'          => $pendingRegUuid,
                     'user_id'       => $idpUser['id'] ?? null,
                     'email'         => $idpEmail,
                     'username'      => $idpUser['username'] ?? null,
-                    'access_token'  => $accessToken,
-                    'refresh_token' => $refreshToken,
-                    'expires_at'    => now()->addSeconds($expiresIn - 60),
                 ]]);
 
                 return redirect('/register');
@@ -483,7 +493,14 @@ class IdpAuthController extends Controller
         $accessToken = null;
 
         if (session()->has('pending_registration')) {
-            $accessToken = session('pending_registration.access_token');
+            $uuid = session('pending_registration.uuid');
+            if ($uuid) {
+                $tokens = \Illuminate\Support\Facades\Cache::store('redis')->get("pending_tokens:{$uuid}");
+                if ($tokens) {
+                    $accessToken = $tokens['access_token'] ?? null;
+                    \Illuminate\Support\Facades\Cache::store('redis')->forget("pending_tokens:{$uuid}");
+                }
+            }
             session()->forget('pending_registration');
         }
 
