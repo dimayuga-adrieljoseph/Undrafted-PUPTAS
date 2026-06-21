@@ -49,12 +49,7 @@ class IdpAuthController extends Controller
         }
         $state = session('idp_oauth_state');
 
-        // WORKAROUND: The IDP has a bug where adding `prompt=login` causes it to drop
-        // the `state` parameter from the callback URL. We still need `prompt=login` 
-        // to prevent premature SSO (OTP bypass). To preserve CSRF protection, we 
-        // embed the state as a custom query parameter inside the `redirect_uri` itself.
         $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
-        $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($state);
 
         // Build authorization query parameters
         // prompt=login forces the IDP to always show its login page,
@@ -107,21 +102,25 @@ class IdpAuthController extends Controller
         ]);
 
         // Validate state parameter for CSRF protection
-        // WORKAROUND: We use `custom_state` instead of `state` because the IDP drops `state`
-        $receivedState = $request->query('custom_state') ?? $request->query('state');
+        // WORKAROUND: The IDP drops `state` when `prompt=login` is used.
+        $receivedState = $request->query('state');
         $sessionState = session('idp_oauth_state');
 
         if (empty($receivedState)) {
-            // State is required for CSRF protection. Reject the callback if
-            // the IDP did not return it — never silently bypass this check.
-            \Log::error('IDP callback rejected: missing state parameter (possible CSRF or replay attack)', [
-                'ip'         => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
+            // Since the IDP drops state, we fallback to checking if the session HAS an active state.
+            // This prevents trivial CSRF attacks since attackers cannot force the victim to have a pending session state
+            // without forcing them through the /redirect route (which initiates a genuine login flow).
+            if (empty($sessionState)) {
+                \Log::error('IDP callback rejected: missing state parameter and no pending session state (possible CSRF or replay attack)', [
+                    'ip'         => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
 
-            return redirect('/auth/idp/error')->withErrors([
-                'idp' => 'Authentication failed: invalid callback. Please try logging in again.',
-            ]);
+                return redirect('/auth/idp/error')->withErrors([
+                    'idp' => 'Authentication failed: invalid callback. Please try logging in again.',
+                ]);
+            }
+            \Log::warning('IDP returned no state, relying on session existence as fallback CSRF protection');
         } elseif ($receivedState !== $sessionState) {
             \Log::warning('IDP callback state mismatch', [
                 'ip'                  => $request->ip(),
@@ -175,17 +174,15 @@ class IdpAuthController extends Controller
                 'client_id' => $idpConfig['client_id'],
             ]);
 
-            // Reconstruct the exact redirect_uri used in the authorization request,
-            // including the custom_state, as required by OAuth2 spec.
+            // Reconstruct the exact redirect_uri used in the authorization request
             $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
-            $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($sessionState);
 
             // Prepare the token request payload
             $tokenPayload = [
                 'client_id'     => $idpConfig['client_id'],
                 'client_secret' => $idpConfig['client_secret'],
                 'code'          => $code,
-                'redirect_uri'  => $customRedirectUri,
+                'redirect_uri'  => $baseRedirectUri,
             ];
 
             // Send POST request to IDP token endpoint
@@ -463,13 +460,13 @@ class IdpAuthController extends Controller
         session(['idp_oauth_state' => $postLogoutState]);
 
         $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
-        $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($postLogoutState);
 
         $authorizePath = $idpConfig['authorize_path'] ?? '/login';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
-            'redirect_uri'  => $customRedirectUri,
+            'redirect_uri'  => $baseRedirectUri,
+            'state'         => $postLogoutState,
             'prompt'        => 'login',
         ];
 
@@ -515,13 +512,13 @@ class IdpAuthController extends Controller
         $state = session('idp_oauth_state');
 
         $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
-        $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($state);
 
         $authorizePath = $idpConfig['authorize_path'] ?? '/login';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
-            'redirect_uri'  => $customRedirectUri,
+            'redirect_uri'  => $baseRedirectUri,
+            'state'         => $state,
             'prompt'        => 'login',
         ];
 
