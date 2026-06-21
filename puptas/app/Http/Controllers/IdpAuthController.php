@@ -61,6 +61,7 @@ class IdpAuthController extends Controller
             'response_type' => 'code',
             'redirect_uri'  => $baseRedirectUri,
             'prompt'        => 'login',
+            'max_age'       => 0,
         ];
 
         // Construct the full authorization URL using configurable path
@@ -468,6 +469,7 @@ class IdpAuthController extends Controller
             'redirect_uri'  => $baseRedirectUri,
             'state'         => $postLogoutState,
             'prompt'        => 'login',
+            'max_age'       => 0,
         ];
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
@@ -520,6 +522,7 @@ class IdpAuthController extends Controller
             'redirect_uri'  => $baseRedirectUri,
             'state'         => $state,
             'prompt'        => 'login',
+            'max_age'       => 0,
         ];
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
