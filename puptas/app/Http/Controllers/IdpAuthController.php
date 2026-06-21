@@ -59,7 +59,7 @@ class IdpAuthController extends Controller
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
-            'redirect_uri'  => $customRedirectUri,
+            'redirect_uri'  => $baseRedirectUri,
             'prompt'        => 'login',
         ];
 
