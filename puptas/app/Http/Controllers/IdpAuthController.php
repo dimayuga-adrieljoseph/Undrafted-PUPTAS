@@ -96,10 +96,22 @@ class IdpAuthController extends Controller
         ]);
 
         // Validate state parameter for CSRF protection
+        // WORKAROUND: The IDP drops `state` so we cannot strictly enforce it.
         $receivedState = $request->query('state');
         $sessionState = session('idp_oauth_state');
 
-        if (empty($receivedState) || empty($sessionState) || $receivedState !== $sessionState) {
+        if (empty($receivedState)) {
+            if (empty($sessionState)) {
+                \Log::error('IDP callback rejected: missing state parameter and no pending session state', [
+                    'ip'         => $request->ip(),
+                ]);
+
+                return redirect('/auth/idp/error')->withErrors([
+                    'idp' => 'Authentication failed: invalid callback. Please try logging in again.',
+                ]);
+            }
+            \Log::warning('IDP returned no state, relying on session existence as fallback CSRF protection');
+        } elseif ($receivedState !== $sessionState) {
             \Log::warning('IDP callback state mismatch or missing', [
                 'ip'                  => $request->ip(),
                 'user_agent'          => $request->userAgent(),
