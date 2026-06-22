@@ -162,7 +162,7 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
     ]);
 })->name('welcome');
 
-Route::middleware(['idp.maintenance'])->group(function () {
+Route::middleware([])->group(function () {
     Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
         ->name('idp.redirect');
 

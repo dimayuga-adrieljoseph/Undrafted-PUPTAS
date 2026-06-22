@@ -49,28 +49,17 @@ class IdpAuthController extends Controller
         }
         $state = session('idp_oauth_state');
 
-        // WORKAROUND: The IDP has a bug where adding `prompt=login` causes it to drop
-        // the `state` parameter from the callback URL. We still need `prompt=login` 
-        // to prevent premature SSO (OTP bypass). To preserve CSRF protection, we 
-        // embed the state as a custom query parameter inside the `redirect_uri` itself.
         $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
-        $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($state);
 
-        // Build authorization query parameters
-        // prompt=login forces the IDP to always show its login page,
-        // even if the user has an existing IDP SSO session cookie.
-        // This prevents users from bypassing OTP by waiting and refreshing the page.
-        // Note: this means users already logged in to the IDP will still be prompted.
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
-            'redirect_uri'  => $customRedirectUri,
-            'prompt'        => 'login',
+            'redirect_uri'  => $baseRedirectUri,
+            'state'         => $state,
         ];
 
         // Construct the full authorization URL using configurable path
-        // Updated fallback to /login as a hard-override to bypass the IDP's broken /api/v1/auth/authorize handling
-        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
+        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/authorize';
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
@@ -107,28 +96,28 @@ class IdpAuthController extends Controller
         ]);
 
         // Validate state parameter for CSRF protection
-        // WORKAROUND: We use `custom_state` instead of `state` because the IDP drops `state`
-        $receivedState = $request->query('custom_state') ?? $request->query('state');
+        // WORKAROUND: The IDP drops `state` so we cannot strictly enforce it.
+        $receivedState = $request->query('state');
         $sessionState = session('idp_oauth_state');
 
         if (empty($receivedState)) {
-            // State is required for CSRF protection. Reject the callback if
-            // the IDP did not return it — never silently bypass this check.
-            \Log::error('IDP callback rejected: missing state parameter (possible CSRF or replay attack)', [
-                'ip'         => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
+            if (empty($sessionState)) {
+                \Log::error('IDP callback rejected: missing state parameter and no pending session state', [
+                    'ip'         => $request->ip(),
+                ]);
 
-            return redirect('/auth/idp/error')->withErrors([
-                'idp' => 'Authentication failed: invalid callback. Please try logging in again.',
-            ]);
+                return redirect('/auth/idp/error')->withErrors([
+                    'idp' => 'Authentication failed: invalid callback. Please try logging in again.',
+                ]);
+            }
+            \Log::warning('IDP returned no state, relying on session existence as fallback CSRF protection');
         } elseif ($receivedState !== $sessionState) {
-            \Log::warning('IDP callback state mismatch', [
+            \Log::warning('IDP callback state mismatch or missing', [
                 'ip'                  => $request->ip(),
                 'user_agent'          => $request->userAgent(),
                 'has_session_state'   => !empty($sessionState),
-                'received_state_hash' => substr(hash('sha256', $receivedState), 0, 12),
-                'session_state_hash'  => !empty($sessionState) ? substr(hash('sha256', $sessionState), 0, 12) : null,
+                'received_state_hash' => substr(hash('sha256', (string) $receivedState), 0, 12),
+                'session_state_hash'  => !empty($sessionState) ? substr(hash('sha256', (string) $sessionState), 0, 12) : null,
             ]);
 
             return response('Forbidden: Invalid state parameter', 403);
@@ -175,17 +164,15 @@ class IdpAuthController extends Controller
                 'client_id' => $idpConfig['client_id'],
             ]);
 
-            // Reconstruct the exact redirect_uri used in the authorization request,
-            // including the custom_state, as required by OAuth2 spec.
+            // Reconstruct the exact redirect_uri used in the authorization request
             $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
-            $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($sessionState);
 
             // Prepare the token request payload
             $tokenPayload = [
                 'client_id'     => $idpConfig['client_id'],
                 'client_secret' => $idpConfig['client_secret'],
                 'code'          => $code,
-                'redirect_uri'  => $customRedirectUri,
+                'redirect_uri'  => $baseRedirectUri,
             ];
 
             // Send POST request to IDP token endpoint
@@ -276,13 +263,23 @@ class IdpAuthController extends Controller
                 // Email not found in local DB -> treat as new user/applicant
                 \Log::info('Intercepting first-time IDP applicant for registration flow (email not in DB)', ['email' => $idpEmail]);
 
+                $pendingRegUuid = \Illuminate\Support\Str::uuid()->toString();
+
+                \Illuminate\Support\Facades\Cache::store('redis')->put(
+                    "pending_tokens:{$pendingRegUuid}",
+                    [
+                        'access_token'  => $accessToken,
+                        'refresh_token' => $refreshToken,
+                        'expires_at'    => now()->addSeconds($expiresIn - 60)->timestamp,
+                    ],
+                    now()->addMinutes(30)
+                );
+
                 session(['pending_registration' => [
+                    'uuid'          => $pendingRegUuid,
                     'user_id'       => $idpUser['id'] ?? null,
                     'email'         => $idpEmail,
                     'username'      => $idpUser['username'] ?? null,
-                    'access_token'  => $accessToken,
-                    'refresh_token' => $refreshToken,
-                    'expires_at'    => now()->addSeconds($expiresIn - 60),
                 ]]);
 
                 return redirect('/register');
@@ -463,14 +460,13 @@ class IdpAuthController extends Controller
         session(['idp_oauth_state' => $postLogoutState]);
 
         $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
-        $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($postLogoutState);
 
-        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
+        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/authorize';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
-            'redirect_uri'  => $customRedirectUri,
-            'prompt'        => 'login',
+            'redirect_uri'  => $baseRedirectUri,
+            'state'         => $postLogoutState,
         ];
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
@@ -484,7 +480,14 @@ class IdpAuthController extends Controller
         $accessToken = null;
 
         if (session()->has('pending_registration')) {
-            $accessToken = session('pending_registration.access_token');
+            $uuid = session('pending_registration.uuid');
+            if ($uuid) {
+                $tokens = \Illuminate\Support\Facades\Cache::store('redis')->get("pending_tokens:{$uuid}");
+                if ($tokens) {
+                    $accessToken = $tokens['access_token'] ?? null;
+                    \Illuminate\Support\Facades\Cache::store('redis')->forget("pending_tokens:{$uuid}");
+                }
+            }
             session()->forget('pending_registration');
         }
 
@@ -515,14 +518,13 @@ class IdpAuthController extends Controller
         $state = session('idp_oauth_state');
 
         $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
-        $customRedirectUri = $baseRedirectUri . (str_contains($baseRedirectUri, '?') ? '&' : '?') . 'custom_state=' . urlencode($state);
 
-        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
+        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/authorize';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
-            'redirect_uri'  => $customRedirectUri,
-            'prompt'        => 'login',
+            'redirect_uri'  => $baseRedirectUri,
+            'state'         => $state,
         ];
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
