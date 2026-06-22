@@ -17,6 +17,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Events\QueryExecuted;
 use Laravel\Passport\Passport;
+use App\Models\Application;
+use App\Models\ApplicantProfile;
+use App\Models\ApplicationProcess;
+use App\Observers\ApplicationObserver;
+use App\Observers\ApplicantProfileObserver;
+use App\Observers\ApplicationProcessObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,6 +37,10 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             $url->forceScheme('https');
         }
+
+        Application::observe(ApplicationObserver::class);
+        ApplicantProfile::observe(ApplicantProfileObserver::class);
+        ApplicationProcess::observe(ApplicationProcessObserver::class);
 
         Event::listen(Login::class,  LogUserLogin::class);
         Event::listen(Logout::class, LogUserLogout::class);
