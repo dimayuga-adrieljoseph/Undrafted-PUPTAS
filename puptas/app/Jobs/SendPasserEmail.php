@@ -43,6 +43,7 @@ class SendPasserEmail implements ShouldQueue, ShouldBeUnique
         public readonly string $personalizedMessage,
         public readonly ?int $emailLogId = null,
         public readonly ?int $bulkOperationId = null,
+        public readonly ?string $subject = null,
     ) {
         $this->onQueue('emails');
     }
@@ -50,8 +51,9 @@ class SendPasserEmail implements ShouldQueue, ShouldBeUnique
     public function handle(): void
     {
         try {
+            $subject = $this->subject ?? 'PUPCET Results';
             $sentMessage = Mail::to($this->passer->email)
-                ->send(new TestPasserEmail($this->passer, $this->personalizedMessage));
+                ->send(new TestPasserEmail($this->passer, $this->personalizedMessage, $subject));
 
             if ($this->emailLogId) {
                 $resendMessageId = $this->extractResendMessageId($sentMessage);
