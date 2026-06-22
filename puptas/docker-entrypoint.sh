@@ -66,9 +66,14 @@ php artisan view:clear 2>/dev/null || true
 php artisan cache:clear 2>/dev/null || true
 php artisan optimize:clear 2>/dev/null || true
 
-# Generate APP_KEY if not set (runtime - environment variables are available)
+# Validate APP_KEY is set (must be provided via environment variable)
 echo "[6b/12] Checking APP_KEY..."
-php artisan key:generate --force 2>/dev/null || echo "APP_KEY already set or generation skipped"
+if [ -z "${APP_KEY:-}" ]; then
+    echo "ERROR: APP_KEY environment variable is not set!"
+    echo "Set it via Railway environment variables or your deployment platform."
+    exit 1
+fi
+echo "[6b/12] APP_KEY: present (from environment)"
 
 # Run database migrations
 echo "[7/13] Running database migrations..."
