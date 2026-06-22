@@ -51,22 +51,15 @@ class IdpAuthController extends Controller
 
         $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
 
-        // Build authorization query parameters
-        // prompt=login forces the IDP to always show its login page,
-        // even if the user has an existing IDP SSO session cookie.
-        // This prevents users from bypassing OTP by waiting and refreshing the page.
-        // Note: this means users already logged in to the IDP will still be prompted.
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
             'redirect_uri'  => $baseRedirectUri,
-            'prompt'        => 'login',
-            'max_age'       => 0,
+            'state'         => $state,
         ];
 
         // Construct the full authorization URL using configurable path
-        // Updated fallback to /login as a hard-override to bypass the IDP's broken /api/v1/auth/authorize handling
-        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
+        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/authorize';
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
 
@@ -103,32 +96,16 @@ class IdpAuthController extends Controller
         ]);
 
         // Validate state parameter for CSRF protection
-        // WORKAROUND: The IDP drops `state` when `prompt=login` is used.
         $receivedState = $request->query('state');
         $sessionState = session('idp_oauth_state');
 
-        if (empty($receivedState)) {
-            // Since the IDP drops state, we fallback to checking if the session HAS an active state.
-            // This prevents trivial CSRF attacks since attackers cannot force the victim to have a pending session state
-            // without forcing them through the /redirect route (which initiates a genuine login flow).
-            if (empty($sessionState)) {
-                \Log::error('IDP callback rejected: missing state parameter and no pending session state (possible CSRF or replay attack)', [
-                    'ip'         => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                ]);
-
-                return redirect('/auth/idp/error')->withErrors([
-                    'idp' => 'Authentication failed: invalid callback. Please try logging in again.',
-                ]);
-            }
-            \Log::warning('IDP returned no state, relying on session existence as fallback CSRF protection');
-        } elseif ($receivedState !== $sessionState) {
-            \Log::warning('IDP callback state mismatch', [
+        if (empty($receivedState) || empty($sessionState) || $receivedState !== $sessionState) {
+            \Log::warning('IDP callback state mismatch or missing', [
                 'ip'                  => $request->ip(),
                 'user_agent'          => $request->userAgent(),
                 'has_session_state'   => !empty($sessionState),
-                'received_state_hash' => substr(hash('sha256', $receivedState), 0, 12),
-                'session_state_hash'  => !empty($sessionState) ? substr(hash('sha256', $sessionState), 0, 12) : null,
+                'received_state_hash' => substr(hash('sha256', (string) $receivedState), 0, 12),
+                'session_state_hash'  => !empty($sessionState) ? substr(hash('sha256', (string) $sessionState), 0, 12) : null,
             ]);
 
             return response('Forbidden: Invalid state parameter', 403);
@@ -472,14 +449,12 @@ class IdpAuthController extends Controller
 
         $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
 
-        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
+        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/authorize';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
             'redirect_uri'  => $baseRedirectUri,
             'state'         => $postLogoutState,
-            'prompt'        => 'login',
-            'max_age'       => 0,
         ];
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
@@ -532,14 +507,12 @@ class IdpAuthController extends Controller
 
         $baseRedirectUri = $idpConfig['redirect_uri'] ?? route('idp.callback');
 
-        $authorizePath = $idpConfig['authorize_path'] ?? '/login';
+        $authorizePath = $idpConfig['authorize_path'] ?? '/api/v1/auth/authorize';
         $authorizeQuery = [
             'client_id'     => $idpConfig['client_id'],
             'response_type' => 'code',
             'redirect_uri'  => $baseRedirectUri,
             'state'         => $state,
-            'prompt'        => 'login',
-            'max_age'       => 0,
         ];
 
         $authorizeUrl = rtrim($idpConfig['base_url'], '/') . $authorizePath . '?' . http_build_query($authorizeQuery);
