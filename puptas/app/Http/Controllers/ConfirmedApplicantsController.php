@@ -388,12 +388,15 @@ class ConfirmedApplicantsController extends Controller
 
             // Use a fake TestPasser-like object for the job (compatible with SendPasserEmail)
             // We dispatch with a mock passer to reuse the existing job infrastructure
+            $subject = 'PUP Taguig Admission';
+
             if ($testPasser) {
                 SendPasserEmail::dispatch(
                     $testPasser,
                     $personalizedMessage,
                     $emailLog->exists ? $emailLog->id : null,
-                    $bulkOperation->id
+                    $bulkOperation->id,
+                    $subject
                 )->delay(now()->addSeconds($successCount * $delaySeconds));
             } else {
                 // For applicants without a linked test passer, create a minimal object
@@ -405,7 +408,8 @@ class ConfirmedApplicantsController extends Controller
                     $mockPasser,
                     $personalizedMessage,
                     $emailLog->exists ? $emailLog->id : null,
-                    $bulkOperation->id
+                    $bulkOperation->id,
+                    $subject
                 )->delay(now()->addSeconds($successCount * $delaySeconds));
             }
 

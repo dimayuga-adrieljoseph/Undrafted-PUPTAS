@@ -31,14 +31,14 @@ return [
 
     'idp' => [
         'base_url' => env('IDP_BASE_URL', 'https://identity-provider.isaxbsit2027.com'),
-        // Using /login as the authorize_path to bypass broken API endpoints on IDP side
-        'authorize_path' => env('IDP_AUTHORIZE_PATH', '/login'),
+        'authorize_path' => env('IDP_AUTHORIZE_PATH', '/api/v1/auth/authorize'),
         'token_path' => env('IDP_TOKEN_PATH', '/api/v1/auth/token'),
         'user_path' => env('IDP_USER_PATH', '/api/v1/me'),
         'client_id' => env('IDP_CLIENT_ID'),
         'client_secret' => env('IDP_CLIENT_SECRET'),
         'redirect_uri' => env('IDP_REDIRECT_URI'),
         'scope' => env('IDP_SCOPE', 'openid profile email'),
+        'allowed_ips' => env('IDP_ALLOWED_IPS'),
     ],
 
     'external_api' => [

@@ -43,7 +43,7 @@ class CreateNewUser implements CreatesNewUsers
         
         \Log::info('Pending registration found', [
             'email' => $pendingReg['email'] ?? 'MISSING',
-            'has_access_token' => !empty($pendingReg['access_token']),
+            'has_uuid' => !empty($pendingReg['uuid']),
         ]);
 
         $cutoffService = app(\App\Services\CutoffSettingsService::class);
@@ -156,26 +156,31 @@ class CreateNewUser implements CreatesNewUsers
                 }
             }
 
-            if (!empty($pendingReg['access_token'])) {
-                try {
-                    // Store IDP tokens server-side only in Redis.
-                    $expiresAt = $pendingReg['expires_at'] ?? now()->addHour();
-                    $ttl = 60 * 60 * 24 * 30; // 30 days
+            $uuid = $pendingReg['uuid'] ?? null;
+            if ($uuid) {
+                $tokens = \Illuminate\Support\Facades\Cache::store('redis')->get("pending_tokens:{$uuid}");
+                if ($tokens && !empty($tokens['access_token'])) {
+                    try {
+                        // Store IDP tokens server-side only in Redis.
+                        $expiresAt = $tokens['expires_at'] ?? now()->addHour()->timestamp;
+                        $ttl = 60 * 60 * 24 * 30; // 30 days
 
-                    \Illuminate\Support\Facades\Cache::store('redis')->put(
-                        "idp_tokens:user_{$user->id}",
-                        [
-                            'access_token'  => $pendingReg['access_token'],
-                            'refresh_token' => $pendingReg['refresh_token'] ?? null,
-                            'expires_at'    => $expiresAt->timestamp,
-                        ],
-                        $ttl
-                    );
-                } catch (\Exception $e) {
-                    \Log::warning('Failed to store IDP tokens in Redis during registration', [
-                        'error' => $e->getMessage()
-                    ]);
-                    // Continue registration even if Redis is unavailable locally
+                        \Illuminate\Support\Facades\Cache::store('redis')->put(
+                            "idp_tokens:user_{$user->id}",
+                            [
+                                'access_token'  => $tokens['access_token'],
+                                'refresh_token' => $tokens['refresh_token'] ?? null,
+                                'expires_at'    => $expiresAt,
+                            ],
+                            $ttl
+                        );
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to store IDP tokens in Redis during registration', [
+                            'error' => $e->getMessage()
+                        ]);
+                        // Continue registration even if Redis is unavailable locally
+                    }
+                    \Illuminate\Support\Facades\Cache::store('redis')->forget("pending_tokens:{$uuid}");
                 }
             }
 

@@ -91,103 +91,116 @@ class DashboardService
         }
 
         $cacheKey = 'dashboard_chart_data_' . ($startDateParam ?: 'default') . '_' . ($endDateParam ?: 'default');
-
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 600, function () use ($now, $startDateParam, $endDateParam) {
-        \Log::info('Dashboard dates:', ['start' => $startDateParam, 'end' => $endDateParam]);
-
-        if ($startDateParam && $endDateParam) {
-            try {
-                $startDate = \Carbon\Carbon::parse($startDateParam)->startOfDay();
-                $endDate = \Carbon\Carbon::parse($endDateParam)->endOfDay();
-                
-                if ($startDate->greaterThan($endDate)) {
-                    $temp = $startDate;
-                    $startDate = $endDate;
-                    $endDate = $temp;
-                }
-            } catch (\Exception $e) {
-                $startDate = $now->copy()->subDays(29)->startOfDay();
-                $endDate = $now->copy()->endOfDay();
-            }
-        } else {
-            $startDate = $now->copy()->subDays(29)->startOfDay();
-            $endDate = $now->copy()->endOfDay();
-        }
+        $lockKey = $cacheKey . '_lock';
         
-        $diffInDays = (int) $startDate->diffInDays($endDate->copy()->startOfDay());
-        if ($diffInDays > 365) {
-            $diffInDays = 365;
-            $startDate = $endDate->copy()->subDays(365)->startOfDay();
+        try {
+            $cacheInstance = \Illuminate\Support\Facades\Cache::tags(['dashboard', 'applications']);
+        } catch (\BadMethodCallException $e) {
+            $cacheInstance = \Illuminate\Support\Facades\Cache::store();
         }
 
-        $submittedQuery = DB::table('applications')
-            ->select(
-                DB::raw('DATE(created_at) as date'),
-                'status',
-                DB::raw('COUNT(*) as count')
-            )
-            ->where('status', 'submitted')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy(DB::raw('DATE(created_at)'), 'status');
-
-        $acceptedQuery = DB::table('application_processes')
-            ->select(
-                DB::raw('DATE(updated_at) as date'),
-                DB::raw("'accepted' as status"),
-                DB::raw('COUNT(DISTINCT application_id) as count')
-            )
-            ->where('stage', 'interviewer')
-            ->where('status', 'completed')
-            ->where('action', 'passed')
-            ->whereBetween('updated_at', [$startDate, $endDate])
-            ->groupBy(DB::raw('DATE(updated_at)'));
-
-        $returnedQuery = DB::table('applications')
-            ->select(
-                DB::raw('DATE(updated_at) as date'),
-                'status',
-                DB::raw('COUNT(*) as count')
-            )
-            ->where('status', 'returned')
-            ->whereBetween('updated_at', [$startDate, $endDate])
-            ->groupBy(DB::raw('DATE(updated_at)'), 'status');
-
-        $applications = $submittedQuery
-            ->unionAll($acceptedQuery)
-            ->unionAll($returnedQuery)
-            ->get();
-
-        // Build a list of dates
-        $dates = [];
-        $dateLabels = [];
-        for ($i = $diffInDays; $i >= 0; $i--) {
-            $date = $endDate->copy()->subDays($i);
-            $dates[] = $date->format('Y-m-d');
-            $dateLabels[] = $date->format('M j');
+        if ($cachedData = $cacheInstance->get($cacheKey)) {
+            return $cachedData;
         }
 
-        // Initialize status arrays
-        $submitted = [];
-        $accepted = [];
-        $returned = [];
+        return \Illuminate\Support\Facades\Cache::lock($lockKey, 10)->block(5, function () use ($cacheInstance, $cacheKey, $now, $startDateParam, $endDateParam) {
+            return $cacheInstance->remember($cacheKey, 600, function () use ($now, $startDateParam, $endDateParam) {
+                \Log::info('Dashboard dates:', ['start' => $startDateParam, 'end' => $endDateParam]);
 
-        foreach ($dates as $date) {
-            $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
-            $accepted[]  = $applications->where('date', $date)->whereIn('status', ['accepted', 'cleared_for_enrollment'])->sum('count');
-            $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
-        }
+                if ($startDateParam && $endDateParam) {
+                    try {
+                        $startDate = \Carbon\Carbon::parse($startDateParam)->startOfDay();
+                        $endDate = \Carbon\Carbon::parse($endDateParam)->endOfDay();
+                        
+                        if ($startDate->greaterThan($endDate)) {
+                            $temp = $startDate;
+                            $startDate = $endDate;
+                            $endDate = $temp;
+                        }
+                    } catch (\Exception $e) {
+                        $startDate = $now->copy()->subDays(29)->startOfDay();
+                        $endDate = $now->copy()->endOfDay();
+                    }
+                } else {
+                    $startDate = $now->copy()->subDays(29)->startOfDay();
+                    $endDate = $now->copy()->endOfDay();
+                }
+                
+                $diffInDays = (int) $startDate->diffInDays($endDate->copy()->startOfDay());
+                if ($diffInDays > 365) {
+                    $diffInDays = 365;
+                    $startDate = $endDate->copy()->subDays(365)->startOfDay();
+                }
 
-        return [
-            'labels' => $dateLabels,
-            'years' => $dateLabels,  // For backward compatibility
-            'submitted' => $submitted,
-            'accepted' => $accepted,
-            'returned' => $returned,
-            'filters' => [
-                'start_date' => $startDate->format('Y-m-d'),
-                'end_date' => $endDate->format('Y-m-d'),
-            ],
-        ];
+                $submittedQuery = DB::table('applications')
+                    ->select(
+                        DB::raw('DATE(created_at) as date'),
+                        'status',
+                        DB::raw('COUNT(*) as count')
+                    )
+                    ->where('status', 'submitted')
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->groupBy(DB::raw('DATE(created_at)'), 'status');
+
+                $acceptedQuery = DB::table('application_processes')
+                    ->select(
+                        DB::raw('DATE(updated_at) as date'),
+                        DB::raw("'accepted' as status"),
+                        DB::raw('COUNT(DISTINCT application_id) as count')
+                    )
+                    ->where('stage', 'interviewer')
+                    ->where('status', 'completed')
+                    ->where('action', 'passed')
+                    ->whereBetween('updated_at', [$startDate, $endDate])
+                    ->groupBy(DB::raw('DATE(updated_at)'));
+
+                $returnedQuery = DB::table('applications')
+                    ->select(
+                        DB::raw('DATE(updated_at) as date'),
+                        'status',
+                        DB::raw('COUNT(*) as count')
+                    )
+                    ->where('status', 'returned')
+                    ->whereBetween('updated_at', [$startDate, $endDate])
+                    ->groupBy(DB::raw('DATE(updated_at)'), 'status');
+
+                $applications = $submittedQuery
+                    ->unionAll($acceptedQuery)
+                    ->unionAll($returnedQuery)
+                    ->get();
+
+                // Build a list of dates
+                $dates = [];
+                $dateLabels = [];
+                for ($i = $diffInDays; $i >= 0; $i--) {
+                    $date = $endDate->copy()->subDays($i);
+                    $dates[] = $date->format('Y-m-d');
+                    $dateLabels[] = $date->format('M j');
+                }
+
+                // Initialize status arrays
+                $submitted = [];
+                $accepted = [];
+                $returned = [];
+
+                foreach ($dates as $date) {
+                    $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
+                    $accepted[]  = $applications->where('date', $date)->whereIn('status', ['accepted', 'cleared_for_enrollment'])->sum('count');
+                    $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
+                }
+
+                return [
+                    'labels' => $dateLabels,
+                    'years' => $dateLabels,  // For backward compatibility
+                    'submitted' => $submitted,
+                    'accepted' => $accepted,
+                    'returned' => $returned,
+                    'filters' => [
+                        'start_date' => $startDate->format('Y-m-d'),
+                        'end_date' => $endDate->format('Y-m-d'),
+                    ],
+                ];
+            });
         });
     }
 

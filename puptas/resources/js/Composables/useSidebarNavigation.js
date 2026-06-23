@@ -140,25 +140,40 @@ export function useSidebarNavigation() {
         // Superadmin-only items
         ...(isSuperAdmin.value ? [
             {
-                key: 'audit-logs',
-                label: 'Audit Logs',
-                icon: 'history',
-                route: 'audit-logs.index',
-                activeRoutes: ['audit-logs.index'],
-            },
-            {
-                key: 'api-clients',
-                label: 'API Clients',
-                icon: 'network-wired',
-                route: 'api-clients.index',
-                activeRoutes: ['api-clients.index'],
-            },
-            {
-                key: 'cutoff-settings',
-                label: 'Cutoff Settings',
-                icon: 'clock',
-                route: 'cutoff-settings.index',
-                activeRoutes: ['cutoff-settings.index'],
+                key: 'system-settings-group',
+                label: 'System Settings',
+                icon: 'cogs',
+                activeRoutes: ['audit-logs.index', 'api-clients.index', 'cutoff-settings.index', 'system-settings.index'],
+                children: computed(() => [
+                    {
+                        key: 'audit-logs',
+                        label: 'Audit Logs',
+                        icon: 'history',
+                        route: 'audit-logs.index',
+                        activeRoutes: ['audit-logs.index'],
+                    },
+                    {
+                        key: 'api-clients',
+                        label: 'API Clients',
+                        icon: 'network-wired',
+                        route: 'api-clients.index',
+                        activeRoutes: ['api-clients.index'],
+                    },
+                    {
+                        key: 'cutoff-settings',
+                        label: 'Cutoff Settings',
+                        icon: 'clock',
+                        route: 'cutoff-settings.index',
+                        activeRoutes: ['cutoff-settings.index'],
+                    },
+                    {
+                        key: 'emergency-access',
+                        label: 'Emergency Access',
+                        icon: 'user-shield',
+                        route: 'system-settings.index',
+                        activeRoutes: ['system-settings.index'],
+                    },
+                ]),
             },
         ] : []),
     ])

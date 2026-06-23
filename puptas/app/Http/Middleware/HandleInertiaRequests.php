@@ -37,7 +37,6 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         return array_merge(parent::share($request), [
-            'csrf_token' => $request->session()->token(),
             'flash' => [
                 'error' => $request->session()->get('error'),
                 'success' => $request->session()->get('success'),
@@ -51,10 +50,17 @@ class HandleInertiaRequests extends Middleware
                     'lastname'   => $request->user()->lastname,
                     'email'      => $request->user()->email,
                     'role_id'    => $request->user()->role_id,
-                    'idp_user_id' => $request->user()->idp_user_id,
+                    // Intentionally excluding idp_user_id and tokens from frontend payload
                 ] : null,
             ],
-            'pending_registration' => $request->session()->get('pending_registration'),
+            // Strip server-only token fields before sending to frontend.
+            // access_token and refresh_token are only needed server-side (cancelRegistration);
+            // exposing them in the Inertia page payload would make them visible in DevTools.
+            'pending_registration' => (function () use ($request) {
+                $reg = $request->session()->get('pending_registration');
+                if (!$reg) return null;
+                return array_diff_key($reg, array_flip(['access_token', 'refresh_token']));
+            })(),
             'test_passer_data' => function () use ($request) {
                 $pendingReg = $request->session()->get('pending_registration');
                 if ($pendingReg && !empty($pendingReg['email'])) {

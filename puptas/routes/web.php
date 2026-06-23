@@ -162,18 +162,39 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
     ]);
 })->name('welcome');
 
-Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
-    ->name('idp.redirect');
+Route::middleware([])->group(function () {
+    Route::get('/auth/idp/redirect', [IdpAuthController::class, 'login'])
+        ->name('idp.redirect');
+
+    Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
+        ->middleware('throttle:10,1')
+        ->name('idp.callback');
+
+    // Emergency OTP Login Routes
+    Route::get('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'showLoginForm'])->name('emergency.login');
+    Route::post('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'sendOtp'])->name('emergency.send-otp');
+    Route::get('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'showVerifyForm'])->name('emergency.verify-form');
+    Route::post('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'verifyOtp'])->name('emergency.verify');
+
+    Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
+        ->middleware('throttle:10,1')
+        ->name('idp.callback.alias');
+
+    // Backward-compatible callback aliases — kept for IDP redirect_uri compatibility.
+    // TODO: Remove these routes once the IDP is updated to use /auth/idp/callback exclusively.
+    Route::get('/callback', [IdpAuthController::class, 'callback'])
+        ->middleware(['guest', 'throttle:10,1'])
+        ->name('idp.callback.legacy');
+
+    Route::get('/api/callback', [IdpAuthController::class, 'callback'])
+        ->middleware(['guest', 'throttle:10,1'])
+        ->name('idp.callback.api-legacy');
+});
 
 Route::get('/auth/idp/error', function () {
     return Inertia::render('Auth/IdpError');
 })->name('idp.error');
 
-Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
-    ->name('idp.callback');
-
-Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
-    ->name('idp.callback.alias');
 
 Route::get('/auth/idp/cancel-registration', [IdpAuthController::class, 'cancelRegistration'])
     ->name('idp.cancel-registration');
@@ -182,15 +203,6 @@ Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
     ->middleware('auth')
     ->name('idp.logout');
 
-
-// Backward-compatible callback aliases in case IDP client is configured with older paths.
-Route::get('/callback', [IdpAuthController::class, 'callback'])
-    ->middleware('guest')
-    ->name('idp.callback.legacy');
-
-Route::get('/api/callback', [IdpAuthController::class, 'callback'])
-    ->middleware('guest')
-    ->name('idp.callback.api-legacy');
 
 // View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
@@ -584,6 +596,10 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'index'])->name('cutoff-settings.index');
     Route::post('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'store'])->name('cutoff-settings.store');
     Route::delete('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'destroy'])->name('cutoff-settings.destroy');
+
+    // System Settings
+    Route::get('/admin/system-settings', [\App\Http\Controllers\SuperAdmin\SystemSettingController::class, 'index'])->name('system-settings.index');
+    Route::post('/admin/system-settings', [\App\Http\Controllers\SuperAdmin\SystemSettingController::class, 'update'])->name('system-settings.update');
 });
 
 // Temporary debug route for SAR PDF generation

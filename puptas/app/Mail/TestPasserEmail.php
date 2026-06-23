@@ -22,11 +22,13 @@ class TestPasserEmail extends Mailable implements ShouldQueue
 
     public $passer;
     public $messageTemplate;
+    public string $customSubject;
 
-    public function __construct($passer, $messageTemplate)
+    public function __construct($passer, $messageTemplate, string $subject = 'PUPCET Results')
     {
         $this->passer = $passer;
         $this->messageTemplate = $messageTemplate;
+        $this->customSubject = $subject;
         $this->onQueue('emails');
     }
 
@@ -34,7 +36,7 @@ class TestPasserEmail extends Mailable implements ShouldQueue
     {
         $plainText = $this->convertHtmlToPlainText($this->messageTemplate);
 
-        return $this->subject('PUPCET Results')
+        return $this->subject($this->customSubject)
                     ->html($this->messageTemplate)
                     ->text('emails.plain.congratulations', [
                         'plainTextContent' => $plainText,

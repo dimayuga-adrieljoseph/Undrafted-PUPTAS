@@ -34,12 +34,22 @@ return Application::configure(basePath: dirname(__DIR__))
             // Add any routes that should be exempt from CSRF protection
         ]);
 
+        // Encrypt all cookies except XSRF-TOKEN.
+        // XSRF-TOKEN must remain unencrypted so the browser's JS can read it
+        // and attach it to AJAX/Inertia requests as a CSRF header.
+        // All other cookies (session, access_token, refresh_token) are encrypted
+        // so their values cannot be read or tampered with even if intercepted.
+        $middleware->encryptCookies(except: [
+            'XSRF-TOKEN',
+        ]);
+
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'client' => \Laravel\Passport\Http\Middleware\CheckClientCredentials::class,
             'medical.webhook' => \App\Http\Middleware\VerifyMedicalWebhookSignature::class,
             'refresh.idp' => \App\Http\Middleware\RefreshIdpToken::class,
+            'idp.maintenance' => \App\Http\Middleware\IdpMaintenanceMode::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
