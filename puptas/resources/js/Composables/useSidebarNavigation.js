@@ -143,7 +143,7 @@ export function useSidebarNavigation() {
                 key: 'system-settings-group',
                 label: 'System Settings',
                 icon: 'cogs',
-                activeRoutes: ['audit-logs.index', 'api-clients.index', 'cutoff-settings.index', 'system-settings.index'],
+                activeRoutes: ['audit-logs.index', 'api-clients.index', 'cutoff-settings.index'],
                 children: computed(() => [
                     {
                         key: 'audit-logs',
@@ -165,13 +165,6 @@ export function useSidebarNavigation() {
                         icon: 'clock',
                         route: 'cutoff-settings.index',
                         activeRoutes: ['cutoff-settings.index'],
-                    },
-                    {
-                        key: 'emergency-access',
-                        label: 'Emergency Access',
-                        icon: 'user-shield',
-                        route: 'system-settings.index',
-                        activeRoutes: ['system-settings.index'],
                     },
                 ]),
             },
