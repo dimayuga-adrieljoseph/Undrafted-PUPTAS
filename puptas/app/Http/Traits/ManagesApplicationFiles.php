@@ -85,6 +85,7 @@ trait ManagesApplicationFiles
 
             // Compute qualified programs (best-effort — never breaks the main request)
             $qualifiedProgramsList = [];
+            $unqualifiedProgramsList = [];
             try {
                 if ($user->grades) {
                     $gradeComputation = app(\App\Services\GradeComputationService::class);
@@ -101,10 +102,49 @@ trait ManagesApplicationFiles
                     $strand = $user->applicantProfile?->strand ?? '';
 
                     foreach ($programs as $program) {
-                        if ($gradeComputation->isQualified($program, $strand, $mathAvg, $englishAvg, $scienceAvg, $gwa)) {
+                        $strandNames = strtoupper($program->strand_names ?? '');
+                        $meetsStrand = $gradeComputation->isQualified($program, $strand, 100, 100, 100, 100); // check strand only via dummy passing grades
+                        // Re-derive strand eligibility properly
+                        $meetsStrand = !$strand
+                            || empty($strandNames)
+                            || str_contains($strandNames, 'OPEN TO ALL')
+                            || (str_contains($strandNames, 'OTHER') && str_contains($strandNames, 'BRIDGING'))
+                            || collect(array_map('trim', preg_split('/[,\/]/', $strandNames)))->contains(function($allowed) use ($strand) {
+                                if (str_contains($allowed, 'TECH-VOC') || str_contains($allowed, 'TVL')) $allowed = 'TVL';
+                                return $allowed === strtoupper($strand);
+                            });
+
+                        $meetsGrades = ($mathAvg    ?? 0) >= ($program->math    ?? 0)
+                                    && ($scienceAvg ?? 0) >= ($program->science ?? 0)
+                                    && ($englishAvg ?? 0) >= ($program->english ?? 0)
+                                    && ($gwa        ?? 0) >= ($program->gwa     ?? 0);
+
+                        if ($meetsStrand && $meetsGrades) {
                             $qualifiedProgramsList[] = [
                                 'code' => $program->code,
                                 'name' => $program->name,
+                            ];
+                        } else {
+                            $unqualifiedProgramsList[] = [
+                                'id'           => $program->id,
+                                'code'         => $program->code,
+                                'name'         => $program->name,
+                                'slots'        => $program->slots,
+                                'strand_names' => $program->strand_names,
+                                'meets_strand' => $meetsStrand,
+                                'meets_grades' => $meetsGrades,
+                                'requirements' => [
+                                    'math'    => $program->math    ?? 0,
+                                    'science' => $program->science ?? 0,
+                                    'english' => $program->english ?? 0,
+                                    'gwa'     => $program->gwa     ?? 0,
+                                ],
+                                'your_grades' => [
+                                    'math'    => $mathAvg    ?? 0,
+                                    'science' => $scienceAvg ?? 0,
+                                    'english' => $englishAvg ?? 0,
+                                    'gwa'     => $gwa        ?? 0,
+                                ],
                             ];
                         }
                     }
@@ -131,6 +171,7 @@ trait ManagesApplicationFiles
                 'created_at' => $user->created_at,
                 'grades' => $user->grades, // Include grades
                 'qualified_programs' => $qualifiedProgramsList,
+                'unqualified_programs' => $unqualifiedProgramsList,
                 // Map currentApplication to application for frontend compatibility
                 'application' => $user->currentApplication ? [
                     'id' => $user->currentApplication->id,
