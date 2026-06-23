@@ -260,9 +260,9 @@
                         </div>
                     </div>
 
-                    <div class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6">
                         <!-- Left Column: Info & Grades -->
-                        <div class="lg:col-span-7 space-y-5 overflow-y-auto pr-2 pb-4">
+                        <div class="lg:col-span-7 space-y-5 overflow-y-auto pr-2 pb-4 min-h-0">
 
                             <!-- Promissory Note Tag -->
                             <div v-if="selectedUser?.application?.requires_promissory_note" class="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl flex items-center gap-2">
@@ -563,7 +563,7 @@
                         </div>
 
                         <!-- Right Column: Actions & Documents -->
-                        <div class="lg:col-span-5 space-y-5 overflow-y-auto pr-2 pb-4">
+                        <div class="lg:col-span-5 space-y-5 overflow-y-auto pr-2 pb-4 min-h-0">
 
                             <!-- Evaluation Actions -->
                             <div v-if="!isEvaluationCompleted" class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
