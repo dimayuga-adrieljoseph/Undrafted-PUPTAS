@@ -716,6 +716,18 @@
             @confirm="rejectApplication"
         />
 
+        <ChangesConfirmationModal
+            :show="showCancelModal"
+            :loading="isCancellingInterview"
+            title="Cancel Interview"
+            subtitle="Are you sure you want to cancel your current interview? Your progress will not be saved."
+            confirm-text="Cancel Interview"
+            confirm-button-class="bg-red-600 hover:bg-red-700 text-white"
+            :hide-table="true"
+            @cancel="showCancelModal = false"
+            @confirm="confirmCancelInterview"
+        />
+
     </InterviewerLayout>
 </template>
 
@@ -1043,6 +1055,7 @@ const closeUserCard = () => {
     interviewStartTime.value = null;
 };
 const isCancellingInterview = ref(false);
+const showCancelModal = ref(false);
 
 const beginInterview = async () => {
     try {
@@ -1056,9 +1069,11 @@ const beginInterview = async () => {
     }
 };
 
-const cancelInterview = async () => {
-    if (!confirm("Are you sure you want to cancel your current interview? Your progress will not be saved.")) return;
+const cancelInterview = () => {
+    showCancelModal.value = true;
+};
 
+const confirmCancelInterview = async () => {
     isCancellingInterview.value = true;
     try {
         await axios.post(`/interviewer-dashboard/cancel/${selectedUser.value.id}`);
@@ -1073,6 +1088,7 @@ const cancelInterview = async () => {
             }
         }
         showSnackbar("Interview cancelled.", "info");
+        showCancelModal.value = false;
     } catch (e) {
         console.error("Failed to cancel interview:", e);
         const msg = e.response?.data?.message || "Failed to cancel interview";

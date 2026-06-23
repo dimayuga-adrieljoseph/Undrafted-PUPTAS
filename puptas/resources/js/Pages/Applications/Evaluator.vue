@@ -700,6 +700,30 @@
         />
 
         <ChangesConfirmationModal
+            :show="showReturnModal"
+            title="Return Application"
+            subtitle="Return this application to the applicant for corrections? This cannot be undone."
+            confirmText="Confirm Return"
+            confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
+            :hideTable="true"
+            :loading="isSubmitting"
+            @confirm="submitReturn"
+            @cancel="showReturnModal = false"
+        />
+
+        <ChangesConfirmationModal
+            :show="showCancelModal"
+            :loading="isCancellingReview"
+            title="Cancel Review"
+            subtitle="Are you sure you want to cancel your current review? Your progress will not be saved."
+            confirm-text="Cancel Review"
+            confirm-button-class="bg-red-600 hover:bg-red-700 text-white"
+            :hide-table="true"
+            @cancel="showCancelModal = false"
+            @confirm="confirmCancelReview"
+        />
+
+        <ChangesConfirmationModal
             :show="showFlagModal"
             title="Flag Application"
             subtitle="Are you sure you want to require this applicant to go to the assigned office?"
@@ -1015,6 +1039,7 @@ const reviewStartTime = computed(() => {
 
 const isStartingReview = ref(false);
 const isCancellingReview = ref(false);
+const showCancelModal = ref(false);
 
 const startReview = async () => {
     const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
@@ -1072,9 +1097,11 @@ const startReview = async () => {
     }
 };
 
-const cancelReview = async () => {
-    if (!confirm("Are you sure you want to cancel your current review? Your progress will not be saved.")) return;
+const cancelReview = () => {
+    showCancelModal.value = true;
+};
 
+const confirmCancelReview = async () => {
     const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
     const processes = selectedUser.value.application.processes;
     const processIndex = processes.findIndex(p => p.stage === targetStage);
@@ -1096,6 +1123,7 @@ const cancelReview = async () => {
             },
         };
         showToast("Review cancelled.", "info");
+        showCancelModal.value = false;
     } catch (error) {
         showToast(error.response?.data?.message || "Failed to cancel review.", "error");
     } finally {
