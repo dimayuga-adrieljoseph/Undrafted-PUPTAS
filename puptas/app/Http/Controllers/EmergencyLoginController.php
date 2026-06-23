@@ -101,12 +101,21 @@ class EmergencyLoginController extends Controller
             return redirect('/');
         }
 
-        if (!session('emergency_login_email')) {
+        $email = session('emergency_login_email');
+        if (!$email) {
             return redirect()->route('emergency.login');
         }
 
+        $cooldownKey = 'emergency_otp_cooldown_' . $email;
+        $remainingCooldown = 0;
+        if (\Illuminate\Support\Facades\Cache::has($cooldownKey)) {
+            $seconds = \Illuminate\Support\Facades\Cache::get($cooldownKey) - now()->timestamp;
+            $remainingCooldown = max(0, $seconds);
+        }
+
         return Inertia::render('Auth/EmergencyVerify', [
-            'email' => session('emergency_login_email')
+            'email' => $email,
+            'cooldownSeconds' => $remainingCooldown
         ]);
     }
 

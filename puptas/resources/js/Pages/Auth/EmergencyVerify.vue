@@ -11,6 +11,10 @@ const props = defineProps({
     email: {
         type: String,
         required: true,
+    },
+    cooldownSeconds: {
+        type: Number,
+        default: 180,
     }
 })
 
@@ -38,8 +42,8 @@ const resendForm = useForm({
 const cooldown = ref(180) // 3 minutes
 let timerInterval = null
 
-const startTimer = () => {
-    cooldown.value = 180
+const startTimer = (initialValue) => {
+    cooldown.value = initialValue > 0 ? initialValue : 0
     if (timerInterval) clearInterval(timerInterval)
     timerInterval = setInterval(() => {
         if (cooldown.value > 0) {
@@ -51,7 +55,7 @@ const startTimer = () => {
 }
 
 onMounted(() => {
-    startTimer()
+    startTimer(props.cooldownSeconds)
 })
 
 onUnmounted(() => {
@@ -69,7 +73,7 @@ const resendOtp = () => {
         preserveScroll: true,
         onSuccess: () => {
             form.reset('otp')
-            startTimer()
+            startTimer(props.cooldownSeconds)
         }
     })
 }
