@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useForm, usePage } from '@inertiajs/vue3'
-import { Head } from '@inertiajs/vue3'
+import { useForm, usePage, Head } from '@inertiajs/vue3'
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout.vue'
 import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -69,11 +68,11 @@ const saveSettings = () => {
 <template>
     <Head title="Emergency Access" />
     <SuperAdminLayout>
-        <div class="px-4 md:px-8 py-8 w-full">
+        <div class="px-4 md:px-8 py-8 w-full animate-fade-in">
 
             <!-- Header -->
             <div class="mb-8 flex items-center gap-4">
-                <div class="p-3 bg-[#9E122C]/10 rounded-xl">
+                <div class="p-3 bg-[#9E122C]/10 rounded-xl transition-transform hover:scale-105 duration-300">
                     <FontAwesomeIcon icon="user-shield" class="h-6 w-6 text-[#9E122C]" />
                 </div>
                 <div>
@@ -83,34 +82,38 @@ const saveSettings = () => {
             </div>
 
             <!-- Flash Messages -->
-            <div class="mb-6">
-                <div
-                    v-if="flash.success"
-                    class="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-800 dark:text-green-300"
-                >
-                    <FontAwesomeIcon icon="check-circle" class="w-5 h-5 mt-0.5 flex-shrink-0" />
-                    <p class="text-sm font-medium">{{ flash.success }}</p>
-                </div>
-                <div
-                    v-if="flash.error"
-                    class="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-800 dark:text-red-300"
-                >
-                    <FontAwesomeIcon icon="exclamation-circle" class="w-5 h-5 mt-0.5 flex-shrink-0" />
-                    <p class="text-sm font-medium">{{ flash.error }}</p>
-                </div>
+            <div class="mb-6 space-y-4">
+                <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="transform -translate-y-2 opacity-0" enter-to-class="transform translate-y-0 opacity-100" leave-active-class="transition duration-200 ease-in" leave-from-class="transform translate-y-0 opacity-100" leave-to-class="transform -translate-y-2 opacity-0">
+                    <div
+                        v-if="flash.success"
+                        class="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-800 dark:text-green-300"
+                    >
+                        <FontAwesomeIcon icon="check-circle" class="w-5 h-5 mt-0.5 flex-shrink-0" />
+                        <p class="text-sm font-medium">{{ flash.success }}</p>
+                    </div>
+                </Transition>
+                <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="transform -translate-y-2 opacity-0" enter-to-class="transform translate-y-0 opacity-100" leave-active-class="transition duration-200 ease-in" leave-from-class="transform translate-y-0 opacity-100" leave-to-class="transform -translate-y-2 opacity-0">
+                    <div
+                        v-if="flash.error"
+                        class="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-800 dark:text-red-300"
+                    >
+                        <FontAwesomeIcon icon="exclamation-circle" class="w-5 h-5 mt-0.5 flex-shrink-0" />
+                        <p class="text-sm font-medium">{{ flash.error }}</p>
+                    </div>
+                </Transition>
             </div>
 
             <!-- Settings Form -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 mb-6 transition-shadow hover:shadow-md duration-300">
                 <form @submit.prevent="saveSettings" class="space-y-6">
                     
                     <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
                         <div class="flex items-start gap-3 mb-3">
-                            <div class="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex-shrink-0">
+                            <div class="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex-shrink-0 transition-transform hover:rotate-3 duration-300">
                                 <FontAwesomeIcon icon="info-circle" class="w-5 h-5 text-amber-600 dark:text-amber-300" />
                             </div>
                             <div>
-                                <h2 class="text-base font-semibold text-gray-900 dark:text-white">Emergency Email OTP Login</h2>
+                                <h2 class="text-base font-semibold text-gray-900 dark:text-white transition-colors duration-200">Emergency Email OTP Login</h2>
                                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                     When enabled, the system will bypass the external Identity Provider (IDP) and allow users to login locally via an Email OTP. Turn this on ONLY when the IDP is down or experiencing severe outages.
                                 </p>
@@ -118,10 +121,10 @@ const saveSettings = () => {
                         </div>
 
                         <div class="mt-4 flex items-center">
-                            <label class="relative inline-flex items-center cursor-pointer">
+                            <label class="relative inline-flex items-center cursor-pointer group">
                                 <input type="checkbox" v-model="form.idp_down_emergency_login_enabled" class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#9E122C]/30 dark:peer-focus:ring-[#9E122C]/80 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#9E122C]"></div>
-                                <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#9E122C]/30 dark:peer-focus:ring-[#9E122C]/80 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#9E122C] transition-colors duration-300 group-hover:shadow-sm"></div>
+                                <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300 transition-colors duration-300">
                                     {{ form.idp_down_emergency_login_enabled ? 'Enabled' : 'Disabled' }}
                                 </span>
                             </label>
@@ -133,7 +136,7 @@ const saveSettings = () => {
                             type="button"
                             @click="confirmSave"
                             :disabled="form.processing"
-                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#9E122C] hover:bg-[#800000] disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-medium text-sm transition shadow-sm"
+                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#9E122C] hover:bg-[#800000] disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-medium text-sm shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
                         >
                             <FontAwesomeIcon icon="save" class="w-4 h-4" />
                             {{ form.processing ? 'Saving...' : 'Save Settings' }}
@@ -155,3 +158,13 @@ const saveSettings = () => {
         </div>
     </SuperAdminLayout>
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+</style>

@@ -45,7 +45,6 @@ class EmergencyLoginController extends Controller
             return back()->withErrors(['email' => 'No account found with this email address.']);
         }
 
-        // Check if user is an applicant with restricted status
         if ((int) $user->role_id === 1) {
             $testPasser = \App\Models\TestPasser::where('email', $request->email)->first();
             if ($testPasser && in_array($testPasser->passer_status_id, [3, 4])) {
@@ -56,10 +55,33 @@ class EmergencyLoginController extends Controller
             }
         }
 
+        $cooldownKey = 'emergency_otp_cooldown_' . $request->email;
+        if (Cache::has($cooldownKey)) {
+            $seconds = Cache::get($cooldownKey) - now()->timestamp;
+            if ($seconds > 0) {
+                // If they are on cooldown but still have a valid OTP in cache, 
+                // re-establish their session and send them to the verify page.
+                // This handles cases where they accidentally closed their browser tab.
+                if (Cache::has('emergency_otp_' . $user->email)) {
+                    session(['emergency_login_email' => $user->email]);
+                    return redirect()->route('emergency.verify-form')
+                        ->with('success', 'An active authentication code was already sent recently. Please check your email inbox or spam folder.');
+                }
+
+                $minutes = floor($seconds / 60);
+                $sec = $seconds % 60;
+                $timeString = $minutes > 0 ? "{$minutes}m {$sec}s" : "{$sec} seconds";
+                return back()->withErrors(['email' => "Please wait $timeString before requesting another code."]);
+            }
+        }
+
         $otp = sprintf("%06d", random_int(100000, 999999));
         
         // Store in cache for 5 minutes
         Cache::put('emergency_otp_' . $user->email, $otp, now()->addMinutes(5));
+        
+        // Set a 3-minute cooldown
+        Cache::put($cooldownKey, now()->addMinutes(3)->timestamp, now()->addMinutes(3));
 
         // Send Email
         Mail::to($user->email)->send(new EmergencyOtpMail($otp));
