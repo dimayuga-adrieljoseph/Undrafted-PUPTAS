@@ -162,10 +162,10 @@ class InterviewerDashboardController extends Controller
             ], 400);
         }
 
-        if ($interviewerInProgress->performed_by !== null && $interviewerInProgress->performed_by != auth()->id()) {
+        if ($interviewerInProgress->performed_by === null) {
             return response()->json([
-                'message' => 'You cannot cancel an interview started by someone else.',
-            ], 403);
+                'message' => 'Interview has not been started yet.',
+            ], 400);
         }
 
         $interviewerInProgress->update([
