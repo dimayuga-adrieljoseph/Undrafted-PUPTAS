@@ -410,6 +410,34 @@ const closeUserCard = () => {
     interviewNotes.value = "";
 };
 
+const isCancellingInterview = ref(false);
+
+const cancelInterview = async () => {
+    if (!confirm("Are you sure you want to cancel your current interview? Your progress will not be saved.")) return;
+
+    isCancellingInterview.value = true;
+    try {
+        await axios.post(`/interviewer-dashboard/cancel/${selectedUser.value.id}`);
+        // Update local state directly
+        interviewStartTime.value = null;
+        if (selectedUser.value && selectedUser.value.application) {
+            const processes = selectedUser.value.application.processes;
+            const idx = processes.findIndex(p => p.stage === 'interviewer');
+            if (idx !== -1) {
+                processes[idx].started_at = null;
+                processes[idx].performed_by = null;
+            }
+        }
+        showSnackbar("Interview cancelled.", "info");
+    } catch (e) {
+        console.error("Failed to cancel interview:", e);
+        const msg = e.response?.data?.message || "Failed to cancel interview";
+        showSnackbar(msg, "error");
+    } finally {
+        isCancellingInterview.value = false;
+    }
+};
+
 const promptAccept = () => {
     if (!selectedProgramId.value) {
         showSnackbar("Please select a program to accept the applicant into", "error");
@@ -856,11 +884,16 @@ const fetchPrograms = async () => {
                                     </button>
                                 </div>
                                 <div v-else>
-                                    <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center gap-2 border border-blue-200 dark:border-blue-800">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Interview in progress since {{ new Date(interviewStartTime).toLocaleTimeString() }}
+                                    <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center justify-between border border-blue-200 dark:border-blue-800">
+                                        <div class="flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Interview in progress since {{ new Date(interviewStartTime).toLocaleTimeString() }}
+                                        </div>
+                                        <button @click="cancelInterview" :disabled="isCancellingInterview" class="text-xs font-semibold hover:underline text-red-600 dark:text-red-400 disabled:opacity-50">
+                                            {{ isCancellingInterview ? 'Cancelling...' : 'Cancel' }}
+                                        </button>
                                     </div>
                                     <div class="flex flex-col sm:flex-row gap-2">
                                         <button
