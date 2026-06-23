@@ -60,6 +60,7 @@ const submit = () => {
                                     required
                                     placeholder="Enter your registered email"
                                     :disabled="form.processing"
+                                    @input="form.clearErrors('email')"
                                     :class="[
                                         'block w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm transition-colors',
                                         'focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]',
@@ -71,7 +72,7 @@ const submit = () => {
 
                             <button
                                 type="submit"
-                                :disabled="form.processing"
+                                :disabled="form.processing || !!form.errors.email"
                                 class="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold text-sm text-white shadow-md transition-all duration-200
                                        bg-gradient-to-r from-[#800000] to-[#9d0000]
                                        hover:from-[#600000] hover:to-[#800000]
