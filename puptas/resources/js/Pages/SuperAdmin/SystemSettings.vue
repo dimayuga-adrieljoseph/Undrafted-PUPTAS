@@ -1,8 +1,9 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useForm, usePage } from '@inertiajs/vue3'
 import { Head } from '@inertiajs/vue3'
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout.vue'
+import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import {
@@ -31,9 +32,36 @@ const form = useForm({
     idp_down_emergency_login_enabled: props.settings.idp_down_emergency_login_enabled === '1',
 })
 
+const showModal = ref(false)
+const pendingChanges = ref([])
+
+const confirmSave = () => {
+    const oldVal = props.settings.idp_down_emergency_login_enabled === '1' ? 'Enabled' : 'Disabled'
+    const newVal = form.idp_down_emergency_login_enabled ? 'Enabled' : 'Disabled'
+    
+    if (oldVal !== newVal) {
+        pendingChanges.value = [{
+            field: 'Emergency Access (Email OTP)',
+            oldValue: oldVal,
+            newValue: newVal
+        }]
+        showModal.value = true
+    } else {
+        saveSettings()
+    }
+}
+
+const handleConfirm = () => {
+    saveSettings()
+    showModal.value = false
+}
+
 const saveSettings = () => {
     form.post(route('system-settings.update'), {
         preserveScroll: true,
+        onSuccess: () => {
+            showModal.value = false;
+        }
     })
 }
 </script>
@@ -102,7 +130,8 @@ const saveSettings = () => {
 
                     <div class="flex justify-end">
                         <button
-                            type="submit"
+                            type="button"
+                            @click="confirmSave"
                             :disabled="form.processing"
                             class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#9E122C] hover:bg-[#800000] disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-medium text-sm transition shadow-sm"
                         >
@@ -113,6 +142,16 @@ const saveSettings = () => {
                 </form>
             </div>
 
+            <!-- Confirmation Modal -->
+            <ChangesConfirmationModal
+                :show="showModal"
+                :changes="pendingChanges"
+                :loading="form.processing"
+                title="Confirm Security Settings"
+                subtitle="You are about to change the global authentication fallback mode."
+                @confirm="handleConfirm"
+                @cancel="showModal = false"
+            />
         </div>
     </SuperAdminLayout>
 </template>

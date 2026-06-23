@@ -161,6 +161,7 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
 
     return Inertia::render('Public/Landing', [
         'appEnv' => config('app.env'),
+        'appDebug' => config('app.debug'),
         'isEmergencyMode' => $isEmergencyMode,
     ]);
 })->name('welcome');
