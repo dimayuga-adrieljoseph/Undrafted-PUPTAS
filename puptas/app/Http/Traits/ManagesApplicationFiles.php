@@ -121,8 +121,23 @@ trait ManagesApplicationFiles
 
                         if ($meetsStrand && $meetsGrades) {
                             $qualifiedProgramsList[] = [
-                                'code' => $program->code,
-                                'name' => $program->name,
+                                'id'           => $program->id,
+                                'code'         => $program->code,
+                                'name'         => $program->name,
+                                'slots'        => $program->slots,
+                                'strand_names' => $program->strand_names,
+                                'requirements' => [
+                                    'math'    => $program->math    ?? 0,
+                                    'science' => $program->science ?? 0,
+                                    'english' => $program->english ?? 0,
+                                    'gwa'     => $program->gwa     ?? 0,
+                                ],
+                                'your_grades' => [
+                                    'math'    => $mathAvg    ?? 0,
+                                    'science' => $scienceAvg ?? 0,
+                                    'english' => $englishAvg ?? 0,
+                                    'gwa'     => $gwa        ?? 0,
+                                ],
                             ];
                         } else {
                             $unqualifiedProgramsList[] = [
