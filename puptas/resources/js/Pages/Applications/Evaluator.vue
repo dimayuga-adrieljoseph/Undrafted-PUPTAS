@@ -485,6 +485,10 @@
                                 </div>
                                 
                                 <div v-else class="space-y-3">
+                                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center gap-2 border border-blue-200 dark:border-blue-800">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Review in progress since {{ new Date(reviewStartTime).toLocaleTimeString() }}
+                                    </div>
                                     <div class="flex gap-2">
                                         <button v-if="!isEvaluating" @click="showPassModal = true"
                                             class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 shadow-sm">
@@ -896,6 +900,13 @@ const hasStartedReview = computed(() => {
     const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess && !!evaluatorProcess.started_at;
+});
+
+const reviewStartTime = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) return null;
+    const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
+    return evaluatorProcess ? evaluatorProcess.started_at : null;
 });
 
 const isStartingReview = ref(false);
