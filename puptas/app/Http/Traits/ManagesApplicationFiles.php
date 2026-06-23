@@ -29,7 +29,7 @@ trait ManagesApplicationFiles
             // Load user with ONLY essential data (no files relationship)
             $user = User::with([
                 'currentApplication' => function ($query) {
-                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.submitted_at', 'applications.requires_promissory_note', 'applications.requires_guidance_office', 'applications.requires_admission_office');
+                    $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.submitted_at', 'applications.requires_guidance_office', 'applications.requires_admission_office');
                 },
                 'currentApplication.program:id,code,name,slots',
                 'currentApplication.secondChoice:id,code,name,slots',
@@ -83,16 +83,100 @@ trait ManagesApplicationFiles
             // Load files separately (not through relationship) for better performance
             $files = UserFile::where('user_id', (string) $id)->get()->keyBy('type');
 
-            // Transform the response to map currentApplication to application for frontend compatibility
+            // Compute qualified programs (best-effort — never breaks the main request)
+            $qualifiedProgramsList = [];
+            $unqualifiedProgramsList = [];
+            try {
+                if ($user->grades) {
+                    $gradeComputation = app(\App\Services\GradeComputationService::class);
+                    $mathAvg    = is_numeric($user->grades->mathematics) ? (float) $user->grades->mathematics : null;
+                    $englishAvg = is_numeric($user->grades->english) ? (float) $user->grades->english : null;
+                    $scienceAvg = is_numeric($user->grades->science) ? (float) $user->grades->science : null;
+
+                    $gwa = null;
+                    if (is_numeric($user->grades->g12_first_sem) && is_numeric($user->grades->g12_second_sem)) {
+                        $gwa = ((float) $user->grades->g12_first_sem + (float) $user->grades->g12_second_sem) / 2;
+                    }
+
+                    $programs = \App\Models\Program::with('strands')->orderBy('name')->get();
+                    $strand = $user->applicantProfile?->strand ?? '';
+
+                    foreach ($programs as $program) {
+                        $strandNames = strtoupper($program->strand_names ?? '');
+                        $meetsStrand = $gradeComputation->isQualified($program, $strand, 100, 100, 100, 100); // check strand only via dummy passing grades
+                        // Re-derive strand eligibility properly
+                        $meetsStrand = !$strand
+                            || empty($strandNames)
+                            || str_contains($strandNames, 'OPEN TO ALL')
+                            || (str_contains($strandNames, 'OTHER') && str_contains($strandNames, 'BRIDGING'))
+                            || collect(array_map('trim', preg_split('/[,\/]/', $strandNames)))->contains(function($allowed) use ($strand) {
+                                if (str_contains($allowed, 'TECH-VOC') || str_contains($allowed, 'TVL')) $allowed = 'TVL';
+                                return $allowed === strtoupper($strand);
+                            });
+
+                        $meetsGrades = ($mathAvg    ?? 0) >= ($program->math    ?? 0)
+                                    && ($scienceAvg ?? 0) >= ($program->science ?? 0)
+                                    && ($englishAvg ?? 0) >= ($program->english ?? 0)
+                                    && ($gwa        ?? 0) >= ($program->gwa     ?? 0);
+
+                        if ($meetsStrand && $meetsGrades) {
+                            $qualifiedProgramsList[] = [
+                                'id'           => $program->id,
+                                'code'         => $program->code,
+                                'name'         => $program->name,
+                                'slots'        => $program->slots,
+                                'strand_names' => $program->strand_names,
+                                'requirements' => [
+                                    'math'    => $program->math    ?? 0,
+                                    'science' => $program->science ?? 0,
+                                    'english' => $program->english ?? 0,
+                                    'gwa'     => $program->gwa     ?? 0,
+                                ],
+                                'your_grades' => [
+                                    'math'    => $mathAvg    ?? 0,
+                                    'science' => $scienceAvg ?? 0,
+                                    'english' => $englishAvg ?? 0,
+                                    'gwa'     => $gwa        ?? 0,
+                                ],
+                            ];
+                        } else {
+                            $unqualifiedProgramsList[] = [
+                                'id'           => $program->id,
+                                'code'         => $program->code,
+                                'name'         => $program->name,
+                                'slots'        => $program->slots,
+                                'strand_names' => $program->strand_names,
+                                'meets_strand' => $meetsStrand,
+                                'meets_grades' => $meetsGrades,
+                                'requirements' => [
+                                    'math'    => $program->math    ?? 0,
+                                    'science' => $program->science ?? 0,
+                                    'english' => $program->english ?? 0,
+                                    'gwa'     => $program->gwa     ?? 0,
+                                ],
+                                'your_grades' => [
+                                    'math'    => $mathAvg    ?? 0,
+                                    'science' => $scienceAvg ?? 0,
+                                    'english' => $englishAvg ?? 0,
+                                    'gwa'     => $gwa        ?? 0,
+                                ],
+                            ];
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Could not compute qualified programs for user ' . $id . ': ' . $e->getMessage());
+            }
+
             $userData = [
                 'id' => $user->id,
-                'student_number' => $user->applicantProfile?->student_number,
+                'idp_user_id' => $user->idp_user_id,
+                'email' => $user->email,
+                'salutation' => $user->applicantProfile?->salutation,
                 'firstname' => $user->applicantProfile?->firstname ?? $user->firstname,
                 'middlename' => $user->applicantProfile?->middlename,
                 'lastname' => $user->applicantProfile?->lastname ?? $user->lastname,
                 'extension_name' => $user->applicantProfile?->extension_name,
-                'salutation' => $user->applicantProfile?->salutation,
-                'email' => $user->email,
                 'sex' => $user->applicantProfile?->sex ?? $user->sex,
                 'date_graduated' => $user->applicantProfile?->date_graduated,
                 'school' => $user->applicantProfile?->school,
@@ -101,6 +185,8 @@ trait ManagesApplicationFiles
                 'reference_number' => $user->applicantProfile?->testPasser?->reference_number,
                 'created_at' => $user->created_at,
                 'grades' => $user->grades, // Include grades
+                'qualified_programs' => $qualifiedProgramsList,
+                'unqualified_programs' => $unqualifiedProgramsList,
                 // Map currentApplication to application for frontend compatibility
                 'application' => $user->currentApplication ? [
                     'id' => $user->currentApplication->id,
@@ -109,7 +195,6 @@ trait ManagesApplicationFiles
                     'program' => $user->currentApplication->program,
                     'second_choice' => $user->currentApplication->secondChoice,
                     'third_choice' => $user->currentApplication->thirdChoice,
-                    'requires_promissory_note' => $user->currentApplication->requires_promissory_note,
                     'requires_guidance_office' => $user->currentApplication->requires_guidance_office,
                     'requires_admission_office' => $user->currentApplication->requires_admission_office,
                     'processes' => $user->currentApplication->processes,
