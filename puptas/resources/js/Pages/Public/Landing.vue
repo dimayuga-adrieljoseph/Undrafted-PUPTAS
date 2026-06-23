@@ -11,12 +11,11 @@ const props = defineProps({
 
 const currentYear = computed(() => new Date().getFullYear())
 
-// On local/staging keep the dev bypass; on production go straight to IDP
 const goToLogin = () => {
-  if (props.appDebug || props.appEnv === 'local' || props.appEnv === 'staging') {
-    window.location.href = '/dev-login'
-  } else if (props.isEmergencyMode) {
+  if (props.isEmergencyMode) {
     window.location.href = '/emergency-login'
+  } else if (props.appDebug || props.appEnv === 'local' || props.appEnv === 'staging') {
+    window.location.href = '/dev-login'
   } else {
     window.location.href = '/auth/idp/redirect'
   }
