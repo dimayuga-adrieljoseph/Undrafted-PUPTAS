@@ -122,6 +122,16 @@ class EmergencyLoginController extends Controller
         Cache::forget('emergency_otp_' . $email);
         session()->forget('emergency_login_email');
 
+        // Set emergency login session flag
+        session(['emergency_logged_in' => true]);
+
+        // Clear any stale IDP tokens from Redis so middleware doesn't attempt to refresh them
+        try {
+            Cache::store('redis')->forget("idp_tokens:user_{$user->id}");
+        } catch (\Exception $e) {
+            \Log::warning('Failed to clear stale IDP tokens during emergency login', ['error' => $e->getMessage()]);
+        }
+
         // Login user
         Auth::login($user);
         \Log::info('User logged in via Emergency OTP', ['user_id' => $user->id, 'email' => $user->email]);
