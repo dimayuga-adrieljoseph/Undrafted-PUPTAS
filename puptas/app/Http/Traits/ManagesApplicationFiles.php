@@ -83,30 +83,34 @@ trait ManagesApplicationFiles
             // Load files separately (not through relationship) for better performance
             $files = UserFile::where('user_id', (string) $id)->get()->keyBy('type');
 
-            // Transform the response to map currentApplication to application for frontend compatibility
+            // Compute qualified programs (best-effort — never breaks the main request)
             $qualifiedProgramsList = [];
-            if ($user->grades) {
-                $gradeComputation = app(\App\Services\GradeComputationService::class);
-                $mathAvg    = is_numeric($user->grades->mathematics) ? (float) $user->grades->mathematics : null;
-                $englishAvg = is_numeric($user->grades->english) ? (float) $user->grades->english : null;
-                $scienceAvg = is_numeric($user->grades->science) ? (float) $user->grades->science : null;
-                
-                $gwa = null;
-                if (isset($user->grades->g12_first_sem) && isset($user->grades->g12_second_sem)) {
-                    $gwa = $gradeComputation->calculateMean([$user->grades->g12_first_sem, $user->grades->g12_second_sem]);
-                }
-                
-                $programs = \App\Models\Program::orderBy('name')->get();
-                $strand = $user->applicantProfile?->strand ?? '';
-                
-                foreach ($programs as $program) {
-                    if ($gradeComputation->isQualified($program, $strand, $mathAvg, $englishAvg, $scienceAvg, $gwa)) {
-                        $qualifiedProgramsList[] = [
-                            'code' => $program->code,
-                            'name' => $program->name,
-                        ];
+            try {
+                if ($user->grades) {
+                    $gradeComputation = app(\App\Services\GradeComputationService::class);
+                    $mathAvg    = is_numeric($user->grades->mathematics) ? (float) $user->grades->mathematics : null;
+                    $englishAvg = is_numeric($user->grades->english) ? (float) $user->grades->english : null;
+                    $scienceAvg = is_numeric($user->grades->science) ? (float) $user->grades->science : null;
+
+                    $gwa = null;
+                    if (is_numeric($user->grades->g12_first_sem) && is_numeric($user->grades->g12_second_sem)) {
+                        $gwa = ((float) $user->grades->g12_first_sem + (float) $user->grades->g12_second_sem) / 2;
+                    }
+
+                    $programs = \App\Models\Program::with('strands')->orderBy('name')->get();
+                    $strand = $user->applicantProfile?->strand ?? '';
+
+                    foreach ($programs as $program) {
+                        if ($gradeComputation->isQualified($program, $strand, $mathAvg, $englishAvg, $scienceAvg, $gwa)) {
+                            $qualifiedProgramsList[] = [
+                                'code' => $program->code,
+                                'name' => $program->name,
+                            ];
+                        }
                     }
                 }
+            } catch (\Throwable $e) {
+                \Log::warning('Could not compute qualified programs for user ' . $id . ': ' . $e->getMessage());
             }
 
             $userData = [
