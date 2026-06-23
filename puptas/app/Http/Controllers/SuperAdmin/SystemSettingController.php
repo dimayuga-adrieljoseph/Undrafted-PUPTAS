@@ -30,6 +30,9 @@ class SystemSettingController extends Controller
             );
         }
 
+        // Clear the cache so middleware instantly picks up the new setting
+        \Illuminate\Support\Facades\Cache::forget('idp_down_emergency_mode');
+
         return redirect()->back()->with('success', 'System settings updated successfully.');
     }
 }
