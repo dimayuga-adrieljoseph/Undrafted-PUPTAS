@@ -584,9 +584,14 @@
                                 </div>
                                 
                                 <div v-else class="space-y-3">
-                                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center gap-2 border border-blue-200 dark:border-blue-800">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                        Review in progress since {{ new Date(reviewStartTime).toLocaleTimeString() }}
+                                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center justify-between border border-blue-200 dark:border-blue-800">
+                                        <div class="flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                            Review in progress since {{ new Date(reviewStartTime).toLocaleTimeString() }}
+                                        </div>
+                                        <button @click="cancelReview" :disabled="isCancellingReview" class="text-xs font-semibold hover:underline text-red-600 dark:text-red-400 disabled:opacity-50">
+                                            {{ isCancellingReview ? 'Cancelling...' : 'Cancel' }}
+                                        </button>
                                     </div>
                                     <div class="flex gap-2">
                                         <button v-if="!isEvaluating" @click="showPassModal = true"
@@ -692,6 +697,30 @@
             :loading="isSubmitting"
             @confirm="submitPass"
             @cancel="showPassModal = false"
+        />
+
+        <ChangesConfirmationModal
+            :show="showReturnModal"
+            title="Return Application"
+            subtitle="Return this application to the applicant for corrections? This cannot be undone."
+            confirmText="Confirm Return"
+            confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
+            :hideTable="true"
+            :loading="isSubmitting"
+            @confirm="submitReturn"
+            @cancel="showReturnModal = false"
+        />
+
+        <ChangesConfirmationModal
+            :show="showCancelModal"
+            :loading="isCancellingReview"
+            title="Cancel Review"
+            subtitle="Are you sure you want to cancel your current review? Your progress will not be saved."
+            confirm-text="Cancel Review"
+            confirm-button-class="bg-red-600 hover:bg-red-700 text-white"
+            :hide-table="true"
+            @cancel="showCancelModal = false"
+            @confirm="confirmCancelReview"
         />
 
         <ChangesConfirmationModal
@@ -1009,6 +1038,8 @@ const reviewStartTime = computed(() => {
 });
 
 const isStartingReview = ref(false);
+const isCancellingReview = ref(false);
+const showCancelModal = ref(false);
 
 const startReview = async () => {
     const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
@@ -1063,6 +1094,40 @@ const startReview = async () => {
         }
     } finally {
         isStartingReview.value = false;
+    }
+};
+
+const cancelReview = () => {
+    showCancelModal.value = true;
+};
+
+const confirmCancelReview = async () => {
+    const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const processes = selectedUser.value.application.processes;
+    const processIndex = processes.findIndex(p => p.stage === targetStage);
+
+    if (processIndex === -1) return;
+
+    const evaluatorProcess = processes[processIndex];
+    isCancellingReview.value = true;
+    try {
+        await axios.post(`/evaluator/cancel-review/${evaluatorProcess.id}`);
+        // Rebuild selectedUser.value to clear started_at
+        selectedUser.value = {
+            ...selectedUser.value,
+            application: {
+                ...selectedUser.value.application,
+                processes: processes.map((p, i) =>
+                    i === processIndex ? { ...p, started_at: null, reviewed_by: null } : p
+                ),
+            },
+        };
+        showToast("Review cancelled.", "info");
+        showCancelModal.value = false;
+    } catch (error) {
+        showToast(error.response?.data?.message || "Failed to cancel review.", "error");
+    } finally {
+        isCancellingReview.value = false;
     }
 };
 

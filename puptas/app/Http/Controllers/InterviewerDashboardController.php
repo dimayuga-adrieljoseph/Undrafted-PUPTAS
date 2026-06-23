@@ -144,6 +144,40 @@ class InterviewerDashboardController extends Controller
         ]);
     }
 
+    public function cancel(Request $request, $userId)
+    {
+        $this->ensureRole(4);
+
+        $application = $this->applicationService->getApplicationByUserId($userId);
+
+        $interviewerInProgress = $application->processes()
+            ->where('stage', 'interviewer')
+            ->where('status', 'in_progress')
+            ->latest()
+            ->first();
+
+        if (!$interviewerInProgress) {
+            return response()->json([
+                'message' => 'Cannot cancel an interview that is not in progress.',
+            ], 400);
+        }
+
+        if ($interviewerInProgress->performed_by !== null && $interviewerInProgress->performed_by != auth()->id()) {
+            return response()->json([
+                'message' => 'You cannot cancel an interview started by someone else.',
+            ], 403);
+        }
+
+        $interviewerInProgress->update([
+            'started_at' => null,
+            'performed_by' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Interview cancelled successfully.',
+        ]);
+    }
+
     public function accept(Request $request, $userId)
     {
         $this->ensureRole(4);

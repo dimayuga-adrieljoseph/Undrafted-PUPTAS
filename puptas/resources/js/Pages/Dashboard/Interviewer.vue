@@ -431,6 +431,39 @@ const closeUserCard = () => {
     interviewNotes.value = "";
 };
 
+const isCancellingInterview = ref(false);
+const showCancelModal = ref(false);
+
+const cancelInterview = () => {
+    showCancelModal.value = true;
+};
+
+const confirmCancelInterview = async () => {
+
+    isCancellingInterview.value = true;
+    try {
+        await axios.post(`/interviewer-dashboard/cancel/${selectedUser.value.id}`);
+        // Update local state directly
+        interviewStartTime.value = null;
+        if (selectedUser.value && selectedUser.value.application) {
+            const processes = selectedUser.value.application.processes;
+            const idx = processes.findIndex(p => p.stage === 'interviewer');
+            if (idx !== -1) {
+                processes[idx].started_at = null;
+                processes[idx].performed_by = null;
+            }
+        }
+        showSnackbar("Interview cancelled.", "info");
+        showCancelModal.value = false;
+    } catch (e) {
+        console.error("Failed to cancel interview:", e);
+        const msg = e.response?.data?.message || "Failed to cancel interview";
+        showSnackbar(msg, "error");
+    } finally {
+        isCancellingInterview.value = false;
+    }
+};
+
 const promptAccept = () => {
     if (!selectedProgramId.value) {
         showSnackbar("Please select a program to accept the applicant into", "error");
@@ -920,11 +953,16 @@ const fetchPrograms = async () => {
                                     </button>
                                 </div>
                                 <div v-else>
-                                    <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center gap-2 border border-blue-200 dark:border-blue-800">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Interview in progress since {{ new Date(interviewStartTime).toLocaleTimeString() }}
+                                    <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center justify-between border border-blue-200 dark:border-blue-800">
+                                        <div class="flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Interview in progress since {{ new Date(interviewStartTime).toLocaleTimeString() }}
+                                        </div>
+                                        <button @click="cancelInterview" :disabled="isCancellingInterview" class="text-xs font-semibold hover:underline text-red-600 dark:text-red-400 disabled:opacity-50">
+                                            {{ isCancellingInterview ? 'Cancelling...' : 'Cancel' }}
+                                        </button>
                                     </div>
                                     <div class="flex flex-col sm:flex-row gap-2">
                                         <button
@@ -1068,18 +1106,30 @@ const fetchPrograms = async () => {
             </div>
         </transition>
 
-        <!-- Snackbar Notification -->
-        <transition name="fade">
-            <div
-                v-if="snackbar.visible"
-                :class="[
-                    'fixed bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50',
-                    snackbar.type === 'success' ? 'bg-green-600 text-white' :
-                    snackbar.type === 'error' ? 'bg-red-600 text-white' :
-                    'bg-blue-600 text-white'
-                ]"
-            >
-                {{ snackbar.message }}
+        <!-- Success Toast Notification (Replaces Snackbar) -->
+        <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
+            <div v-if="snackbar.visible" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
+                <div :class="['rounded-lg shadow-lg overflow-hidden border', snackbar.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400']">
+                    <div class="p-4 flex items-start">
+                        <svg v-if="snackbar.type === 'success'" class="w-5 h-5 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <svg v-else class="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div class="ml-3 w-0 flex-1 pt-0.5">
+                            <p :class="['text-sm font-medium', snackbar.type === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200']">{{ snackbar.message }}</p>
+                        </div>
+                        <div class="ml-4 flex-shrink-0 flex">
+                            <button @click="snackbar.visible = false" :class="['rounded-md inline-flex focus:outline-none', snackbar.type === 'success' ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600']">
+                                <span class="sr-only">Close</span>
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </transition>
     </InterviewerLayout>
@@ -1129,6 +1179,18 @@ const fetchPrograms = async () => {
         :hide-table="true"
         @cancel="showRejectModal = false"
         @confirm="rejectApplication"
+    />
+
+    <ChangesConfirmationModal
+        :show="showCancelModal"
+        :loading="isCancellingInterview"
+        title="Cancel Interview"
+        subtitle="Are you sure you want to cancel your current interview? Your progress will not be saved."
+        confirm-text="Cancel Interview"
+        confirm-button-class="bg-red-600 hover:bg-red-700 text-white"
+        :hide-table="true"
+        @cancel="showCancelModal = false"
+        @confirm="confirmCancelInterview"
     />
 </template>
 
