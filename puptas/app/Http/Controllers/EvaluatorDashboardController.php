@@ -330,6 +330,26 @@ class EvaluatorDashboardController extends Controller
         return response()->json(['started_at' => $applicationProcess->started_at]);
     }
 
+    public function cancelReview(ApplicationProcess $applicationProcess)
+    {
+        $this->ensureRole($this->getRoleId());
+
+        if ($applicationProcess->status !== 'in_progress' && $applicationProcess->status !== 'returned') {
+            return response()->json(['message' => 'Cannot cancel a review that is already completed.'], 400);
+        }
+
+        if ($applicationProcess->reviewed_by !== auth()->id()) {
+            return response()->json(['message' => 'You cannot cancel a review started by someone else.'], 403);
+        }
+
+        $applicationProcess->update([
+            'started_at'  => null,
+            'reviewed_by' => null,
+        ]);
+
+        return response()->json(['message' => 'Review cancelled successfully.']);
+    }
+
     private function ensureRole(int|array $roleId): void
     {
         $roleIds = is_array($roleId) ? $roleId : [$roleId];
