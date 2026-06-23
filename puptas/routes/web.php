@@ -170,6 +170,12 @@ Route::middleware([])->group(function () {
         ->middleware('throttle:10,1')
         ->name('idp.callback');
 
+    // Emergency OTP Login Routes
+    Route::get('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'showLoginForm'])->name('emergency.login');
+    Route::post('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'sendOtp'])->name('emergency.send-otp');
+    Route::get('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'showVerifyForm'])->name('emergency.verify-form');
+    Route::post('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'verifyOtp'])->name('emergency.verify');
+
     Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
         ->middleware('throttle:10,1')
         ->name('idp.callback.alias');
@@ -590,6 +596,10 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'index'])->name('cutoff-settings.index');
     Route::post('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'store'])->name('cutoff-settings.store');
     Route::delete('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'destroy'])->name('cutoff-settings.destroy');
+
+    // System Settings
+    Route::get('/admin/system-settings', [\App\Http\Controllers\SuperAdmin\SystemSettingController::class, 'index'])->name('system-settings.index');
+    Route::post('/admin/system-settings', [\App\Http\Controllers\SuperAdmin\SystemSettingController::class, 'update'])->name('system-settings.update');
 });
 
 // Temporary debug route for SAR PDF generation

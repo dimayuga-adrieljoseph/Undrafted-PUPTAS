@@ -93,14 +93,18 @@ class DashboardService
         $cacheKey = 'dashboard_chart_data_' . ($startDateParam ?: 'default') . '_' . ($endDateParam ?: 'default');
         $lockKey = $cacheKey . '_lock';
         
-        $cacheTags = \Illuminate\Support\Facades\Cache::tags(['dashboard', 'applications']);
+        try {
+            $cacheInstance = \Illuminate\Support\Facades\Cache::tags(['dashboard', 'applications']);
+        } catch (\BadMethodCallException $e) {
+            $cacheInstance = \Illuminate\Support\Facades\Cache::store();
+        }
 
-        if ($cachedData = $cacheTags->get($cacheKey)) {
+        if ($cachedData = $cacheInstance->get($cacheKey)) {
             return $cachedData;
         }
 
-        return \Illuminate\Support\Facades\Cache::lock($lockKey, 10)->block(5, function () use ($cacheTags, $cacheKey, $now, $startDateParam, $endDateParam) {
-            return $cacheTags->remember($cacheKey, 600, function () use ($now, $startDateParam, $endDateParam) {
+        return \Illuminate\Support\Facades\Cache::lock($lockKey, 10)->block(5, function () use ($cacheInstance, $cacheKey, $now, $startDateParam, $endDateParam) {
+            return $cacheInstance->remember($cacheKey, 600, function () use ($now, $startDateParam, $endDateParam) {
                 \Log::info('Dashboard dates:', ['start' => $startDateParam, 'end' => $endDateParam]);
 
                 if ($startDateParam && $endDateParam) {
