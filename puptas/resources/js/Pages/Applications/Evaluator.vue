@@ -247,10 +247,10 @@
                 </div>
 
                 <!-- Modal Body: 2-column layout -->
-                <div class="flex-1 overflow-y-auto px-6 py-5">
+                <div class="flex-1 overflow-hidden px-6 py-5 flex flex-col">
                     <!-- Evaluation Completed Badge -->
                     <div v-if="isEvaluationCompleted"
-                        class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl mb-5">
+                        class="shrink-0 flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl mb-5">
                         <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -260,9 +260,9 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
                         <!-- Left Column: Info & Grades -->
-                        <div class="lg:col-span-7 space-y-5">
+                        <div class="lg:col-span-7 space-y-5 overflow-y-auto pr-2 pb-4">
 
                             <!-- Promissory Note Tag -->
                             <div v-if="selectedUser?.application?.requires_promissory_note" class="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl flex items-center gap-2">
@@ -563,7 +563,7 @@
                         </div>
 
                         <!-- Right Column: Actions & Documents -->
-                        <div class="lg:col-span-5 space-y-5">
+                        <div class="lg:col-span-5 space-y-5 overflow-y-auto pr-2 pb-4">
 
                             <!-- Evaluation Actions -->
                             <div v-if="!isEvaluationCompleted" class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
