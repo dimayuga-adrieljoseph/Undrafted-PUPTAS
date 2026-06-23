@@ -347,6 +347,16 @@
                                 </div>
                             </div>
 
+                            <!-- Qualified Programs -->
+                            <div v-if="selectedUser.qualified_programs && selectedUser.qualified_programs.length > 0" class="mt-6">
+                                <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Qualified Programs</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    <span v-for="prog in selectedUser.qualified_programs" :key="prog.code" class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-lg border border-green-200 dark:border-green-800" :title="prog.name">
+                                        {{ prog.code }}
+                                    </span>
+                                </div>
+                            </div>
+
                             <!-- Subject Grades -->
                             <div v-if="hasIndividualSubjects">
                                 <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Subject Grades</h4>
