@@ -478,6 +478,7 @@ Route::middleware(['auth', 'role:2,3,7,8'])->group(function () {
     Route::get('/evaluator-dashboard/applicants', [EvaluatorDashboardController::class, 'getUsers']);
     Route::post('/evaluator/pass-application/{userId}', [EvaluatorDashboardController::class, 'passApplication']);
     Route::post('/evaluator/start-review/{applicationProcess}', [EvaluatorDashboardController::class, 'startReview']);
+    Route::post('/evaluator/cancel-review/{applicationProcess}', [EvaluatorDashboardController::class, 'cancelReview']);
     Route::post('/evaluator/reject-application/{userId}', [EvaluatorDashboardController::class, 'rejectApplication']);
     Route::post('/evaluator/flag-application/{userId}', [EvaluatorDashboardController::class, 'flagApplication']);
     Route::get('/dashboard/user-files/{id}', [EvaluatorDashboardController::class, 'getUserFiles']);
@@ -499,6 +500,7 @@ Route::middleware(['auth', 'role:4'])->group(function () {
     Route::get('/interviewer-dashboard/applicants', [InterviewerDashboardController::class, 'getUsers']);
     Route::get('/interviewer-dashboard/application/{id}', [InterviewerDashboardController::class, 'getUserFiles']);
     Route::post('/interviewer-dashboard/start/{id}', [InterviewerDashboardController::class, 'start']);
+    Route::post('/interviewer-dashboard/cancel/{id}', [InterviewerDashboardController::class, 'cancel']);
     Route::post('/interviewer-dashboard/accept/{id}', [InterviewerDashboardController::class, 'accept']);
     Route::post('/interviewer-dashboard/reject/{id}', [InterviewerDashboardController::class, 'reject']);
     Route::get('/interviewer-programs', [StaffProgramController::class, 'index'])->name('interviewer.programs');
