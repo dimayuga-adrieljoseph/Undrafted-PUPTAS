@@ -605,9 +605,7 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'store'])->name('cutoff-settings.store');
     Route::delete('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'destroy'])->name('cutoff-settings.destroy');
 
-    // System Settings
-    Route::get('/admin/system-settings', [\App\Http\Controllers\SuperAdmin\SystemSettingController::class, 'index'])->name('system-settings.index');
-    Route::post('/admin/system-settings', [\App\Http\Controllers\SuperAdmin\SystemSettingController::class, 'update'])->name('system-settings.update');
+
 });
 
 // Temporary debug route for SAR PDF generation
