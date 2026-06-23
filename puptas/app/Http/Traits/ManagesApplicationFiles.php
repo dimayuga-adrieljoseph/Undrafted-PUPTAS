@@ -135,7 +135,6 @@ trait ManagesApplicationFiles
                     'program' => $user->currentApplication->program,
                     'second_choice' => $user->currentApplication->secondChoice,
                     'third_choice' => $user->currentApplication->thirdChoice,
-                    // 'requires_promissory_note' => $user->currentApplication->requires_promissory_note,
                     'requires_guidance_office' => $user->currentApplication->requires_guidance_office,
                     'requires_admission_office' => $user->currentApplication->requires_admission_office,
                     'processes' => $user->currentApplication->processes,
