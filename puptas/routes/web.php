@@ -177,7 +177,7 @@ Route::middleware([])->group(function () {
     // Emergency OTP Login Routes
     Route::get('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'showLoginForm'])->name('emergency.login');
     Route::post('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'sendOtp'])
-        ->middleware('throttle:3,1')
+        ->middleware('throttle:5,1')
         ->name('emergency.send-otp');
     Route::get('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'showVerifyForm'])->name('emergency.verify-form');
     Route::post('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'verifyOtp'])
