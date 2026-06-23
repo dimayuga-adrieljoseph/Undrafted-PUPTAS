@@ -26,6 +26,18 @@ class RefreshIdpToken
             return $next($request);
         }
 
+        // Skip IDP checks completely if the system is in emergency IDP-down mode.
+        // This is much safer than relying on session variables which can sometimes
+        // be lost during Auth::login() regeneration on specific staging environments.
+        $isEmergencyMode = \Illuminate\Support\Facades\Cache::remember('idp_down_emergency_mode', 30, function() {
+            $setting = \App\Models\SystemSetting::where('key', 'idp_down_emergency_login_enabled')->first();
+            return $setting && $setting->value === '1';
+        });
+
+        if ($isEmergencyMode) {
+            return $next($request);
+        }
+
         // Skip IDP session verification/refresh entirely if Redis client classes are not available
         // if (!class_exists('Redis') && !class_exists('Predis\Client')) {
         //     return $next($request);
