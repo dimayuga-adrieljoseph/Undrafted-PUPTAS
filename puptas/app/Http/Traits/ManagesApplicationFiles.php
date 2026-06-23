@@ -84,15 +84,40 @@ trait ManagesApplicationFiles
             $files = UserFile::where('user_id', (string) $id)->get()->keyBy('type');
 
             // Transform the response to map currentApplication to application for frontend compatibility
+            $qualifiedProgramsList = [];
+            if ($user->grades) {
+                $gradeComputation = app(\App\Services\GradeComputationService::class);
+                $mathAvg    = $gradeComputation->calculateMean([$user->grades->mathematics, $user->grades->g11_second_sem_mathematics]);
+                $englishAvg = $gradeComputation->calculateMean([$user->grades->english, $user->grades->g11_second_sem_english]);
+                $scienceAvg = $gradeComputation->calculateMean([$user->grades->science, $user->grades->g11_second_sem_science]);
+                
+                $gwa = null;
+                if (isset($user->grades->g12_first_sem) && isset($user->grades->g12_second_sem)) {
+                    $gwa = $gradeComputation->calculateMean([$user->grades->g12_first_sem, $user->grades->g12_second_sem]);
+                }
+                
+                $programs = \App\Models\Program::orderBy('name')->get();
+                $strand = $user->applicantProfile?->strand ?? '';
+                
+                foreach ($programs as $program) {
+                    if ($gradeComputation->isQualified($program, $strand, $mathAvg, $englishAvg, $scienceAvg, $gwa)) {
+                        $qualifiedProgramsList[] = [
+                            'code' => $program->code,
+                            'name' => $program->name,
+                        ];
+                    }
+                }
+            }
+
             $userData = [
                 'id' => $user->id,
-                'student_number' => $user->applicantProfile?->student_number,
+                'idp_user_id' => $user->idp_user_id,
+                'email' => $user->email,
+                'salutation' => $user->applicantProfile?->salutation,
                 'firstname' => $user->applicantProfile?->firstname ?? $user->firstname,
                 'middlename' => $user->applicantProfile?->middlename,
                 'lastname' => $user->applicantProfile?->lastname ?? $user->lastname,
                 'extension_name' => $user->applicantProfile?->extension_name,
-                'salutation' => $user->applicantProfile?->salutation,
-                'email' => $user->email,
                 'sex' => $user->applicantProfile?->sex ?? $user->sex,
                 'date_graduated' => $user->applicantProfile?->date_graduated,
                 'school' => $user->applicantProfile?->school,
@@ -101,6 +126,7 @@ trait ManagesApplicationFiles
                 'reference_number' => $user->applicantProfile?->testPasser?->reference_number,
                 'created_at' => $user->created_at,
                 'grades' => $user->grades, // Include grades
+                'qualified_programs' => $qualifiedProgramsList,
                 // Map currentApplication to application for frontend compatibility
                 'application' => $user->currentApplication ? [
                     'id' => $user->currentApplication->id,
