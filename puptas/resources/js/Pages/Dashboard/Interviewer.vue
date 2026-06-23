@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { LineChart } from "vue-chart-3";
 import { Head, Link, router } from "@inertiajs/vue3";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
@@ -58,6 +58,27 @@ const props = defineProps({
 const startDateFilter = ref(props.filters?.start_date || '');
 const endDateFilter = ref(props.filters?.end_date || '');
 const showDateFilter = ref(false);
+
+// Low Slot Alert
+const lowSlotThreshold = 10;
+const showLowSlotAlert = ref(true);
+
+const lowSlotPrograms = computed(() => {
+    return (props.assignedPrograms || [])
+        .filter(p => p.slots != null && p.slots <= lowSlotThreshold)
+        .map(p => ({ id: p.id, code: p.code, name: p.name, slots: p.slots }));
+});
+
+watch(() => props.assignedPrograms, () => {
+    showLowSlotAlert.value = true;
+}, { deep: true });
+
+const decrementLocalSlot = (programId) => {
+    const prog = (props.assignedPrograms || []).find(p => p.id == programId);
+    if (prog && prog.slots != null && prog.slots > 0) {
+        prog.slots -= 1;
+    }
+};
 
 const applyFilters = () => {
     router.get(window.location.pathname, {
@@ -420,16 +441,18 @@ const promptAccept = () => {
 
 const acceptApplication = async () => {
     isSubmitting.value = true;
+    const acceptedProgramId = selectedProgramId.value;
     try {
         await axios.post(
             `/interviewer-dashboard/accept/${selectedUser.value.id}`,
             {
-                program_id: selectedProgramId.value,
+                program_id: acceptedProgramId,
                 start_time: interviewStartTime.value,
                 notes: interviewNotes.value
             }
         );
         showSnackbar("Application accepted successfully", "success");
+        decrementLocalSlot(acceptedProgramId);
         closeUserCard();
         showAcceptModal.value = false;
         router.reload({ only: ['pendingUsers', 'summary', 'assignedPrograms'] });
@@ -485,6 +508,47 @@ const fetchPrograms = async () => {
 <template>
     <Head title="Interviewer Dashboard" />
     <InterviewerLayout>
+        <!-- Low Slot Warning Alert -->
+        <transition name="fade">
+            <div
+                v-if="showLowSlotAlert && lowSlotPrograms.length"
+                class="mb-6 mx-4 md:mx-8 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl"
+            >
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                            Low Slots Warning
+                        </p>
+                        <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            The following program(s) have {{ lowSlotThreshold }} or fewer slots remaining:
+                        </p>
+                        <ul class="mt-2 space-y-1">
+                            <li
+                                v-for="p in lowSlotPrograms"
+                                :key="p.id"
+                                class="text-sm font-medium text-amber-800 dark:text-amber-200"
+                            >
+                                {{ p.code }} – {{ p.name }}
+                                <span class="font-bold">({{ p.slots }} slot{{ p.slots !== 1 ? 's' : '' }} left)</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <button
+                        @click="showLowSlotAlert = false"
+                        class="p-1 text-amber-500 hover:text-amber-700 dark:hover:text-amber-300 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-800/30 transition min-h-[44px] min-w-[44px]"
+                        aria-label="Dismiss warning"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </transition>
+
         <!-- Header Section -->
         <div class="px-4 md:px-8 mb-8">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

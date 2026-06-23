@@ -156,9 +156,13 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
         session(['local_bypass' => true]);
         return redirect('/login?local=1');
     }
-    
+    $emergencySetting = \App\Models\SystemSetting::where('key', 'idp_down_emergency_login_enabled')->first();
+    $isEmergencyMode = $emergencySetting && $emergencySetting->value === '1';
+
     return Inertia::render('Public/Landing', [
         'appEnv' => config('app.env'),
+        'appDebug' => config('app.debug'),
+        'isEmergencyMode' => $isEmergencyMode,
     ]);
 })->name('welcome');
 
@@ -169,6 +173,16 @@ Route::middleware([])->group(function () {
     Route::get('/auth/idp/callback', [IdpAuthController::class, 'callback'])
         ->middleware('throttle:10,1')
         ->name('idp.callback');
+
+    // Emergency OTP Login Routes
+    Route::get('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'showLoginForm'])->name('emergency.login');
+    Route::post('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'sendOtp'])
+        ->middleware('throttle:5,1')
+        ->name('emergency.send-otp');
+    Route::get('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'showVerifyForm'])->name('emergency.verify-form');
+    Route::post('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'verifyOtp'])
+        ->middleware('throttle:5,1')
+        ->name('emergency.verify');
 
     Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
         ->middleware('throttle:10,1')
@@ -590,6 +604,8 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'index'])->name('cutoff-settings.index');
     Route::post('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'store'])->name('cutoff-settings.store');
     Route::delete('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'destroy'])->name('cutoff-settings.destroy');
+
+
 });
 
 // Temporary debug route for SAR PDF generation

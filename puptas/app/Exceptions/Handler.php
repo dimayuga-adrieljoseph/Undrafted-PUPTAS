@@ -63,6 +63,10 @@ class Handler extends ExceptionHandler
                 return back()->with('error', 'This link is invalid or has expired. Please request a new link.');
             }
 
+            if ($e instanceof ThrottleRequestsException) {
+                return back()->with('error', 'Too many requests. Please try again in a few minutes.');
+            }
+
             return back()->with('error', 'Something went wrong. Please try again later.');
         }
 

@@ -33,7 +33,7 @@ import {
     faCalendarCheck, faSignOutAlt, faUpload, faList,
     faUserShield, faHome, faHistory, faNetworkWired,
     faChartPie, faChartLine, faFileAlt, faClock,
-    faClipboardList,
+    faClipboardList, faCogs
 } from '@fortawesome/free-solid-svg-icons'
 
 import NavLink from '@/Components/NavLink.vue'
@@ -46,7 +46,7 @@ library.add(
     faCalendarCheck, faSignOutAlt, faUpload, faList,
     faUserShield, faHome, faHistory, faNetworkWired,
     faChartPie, faChartLine, faFileAlt, faClock,
-    faClipboardList,
+    faClipboardList, faCogs
 )
 
 // ─── Props ────────────────────────────────────────────────────────────────────

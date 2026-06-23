@@ -2,6 +2,47 @@
     <Head title="All Interviewer Applications" />
     <InterviewerLayout>
         <div class="max-w-9xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto">
+            <!-- Low Slot Warning Alert -->
+            <transition name="fade">
+                <div
+                    v-if="showLowSlotAlert && lowSlotPrograms.length"
+                    class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl"
+                >
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                                Low Slots Warning
+                            </p>
+                            <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                The following program(s) have {{ lowSlotThreshold }} or fewer slots remaining:
+                            </p>
+                            <ul class="mt-2 space-y-1">
+                                <li
+                                    v-for="p in lowSlotPrograms"
+                                    :key="p.id"
+                                    class="text-sm font-medium text-amber-800 dark:text-amber-200"
+                                >
+                                    {{ p.code }} – {{ p.name }}
+                                    <span class="font-bold">({{ p.slots }} slot{{ p.slots !== 1 ? 's' : '' }} left)</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <button
+                            @click="showLowSlotAlert = false"
+                            class="p-1 text-amber-500 hover:text-amber-700 dark:hover:text-amber-300 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-800/30 transition min-h-[44px] min-w-[44px]"
+                            aria-label="Dismiss warning"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </transition>
+
             <!-- Filters and Controls -->
             <div class="flex flex-col gap-3 mb-6">
                 <!-- Search Input (full width always) -->
@@ -763,6 +804,27 @@ const showStatusDropdown = ref(false);
 const showSortDropdown = ref(false);
 const filterDropdownRef = ref(null);
 
+// Low Slot Alert
+const lowSlotThreshold = 10;
+const showLowSlotAlert = ref(true);
+
+const lowSlotPrograms = computed(() => {
+    return (props.assignedPrograms || [])
+        .filter(p => p.slots != null && p.slots <= lowSlotThreshold)
+        .map(p => ({ id: p.id, code: p.code, name: p.name, slots: p.slots }));
+});
+
+watch(() => props.assignedPrograms, () => {
+    showLowSlotAlert.value = true;
+}, { deep: true });
+
+const decrementLocalSlot = (programId) => {
+    const prog = (props.assignedPrograms || []).find(p => p.id == programId);
+    if (prog && prog.slots != null && prog.slots > 0) {
+        prog.slots -= 1;
+    }
+};
+
 const page = usePage();
 const users = ref(page.props.users || []);
 
@@ -1162,17 +1224,19 @@ const promptAccept = () => {
 const acceptApplication = async () => {
     isSubmitting.value = true;
     const currentUserId = selectedUser.value.id;
+    const acceptedProgramId = selectedProgramId.value;
     try {
         await axios.post(
             `/interviewer-dashboard/accept/${currentUserId}`,
             {
-                program_id: selectedProgramId.value,
+                program_id: acceptedProgramId,
                 requires_promissory_note: requiresPromissoryNote.value,
                 notes: interviewNotes.value,
                 start_time: interviewStartTime.value,
             }
         );
         showSnackbar("Application accepted successfully", "success");
+        decrementLocalSlot(acceptedProgramId);
         selectedProgramId.value = "";
         requiresPromissoryNote.value = false;
         showAcceptModal.value = false;

@@ -23,6 +23,11 @@ class IdpAuthController extends Controller
      */
     public function login()
     {
+        $emergencySetting = \App\Models\SystemSetting::where('key', 'idp_down_emergency_login_enabled')->first();
+        if ($emergencySetting && $emergencySetting->value === '1') {
+            return redirect()->route('emergency.login');
+        }
+
         \Log::info('IDP login initiated');
 
         $idpConfig = config('services.idp');

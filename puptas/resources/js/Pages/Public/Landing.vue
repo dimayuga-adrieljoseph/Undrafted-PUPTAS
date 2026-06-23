@@ -5,13 +5,16 @@ import { Head } from '@inertiajs/vue3'
 
 const props = defineProps({
   appEnv: { type: String, default: 'production' },
+  appDebug: { type: Boolean, default: false },
+  isEmergencyMode: { type: Boolean, default: false },
 })
 
 const currentYear = computed(() => new Date().getFullYear())
 
-// On local/staging keep the dev bypass; on production go straight to IDP
 const goToLogin = () => {
-  if (props.appEnv === 'local' || props.appEnv === 'staging') {
+  if (props.isEmergencyMode) {
+    window.location.href = '/emergency-login'
+  } else if (props.appDebug || props.appEnv === 'local' || props.appEnv === 'staging') {
     window.location.href = '/dev-login'
   } else {
     window.location.href = '/auth/idp/redirect'
