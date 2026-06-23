@@ -56,7 +56,7 @@ class EmergencyLoginController extends Controller
             }
         }
 
-        $otp = sprintf("%06d", mt_rand(100000, 999999));
+        $otp = sprintf("%06d", random_int(100000, 999999));
         
         // Store in cache for 5 minutes
         Cache::put('emergency_otp_' . $user->email, $otp, now()->addMinutes(5));
@@ -108,9 +108,23 @@ class EmergencyLoginController extends Controller
 
         $cachedOtp = Cache::get('emergency_otp_' . $email);
 
+        $attemptsKey = 'emergency_otp_attempts_' . $email;
+        $attempts = Cache::get($attemptsKey, 0);
+
+        if ($attempts >= 3) {
+            Cache::forget('emergency_otp_' . $email);
+            Cache::forget($attemptsKey);
+            return back()->withErrors(['otp' => 'Too many invalid attempts. Please request a new OTP.']);
+        }
+
         if (!$cachedOtp || $cachedOtp !== $request->otp) {
+            Cache::add($attemptsKey, 0, now()->addMinutes(5));
+            Cache::increment($attemptsKey);
             return back()->withErrors(['otp' => 'Invalid or expired OTP.']);
         }
+
+        // OTP is valid - clear attempts
+        Cache::forget($attemptsKey);
 
         // OTP is valid
         $user = User::where('email', $email)->first();
