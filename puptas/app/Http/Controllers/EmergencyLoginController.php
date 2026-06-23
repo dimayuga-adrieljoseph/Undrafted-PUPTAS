@@ -148,6 +148,7 @@ class EmergencyLoginController extends Controller
                 $response = redirect('/dashboard');
                 break;
             case 3:
+            case 8:
                 $response = redirect('/evaluator-dashboard');
                 break;
             case 4:
