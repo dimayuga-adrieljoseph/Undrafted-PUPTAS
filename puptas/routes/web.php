@@ -156,9 +156,12 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
         session(['local_bypass' => true]);
         return redirect('/login?local=1');
     }
-    
+    $emergencySetting = \App\Models\SystemSetting::where('key', 'idp_down_emergency_login_enabled')->first();
+    $isEmergencyMode = $emergencySetting && $emergencySetting->value === '1';
+
     return Inertia::render('Public/Landing', [
         'appEnv' => config('app.env'),
+        'isEmergencyMode' => $isEmergencyMode,
     ]);
 })->name('welcome');
 
@@ -172,9 +175,13 @@ Route::middleware([])->group(function () {
 
     // Emergency OTP Login Routes
     Route::get('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'showLoginForm'])->name('emergency.login');
-    Route::post('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'sendOtp'])->name('emergency.send-otp');
+    Route::post('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'sendOtp'])
+        ->middleware('throttle:3,1')
+        ->name('emergency.send-otp');
     Route::get('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'showVerifyForm'])->name('emergency.verify-form');
-    Route::post('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'verifyOtp'])->name('emergency.verify');
+    Route::post('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'verifyOtp'])
+        ->middleware('throttle:5,1')
+        ->name('emergency.verify');
 
     Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
         ->middleware('throttle:10,1')
