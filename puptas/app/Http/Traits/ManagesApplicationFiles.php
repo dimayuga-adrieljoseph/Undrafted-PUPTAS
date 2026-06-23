@@ -87,9 +87,9 @@ trait ManagesApplicationFiles
             $qualifiedProgramsList = [];
             if ($user->grades) {
                 $gradeComputation = app(\App\Services\GradeComputationService::class);
-                $mathAvg    = $user->grades->mathematics;
-                $englishAvg = $user->grades->english;
-                $scienceAvg = $user->grades->science;
+                $mathAvg    = is_numeric($user->grades->mathematics) ? (float) $user->grades->mathematics : null;
+                $englishAvg = is_numeric($user->grades->english) ? (float) $user->grades->english : null;
+                $scienceAvg = is_numeric($user->grades->science) ? (float) $user->grades->science : null;
                 
                 $gwa = null;
                 if (isset($user->grades->g12_first_sem) && isset($user->grades->g12_second_sem)) {
