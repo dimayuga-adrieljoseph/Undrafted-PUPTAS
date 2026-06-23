@@ -321,69 +321,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Qualified Programs -->
-                                    <div v-if="selectedUser.qualified_programs && selectedUser.qualified_programs.length > 0" class="mt-6">
-                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Qualified Programs</h4>
-                                        <div class="flex flex-wrap gap-2">
-                                            <span v-for="prog in selectedUser.qualified_programs" :key="prog.code" class="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-lg border border-green-200 dark:border-green-800" :title="prog.name">
-                                                {{ prog.code }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Unqualified Programs -->
-                                    <div v-if="selectedUser.unqualified_programs && selectedUser.unqualified_programs.length > 0" class="mt-6">
-                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Not Qualified Programs</h4>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div v-for="prog in selectedUser.unqualified_programs" :key="prog.id" class="p-4 bg-white dark:bg-gray-800 rounded-xl border border-red-200 dark:border-red-800/60 opacity-90">
-                                                <!-- Header -->
-                                                <div class="flex items-start justify-between mb-3">
-                                                    <div class="flex-1 min-w-0">
-                                                        <div class="flex items-center gap-2 mb-0.5">
-                                                            <span class="text-sm font-bold text-gray-700 dark:text-gray-200">{{ prog.code }}</span>
-                                                            <span class="px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">Not Qualified</span>
-                                                        </div>
-                                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ prog.name }}</p>
-                                                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                                            <span class="font-semibold">Strands:</span> {{ prog.strand_names || 'Open to All' }}
-                                                        </p>
-                                                        <div class="mt-1.5">
-                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-lg bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
-                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                                <span v-if="!prog.meets_strand && !prog.meets_grades">Strand mismatch &amp; grades too low</span>
-                                                                <span v-else-if="!prog.meets_strand">Strand mismatch</span>
-                                                                <span v-else-if="!prog.meets_grades">Did not meet grade requirements</span>
-                                                                <span v-else>Not qualified</span>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 ml-2">
-                                                        <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                                    </div>
-                                                </div>
-                                                <!-- Grade Comparison -->
-                                                <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">Requirements vs Grades</p>
-                                                <div class="grid grid-cols-3 gap-1.5">
-                                                    <div class="text-center p-2 rounded-lg border" :class="prog.your_grades.math >= prog.requirements.math ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20'">
-                                                        <p class="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Math</p>
-                                                        <p class="text-sm font-bold" :class="prog.your_grades.math >= prog.requirements.math ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ prog.your_grades.math }}</p>
-                                                        <p class="text-[9px] text-gray-400">≥ {{ prog.requirements.math }}</p>
-                                                    </div>
-                                                    <div class="text-center p-2 rounded-lg border" :class="prog.your_grades.science >= prog.requirements.science ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20'">
-                                                        <p class="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Science</p>
-                                                        <p class="text-sm font-bold" :class="prog.your_grades.science >= prog.requirements.science ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ prog.your_grades.science }}</p>
-                                                        <p class="text-[9px] text-gray-400">≥ {{ prog.requirements.science }}</p>
-                                                    </div>
-                                                    <div class="text-center p-2 rounded-lg border" :class="prog.your_grades.english >= prog.requirements.english ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20'">
-                                                        <p class="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">English</p>
-                                                        <p class="text-sm font-bold" :class="prog.your_grades.english >= prog.requirements.english ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ prog.your_grades.english }}</p>
-                                                        <p class="text-[9px] text-gray-400">≥ {{ prog.requirements.english }}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     <!-- Subject Grades -->
                                     <div v-if="hasIndividualSubjects">
                                         <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Subject Grades</h4>
@@ -464,6 +401,105 @@
                                             <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
                                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">English</p>
                                                 <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.english ?? '—' }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Qualified Programs -->
+                                    <div v-if="selectedUser.qualified_programs && selectedUser.qualified_programs.length > 0" class="mt-6">
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Qualified Programs</h4>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div v-for="prog in selectedUser.qualified_programs" :key="prog.id" class="p-4 bg-white dark:bg-gray-800 rounded-xl border border-green-200 dark:border-green-800/60">
+                                                <div class="flex items-start justify-between mb-3">
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="flex items-center gap-2 mb-0.5">
+                                                            <span class="text-sm font-bold text-gray-700 dark:text-gray-200">{{ prog.code }}</span>
+                                                            <span class="px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">Qualified</span>
+                                                        </div>
+                                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ prog.name }}</p>
+                                                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                                            <span class="font-semibold">Strands:</span> {{ prog.strand_names || 'Open to All' }}
+                                                        </p>
+                                                        <div class="mt-1.5">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-lg bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">
+                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                                Meets all requirements
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 ml-2">
+                                                        <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                                    </div>
+                                                </div>
+                                                <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">Requirements vs Grades</p>
+                                                <div class="grid grid-cols-3 gap-1.5">
+                                                    <div class="text-center p-2 rounded-lg border bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20">
+                                                        <p class="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Math</p>
+                                                        <p class="text-sm font-bold text-green-600 dark:text-green-400">{{ prog.your_grades.math }}</p>
+                                                        <p class="text-[9px] text-gray-400">≥ {{ prog.requirements.math }}</p>
+                                                    </div>
+                                                    <div class="text-center p-2 rounded-lg border bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20">
+                                                        <p class="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Science</p>
+                                                        <p class="text-sm font-bold text-green-600 dark:text-green-400">{{ prog.your_grades.science }}</p>
+                                                        <p class="text-[9px] text-gray-400">≥ {{ prog.requirements.science }}</p>
+                                                    </div>
+                                                    <div class="text-center p-2 rounded-lg border bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20">
+                                                        <p class="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">English</p>
+                                                        <p class="text-sm font-bold text-green-600 dark:text-green-400">{{ prog.your_grades.english }}</p>
+                                                        <p class="text-[9px] text-gray-400">≥ {{ prog.requirements.english }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Unqualified Programs -->
+                                    <div v-if="selectedUser.unqualified_programs && selectedUser.unqualified_programs.length > 0" class="mt-6">
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Not Qualified Programs</h4>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div v-for="prog in selectedUser.unqualified_programs" :key="prog.id" class="p-4 bg-white dark:bg-gray-800 rounded-xl border border-red-200 dark:border-red-800/60 opacity-90">
+                                                <div class="flex items-start justify-between mb-3">
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="flex items-center gap-2 mb-0.5">
+                                                            <span class="text-sm font-bold text-gray-700 dark:text-gray-200">{{ prog.code }}</span>
+                                                            <span class="px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">Not Qualified</span>
+                                                        </div>
+                                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ prog.name }}</p>
+                                                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                                            <span class="font-semibold">Strands:</span> {{ prog.strand_names || 'Open to All' }}
+                                                        </p>
+                                                        <div class="mt-1.5">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-lg bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
+                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                                <span v-if="!prog.meets_strand && !prog.meets_grades">Strand mismatch &amp; grades too low</span>
+                                                                <span v-else-if="!prog.meets_strand">Strand mismatch</span>
+                                                                <span v-else-if="!prog.meets_grades">Did not meet grade requirements</span>
+                                                                <span v-else>Not qualified</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 ml-2">
+                                                        <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                    </div>
+                                                </div>
+                                                <p class="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1.5">Requirements vs Grades</p>
+                                                <div class="grid grid-cols-3 gap-1.5">
+                                                    <div class="text-center p-2 rounded-lg border" :class="prog.your_grades.math >= prog.requirements.math ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20'">
+                                                        <p class="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Math</p>
+                                                        <p class="text-sm font-bold" :class="prog.your_grades.math >= prog.requirements.math ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ prog.your_grades.math }}</p>
+                                                        <p class="text-[9px] text-gray-400">≥ {{ prog.requirements.math }}</p>
+                                                    </div>
+                                                    <div class="text-center p-2 rounded-lg border" :class="prog.your_grades.science >= prog.requirements.science ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20'">
+                                                        <p class="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Science</p>
+                                                        <p class="text-sm font-bold" :class="prog.your_grades.science >= prog.requirements.science ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ prog.your_grades.science }}</p>
+                                                        <p class="text-[9px] text-gray-400">≥ {{ prog.requirements.science }}</p>
+                                                    </div>
+                                                    <div class="text-center p-2 rounded-lg border" :class="prog.your_grades.english >= prog.requirements.english ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/20' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20'">
+                                                        <p class="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">English</p>
+                                                        <p class="text-sm font-bold" :class="prog.your_grades.english >= prog.requirements.english ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">{{ prog.your_grades.english }}</p>
+                                                        <p class="text-[9px] text-gray-400">≥ {{ prog.requirements.english }}</p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
