@@ -1,7 +1,6 @@
 <script setup>
-import { Head, useForm, Link } from '@inertiajs/vue3'
-import { computed } from 'vue'
-import { usePage } from '@inertiajs/vue3'
+import { Head, useForm, Link, usePage } from '@inertiajs/vue3'
+import { computed, watch, ref, onMounted, onUnmounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faKey, faCheckCircle, faArrowRight } from '@fortawesome/free-solid-svg-icons'
@@ -25,88 +24,180 @@ const form = useForm({
 const submit = () => {
     form.post(route('emergency.verify'))
 }
+
+watch(() => form.otp, (newVal) => {
+    if (newVal && newVal.length === 6 && !form.processing) {
+        submit()
+    }
+})
+
+const resendForm = useForm({
+    email: props.email
+})
+
+const cooldown = ref(180) // 3 minutes
+let timerInterval = null
+
+const startTimer = () => {
+    cooldown.value = 180
+    if (timerInterval) clearInterval(timerInterval)
+    timerInterval = setInterval(() => {
+        if (cooldown.value > 0) {
+            cooldown.value--
+        } else {
+            clearInterval(timerInterval)
+        }
+    }, 1000)
+}
+
+onMounted(() => {
+    startTimer()
+})
+
+onUnmounted(() => {
+    if (timerInterval) clearInterval(timerInterval)
+})
+
+const formattedCooldown = computed(() => {
+    const minutes = Math.floor(cooldown.value / 60)
+    const seconds = cooldown.value % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+})
+
+const resendOtp = () => {
+    resendForm.post('/emergency-login', {
+        preserveScroll: true,
+        onSuccess: () => {
+            form.reset('otp')
+            startTimer()
+        }
+    })
+}
 </script>
 
 <template>
     <Head title="Verify OTP - PUPT Admission Portal" />
 
-    <div class="min-h-screen bg-[#FDFCF8] font-sans text-[#2C2C24] relative overflow-hidden flex flex-col items-center justify-center p-4">
-        <!-- Global Grain Texture -->
-        <div class="pointer-events-none fixed inset-0 z-[100] opacity-[0.035] mix-blend-multiply"
-            style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E'); background-size: 200px 200px;"></div>
+    <!-- Full-page centered layout matching CheckStatus.vue -->
+    <div class="relative min-h-screen bg-cover bg-center bg-[url('/assets/images/2.jpg')] font-sans">
+        <!-- Frosted overlay consistent with the rest of the app -->
+        <div class="absolute inset-0 bg-white/40 backdrop-blur-[10px] saturate-[168%]"></div>
 
-        <!-- Ambient Blobs -->
-        <div class="absolute top-0 right-0 w-[500px] h-[500px] opacity-15 pointer-events-none"
-            style="background: radial-gradient(circle, #9E122C 0%, transparent 70%); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; filter: blur(60px); transform: translate(30%, -30%);"></div>
-        <div class="absolute bottom-0 left-0 w-[400px] h-[400px] opacity-10 pointer-events-none"
-            style="background: radial-gradient(circle, #C18C5D 0%, transparent 70%); border-radius: 40% 60% 70% 30% / 40% 70% 30% 60%; filter: blur(50px); transform: translate(-30%, 30%);"></div>
+        <div class="relative z-10 min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div class="w-full max-w-md animate-fade-in-up">
 
-        <!-- Logo Section Outside -->
-        <div class="relative z-10 flex flex-col items-center mb-8">
-            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-[0_8px_30px_-4px_rgba(158,18,44,0.2)] mb-4 border border-[#DED8CF]/50">
-                <img src="/assets/images/pup_logo.png" alt="PUP Logo" class="h-14 w-14 object-contain" />
-            </div>
-            <h1 class="text-3xl font-bold text-[#2C2C24] tracking-tight text-center leading-tight">
-                Secure <span class="text-[#9E122C]">Verification</span>
-            </h1>
-        </div>
+                <!-- Card -->
+                <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden border border-white/50">
 
-        <!-- Main Card -->
-        <div class="relative z-10 w-full max-w-md bg-[#FEFEFA] rounded-[2.5rem] rounded-tl-[1rem] shadow-[0_20px_60px_-15px_rgba(93,112,82,0.15)] border border-[#DED8CF]/60 overflow-hidden">
-            <!-- Content -->
-            <div class="p-8 sm:p-10 space-y-7">
-                <div class="text-center">
-                    <p class="text-[15px] text-[#78786C] leading-relaxed">
-                        We've sent a 6-digit magic code to <br/>
-                        <span class="font-bold text-[#4A4A40]">{{ email }}</span>
-                    </p>
-                </div>
-                
-                <div v-if="flash.success" class="p-4 bg-green-50/80 border border-green-200/60 rounded-[1.25rem] text-sm text-green-800 font-medium text-center flex items-center justify-center gap-2">
-                    <FontAwesomeIcon icon="check-circle" />
-                    {{ flash.success }}
-                </div>
+                    <!-- Brand accent bar -->
+                    <div class="h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000]"></div>
 
-                <div v-if="form.errors.otp || form.errors.email" class="p-4 bg-red-50/80 border border-red-200/60 rounded-[1.25rem] text-sm text-[#9E122C] font-medium text-center">
-                    {{ form.errors.otp || form.errors.email }}
-                </div>
-
-                <form @submit.prevent="submit" class="space-y-6">
-                    <div>
-                        <label for="otp" class="block text-sm font-bold text-[#4A4A40] mb-2 pl-1 text-center">Enter 6-Digit Code</label>
-                        <input
-                            id="otp"
-                            v-model="form.otp"
-                            type="text"
-                            required
-                            maxlength="6"
-                            class="w-full text-center text-3xl tracking-[0.5em] font-mono px-4 py-4 rounded-[1.25rem] border border-[#DED8CF] bg-white focus:ring-4 focus:ring-[#9E122C]/10 focus:border-[#9E122C] outline-none transition-all text-[#2C2C24] shadow-sm font-bold placeholder-gray-300"
-                            placeholder="000000"
-                            autocomplete="one-time-code"
-                        />
+                    <!-- Header -->
+                    <div class="px-6 sm:px-8 pt-8 pb-6 text-center">
+                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-100">
+                            <img src="/assets/images/pup_logo.png" alt="PUP Logo" class="h-10 w-10 object-contain" />
+                        </div>
+                        <h1 class="text-2xl font-bold text-gray-900">Secure Verification</h1>
+                        <p class="text-sm text-gray-600 mt-2">
+                            We've sent a 6-digit authentication code to <br/>
+                            <span class="font-bold text-gray-900">{{ email }}</span>
+                        </p>
                     </div>
 
-                    <button
-                        type="submit"
-                        :disabled="form.processing || form.otp.length !== 6"
-                        class="w-full inline-flex justify-center items-center gap-2.5 px-6 py-4 border border-transparent text-base font-bold rounded-[1.25rem] text-white bg-[#9E122C] shadow-[0_8px_25px_-5px_rgba(158,18,44,0.35)] hover:shadow-[0_12px_35px_-5px_rgba(158,18,44,0.45)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
-                    >
-                        {{ form.processing ? 'Verifying Identity...' : 'Verify & Sign In' }}
-                    </button>
-                </form>
+                    <div class="px-6 sm:px-8 pb-8">
+                        <div v-if="flash.success" class="mb-5 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm text-center font-medium flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            {{ flash.success }}
+                        </div>
 
-                <div class="text-center pt-4 border-t border-[#DED8CF]/40 space-y-3">
-                    <p class="text-sm text-[#78786C]">
-                        Didn't receive the code? 
-                        <Link :href="route('emergency.login')" class="font-bold text-[#9E122C] hover:text-[#800000] hover:underline transition-colors">
-                            Try again
-                        </Link>
-                    </p>
-                    <Link href="/" class="block text-sm font-semibold text-[#78786C] hover:text-[#4A4A40] transition-colors">
-                        Cancel & Return
-                    </Link>
+                        <div v-if="form.errors.otp || form.errors.email" class="mb-5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm text-center font-medium">
+                            {{ form.errors.otp || form.errors.email }}
+                        </div>
+
+                        <form @submit.prevent="submit" class="space-y-5" novalidate>
+                            <div>
+                                <label for="otp" class="block text-sm font-medium text-gray-700 mb-1 text-center">
+                                    Enter 6-Digit Code
+                                </label>
+                                <input
+                                    id="otp"
+                                    v-model="form.otp"
+                                    type="text"
+                                    required
+                                    maxlength="6"
+                                    placeholder="000000"
+                                    autocomplete="one-time-code"
+                                    :disabled="form.processing"
+                                    :class="[
+                                        'block w-full rounded-lg border px-3 py-3 text-3xl tracking-[0.5em] font-mono text-center shadow-sm transition-colors',
+                                        'focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]',
+                                        'disabled:bg-gray-100 disabled:cursor-not-allowed',
+                                        form.errors.otp ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white/80'
+                                    ]"
+                                />
+                            </div>
+
+                            <!-- Auto-verifying state indicator instead of button -->
+                            <div class="h-10 flex items-center justify-center">
+                                <span v-if="form.processing" class="flex items-center gap-2 text-sm font-semibold text-[#800000]">
+                                    <svg class="animate-spin w-4 h-4 text-[#800000]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Verifying Authentication Code...
+                                </span>
+                                <span v-else class="text-sm text-gray-400">
+                                    Enter the 6-digit code to auto-verify
+                                </span>
+                            </div>
+                        </form>
+
+                        <div class="text-center mt-2 pt-5 border-t border-gray-200/50 space-y-3">
+                            <div v-if="resendForm.errors.email" class="mb-2 p-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs text-center font-medium">
+                                {{ resendForm.errors.email }}
+                            </div>
+                            
+                            <p class="text-sm text-gray-600 flex flex-col items-center gap-2">
+                                Didn't receive the code? 
+                                <button 
+                                    @click="resendOtp" 
+                                    :disabled="resendForm.processing || cooldown > 0"
+                                    class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-[#800000] bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg v-if="resendForm.processing" class="animate-spin w-4 h-4 text-[#800000]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span v-if="cooldown > 0">Resend in {{ formattedCooldown }}</span>
+                                    <span v-else>{{ resendForm.processing ? 'Resending...' : 'Resend OTP' }}</span>
+                                </button>
+                            </p>
+                            <Link href="/" class="inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-[#800000] transition-colors">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Cancel & Return
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+</style>
