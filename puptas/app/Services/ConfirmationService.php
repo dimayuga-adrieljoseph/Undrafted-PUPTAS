@@ -103,7 +103,6 @@ class ConfirmationService
             'program_name'        => $firstName,
             'second_choice_name'  => $secondName,
             'third_choice_name'   => $thirdName,
-            // 'requires_promissory_note' => (bool) ($application?->requires_promissory_note ?? false),
             'requires_guidance_office' => (bool) ($application?->requires_guidance_office ?? false),
             'requires_admission_office' => (bool) ($application?->requires_admission_office ?? false),
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
