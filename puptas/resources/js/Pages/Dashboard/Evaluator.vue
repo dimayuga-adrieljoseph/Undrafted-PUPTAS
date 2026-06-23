@@ -292,9 +292,13 @@ const reviewStartTime = computed(() => {
 
 const isStartingReview = ref(false);
 const isCancellingReview = ref(false);
+const showCancelModal = ref(false);
 
-const cancelReview = async () => {
-    if (!confirm("Are you sure you want to cancel your current review? Your progress will not be saved.")) return;
+const cancelReview = () => {
+    showCancelModal.value = true;
+};
+
+const confirmCancelReview = async () => {
 
     const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
     const processes = selectedUser.value.application.processes;
@@ -317,6 +321,7 @@ const cancelReview = async () => {
             },
         };
         showToast("Review cancelled.", "info");
+        showCancelModal.value = false;
     } catch (error) {
         showToast(error.response?.data?.message || "Failed to cancel review.", "error");
     } finally {
@@ -1229,6 +1234,18 @@ const showToast = (message, type = 'success') => {
             :loading="isSubmitting"
             @confirm="submitReturn"
             @cancel="showReturnModal = false"
+        />
+
+        <ChangesConfirmationModal
+            :show="showCancelModal"
+            :loading="isCancellingReview"
+            title="Cancel Review"
+            subtitle="Are you sure you want to cancel your current review? Your progress will not be saved."
+            confirm-text="Cancel Review"
+            confirm-button-class="bg-red-600 hover:bg-red-700 text-white"
+            :hide-table="true"
+            @cancel="showCancelModal = false"
+            @confirm="confirmCancelReview"
         />
     </EvaluatorLayout>
 </template>
