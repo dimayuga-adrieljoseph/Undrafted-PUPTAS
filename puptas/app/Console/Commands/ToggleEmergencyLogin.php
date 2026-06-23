@@ -35,10 +35,24 @@ class ToggleEmergencyLogin extends Command
 
         if ($action === 'enable') {
             $setting->update(['value' => '1']);
+            app(\App\Services\AuditLogService::class)->logActivity(
+                'UPDATE',
+                'System Settings',
+                'Emergency Access (Email OTP) was ENABLED via console command.',
+                null,
+                \App\Models\AuditLog::CATEGORY_SYSTEM_OPERATION
+            );
             $this->info('CRITICAL: Emergency Access (Email OTP) has been ENABLED.');
             $this->warn('Users will now bypass the IDP and login via Email OTP.');
         } elseif ($action === 'disable') {
             $setting->update(['value' => '0']);
+            app(\App\Services\AuditLogService::class)->logActivity(
+                'UPDATE',
+                'System Settings',
+                'Emergency Access (Email OTP) was DISABLED via console command.',
+                null,
+                \App\Models\AuditLog::CATEGORY_SYSTEM_OPERATION
+            );
             $this->info('Emergency Access (Email OTP) has been DISABLED.');
             $this->line('Users will log in normally via the external Identity Provider.');
         } elseif ($action === 'status' || !$action) {
