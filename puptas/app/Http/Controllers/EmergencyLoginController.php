@@ -86,6 +86,15 @@ class EmergencyLoginController extends Controller
         // Send Email
         Mail::to($user->email)->send(new EmergencyOtpMail($otp));
 
+        // Audit log the OTP request
+        app(\App\Services\AuditLogService::class)->logActivity(
+            'READ',
+            'Authentication',
+            "Emergency OTP requested for {$user->email}",
+            $user,
+            \App\Models\AuditLog::CATEGORY_AUTHENTICATION
+        );
+
         // Store email in session to verify in the next step
         session(['emergency_login_email' => $user->email]);
 
@@ -180,6 +189,9 @@ class EmergencyLoginController extends Controller
         // Login user
         Auth::login($user);
         \Log::info('User logged in via Emergency OTP', ['user_id' => $user->id, 'email' => $user->email]);
+
+        // Audit log the login
+        app(\App\Services\AuditLogService::class)->logLogin($user);
 
         $roleId = (int) $user->role_id;
         $response = redirect('/dashboard');
