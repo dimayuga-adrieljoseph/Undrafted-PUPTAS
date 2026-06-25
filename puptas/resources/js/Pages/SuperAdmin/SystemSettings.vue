@@ -1,6 +1,6 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3'
-import AdminLayout from '@/Layouts/AdminLayout.vue'
+import SuperAdminLayout from '@/Layouts/SuperAdminLayout.vue'
 
 const props = defineProps({
     settings: {
@@ -26,7 +26,7 @@ const submit = () => {
 <template>
     <Head title="System Settings" />
 
-    <AdminLayout title="System Settings">
+    <SuperAdminLayout title="System Settings">
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 System Settings
@@ -82,5 +82,5 @@ const submit = () => {
                 </div>
             </div>
         </div>
-    </AdminLayout>
+    </SuperAdminLayout>
 </template>
