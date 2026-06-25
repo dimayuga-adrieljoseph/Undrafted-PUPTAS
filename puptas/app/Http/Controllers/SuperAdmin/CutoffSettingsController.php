@@ -11,6 +11,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\SystemSetting;
+use Illuminate\Support\Facades\Cache;
 
 class CutoffSettingsController extends Controller
 {
@@ -24,9 +26,17 @@ class CutoffSettingsController extends Controller
      */
     public function index(): Response
     {
+        $qualifiedEnabled = SystemSetting::where('key', 'enable_qualified_programs_view')->value('value');
+        if ($qualifiedEnabled === null) {
+            $qualifiedEnabled = '1';
+        }
+
         return Inertia::render('SuperAdmin/CutoffSettings', [
             'cutoff_display' => $this->cutoffService->formatForDisplay(),
             'cutoff_raw'     => $this->cutoffService->getCutoff()?->toIso8601String(),
+            'settings' => [
+                'enable_qualified_programs_view' => $qualifiedEnabled !== '0',
+            ]
         ]);
     }
 
@@ -84,5 +94,36 @@ class CutoffSettingsController extends Controller
         }
 
         return redirect()->back()->with('success', 'Cutoff cleared successfully.');
+    }
+
+    /**
+     * Update global system settings (like Qualified Programs View).
+     */
+    public function updateSystemSettings(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'enable_qualified_programs_view' => 'required|boolean',
+        ]);
+
+        SystemSetting::updateOrCreate(
+            ['key' => 'enable_qualified_programs_view'],
+            ['value' => $request->enable_qualified_programs_view ? '1' : '0']
+        );
+
+        Cache::forget('setting_qualified_programs_view');
+
+        try {
+            $this->auditLogService->logActivity(
+                actionType: AuditLog::ACTION_UPDATE,
+                moduleName: 'System Settings',
+                description: 'Super Admin updated Qualified Programs View to ' . ($request->enable_qualified_programs_view ? 'Enabled' : 'Disabled'),
+                actor: auth()->user(),
+                logCategory: AuditLog::CATEGORY_SYSTEM_OPERATION
+            );
+        } catch (\Throwable $e) {
+            \Log::error('System Settings audit log write failed', ['error' => $e->getMessage()]);
+        }
+
+        return redirect()->back()->with('success', 'System settings updated successfully.');
     }
 }

@@ -26,6 +26,10 @@ const props = defineProps({
         type: String,
         default: null,
     },
+    settings: {
+        type: Object,
+        default: () => ({ enable_qualified_programs_view: true })
+    }
 })
 
 const page = usePage()
@@ -49,6 +53,17 @@ const clearForm = useForm({})
 const clearCutoff = () => {
     if (!confirm('Are you sure you want to clear the submission cutoff? Applicants will be able to submit without a deadline.')) return
     clearForm.delete(route('cutoff-settings.destroy'), {
+        preserveScroll: true,
+    })
+}
+
+// System Settings form
+const systemForm = useForm({
+    enable_qualified_programs_view: props.settings?.enable_qualified_programs_view ?? true,
+})
+
+const saveSystemSettings = () => {
+    systemForm.post(route('cutoff-settings.system-update'), {
         preserveScroll: true,
     })
 }
@@ -164,6 +179,41 @@ const clearCutoff = () => {
                     <FontAwesomeIcon icon="trash" class="w-4 h-4" />
                     {{ clearForm.processing ? 'Clearing...' : 'Clear Cutoff' }}
                 </button>
+                </button>
+            </div>
+
+            <!-- Other System Settings -->
+            <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Other Settings</h2>
+                <form @submit.prevent="saveSystemSettings" class="space-y-6">
+                    <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-100 dark:border-gray-700">
+                        <div class="mr-4">
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Enable Qualified Programs View for Applicants</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                When enabled, applicants can track their qualified programs and the available slots on their dashboard.
+                            </p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                            <input
+                                type="checkbox"
+                                v-model="systemForm.enable_qualified_programs_view"
+                                class="sr-only peer"
+                            >
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#9E122C]/20 dark:peer-focus:ring-[#9E122C]/30 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#9E122C]"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button
+                            type="submit"
+                            :disabled="systemForm.processing"
+                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-[#9E122C] hover:bg-[#800000] disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-medium text-sm transition shadow-sm"
+                        >
+                            <FontAwesomeIcon icon="save" class="w-4 h-4" />
+                            {{ systemForm.processing ? 'Saving...' : 'Save Settings' }}
+                        </button>
+                    </div>
+                </form>
             </div>
 
         </div>
