@@ -65,10 +65,6 @@ class ApplicantDashboardController extends Controller
             return SystemSetting::where('key', 'enable_qualified_programs_view')->value('value') !== '0';
         });
 
-        if (!$isEnabled) {
-            abort(403, 'The Qualified Programs page is currently disabled by the administration.');
-        }
-
         $application = $user->currentApplication;
         $hasSubmittedApplication = $application && $application->status !== 'draft';
 
