@@ -27,6 +27,7 @@ class ControlListController extends Controller
             
             $applicants = Application::with(['user.grades', 'processes'])
                 ->where('program_id', $programId)
+                ->has('user')
                 ->whereHas('processes', function ($q) {
                     $q->where('stage', 'interviewer')
                       ->where('status', 'completed')
@@ -70,6 +71,7 @@ class ControlListController extends Controller
         // "Accepted" = passed the interview (Step 3 completed)
         $entries = Application::with(['user.grades', 'processes'])
             ->where('program_id', $program->id)
+            ->has('user')
             ->whereHas('processes', function ($q) {
                 // Adjust this depending on the exact stage name for Step 3 in DB
                 // From LogbookController, step 3 is 'interviewer'
