@@ -179,7 +179,6 @@ const saveSystemSettings = () => {
                     <FontAwesomeIcon icon="trash" class="w-4 h-4" />
                     {{ clearForm.processing ? 'Clearing...' : 'Clear Cutoff' }}
                 </button>
-                </button>
             </div>
 
             <!-- Other System Settings -->
