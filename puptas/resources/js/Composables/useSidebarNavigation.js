@@ -23,6 +23,7 @@ export function useSidebarNavigation() {
     const page = usePage()
     const user = computed(() => page.props.auth?.user ?? null)
     const showQualifiedProgramsNav = computed(() => page.props.showQualifiedProgramsNav ?? false)
+    const isQualifiedProgramsViewEnabled = computed(() => page.props.system_settings?.qualified_programs_enabled !== false)
 
     // ─── Role helpers ────────────────────────────────────────────────────────
     const isSuperAdmin = computed(() => user.value?.role_id === 7)
@@ -146,6 +147,13 @@ export function useSidebarNavigation() {
                 activeRoutes: ['audit-logs.index', 'api-clients.index', 'cutoff-settings.index'],
                 children: computed(() => [
                     {
+                        key: 'general-settings',
+                        label: 'General Settings',
+                        icon: 'sliders-h',
+                        route: 'system-settings.index',
+                        activeRoutes: ['system-settings.index'],
+                    },
+                    {
                         key: 'audit-logs',
                         label: 'Audit Logs',
                         icon: 'history',
@@ -205,8 +213,8 @@ export function useSidebarNavigation() {
             route: 'applicant.dashboard',
             activeRoutes: ['applicant.dashboard'],
         },
-        // Conditionally shown based on server-side prop
-        ...(showQualifiedProgramsNav.value ? [{
+        // Conditionally shown based on server-side prop and system settings
+        ...(showQualifiedProgramsNav.value && isQualifiedProgramsViewEnabled.value ? [{
             key: 'qualified-programs',
             label: 'Qualified Programs',
             icon: 'graduation-cap',
