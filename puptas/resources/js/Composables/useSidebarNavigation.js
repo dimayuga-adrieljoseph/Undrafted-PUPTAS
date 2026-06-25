@@ -206,8 +206,8 @@ export function useSidebarNavigation() {
             route: 'applicant.dashboard',
             activeRoutes: ['applicant.dashboard'],
         },
-        // Conditionally shown based on server-side prop and system settings
-        ...(showQualifiedProgramsNav.value && isQualifiedProgramsViewEnabled.value ? [{
+        // Conditionally shown based on server-side prop
+        ...(showQualifiedProgramsNav.value ? [{
             key: 'qualified-programs',
             label: 'Qualified Programs',
             icon: 'graduation-cap',
