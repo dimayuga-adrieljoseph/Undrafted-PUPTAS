@@ -56,16 +56,16 @@ class AdmissionLogbookController extends Controller
 
         return [
             'requested_at'      => $e->started_at
-                ? $e->started_at->format('m/d/Y h:i A')
-                : ($e->created_at ? $e->created_at->format('m/d/Y h:i A') : ''),
+                ? $e->started_at->timezone('Asia/Manila')->format('m/d/Y h:i A')
+                : ($e->created_at ? $e->created_at->timezone('Asia/Manila')->format('m/d/Y h:i A') : ''),
             'client_name'       => $fullName,
             'program'           => $programCode,
             'sex'               => $profile ? ($profile->sex ?? '') : '',
             'email'             => $profile ? ($profile->email ?? '') : '',
             'concern'           => $this->getConcernText($step),
-            'processed_at'      => $e->updated_at ? $e->updated_at->format('m/d/Y h:i A') : '',
+            'processed_at'      => $e->updated_at ? $e->updated_at->timezone('Asia/Manila')->format('m/d/Y h:i A') : '',
             'minutes_processed' => $minutes,
-            'claimed_at'        => today()->format('m/d/Y'), // Always show current date for date claimed/signature
+            'claimed_at'        => today()->timezone('Asia/Manila')->format('m/d/Y'), // Always show current date for date claimed/signature
         ];
     }
 

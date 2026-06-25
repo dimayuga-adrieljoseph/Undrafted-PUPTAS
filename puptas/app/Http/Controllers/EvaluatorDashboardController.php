@@ -337,8 +337,8 @@ class EvaluatorDashboardController extends Controller
             return response()->json(['message' => 'Cannot cancel a review that is already completed.'], 400);
         }
 
-        if ($applicationProcess->reviewed_by !== null && $applicationProcess->reviewed_by != auth()->id()) {
-            return response()->json(['message' => 'You cannot cancel a review started by someone else.'], 403);
+        if ($applicationProcess->reviewed_by === null) {
+            return response()->json(['message' => 'Review has not been started yet.'], 400);
         }
 
         $applicationProcess->update([

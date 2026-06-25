@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Program;
 use App\Models\Grade;
 use App\Models\Application;
+use App\Models\SystemSetting;
 
 class ApplicantDashboardController extends Controller
 {
@@ -57,6 +59,14 @@ class ApplicantDashboardController extends Controller
 
         if ($user->role_id !== 1) {
             return redirect()->back()->with('error', 'Unauthorized access.');
+        }
+
+        $isEnabled = Cache::remember('setting_qualified_programs_view', 300, function () {
+            return SystemSetting::where('key', 'enable_qualified_programs_view')->value('value') !== '0';
+        });
+
+        if (!$isEnabled) {
+            abort(403, 'The Qualified Programs page is currently disabled by the administration.');
         }
 
         $application = $user->currentApplication;
@@ -110,6 +120,14 @@ class ApplicantDashboardController extends Controller
 
         if ($user->role_id !== 1) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $isEnabled = Cache::remember('setting_qualified_programs_view', 300, function () {
+            return SystemSetting::where('key', 'enable_qualified_programs_view')->value('value') !== '0';
+        });
+
+        if (!$isEnabled) {
+            return response()->json(['message' => 'Feature disabled.'], 403);
         }
 
         $grades = Grade::where('user_id', (string) $user->id)->first();
