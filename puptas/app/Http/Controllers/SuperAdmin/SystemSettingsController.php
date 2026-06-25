@@ -7,9 +7,17 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\SystemSetting;
 use Illuminate\Support\Facades\Cache;
+use App\Services\AuditLogService;
+use App\Models\AuditLog;
 
 class SystemSettingsController extends Controller
 {
+    private AuditLogService $auditLogService;
+
+    public function __construct(AuditLogService $auditLogService)
+    {
+        $this->auditLogService = $auditLogService;
+    }
     public function index()
     {
         // By default, treat it as enabled if not set
@@ -37,6 +45,14 @@ class SystemSettingsController extends Controller
         );
 
         Cache::forget('setting_qualified_programs_view');
+
+        $this->auditLogService->logActivity(
+            AuditLog::ACTION_UPDATE,
+            'System Settings',
+            "Updated Qualified Programs View to " . ($request->enable_qualified_programs_view ? 'Enabled' : 'Disabled'),
+            auth()->user(),
+            AuditLog::CATEGORY_SYSTEM_OPERATION
+        );
 
         return redirect()->back()->with('success', 'System settings updated successfully.');
     }
