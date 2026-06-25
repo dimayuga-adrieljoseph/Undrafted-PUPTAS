@@ -147,13 +147,6 @@ export function useSidebarNavigation() {
                 activeRoutes: ['audit-logs.index', 'api-clients.index', 'cutoff-settings.index'],
                 children: computed(() => [
                     {
-                        key: 'general-settings',
-                        label: 'General Settings',
-                        icon: 'sliders-h',
-                        route: 'system-settings.index',
-                        activeRoutes: ['system-settings.index'],
-                    },
-                    {
                         key: 'audit-logs',
                         label: 'Audit Logs',
                         icon: 'history',
