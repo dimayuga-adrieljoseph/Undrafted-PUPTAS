@@ -606,7 +606,10 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'index'])->name('cutoff-settings.index');
     Route::post('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'store'])->name('cutoff-settings.store');
     Route::delete('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'destroy'])->name('cutoff-settings.destroy');
+    Route::post('/admin/cutoff-settings/system', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'updateSystemSettings'])->name('cutoff-settings.system-update');
 
+    // Global System Settings (Deprecated in favor of CutoffSettings)
+    // Removed SystemSettingsController routes
 
 });
 
