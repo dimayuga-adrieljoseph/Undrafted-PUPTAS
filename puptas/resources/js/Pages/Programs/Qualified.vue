@@ -1,7 +1,11 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage, router } from "@inertiajs/vue3";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
+
+const page = usePage();
+const isEnabled = computed(() => page.props.system_settings?.qualified_programs_enabled !== false);
+const showDisabledPopup = ref(false);
 
 const axios = window.axios;
 
@@ -44,9 +48,18 @@ const hasData = computed(() => qualifiedPrograms.value.length > 0 || disqualifie
 const isEmpty = computed(() => !loading.value && !error.value && qualifiedPrograms.value.length === 0 && disqualifiedPrograms.value.length === 0);
 
 onMounted(() => {
+  if (!isEnabled.value) {
+    showDisabledPopup.value = true;
+    return;
+  }
   fetchPrograms();
   pollInterval = setInterval(() => fetchPrograms(true), 30000);
 });
+
+const closePopupAndRedirect = () => {
+    showDisabledPopup.value = false;
+    router.visit(route('applicant.dashboard'));
+};
 
 onUnmounted(() => {
   if (pollInterval) clearInterval(pollInterval);
@@ -61,6 +74,27 @@ onUnmounted(() => {
         Program Eligibility
       </h2>
     </template>
+
+    <!-- Disabled Feature Popup Modal -->
+    <div v-if="showDisabledPopup" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6 text-center transform transition-all">
+        <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Currently Closed</h3>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">
+          The Qualified Programs view is currently closed. You will be able to view and track available programs once the admission tagging process is complete.
+        </p>
+        <button
+          @click="closePopupAndRedirect"
+          class="w-full py-3 px-4 bg-gray-900 hover:bg-gray-800 dark:bg-[#9E122C] dark:hover:bg-[#800000] text-white rounded-xl font-semibold transition duration-200"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    </div>
 
     <div class="py-8">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
