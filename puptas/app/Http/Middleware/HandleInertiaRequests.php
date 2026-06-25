@@ -5,6 +5,8 @@ namespace App\Http\Middleware;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use App\Models\SystemSetting;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -72,6 +74,11 @@ class HandleInertiaRequests extends Middleware
                 'required' => $request->user() ? !$request->user()->privacy_consent : false,
             ],
             'appEnv' => config('app.env'),
+            'system_settings' => [
+                'qualified_programs_enabled' => Cache::remember('setting_qualified_programs_view', 300, function () {
+                    return SystemSetting::where('key', 'enable_qualified_programs_view')->value('value') !== '0';
+                }),
+            ],
         ]);
     }
 }
