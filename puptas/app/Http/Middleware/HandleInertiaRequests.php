@@ -73,6 +73,12 @@ class HandleInertiaRequests extends Middleware
             'privacy_consent' => [
                 'required' => $request->user() ? !$request->user()->privacy_consent : false,
             ],
+            'system_settings' => [
+                'qualified_programs_enabled' => Cache::remember('setting_qualified_programs_view', 300, function () {
+                    $setting = SystemSetting::where('key', 'enable_qualified_programs_view')->first();
+                    return $setting ? $setting->value === '1' : true;
+                }),
+            ],
             'appEnv' => config('app.env'),
             'system_settings' => [
                 'qualified_programs_enabled' => Cache::remember('setting_qualified_programs_view', 300, function () {
