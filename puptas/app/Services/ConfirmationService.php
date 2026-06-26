@@ -114,7 +114,7 @@ class ConfirmationService
                 }
                 return [
                     'is_passed' => $isScoreAllowedOverride ? false : $this->cutoffSettingsService->isCutoffPassed(),
-                    'display'   => $this->cutoffSettingsService->formatForDisplay(),
+                    'display'   => $isScoreAllowedOverride ? null : $this->cutoffSettingsService->formatForDisplay(),
                 ];
             })(),
         ];
