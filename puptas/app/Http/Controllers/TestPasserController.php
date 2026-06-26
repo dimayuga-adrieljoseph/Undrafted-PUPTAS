@@ -55,6 +55,7 @@ class TestPasserController extends Controller
             'strand' => 'nullable|string|max:100',
             'status' => 'nullable|integer|exists:passer_statuses,id',
             'search' => 'nullable|string|max:100',
+            'score' => 'nullable|numeric',
             'sort_key' => 'nullable|string|in:pupcet_total_score,surname,first_name,email,school_year,batch_number',
             'sort_order' => 'nullable|string|in:asc,desc',
             'page' => 'nullable|integer|min:1',
@@ -112,14 +113,18 @@ class TestPasserController extends Controller
             'strand' => $request->input('strand'),
             'status' => $request->input('status') ? (int) $request->input('status') : null,
             'search' => $request->input('search'),
+            'score' => $request->input('score'),
             'sort_key' => $request->input('sort_key', 'pupcet_total_score'),
             'sort_order' => $request->input('sort_order', 'desc'),
         ];
+
+        $programs = \App\Models\Program::orderBy('name', 'asc')->get(['id', 'name']);
 
         return Inertia::render('TestPassers/Email', [
             'passers' => $passers,
             'filterOptions' => $filterOptions,
             'filters' => $filters,
+            'programs' => $programs,
             'registrationUrl' => url('/links/register'),
             'admissionCriteriaUrl' => url('/links/admission-criteria'),
             'facebookUrl' => url('/links/facebook'),
@@ -164,6 +169,10 @@ class TestPasserController extends Controller
                   ->orWhere('first_name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             });
+        }
+
+        if ($request->filled('score')) {
+            $query->where('pupcet_total_score', $request->input('score'));
         }
 
         // Configurable sort (whitelist allowed columns)
@@ -214,6 +223,10 @@ class TestPasserController extends Controller
                   ->orWhere('first_name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             });
+        }
+
+        if ($request->filled('score')) {
+            $query->where('pupcet_total_score', $request->input('score'));
         }
 
         $ids = $query->pluck('test_passer_id')->all();

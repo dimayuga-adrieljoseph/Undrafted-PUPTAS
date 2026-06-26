@@ -167,6 +167,13 @@ export function useSidebarNavigation() {
                         route: 'cutoff-settings.index',
                         activeRoutes: ['cutoff-settings.index'],
                     },
+                    {
+                        key: 'score-overrides',
+                        label: 'Score Overrides',
+                        icon: 'user-check',
+                        route: 'score-overrides.index',
+                        activeRoutes: ['score-overrides.index'],
+                    },
                 ]),
             },
         ] : []),
