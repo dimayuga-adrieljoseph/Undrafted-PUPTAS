@@ -90,7 +90,7 @@ class DashboardService
             $endDateParam = session('dashboard_end_date');
         }
 
-        $cacheKey = 'dashboard_chart_data_' . ($startDateParam ?: 'default') . '_' . ($endDateParam ?: 'default');
+        $cacheKey = 'dashboard_chart_data_v3_' . ($startDateParam ?: 'default') . '_' . ($endDateParam ?: 'default');
         $lockKey = $cacheKey . '_lock';
         
         try {
@@ -182,7 +182,7 @@ class DashboardService
 
             foreach ($dates as $date) {
                 $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
-                $accepted[]  = $applications->where('date', $date)->whereIn('status', ['accepted', 'cleared_for_enrollment'])->sum('count');
+                $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
                 $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
             }
 

@@ -63,6 +63,7 @@ class InterviewerDashboardController extends Controller
             'pendingUsers' => $dashboardData['pendingUsers'],
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
+            'filters' => $dashboardData['chartData']['filters'],
             'assignedPrograms' => $assignedPrograms,
         ]);
     }

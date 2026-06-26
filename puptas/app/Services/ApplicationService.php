@@ -24,7 +24,8 @@ class ApplicationService
     {
         return [
             'total' => Application::count(),
-            'accepted' => ApplicationProcess::where('stage', 'interviewer')
+            'accepted' => DB::table('application_processes')
+                ->where('stage', 'interviewer')
                 ->where('status', 'completed')
                 ->where('action', 'passed')
                 ->distinct('application_id')
