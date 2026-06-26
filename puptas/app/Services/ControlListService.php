@@ -66,15 +66,25 @@ class ControlListService
 
             // Write data rows
             $pdf->SetFont($config['font'], '', $config['font_size']);
-            foreach ($chunk->values() as $index => $entry) {
+            $rowsPerPage = $config['rows_per_page'] ?? 10;
+            $chunkValues = $chunk->values()->all();
+
+            for ($index = 0; $index < $rowsPerPage; $index++) {
                 // If row_start_y or row_height are not set, don't crash
                 if ($config['row_start_y'] === null || $config['row_height'] === null) {
                     continue;
                 }
                 
                 $y = $config['row_start_y'] + ($index * $config['row_height']);
-                $entry['number'] = $globalIndex++;
-                $this->writeRow($pdf, $entry, $y, $config['columns']);
+                
+                if (isset($chunkValues[$index])) {
+                    $entry = $chunkValues[$index];
+                    $entry['number'] = $globalIndex++;
+                    $this->writeRow($pdf, $entry, $y, $config['columns']);
+                } else {
+                    // Empty row: write empty entry to apply mask over pre-printed template numbers
+                    $this->writeRow($pdf, [], $y, $config['columns']);
+                }
             }
 
             // Add system generated footer
@@ -177,7 +187,11 @@ class ControlListService
 
     private function writeRow($pdf, array $entry, float $y, array $columns): void
     {
-        $pdf->SetFont(config('control_list_fields.font'), '', config('control_list_fields.font_size'));
+        $globalFont = config('control_list_fields.font');
+        $globalFontSize = config('control_list_fields.font_size');
+        
+        $pdf->SetFont($globalFont, '', $globalFontSize);
+
         foreach ($columns as $field => $coords) {
             if ($coords['x'] === null || $coords['width'] === null) continue;
             
@@ -185,16 +199,30 @@ class ControlListService
             if (isset($coords['mask'])) {
                 $pdf->SetFillColor(255, 255, 255); // White mask
                 $maskX = $coords['mask']['x'] ?? $coords['x'];
-                $maskY = $coords['mask']['y'] ?? ($y - 0.5); // Slight offset above the text line
+                $maskY = $coords['mask']['y'] ?? ($y + ($coords['mask']['y_offset'] ?? -0.5)); // Slight offset above the text line
                 $maskWidth = $coords['mask']['width'] ?? $coords['width'];
                 $maskHeight = $coords['mask']['height'] ?? 6; // Standard row mask height
                 $pdf->Rect($maskX, $maskY, $maskWidth, $maskHeight, 'F');
+            }
+
+            // Set custom font for this column if specified
+            $colFont = $coords['font'] ?? $globalFont;
+            $colStyle = $coords['font_style'] ?? '';
+            $colFontSize = $coords['font_size'] ?? $globalFontSize;
+            
+            if ($colFont !== $globalFont || $colStyle !== '' || $colFontSize !== $globalFontSize) {
+                $pdf->SetFont($colFont, $colStyle, $colFontSize);
             }
 
             $pdf->SetXY($coords['x'], $y);
             $align = $coords['align'] ?? 'L';
             $height = $coords['height'] ?? 5;
             $pdf->Cell($coords['width'], $height, $entry[$field] ?? '', 0, 0, $align);
+
+            // Reset font if changed
+            if ($colFont !== $globalFont || $colStyle !== '' || $colFontSize !== $globalFontSize) {
+                $pdf->SetFont($globalFont, '', $globalFontSize);
+            }
         }
     }
 }
