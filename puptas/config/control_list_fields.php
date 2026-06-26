@@ -46,6 +46,7 @@ return [
 
     // Column X positions and widths — calibrate all
     'columns' => [
+        'number'      => ['x' => 15,  'width' => 15, 'align' => 'C', 'mask' => ['x' => 14, 'width' => 18, 'height' => 6]],
         'full_name'   => ['x' => 42,  'width' => 80],
         'strand'      => ['x' => 148, 'width' => 20],
         'gwa'         => ['x' => 190, 'width' => 15],

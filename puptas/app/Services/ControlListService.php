@@ -37,14 +37,17 @@ class ControlListService
         $pdf->SetPrintHeader(false);
         $pdf->SetPrintFooter(false);
 
-        // Cap at 50 entries max
-        $entries = $entries->take($config['max_rows']);
+        // Remove limit, or use a very high cap just in case
+        $maxRows = $config['max_rows'] ?? 10000;
+        $entries = $entries->take($maxRows);
         $chunks  = $entries->chunk($config['rows_per_page']);
 
         if ($chunks->isEmpty()) {
             // If empty, generate at least one page so it doesn't crash
             $chunks->push(collect([]));
         }
+
+        $globalIndex = 1;
 
         foreach ($chunks as $chunk) {
             $pdf->AddPage('L', [$size['width'] ?? 355.6, $size['height'] ?? 215.9]);
@@ -70,6 +73,7 @@ class ControlListService
                 }
                 
                 $y = $config['row_start_y'] + ($index * $config['row_height']);
+                $entry['number'] = $globalIndex++;
                 $this->writeRow($pdf, $entry, $y, $config['columns']);
             }
 
@@ -177,6 +181,16 @@ class ControlListService
         foreach ($columns as $field => $coords) {
             if ($coords['x'] === null || $coords['width'] === null) continue;
             
+            // Handle mask to cover existing pre-printed text (like row numbers)
+            if (isset($coords['mask'])) {
+                $pdf->SetFillColor(255, 255, 255); // White mask
+                $maskX = $coords['mask']['x'] ?? $coords['x'];
+                $maskY = $coords['mask']['y'] ?? ($y - 0.5); // Slight offset above the text line
+                $maskWidth = $coords['mask']['width'] ?? $coords['width'];
+                $maskHeight = $coords['mask']['height'] ?? 6; // Standard row mask height
+                $pdf->Rect($maskX, $maskY, $maskWidth, $maskHeight, 'F');
+            }
+
             $pdf->SetXY($coords['x'], $y);
             $align = $coords['align'] ?? 'L';
             $height = $coords['height'] ?? 5;
