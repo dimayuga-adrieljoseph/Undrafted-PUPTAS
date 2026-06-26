@@ -4,7 +4,7 @@ $app = require_once __DIR__.'/bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-$request = Illuminate\Http\Request::create('/register?email=makuippo888@gmail.com', 'GET');
+$request = Illuminate\Http\Request::create('/register?email=makuippo888@gmail.com&local=1', 'GET');
 $request->setLaravelSession(app('session')->driver('array'));
 app()->instance('request', $request);
 
@@ -22,16 +22,10 @@ $service->addAllowedRegistrationScore(85.50);
 );
 
 $middleware = app(\App\Http\Middleware\ShareInertiaData::class);
-$middleware->handle($request, function ($req) {
-    return \Inertia\Inertia::render('Auth/Register');
+$response = $middleware->handle($request, function ($req) {
+    $r = \Inertia\Inertia::render('Auth/Register', ['test_passer_data' => 'mocked']);
+    return $r->toResponse($req);
 });
 
-$shared = \Inertia\Inertia::getShared();
-$cutoffClosure = $shared['cutoff'] ?? null;
-if (is_callable($cutoffClosure)) {
-    $cutoff = $cutoffClosure();
-    echo "Cutoff Output:\n";
-    echo json_encode($cutoff, JSON_PRETTY_PRINT);
-} else {
-    echo "Cutoff is not a closure: " . json_encode($cutoffClosure);
-}
+echo "Inertia Props:\n";
+echo json_encode($response->getOriginalContent(), JSON_PRETTY_PRINT);

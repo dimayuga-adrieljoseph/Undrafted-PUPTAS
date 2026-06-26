@@ -20,6 +20,9 @@ onMounted(() => {
 
     const testPasser = page.props.test_passer_data;
     if (testPasser) {
+        console.log("DEBUG CUTOFF:", page.props.cutoff);
+        console.log("DEBUG HAS SCORE OVERRIDE:", page.props.cutoff?.has_score_override);
+        
         const hasScoreOverride = page.props.cutoff?.has_score_override;
 
         if (!hasScoreOverride && (testPasser.passer_status_id === 3 || testPasser.passer_status_id === 4)) {
