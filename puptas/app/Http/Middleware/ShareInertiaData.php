@@ -76,6 +76,9 @@ class ShareInertiaData
                         $email = $user->email;
                     } elseif ($pendingReg = $request->session()->get('pending_registration')) {
                         $email = $pendingReg['email'] ?? null;
+                    } elseif ($request->has('email')) {
+                        // Fallback for local/staging IDP bypass where pending_registration is set late
+                        $email = $request->query('email');
                     }
 
                     if ($email) {
