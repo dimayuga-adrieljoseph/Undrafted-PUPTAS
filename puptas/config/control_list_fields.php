@@ -41,12 +41,19 @@ return [
     ],
 
     // Data row configuration
-    'row_start_y'  => 79, // Y of first data row — calibrate
+    'row_start_y'  => 78.5, // Y of first data row — calibrate
     'row_height'   => 7.8, // height per row — calibrate
 
     // Column X positions and widths — calibrate all
     'columns' => [
-        'number'      => ['x' => 15,  'width' => 15, 'align' => 'C', 'mask' => ['x' => 14, 'width' => 18, 'height' => 6]],
+        'number'      => [
+            'x' => 21,  
+            'width' => 13, 
+            'align' => 'C', 
+            'font_size' => 14, // Adjust font size here
+            'font_style' => 'B', // 'B' for bold, '' for normal
+            'mask' => ['x' => 20, 'width' => 16, 'height' => 6]
+        ],
         'full_name'   => ['x' => 42,  'width' => 80],
         'strand'      => ['x' => 148, 'width' => 20],
         'gwa'         => ['x' => 190, 'width' => 15],
