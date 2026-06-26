@@ -24,11 +24,7 @@ class ApplicationService
     {
         return [
             'total' => Application::count(),
-            'accepted' => ApplicationProcess::where('stage', 'interviewer')
-                ->where('status', 'completed')
-                ->where('action', 'passed')
-                ->distinct('application_id')
-                ->count('application_id'),
+            'accepted' => Application::whereIn('status', ['accepted', 'cleared_for_enrollment', 'officially_enrolled'])->count(),
             'pending' => Application::where('status', 'submitted')->count(),
             'returned' => Application::where('status', 'returned')->count(),
         ];
