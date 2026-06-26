@@ -90,7 +90,7 @@ class DashboardService
             $endDateParam = session('dashboard_end_date');
         }
 
-        $cacheKey = 'dashboard_chart_data_' . ($startDateParam ?: 'default') . '_' . ($endDateParam ?: 'default');
+        $cacheKey = 'dashboard_chart_data_v2_' . ($startDateParam ?: 'default') . '_' . ($endDateParam ?: 'default');
         $lockKey = $cacheKey . '_lock';
         
         try {
