@@ -230,7 +230,8 @@ class CutoffSettingsService
     {
         $allowed = $this->getAllowedRegistrationScores();
         foreach ($allowed as $item) {
-            if ($item['score'] === $score) {
+            // Use epsilon for safe float comparison
+            if (abs($item['score'] - $score) < 0.001) {
                 // Check expiration
                 if (empty($item['expires_at'])) {
                     return true; // No expiration means always allowed
