@@ -47,7 +47,26 @@ class CreateNewUser implements CreatesNewUsers
         ]);
 
         $cutoffService = app(\App\Services\CutoffSettingsService::class);
-        if ($cutoffService->isCutoffPassed()) {
+        $isScoreAllowedOverride = false;
+        
+        if (!empty($input['reference_number'])) {
+            $inputRefNumber = trim($input['reference_number']);
+            $testPasserCheck = null;
+            
+            if ($pendingReg && !empty($pendingReg['email'])) {
+                $testPasserCheck = TestPasser::where('email', $pendingReg['email'])->first();
+            }
+            
+            if (!$testPasserCheck) {
+                $testPasserCheck = TestPasser::where('reference_number', $inputRefNumber)->first();
+            }
+            
+            if ($testPasserCheck && $cutoffService->isScoreAllowed((float) $testPasserCheck->pupcet_total_score)) {
+                $isScoreAllowedOverride = true;
+            }
+        }
+
+        if (!$isScoreAllowedOverride && $cutoffService->isCutoffPassed()) {
             \Log::warning('Registration blocked: Cutoff has passed.', ['email' => $pendingReg['email'] ?? 'UNKNOWN']);
             abort(403, 'Registration is closed. The deadline for admissions has already passed.');
         }
@@ -66,7 +85,7 @@ class CreateNewUser implements CreatesNewUsers
 
         Validator::make($input, $rules)->validate();
 
-        return DB::transaction(function () use ($input, $pendingReg) {
+        return DB::transaction(function () use ($input, $pendingReg, $isScoreAllowedOverride) {
             try {
             $email = strtolower(trim($pendingReg['email'] ?? ''));
 
@@ -85,16 +104,22 @@ class CreateNewUser implements CreatesNewUsers
             // Validate reference number before writing anything to the database.
             // Only test passers are allowed to register — reject early if not found.
             $inputRefNumber = trim($input['reference_number']);
-            $testPasser = TestPasser::where('reference_number', $inputRefNumber)->first();
+            
+            // Prioritize searching by email, as it is the most reliable identifier and bypasses formatting/spacing issues
+            $testPasser = TestPasser::where('email', $email)->first();
+            
+            if (!$testPasser) {
+                $testPasser = TestPasser::where('reference_number', $inputRefNumber)->first();
+            }
 
             if (!$testPasser) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'reference_number' => 'The reference number you entered is not recognized. Only admitted test passers are allowed to create an account. Please verify your reference number and try again.',
+                    'reference_number' => "DEBUG - NOT RECOGNIZED. Email: [{$email}] InputRef: [{$inputRefNumber}]. Only admitted test passers are allowed to create an account.",
                 ]);
             }
 
             // Block registration for Unqualified and Waitlisted Below Cutoff
-            if (in_array($testPasser->passer_status_id, [3, 4])) {
+            if (!$isScoreAllowedOverride && in_array($testPasser->passer_status_id, [3, 4])) {
                 $statusName = $testPasser->passer_status_id === 3 ? 'Unqualified' : 'Waitlisted Below Cutoff';
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'reference_number' => "Registration is currently closed for {$statusName} applicants. Please wait for further announcements regarding open slots.",

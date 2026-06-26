@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CutoffSettings;
+use App\Models\SystemSetting;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Validator;
@@ -183,5 +184,118 @@ class CutoffSettingsService
     private function hasTimezoneOffset(string $value): bool
     {
         return (bool) preg_match('/[Zz]$|[+-]\d{2}:?\d{0,2}$/', trim($value));
+    }
+
+    // ─── Registration Score Overrides ───────────────────────────────────────────
+
+    /**
+     * Get the list of pupcet_total_scores allowed to register regardless of cutoff.
+     *
+     * @return float[]
+     */
+    public function getAllowedRegistrationScores(): array
+    {
+        $setting = SystemSetting::where('key', 'allowed_registration_scores')->first();
+        if (!$setting || empty($setting->value)) {
+            return [];
+        }
+
+        $decoded = json_decode($setting->value, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        // Migrate flat array [85.5] to [['score' => 85.5, 'expires_at' => null]] on the fly
+        return array_map(function ($item) {
+            if (is_numeric($item)) {
+                return [
+                    'score' => (float) $item,
+                    'expires_at' => null,
+                ];
+            }
+            return [
+                'score' => isset($item['score']) ? (float) $item['score'] : 0.0,
+                'expires_at' => $item['expires_at'] ?? null,
+            ];
+        }, $decoded);
+    }
+
+    /**
+     * Check if a specific pupcet_total_score is allowed to register regardless of cutoff.
+     *
+     * @param float $score
+     * @return bool
+     */
+    public function isScoreAllowed(float $score): bool
+    {
+        $allowed = $this->getAllowedRegistrationScores();
+        foreach ($allowed as $item) {
+            // Use epsilon for safe float comparison
+            if (abs($item['score'] - $score) < 0.001) {
+                // Check expiration
+                if (empty($item['expires_at'])) {
+                    return true; // No expiration means always allowed
+                }
+                
+                // Compare with current Manila time
+                try {
+                    $expiresAt = CarbonImmutable::parse($item['expires_at'], self::TIMEZONE);
+                    if (CarbonImmutable::now(self::TIMEZONE)->lte($expiresAt)) {
+                        return true;
+                    }
+                } catch (\Exception $e) {
+                    // Fallback to true if date is unparseable for some reason
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Add a score to the allowed registration list.
+     *
+     * @param float $score
+     * @return void
+     */
+    public function addAllowedRegistrationScore(float $score, ?string $expiresAt = null): void
+    {
+        $allowed = $this->getAllowedRegistrationScores();
+        
+        // Remove any existing entry for this score to avoid duplicates
+        $filtered = array_filter($allowed, fn($item) => $item['score'] !== $score);
+        
+        // Ensure expiration is parsed into Manila time if provided
+        $expiresAtManila = null;
+        if ($expiresAt) {
+            $expiresAtManila = CarbonImmutable::parse($expiresAt, self::TIMEZONE)->toDateTimeString();
+        }
+
+        $filtered[] = [
+            'score' => $score,
+            'expires_at' => $expiresAtManila,
+        ];
+        
+        SystemSetting::updateOrCreate(
+            ['key' => 'allowed_registration_scores'],
+            ['value' => json_encode(array_values($filtered))]
+        );
+    }
+
+    /**
+     * Remove a score from the allowed registration list.
+     *
+     * @param float $score
+     * @return void
+     */
+    public function removeAllowedRegistrationScore(float $score): void
+    {
+        $allowed = $this->getAllowedRegistrationScores();
+        $filtered = array_filter($allowed, fn($item) => $item['score'] !== $score);
+        
+        SystemSetting::updateOrCreate(
+            ['key' => 'allowed_registration_scores'],
+            ['value' => json_encode(array_values($filtered))]
+        );
     }
 }

@@ -37,18 +37,30 @@
                             </span>
                         </div>
 
-                        <!-- Search -->
-                        <div class="relative mb-3">
-                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                            <input
-                                type="text"
-                                v-model="searchTerm"
-                                @input="onSearchInput"
-                                placeholder="Search by name, surname, or email..."
-                                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                            />
+                        <!-- Search and Score Filter -->
+                        <div class="flex gap-3 mb-3">
+                            <div class="relative flex-1">
+                                <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input
+                                    type="text"
+                                    v-model="searchTerm"
+                                    @input="onSearchInput"
+                                    placeholder="Search by name, surname, or email..."
+                                    class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                />
+                            </div>
+                            <div class="w-1/3 min-w-[150px]">
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    v-model="filterScore"
+                                    @input="onScoreInput"
+                                    placeholder="Filter by Exact Score"
+                                    class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                                />
+                            </div>
                         </div>
 
                         <!-- Dropdowns -->
@@ -369,6 +381,27 @@
                             </label>
                             <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
                                 <div v-html="formattedWaitlistedCutoffTemplatePreview"></div>
+                            </div>
+                        </div>
+
+                        <!-- Waitlisted Limited Slots Template Preview -->
+                        <div v-else-if="templateType === 'waitlisted-limited'" class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
+                                Select Available Programs
+                            </label>
+                            <div class="grid grid-cols-1 gap-2 mb-6 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900">
+                                <label v-for="program in programs" :key="program.id" class="flex items-start space-x-3 cursor-pointer">
+                                    <input type="checkbox" :value="program.id" v-model="selectedPrograms" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:bg-gray-800">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ program.name }}</span>
+                                </label>
+                                <div v-if="!programs || programs.length === 0" class="text-sm text-gray-500 italic">No programs available.</div>
+                            </div>
+
+                            <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
+                                Waitlisted (Limited Slots) Template Preview
+                            </label>
+                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
+                                <div v-html="formattedWaitlistedLimitedTemplatePreview"></div>
                             </div>
                         </div>
 
@@ -1165,11 +1198,11 @@ onMounted(() => {
     handleScroll();
 });
 
-// Template types for selection
 const templateTypes = [
     { label: 'Default', value: 'default' },
     { label: 'Custom', value: 'custom' },
-    { label: 'Waitlisted (Below Cut-off)', value: 'waitlisted-cutoff' }
+    { label: 'Waitlisted (Below Cut-off)', value: 'waitlisted-cutoff' },
+    { label: 'Waitlisted (Limited Slots)', value: 'waitlisted-limited' }
 ];
 
 // All existing functionality remains exactly the same
@@ -1190,6 +1223,7 @@ const props = defineProps({
     passers: Object,
     filterOptions: Object,
     filters: Object,
+    programs: Array,
     registrationUrl: String,
     admissionCriteriaUrl: String,
     facebookUrl: String,
@@ -1308,6 +1342,57 @@ const waitlistedCutoffTemplatePreview = `
   </div>
 </div>`.trim();
 
+const selectedPrograms = ref([]);
+
+const getWaitlistedLimitedTemplateHTML = () => {
+    let listItems = "";
+    if (selectedPrograms.value.length === 0) {
+        listItems = "<li><em>No programs selected</em></li>";
+    } else {
+        selectedPrograms.value.forEach(pId => {
+            const p = props.programs?.find(prog => prog.id === pId);
+            if (p) {
+                listItems += `<li>${p.name}</li>`;
+            }
+        });
+    }
+
+    return `
+<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations!</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">The following programs have limited slots available:</p>
+    <ul style="margin:0 0 12px 0;padding-left:40px;font-size:14px;color:#222;line-height:1.6;list-style-type:disc;">
+        ${listItems}
+    </ul>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;font-weight:bold;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 28, 2026 (Sunday)</strong>. You will receive an email containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long-sized bond paper, sign, and bring them on the day of the interview on <strong>July 1, 2026 (Wednesday)</strong>. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
+    <div style="text-align:center;margin:24px 0;">
+    <a 
+        href="${props.registrationUrl}" 
+        style="
+        display:inline-block;
+        padding:12px 24px;
+        background:#9E122C;
+        color:#ffffff;
+        text-decoration:none;
+        border-radius:6px;
+        font-weight:bold;
+        font-size:14px;
+        "
+    >
+        CLICK TO CONFIRM YOUR INTERVIEW SLOT
+    </a>
+    </div>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with three photocopies on <strong>July 1, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
+    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
+  </div>
+</div>`.trim();
+};
+
 const formattedDefaultTemplatePreview = computed(() => {
     return defaultTemplatePreview
         .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
@@ -1325,6 +1410,13 @@ const formattedWaitlistedTemplatePreview = computed(() => {
 const formattedWaitlistedCutoffTemplatePreview = computed(() => {
     return waitlistedCutoffTemplatePreview
         .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#9E122C;font-weight:bold;">John Doe</span>')
+        .replace(/\{\{firstname\}\}/g, 'John')
+        .replace(/\{\{surname\}\}/g, 'Doe');
+});
+
+const formattedWaitlistedLimitedTemplatePreview = computed(() => {
+    return getWaitlistedLimitedTemplateHTML()
+        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
         .replace(/\{\{firstname\}\}/g, 'John')
         .replace(/\{\{surname\}\}/g, 'Doe');
 });
@@ -1368,6 +1460,8 @@ watch(
 
 const searchTerm = ref(props.filters?.search || "");
 const debouncedSearchTerm = ref(props.filters?.search || "");
+const filterScore = ref(props.filters?.score || "");
+const debouncedFilterScore = ref(props.filters?.score || "");
 const filterSchoolYear = ref(props.filters?.school_year || "all");
 const filterBatchNumber = ref(props.filters?.batch_number || "all");
 const sortKey = ref(props.filters?.sort_key || "pupcet_total_score");
@@ -1384,6 +1478,7 @@ function buildServerParams(overrides = {}) {
         school_year: filterSchoolYear.value || 'all',
         batch_number: filterBatchNumber.value || 'all',
         search: debouncedSearchTerm.value || undefined,
+        score: debouncedFilterScore.value || undefined,
         sort_key: sortKey.value || undefined,
         sort_order: sortOrder.value || undefined,
         per_page: itemsPerPage.value,
@@ -1414,6 +1509,11 @@ function applyServerFilters() {
 
 const onSearchInput = debounce(() => {
     debouncedSearchTerm.value = searchTerm.value.toLowerCase();
+    applyServerFilters();
+}, 300);
+
+const onScoreInput = debounce(() => {
+    debouncedFilterScore.value = filterScore.value;
     applyServerFilters();
 }, 300);
 
@@ -1537,6 +1637,7 @@ const toggleSelectAll = async (isSelected) => {
             if (filterSchoolYear.value) params.school_year = filterSchoolYear.value;
             if (filterBatchNumber.value) params.batch_number = filterBatchNumber.value;
             if (debouncedSearchTerm.value) params.search = debouncedSearchTerm.value;
+            if (debouncedFilterScore.value) params.score = debouncedFilterScore.value;
 
             const response = await axios.get('/test-passers/select-all-ids', { params });
             const allIds = response.data.ids;
@@ -1598,6 +1699,8 @@ const executeSendEmails = async () => {
         messageHtml = waitlistedTemplatePreview;
     } else if (templateType.value === 'waitlisted-cutoff') {
         messageHtml = waitlistedCutoffTemplatePreview;
+    } else if (templateType.value === 'waitlisted-limited') {
+        messageHtml = getWaitlistedLimitedTemplateHTML();
     } else {
         const quillContainer = document.querySelector(".ql-editor");
         messageHtml = quillContainer

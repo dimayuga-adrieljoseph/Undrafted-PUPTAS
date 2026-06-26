@@ -219,9 +219,8 @@ class GradesController extends Controller
         }
         
         $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get()->each(function ($program) {
-            $program->append('strand_names');
-        });
+        $programs = Program::with('strands')->get();
+        $this->attachProgramMetadata($programs, $user->id);
 
         // Only pass extraction result if grades haven't been saved yet
         // This prevents overwriting user's manual edits with extraction data
@@ -253,9 +252,8 @@ class GradesController extends Controller
         }
         
         $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get()->each(function ($program) {
-            $program->append('strand_names');
-        });
+        $programs = Program::with('strands')->get();
+        $this->attachProgramMetadata($programs, $user->id);
 
         // Only pass extraction result if grades haven't been saved yet
         // This prevents overwriting user's manual edits with extraction data
@@ -358,9 +356,8 @@ class GradesController extends Controller
         }
         
         $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get()->each(function ($program) {
-            $program->append('strand_names');
-        });
+        $programs = Program::with('strands')->get();
+        $this->attachProgramMetadata($programs, $user->id);
 
         // Only pass extraction result if grades haven't been saved yet
         // This prevents overwriting user's manual edits with extraction data
@@ -390,9 +387,8 @@ class GradesController extends Controller
         }
         
         $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get()->each(function ($program) {
-            $program->append('strand_names');
-        });
+        $programs = Program::with('strands')->get();
+        $this->attachProgramMetadata($programs, $user->id);
 
         // Only pass extraction result if grades haven't been saved yet
         // This prevents overwriting user's manual edits with extraction data
@@ -422,9 +418,8 @@ class GradesController extends Controller
         }
         
         $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get()->each(function ($program) {
-            $program->append('strand_names');
-        });
+        $programs = Program::with('strands')->get();
+        $this->attachProgramMetadata($programs, $user->id);
 
         // Only pass extraction result if grades haven't been saved yet
         // This prevents overwriting user's manual edits with extraction data
@@ -454,9 +449,8 @@ class GradesController extends Controller
         }
         
         $grade = Grade::where('user_id', (string) $user->id)->first() ?? new Grade();
-        $programs = Program::with('strands')->get()->each(function ($program) {
-            $program->append('strand_names');
-        });
+        $programs = Program::with('strands')->get();
+        $this->attachProgramMetadata($programs, $user->id);
 
         // Only pass extraction result if grades haven't been saved yet
         // This prevents overwriting user's manual edits with extraction data
@@ -575,6 +569,46 @@ class GradesController extends Controller
         app(\App\Services\AuditLogService::class)->logActivity('CREATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} submitted grades and program choices.", $user, 'ADMISSION_DATA');
 
         return redirect()->route('applicant.dashboard')->with('success', 'Grades and program choices saved successfully');
+    }
+
+    /**
+     * Compute available slots for a program, excluding the current user's own application.
+     * Slot-consuming statuses: submitted, under_review, confirmed, waitlisted, enrolled.
+     * Non-consuming statuses: draft, rejected, returned.
+     */
+    /**
+     * Slot-consuming statuses: only applicants accepted at interview and beyond.
+     * Pipeline: submitted → evaluation_passed → for_interview →
+     *           interview_passed → for_medical → for_records → officially_enrolled
+     * Only interview_passed and onward counts as slot-occupied.
+     */
+    private function computeAvailableSlots(Program $program, ?string $excludeUserId = null): int
+    {
+        $occupiedCount = Application::where('program_id', $program->id)
+            ->whereIn('status', [
+                'interview_passed',
+                'interview_transferred',
+                'for_medical',
+                'for_records',
+                'officially_enrolled',
+            ])
+            ->when($excludeUserId, function ($query) use ($excludeUserId) {
+                $query->where('user_id', '!=', $excludeUserId);
+            })
+            ->count();
+
+        return max(0, (int) $program->slots - $occupiedCount);
+    }
+
+    /**
+     * Attach available_slots and strand_names to each program in a collection.
+     */
+    private function attachProgramMetadata($programs, ?string $excludeUserId = null): void
+    {
+        $programs->each(function ($program) use ($excludeUserId) {
+            $program->append('strand_names');
+            $program->available_slots = $this->computeAvailableSlots($program, $excludeUserId);
+        });
     }
 
     private function isEvaluatorLocked(User $user): bool

@@ -5,7 +5,8 @@ import { router } from '@inertiajs/vue3';
  * Composable for managing grade input forms across all strands.
  *
  * Handles reactive form state, dynamic subject management, category average
- * computation, program qualification logic, validation helpers, and form submission.
+ * computation, program qualification logic, slot availability checking,
+ * validation helpers, and form submission.
  *
  * @param {Object} options
  * @param {string} options.strand - The applicant's strand (e.g., 'STEM', 'ABM')
@@ -191,6 +192,16 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
 
     const currentStrand = computed(() => (strand || '').toUpperCase());
 
+    // Track the user's previously saved program choices (from profile)
+    const savedProgramIds = computed(() => {
+        if (!profile) return new Set();
+        const ids = new Set();
+        if (profile.first_choice_program) ids.add(profile.first_choice_program);
+        if (profile.second_choice_program) ids.add(profile.second_choice_program);
+        if (profile.third_choice_program) ids.add(profile.third_choice_program);
+        return ids;
+    });
+
     /**
      * Program choice selection is disabled when any category average is null
      * (meaning no valid grades in that category).
@@ -248,6 +259,20 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
         return isAllowed;
     }
 
+    /**
+     * Check if a program has available slots.
+     * Always allows the program if it's one the user has already saved (re-saving).
+     */
+    function hasAvailableSlots(program) {
+        if (savedProgramIds.value.has(program.id)) {
+            return true; // User can re-select their existing choice
+        }
+        const available = program.available_slots;
+        // null/undefined means slots field is not set (unlimited)
+        if (available === null || available === undefined) return true;
+        return available > 0;
+    }
+
     const qualifiedPrograms = computed(() => {
         if (
             !programs ||
@@ -262,12 +287,41 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
         return programs.filter((program) => {
             if (!isStrandAllowed(program)) return false;
 
-            return (
+            const gradeQualified =
                 meetsRequirement(mathAverage.value, program.math) &&
                 meetsRequirement(scienceAverage.value, program.science) &&
                 meetsRequirement(englishAverage.value, program.english) &&
-                meetsRequirement(g12GWA.value, program.gwa)
-            );
+                meetsRequirement(g12GWA.value, program.gwa);
+
+            return gradeQualified && hasAvailableSlots(program);
+        });
+    });
+
+    /**
+     * Programs that qualify academically and by strand, but have no available slots.
+     */
+    const noSlotsPrograms = computed(() => {
+        if (
+            !programs ||
+            !mathAverage.value ||
+            !scienceAverage.value ||
+            !englishAverage.value ||
+            !g12GWA.value
+        ) {
+            return [];
+        }
+
+        return programs.filter((program) => {
+            if (!isStrandAllowed(program)) return false;
+
+            const gradeQualified =
+                meetsRequirement(mathAverage.value, program.math) &&
+                meetsRequirement(scienceAverage.value, program.science) &&
+                meetsRequirement(englishAverage.value, program.english) &&
+                meetsRequirement(g12GWA.value, program.gwa);
+
+            // Must be academically qualified but have no slots
+            return gradeQualified && !hasAvailableSlots(program);
         });
     });
 
@@ -291,7 +345,7 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
             });
         }
 
-        return programs
+        const academicNotQualified = programs
             .filter((program) => {
                 if (!isStrandAllowed(program)) return true;
 
@@ -324,7 +378,33 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
 
                 return { ...program, unmetRequirements };
             });
+
+        // Also include programs that qualify academically but have no available slots
+        const noSlots = noSlotsPrograms.value.map((program) => ({
+            ...program,
+            unmetRequirements: ['No available slots left'],
+        }));
+
+        return [...academicNotQualified, ...noSlots];
     });
+
+    /**
+     * Check if selecting a program is allowed (has slots or is a saved choice).
+     * Returns { allowed: boolean, message: string|null }
+     */
+    function checkSlotAvailability(programId) {
+        const program = programs?.find((p) => p.id === programId);
+        if (!program) return { allowed: false, message: 'Program not found.' };
+
+        if (hasAvailableSlots(program)) {
+            return { allowed: true, message: null };
+        }
+
+        return {
+            allowed: false,
+            message: `"${program.code} - ${program.name}" has no available slots left. Please select another program.`,
+        };
+    }
 
     // --- Validation Helpers ---
 
@@ -676,7 +756,12 @@ export function useGradeForm({ strand, defaultSubjects, grade, programs, profile
         // Program qualification
         qualifiedPrograms,
         notQualifiedPrograms,
+        noSlotsPrograms,
         programChoiceDisabled,
+
+        // Slot availability
+        hasAvailableSlots,
+        checkSlotAvailability,
 
         // Validation
         validateGrade,

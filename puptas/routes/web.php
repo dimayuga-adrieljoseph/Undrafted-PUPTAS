@@ -261,12 +261,35 @@ Route::post('/check-email', function (\Illuminate\Http\Request $request) {
 
 Route::post('/check-reference-number', function (\Illuminate\Http\Request $request) {
     $request->validate(['reference_number' => 'required|string|max:100']);
-    $testPasser = \App\Models\TestPasser::where('reference_number', trim($request->reference_number))->first();
+    $inputRefNumber = trim($request->reference_number);
     
-    // Valid if it exists and status is not 3 (Unqualified) or 4 (Waitlisted Below Cutoff)
-    $valid = $testPasser && !in_array($testPasser->passer_status_id, [3, 4]);
+    $pendingReg = session('pending_registration');
+    $email = $pendingReg && !empty($pendingReg['email']) ? strtolower(trim($pendingReg['email'])) : null;
     
-    return response()->json(['valid' => $valid]);
+    $testPasser = null;
+    if ($email) {
+        $testPasser = \App\Models\TestPasser::where('email', $email)->first();
+    }
+    if (!$testPasser) {
+        $testPasser = \App\Models\TestPasser::where('reference_number', $inputRefNumber)->first();
+    }
+    
+    if (!$testPasser) {
+        return response()->json(['valid' => false]);
+    }
+
+    $isScoreAllowedOverride = false;
+    $cutoffService = app(\App\Services\CutoffSettingsService::class);
+    if ($cutoffService->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
+        $isScoreAllowedOverride = true;
+    }
+    
+    $isRestrictedStatus = in_array($testPasser->passer_status_id, [3, 4]);
+    if ($isRestrictedStatus && !$isScoreAllowedOverride) {
+        return response()->json(['valid' => false]);
+    }
+    
+    return response()->json(['valid' => true]);
 })->middleware('guest');
 
 // Email Link Redirects — hosted on our domain so email link URLs match the sending domain
@@ -612,6 +635,12 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'store'])->name('cutoff-settings.store');
     Route::delete('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'destroy'])->name('cutoff-settings.destroy');
     Route::post('/admin/cutoff-settings/system', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'updateSystemSettings'])->name('cutoff-settings.system-update');
+
+    // Score Registration Overrides
+    Route::get('/admin/score-overrides', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'index'])->name('score-overrides.index');
+    Route::post('/admin/score-overrides/search', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'search'])->name('score-overrides.search');
+    Route::post('/admin/score-overrides', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'store'])->name('score-overrides.store');
+    Route::delete('/admin/score-overrides', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'destroy'])->name('score-overrides.destroy');
 
     // Global System Settings (Deprecated in favor of CutoffSettings)
     // Removed SystemSettingsController routes

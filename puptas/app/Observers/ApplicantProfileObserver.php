@@ -52,6 +52,11 @@ class ApplicantProfileObserver
      */
     protected function clearDashboardCache(): void
     {
-        Cache::tags(['dashboard', 'applications'])->flush();
+        try {
+            Cache::tags(['dashboard', 'applications'])->flush();
+        } catch (\BadMethodCallException $e) {
+            Cache::forget('applicants_with_applications');
+            Cache::forget('application_summary');
+        }
     }
 }
