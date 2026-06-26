@@ -523,9 +523,15 @@
                                             <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
                                                 <span class="font-medium">Strand:</span> {{ program.strand_names || 'Open to All' }}
                                             </p>
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                <span class="font-medium">Slots:</span>
+                                                <span v-if="program.available_slots === null || program.available_slots === undefined" class="text-blue-600 dark:text-blue-400">Unlimited</span>
+                                                <span v-else-if="program.available_slots > 5" class="text-green-600 dark:text-green-400 font-medium">{{ program.available_slots }} available</span>
+                                                <span v-else class="text-orange-600 dark:text-orange-400 font-semibold">Only {{ program.available_slots }} left</span>
+                                            </p>
                                         </div>
                                     </div>
-                                    <p v-else class="text-sm text-gray-500 dark:text-gray-400 italic">
+                                    <p v-if="qualifiedPrograms.length === 0 && noSlotsPrograms.length === 0" class="text-sm text-gray-500 dark:text-gray-400 italic">
                                         No qualified programs based on current grades
                                     </p>
                                 </div>
@@ -815,7 +821,10 @@ const {
     canAddSubject,
     qualifiedPrograms,
     notQualifiedPrograms,
+    noSlotsPrograms,
     programChoiceDisabled,
+    hasAvailableSlots,
+    checkSlotAvailability,
     validateGrade,
     preventInvalidInput,
     errors,
