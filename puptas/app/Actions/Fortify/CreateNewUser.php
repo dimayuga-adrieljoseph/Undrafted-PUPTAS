@@ -51,7 +51,16 @@ class CreateNewUser implements CreatesNewUsers
         
         if (!empty($input['reference_number'])) {
             $inputRefNumber = trim($input['reference_number']);
-            $testPasserCheck = TestPasser::where('reference_number', $inputRefNumber)->first();
+            $testPasserCheck = null;
+            
+            if ($pendingReg && !empty($pendingReg['email'])) {
+                $testPasserCheck = TestPasser::where('email', $pendingReg['email'])->first();
+            }
+            
+            if (!$testPasserCheck) {
+                $testPasserCheck = TestPasser::where('reference_number', $inputRefNumber)->first();
+            }
+            
             if ($testPasserCheck && $cutoffService->isScoreAllowed((float) $testPasserCheck->pupcet_total_score)) {
                 $isScoreAllowedOverride = true;
             }
@@ -95,7 +104,13 @@ class CreateNewUser implements CreatesNewUsers
             // Validate reference number before writing anything to the database.
             // Only test passers are allowed to register — reject early if not found.
             $inputRefNumber = trim($input['reference_number']);
-            $testPasser = TestPasser::where('reference_number', $inputRefNumber)->first();
+            
+            // Prioritize searching by email, as it is the most reliable identifier and bypasses formatting/spacing issues
+            $testPasser = TestPasser::where('email', $email)->first();
+            
+            if (!$testPasser) {
+                $testPasser = TestPasser::where('reference_number', $inputRefNumber)->first();
+            }
 
             if (!$testPasser) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
