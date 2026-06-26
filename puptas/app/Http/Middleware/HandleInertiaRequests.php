@@ -85,6 +85,37 @@ class HandleInertiaRequests extends Middleware
                     return SystemSetting::where('key', 'enable_qualified_programs_view')->value('value') !== '0';
                 }),
             ],
+            'cutoff' => function () use ($request) {
+                $service = app(\App\Services\CutoffSettingsService::class);
+                $isPassed = $service->isCutoffPassed();
+                $hasScoreOverride = false;
+
+                $email = null;
+                
+                // Prioritize the IDP bypass email if it's provided in the URL,
+                // otherwise an admin testing this in the same browser will have their admin email used!
+                if ($request->has('email') && (in_array(strtolower(config('app.env')), ['local', 'staging']) && ($request->has('local') || $request->session()->get('local_bypass')))) {
+                    $email = $request->query('email');
+                } elseif ($user = $request->user()) {
+                    $email = $user->email;
+                } elseif ($pendingReg = $request->session()->get('pending_registration')) {
+                    $email = $pendingReg['email'] ?? null;
+                }
+
+                if ($email) {
+                    $testPasser = \App\Models\TestPasser::where('email', $email)->first();
+                    if ($testPasser && $service->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
+                        $hasScoreOverride = true;
+                        $isPassed = false; // Override cutoff for this specific applicant if it was passed
+                    }
+                }
+
+                return [
+                    'is_passed' => $isPassed,
+                    'display' => $service->formatForDisplay(),
+                    'has_score_override' => $hasScoreOverride,
+                ];
+            },
         ]);
     }
 }
