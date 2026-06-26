@@ -106,10 +106,17 @@ class ConfirmationService
             'requires_guidance_office' => (bool) ($application?->requires_guidance_office ?? false),
             'requires_admission_office' => (bool) ($application?->requires_admission_office ?? false),
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
-            'cutoff' => [
-                'is_passed' => $this->cutoffSettingsService->isCutoffPassed(),
-                'display'   => $this->cutoffSettingsService->formatForDisplay(),
-            ],
+            'cutoff' => (function () use ($user) {
+                $isScoreAllowedOverride = false;
+                $testPasser = \App\Models\TestPasser::where('user_id', $user->id)->first();
+                if ($testPasser && $this->cutoffSettingsService->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
+                    $isScoreAllowedOverride = true;
+                }
+                return [
+                    'is_passed' => $isScoreAllowedOverride ? false : $this->cutoffSettingsService->isCutoffPassed(),
+                    'display'   => $this->cutoffSettingsService->formatForDisplay(),
+                ];
+            })(),
         ];
     }
 
