@@ -69,24 +69,25 @@ class ShareInertiaData
                 $isPassed = $service->isCutoffPassed();
                 $hasScoreOverride = false;
 
-                // If cutoff is passed, check if there's an allowed override score for the user
-                if ($isPassed) {
-                    $email = null;
-                    if ($user = $request->user()) {
-                        $email = $user->email;
-                    } elseif ($pendingReg = $request->session()->get('pending_registration')) {
-                        $email = $pendingReg['email'] ?? null;
-                    } elseif ($request->has('email')) {
-                        // Fallback for local/staging IDP bypass where pending_registration is set late
-                        $email = $request->query('email');
-                    }
+                // Always check for a score override regardless of whether the cutoff is passed
+                // so the frontend can bypass the "Status 4" block for allowed scores.
+                $email = null;
+                
+                // Prioritize the IDP bypass email if it's provided in the URL,
+                // otherwise an admin testing this in the same browser will have their admin email used!
+                if ($request->has('email') && (in_array(strtolower(config('app.env')), ['local', 'staging']) && ($request->has('local') || $request->session()->get('local_bypass')))) {
+                    $email = $request->query('email');
+                } elseif ($user = $request->user()) {
+                    $email = $user->email;
+                } elseif ($pendingReg = $request->session()->get('pending_registration')) {
+                    $email = $pendingReg['email'] ?? null;
+                }
 
-                    if ($email) {
-                        $testPasser = \App\Models\TestPasser::where('email', $email)->first();
-                        if ($testPasser && $service->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
-                            $isPassed = false; // Override cutoff for this specific applicant
-                            $hasScoreOverride = true;
-                        }
+                if ($email) {
+                    $testPasser = \App\Models\TestPasser::where('email', $email)->first();
+                    if ($testPasser && $service->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
+                        $hasScoreOverride = true;
+                        $isPassed = false; // Override cutoff for this specific applicant if it was passed
                     }
                 }
 
