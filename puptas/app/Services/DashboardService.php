@@ -139,17 +139,15 @@ class DashboardService
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->groupBy(DB::raw('DATE(created_at)'), 'status');
 
-            $acceptedQuery = DB::table('application_processes')
+            $acceptedQuery = DB::table('applications')
                 ->select(
                     DB::raw('DATE(updated_at) as date'),
-                    DB::raw("'accepted' as status"),
-                    DB::raw('COUNT(DISTINCT application_id) as count')
+                    'status',
+                    DB::raw('COUNT(*) as count')
                 )
-                ->where('stage', 'interviewer')
-                ->where('status', 'completed')
-                ->where('action', 'passed')
+                ->whereIn('status', ['accepted', 'cleared_for_enrollment', 'officially_enrolled'])
                 ->whereBetween('updated_at', [$startDate, $endDate])
-                ->groupBy(DB::raw('DATE(updated_at)'));
+                ->groupBy(DB::raw('DATE(updated_at)'), 'status');
 
             $returnedQuery = DB::table('applications')
                 ->select(
