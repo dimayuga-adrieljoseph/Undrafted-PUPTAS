@@ -139,15 +139,17 @@ class DashboardService
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->groupBy(DB::raw('DATE(created_at)'), 'status');
 
-            $acceptedQuery = DB::table('applications')
+            $acceptedQuery = DB::table('application_processes')
                 ->select(
                     DB::raw('DATE(updated_at) as date'),
-                    'status',
-                    DB::raw('COUNT(*) as count')
+                    DB::raw("'accepted' as status"),
+                    DB::raw('COUNT(DISTINCT application_id) as count')
                 )
-                ->whereIn('status', ['accepted', 'cleared_for_enrollment', 'officially_enrolled'])
+                ->where('stage', 'interviewer')
+                ->where('status', 'completed')
+                ->where('action', 'passed')
                 ->whereBetween('updated_at', [$startDate, $endDate])
-                ->groupBy(DB::raw('DATE(updated_at)'), 'status');
+                ->groupBy(DB::raw('DATE(updated_at)'));
 
             $returnedQuery = DB::table('applications')
                 ->select(
@@ -180,7 +182,7 @@ class DashboardService
 
             foreach ($dates as $date) {
                 $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
-                $accepted[]  = $applications->where('date', $date)->whereIn('status', ['accepted', 'cleared_for_enrollment', 'officially_enrolled'])->sum('count');
+                $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
                 $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
             }
 
