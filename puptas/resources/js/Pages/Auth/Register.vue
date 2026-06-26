@@ -20,7 +20,9 @@ onMounted(() => {
 
     const testPasser = page.props.test_passer_data;
     if (testPasser) {
-        if (testPasser.passer_status_id === 3 || testPasser.passer_status_id === 4) {
+        const hasScoreOverride = page.props.cutoff?.has_score_override;
+
+        if (!hasScoreOverride && (testPasser.passer_status_id === 3 || testPasser.passer_status_id === 4)) {
             showTermsModal.value = false;
             showBlockedModal.value = true;
             if (testPasser.passer_status_id === 3) {

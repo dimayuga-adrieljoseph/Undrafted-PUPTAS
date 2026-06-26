@@ -67,18 +67,30 @@ class ShareInertiaData
             'cutoff' => function () use ($request) {
                 $service = app(\App\Services\CutoffSettingsService::class);
                 $isPassed = $service->isCutoffPassed();
+                $hasScoreOverride = false;
 
-                // If cutoff is passed, check if the authenticated user has an allowed override score
-                if ($isPassed && $user = $request->user()) {
-                    $testPasser = $user->testPasser;
-                    if ($testPasser && $service->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
-                        $isPassed = false; // Override cutoff for this specific user
+                // If cutoff is passed, check if there's an allowed override score for the user
+                if ($isPassed) {
+                    $email = null;
+                    if ($user = $request->user()) {
+                        $email = $user->email;
+                    } elseif ($pendingReg = $request->session()->get('pending_registration')) {
+                        $email = $pendingReg['email'] ?? null;
+                    }
+
+                    if ($email) {
+                        $testPasser = \App\Models\TestPasser::where('email', $email)->first();
+                        if ($testPasser && $service->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
+                            $isPassed = false; // Override cutoff for this specific applicant
+                            $hasScoreOverride = true;
+                        }
                     }
                 }
 
                 return [
                     'is_passed' => $isPassed,
                     'display' => $service->formatForDisplay(),
+                    'has_score_override' => $hasScoreOverride,
                 ];
             },
         ]);
