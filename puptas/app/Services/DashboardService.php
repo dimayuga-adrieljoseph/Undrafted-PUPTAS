@@ -180,7 +180,7 @@ class DashboardService
 
             foreach ($dates as $date) {
                 $submitted[] = $applications->where('date', $date)->where('status', 'submitted')->sum('count');
-                $accepted[]  = $applications->where('date', $date)->whereIn('status', ['accepted', 'cleared_for_enrollment', 'officially_enrolled'])->sum('count');
+                $accepted[]  = $applications->where('date', $date)->where('status', 'accepted')->sum('count');
                 $returned[]  = $applications->where('date', $date)->where('status', 'returned')->sum('count');
             }
 
