@@ -1,7 +1,7 @@
 <?php
 return [
     'rows_per_page' => 10,
-    'max_rows'      => 50,
+    'max_rows'      => 10000,
 
     // Position of the dynamic program title (e.g. "BSBA-HRM 1-1")
     // Calibrate x, y after first test render
