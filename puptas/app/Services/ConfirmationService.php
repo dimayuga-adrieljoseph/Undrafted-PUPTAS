@@ -214,7 +214,13 @@ class ConfirmationService
     public function submitApplication(User $user, array $validated): Application
     {
         return DB::transaction(function () use ($user, $validated) {
-            if ($this->cutoffSettingsService->isCutoffPassed()) {
+            $isScoreAllowedOverride = false;
+            $testPasser = $user->testPasser;
+            if ($testPasser && $this->cutoffSettingsService->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
+                $isScoreAllowedOverride = true;
+            }
+
+            if (!$isScoreAllowedOverride && $this->cutoffSettingsService->isCutoffPassed()) {
                 abort(422, 'The application submission period has closed.');
             }
 
@@ -558,7 +564,13 @@ class ConfirmationService
      */
     public function resubmitApplication(User $user): Application
     {
-        if ($this->cutoffSettingsService->isCutoffPassed()) {
+        $isScoreAllowedOverride = false;
+        $testPasser = $user->testPasser;
+        if ($testPasser && $this->cutoffSettingsService->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
+            $isScoreAllowedOverride = true;
+        }
+
+        if (!$isScoreAllowedOverride && $this->cutoffSettingsService->isCutoffPassed()) {
             abort(422, 'The application submission period has closed.');
         }
 

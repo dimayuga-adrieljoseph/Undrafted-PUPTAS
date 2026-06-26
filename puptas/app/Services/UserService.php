@@ -23,14 +23,12 @@ class UserService
      */
     public function getApplicantsWithApplications(): Collection
     {
-        $cacheTags = Cache::tags(['dashboard', 'applications']);
-
-        if ($cachedData = $cacheTags->get('applicants_with_applications')) {
+        if ($cachedData = Cache::get('applicants_with_applications')) {
             return collect($cachedData);
         }
 
-        return Cache::lock('applicants_with_applications_lock', 10)->block(5, function () use ($cacheTags) {
-            return $cacheTags->remember('applicants_with_applications', 300, function () {
+        return Cache::lock('applicants_with_applications_lock', 10)->block(5, function () {
+            return Cache::remember('applicants_with_applications', 300, function () {
                 return ApplicantProfile::select(['user_id', 'firstname', 'lastname', 'email'])
                     ->with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
                     ->whereHas('currentApplication')

@@ -47,7 +47,17 @@ class CreateNewUser implements CreatesNewUsers
         ]);
 
         $cutoffService = app(\App\Services\CutoffSettingsService::class);
-        if ($cutoffService->isCutoffPassed()) {
+        $isScoreAllowedOverride = false;
+        
+        if (!empty($input['reference_number'])) {
+            $inputRefNumber = trim($input['reference_number']);
+            $testPasserCheck = TestPasser::where('reference_number', $inputRefNumber)->first();
+            if ($testPasserCheck && $cutoffService->isScoreAllowed((float) $testPasserCheck->pupcet_total_score)) {
+                $isScoreAllowedOverride = true;
+            }
+        }
+
+        if (!$isScoreAllowedOverride && $cutoffService->isCutoffPassed()) {
             \Log::warning('Registration blocked: Cutoff has passed.', ['email' => $pendingReg['email'] ?? 'UNKNOWN']);
             abort(403, 'Registration is closed. The deadline for admissions has already passed.');
         }
@@ -66,7 +76,7 @@ class CreateNewUser implements CreatesNewUsers
 
         Validator::make($input, $rules)->validate();
 
-        return DB::transaction(function () use ($input, $pendingReg) {
+        return DB::transaction(function () use ($input, $pendingReg, $isScoreAllowedOverride) {
             try {
             $email = strtolower(trim($pendingReg['email'] ?? ''));
 
@@ -94,7 +104,7 @@ class CreateNewUser implements CreatesNewUsers
             }
 
             // Block registration for Unqualified and Waitlisted Below Cutoff
-            if (in_array($testPasser->passer_status_id, [3, 4])) {
+            if (!$isScoreAllowedOverride && in_array($testPasser->passer_status_id, [3, 4])) {
                 $statusName = $testPasser->passer_status_id === 3 ? 'Unqualified' : 'Waitlisted Below Cutoff';
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'reference_number' => "Registration is currently closed for {$statusName} applicants. Please wait for further announcements regarding open slots.",

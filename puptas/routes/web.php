@@ -613,6 +613,12 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::delete('/admin/cutoff-settings', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'destroy'])->name('cutoff-settings.destroy');
     Route::post('/admin/cutoff-settings/system', [\App\Http\Controllers\SuperAdmin\CutoffSettingsController::class, 'updateSystemSettings'])->name('cutoff-settings.system-update');
 
+    // Score Registration Overrides
+    Route::get('/admin/score-overrides', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'index'])->name('score-overrides.index');
+    Route::post('/admin/score-overrides/search', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'search'])->name('score-overrides.search');
+    Route::post('/admin/score-overrides', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'store'])->name('score-overrides.store');
+    Route::delete('/admin/score-overrides', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'destroy'])->name('score-overrides.destroy');
+
     // Global System Settings (Deprecated in favor of CutoffSettings)
     // Removed SystemSettingsController routes
 
