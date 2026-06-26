@@ -64,10 +64,20 @@ class ShareInertiaData
                     ->mapWithKeys(fn ($bag, $key) => [$key => $bag->messages()])
                     ->all();
             },
-            'cutoff' => function () {
+            'cutoff' => function () use ($request) {
                 $service = app(\App\Services\CutoffSettingsService::class);
+                $isPassed = $service->isCutoffPassed();
+
+                // If cutoff is passed, check if the authenticated user has an allowed override score
+                if ($isPassed && $user = $request->user()) {
+                    $testPasser = $user->testPasser;
+                    if ($testPasser && $service->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
+                        $isPassed = false; // Override cutoff for this specific user
+                    }
+                }
+
                 return [
-                    'is_passed' => $service->isCutoffPassed(),
+                    'is_passed' => $isPassed,
                     'display' => $service->formatForDisplay(),
                 ];
             },
