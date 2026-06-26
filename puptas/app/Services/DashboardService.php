@@ -90,7 +90,7 @@ class DashboardService
             $endDateParam = session('dashboard_end_date');
         }
 
-        $cacheKey = 'dashboard_chart_data_v2_' . ($startDateParam ?: 'default') . '_' . ($endDateParam ?: 'default');
+        $cacheKey = 'dashboard_chart_data_v3_' . ($startDateParam ?: 'default') . '_' . ($endDateParam ?: 'default');
         $lockKey = $cacheKey . '_lock';
         
         try {
@@ -139,15 +139,17 @@ class DashboardService
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->groupBy(DB::raw('DATE(created_at)'), 'status');
 
-            $acceptedQuery = DB::table('applications')
+            $acceptedQuery = DB::table('application_processes')
                 ->select(
                     DB::raw('DATE(updated_at) as date'),
-                    'status',
-                    DB::raw('COUNT(*) as count')
+                    DB::raw("'accepted' as status"),
+                    DB::raw('COUNT(DISTINCT application_id) as count')
                 )
-                ->whereIn('status', ['accepted', 'cleared_for_enrollment', 'officially_enrolled'])
+                ->where('stage', 'interviewer')
+                ->where('status', 'completed')
+                ->where('action', 'passed')
                 ->whereBetween('updated_at', [$startDate, $endDate])
-                ->groupBy(DB::raw('DATE(updated_at)'), 'status');
+                ->groupBy(DB::raw('DATE(updated_at)'));
 
             $returnedQuery = DB::table('applications')
                 ->select(
