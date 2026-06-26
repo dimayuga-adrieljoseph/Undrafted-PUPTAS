@@ -114,7 +114,7 @@ class CreateNewUser implements CreatesNewUsers
 
             if (!$testPasser) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'reference_number' => 'The reference number you entered is not recognized. Only admitted test passers are allowed to create an account. Please verify your reference number and try again.',
+                    'reference_number' => "DEBUG - NOT RECOGNIZED. Email: [{$email}] InputRef: [{$inputRefNumber}]. Only admitted test passers are allowed to create an account.",
                 ]);
             }
 
