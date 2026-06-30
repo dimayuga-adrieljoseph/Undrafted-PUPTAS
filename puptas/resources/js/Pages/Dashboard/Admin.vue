@@ -225,6 +225,20 @@ const closeUserCard = () => {
             class-name="text-gray-600 dark:text-gray-400 mt-2"
           />
         </div>
+        <div class="flex flex-wrap gap-3">
+          <Link
+            href="/evaluator-dashboard"
+            class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition font-medium text-sm"
+          >
+            Evaluator Dashboard
+          </Link>
+          <Link
+            href="/interviewer-dashboard"
+            class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition font-medium text-sm"
+          >
+            Interviewer Dashboard
+          </Link>
+        </div>
       </div>
     </div>
 

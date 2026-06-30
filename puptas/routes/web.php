@@ -238,15 +238,23 @@ Route::get('/applications/user/{user}', function ($user) {
     $component = match ((int) $roleId) {
         3, 8 => 'Applications/Evaluator',
         4 => 'Applications/Interviewer',
-        default => ($context === 'evaluator' && in_array($roleId, [2, 7])) ? 'Applications/Evaluator' : 'Applications/Index',
+        default => match($context) {
+            'evaluator' => in_array($roleId, [2, 7]) ? 'Applications/Evaluator' : 'Applications/Index',
+            'interviewer' => in_array($roleId, [2, 7]) ? 'Applications/Interviewer' : 'Applications/Index',
+            default => 'Applications/Index'
+        },
     };
 
     $props = [
         'selectedUserId' => (string) $user
     ];
 
-    if ($roleId == 4) {
-        $props['assignedPrograms'] = $currentUser->programs()->get(['id', 'code', 'name']);
+    if (in_array($roleId, [2, 4, 7])) {
+        if (in_array($roleId, [2, 7])) {
+            $props['assignedPrograms'] = \App\Models\Program::get(['id', 'code', 'name']);
+        } else {
+            $props['assignedPrograms'] = $currentUser->programs()->get(['id', 'code', 'name']);
+        }
     }
 
     return Inertia::render($component, $props);
@@ -510,11 +518,15 @@ Route::middleware(['auth', 'role:2,3,7,8'])->group(function () {
 });
 
 // Interviewer Routes
-Route::middleware(['auth', 'role:4'])->group(function () {
+Route::middleware(['auth', 'role:2,4,7'])->group(function () {
     Route::get('/interviewer-dashboard', [InterviewerDashboardController::class, 'index'])->name('interviewer.dashboard');
     Route::get('/interviewer-applications', function () {
         $user = Auth::user();
-        $assignedPrograms = $user->programs()->get(['programs.id', 'programs.code', 'programs.name', 'programs.slots']);
+        if (in_array($user->role_id, [2, 7])) {
+            $assignedPrograms = \App\Models\Program::get(['id', 'code', 'name', 'slots']);
+        } else {
+            $assignedPrograms = $user->programs()->get(['programs.id', 'programs.code', 'programs.name', 'programs.slots']);
+        }
         return Inertia::render('Applications/Interviewer', [
             'user' => $user,
             'assignedPrograms' => $assignedPrograms,
@@ -560,7 +572,7 @@ Route::middleware(['auth', 'role:2,3,4,6,7,8'])->group(function () {
     Route::get('/api/staff/programs/slots', [StaffProgramController::class, 'getPrograms']);
 });
 
-Route::middleware(['auth', 'role:4'])->group(function () {
+Route::middleware(['auth', 'role:2,4,7'])->group(function () {
     Route::get('/interviewer-dashboard/user-grades/{id}', [InterviewerDashboardController::class, 'getUserGrades']);
 });
 
