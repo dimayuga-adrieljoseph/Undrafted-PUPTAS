@@ -88,14 +88,14 @@ export function useSidebarNavigation() {
             children: [
                 {
                     key: 'document-evaluate',
-                    label: 'Document Eval',
+                    label: 'Document Evaluation',
                     icon: 'file-signature',
                     route: 'document_evaluator.dashboard',
                     activeRoutes: ['document_evaluator.dashboard'],
                 },
                 {
                     key: 'grade-evaluate',
-                    label: 'Grade Eval',
+                    label: 'Grade Evaluation',
                     icon: 'clipboard-list',
                     route: 'evaluator.dashboard',
                     activeRoutes: ['evaluator.dashboard'],

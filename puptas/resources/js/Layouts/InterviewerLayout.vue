@@ -7,6 +7,7 @@ import { useLayout } from '@/Composables/useLayout'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
+import { Link } from '@inertiajs/vue3'
 
 library.add(faMoon, faSun)
 
@@ -46,6 +47,18 @@ const {
                 </div>
 
                 <div class="flex items-center gap-4">
+                    <!-- Back to Admin (admin/superadmin only) -->
+                    <Link
+                        v-if="user?.role_id === 2 || user?.role_id === 7"
+                        href="/dashboard"
+                        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-[#9E122C] bg-[#9E122C]/10 hover:bg-[#9E122C]/20 transition dark:text-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Admin
+                    </Link>
+
                     <button
                         class="w-9 h-9 rounded-lg flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
                         aria-label="Toggle dark mode"
