@@ -117,13 +117,13 @@ class ExternalStudentApiController extends Controller
         ]);
     }
 
-    public function showByIdpUserId(Request $request, string $idpUserId): JsonResponse
+    public function showByEmail(Request $request, string $email): JsonResponse
     {
         $application = Application::query()
             ->with(['user.user', 'user.grades', 'program', 'user.testPasser'])
             ->where('enrollment_status', 'officially_enrolled')
-            ->whereHas('user.user', function ($query) use ($idpUserId) {
-                $query->where('idp_user_id', $idpUserId);
+            ->whereHas('user.user', function ($query) use ($email) {
+                $query->where('email', $email);
             })
             ->first();
 
@@ -135,8 +135,8 @@ class ExternalStudentApiController extends Controller
                 'READ_MISS',
                 'External API',
                 sprintf(
-                    'External student lookup miss for idp_user_id %s from IP %s.',
-                    $idpUserId,
+                    'External student lookup miss for email %s from IP %s.',
+                    $email,
                     $request->ip() ?? 'unknown'
                 ),
                 null,
@@ -189,8 +189,8 @@ class ExternalStudentApiController extends Controller
             'READ',
             'External API',
             sprintf(
-                'External student lookup success for idp_user_id %s from IP %s.',
-                $idpUserId,
+                'External student lookup success for email %s from IP %s.',
+                $email,
                 $request->ip() ?? 'unknown'
             ),
             null,
