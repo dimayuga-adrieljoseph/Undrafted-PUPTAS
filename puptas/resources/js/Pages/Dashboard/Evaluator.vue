@@ -277,21 +277,21 @@ const getEvaluationStatusClass = (pipelineStatus) => {
 
 const isEvaluationCompleted = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = currentStage.value;
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess && evaluatorProcess.status === 'completed';
 });
 
 const hasStartedReview = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = currentStage.value;
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess && !!evaluatorProcess.started_at;
 });
 
 const reviewStartTime = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return null;
-    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = currentStage.value;
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess?.started_at || null;
 });
@@ -306,7 +306,7 @@ const cancelReview = () => {
 
 const confirmCancelReview = async () => {
 
-    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = currentStage.value;
     const processes = selectedUser.value.application.processes;
     const processIndex = processes.findIndex(p => p.stage === targetStage);
 

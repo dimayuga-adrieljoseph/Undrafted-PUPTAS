@@ -1105,7 +1105,7 @@ const cancelReview = () => {
 };
 
 const confirmCancelReview = async () => {
-    const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
     const processes = selectedUser.value.application.processes;
     const processIndex = processes.findIndex(p => p.stage === targetStage);
 
