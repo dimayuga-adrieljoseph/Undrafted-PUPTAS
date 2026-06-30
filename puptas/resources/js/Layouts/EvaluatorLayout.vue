@@ -29,7 +29,7 @@ const currentStage = computed(() => page.props.stage || (user.value?.role_id ===
 <template>
     <div class="min-h-screen flex bg-gradient-to-br from-orange-100 to-[#faf6f2] dark:from-gray-950 dark:to-gray-900">
 
-        <Sidebar variant="evaluator" v-model:open="sidebarOpen" />
+        <Sidebar :variant="currentStage === 'document_evaluator' ? 'document_evaluator' : 'evaluator'" v-model:open="sidebarOpen" />
 
         <div class="flex-1 flex flex-col ml-0 md:ml-[var(--sidebar-width,5rem)]">
 

@@ -208,14 +208,14 @@ export function useSidebarNavigation() {
             label: 'Dashboard',
             icon: 'tachometer-alt',
             route: `${variant}.dashboard`,
-            activeRoutes: [`${variant}.dashboard`, 'record.dashboard', 'interviewer.dashboard', 'evaluator.dashboard'],
+            activeRoutes: [`${variant}.dashboard`, 'record.dashboard', 'interviewer.dashboard', 'evaluator.dashboard', 'document_evaluator.dashboard'],
         },
         {
             key: 'applications',
             label: 'Applications',
             icon: 'envelope-open-text',
             route: `${variant}.applications`,
-            activeRoutes: [`${variant}.applications`, 'recordstaff.applications', 'interviewer.applications', 'evaluator.applications'],
+            activeRoutes: [`${variant}.applications`, 'recordstaff.applications', 'interviewer.applications', 'evaluator.applications', 'document_evaluator.applications'],
         },
         {
             key: 'programs',
