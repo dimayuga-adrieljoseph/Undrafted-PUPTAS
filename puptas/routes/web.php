@@ -246,7 +246,8 @@ Route::get('/applications/user/{user}', function ($user) {
     };
 
     $props = [
-        'selectedUserId' => (string) $user
+        'selectedUserId' => (string) $user,
+        'stage' => request('stage')
     ];
 
     if (in_array($roleId, [2, 4, 7])) {

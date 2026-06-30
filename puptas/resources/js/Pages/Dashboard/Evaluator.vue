@@ -986,7 +986,7 @@ const showToast = (message, type = 'success') => {
                                                 </svg>
                                                 <span>{{ isStartingReview ? 'Starting...' : 'Begin Review' }}</span>
                                             </button>
-                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator`"
+                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator&stage=${currentStage}`"
                                                   :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
                                                 View Full Details
                                             </Link>
@@ -1018,7 +1018,7 @@ const showToast = (message, type = 'success') => {
                                             >
                                                 Pass Application
                                             </button>
-                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator`"
+                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator&stage=${currentStage}`"
                                                   :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
                                                 View Full Details
                                             </Link>
