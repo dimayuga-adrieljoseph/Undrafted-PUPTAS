@@ -222,7 +222,7 @@ export function useSidebarNavigation() {
             label: 'Programs',
             icon: 'clipboard-list',
             route: `${variant}.programs`,
-            activeRoutes: [`${variant}.programs`, 'evaluator.programs', 'interviewer.programs', 'record.programs'],
+            activeRoutes: [`${variant}.programs`, 'evaluator.programs', 'interviewer.programs', 'record.programs', 'document_evaluator.programs'],
         },
     ])
 

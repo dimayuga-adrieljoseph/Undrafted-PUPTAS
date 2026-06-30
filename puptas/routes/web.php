@@ -522,6 +522,7 @@ Route::middleware(['auth', 'role:2,3,7,8'])->group(function () {
     Route::get('/dashboard/user-files/{id}', [EvaluatorDashboardController::class, 'getUserFiles']);
     Route::post('/dashboard/return-files/{user}', [EvaluatorDashboardController::class, 'returnApplication'])->name('return.files');
     Route::get('/evaluator-programs', [StaffProgramController::class, 'index'])->name('evaluator.programs');
+    Route::get('/document-evaluator-programs', [StaffProgramController::class, 'index'])->name('document_evaluator.programs');
 });
 
 // Interviewer Routes
