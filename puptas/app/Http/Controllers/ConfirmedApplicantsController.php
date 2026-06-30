@@ -39,7 +39,8 @@ class ConfirmedApplicantsController extends Controller
     }
 
     /**
-     * JSON: Get all confirmed applicants (status = for_evaluation).
+     * JSON: Get all confirmed applicants across all active evaluation stages.
+     * Includes: document_evaluator, grade_evaluator, interviewer, and medical.
      * Joins with test_passers via reference_number to expose grade sync status.
      */
     public function getApplicants()
@@ -51,55 +52,65 @@ class ConfirmedApplicantsController extends Controller
 
         $applicants = ApplicantProfile::with([
             'currentApplication.program:id,code,name',
+            'currentApplication.processes',
             'grades',
             'testPasser.passerStatus',
             'testPasser.sarGenerations',
             'graduateTypes',
         ])
             ->whereHas('currentApplication.processes', function ($q) {
-                $q->where('stage', 'document_evaluator')
-                    ->whereIn('status', ['in_progress', 'returned']);
+                $q->whereIn('stage', [
+                    'document_evaluator',
+                    'grade_evaluator',
+                    'interviewer',
+                    'medical',
+                ])->whereIn('status', ['in_progress', 'returned']);
             })
             ->orderBy('lastname')
             ->get()
             ->map(function ($applicant) {
                 $testPasser = $applicant->testPasser;
 
-                // Check if this applicant has a linked test passer record
                 $hasTestPasser = $testPasser !== null;
+                $gradesSynced  = $hasTestPasser && $applicant->grades !== null;
 
-                // Check if grades exist and whether they differ from test passer scores
-                $gradesExist = $applicant->grades !== null;
-                $gradesSynced = false;
-
-                if ($hasTestPasser && $gradesExist) {
-                    // We consider grades "synced" if they were imported from the passer list
-                    // This is a simple heuristic: if grades exist, they've been synced at least once
-                    $gradesSynced = true;
+                // Determine the applicant's current active stage from their processes.
+                // Priority: medical > interviewer > grade_evaluator > document_evaluator
+                $processes   = $applicant->currentApplication?->processes ?? collect();
+                $currentStage = null;
+                foreach (['medical', 'interviewer', 'grade_evaluator', 'document_evaluator'] as $stage) {
+                    $process = $processes->where('stage', $stage)
+                        ->whereIn('status', ['in_progress', 'returned'])
+                        ->first();
+                    if ($process) {
+                        $currentStage = $stage;
+                        break;
+                    }
                 }
 
                 return [
-                    'id'           => $applicant->user_id,
-                    'firstname'    => $applicant->firstname,
-                    'lastname'     => $applicant->lastname,
-                    'email'        => $applicant->email,
-                    'student_number' => $applicant->student_number,
-                    'status'       => $applicant->currentApplication?->status,
-                    'program'      => $applicant->currentApplication?->program,
-                    'grades'       => $applicant->grades,
-                    'has_test_passer' => $hasTestPasser,
-                    'grades_synced'   => $gradesSynced,
-                    'test_passer_id'  => $testPasser?->test_passer_id,
+                    'id'               => $applicant->user_id,
+                    'firstname'        => $applicant->firstname,
+                    'lastname'         => $applicant->lastname,
+                    'email'            => $applicant->email,
+                    'student_number'   => $applicant->student_number,
+                    'status'           => $applicant->currentApplication?->status,
+                    'program'          => $applicant->currentApplication?->program,
+                    'grades'           => $applicant->grades,
+                    'has_test_passer'  => $hasTestPasser,
+                    'grades_synced'    => $gradesSynced,
+                    'test_passer_id'   => $testPasser?->test_passer_id,
                     'reference_number' => $testPasser?->reference_number,
-                    'batch_number' => $testPasser?->batch_number,
+                    'batch_number'     => $testPasser?->batch_number,
                     'passer_status_id' => $testPasser?->passer_status_id,
                     'passer_status_name' => $testPasser?->passerStatus?->status,
-                    'sar_sent'     => $testPasser
+                    'sar_sent'         => $testPasser
                         ? $testPasser->sarGenerations
                             ->where('email_sent_successfully', true)
                             ->isNotEmpty()
                         : false,
-                    'graduate_type' => $applicant->graduateTypes->first()?->label,
+                    'graduate_type'    => $applicant->graduateTypes->first()?->label,
+                    'current_stage'    => $currentStage,
                 ];
             });
 
