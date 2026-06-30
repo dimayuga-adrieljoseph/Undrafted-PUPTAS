@@ -4,28 +4,31 @@ use App\Models\Application;
 use App\Models\AuditLog;
 use App\Models\Program;
 use App\Models\User;
+use Laravel\Passport\Passport;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\ApplicantProfile;
+
+uses(RefreshDatabase::class);
 
 test('external students endpoint requires valid token', function () {
-    config()->set('services.external_api.token', 'test-shared-token');
-
     $response = $this->getJson('/api/v1/students');
 
     $response->assertStatus(401)
         ->assertJson([
-            'message' => 'Unauthorized',
+            'message' => 'You are not authenticated. Please log in.',
         ]);
-
-    expect(AuditLog::query()->where('action_type', 'AUTH_FAILED')->where('module_name', 'External API')->exists())
-        ->toBeTrue();
 });
 
 test('external students list endpoint is gone and points to single-student endpoint', function () {
-    config()->set('services.external_api.token', 'test-shared-token');
+    Passport::actingAsClient(
+        \Laravel\Passport\Client::factory()->create(),
+        ['student-read']
+    );
 
-    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students');
+    $response = $this->getJson('/api/v1/students');
 
     $response->assertStatus(410)
-        ->assertJsonPath('message', 'This endpoint is deprecated. Use /api/v1/students/{studentNumber}.')
+        ->assertJsonPath('message', 'This endpoint is deprecated. Use /api/v1/students/{referenceNumber}.')
         ->assertHeader('Deprecation', 'true');
 
     expect(AuditLog::query()->where('action_type', 'DEPRECATED_ENDPOINT')->where('module_name', 'External API')->exists())
@@ -33,7 +36,10 @@ test('external students list endpoint is gone and points to single-student endpo
 });
 
 test('external student lookup returns one student by student number', function () {
-    config()->set('services.external_api.token', 'test-shared-token');
+    Passport::actingAsClient(
+        \Laravel\Passport\Client::factory()->create(),
+        ['student-read']
+    );
 
     $program = Program::create([
         'code' => 'BSIT',
@@ -41,12 +47,22 @@ test('external student lookup returns one student by student number', function (
     ]);
 
     $user = User::create([
-        'student_number' => '2026-55555',
         'firstname' => 'Carla',
         'lastname' => 'Lopez',
-        'contactnumber' => '09170000003',
         'email' => 'carla@example.com',
         'password' => bcrypt('password'),
+    ]);
+
+    $profile = ApplicantProfile::create([
+        'user_id' => $user->id,
+        'email' => $user->email,
+    ]);
+
+    \App\Models\TestPasser::create([
+        'user_id' => $user->id,
+        'reference_number' => '2026-55555',
+        'surname' => 'Lopez',
+        'first_name' => 'Carla',
     ]);
 
     Application::create([
@@ -56,18 +72,21 @@ test('external student lookup returns one student by student number', function (
         'enrollment_status' => 'officially_enrolled',
     ]);
 
-    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students/2026-55555');
+    $response = $this->getJson('/api/v1/students/2026-55555');
 
     $response->assertOk()
-        ->assertJsonPath('data.student_number', '2026-55555')
+        ->assertJsonPath('data.reference_number', '2026-55555')
         ->assertJsonPath('data.application.enrollment_status', 'officially_enrolled')
         ->assertJsonPath('data.program.program_code', 'BSIT');
 });
 
 test('external student lookup returns 404 when student is not officially enrolled or missing', function () {
-    config()->set('services.external_api.token', 'test-shared-token');
+    Passport::actingAsClient(
+        \Laravel\Passport\Client::factory()->create(),
+        ['student-read']
+    );
 
-    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students/NO-SUCH-STUDENT');
+    $response = $this->getJson('/api/v1/students/NO-SUCH-STUDENT');
 
     $response->assertStatus(404)
         ->assertJson([
@@ -78,8 +97,11 @@ test('external student lookup returns 404 when student is not officially enrolle
         ->toBeTrue();
 });
 
-test('external student lookup returns one student by idp user id', function () {
-    config()->set('services.external_api.token', 'test-shared-token');
+test('external student lookup returns one student by email', function () {
+    Passport::actingAsClient(
+        \Laravel\Passport\Client::factory()->create(),
+        ['student-read']
+    );
 
     $program = Program::create([
         'code' => 'BSBA',
@@ -88,12 +110,15 @@ test('external student lookup returns one student by idp user id', function () {
 
     $user = User::create([
         'idp_user_id' => 'idp-abc-123',
-        'student_number' => '2026-77777',
         'firstname' => 'Dianne',
         'lastname' => 'Garcia',
-        'contactnumber' => '09170000004',
         'email' => 'dianne@example.com',
         'password' => bcrypt('password'),
+    ]);
+
+    $profile = ApplicantProfile::create([
+        'user_id' => $user->id,
+        'email' => $user->email,
     ]);
 
     Application::create([
@@ -103,18 +128,21 @@ test('external student lookup returns one student by idp user id', function () {
         'enrollment_status' => 'officially_enrolled',
     ]);
 
-    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students/idp/idp-abc-123');
+    $response = $this->getJson('/api/v1/students/email/dianne@example.com');
 
     $response->assertOk()
-        ->assertJsonPath('data.idp_user_id', 'idp-abc-123')
+        ->assertJsonPath('data.email', 'dianne@example.com')
         ->assertJsonPath('data.application.enrollment_status', 'officially_enrolled')
         ->assertJsonPath('data.program.program_code', 'BSBA');
 });
 
-test('external student lookup by idp user id returns 404 when missing', function () {
-    config()->set('services.external_api.token', 'test-shared-token');
+test('external student lookup by email returns 404 when missing', function () {
+    Passport::actingAsClient(
+        \Laravel\Passport\Client::factory()->create(),
+        ['student-read']
+    );
 
-    $response = $this->withToken('test-shared-token')->getJson('/api/v1/students/idp/idp-missing-user');
+    $response = $this->getJson('/api/v1/students/email/missing@example.com');
 
     $response->assertStatus(404)
         ->assertJson([

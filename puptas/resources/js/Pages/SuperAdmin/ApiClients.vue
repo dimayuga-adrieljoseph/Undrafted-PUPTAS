@@ -255,23 +255,7 @@ const totalScopes = computed(() => {
                 </div>
             </div>
 
-            <!-- How to use -->
-            <div class="mt-8 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                <div class="flex items-center gap-2 mb-3">
-                    <FontAwesomeIcon icon="info-circle" class="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">How External Systems Authenticate</h4>
-                </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">External systems exchange their <code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded font-mono">client_id</code> + <code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded font-mono">client_secret</code> for a short-lived access token:</p>
-                <pre class="text-xs bg-gray-900 dark:bg-gray-950 text-green-400 rounded-lg p-4 overflow-x-auto"><code>POST {{ $page.props.ziggy?.url ?? '' }}/oauth/token
-Content-Type: application/json
 
-{
-  "grant_type": "client_credentials",
-  "client_id": "&lt;your-client-id&gt;",
-  "client_secret": "&lt;your-client-secret&gt;",
-  "scope": "medical-read"
-}</code></pre>
-            </div>
         </div>
 
         <!-- Modals -->
