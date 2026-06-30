@@ -258,7 +258,7 @@ export function useSidebarNavigation() {
      */
     const getNavigation = (variant) => {
         if (variant === 'applicant') return applicantNav
-        if (['record', 'interviewer', 'evaluator'].includes(variant)) return staffNav(variant)
+        if (['record', 'interviewer', 'evaluator', 'document_evaluator'].includes(variant)) return staffNav(variant)
         return adminNav // default, superadmin
     }
 

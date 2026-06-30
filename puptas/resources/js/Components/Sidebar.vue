@@ -57,7 +57,7 @@ const props = defineProps({
     variant: {
         type: String,
         default: 'default',
-        validator: (v) => ['default', 'superadmin', 'record', 'interviewer', 'evaluator', 'applicant'].includes(v),
+        validator: (v) => ['default', 'superadmin', 'record', 'interviewer', 'evaluator', 'document_evaluator', 'applicant'].includes(v),
     },
     /**
      * Collapse behavior.
