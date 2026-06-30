@@ -18,6 +18,7 @@ const filterPasserStatus = ref([]);
 const showStatusDropdown = ref(false);
 const filterSarStatus = ref("");
 const filterGraduateType = ref("");
+const filterStage = ref("");
 const selectedIds = ref([]);
 
 // Template / action mode: 'sar' | 'custom'
@@ -120,6 +121,8 @@ const filtered = computed(() => {
         list = list.filter((a) => !a.sar_sent);
     if (filterGraduateType.value)
         list = list.filter((a) => a.graduate_type === filterGraduateType.value);
+    if (filterStage.value)
+        list = list.filter((a) => a.current_stage === filterStage.value);
     return list;
 });
 
@@ -166,6 +169,7 @@ watch(
         filterPasserStatus,
         filterSarStatus,
         filterGraduateType,
+        filterStage,
     ],
     () => {
         currentPage.value = 1;
@@ -537,11 +541,7 @@ onMounted(() => {
                 Confirmed Applicants
             </h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Applicants with
-                <span class="font-semibold text-yellow-600 dark:text-yellow-400"
-                    >For Evaluation</span
-                >
-                status. Send SAR Forms or custom emails.
+                Applicants currently under evaluation across all stages. Send SAR Forms or custom emails.
             </p>
         </div>
 
@@ -642,6 +642,16 @@ onMounted(() => {
                             <option v-for="gt in graduateTypes" :key="gt" :value="gt">
                                 {{ gt }}
                             </option>
+                        </select>
+                        <select
+                            v-model="filterStage"
+                            class="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                        >
+                            <option value="">All Stages</option>
+                            <option value="document_evaluator">For Document Evaluator</option>
+                            <option value="grade_evaluator">For Grade Evaluator</option>
+                            <option value="interviewer">For Interviewer</option>
+                            <option value="medical">For Medical</option>
                         </select>
                         <button
                             @click="fetchApplicants"

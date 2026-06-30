@@ -89,6 +89,20 @@ class FortifyServiceProvider extends ServiceProvider
                     'test_passer_data' => \App\Models\TestPasser::where('email', $email)->first()
                 ]);
             }
+
+            // If the user arrived from the IDP callback with a pending registration
+            // (i.e., they authenticated with IDP but have no local account yet),
+            // render the registration form instead of redirecting back to IDP.
+            // Without this check, new users hit an infinite redirect loop:
+            //   /register -> IDP -> callback -> /register -> IDP -> ... -> auth error page.
+            if (session()->has('pending_registration')) {
+                $pendingReg = session('pending_registration');
+
+                return \Inertia\Inertia::render('Auth/Register', [
+                    'pending_registration' => $pendingReg,
+                    'test_passer_data' => \App\Models\TestPasser::where('email', $pendingReg['email'] ?? '')->first(),
+                ]);
+            }
             
             return redirect()->route('idp.redirect');
         });
