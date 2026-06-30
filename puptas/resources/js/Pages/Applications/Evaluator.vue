@@ -996,7 +996,8 @@ const filteredUsers = computed(() => {
 
 const selectUser = async (user) => {
     try {
-        const response = await axios.get(`/dashboard/user-files/${user.id}`);
+        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+        const response = await axios.get(`/dashboard/user-files/${user.id}?stage=${targetStageForApi}`);
         selectedUser.value = {
             ...user,
             ...response.data.user,
@@ -1071,7 +1072,8 @@ const startReview = async () => {
         if (error.response?.status === 409) {
             // Already started — re-fetch user to sync UI with DB state
             try {
-                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}`);
+                const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${targetStageForApi}`);
                 const userData = refetch.data.user;
                 selectedUser.value = {
                     ...selectedUser.value,

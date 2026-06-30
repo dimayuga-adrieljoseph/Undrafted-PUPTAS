@@ -147,7 +147,10 @@ const getStatusClass = (status) => {
 
 const getUserFilesEndpoint = (userId) => {
     const roleId = currentUser.value?.role_id;
-    if (roleId === 3) return `/dashboard/user-files/${userId}`; // Evaluator
+    if (roleId === 3) {
+        const targetStage = page.props.stage || 'document_evaluator';
+        return `/dashboard/user-files/${userId}?stage=${targetStage}`;
+    }
     if (roleId === 4) return `/interviewer-dashboard/application/${userId}`; // Interviewer
     return `/admin-dashboard/user-files/${userId}`; // Admin (default)
 };

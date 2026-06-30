@@ -364,7 +364,7 @@ const startReview = async () => {
         if (error.response?.status === 409) {
             // Already started — re-fetch user to sync UI with DB state
             try {
-                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}`);
+                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
                 const userData = refetch.data.user;
                 selectedUser.value = {
                     ...selectedUser.value,
@@ -447,7 +447,7 @@ const capitalize = (str) =>
 // User selection and file fetching
 const selectUser = async (user) => {
     try {
-        const response = await axios.get(`/dashboard/user-files/${user.id}`);
+        const response = await axios.get(`/dashboard/user-files/${user.id}?stage=${currentStage.value}`);
 
         const userData = response.data.user;
         selectedUser.value = {
