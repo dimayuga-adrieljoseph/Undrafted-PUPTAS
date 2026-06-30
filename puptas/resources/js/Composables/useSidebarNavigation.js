@@ -81,11 +81,33 @@ export function useSidebarNavigation() {
             activeRoutes: ['applications', 'recordstaff.applications', 'interviewer.applications', 'evaluator.applications'],
         },
         {
-            key: 'evaluate-grades',
-            label: 'Evaluate Grades',
-            icon: 'clipboard-list',
-            route: 'evaluator.dashboard',
-            activeRoutes: ['evaluator.dashboard'],
+            key: 'tagging',
+            label: 'Tagging',
+            icon: 'tags',
+            activeRoutes: ['evaluator.dashboard', 'interviewer.dashboard'],
+            children: [
+                {
+                    key: 'document-evaluate',
+                    label: 'Document Eval',
+                    icon: 'file-signature',
+                    route: 'document_evaluator.dashboard',
+                    activeRoutes: ['document_evaluator.dashboard'],
+                },
+                {
+                    key: 'grade-evaluate',
+                    label: 'Grade Eval',
+                    icon: 'clipboard-list',
+                    route: 'evaluator.dashboard',
+                    activeRoutes: ['evaluator.dashboard'],
+                },
+                {
+                    key: 'interview',
+                    label: 'Interview',
+                    icon: 'comments',
+                    route: 'interviewer.dashboard',
+                    activeRoutes: ['interviewer.dashboard'],
+                },
+            ]
         },
         {
             key: 'programs',

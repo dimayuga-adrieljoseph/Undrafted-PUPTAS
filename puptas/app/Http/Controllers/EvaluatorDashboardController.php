@@ -57,12 +57,21 @@ class EvaluatorDashboardController extends Controller
             'summary' => $dashboardData['summary'],
             'chartData' => $dashboardData['chartData'],
             'filters' => $dashboardData['chartData']['filters'],
+            'stage' => $this->getCurrentStage(),
         ]);
     }
 
     protected function getCurrentStage(): string
     {
-        return Auth::user()->role_id == 3 ? 'document_evaluator' : 'grade_evaluator';
+        if (request()->routeIs('document_evaluator.dashboard') || request('stage') === 'document_evaluator') {
+            return 'document_evaluator';
+        }
+        
+        $user = Auth::user();
+        if (in_array($user->role_id, [2, 7])) {
+            return request('stage', 'grade_evaluator');
+        }
+        return $user->role_id == 3 ? 'document_evaluator' : 'grade_evaluator';
     }
 
     protected function getRoleId(): array

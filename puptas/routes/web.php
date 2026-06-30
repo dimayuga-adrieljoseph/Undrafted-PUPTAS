@@ -504,8 +504,14 @@ Route::get('/user/eligible-programs', [ConfirmationController::class, 'getEligib
 Route::middleware(['auth', 'role:2,3,7,8'])->group(function () {
     Route::get('/evaluator-dashboard', [EvaluatorDashboardController::class, 'index'])->name('evaluator.dashboard');
     Route::get('/evaluator-applications', function () {
-        return Inertia::render('Applications/Evaluator', ['user' => Auth::user()]);
+        $stage = request('stage', Auth::user()->role_id == 3 ? 'document_evaluator' : 'grade_evaluator');
+        return Inertia::render('Applications/Evaluator', ['user' => Auth::user(), 'stage' => $stage]);
     })->name('evaluator.applications');
+
+    Route::get('/document-evaluator-dashboard', [EvaluatorDashboardController::class, 'index'])->name('document_evaluator.dashboard');
+    Route::get('/document-evaluator-applications', function () {
+        return Inertia::render('Applications/Evaluator', ['user' => Auth::user(), 'stage' => 'document_evaluator']);
+    })->name('document_evaluator.applications');
     Route::get('/evaluator-dashboard/applicants', [EvaluatorDashboardController::class, 'getUsers']);
     Route::post('/evaluator/pass-application/{userId}', [EvaluatorDashboardController::class, 'passApplication']);
     Route::post('/evaluator/start-review/{applicationProcess}', [EvaluatorDashboardController::class, 'startReview']);

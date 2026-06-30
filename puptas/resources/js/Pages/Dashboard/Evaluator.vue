@@ -47,6 +47,10 @@ const props = defineProps({
     filters: {
         type: Object,
         default: () => ({ start_date: '', end_date: '' })
+    },
+    stage: {
+        type: String,
+        default: ''
     }
 });
 
@@ -538,15 +542,16 @@ const submitReturn = async () => {
 
     isSubmitting.value = true;
     try {
+        const targetStageForApi = props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
         if (props.user?.role_id !== 3) {
-            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}`, {
+            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}?stage=${targetStageForApi}`, {
                 note: returnNote.value,
                 requires_promissory_note: requiresPromissoryNote.value,
                 requires_admission_office: true
             });
             showToast("Applicant flagged for Admissions Office!");
         } else {
-            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}`, {
+            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}?stage=${targetStageForApi}`, {
                 note: returnNote.value,
                 requires_promissory_note: requiresPromissoryNote.value,
                 requires_guidance_office: true
@@ -570,8 +575,9 @@ const submitPass = async () => {
     evaluationError.value = "";
     isSubmitting.value = true;
     try {
+        const targetStageForApi = props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
         await axios.post(
-            `/evaluator/pass-application/${selectedUser.value.id}`,
+            `/evaluator/pass-application/${selectedUser.value.id}?stage=${targetStageForApi}`,
             {
                 note: ""
             }
