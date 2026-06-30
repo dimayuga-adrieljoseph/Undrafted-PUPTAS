@@ -82,6 +82,8 @@ const requiresPromissoryNote = ref(false);
 const autoRefreshTimer = ref(null);
 const POLL_INTERVAL_MS = 10000;
 
+const currentStage = computed(() => props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator'));
+
 const refreshDashboard = () => {
     router.reload({
         only: ["pendingUsers", "summary", "chartData"],
@@ -616,7 +618,7 @@ const showToast = (message, type = 'success') => {
 </script>
 
 <template>
-    <Head :title="user?.role_id === 3 ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'" />
+    <Head :title="currentStage === 'document_evaluator' ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'" />
     <EvaluatorLayout>
         <!-- Success Toast Notification -->
         <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
@@ -650,7 +652,7 @@ const showToast = (message, type = 'success') => {
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <BlurText
-                        :text="user?.role_id === 3 ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'"
+                        :text="currentStage === 'document_evaluator' ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'"
                         :delay="100"
                         animate-by="words"
                         direction="top"
