@@ -68,6 +68,9 @@ class EvaluatorDashboardController extends Controller
         }
         
         $user = Auth::user();
+        if (!$user) {
+            return 'grade_evaluator';
+        }
         if (in_array($user->role_id, [2, 7])) {
             return request('stage', 'grade_evaluator');
         }

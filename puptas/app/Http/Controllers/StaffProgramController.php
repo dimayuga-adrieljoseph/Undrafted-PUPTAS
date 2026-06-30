@@ -16,6 +16,10 @@ class StaffProgramController extends Controller
     {
         $user = Auth::user();
         
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
         // Ensure user is one of the staff roles
         // 2: Admin, 3: Document Evaluator, 4: Interviewer, 6: Record Staff, 7: Admin2, 8: Grade Evaluator
         if (!in_array($user->role_id, [2, 3, 4, 6, 7, 8])) {
