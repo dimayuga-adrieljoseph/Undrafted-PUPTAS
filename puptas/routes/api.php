@@ -19,7 +19,7 @@ Route::prefix('v1')
     ->middleware(['client:student-read', 'throttle:external-api-second', 'throttle:external-api-minute', 'throttle:external-api-daily'])
     ->group(function () {
         Route::get('/students', [ExternalStudentApiController::class, 'index']);
-        Route::get('/students/idp/{idpUserId}', [ExternalStudentApiController::class, 'showByIdpUserId']);
+        Route::get('/students/email/{email}', [ExternalStudentApiController::class, 'showByEmail']);
         Route::get('/students/{referenceNumber}', [ExternalStudentApiController::class, 'showByReferenceNumber']);
     });
 
