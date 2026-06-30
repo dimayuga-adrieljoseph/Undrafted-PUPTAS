@@ -28,15 +28,24 @@ class StaffProgramController extends Controller
 
         // Determine stage from route name or user role
         $stage = 'grade_evaluator';
+        $variant = 'evaluator';
+
         if (request()->routeIs('document_evaluator.programs') || $user->role_id === 3) {
             $stage = 'document_evaluator';
+            $variant = 'evaluator';
+        } elseif (request()->routeIs('interviewer.programs')) {
+            $variant = 'interviewer';
+        } elseif (request()->routeIs('record.programs')) {
+            $variant = 'record';
         } elseif (in_array($user->role_id, [2, 7])) {
             $stage = request('stage', 'grade_evaluator');
+            $variant = 'evaluator';
         }
 
         return Inertia::render('Programs/StaffPrograms', [
             'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'stage' => $stage,
+            'variant' => $variant,
         ]);
     }
 
