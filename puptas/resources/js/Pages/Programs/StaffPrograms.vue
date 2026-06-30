@@ -10,6 +10,12 @@ const page = usePage();
 const user = computed(() => page.props.auth?.user ?? null);
 
 const layoutComponent = computed(() => {
+    const variant = page.props.variant;
+    if (variant === 'interviewer') return InterviewerLayout;
+    if (variant === 'record') return RecordStaffLayout;
+    if (variant === 'evaluator') return EvaluatorLayout;
+
+    // Fallback to role-based if variant is missing
     const roleId = user.value?.role_id;
     if (roleId === 4) return InterviewerLayout;
     if (roleId === 6) return RecordStaffLayout;
