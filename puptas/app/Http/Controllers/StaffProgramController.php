@@ -22,8 +22,17 @@ class StaffProgramController extends Controller
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
+        // Determine stage from route name or user role
+        $stage = 'grade_evaluator';
+        if (request()->routeIs('document_evaluator.programs') || $user->role_id === 3) {
+            $stage = 'document_evaluator';
+        } elseif (in_array($user->role_id, [2, 7])) {
+            $stage = request('stage', 'grade_evaluator');
+        }
+
         return Inertia::render('Programs/StaffPrograms', [
             'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
+            'stage' => $stage,
         ]);
     }
 
