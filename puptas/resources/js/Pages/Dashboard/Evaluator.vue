@@ -336,7 +336,7 @@ const confirmCancelReview = async () => {
 };
 
 const startReview = async () => {
-    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = currentStage.value;
     const processes = selectedUser.value.application.processes;
     const processIndex = processes.findIndex(p => p.stage === targetStage);
     
