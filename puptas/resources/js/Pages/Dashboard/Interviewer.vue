@@ -981,7 +981,7 @@ const fetchPrograms = async () => {
                                 </div>
 
                                 <Link
-                                    :href="`/applications/user/${selectedUser.id}`"
+                                    :href="`/applications/user/${selectedUser.id}?context=interviewer`"
                                     :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block mt-3']"
                                 >
                                     View Full Details
