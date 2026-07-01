@@ -566,13 +566,20 @@ class UserService
      * @param  int          $perPage  Records per page (default 15)
      * @return array
      */
-    public function searchUsers(?string $search = null, int $page = 1, int $perPage = 15): array
+    public function searchUsers(?string $search = null, int $page = 1, int $perPage = 15, ?int $roleId = null): array
     {
         $term = $search ? '%' . $search . '%' : null;
 
         // --- Staff query (role_id > 1) ---
+        // Skip entirely when filtering specifically for Applicants (role 1)
+        $skipStaff = $roleId === 1;
+
         $staffQuery = \App\Models\User::with(['programs:id,name,code', 'role'])
             ->where('role_id', '>', 1);
+
+        if ($roleId && $roleId > 1) {
+            $staffQuery->where('role_id', $roleId);
+        }
 
         if ($term) {
             $staffQuery->where(function ($q) use ($term) {
@@ -582,9 +589,12 @@ class UserService
             });
         }
 
-        $totalStaff = $staffQuery->count();
+        $totalStaff = $skipStaff ? 0 : $staffQuery->count();
 
         // --- Applicant query ---
+        // Skip entirely when filtering for a non-applicant role
+        $skipApplicants = $roleId !== null && $roleId !== 1;
+
         $applicantQuery = \App\Models\ApplicantProfile::with([
             'firstChoiceProgram:id,name,code',
             'currentApplication' => function ($q) {
@@ -605,13 +615,15 @@ class UserService
             });
         }
 
-        $totalApplicants = $applicantQuery->count();
+        $totalApplicants = $skipApplicants ? 0 : $applicantQuery->count();
         $total = $totalStaff + $totalApplicants;
         $lastPage = max(1, (int) ceil($total / $perPage));
         $page = min(max(1, $page), $lastPage);
         $offset = ($page - 1) * $perPage;
 
-        $staff = $staffQuery->orderBy('created_at', 'desc')->get()->map(function ($u) {
+        $staff = $skipStaff
+            ? collect()
+            : $staffQuery->orderBy('created_at', 'desc')->get()->map(function ($u) {
             return (object) [
                 'id'             => $u->idp_user_id ?: $u->id,
                 'firstname'      => $u->firstname,
@@ -629,7 +641,9 @@ class UserService
             ];
         });
 
-        $applicants = $applicantQuery->orderBy('created_at', 'desc')->get()->map(function ($a) {
+        $applicants = $skipApplicants
+            ? collect()
+            : $applicantQuery->orderBy('created_at', 'desc')->get()->map(function ($a) {
             return (object) [
                 'id'             => $a->user_id,
                 'firstname'      => $a->firstname,
