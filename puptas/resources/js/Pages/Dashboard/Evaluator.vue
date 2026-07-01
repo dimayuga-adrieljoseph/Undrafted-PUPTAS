@@ -47,6 +47,10 @@ const props = defineProps({
     filters: {
         type: Object,
         default: () => ({ start_date: '', end_date: '' })
+    },
+    stage: {
+        type: String,
+        default: ''
     }
 });
 
@@ -77,6 +81,8 @@ const returnNote = ref("");
 const requiresPromissoryNote = ref(false);
 const autoRefreshTimer = ref(null);
 const POLL_INTERVAL_MS = 10000;
+
+const currentStage = computed(() => props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator'));
 
 const refreshDashboard = () => {
     router.reload({
@@ -271,21 +277,21 @@ const getEvaluationStatusClass = (pipelineStatus) => {
 
 const isEvaluationCompleted = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = currentStage.value;
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess && evaluatorProcess.status === 'completed';
 });
 
 const hasStartedReview = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = currentStage.value;
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess && !!evaluatorProcess.started_at;
 });
 
 const reviewStartTime = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return null;
-    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = currentStage.value;
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess?.started_at || null;
 });
@@ -300,7 +306,7 @@ const cancelReview = () => {
 
 const confirmCancelReview = async () => {
 
-    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = currentStage.value;
     const processes = selectedUser.value.application.processes;
     const processIndex = processes.findIndex(p => p.stage === targetStage);
 
@@ -330,7 +336,7 @@ const confirmCancelReview = async () => {
 };
 
 const startReview = async () => {
-    const targetStage = props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = currentStage.value;
     const processes = selectedUser.value.application.processes;
     const processIndex = processes.findIndex(p => p.stage === targetStage);
     
@@ -358,7 +364,7 @@ const startReview = async () => {
         if (error.response?.status === 409) {
             // Already started — re-fetch user to sync UI with DB state
             try {
-                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}`);
+                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
                 const userData = refetch.data.user;
                 selectedUser.value = {
                     ...selectedUser.value,
@@ -441,7 +447,7 @@ const capitalize = (str) =>
 // User selection and file fetching
 const selectUser = async (user) => {
     try {
-        const response = await axios.get(`/dashboard/user-files/${user.id}`);
+        const response = await axios.get(`/dashboard/user-files/${user.id}?stage=${currentStage.value}`);
 
         const userData = response.data.user;
         selectedUser.value = {
@@ -538,15 +544,16 @@ const submitReturn = async () => {
 
     isSubmitting.value = true;
     try {
+        const targetStageForApi = props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
         if (props.user?.role_id !== 3) {
-            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}`, {
+            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}?stage=${targetStageForApi}`, {
                 note: returnNote.value,
                 requires_promissory_note: requiresPromissoryNote.value,
                 requires_admission_office: true
             });
             showToast("Applicant flagged for Admissions Office!");
         } else {
-            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}`, {
+            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}?stage=${targetStageForApi}`, {
                 note: returnNote.value,
                 requires_promissory_note: requiresPromissoryNote.value,
                 requires_guidance_office: true
@@ -570,8 +577,9 @@ const submitPass = async () => {
     evaluationError.value = "";
     isSubmitting.value = true;
     try {
+        const targetStageForApi = props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
         await axios.post(
-            `/evaluator/pass-application/${selectedUser.value.id}`,
+            `/evaluator/pass-application/${selectedUser.value.id}?stage=${targetStageForApi}`,
             {
                 note: ""
             }
@@ -610,7 +618,7 @@ const showToast = (message, type = 'success') => {
 </script>
 
 <template>
-    <Head :title="user?.role_id === 3 ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'" />
+    <Head :title="currentStage === 'document_evaluator' ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'" />
     <EvaluatorLayout>
         <!-- Success Toast Notification -->
         <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
@@ -644,7 +652,7 @@ const showToast = (message, type = 'success') => {
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <BlurText
-                        :text="user?.role_id === 3 ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'"
+                        :text="currentStage === 'document_evaluator' ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'"
                         :delay="100"
                         animate-by="words"
                         direction="top"
@@ -978,7 +986,7 @@ const showToast = (message, type = 'success') => {
                                                 </svg>
                                                 <span>{{ isStartingReview ? 'Starting...' : 'Begin Review' }}</span>
                                             </button>
-                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator`"
+                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator&stage=${currentStage}`"
                                                   :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
                                                 View Full Details
                                             </Link>
@@ -1010,7 +1018,7 @@ const showToast = (message, type = 'success') => {
                                             >
                                                 Pass Application
                                             </button>
-                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator`"
+                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator&stage=${currentStage}`"
                                                   :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
                                                 View Full Details
                                             </Link>

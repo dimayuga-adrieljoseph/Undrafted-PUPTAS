@@ -31,7 +31,20 @@ class VerifyMedicalWebhookSignature
             return response()->json(['message' => 'Missing timestamp'], 400);
         }
         
-        $timestamp = $payloadData['timestamp'];
+        $timestampValue = $payloadData['timestamp'];
+        
+        // Convert to UNIX timestamp if it's an ISO8601 string
+        if (is_string($timestampValue)) {
+            $timestamp = strtotime($timestampValue);
+            if ($timestamp === false) {
+                return response()->json(['message' => 'Invalid timestamp format'], 400);
+            }
+        } elseif (is_numeric($timestampValue)) {
+            $timestamp = (int) $timestampValue;
+        } else {
+            return response()->json(['message' => 'Invalid timestamp format'], 400);
+        }
+
         $currentTime = time();
         $fiveMinutesInSeconds = 5 * 60;
         

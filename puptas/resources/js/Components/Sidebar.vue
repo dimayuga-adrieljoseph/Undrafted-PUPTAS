@@ -33,7 +33,7 @@ import {
     faCalendarCheck, faSignOutAlt, faUpload, faList,
     faUserShield, faHome, faHistory, faNetworkWired,
     faChartPie, faChartLine, faFileAlt, faClock,
-    faClipboardList, faCogs
+    faClipboardList, faCogs, faTags, faFileSignature, faComments
 } from '@fortawesome/free-solid-svg-icons'
 
 import NavLink from '@/Components/NavLink.vue'
@@ -46,7 +46,7 @@ library.add(
     faCalendarCheck, faSignOutAlt, faUpload, faList,
     faUserShield, faHome, faHistory, faNetworkWired,
     faChartPie, faChartLine, faFileAlt, faClock,
-    faClipboardList, faCogs
+    faClipboardList, faCogs, faTags, faFileSignature, faComments
 )
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ const props = defineProps({
     variant: {
         type: String,
         default: 'default',
-        validator: (v) => ['default', 'superadmin', 'record', 'interviewer', 'evaluator', 'applicant'].includes(v),
+        validator: (v) => ['default', 'superadmin', 'record', 'interviewer', 'evaluator', 'document_evaluator', 'applicant'].includes(v),
     },
     /**
      * Collapse behavior.

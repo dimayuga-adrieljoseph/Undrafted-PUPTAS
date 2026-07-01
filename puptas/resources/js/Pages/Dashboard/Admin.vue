@@ -225,6 +225,7 @@ const closeUserCard = () => {
             class-name="text-gray-600 dark:text-gray-400 mt-2"
           />
         </div>
+
       </div>
     </div>
 

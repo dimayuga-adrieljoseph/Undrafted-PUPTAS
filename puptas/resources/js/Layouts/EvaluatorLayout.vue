@@ -6,7 +6,8 @@ import { useLayout } from '@/Composables/useLayout'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
 library.add(faMoon, faSun)
 
@@ -20,12 +21,15 @@ const {
     handlePrivacyCancel,
     sidebarOpen,
 } = useLayout()
+
+const page = usePage()
+const currentStage = computed(() => page.props.stage || (user.value?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator'))
 </script>
 
 <template>
     <div class="min-h-screen flex bg-gradient-to-br from-orange-100 to-[#faf6f2] dark:from-gray-950 dark:to-gray-900">
 
-        <Sidebar variant="evaluator" v-model:open="sidebarOpen" />
+        <Sidebar :variant="currentStage === 'document_evaluator' ? 'document_evaluator' : 'evaluator'" v-model:open="sidebarOpen" />
 
         <div class="flex-1 flex flex-col ml-0 md:ml-[var(--sidebar-width,5rem)]">
 
@@ -42,7 +46,7 @@ const {
                     </button>
                     <slot name="title">
                         <h1 class="text-lg md:text-xl font-semibold text-gray-800 dark:text-gray-100">
-                            {{ user?.role_id === 3 ? 'Document Evaluator' : 'Grade Evaluator' }} Workspace
+                            {{ currentStage === 'document_evaluator' ? 'Document Evaluator' : 'Grade Evaluator' }} Workspace
                         </h1>
                     </slot>
                 </div>
@@ -75,7 +79,7 @@ const {
                         <div class="hidden sm:block leading-tight">
                             <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ user?.firstname }} {{ user?.lastname }}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ user?.role_id === 3 ? 'Document Evaluator' : 'Grade Evaluator' }}
+                                {{ currentStage === 'document_evaluator' ? 'Document Evaluator' : 'Grade Evaluator' }}
                             </p>
                         </div>
                     </div>

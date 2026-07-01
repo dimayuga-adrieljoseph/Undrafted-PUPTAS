@@ -431,6 +431,14 @@ const closeUserCard = () => {
     interviewNotes.value = "";
 };
 
+const isApplicantQualified = computed(() => {
+    if (!selectedProgramId.value || !selectedUser.value?.unqualified_programs) return true;
+    
+    // Check if the selected program is in the unqualified list
+    const isUnqualified = selectedUser.value.unqualified_programs.some(p => p.id === selectedProgramId.value);
+    return !isUnqualified;
+});
+
 const isCancellingInterview = ref(false);
 const showCancelModal = ref(false);
 
@@ -964,10 +972,15 @@ const fetchPrograms = async () => {
                                             {{ isCancellingInterview ? 'Cancelling...' : 'Cancel' }}
                                         </button>
                                     </div>
+                                    <div v-if="!isApplicantQualified && page.props.auth?.user?.role_id === 7 && selectedProgramId" class="p-3 mb-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-lg text-sm text-yellow-800 dark:text-yellow-200">
+                                        <strong>⚠️ Grade Override:</strong> Applicant does not meet the grade requirements for this program. As a Superadmin, you can override this restriction.
+                                    </div>
                                     <div class="flex flex-col sm:flex-row gap-2">
                                         <button
                                             @click="promptAccept"
-                                            :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2']"
+                                            :disabled="!isApplicantQualified && page.props.auth?.user?.role_id !== 7"
+                                            :title="!isApplicantQualified && page.props.auth?.user?.role_id !== 7 ? 'Applicant does not meet grade requirements for this program' : ''"
+                                            :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2', !isApplicantQualified && page.props.auth?.user?.role_id !== 7 ? 'opacity-50 cursor-not-allowed' : '']"
                                         >
                                             ✓ Accept
                                         </button>
@@ -981,7 +994,7 @@ const fetchPrograms = async () => {
                                 </div>
 
                                 <Link
-                                    :href="`/applications/user/${selectedUser.id}`"
+                                    :href="`/applications/user/${selectedUser.id}?context=interviewer`"
                                     :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block mt-3']"
                                 >
                                     View Full Details

@@ -925,7 +925,8 @@ const getEvaluationStatusClass = (user) => {
 
 const fetchUsers = async () => {
     try {
-        const response = await fetch("/evaluator-dashboard/applicants", {
+        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+        const response = await fetch(`/evaluator-dashboard/applicants?stage=${targetStageForApi}`, {
             headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
         });
         if (!response.ok) throw new Error("Failed to fetch users");
@@ -995,7 +996,8 @@ const filteredUsers = computed(() => {
 
 const selectUser = async (user) => {
     try {
-        const response = await axios.get(`/dashboard/user-files/${user.id}`);
+        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+        const response = await axios.get(`/dashboard/user-files/${user.id}?stage=${targetStageForApi}`);
         selectedUser.value = {
             ...user,
             ...response.data.user,
@@ -1018,21 +1020,21 @@ const selectUser = async (user) => {
 
 const isEvaluationCompleted = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess && evaluatorProcess.status === 'completed';
 });
 
 const hasStartedReview = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess && !!evaluatorProcess.started_at;
 });
 
 const reviewStartTime = computed(() => {
     if (!selectedUser.value || !selectedUser.value.application?.processes) return null;
-    const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
     const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
     return evaluatorProcess ? evaluatorProcess.started_at : null;
 });
@@ -1042,7 +1044,7 @@ const isCancellingReview = ref(false);
 const showCancelModal = ref(false);
 
 const startReview = async () => {
-    const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
     const processes = selectedUser.value.application.processes;
     const processIndex = processes.findIndex(p => p.stage === targetStage);
 
@@ -1070,7 +1072,8 @@ const startReview = async () => {
         if (error.response?.status === 409) {
             // Already started — re-fetch user to sync UI with DB state
             try {
-                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}`);
+                const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${targetStageForApi}`);
                 const userData = refetch.data.user;
                 selectedUser.value = {
                     ...selectedUser.value,
@@ -1102,7 +1105,7 @@ const cancelReview = () => {
 };
 
 const confirmCancelReview = async () => {
-    const targetStage = page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator';
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
     const processes = selectedUser.value.application.processes;
     const processIndex = processes.findIndex(p => p.stage === targetStage);
 
@@ -1111,7 +1114,7 @@ const confirmCancelReview = async () => {
     const evaluatorProcess = processes[processIndex];
     isCancellingReview.value = true;
     try {
-        await axios.post(`/evaluator/cancel-review/${evaluatorProcess.id}`);
+        await axios.post(`/evaluator/cancel-review/${evaluatorProcess.id}?stage=${targetStage}`);
         // Rebuild selectedUser.value to clear started_at
         selectedUser.value = {
             ...selectedUser.value,
@@ -1203,7 +1206,8 @@ const submitFlag = async () => {
         const currentUserId = selectedUser.value.id;
         const isGradeEvaluator = page.props.auth?.user?.role_id !== 3;
 
-        await axios.post(`/evaluator/flag-application/${currentUserId}`, {
+        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+        await axios.post(`/evaluator/flag-application/${currentUserId}?stage=${targetStageForApi}`, {
             note,
             requires_promissory_note: requiresPromissoryNote.value,
             requires_guidance_office: !isGradeEvaluator,
@@ -1249,7 +1253,8 @@ const submitPass = async () => {
     isSubmitting.value = true;
     try {
         const currentUserId = selectedUser.value.id;
-        await axios.post(`/evaluator/pass-application/${currentUserId}`, {
+        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+        await axios.post(`/evaluator/pass-application/${currentUserId}?stage=${targetStageForApi}`, {
             note: ""
         });
         showPassModal.value = false;

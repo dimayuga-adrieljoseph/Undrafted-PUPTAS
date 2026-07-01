@@ -49,14 +49,18 @@ class InterviewerDashboardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->dashboardService->verifyRoleAccess($user, 4)) {
+        if (!$this->dashboardService->verifyRoleAccess($user, [2, 4, 7])) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
         $dashboardData = $this->dashboardService->getInterviewerDashboardData();
 
         // Get interviewer's assigned programs
-        $assignedPrograms = $user->programs()->get(['id', 'code', 'name', 'slots']);
+        if (in_array($user->role_id, [2, 7])) {
+            $assignedPrograms = Program::get(['id', 'code', 'name', 'slots']);
+        } else {
+            $assignedPrograms = $user->programs()->get(['id', 'code', 'name', 'slots']);
+        }
 
         return Inertia::render('Dashboard/Interviewer', [
             'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
@@ -73,9 +77,9 @@ class InterviewerDashboardController extends Controller
         return 'interviewer';
     }
 
-    protected function getRoleId(): int
+    protected function getRoleId(): array
     {
-        return 4;
+        return [2, 4, 7];
     }
 
     protected function checkPrerequisiteStage($application)
@@ -108,7 +112,7 @@ class InterviewerDashboardController extends Controller
 
     public function start(Request $request, $userId)
     {
-        $this->ensureRole(4);
+        $this->ensureRole($this->getRoleId());
 
         $application = $this->applicationService->getApplicationByUserId($userId);
 
@@ -147,7 +151,7 @@ class InterviewerDashboardController extends Controller
 
     public function cancel(Request $request, $userId)
     {
-        $this->ensureRole(4);
+        $this->ensureRole($this->getRoleId());
 
         $application = $this->applicationService->getApplicationByUserId($userId);
 
@@ -181,7 +185,7 @@ class InterviewerDashboardController extends Controller
 
     public function accept(Request $request, $userId)
     {
-        $this->ensureRole(4);
+        $this->ensureRole($this->getRoleId());
 
         // Validate that program_id is provided and start_time
         $validated = $request->validate([
@@ -195,7 +199,11 @@ class InterviewerDashboardController extends Controller
         $customNotes = $validated['notes'] ?? '';
 
         // Check if interviewer is assigned to this program
-        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        if (in_array(Auth::user()->role_id, [2, 7])) {
+            $assignedProgramIds = \App\Models\Program::pluck('id')->toArray();
+        } else {
+            $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        }
         
         if (!in_array($programId, $assignedProgramIds)) {
             return response()->json([
@@ -247,10 +255,14 @@ class InterviewerDashboardController extends Controller
                     abort(400, 'No available slots in the selected program.');
                 }
 
+                $isSuperAdmin = Auth::user()->role_id === 7;
+
                 if (
-                    $grades->mathematics < $program->math ||
-                    $grades->science < $program->science ||
-                    $grades->english < $program->english
+                    !$isSuperAdmin && (
+                        $grades->mathematics < $program->math ||
+                        $grades->science < $program->science ||
+                        $grades->english < $program->english
+                    )
                 ) {
                     \Log::warning("📉 User {$userId} does not meet grade requirements for program {$program->id}");
                     abort(400, 'User does not meet the grade requirements for this program.');
@@ -297,7 +309,7 @@ class InterviewerDashboardController extends Controller
 
     public function reject(Request $request, $userId)
     {
-        $this->ensureRole(4);
+        $this->ensureRole($this->getRoleId());
 
         // Validate that program_id is provided
         $validated = $request->validate([
@@ -311,7 +323,11 @@ class InterviewerDashboardController extends Controller
         $customNotes = $validated['notes'] ?? '';
 
         // Check if interviewer is assigned to this program
-        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        if (in_array(Auth::user()->role_id, [2, 7])) {
+            $assignedProgramIds = \App\Models\Program::pluck('id')->toArray();
+        } else {
+            $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        }
         
         if (!in_array($programId, $assignedProgramIds)) {
             return response()->json([
@@ -375,9 +391,10 @@ class InterviewerDashboardController extends Controller
         }
     }
 
-    private function ensureRole(int $roleId): void
+    private function ensureRole(int|array $roleId): void
     {
-        if (!Auth::user() || Auth::user()->role_id !== $roleId) {
+        $roleIds = is_array($roleId) ? $roleId : [$roleId];
+        if (!Auth::user() || !in_array(Auth::user()->role_id, $roleIds)) {
             abort(403, 'Unauthorized access.');
         }
     }

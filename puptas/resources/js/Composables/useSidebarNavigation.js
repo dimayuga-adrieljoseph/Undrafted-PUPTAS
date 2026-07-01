@@ -81,11 +81,33 @@ export function useSidebarNavigation() {
             activeRoutes: ['applications', 'recordstaff.applications', 'interviewer.applications', 'evaluator.applications'],
         },
         {
-            key: 'evaluate-grades',
-            label: 'Evaluate Grades',
-            icon: 'clipboard-list',
-            route: 'evaluator.dashboard',
-            activeRoutes: ['evaluator.dashboard'],
+            key: 'tagging',
+            label: 'Tagging',
+            icon: 'tags',
+            activeRoutes: ['evaluator.dashboard', 'interviewer.dashboard'],
+            children: [
+                {
+                    key: 'document-evaluate',
+                    label: 'Document Evaluation',
+                    icon: 'file-signature',
+                    route: 'document_evaluator.dashboard',
+                    activeRoutes: ['document_evaluator.dashboard'],
+                },
+                {
+                    key: 'grade-evaluate',
+                    label: 'Grade Evaluation',
+                    icon: 'clipboard-list',
+                    route: 'evaluator.dashboard',
+                    activeRoutes: ['evaluator.dashboard'],
+                },
+                {
+                    key: 'interview',
+                    label: 'Interview',
+                    icon: 'comments',
+                    route: 'interviewer.dashboard',
+                    activeRoutes: ['interviewer.dashboard'],
+                },
+            ]
         },
         {
             key: 'programs',
@@ -186,21 +208,21 @@ export function useSidebarNavigation() {
             label: 'Dashboard',
             icon: 'tachometer-alt',
             route: `${variant}.dashboard`,
-            activeRoutes: [`${variant}.dashboard`, 'record.dashboard', 'interviewer.dashboard', 'evaluator.dashboard'],
+            activeRoutes: [`${variant}.dashboard`, 'record.dashboard', 'interviewer.dashboard', 'evaluator.dashboard', 'document_evaluator.dashboard'],
         },
         {
             key: 'applications',
             label: 'Applications',
             icon: 'envelope-open-text',
             route: `${variant}.applications`,
-            activeRoutes: [`${variant}.applications`, 'recordstaff.applications', 'interviewer.applications', 'evaluator.applications'],
+            activeRoutes: [`${variant}.applications`, 'recordstaff.applications', 'interviewer.applications', 'evaluator.applications', 'document_evaluator.applications'],
         },
         {
             key: 'programs',
             label: 'Programs',
             icon: 'clipboard-list',
             route: `${variant}.programs`,
-            activeRoutes: [`${variant}.programs`, 'evaluator.programs', 'interviewer.programs', 'record.programs'],
+            activeRoutes: [`${variant}.programs`, 'evaluator.programs', 'interviewer.programs', 'record.programs', 'document_evaluator.programs'],
         },
     ])
 
@@ -236,7 +258,7 @@ export function useSidebarNavigation() {
      */
     const getNavigation = (variant) => {
         if (variant === 'applicant') return applicantNav
-        if (['record', 'interviewer', 'evaluator'].includes(variant)) return staffNav(variant)
+        if (['record', 'interviewer', 'evaluator', 'document_evaluator'].includes(variant)) return staffNav(variant)
         return adminNav // default, superadmin
     }
 
