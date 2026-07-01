@@ -260,6 +260,8 @@ class TestPasserController extends Controller
             'default' => 'pupcet_result',
             'sar'     => 'sar_form',
             'waitlisted' => 'waitlisted',
+            'waitlisted-cutoff' => 'waitlisted',
+            'waitlisted-limited' => 'waitlisted',
         ];
         $emailType = $emailTypeMap[$templateType] ?? 'pupcet_result';
 
@@ -285,8 +287,8 @@ class TestPasserController extends Controller
             return $this->sendSarEmails($passerIds, $enrollmentDate, $enrollmentTime, $operation);
         }
 
-        // Handle Waitlisted Template
-        if ($templateType === 'waitlisted') {
+        // Handle Waitlisted Templates
+        if (in_array($templateType, ['waitlisted', 'waitlisted-cutoff', 'waitlisted-limited'])) {
             if (!$messageTemplate) {
                 return response()->json(['error' => 'Message template is required for waitlisted emails'], 422);
             }

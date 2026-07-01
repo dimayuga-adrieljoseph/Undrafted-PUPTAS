@@ -397,6 +397,29 @@
                                 <div v-if="!programs || programs.length === 0" class="text-sm text-gray-500 italic">No programs available.</div>
                             </div>
 
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                        Slot Confirmation Deadline
+                                    </label>
+                                    <input
+                                        type="date"
+                                        v-model="waitlistSlotDate"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                        Interview Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        v-model="waitlistInterviewDate"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 Waitlisted (Limited Slots) Template Preview
                             </label>
@@ -1061,7 +1084,44 @@
                 @cancel="showSendEmailsConfirmModal = false"
             >
                 <template #content>
-                    <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 max-h-[50vh] overflow-y-auto">
+                    <!-- Template Configuration Summary -->
+                    <div class="mb-4">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Email Configuration</h3>
+                        <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                            <div class="flex">
+                                <span class="font-medium w-40 text-gray-800 dark:text-gray-200">Template Type:</span>
+                                <span>{{ templateTypes.find(t => t.value === templateType)?.label || templateType }}</span>
+                            </div>
+                            
+                            <template v-if="templateType === 'waitlisted-limited'">
+                                <div class="flex">
+                                    <span class="font-medium w-40 text-gray-800 dark:text-gray-200">Slot Confirmation:</span>
+                                    <span>{{ formatDateForEmail(waitlistSlotDate) }}</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="font-medium w-40 text-gray-800 dark:text-gray-200">Interview Date:</span>
+                                    <span>{{ formatDateForEmail(waitlistInterviewDate) }}</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="font-medium w-40 text-gray-800 dark:text-gray-200">Selected Programs:</span>
+                                    <span class="flex-1">
+                                        {{ selectedPrograms.length ? programs.filter(p => selectedPrograms.includes(p.id)).map(p => p.name).join(', ') : 'None' }}
+                                    </span>
+                                </div>
+                            </template>
+                            
+                            <template v-if="templateType === 'sar'">
+                                <div class="flex">
+                                    <span class="font-medium w-40 text-gray-800 dark:text-gray-200">Enrollment Schedule:</span>
+                                    <span>{{ sarEnrollmentDate }} at {{ sarEnrollmentTime }}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Passers List -->
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Selected Passers ({{ selectedPassersList.length }})</h3>
+                    <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 max-h-[40vh] overflow-y-auto">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
                                 <tr>
@@ -1344,6 +1404,19 @@ const waitlistedCutoffTemplatePreview = `
 
 const selectedPrograms = ref([]);
 
+const waitlistSlotDate = ref("2026-06-28");
+const waitlistInterviewDate = ref("2026-07-01");
+
+const formatDateForEmail = (dateString) => {
+    if (!dateString) return '';
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return dateString;
+    const date = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    const monthStr = date.toLocaleString('en-US', { month: 'long' });
+    const weekdayStr = date.toLocaleString('en-US', { weekday: 'long' });
+    return `${monthStr} ${date.getDate()}, ${date.getFullYear()} (${weekdayStr})`;
+};
+
 const getWaitlistedLimitedTemplateHTML = () => {
     let listItems = "";
     if (selectedPrograms.value.length === 0) {
@@ -1369,7 +1442,7 @@ const getWaitlistedLimitedTemplateHTML = () => {
         ${listItems}
     </ul>
     <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;font-weight:bold;">2026 PUP-Taguig Campus Admission Criteria</a></p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 28, 2026 (Sunday)</strong>. You will receive an email containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long-sized bond paper, sign, and bring them on the day of the interview on <strong>July 1, 2026 (Wednesday)</strong>. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until ${formatDateForEmail(waitlistSlotDate.value)}</strong>. You will receive an email containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long-sized bond paper, sign, and bring them on the day of the interview on <strong>${formatDateForEmail(waitlistInterviewDate.value)}</strong>. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
     <div style="text-align:center;margin:24px 0;">
     <a 
         href="${props.registrationUrl}" 
@@ -1387,7 +1460,7 @@ const getWaitlistedLimitedTemplateHTML = () => {
         CLICK TO CONFIRM YOUR INTERVIEW SLOT
     </a>
     </div>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with three photocopies on <strong>July 1, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with three photocopies on <strong>${formatDateForEmail(waitlistInterviewDate.value)}</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
     <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
   </div>
 </div>`.trim();
