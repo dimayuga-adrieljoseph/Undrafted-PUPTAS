@@ -75,22 +75,39 @@
 
         <!-- Toolbar -->
         <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <div class="relative flex-1 max-w-sm">
-            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <input
-              v-model="searchTerm"
-              type="text"
-              placeholder="Search by name or email..."
-              class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-            />
-            <!-- Loading spinner -->
-            <svg v-if="searching" class="w-4 h-4 text-[#9E122C] absolute right-3 top-3 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-            </svg>
+          <div class="flex flex-col sm:flex-row gap-3 flex-1">
+            <!-- Search -->
+            <div class="relative flex-1 max-w-sm">
+              <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              <input
+                v-model="searchTerm"
+                type="text"
+                placeholder="Search by name or email..."
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+              />
+            </div>
+
+
+            <!-- Role Filter -->
+            <div class="relative">
+              <svg class="w-4 h-4 text-gray-400 absolute left-3 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/>
+              </svg>
+              <select
+                id="role-filter"
+                v-model="selectedRole"
+                class="pl-9 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#9E122C] focus:border-transparent cursor-pointer min-w-[160px]"
+              >
+                <option value="">All Roles</option>
+                <option v-for="(label, roleId) in roles" :key="roleId" :value="roleId">
+                  {{ label }}
+                </option>
+              </select>
+            </div>
           </div>
+
           <p class="text-sm text-gray-500 dark:text-gray-400 self-center whitespace-nowrap">
             {{ paginationInfo.total }} users &bull; page {{ paginationInfo.current_page }} of {{ paginationInfo.last_page }}
           </p>
@@ -258,7 +275,7 @@
           </svg>
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No users found</h3>
           <p class="text-gray-500 dark:text-gray-400 mb-4">
-            <span v-if="searchTerm">No users match your search. Try a different term.</span>
+            <span v-if="searchTerm || selectedRole">No users match your filters. Try adjusting the search or role filter.</span>
             <span v-else>Get started by adding your first user.</span>
           </p>
           <Link
@@ -365,6 +382,7 @@ const canViewProfiles = computed(() => isSuperAdmin.value || isAdmin.value);
 
 // ── State ──────────────────────────────────────────────────────────────────
 const searchTerm     = ref('');
+const selectedRole   = ref('');
 const searching      = ref(false);
 const displayedUsers = ref([...(props.users ?? [])]);
 const paginationInfo = ref({ ...(props.pagination ?? { total: 0, per_page: 15, current_page: 1, last_page: 1 }) });
@@ -375,7 +393,10 @@ let debounceTimer = null;
 async function fetchPage(q, p) {
   searching.value = true;
   try {
-    const { data } = await axios.get(route('users.search'), { params: { q: q || undefined, page: p } });
+    const params = { page: p };
+    if (q) params.q = q;
+    if (selectedRole.value) params.role = selectedRole.value;
+    const { data } = await axios.get(route('users.search'), { params });
     displayedUsers.value = data.data;
     paginationInfo.value = {
       total:        data.total,
@@ -397,6 +418,11 @@ function changePage(p) {
 watch(searchTerm, (val) => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => fetchPage(val, 1), 350);
+});
+
+// Immediately filter when role selection changes
+watch(selectedRole, () => {
+  fetchPage(searchTerm.value, 1);
 });
 
 // Visible page numbers (max 5 around current page)

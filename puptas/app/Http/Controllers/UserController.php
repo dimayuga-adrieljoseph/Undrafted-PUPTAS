@@ -555,8 +555,9 @@ class UserController extends Controller
         $search  = $request->input('q');
         $page    = (int) $request->input('page', 1);
         $perPage = 15;
+        $roleId  = $request->filled('role') ? (int) $request->input('role') : null;
 
-        $result = $this->userService->searchUsers($search, $page, $perPage);
+        $result = $this->userService->searchUsers($search, $page, $perPage, $roleId);
 
         return response()->json($result);
     }
