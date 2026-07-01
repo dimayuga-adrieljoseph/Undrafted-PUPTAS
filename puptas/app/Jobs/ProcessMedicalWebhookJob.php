@@ -14,8 +14,6 @@ class ProcessMedicalWebhookJob implements ShouldQueue
 {
     use Queueable;
 
-    public $queue = 'high';
-
     protected array $payload;
     protected string $ipAddress;
 
@@ -26,6 +24,7 @@ class ProcessMedicalWebhookJob implements ShouldQueue
     {
         $this->payload = $payload;
         $this->ipAddress = $ipAddress;
+        $this->onQueue('high');
     }
 
     /**
