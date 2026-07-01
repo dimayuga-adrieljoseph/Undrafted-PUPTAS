@@ -42,10 +42,18 @@ class ApplicantDashboardController extends Controller
         $hasGrades = Grade::where('user_id', (string) $user->id)->exists();
         $canDownloadSlip = $hasSubmittedApplication && $hasGrades;
 
+        // Determine whether the "Download F137 Request Letter" button should appear.
+        // Conditions:
+        //   - Former School Name has been provided in the applicant's profile
+        //   - Former School Address has been provided in the applicant's profile
+        $canDownloadF137 = !empty(trim($profile?->school               ?? ''))
+                        && !empty(trim($profile?->former_school_address ?? ''));
+
         return Inertia::render('Dashboard/Applicant', [
             'user'           => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'gradeUrl'       => $strand ? ($gradeRouteMap[$strand] ?? null) : null,
             'canDownloadSlip' => $canDownloadSlip,
+            'canDownloadF137' => $canDownloadF137,
             'showQualifiedProgramsNav' => $hasSubmittedApplication,
         ]);
     }
@@ -103,6 +111,11 @@ class ApplicantDashboardController extends Controller
             'files'            => $files,
             'application'      => $application,
             'showQualifiedProgramsNav' => $application && $application->status !== 'draft',
+            'formerSchool' => [
+                'school'                  => $profile?->school                  ?? '',
+                'former_school_address'   => $profile?->former_school_address   ?? '',
+                'former_school_principal' => $profile?->former_school_principal ?? '',
+            ],
         ]);
     }
 
