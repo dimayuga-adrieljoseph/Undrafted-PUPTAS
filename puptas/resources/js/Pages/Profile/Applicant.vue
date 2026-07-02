@@ -366,7 +366,7 @@ const cancelAcademic = () => {
                 <div class="card-header"><div class="card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93C9.33 17.79 7 14.5 7 11V7.18L12 5z"/></svg></div><div><h3 class="card-title">PUPCET Result</h3></div></div>
                 <dl class="info-list">
                   <div class="info-row"><dt>Reference No.</dt><dd>{{ user.test_passer.reference_number || '—' }}</dd></div>
-                  <div v-if="user.test_passer.pupcet_score" class="info-row"><dt>PUPCET Score</dt><dd class="score-value">{{ user.test_passer.pupcet_score }}</dd></div>
+                  <div v-if="user.test_passer.pupcet_total_score" class="info-row"><dt>PUPCET Score</dt><dd class="score-value">{{ user.test_passer.pupcet_total_score }}</dd></div>
                 </dl>
               </div>
             </aside>

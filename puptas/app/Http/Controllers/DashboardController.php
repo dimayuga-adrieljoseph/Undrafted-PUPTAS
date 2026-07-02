@@ -164,7 +164,7 @@ class DashboardController extends Controller
                 'email' => $applicant->email,
                 'sex' => $applicant->sex,
                 'created_at' => $applicant->created_at,
-                'grades' => $applicant->grades, // Include grades in response
+                'grades' => $applicant->grades ? $applicant->grades->except(['id', 'user_id', 'created_at', 'updated_at']) : null,
                 // Map currentApplication to application for frontend compatibility 
                 'application' => $applicant->currentApplication ? [
                     'id' => $applicant->currentApplication->id,
@@ -180,16 +180,7 @@ class DashboardController extends Controller
             // Return full file data with URLs (not lazy loading)
             $fileList = FileMapper::formatFilesForGraduateType($files, $graduateType, false);
 
-            // Debug logging
-            \Log::info('Admin getUserFiles response', [
-                'userId' => $id,
-                'graduateType' => $graduateType,
-                'hasGrades' => $applicant->grades !== null,
-                'gradesData' => $applicant->grades,
-                'rawFileCount' => $files->count(),
-                'formattedFileCount' => count($fileList),
-                'fileKeys' => array_keys($fileList),
-            ]);
+
 
             return response()->json([
                 'user' => $userData,

@@ -66,7 +66,17 @@ class HandleInertiaRequests extends Middleware
             'test_passer_data' => function () use ($request) {
                 $pendingReg = $request->session()->get('pending_registration');
                 if ($pendingReg && !empty($pendingReg['email'])) {
-                    return \App\Models\TestPasser::where('email', $pendingReg['email'])->first();
+                    $passer = \App\Models\TestPasser::where('email', $pendingReg['email'])
+                        ->first([
+                            'reference_number',
+                            'first_name',
+                            'surname',
+                            'middle_name',
+                            'email',
+                            'shs_school',
+                            'passer_status_id',
+                        ]);
+                    return $passer;
                 }
                 return null;
             },
