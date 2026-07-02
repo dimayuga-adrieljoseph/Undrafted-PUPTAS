@@ -873,16 +873,17 @@ onMounted(() => {
                                             {{ a.program?.code || "—" }}
                                         </span>
                                     </td>
-                                    <td class="px-3 py-3 whitespace-nowrap">
+                                    <td class="px-3 py-3 w-full overflow-hidden">
                                         <span
                                             :class="
                                                 getStatusClass(
                                                     a.passer_status_name,
                                                 )
                                             "
-                                            class="px-2.5 py-1 rounded-full text-xs font-medium capitalize"
+                                            class="px-2.5 py-1 rounded-full text-xs font-medium capitalize inline-block max-w-full truncate align-middle"
+                                            :title="a.passer_status_name ? a.passer_status_name.replace(/_/g, ' ') : ''"
                                         >
-                                            {{ a.passer_status_name }}
+                                            {{ a.passer_status_name ? a.passer_status_name.replace(/_/g, ' ') : '' }}
                                         </span>
                                     </td>
                                     <td class="px-3 py-3">
