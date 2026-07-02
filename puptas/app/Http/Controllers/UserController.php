@@ -515,6 +515,106 @@ class UserController extends Controller
     }
 
     /**
+     * Process a pull-out for an applicant who has passed the interview stage.
+     * Reverts the applicant to in-progress interviewer stage, removes medical/records
+     * processes, and adds 1 slot back to their first-choice program.
+     *
+     * Accessible by Admin (role_id 2) and SuperAdmin (role_id 7).
+     */
+    public function processPullout(Request $request, $id)
+    {
+        $currentRoleId = $request->user()->role_id;
+        if (!in_array($currentRoleId, [2, 7])) {
+            return back()->with('error', 'You do not have permission to process pull-outs.');
+        }
+
+        $request->validate([
+            'notes' => 'required|string|min:5|max:1000',
+        ]);
+
+        $userModel = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
+        if (!$userModel) {
+            abort(404, 'User not found.');
+        }
+
+        return DB::transaction(function () use ($request, $id, $userModel) {
+            // Resolve applicant profile
+            $applicant = \App\Models\ApplicantProfile::where('user_id', (string) $id)
+                ->orWhere('user_id', (string) $userModel->id)
+                ->first();
+
+            if (!$applicant) {
+                abort(422, 'Applicant profile not found.');
+            }
+
+            // Get latest application
+            $application = \App\Models\Application::where('user_id', $applicant->user_id)
+                ->whereNull('deleted_at')
+                ->with(['processes', 'program'])
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$application) {
+                abort(422, 'No application found for this applicant.');
+            }
+
+            // Guard: only allow pull-out if the interviewer stage was passed
+            $interviewerProcess = $application->processes
+                ->where('stage', 'interviewer')
+                ->first();
+
+            if (!$interviewerProcess || $interviewerProcess->action !== 'passed') {
+                abort(422, 'Pull-out can only be processed for applicants who have passed the interview stage.');
+            }
+
+            $programName = $application->program?->name ?? 'their program';
+            $programCode = $application->program?->code;
+
+            // 1. Revert application status
+            $application->update([
+                'status'              => 'submitted',
+                'enrollment_status'   => 'pending',
+                'enrollment_position' => null,
+            ]);
+
+            // 2. Delete medical and records stages
+            \App\Models\ApplicationProcess::where('application_id', $application->id)
+                ->whereIn('stage', ['medical', 'records'])
+                ->delete();
+
+            // 3. Revert interviewer stage to in_progress
+            \App\Models\ApplicationProcess::where('application_id', $application->id)
+                ->where('stage', 'interviewer')
+                ->update([
+                    'status'          => 'in_progress',
+                    'action'          => null,
+                    'decision_reason' => $request->notes,
+                ]);
+
+            // 4. Add 1 slot back to the program
+            if ($programCode) {
+                \App\Models\Program::where('code', $programCode)
+                    ->increment('slots');
+            }
+
+            // 5. Audit log
+            $adminEmail = $request->user()->email;
+            $applicantName = "{$applicant->firstname} {$applicant->lastname}";
+            $this->auditLogService->logActivity(
+                'PULL_OUT',
+                'Applications',
+                "Admin {$adminEmail} processed pull-out for applicant {$applicantName} ({$applicant->email}). "
+                    . "Reverted to interviewer stage. +1 slot returned to {$programCode}. "
+                    . "Notes: {$request->notes}",
+                null,
+                'USER_MANAGEMENT'
+            );
+
+            return back()->with('pullout_success', "Pull-out processed successfully. {$applicantName} has been reverted to the interview queue and 1 slot was returned to {$programName}.");
+        });
+    }
+
+    /**
      * Remove the specified user from storage.
      */
     public function destroy(Request $request, $id)

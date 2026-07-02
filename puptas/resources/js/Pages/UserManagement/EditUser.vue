@@ -515,6 +515,58 @@ const roleColor = computed(() => {
     const map = { 1: 'role-applicant', 2: 'role-staff', 3: 'role-evaluator', 4: 'role-interviewer', 5: 'role-admin', 6: 'role-registrar', 7: 'role-super' };
     return map[parseInt(props.user.role_id)] ?? 'role-default';
 });
+
+// ── Pull-Out Feature ──────────────────────────────────────────────────────────
+const isAdmin     = computed(() => props.currentUserRoleId === 2);
+const canActOnPullout = computed(() => isSuperAdmin.value || isAdmin.value);
+
+// Pull-out is only allowed when the interviewer stage has action = 'passed'
+const canPullOut = computed(() => {
+    if (!isApplicant.value || !canActOnPullout.value) return false;
+    const processes = props.user.current_application?.processes ?? [];
+    const interviewerProcess = processes.find(p => p.stage === 'interviewer');
+    return interviewerProcess?.action === 'passed';
+});
+
+const pulloutNotes        = ref('');
+const pulloutConfirming   = ref(false);
+const pulloutSaving       = ref(false);
+const pulloutSuccess      = ref('');
+const pulloutError        = ref('');
+
+const openPulloutConfirm = () => {
+    if (!pulloutNotes.value.trim() || pulloutNotes.value.trim().length < 5) {
+        pulloutError.value = 'Please enter a reason of at least 5 characters.';
+        return;
+    }
+    pulloutError.value = '';
+    pulloutConfirming.value = true;
+};
+
+const cancelPulloutConfirm = () => {
+    pulloutConfirming.value = false;
+};
+
+const submitPullout = () => {
+    pulloutSaving.value = true;
+    pulloutError.value  = '';
+    pulloutSuccess.value = '';
+    router.post(route('users.pullout', props.user.id), { notes: pulloutNotes.value }, {
+        preserveScroll: true,
+        onSuccess: (page) => {
+            pulloutConfirming.value = false;
+            pulloutSuccess.value = page.props.flash?.pullout_success ?? 'Pull-out processed successfully.';
+            pulloutNotes.value = '';
+        },
+        onError: (errors) => {
+            pulloutConfirming.value = false;
+            pulloutError.value = errors?.notes ?? errors?.message ?? 'An error occurred. Please try again.';
+        },
+        onFinish: () => {
+            pulloutSaving.value = false;
+        },
+    });
+};
 </script>
 
 <template>
@@ -749,11 +801,108 @@ const roleColor = computed(() => {
                                     </div>
                                 </div>
                             </div>
+                        <!-- ── Pull-Out Card (Admin/SuperAdmin only, post-interview) ── -->
+                        <div v-if="canPullOut || (isApplicant && canActOnPullout && !canPullOut)" class="card card--wide pullout-card">
+                            <div class="card-header pullout-card-header">
+                                <div class="card-icon pullout-icon">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                                </div>
+                                <div>
+                                    <h2 class="card-title pullout-title">Process Pull-Out</h2>
+                                    <p class="card-subtitle">Revert applicant to interview queue &amp; reclaim program slot</p>
+                                </div>
+                            </div>
+
+                            <!-- Success Banner -->
+                            <div v-if="pulloutSuccess" class="pullout-success-banner">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                                <span>{{ pulloutSuccess }}</span>
+                            </div>
+
+                            <!-- Not Eligible State -->
+                            <div v-if="!canPullOut" class="pullout-not-eligible">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                                <p>Pull-out is only available for applicants who have <strong>passed the interview stage</strong>. This applicant has not yet passed their interview.</p>
+                            </div>
+
+                            <!-- Active Pull-Out Form -->
+                            <template v-if="canPullOut">
+                                <div class="pullout-body">
+                                    <div class="pullout-warning">
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                                        <div>
+                                            <p class="pullout-warning-title">This action cannot be undone automatically.</p>
+                                            <p class="pullout-warning-text">
+                                                This will revert <strong>{{ user.firstname }} {{ user.lastname }}</strong> back to the interviewer queue,
+                                                delete their medical/records stage progress, and return <strong>1 slot</strong> to
+                                                <strong>{{ user.program?.name ?? user.current_application?.program?.name ?? 'their program' }}</strong>.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label class="field-label pullout-label">Pull-Out Reason / Notes <span class="req">*</span></label>
+                                        <textarea
+                                            v-model="pulloutNotes"
+                                            rows="3"
+                                            maxlength="1000"
+                                            placeholder="e.g., Applicant informed us they are pulling out and will not pursue PUP enrollment."
+                                            class="field-input pullout-textarea"
+                                        ></textarea>
+                                        <p v-if="pulloutError" class="field-error">{{ pulloutError }}</p>
+                                        <p class="field-hint">{{ pulloutNotes.length }}/1000 characters. Minimum 5 characters.</p>
+                                    </div>
+                                    <div class="pullout-actions">
+                                        <button type="button" class="btn btn--danger" @click="openPulloutConfirm" :disabled="pulloutSaving">
+                                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                                            Process Pull-Out
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
 
-                <!-- ── Grades Tab ─────────────────────────────────── -->
+                <!-- ── Pull-Out Confirmation Modal ──────────────────────── -->
+                <Teleport to="body">
+                    <div v-if="pulloutConfirming" class="pullout-overlay" @click.self="cancelPulloutConfirm">
+                        <div class="pullout-modal" role="dialog" aria-modal="true">
+                            <div class="pullout-modal-header">
+                                <div class="pullout-modal-icon">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="pullout-modal-title">Confirm Pull-Out</h3>
+                                    <p class="pullout-modal-subtitle">Please review the changes below before confirming.</p>
+                                </div>
+                            </div>
+                            <div class="pullout-modal-body">
+                                <p class="pullout-modal-applicant">Applicant: <strong>{{ user.firstname }} {{ user.lastname }}</strong> ({{ user.email }})</p>
+                                <ul class="pullout-modal-list">
+                                    <li>Application status → <strong>Submitted</strong> (enrollment cleared)</li>
+                                    <li>Interviewer stage → <strong>In Progress</strong> (returned to interview queue)</li>
+                                    <li>Medical &amp; Records stages → <strong>Deleted</strong></li>
+                                    <li><strong>+1 slot</strong> returned to <strong>{{ user.program?.name ?? user.current_application?.program?.name ?? 'their program' }}</strong></li>
+                                </ul>
+                                <div class="pullout-modal-notes">
+                                    <p class="pullout-modal-notes-label">Reason/Notes:</p>
+                                    <p class="pullout-modal-notes-text">{{ pulloutNotes }}</p>
+                                </div>
+                            </div>
+                            <div class="pullout-modal-footer">
+                                <button type="button" class="btn btn--ghost" @click="cancelPulloutConfirm" :disabled="pulloutSaving">Cancel</button>
+                                <button type="button" class="btn btn--danger" @click="submitPullout" :disabled="pulloutSaving">
+                                    <span v-if="pulloutSaving" class="spinner"></span>
+                                    <svg v-else viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                                    {{ pulloutSaving ? 'Processing…' : 'Confirm Pull-Out' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </Teleport>
+
+</ReplacementContent>
+<parameter name="StartLine">804                <!-- ── Grades Tab ─────────────────────────────────── -->
                 <div v-show="activeTab === 'grades'" class="tab-panel">
                     <div v-if="gradesSaved" class="grades-saved-banner"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Grades saved successfully. Category averages and program qualification have been recomputed.</div>
                     <div class="avg-summary-bar">
@@ -1149,4 +1298,62 @@ REPLACE
 .dark .timeline-remark { color:#94a3b8; }
 .dark .breadcrumb { color:#64748b; }
 .dark .breadcrumb-sep { color:#374151; }
+
+/* ── Pull-Out Feature Styles ──────────────────────────────────── */
+.pullout-card { border:1.5px solid #fee2e2; margin-top:1.25rem; }
+.pullout-card-header { background:linear-gradient(135deg, #fff5f5 0%, #fff 100%); }
+.pullout-icon { background:rgba(239,68,68,.12) !important; color:#dc2626 !important; }
+.pullout-title { color:#dc2626 !important; }
+.pullout-body { padding:1rem 1.5rem 1.5rem; display:flex; flex-direction:column; gap:1rem; }
+.pullout-warning { display:flex; gap:.75rem; align-items:flex-start; background:#fef2f2; border:1px solid #fecaca; border-radius:.625rem; padding:.875rem 1rem; }
+.pullout-warning svg { width:20px; height:20px; fill:#dc2626; flex-shrink:0; margin-top:2px; }
+.pullout-warning-title { font-size:.825rem; font-weight:700; color:#dc2626; margin-bottom:.25rem; }
+.pullout-warning-text { font-size:.825rem; color:#7f1d1d; line-height:1.5; }
+.pullout-label { color:#dc2626 !important; }
+.pullout-textarea { min-height:80px; resize:vertical; }
+.pullout-actions { display:flex; justify-content:flex-end; }
+.pullout-not-eligible { display:flex; align-items:flex-start; gap:.75rem; padding:1rem 1.5rem 1.5rem; color:#6b7280; }
+.pullout-not-eligible svg { width:20px; height:20px; fill:#d1d5db; flex-shrink:0; margin-top:2px; }
+.pullout-not-eligible p { font-size:.875rem; line-height:1.5; }
+.pullout-success-banner { display:flex; align-items:center; gap:.625rem; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; border-radius:.5rem; padding:.75rem 1.25rem; margin:.75rem 1.5rem 0; font-size:.875rem; }
+.pullout-success-banner svg { width:18px; height:18px; fill:#16a34a; flex-shrink:0; }
+
+/* Danger button */
+.btn--danger { display:inline-flex; align-items:center; gap:.5rem; padding:.5rem 1.25rem; border-radius:.5rem; font-size:.875rem; font-weight:600; background:#dc2626; color:#fff; border:none; cursor:pointer; transition:background .15s, transform .1s; }
+.btn--danger:hover:not(:disabled) { background:#b91c1c; transform:translateY(-1px); }
+.btn--danger:disabled { opacity:.6; cursor:not-allowed; }
+.btn--danger svg { width:16px; height:16px; fill:currentColor; }
+
+/* Pull-Out Confirmation Modal */
+.pullout-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(3px); z-index:9999; display:flex; align-items:center; justify-content:center; padding:1rem; }
+.pullout-modal { background:#fff; border-radius:1rem; box-shadow:0 20px 60px rgba(0,0,0,.2); width:100%; max-width:520px; overflow:hidden; animation:pullout-slide-in .2s ease; }
+@keyframes pullout-slide-in { from { opacity:0; transform:scale(.95) translateY(-8px); } to { opacity:1; transform:scale(1) translateY(0); } }
+.pullout-modal-header { display:flex; align-items:flex-start; gap:1rem; padding:1.25rem 1.5rem; background:linear-gradient(135deg,#fff5f5 0%,#fff 100%); border-bottom:1px solid #fee2e2; }
+.pullout-modal-icon { width:40px; height:40px; border-radius:.625rem; background:rgba(239,68,68,.12); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.pullout-modal-icon svg { width:22px; height:22px; fill:#dc2626; }
+.pullout-modal-title { font-size:1.05rem; font-weight:700; color:#dc2626; margin:0 0 .2rem; }
+.pullout-modal-subtitle { font-size:.8rem; color:#6b7280; margin:0; }
+.pullout-modal-body { padding:1.25rem 1.5rem; display:flex; flex-direction:column; gap:1rem; }
+.pullout-modal-applicant { font-size:.9rem; color:#374151; background:#f9fafb; border:1px solid #e5e7eb; border-radius:.5rem; padding:.625rem .875rem; margin:0; }
+.pullout-modal-list { margin:0; padding:0 0 0 1.25rem; display:flex; flex-direction:column; gap:.4rem; }
+.pullout-modal-list li { font-size:.875rem; color:#374151; }
+.pullout-modal-notes { background:#fef2f2; border:1px solid #fecaca; border-radius:.5rem; padding:.75rem 1rem; }
+.pullout-modal-notes-label { font-size:.75rem; font-weight:600; color:#dc2626; margin:0 0 .3rem; text-transform:uppercase; letter-spacing:.04em; }
+.pullout-modal-notes-text { font-size:.875rem; color:#7f1d1d; margin:0; white-space:pre-wrap; line-height:1.5; }
+.pullout-modal-footer { display:flex; align-items:center; justify-content:flex-end; gap:.75rem; padding:1rem 1.5rem; border-top:1px solid #f3f4f6; background:#fafafa; }
+
+/* Dark mode overrides */
+.dark .pullout-card { border-color:rgba(239,68,68,.25); }
+.dark .pullout-card-header { background:linear-gradient(135deg,rgba(239,68,68,.08) 0%,#0f1117 100%); }
+.dark .pullout-warning { background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.2); }
+.dark .pullout-warning-text { color:#fca5a5; }
+.dark .pullout-success-banner { background:rgba(34,197,94,.08); border-color:rgba(34,197,94,.2); color:#86efac; }
+.dark .pullout-not-eligible { color:#64748b; }
+.dark .pullout-modal { background:#0f1117; }
+.dark .pullout-modal-header { background:linear-gradient(135deg,rgba(239,68,68,.1) 0%,#0f1117 100%); border-color:rgba(239,68,68,.2); }
+.dark .pullout-modal-applicant { background:#1a1d27; border-color:#2a2d3a; color:#94a3b8; }
+.dark .pullout-modal-list li { color:#94a3b8; }
+.dark .pullout-modal-notes { background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.2); }
+.dark .pullout-modal-notes-text { color:#fca5a5; }
+.dark .pullout-modal-footer { background:#1a1d27; border-color:#2a2d3a; }
 </style>

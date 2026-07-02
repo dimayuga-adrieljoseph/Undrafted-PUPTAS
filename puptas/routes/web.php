@@ -626,6 +626,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::put('/users/{user}/grades', [UserController::class, 'updateGrades'])->name('users.grades.update');
+    Route::post('/users/{user}/pullout', [UserController::class, 'processPullout'])->name('users.pullout');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     // Admin Reports

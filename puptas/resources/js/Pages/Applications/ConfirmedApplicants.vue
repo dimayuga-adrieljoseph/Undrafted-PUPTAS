@@ -121,8 +121,13 @@ const filtered = computed(() => {
         list = list.filter((a) => !a.sar_sent);
     if (filterGraduateType.value)
         list = list.filter((a) => a.graduate_type === filterGraduateType.value);
-    if (filterStage.value)
-        list = list.filter((a) => a.current_stage === filterStage.value);
+    if (filterStage.value) {
+        if (filterStage.value === 'pulled_out') {
+            list = list.filter((a) => a.pulled_out);
+        } else {
+            list = list.filter((a) => a.current_stage === filterStage.value && !a.pulled_out);
+        }
+    }
     return list;
 });
 
@@ -653,6 +658,7 @@ onMounted(() => {
                             <option value="interviewer">For Interviewer</option>
                             <option value="medical">For Medical</option>
                             <option value="enrollment">For Enrollment</option>
+                            <option value="pulled_out">Pulled Out</option>
                         </select>
                         <button
                             @click="fetchApplicants"
@@ -845,10 +851,16 @@ onMounted(() => {
                                     <td class="px-3 py-3">
                                         <div class="truncate">
                                             <div
-                                                class="font-medium text-gray-900 dark:text-gray-200 truncate"
+                                                class="font-medium text-gray-900 dark:text-gray-200 truncate flex items-center gap-2"
                                             >
                                                 {{ a.lastname }},
                                                 {{ a.firstname }}
+                                                <span v-if="a.pulled_out"
+                                                    class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-800/50 cursor-help"
+                                                    :title="a.pullout_notes ? 'Notes: ' + a.pullout_notes : 'Pulled Out'"
+                                                >
+                                                    PULLED OUT
+                                                </span>
                                             </div>
                                         </div>
                                     </td>
