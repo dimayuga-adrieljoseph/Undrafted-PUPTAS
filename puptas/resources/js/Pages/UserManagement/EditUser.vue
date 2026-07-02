@@ -801,6 +801,7 @@ const submitPullout = () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
                         <!-- ── Pull-Out Card (Admin/SuperAdmin only, post-interview) ── -->
                         <div v-if="canPullOut || (isApplicant && canActOnPullout && !canPullOut)" class="card card--wide pullout-card">
                             <div class="card-header pullout-card-header">
@@ -900,9 +901,7 @@ const submitPullout = () => {
                         </div>
                     </div>
                 </Teleport>
-
-</ReplacementContent>
-<parameter name="StartLine">804                <!-- ── Grades Tab ─────────────────────────────────── -->
+                <!-- ── Grades Tab ─────────────────────────────────── -->
                 <div v-show="activeTab === 'grades'" class="tab-panel">
                     <div v-if="gradesSaved" class="grades-saved-banner"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Grades saved successfully. Category averages and program qualification have been recomputed.</div>
                     <div class="avg-summary-bar">
