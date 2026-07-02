@@ -836,7 +836,7 @@ const submitPullout = () => {
                                             <p class="pullout-warning-text">
                                                 This will revert <strong>{{ user.firstname }} {{ user.lastname }}</strong> back to the interviewer queue,
                                                 delete their medical/records stage progress, and return <strong>1 slot</strong> to
-                                                <strong>{{ user.program?.name ?? user.current_application?.program?.name ?? 'their program' }}</strong>.
+                                                <strong>{{ user.current_application?.program?.name ?? user.program?.name ?? 'their program' }}</strong>.
                                             </p>
                                         </div>
                                     </div>
@@ -883,7 +883,7 @@ const submitPullout = () => {
                                     <li>Application status → <strong>Submitted</strong> (enrollment cleared)</li>
                                     <li>Interviewer stage → <strong>In Progress</strong> (returned to interview queue)</li>
                                     <li>Medical &amp; Records stages → <strong>Deleted</strong></li>
-                                    <li><strong>+1 slot</strong> returned to <strong>{{ user.program?.name ?? user.current_application?.program?.name ?? 'their program' }}</strong></li>
+                                    <li><strong>+1 slot</strong> returned to <strong>{{ user.current_application?.program?.name ?? user.program?.name ?? 'their program' }}</strong></li>
                                 </ul>
                                 <div class="pullout-modal-notes">
                                     <p class="pullout-modal-notes-label">Reason/Notes:</p>

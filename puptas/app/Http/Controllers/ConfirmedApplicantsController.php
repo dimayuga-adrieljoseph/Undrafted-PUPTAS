@@ -97,7 +97,7 @@ class ConfirmedApplicantsController extends Controller
                     && $interviewerProcess->status === 'in_progress'
                     && $interviewerProcess->action === null
                     && !$hasMedicalOrRecords
-                    && $interviewerProcess->decision_reason !== null; // notes were set during pull-out
+                    && ($interviewerProcess->decision_reason !== null || $interviewerProcess->reviewer_notes !== null); // notes were set during pull-out
 
                 return [
                     'id'               => $applicant->user_id,
@@ -122,7 +122,7 @@ class ConfirmedApplicantsController extends Controller
                     'graduate_type'    => $applicant->graduateTypes->first()?->label,
                     'current_stage'    => $currentStage,
                     'pulled_out'       => $isPulledOut,
-                    'pullout_notes'    => $isPulledOut ? $interviewerProcess->decision_reason : null,
+                    'pullout_notes'    => $isPulledOut ? ($interviewerProcess->decision_reason ?? $interviewerProcess->reviewer_notes) : null,
                 ];
             });
 
