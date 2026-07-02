@@ -725,11 +725,11 @@ onMounted(() => {
                     <!-- Table -->
                     <div class="overflow-x-auto">
                         <table
-                            class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+                            class="w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed"
                         >
                             <thead class="bg-gray-50 dark:bg-gray-900">
                                 <tr>
-                                    <th class="px-3 py-3 text-left">
+                                    <th class="px-3 py-3 text-left w-10">
                                         <input
                                             type="checkbox"
                                             :checked="
@@ -744,37 +744,37 @@ onMounted(() => {
                                         />
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-16"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-12"
                                     >
                                         Rank
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[20%]"
                                     >
                                         Name
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[20%]"
                                     >
                                         Contact
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
                                     >
                                         Program
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
                                     >
                                         Passer Status
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
                                     >
                                         Graduate Type
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-24 sticky right-0 bg-gray-50 dark:bg-gray-900"
                                     >
                                         SAR STATUS
                                     </th>
@@ -842,9 +842,9 @@ onMounted(() => {
                                         {{ getGlobalRank(pageIndex) }}
                                     </td>
                                     <td class="px-3 py-3">
-                                        <div>
+                                        <div class="truncate">
                                             <div
-                                                class="font-medium text-gray-900 dark:text-gray-200"
+                                                class="font-medium text-gray-900 dark:text-gray-200 truncate"
                                             >
                                                 {{ a.lastname }},
                                                 {{ a.firstname }}
@@ -852,16 +852,18 @@ onMounted(() => {
                                         </div>
                                     </td>
                                     <td class="px-3 py-3">
-                                        <div
-                                            class="text-gray-900 dark:text-gray-200 text-sm"
-                                        >
-                                            {{ a.email }}
-                                        </div>
-                                        <div
-                                            v-if="a.reference_number"
-                                            class="text-sm text-gray-500 dark:text-gray-300"
-                                        >
-                                            Ref: {{ a.reference_number }}
+                                        <div class="truncate">
+                                            <div
+                                                class="text-gray-900 dark:text-gray-200 text-sm truncate"
+                                            >
+                                                {{ a.email }}
+                                            </div>
+                                            <div
+                                                v-if="a.reference_number"
+                                                class="text-sm text-gray-500 dark:text-gray-300 truncate"
+                                            >
+                                                Ref: {{ a.reference_number }}
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="px-3 py-3 whitespace-nowrap">
@@ -884,12 +886,12 @@ onMounted(() => {
                                         </span>
                                     </td>
                                     <td class="px-3 py-3">
-                                        <div class="text-sm text-gray-900 dark:text-gray-200">
+                                        <div class="text-sm text-gray-900 dark:text-gray-200 truncate" :title="a.graduate_type">
                                             {{ a.graduate_type || "—" }}
                                         </div>
                                     </td>
                                     <td
-                                        class="px-3 py-3 whitespace-nowrap text-sm font-medium"
+                                        class="px-3 py-3 whitespace-nowrap text-sm font-medium sticky right-0 bg-white dark:bg-gray-800"
                                     >
                                         <span
                                             v-if="a.sar_sent"
