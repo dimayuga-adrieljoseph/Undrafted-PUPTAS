@@ -138,12 +138,16 @@ class ConfirmedApplicantsController extends Controller
         $enrollmentDate = $request->input('enrollment_date');
         $enrollmentTime = $request->input('enrollment_time');
 
-        // Verify all applicants are confirmed (for_evaluation)
+        // Verify all applicants are in any active evaluation stage
         $applicants = ApplicantProfile::with(['currentApplication', 'testPasser'])
             ->whereIn('user_id', $applicantIds)
             ->whereHas('currentApplication.processes', function ($q) {
-                $q->where('stage', 'document_evaluator')
-                    ->whereIn('status', ['in_progress', 'returned']);
+                $q->whereIn('stage', [
+                    'document_evaluator',
+                    'grade_evaluator',
+                    'interviewer',
+                    'medical',
+                ])->whereIn('status', ['in_progress', 'returned']);
             })
             ->get()
             ->sortByDesc(function ($applicant) {
@@ -152,7 +156,7 @@ class ConfirmedApplicantsController extends Controller
 
         if ($applicants->isEmpty()) {
             return response()->json([
-                'message' => 'No confirmed applicants found. SAR Forms can only be sent to applicants with "For Evaluation" status.',
+                'message' => 'No confirmed applicants found. SAR Forms can only be sent to applicants currently under evaluation.',
             ], 422);
         }
 
@@ -309,12 +313,16 @@ class ConfirmedApplicantsController extends Controller
         $applicantIds    = $request->input('applicant_ids');
         $messageTemplate = $request->input('message_template');
 
-        // Verify all applicants are confirmed
+        // Verify all applicants are in any active evaluation stage
         $applicants = ApplicantProfile::with(['currentApplication', 'testPasser'])
             ->whereIn('user_id', $applicantIds)
             ->whereHas('currentApplication.processes', function ($q) {
-                $q->where('stage', 'document_evaluator')
-                    ->whereIn('status', ['in_progress', 'returned']);
+                $q->whereIn('stage', [
+                    'document_evaluator',
+                    'grade_evaluator',
+                    'interviewer',
+                    'medical',
+                ])->whereIn('status', ['in_progress', 'returned']);
             })
             ->get();
 
