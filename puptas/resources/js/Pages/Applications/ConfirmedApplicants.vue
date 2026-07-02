@@ -729,7 +729,7 @@ onMounted(() => {
                         >
                             <thead class="bg-gray-50 dark:bg-gray-900">
                                 <tr>
-                                    <th class="px-6 py-4 text-left">
+                                    <th class="px-3 py-3 text-left">
                                         <input
                                             type="checkbox"
                                             :checked="
@@ -744,37 +744,37 @@ onMounted(() => {
                                         />
                                     </th>
                                     <th
-                                        class="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-16"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-16"
                                     >
                                         Rank
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Name
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Contact
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Program
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Passer Status
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Graduate Type
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         SAR STATUS
                                     </th>
@@ -827,7 +827,7 @@ onMounted(() => {
                                     @click="toggle(a.id)"
                                     v-else
                                 >
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-3 py-3 whitespace-nowrap">
                                         <input
                                             type="checkbox"
                                             :checked="
@@ -837,11 +837,11 @@ onMounted(() => {
                                         />
                                     </td>
                                     <td
-                                        class="px-3 py-4 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-400"
+                                        class="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-400"
                                     >
                                         {{ getGlobalRank(pageIndex) }}
                                     </td>
-                                    <td class="px-6 py-4">
+                                    <td class="px-3 py-3">
                                         <div>
                                             <div
                                                 class="font-medium text-gray-900 dark:text-gray-200"
@@ -851,7 +851,7 @@ onMounted(() => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4">
+                                    <td class="px-3 py-3">
                                         <div
                                             class="text-gray-900 dark:text-gray-200 text-sm"
                                         >
@@ -864,14 +864,14 @@ onMounted(() => {
                                             Ref: {{ a.reference_number }}
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-3 py-3 whitespace-nowrap">
                                         <span
                                             class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-300"
                                         >
                                             {{ a.program?.code || "—" }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-3 py-3 whitespace-nowrap">
                                         <span
                                             :class="
                                                 getStatusClass(
@@ -883,13 +883,13 @@ onMounted(() => {
                                             {{ a.passer_status_name }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4">
+                                    <td class="px-3 py-3">
                                         <div class="text-sm text-gray-900 dark:text-gray-200">
                                             {{ a.graduate_type || "—" }}
                                         </div>
                                     </td>
                                     <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                                        class="px-3 py-3 whitespace-nowrap text-sm font-medium"
                                     >
                                         <span
                                             v-if="a.sar_sent"
