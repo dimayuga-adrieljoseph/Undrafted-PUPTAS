@@ -887,7 +887,7 @@ onMounted(() => {
                                         </span>
                                     </td>
                                     <td class="px-3 py-3">
-                                        <div class="text-sm text-gray-900 dark:text-gray-200 truncate" :title="a.graduate_type">
+                                        <div class="text-sm text-gray-900 dark:text-gray-200 whitespace-normal break-words" :title="a.graduate_type">
                                             {{ a.graduate_type || "—" }}
                                         </div>
                                     </td>
