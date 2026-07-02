@@ -58,13 +58,17 @@ class ConfirmedApplicantsController extends Controller
             'testPasser.sarGenerations',
             'graduateTypes',
         ])
-            ->whereHas('currentApplication.processes', function ($q) {
-                $q->whereIn('stage', [
-                    'document_evaluator',
-                    'grade_evaluator',
-                    'interviewer',
-                    'medical',
-                ])->whereIn('status', ['in_progress', 'returned']);
+            ->whereHas('currentApplication', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereHas('processes', function ($processQ) {
+                        $processQ->whereIn('stage', [
+                            'document_evaluator',
+                            'grade_evaluator',
+                            'interviewer',
+                            'medical',
+                        ])->whereIn('status', ['in_progress', 'returned']);
+                    })->orWhere('status', 'cleared_for_enrollment');
+                });
             })
             ->orderBy('lastname')
             ->get()
