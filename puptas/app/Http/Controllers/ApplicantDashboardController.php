@@ -105,11 +105,23 @@ class ApplicantDashboardController extends Controller
         $profile = $user->applicantProfile;
 
         return Inertia::render('Profile/Applicant', [
-            'user'             => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
-            'applicantProfile' => $profile,
-            'grades'           => $grades,
-            'files'            => $files,
-            'application'      => $application,
+            'user'             => $user ? array_merge(
+                $user->only(['id', 'firstname', 'lastname', 'middlename', 'email', 'role_id']),
+                ['test_passer' => $user->testPasser ? $user->testPasser->only(['reference_number', 'pupcet_total_score']) : null]
+            ) : null,
+            'applicantProfile' => $profile ? $profile->only(['extension_name', 'strand', 'date_graduated', 'school']) : null,
+            'grades'           => $grades ? collect($grades->toArray())->except(['id', 'user_id', 'created_at', 'updated_at'])->toArray() : null,
+            'files'            => $files->map(fn($f) => $f->only(['id', 'type', 'url', 'file_path'])),
+            'application'      => $application ? [
+                'status' => $application->status,
+                'enrollment_status' => $application->enrollment_status,
+                'enrollment_position' => $application->enrollment_position,
+                'submitted_at' => $application->submitted_at,
+                'program' => $application->program ? $application->program->only(['name', 'code']) : null,
+                'second_choice' => $application->secondChoice ? $application->secondChoice->only(['name', 'code']) : null,
+                'third_choice' => $application->thirdChoice ? $application->thirdChoice->only(['name', 'code']) : null,
+                'processes' => $application->processes->map(fn($p) => collect($p)->only(['id', 'name', 'type', 'status', 'updated_at', 'remarks'])),
+            ] : null,
             'showQualifiedProgramsNav' => $application && $application->status !== 'draft',
             'formerSchool' => [
                 'school'                  => $profile?->school                  ?? '',

@@ -2,6 +2,8 @@
 <div class="overflow-x-auto">
     <script
         src="https://cdn.jsdelivr.net/npm/sienna-accessibility@latest/dist/sienna-accessibility.umd.js"
+        integrity="sha384-0KH2WYpIKGviyNd2L73jN0B5O/d6vMdncUyRe/ZuE1f9wLaExDOAJE6OH5TQRtOQ"
+        crossorigin="anonymous"
         defer
         data-asw-position="{{ config('app.sienna_widget.position', 'bottom-right') }}"
         data-asw-offset="{{ config('app.sienna_widget.offset', '20,20') }}"

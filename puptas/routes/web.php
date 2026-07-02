@@ -161,8 +161,8 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
     $isEmergencyMode = $emergencySetting && $emergencySetting->value === '1';
 
     return Inertia::render('Public/Landing', [
-        'appEnv' => config('app.env'),
-        'appDebug' => config('app.debug'),
+        'isDevMode'       => in_array(config('app.env'), ['local', 'staging']),
+        'appDebug'        => config('app.debug'),
         'isEmergencyMode' => $isEmergencyMode,
     ]);
 })->name('welcome');
@@ -680,6 +680,8 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
 
 // Temporary debug route for SAR PDF generation
 Route::get('/debug-sar-error', function () {
+    abort_if(!in_array(config('app.env'), ['local', 'staging']), 404);
+
     try {
         $sarService = app(\App\Services\SarFormService::class);
         $result = $sarService->generateSarPdf([

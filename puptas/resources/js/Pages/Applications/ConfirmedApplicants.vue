@@ -546,9 +546,9 @@ onMounted(() => {
         </div>
 
         <!-- Two-column layout -->
-        <div class="flex gap-6 items-start">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <!-- ── LEFT: Applicant List ─────────────────────────────── -->
-            <div class="flex-1 min-w-0">
+            <div class="lg:col-span-2 min-w-0">
                 <!-- Filters & Controls card -->
                 <div
                     class="bg-white rounded-2xl shadow-lg p-6 mb-6 dark:bg-gray-800"
@@ -725,11 +725,11 @@ onMounted(() => {
                     <!-- Table -->
                     <div class="overflow-x-auto">
                         <table
-                            class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+                            class="w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed"
                         >
                             <thead class="bg-gray-50 dark:bg-gray-900">
                                 <tr>
-                                    <th class="px-6 py-4 text-left">
+                                    <th class="px-3 py-3 text-left w-10">
                                         <input
                                             type="checkbox"
                                             :checked="
@@ -744,37 +744,37 @@ onMounted(() => {
                                         />
                                     </th>
                                     <th
-                                        class="px-3 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-16"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-12"
                                     >
                                         Rank
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[20%]"
                                     >
                                         Name
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[20%]"
                                     >
                                         Contact
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
                                     >
                                         Program
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
                                     >
                                         Passer Status
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
                                     >
                                         Graduate Type
                                     </th>
                                     <th
-                                        class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-24 sticky right-0 bg-gray-50 dark:bg-gray-900"
                                     >
                                         SAR STATUS
                                     </th>
@@ -827,7 +827,7 @@ onMounted(() => {
                                     @click="toggle(a.id)"
                                     v-else
                                 >
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-3 py-3 whitespace-nowrap">
                                         <input
                                             type="checkbox"
                                             :checked="
@@ -837,59 +837,62 @@ onMounted(() => {
                                         />
                                     </td>
                                     <td
-                                        class="px-3 py-4 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-400"
+                                        class="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-400"
                                     >
                                         {{ getGlobalRank(pageIndex) }}
                                     </td>
-                                    <td class="px-6 py-4">
-                                        <div>
+                                    <td class="px-3 py-3">
+                                        <div class="truncate">
                                             <div
-                                                class="font-medium text-gray-900 dark:text-gray-200"
+                                                class="font-medium text-gray-900 dark:text-gray-200 truncate"
                                             >
                                                 {{ a.lastname }},
                                                 {{ a.firstname }}
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4">
-                                        <div
-                                            class="text-gray-900 dark:text-gray-200 text-sm"
-                                        >
-                                            {{ a.email }}
-                                        </div>
-                                        <div
-                                            v-if="a.reference_number"
-                                            class="text-sm text-gray-500 dark:text-gray-300"
-                                        >
-                                            Ref: {{ a.reference_number }}
+                                    <td class="px-3 py-3">
+                                        <div class="truncate">
+                                            <div
+                                                class="text-gray-900 dark:text-gray-200 text-sm truncate"
+                                            >
+                                                {{ a.email }}
+                                            </div>
+                                            <div
+                                                v-if="a.reference_number"
+                                                class="text-sm text-gray-500 dark:text-gray-300 truncate"
+                                            >
+                                                Ref: {{ a.reference_number }}
+                                            </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-3 py-3 whitespace-nowrap">
                                         <span
                                             class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-300"
                                         >
                                             {{ a.program?.code || "—" }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-3 py-3 w-full overflow-hidden">
                                         <span
                                             :class="
                                                 getStatusClass(
                                                     a.passer_status_name,
                                                 )
                                             "
-                                            class="px-2.5 py-1 rounded-full text-xs font-medium capitalize"
+                                            class="px-2.5 py-1 rounded-full text-xs font-medium capitalize inline-block max-w-full truncate align-middle"
+                                            :title="a.passer_status_name ? a.passer_status_name.replace(/_/g, ' ') : ''"
                                         >
-                                            {{ a.passer_status_name }}
+                                            {{ a.passer_status_name ? a.passer_status_name.replace(/_/g, ' ') : '' }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4">
-                                        <div class="text-sm text-gray-900 dark:text-gray-200">
+                                    <td class="px-3 py-3">
+                                        <div class="text-sm text-gray-900 dark:text-gray-200 truncate" :title="a.graduate_type">
                                             {{ a.graduate_type || "—" }}
                                         </div>
                                     </td>
                                     <td
-                                        class="px-6 py-4 whitespace-nowrap text-sm font-medium"
+                                        class="px-3 py-3 whitespace-nowrap text-sm font-medium sticky right-0 bg-white dark:bg-gray-800"
                                     >
                                         <span
                                             v-if="a.sar_sent"
@@ -999,7 +1002,7 @@ onMounted(() => {
             </div>
 
             <!-- ── RIGHT: Action Panel ──────────────────────────────── -->
-            <div class="w-[550px] flex-shrink-0 sticky top-6 space-y-6">
+            <div class="space-y-6 sticky top-6">
                 <div
                     class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5"
                 >

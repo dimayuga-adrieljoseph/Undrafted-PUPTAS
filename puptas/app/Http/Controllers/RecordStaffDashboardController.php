@@ -268,7 +268,7 @@ class RecordStaffDashboardController extends Controller
                 'email' => $user->email,
                 'sex' => $user->sex,
                 'created_at' => $user->created_at,
-                'grades' => $user->grades,
+                'grades' => $user->grades ? collect($user->grades->toArray())->except(['id', 'user_id', 'created_at', 'updated_at'])->toArray() : null,
                 'application' => [
                     'id' => $application->id,
                     'status' => $application->status,
@@ -281,14 +281,7 @@ class RecordStaffDashboardController extends Controller
 
             $graduateType = $user->graduateTypes->first()?->label ?? null;
 
-            // Debug logging
-            \Log::info('Registrar getUserFiles response', [
-                'userId' => $id,
-                'graduateType' => $graduateType,
-                'hasGrades' => $user->grades !== null,
-                'rawFileCount' => $files->count(),
-                'formattedFileCount' => count(FileMapper::formatFilesForGraduateType($files, $graduateType, false)),
-            ]);
+
 
             return response()->json([
                 'user' => $userData,

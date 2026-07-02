@@ -4,7 +4,7 @@ import { ref, computed } from 'vue'
 import { Head } from '@inertiajs/vue3'
 
 const props = defineProps({
-  appEnv: { type: String, default: 'production' },
+  isDevMode: { type: Boolean, default: false },
   appDebug: { type: Boolean, default: false },
   isEmergencyMode: { type: Boolean, default: false },
 })
@@ -14,7 +14,7 @@ const currentYear = computed(() => new Date().getFullYear())
 const goToLogin = () => {
   if (props.isEmergencyMode) {
     window.location.href = '/emergency-login'
-  } else if (props.appDebug || props.appEnv === 'local' || props.appEnv === 'staging') {
+  } else if (props.appDebug || props.isDevMode) {
     window.location.href = '/dev-login'
   } else {
     window.location.href = '/auth/idp/redirect'

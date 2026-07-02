@@ -56,9 +56,10 @@ class ChatwootWebhookController extends Controller
     {
         $secretKey = config('services.chatwoot.secret_key');
         
-        // If no secret is configured, skip verification
+        // If no secret is configured, fail closed (reject)
         if (empty($secretKey)) {
-            return true;
+            Log::warning('Chatwoot webhook secret not configured. Rejecting request.');
+            return false;
         }
 
         $signature = $request->header('X-Chatwoot-Signature');

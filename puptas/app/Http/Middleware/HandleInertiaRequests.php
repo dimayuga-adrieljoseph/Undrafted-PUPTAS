@@ -66,14 +66,25 @@ class HandleInertiaRequests extends Middleware
             'test_passer_data' => function () use ($request) {
                 $pendingReg = $request->session()->get('pending_registration');
                 if ($pendingReg && !empty($pendingReg['email'])) {
-                    return \App\Models\TestPasser::where('email', $pendingReg['email'])->first();
+                    $passer = \App\Models\TestPasser::where('email', $pendingReg['email'])
+                        ->first([
+                            'reference_number',
+                            'first_name',
+                            'surname',
+                            'middle_name',
+                            'email',
+                            'shs_school',
+                            'passer_status_id',
+                        ]);
+                    return $passer;
                 }
                 return null;
             },
+            // Expose only a boolean — the actual env name ('staging', 'local') doesn't need to leave the server.
+            'isDevMode' => in_array(config('app.env'), ['local', 'staging']),
             'privacy_consent' => [
                 'required' => $request->user() ? !$request->user()->privacy_consent : false,
             ],
-            'appEnv' => config('app.env'),
             'system_settings' => [
                 'qualified_programs_enabled' => Cache::remember('setting_qualified_programs_view', 300, function () {
                     return SystemSetting::where('key', 'enable_qualified_programs_view')->value('value') !== '0';
