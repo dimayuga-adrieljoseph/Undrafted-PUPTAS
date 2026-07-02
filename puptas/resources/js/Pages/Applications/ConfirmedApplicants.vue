@@ -546,9 +546,9 @@ onMounted(() => {
         </div>
 
         <!-- Two-column layout -->
-        <div class="flex flex-col lg:flex-row gap-6 items-start">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             <!-- ── LEFT: Applicant List ─────────────────────────────── -->
-            <div class="flex-1 w-full min-w-0">
+            <div class="lg:col-span-2 min-w-0">
                 <!-- Filters & Controls card -->
                 <div
                     class="bg-white rounded-2xl shadow-lg p-6 mb-6 dark:bg-gray-800"
@@ -999,7 +999,7 @@ onMounted(() => {
             </div>
 
             <!-- ── RIGHT: Action Panel ──────────────────────────────── -->
-            <div class="w-full lg:w-[320px] flex-shrink-0 sticky top-6 space-y-6">
+            <div class="space-y-6 sticky top-6">
                 <div
                     class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5"
                 >
