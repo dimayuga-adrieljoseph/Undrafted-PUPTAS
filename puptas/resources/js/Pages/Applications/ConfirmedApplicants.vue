@@ -124,6 +124,8 @@ const filtered = computed(() => {
     if (filterStage.value) {
         if (filterStage.value === 'pulled_out') {
             list = list.filter((a) => a.pulled_out);
+        } else if (filterStage.value === 'enrollment') {
+            list = list.filter((a) => a.status === 'cleared_for_enrollment' && !a.pulled_out);
         } else {
             list = list.filter((a) => a.current_stage === filterStage.value && !a.pulled_out);
         }
