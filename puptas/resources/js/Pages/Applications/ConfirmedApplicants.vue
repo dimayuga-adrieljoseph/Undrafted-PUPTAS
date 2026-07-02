@@ -615,14 +615,14 @@ onMounted(() => {
                                 <span>{{ filterPasserStatus.length === 0 ? 'All Statuses' : filterPasserStatus.length + ' selected' }}</span>
                                 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </button>
-                            <div v-if="showStatusDropdown" class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg py-1">
+                            <div v-if="showStatusDropdown" class="absolute z-50 mt-1 min-w-full w-max bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg py-1">
                                 <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                                     <input type="checkbox" :checked="filterPasserStatus.length === 0" @change="filterPasserStatus = []" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
                                     All Statuses
                                 </label>
                                 <label v-for="s in passerStatuses" :key="s" class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                                     <input type="checkbox" :value="s" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
-                                    {{ s }}
+                                    {{ s.replace(/_/g, ' ') }}
                                 </label>
                             </div>
                         </div>
@@ -645,13 +645,14 @@ onMounted(() => {
                         </select>
                         <select
                             v-model="filterStage"
-                            class="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Stages</option>
                             <option value="document_evaluator">For Document Evaluator</option>
                             <option value="grade_evaluator">For Grade Evaluator</option>
                             <option value="interviewer">For Interviewer</option>
                             <option value="medical">For Medical</option>
+                            <option value="enrollment">For Enrollment</option>
                         </select>
                         <button
                             @click="fetchApplicants"
@@ -880,8 +881,7 @@ onMounted(() => {
                                                     a.passer_status_name,
                                                 )
                                             "
-                                            class="px-2.5 py-1 rounded-full text-xs font-medium capitalize inline-block max-w-full truncate align-middle"
-                                            :title="a.passer_status_name ? a.passer_status_name.replace(/_/g, ' ') : ''"
+                                            class="px-2.5 py-1 rounded-xl text-xs font-medium capitalize inline-block break-words whitespace-normal text-center align-middle"
                                         >
                                             {{ a.passer_status_name ? a.passer_status_name.replace(/_/g, ' ') : '' }}
                                         </span>
