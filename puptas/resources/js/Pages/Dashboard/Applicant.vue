@@ -8,7 +8,7 @@ import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
 import BlurText from "@/Components/BlurText.vue";
 
-const props = defineProps({ user: Object, gradeUrl: String, canDownloadSlip: Boolean });
+const props = defineProps({ user: Object, gradeUrl: String, canDownloadSlip: Boolean, canDownloadF137: Boolean });
 
 const showModal = ref(false);
 const showSuccessNotification = ref(false);
@@ -458,44 +458,27 @@ const goToQualifiedPrograms = () => {
  */
 const welcomeText = computed(() => `Welcome back, ${props.user?.firstname || 'Applicant'}!`);
 
-const downloadGradeVerificationSlip = async () => {
-  downloadingSlip.value = true;
+const downloadGradeVerificationSlip = () => {
+  // Navigate directly to the authenticated download route.
+  // The server responds with Content-Disposition: attachment so the browser
+  // saves the file without navigating away from the page.
+  //
+  // This replaces the previous axios blob approach, which lost the browser's
+  // user-gesture context after `await` and was silently blocked on mobile
+  // (Chrome Android, Safari iOS) and desktops with strict download settings.
   slipDownloadError.value = '';
+  window.location.href = '/applicant-dashboard/grade-verification-slip';
+};
 
-  try {
-    const response = await axios.get('/applicant-dashboard/grade-verification-slip', {
-      responseType: 'blob',
-    });
-
-    // Derive filename from Content-Disposition header if present, otherwise fall back
-    let filename = 'Grade_Verification_Slip.pdf';
-    const disposition = response.headers['content-disposition'];
-    if (disposition) {
-      const match = disposition.match(/filename="?([^";\n]+)"?/);
-      if (match && match[1]) {
-        filename = match[1].trim();
-      }
-    }
-
-    // response.data is already a Blob (responseType: 'blob') — use directly
-    const url = window.URL.createObjectURL(response.data);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    const message = err.response?.data?.message
-      || (err.response?.status === 403 ? 'Grade Verification Slip is not yet available. Please submit your application and complete your grade input first.' : null)
-      || 'Failed to download the Grade Verification Slip. Please try again.';
-    slipDownloadError.value = message;
-
-    setTimeout(() => { slipDownloadError.value = ''; }, 6000);
-  } finally {
-    downloadingSlip.value = false;
-  }
+/**
+ * Download the F137 Request Letter.
+ * Fresh Philippine date is applied server-side on every download.
+ * Only available when school and former_school_address are set in the applicant's profile.
+ */
+const f137DownloadError = ref('');
+const downloadF137RequestLetter = () => {
+  f137DownloadError.value = '';
+  window.location.href = '/applicant-dashboard/f137-request-letter';
 };
 
 onMounted(() => { 
@@ -976,22 +959,48 @@ onMounted(() => {
             <button
               v-if="canDownloadSlipReactive"
               @click="downloadGradeVerificationSlip"
-              :disabled="downloadingSlip"
-              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
               style="background-color: #059669;"
-              onmouseover="if(!disabled) this.style.backgroundColor='#047857'"
+              onmouseover="this.style.backgroundColor='#047857'"
               onmouseout="this.style.backgroundColor='#059669'"
               title="Download your Grade Verification Slip"
             >
-              <svg v-if="downloadingSlip" class="animate-spin h-5 w-5 text-white flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              {{ downloadingSlip ? 'Generating...' : 'Download Verification Slip' }}
+              Download Verification Slip
             </button>
+
+            <!-- Download F137 Request Letter — only shown at medical stage -->
+            <template v-if="showMedicalRedirect">
+              <button
+                v-if="props.canDownloadF137"
+                @click="downloadF137RequestLetter"
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
+                style="background-color: #9E122C;"
+                onmouseover="this.style.backgroundColor='#7a0e22'"
+                onmouseout="this.style.backgroundColor='#9E122C'"
+                title="Download your F137 Request Letter"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download F137 Request Letter
+              </button>
+              <!-- F137 not available — prompt to complete profile -->
+              <div
+                v-else
+                class="w-full sm:w-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm border border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 min-h-[44px]"
+                title="Complete Former School Information in your Profile to unlock this"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.73-3L13.73 4a2 2 0 00-3.46 0L3.27 16A2 2 0 005.07 19z" />
+                </svg>
+                <span class="text-xs">
+                  F137 Request Letter — <a :href="route('applicant.profile')" class="underline font-semibold">edit your academic information</a> in your Profile to enable this.
+                </span>
+              </div>
+            </template>
           </div>
 
           <!-- Slip download error toast -->
@@ -1001,6 +1010,15 @@ onMounted(() => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
               {{ slipDownloadError }}
+            </div>
+          </Transition>
+          <!-- F137 download error toast -->
+          <Transition name="slide-down">
+            <div v-if="f137DownloadError" class="w-full mt-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              {{ f137DownloadError }}
             </div>
           </Transition>
         </div>
@@ -1033,7 +1051,8 @@ onMounted(() => {
               'Review entries, then click <code>Save Grades</code>',
               'Go to <code>Review Application</code> &amp; verify info',
               'Click <code class=\'submit\'>Submit Application</code>',
-              'Download your <code class=\'download\'>Grade Verification Slip</code> and bring it along with your <code>SAR Form</code> on your interview day.'
+              'Download your <code class=\'download\'>Grade Verification Slip</code> and bring it along with your <code>SAR Form</code> on your interview day.',
+              'Download your <code class=\'f137\'>F137 Request Letter</code> and submit it to your former school to request your copy of F137.'
             ]" :key="i">
 
               <div class="relative z-10 flex flex-row sm:flex-col items-start sm:items-center gap-3 sm:gap-2 flex-1 py-2 sm:py-0">
@@ -1073,6 +1092,9 @@ onMounted(() => {
                     [&_code.download]:bg-emerald-50 dark:[&_code.download]:bg-emerald-950/40
                     [&_code.download]:border-emerald-200 dark:[&_code.download]:border-emerald-900
                     [&_code.download]:text-emerald-700 dark:[&_code.download]:text-emerald-400
+                    [&_code.f137]:bg-red-50 dark:[&_code.f137]:bg-red-950/40
+                    [&_code.f137]:border-red-200 dark:[&_code.f137]:border-red-900
+                    [&_code.f137]:text-[#9E122C] dark:[&_code.f137]:text-red-400
                   "
                   v-html="step"
                 ></p>

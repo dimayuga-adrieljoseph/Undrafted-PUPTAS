@@ -1,6 +1,6 @@
 <script setup>
-import { computed, ref } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { computed, ref, reactive } from 'vue';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import ApplicantLayout from '@/Layouts/ApplicantLayout.vue';
 
 const props = defineProps({
@@ -9,6 +9,7 @@ const props = defineProps({
   grades: Object,
   files: Array,
   application: Object,
+  formerSchool: Object,
 });
 
 const p = computed(() => props.applicantProfile ?? {});
@@ -156,6 +157,40 @@ const formatGrade = (val) => {
   const num = parseFloat(val);
   return isNaN(num) ? '—' : Number(num).toFixed(2);
 };
+
+// ── Academic Background + Former School form ────────────────────────────────
+const academicForm = useForm({
+  school:                  props.formerSchool?.school               ?? props.applicantProfile?.school ?? '',
+  former_school_address:   props.formerSchool?.former_school_address    ?? '',
+  former_school_principal: props.formerSchool?.former_school_principal  ?? '',
+});
+
+const academicSaved   = ref(false);
+const academicEditing = ref(false);
+
+const formerSchoolComplete = computed(() =>
+  academicForm.school.trim() !== '' &&
+  academicForm.former_school_address.trim() !== ''
+);
+
+const submitAcademic = () => {
+  academicForm.post(route('applicant.profile.update-former-school'), {
+    preserveScroll: true,
+    onSuccess: () => {
+      academicSaved.value   = true;
+      academicEditing.value = false;
+      setTimeout(() => { academicSaved.value = false; }, 4000);
+    },
+  });
+};
+
+const cancelAcademic = () => {
+  academicForm.school                  = props.formerSchool?.school               ?? props.applicantProfile?.school ?? '';
+  academicForm.former_school_address   = props.formerSchool?.former_school_address   ?? '';
+  academicForm.former_school_principal = props.formerSchool?.former_school_principal ?? '';
+  academicForm.clearErrors();
+  academicEditing.value = false;
+};
 </script>
 
 <template>
@@ -221,14 +256,100 @@ const formatGrade = (val) => {
 
             <!-- Sidebar -->
             <aside class="sidebar">
-              <!-- Academic Background -->
+              <!-- Academic Background (editable) -->
               <div class="card">
-                <div class="card-header"><div class="card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg></div><div><h3 class="card-title">Academic Background</h3></div></div>
-                <dl class="info-list">
-                  <div class="info-row"><dt>Strand</dt><dd>{{ applicantProfile?.strand || '—' }}</dd></div>
-                  <div class="info-row"><dt>School (SHS)</dt><dd>{{ applicantProfile?.school || '—' }}</dd></div>
-                  <div class="info-row"><dt>Date Graduated</dt><dd>{{ formatDateDisplay(applicantProfile?.date_graduated) }}</dd></div>
-                </dl>
+                <div class="card-header">
+                  <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+                  </div>
+                  <div style="flex:1"><h3 class="card-title">Academic Background</h3></div>
+                  <template v-if="!academicEditing">
+                    <button @click="academicEditing = true" class="edit-btn" title="Edit Former School Information">
+                      <svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px;"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                      Edit
+                    </button>
+                  </template>
+                </div>
+
+                <!-- ── View mode ── -->
+                <template v-if="!academicEditing">
+                  <dl class="info-list">
+                    <div class="info-row"><dt>Strand</dt><dd>{{ applicantProfile?.strand || '—' }}</dd></div>
+                    <div class="info-row"><dt>Date Graduated</dt><dd>{{ formatDateDisplay(applicantProfile?.date_graduated) }}</dd></div>
+                    <div class="info-row" style="padding:.4rem 0 .1rem;">
+                      <dt style="font-size:.7rem;font-weight:700;color:#9E122C;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;">For F137 Request Letter</dt>
+                      <dd></dd>
+                    </div>
+                    <div class="info-row"><dt>School (SHS)</dt><dd>{{ academicForm.school || '—' }}</dd></div>
+                    <div class="info-row"><dt>School Address</dt><dd>{{ academicForm.former_school_address || '—' }}</dd></div>
+                    <div class="info-row"><dt>Principal / Registrar</dt><dd>{{ academicForm.former_school_principal || '—' }}</dd></div>
+                  </dl>
+                  <Transition name="fade">
+                    <div v-if="academicSaved" style="padding:.5rem 1.25rem;border-top:1px solid #f3f4f6;display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#15803d;">
+                      <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;flex-shrink:0;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                      Saved successfully
+                    </div>
+                  </Transition>
+                </template>
+
+                <!-- ── Edit mode ── -->
+                <form v-else @submit.prevent="submitAcademic" style="padding:.75rem 1.25rem;display:flex;flex-direction:column;gap:.85rem;">
+
+                  <!-- For F137 divider -->
+                  <div style="display:flex;align-items:center;gap:.5rem;">
+                    <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+                    <span style="font-size:.7rem;font-weight:700;color:#9E122C;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;">For F137 Request Letter</span>
+                    <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+                  </div>
+
+                  <!-- School (SHS) -->
+                  <div>
+                    <label class="field-label">School (SHS) <span class="req">*</span></label>
+                    <input
+                      v-model="academicForm.school"
+                      type="text"
+                      required
+                      placeholder="e.g. PUP Taguig SHS"
+                      class="field-input"
+                    />
+                    <p v-if="academicForm.errors.school" class="field-error">{{ academicForm.errors.school }}</p>
+                  </div>
+
+                  <!-- School Address -->
+                  <div>
+                    <label class="field-label">School Address <span class="req">*</span></label>
+                    <input
+                      v-model="academicForm.former_school_address"
+                      type="text"
+                      required
+                      placeholder="e.g. General Santos Avenue, Lower Bicutan, Taguig City, Metro Manila"
+                      class="field-input"
+                    />
+                    <p v-if="academicForm.errors.former_school_address" class="field-error">{{ academicForm.errors.former_school_address }}</p>
+                  </div>
+
+                  <!-- Principal / Registrar -->
+                  <div>
+                    <label class="field-label">Name of Principal / Registrar <span class="opt">(optional)</span></label>
+                    <input
+                      v-model="academicForm.former_school_principal"
+                      type="text"
+                      placeholder="e.g. Maria Santos"
+                      class="field-input"
+                    />
+                    <p class="field-hint">If left blank, the letter will be addressed to "THE PRINCIPAL/REGISTRAR".</p>
+                  </div>
+
+                  <!-- Actions -->
+                  <div style="display:flex;gap:.5rem;">
+                    <button type="submit" :disabled="academicForm.processing" class="btn-save">
+                      {{ academicForm.processing ? 'Saving…' : 'Save' }}
+                    </button>
+                    <button type="button" @click="cancelAcademic" :disabled="academicForm.processing" class="btn-cancel">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               </div>
               <!-- Program Choices -->
               <div class="card">
@@ -392,6 +513,24 @@ const formatGrade = (val) => {
 .grade-pass { color:#eab308; }
 .grade-low { color:#ef4444; }
 .grade-neutral { color:#6b7280; }
+.fade-enter-active, .fade-leave-active { transition:opacity .3s; }
+.fade-enter-from, .fade-leave-to { opacity:0; }
+.edit-btn { display:inline-flex;align-items:center;gap:.3rem;font-size:.75rem;font-weight:600;padding:.3rem .7rem;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;cursor:pointer;transition:background .15s; }
+.edit-btn:hover { background:#f3f4f6; }
+.edit-btn svg { fill:#6b7280; }
+.field-label { display:block;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.3rem; }
+.req { color:#9E122C; }
+.opt { font-size:.7rem;font-weight:400;color:#9ca3af; }
+.field-input { width:100%;padding:.5rem .75rem;border:1px solid #e5e7eb;border-radius:8px;font-size:.82rem;color:#111827;outline:none;box-sizing:border-box;transition:border-color .15s; }
+.field-input:focus { border-color:#9E122C; }
+.field-error { font-size:.72rem;color:#b91c1c;margin-top:.25rem; }
+.field-hint { font-size:.7rem;color:#9ca3af;margin-top:.25rem; }
+.btn-save { font-size:.78rem;font-weight:700;padding:.45rem 1rem;border-radius:8px;border:none;background:#9E122C;color:#fff;cursor:pointer;min-height:36px;transition:background .15s; }
+.btn-save:hover:not(:disabled) { background:#7a0e22; }
+.btn-save:disabled { opacity:.6;cursor:not-allowed; }
+.btn-cancel { font-size:.78rem;font-weight:600;padding:.45rem .9rem;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;cursor:pointer;transition:background .15s; }
+.btn-cancel:hover:not(:disabled) { background:#f3f4f6; }
+.btn-cancel:disabled { opacity:.6;cursor:not-allowed; }
 .doc-grid { display:grid; grid-template-columns:1fr; gap:1rem; }
 @media (min-width:640px) { .doc-grid { grid-template-columns:1fr 1fr; } }
 @media (min-width:1024px) { .doc-grid { grid-template-columns:1fr 1fr 1fr; } }

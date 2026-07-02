@@ -30,6 +30,9 @@ class ApplicantProfile extends Model
         'first_choice_program',
         'second_choice_program',
         'third_choice_program',
+        // Former School Information (for F137 Request Letter)
+        'former_school_address',
+        'former_school_principal',
     ];
 
     /**

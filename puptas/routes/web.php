@@ -8,6 +8,7 @@ use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\GradesController;
 use App\Http\Controllers\ApplicantDashboardController;
 use App\Http\Controllers\GradeVerificationSlipController;
+use App\Http\Controllers\F137RequestLetterController;
 use App\Http\Controllers\TestPasserController;
 use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
@@ -351,6 +352,16 @@ Route::middleware(['auth'])->group(function () {
     // No reference number or user ID is accepted as a URL parameter.
     Route::get('/applicant-dashboard/grade-verification-slip', [GradeVerificationSlipController::class, 'download'])
         ->name('applicant.grade-verification-slip');
+
+    // F137 Request Letter — applicant-initiated self-service download
+    // Requires `school` (existing field) and former_school_address to be set in profile.
+    // The date is generated fresh (current Philippine time) on each download.
+    Route::get('/applicant-dashboard/f137-request-letter', [F137RequestLetterController::class, 'download'])
+        ->name('applicant.f137-request-letter');
+
+    // Update former school information from the applicant profile page
+    Route::post('/applicant-profile/former-school', [F137RequestLetterController::class, 'updateFormerSchool'])
+        ->name('applicant.profile.update-former-school');
 
     Route::middleware(['throttle:grade-extraction'])
         ->post('/api/grades/extract', [GradeExtractionController::class, 'extract']);
