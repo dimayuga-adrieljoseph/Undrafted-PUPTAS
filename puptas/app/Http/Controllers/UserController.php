@@ -588,7 +588,8 @@ class UserController extends Controller
                 ->update([
                     'status'          => 'in_progress',
                     'action'          => null,
-                    'decision_reason' => $request->notes,
+                    'decision_reason' => null,
+                    'reviewer_notes'  => "[Reverted by Admin: Pull-Out] " . $request->notes,
                 ]);
 
             // 4. Add 1 slot back to the program
