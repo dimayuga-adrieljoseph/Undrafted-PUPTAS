@@ -25,6 +25,7 @@ class SecurityHeaders
             "font-src 'self' data: https://fonts.bunny.net https://fonts.gstatic.com",
             "img-src 'self' data: https: blob:",
             "connect-src 'self' https://chatwoot-production-49b7.up.railway.app wss://chatwoot-production-49b7.up.railway.app",
+            "frame-src 'self' blob:",
             "frame-ancestors 'self'", // Modern anti-clickjacking
         ];
 

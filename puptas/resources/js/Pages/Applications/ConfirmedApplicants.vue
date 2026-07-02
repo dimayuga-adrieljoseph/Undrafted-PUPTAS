@@ -576,7 +576,7 @@ onMounted(() => {
                     <!-- Search -->
                     <div class="relative mb-3">
                         <svg
-                            class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                            class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -589,6 +589,8 @@ onMounted(() => {
                             />
                         </svg>
                         <input
+                            id="searchQuery"
+                            name="searchQuery"
                             v-model="searchQuery"
                             type="text"
                             placeholder="Search by name, email, or reference no…"
@@ -1103,6 +1105,8 @@ onMounted(() => {
                                     Enrollment Date
                                 </label>
                                 <input
+                                    id="sarEnrollmentDate"
+                                    name="sarEnrollmentDate"
                                     type="date"
                                     v-model="sarEnrollmentDate"
                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C]"
@@ -1115,6 +1119,8 @@ onMounted(() => {
                                     Enrollment Time
                                 </label>
                                 <input
+                                    id="sarEnrollmentTime"
+                                    name="sarEnrollmentTime"
                                     type="time"
                                     v-model="sarEnrollmentTime"
                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm dark:bg-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C]"
