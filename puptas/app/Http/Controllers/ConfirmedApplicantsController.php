@@ -88,6 +88,17 @@ class ConfirmedApplicantsController extends Controller
                     }
                 }
 
+                // Detect pull-out state:
+                // Interviewer is in_progress AND no medical/records processes exist.
+                // This indicates the applicant was reverted from a post-interview stage.
+                $interviewerProcess = $processes->where('stage', 'interviewer')->first();
+                $hasMedicalOrRecords = $processes->whereIn('stage', ['medical', 'records'])->isNotEmpty();
+                $isPulledOut = $interviewerProcess
+                    && $interviewerProcess->status === 'in_progress'
+                    && $interviewerProcess->action === null
+                    && !$hasMedicalOrRecords
+                    && $interviewerProcess->decision_reason !== null; // notes were set during pull-out
+
                 return [
                     'id'               => $applicant->user_id,
                     'firstname'        => $applicant->firstname,
@@ -110,8 +121,11 @@ class ConfirmedApplicantsController extends Controller
                         : false,
                     'graduate_type'    => $applicant->graduateTypes->first()?->label,
                     'current_stage'    => $currentStage,
+                    'pulled_out'       => $isPulledOut,
+                    'pullout_notes'    => $isPulledOut ? $interviewerProcess->decision_reason : null,
                 ];
             });
+
 
         return response()->json($applicants);
     }

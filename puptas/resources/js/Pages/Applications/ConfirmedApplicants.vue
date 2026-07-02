@@ -121,8 +121,13 @@ const filtered = computed(() => {
         list = list.filter((a) => !a.sar_sent);
     if (filterGraduateType.value)
         list = list.filter((a) => a.graduate_type === filterGraduateType.value);
-    if (filterStage.value)
-        list = list.filter((a) => a.current_stage === filterStage.value);
+    if (filterStage.value) {
+        if (filterStage.value === 'pulled_out') {
+            list = list.filter((a) => a.pulled_out);
+        } else {
+            list = list.filter((a) => a.current_stage === filterStage.value && !a.pulled_out);
+        }
+    }
     return list;
 });
 
@@ -615,14 +620,14 @@ onMounted(() => {
                                 <span>{{ filterPasserStatus.length === 0 ? 'All Statuses' : filterPasserStatus.length + ' selected' }}</span>
                                 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </button>
-                            <div v-if="showStatusDropdown" class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg py-1">
+                            <div v-if="showStatusDropdown" class="absolute z-50 mt-1 min-w-full w-max bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg py-1">
                                 <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                                     <input type="checkbox" :checked="filterPasserStatus.length === 0" @change="filterPasserStatus = []" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
                                     All Statuses
                                 </label>
                                 <label v-for="s in passerStatuses" :key="s" class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                                     <input type="checkbox" :value="s" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
-                                    {{ s }}
+                                    {{ s.replace(/_/g, ' ') }}
                                 </label>
                             </div>
                         </div>
@@ -645,13 +650,15 @@ onMounted(() => {
                         </select>
                         <select
                             v-model="filterStage"
-                            class="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Stages</option>
                             <option value="document_evaluator">For Document Evaluator</option>
                             <option value="grade_evaluator">For Grade Evaluator</option>
                             <option value="interviewer">For Interviewer</option>
                             <option value="medical">For Medical</option>
+                            <option value="enrollment">For Enrollment</option>
+                            <option value="pulled_out">Pulled Out</option>
                         </select>
                         <button
                             @click="fetchApplicants"
@@ -844,10 +851,16 @@ onMounted(() => {
                                     <td class="px-3 py-3">
                                         <div class="truncate">
                                             <div
-                                                class="font-medium text-gray-900 dark:text-gray-200 truncate"
+                                                class="font-medium text-gray-900 dark:text-gray-200 truncate flex items-center gap-2"
                                             >
                                                 {{ a.lastname }},
                                                 {{ a.firstname }}
+                                                <span v-if="a.pulled_out"
+                                                    class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-800/50 cursor-help"
+                                                    :title="a.pullout_notes ? 'Notes: ' + a.pullout_notes : 'Pulled Out'"
+                                                >
+                                                    PULLED OUT
+                                                </span>
                                             </div>
                                         </div>
                                     </td>
@@ -880,14 +893,13 @@ onMounted(() => {
                                                     a.passer_status_name,
                                                 )
                                             "
-                                            class="px-2.5 py-1 rounded-full text-xs font-medium capitalize inline-block max-w-full truncate align-middle"
-                                            :title="a.passer_status_name ? a.passer_status_name.replace(/_/g, ' ') : ''"
+                                            class="px-2.5 py-1 rounded-xl text-xs font-medium capitalize inline-block break-words whitespace-normal text-center align-middle"
                                         >
                                             {{ a.passer_status_name ? a.passer_status_name.replace(/_/g, ' ') : '' }}
                                         </span>
                                     </td>
                                     <td class="px-3 py-3">
-                                        <div class="text-sm text-gray-900 dark:text-gray-200 truncate" :title="a.graduate_type">
+                                        <div class="text-sm text-gray-900 dark:text-gray-200 whitespace-normal break-words" :title="a.graduate_type">
                                             {{ a.graduate_type || "—" }}
                                         </div>
                                     </td>
