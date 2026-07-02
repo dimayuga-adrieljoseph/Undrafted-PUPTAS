@@ -199,6 +199,6 @@ class ExternalStudentApiController extends Controller
 
         return response()->json([
             'data' => $payload,
-        ]);
+        ])->header('Cache-Control', 'no-store, no-cache');
     }
 }

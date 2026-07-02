@@ -80,16 +80,11 @@ class HandleInertiaRequests extends Middleware
                 }
                 return null;
             },
+            // Expose only a boolean — the actual env name ('staging', 'local') doesn't need to leave the server.
+            'isDevMode' => in_array(config('app.env'), ['local', 'staging']),
             'privacy_consent' => [
                 'required' => $request->user() ? !$request->user()->privacy_consent : false,
             ],
-            'system_settings' => [
-                'qualified_programs_enabled' => Cache::remember('setting_qualified_programs_view', 300, function () {
-                    $setting = SystemSetting::where('key', 'enable_qualified_programs_view')->first();
-                    return $setting ? $setting->value === '1' : true;
-                }),
-            ],
-            'appEnv' => config('app.env'),
             'system_settings' => [
                 'qualified_programs_enabled' => Cache::remember('setting_qualified_programs_view', 300, function () {
                     return SystemSetting::where('key', 'enable_qualified_programs_view')->value('value') !== '0';

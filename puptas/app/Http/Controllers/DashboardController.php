@@ -164,7 +164,7 @@ class DashboardController extends Controller
                 'email' => $applicant->email,
                 'sex' => $applicant->sex,
                 'created_at' => $applicant->created_at,
-                'grades' => $applicant->grades ? $applicant->grades->except(['id', 'user_id', 'created_at', 'updated_at']) : null,
+                'grades' => $applicant->grades ? collect($applicant->grades->toArray())->except(['id', 'user_id', 'created_at', 'updated_at'])->toArray() : null,
                 // Map currentApplication to application for frontend compatibility 
                 'application' => $applicant->currentApplication ? [
                     'id' => $applicant->currentApplication->id,

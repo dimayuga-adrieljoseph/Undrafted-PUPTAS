@@ -65,10 +65,10 @@ class ResendWebhookController extends Controller
     {
         $secret = config('services.resend.webhook_secret');
 
-        // If no secret configured, skip verification (not recommended for production)
+        // If no secret configured, fail closed (reject)
         if (!$secret) {
-            logger()->warning('[ResendWebhook] No webhook secret configured, skipping verification');
-            return true;
+            logger()->warning('[ResendWebhook] No webhook secret configured, rejecting request');
+            return false;
         }
 
         $svixId = $request->header('svix-id');

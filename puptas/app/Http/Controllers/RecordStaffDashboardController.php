@@ -268,7 +268,7 @@ class RecordStaffDashboardController extends Controller
                 'email' => $user->email,
                 'sex' => $user->sex,
                 'created_at' => $user->created_at,
-                'grades' => $user->grades ? $user->grades->except(['id', 'user_id', 'created_at', 'updated_at']) : null,
+                'grades' => $user->grades ? collect($user->grades->toArray())->except(['id', 'user_id', 'created_at', 'updated_at'])->toArray() : null,
                 'application' => [
                     'id' => $application->id,
                     'status' => $application->status,

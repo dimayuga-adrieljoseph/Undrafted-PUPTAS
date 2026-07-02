@@ -110,8 +110,8 @@ class ApplicantDashboardController extends Controller
                 ['test_passer' => $user->testPasser ? $user->testPasser->only(['reference_number', 'pupcet_total_score']) : null]
             ) : null,
             'applicantProfile' => $profile ? $profile->only(['extension_name', 'strand', 'date_graduated', 'school']) : null,
-            'grades'           => $grades ? $grades->except(['id', 'user_id', 'created_at', 'updated_at']) : null,
-            'files'            => $files->map(fn($f) => collect($f)->only(['id', 'type', 'url', 'file_path'])),
+            'grades'           => $grades ? collect($grades->toArray())->except(['id', 'user_id', 'created_at', 'updated_at'])->toArray() : null,
+            'files'            => $files->map(fn($f) => $f->only(['id', 'type', 'url', 'file_path'])),
             'application'      => $application ? [
                 'status' => $application->status,
                 'enrollment_status' => $application->enrollment_status,

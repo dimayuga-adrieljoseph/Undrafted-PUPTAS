@@ -95,7 +95,7 @@ class ConfirmedApplicantsController extends Controller
                     'email'            => $applicant->email,
                     'status'           => $applicant->currentApplication?->status,
                     'program'          => $applicant->currentApplication?->program,
-                    'grades'           => $applicant->grades ? $applicant->grades->except(['id', 'user_id', 'created_at', 'updated_at']) : null,
+                    'grades'           => $applicant->grades ? collect($applicant->grades->toArray())->except(['id', 'user_id', 'created_at', 'updated_at'])->toArray() : null,
                     'has_test_passer'  => $hasTestPasser,
                     'grades_synced'    => $gradesSynced,
                     'test_passer_id'   => $testPasser?->test_passer_id,
