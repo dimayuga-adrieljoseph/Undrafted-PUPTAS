@@ -17,6 +17,14 @@ class SecurityHeaders
     {
         $response = $next($request);
 
+        // The SAR preview route (/admin/sar/{id}/preview) is intentionally loaded inside
+        // an <iframe> within the admin panel (same origin). It gets SAMEORIGIN instead of DENY
+        // so the browser permits it while still blocking all external domains.
+        $isSarPreview = $request->is('admin/sar/*/preview');
+
+        $frameAncestors = $isSarPreview ? "'self'" : "'none'";
+        $xFrameOptions  = $isSarPreview ? 'SAMEORIGIN' : 'DENY';
+
         // Define the Content Security Policy
         $csp = [
             "default-src 'self'",
@@ -25,13 +33,13 @@ class SecurityHeaders
             "font-src 'self' data: https://fonts.bunny.net https://fonts.gstatic.com",
             "img-src 'self' data: https: blob:",
             "connect-src 'self' https://chatwoot-production-49b7.up.railway.app wss://chatwoot-production-49b7.up.railway.app",
-            "frame-src 'self' blob:",
-            "frame-ancestors 'self'", // Modern anti-clickjacking
+            "frame-src 'self' blob: https://chatwoot-production-49b7.up.railway.app",
+            "frame-ancestors {$frameAncestors}",
         ];
 
         // Apply security headers to the response
         $response->headers->set('Content-Security-Policy', implode('; ', $csp));
-        $response->headers->set('X-Frame-Options', 'SAMEORIGIN'); // Legacy anti-clickjacking
+        $response->headers->set('X-Frame-Options', $xFrameOptions);
         $response->headers->set('X-Content-Type-Options', 'nosniff'); // Prevent MIME sniffing
         $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload'); // HSTS
 
