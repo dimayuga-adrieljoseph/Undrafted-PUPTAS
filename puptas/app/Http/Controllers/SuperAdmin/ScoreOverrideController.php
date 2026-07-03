@@ -26,6 +26,7 @@ class ScoreOverrideController extends Controller
     {
         return Inertia::render('SuperAdmin/ScoreOverrides', [
             'allowed_scores' => $this->cutoffService->getAllowedRegistrationScores(),
+            'allowed_emails' => $this->cutoffService->getAllowedRegistrationEmails(),
             'cutoff_active'  => $this->cutoffService->isCutoffPassed(),
         ]);
     }
@@ -93,5 +94,70 @@ class ScoreOverrideController extends Controller
         );
 
         return redirect()->back()->with('success', "Score $score has been removed from allowed registration.");
+    }
+
+    /**
+     * Search for TestPassers matching a specific email.
+     */
+    public function searchEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $email = strtolower(trim($request->input('email')));
+
+        $applicants = TestPasser::where('email', $email)
+            ->with(['passerStatus'])
+            ->get(['test_passer_id', 'reference_number', 'email', 'first_name', 'surname', 'middle_name', 'status', 'passer_status_id']);
+
+        return response()->json([
+            'applicants' => $applicants
+        ]);
+    }
+
+    /**
+     * Add an email to the allowed list.
+     */
+    public function storeEmail(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'expires_at' => 'required|date|after_or_equal:now',
+        ]);
+
+        $email = strtolower(trim($request->input('email')));
+        $expiresAt = $request->input('expires_at');
+        
+        $this->cutoffService->addAllowedRegistrationEmail($email, $expiresAt);
+
+        $this->auditLogService->logActivity(
+            AuditLog::ACTION_CREATE,
+            'Registration Overrides',
+            "Allowed email $email to bypass registration cutoff until $expiresAt."
+        );
+
+        return redirect()->back()->with('success', "Email $email has been allowed for registration until $expiresAt.");
+    }
+
+    /**
+     * Remove an email from the allowed list.
+     */
+    public function destroyEmail(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $email = strtolower(trim($request->input('email')));
+        $this->cutoffService->removeAllowedRegistrationEmail($email);
+
+        $this->auditLogService->logActivity(
+            AuditLog::ACTION_DELETE,
+            'Registration Overrides',
+            "Removed email $email from allowed registration overrides."
+        );
+
+        return redirect()->back()->with('success', "Email $email has been removed from allowed registration.");
     }
 }

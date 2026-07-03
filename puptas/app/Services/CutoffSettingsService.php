@@ -298,4 +298,113 @@ class CutoffSettingsService
             ['value' => json_encode(array_values($filtered))]
         );
     }
+
+    // ─── Registration Email Overrides ───────────────────────────────────────────
+
+    /**
+     * Get the list of emails allowed to register regardless of cutoff.
+     *
+     * @return array
+     */
+    public function getAllowedRegistrationEmails(): array
+    {
+        $setting = SystemSetting::where('key', 'allowed_registration_emails')->first();
+        if (!$setting || empty($setting->value)) {
+            return [];
+        }
+
+        $decoded = json_decode($setting->value, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        return array_map(function ($item) {
+            return [
+                'email' => isset($item['email']) ? strtolower(trim($item['email'])) : '',
+                'expires_at' => $item['expires_at'] ?? null,
+            ];
+        }, $decoded);
+    }
+
+    /**
+     * Check if a specific email is allowed to register regardless of cutoff.
+     *
+     * @param string $email
+     * @return bool
+     */
+    public function isEmailAllowed(string $email): bool
+    {
+        $email = strtolower(trim($email));
+        $allowed = $this->getAllowedRegistrationEmails();
+        
+        foreach ($allowed as $item) {
+            if ($item['email'] === $email) {
+                // Check expiration
+                if (empty($item['expires_at'])) {
+                    return true; // No expiration means always allowed
+                }
+                
+                // Compare with current Manila time
+                try {
+                    $expiresAt = CarbonImmutable::parse($item['expires_at'], self::TIMEZONE);
+                    if (CarbonImmutable::now(self::TIMEZONE)->lte($expiresAt)) {
+                        return true;
+                    }
+                } catch (\Exception $e) {
+                    // Fallback to true if date is unparseable
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Add an email to the allowed registration list.
+     *
+     * @param string $email
+     * @param string|null $expiresAt
+     * @return void
+     */
+    public function addAllowedRegistrationEmail(string $email, ?string $expiresAt = null): void
+    {
+        $email = strtolower(trim($email));
+        $allowed = $this->getAllowedRegistrationEmails();
+        
+        // Remove any existing entry for this email
+        $filtered = array_filter($allowed, fn($item) => $item['email'] !== $email);
+        
+        $expiresAtManila = null;
+        if ($expiresAt) {
+            $expiresAtManila = CarbonImmutable::parse($expiresAt, self::TIMEZONE)->toDateTimeString();
+        }
+
+        $filtered[] = [
+            'email' => $email,
+            'expires_at' => $expiresAtManila,
+        ];
+        
+        SystemSetting::updateOrCreate(
+            ['key' => 'allowed_registration_emails'],
+            ['value' => json_encode(array_values($filtered))]
+        );
+    }
+
+    /**
+     * Remove an email from the allowed registration list.
+     *
+     * @param string $email
+     * @return void
+     */
+    public function removeAllowedRegistrationEmail(string $email): void
+    {
+        $email = strtolower(trim($email));
+        $allowed = $this->getAllowedRegistrationEmails();
+        $filtered = array_filter($allowed, fn($item) => $item['email'] !== $email);
+        
+        SystemSetting::updateOrCreate(
+            ['key' => 'allowed_registration_emails'],
+            ['value' => json_encode(array_values($filtered))]
+        );
+    }
 }
