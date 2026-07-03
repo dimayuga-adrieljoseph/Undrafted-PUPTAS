@@ -102,13 +102,16 @@ class ScoreOverrideController extends Controller
     public function searchEmail(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|string',
         ]);
 
-        $email = strtolower(trim($request->input('email')));
+        $searchTerm = trim($request->input('email'));
 
-        $applicants = TestPasser::where('email', $email)
+        $applicants = TestPasser::where('email', 'LIKE', '%' . $searchTerm . '%')
+            ->orWhere('first_name', 'LIKE', '%' . $searchTerm . '%')
+            ->orWhere('surname', 'LIKE', '%' . $searchTerm . '%')
             ->with(['passerStatus'])
+            ->limit(50)
             ->get(['test_passer_id', 'reference_number', 'email', 'first_name', 'surname', 'middle_name', 'status', 'passer_status_id']);
 
         return response()->json([
@@ -122,22 +125,29 @@ class ScoreOverrideController extends Controller
     public function storeEmail(Request $request): RedirectResponse
     {
         $request->validate([
-            'email' => 'required|email',
+            'emails' => 'required|array|min:1',
+            'emails.*' => 'required|email',
             'expires_at' => 'required|date|after_or_equal:now',
         ]);
 
-        $email = strtolower(trim($request->input('email')));
+        $emails = array_map(function ($email) {
+            return strtolower(trim($email));
+        }, $request->input('emails'));
+        
         $expiresAt = $request->input('expires_at');
         
-        $this->cutoffService->addAllowedRegistrationEmail($email, $expiresAt);
+        foreach ($emails as $email) {
+            $this->cutoffService->addAllowedRegistrationEmail($email, $expiresAt);
+        }
 
+        $emailList = implode(', ', $emails);
         $this->auditLogService->logActivity(
             AuditLog::ACTION_CREATE,
             'Registration Overrides',
-            "Allowed email $email to bypass registration cutoff until $expiresAt."
+            "Allowed emails to bypass registration cutoff until $expiresAt: $emailList"
         );
 
-        return redirect()->back()->with('success', "Email $email has been allowed for registration until $expiresAt.");
+        return redirect()->back()->with('success', count($emails) . " email(s) have been allowed for registration until $expiresAt.");
     }
 
     /**

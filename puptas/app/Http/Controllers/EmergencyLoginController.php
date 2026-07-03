@@ -48,10 +48,16 @@ class EmergencyLoginController extends Controller
         if ((int) $user->role_id === 1) {
             $testPasser = \App\Models\TestPasser::where('email', $request->email)->first();
             if ($testPasser && in_array($testPasser->passer_status_id, [3, 4])) {
-                $message = $testPasser->passer_status_id === 3 
-                    ? 'Login is not available for Unqualified applicants.' 
-                    : 'Login is currently closed for Waitlisted applicants.';
-                return back()->withErrors(['email' => $message]);
+                $cutoffService = app(\App\Services\CutoffSettingsService::class);
+                $isScoreOverride = $cutoffService->isScoreAllowed((float) $testPasser->pupcet_total_score);
+                $isEmailOverride = $cutoffService->isEmailAllowed($request->email);
+
+                if (!$isScoreOverride && !$isEmailOverride) {
+                    $message = $testPasser->passer_status_id === 3 
+                        ? 'Login is not available for Unqualified applicants.' 
+                        : 'Login is currently closed for Waitlisted applicants.';
+                    return back()->withErrors(['email' => $message]);
+                }
             }
         }
 
