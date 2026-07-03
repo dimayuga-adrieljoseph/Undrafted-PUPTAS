@@ -290,16 +290,15 @@ class IdpAuthController extends Controller
                 return redirect('/register');
             }
 
-            // Check if existing user is an applicant with restricted status.
-            // IMPORTANT: Score overrides must be consulted first — an admin may have
-            // explicitly allowed a specific score (e.g. 74) to bypass restrictions.
+            // Check if existing user is an applicant with restricted status
             if ((int) $localDbUser->role_id === 1) {
                 $testPasser = \App\Models\TestPasser::where('email', $idpEmail)->first();
                 if ($testPasser && in_array($testPasser->passer_status_id, [3, 4])) {
                     $cutoffService = app(\App\Services\CutoffSettingsService::class);
-                    $hasScoreOverride = $cutoffService->isScoreAllowed((float) $testPasser->pupcet_total_score);
+                    $isScoreOverride = $cutoffService->isScoreAllowed((float) $testPasser->pupcet_total_score);
+                    $isEmailOverride = $cutoffService->isEmailAllowed($idpEmail);
 
-                    if (!$hasScoreOverride) {
+                    if (!$isScoreOverride && !$isEmailOverride) {
                         $message = $testPasser->passer_status_id === 3 
                             ? 'Login is not available for Unqualified applicants.' 
                             : 'Login is currently closed for Waitlisted applicants. Please wait for further announcements regarding open slots.';
@@ -308,7 +307,6 @@ class IdpAuthController extends Controller
                             'idp' => $message,
                         ]);
                     }
-                    // Score override granted — fall through and log in normally.
                 }
             }
 

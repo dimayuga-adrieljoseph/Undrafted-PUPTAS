@@ -191,7 +191,7 @@ export function useSidebarNavigation() {
                     },
                     {
                         key: 'score-overrides',
-                        label: 'Score Overrides',
+                        label: 'Registration Overrides',
                         icon: 'user-check',
                         route: 'score-overrides.index',
                         activeRoutes: ['score-overrides.index'],

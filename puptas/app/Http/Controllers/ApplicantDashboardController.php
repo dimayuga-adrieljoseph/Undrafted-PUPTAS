@@ -107,7 +107,7 @@ class ApplicantDashboardController extends Controller
         return Inertia::render('Profile/Applicant', [
             'user'             => $user ? array_merge(
                 $user->only(['id', 'firstname', 'lastname', 'middlename', 'email', 'role_id']),
-                ['test_passer' => $user->testPasser ? $user->testPasser->only(['reference_number', 'pupcet_total_score']) : null]
+                ['test_passer' => $user->testPasser ? $user->testPasser->only(['reference_number']) : null]
             ) : null,
             'applicantProfile' => $profile ? $profile->only(['extension_name', 'strand', 'date_graduated', 'school']) : null,
             'grades'           => $grades ? collect($grades->toArray())->except(['id', 'user_id', 'created_at', 'updated_at'])->toArray() : null,

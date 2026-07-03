@@ -93,7 +93,7 @@ class HandleInertiaRequests extends Middleware
             'cutoff' => function () use ($request) {
                 $service = app(\App\Services\CutoffSettingsService::class);
                 $isPassed = $service->isCutoffPassed();
-                $hasScoreOverride = false;
+                $hasOverride = false;
 
                 $email = null;
                 
@@ -109,16 +109,20 @@ class HandleInertiaRequests extends Middleware
 
                 if ($email) {
                     $testPasser = \App\Models\TestPasser::where('email', $email)->first();
-                    if ($testPasser && $service->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
-                        $hasScoreOverride = true;
+                    
+                    $scoreOverride = $testPasser && $service->isScoreAllowed((float) $testPasser->pupcet_total_score);
+                    $emailOverride = $service->isEmailAllowed($email);
+                    
+                    if ($scoreOverride || $emailOverride) {
+                        $hasOverride = true;
                         $isPassed = false; // Override cutoff for this specific applicant if it was passed
                     }
                 }
 
                 return [
                     'is_passed' => $isPassed,
-                    'display' => $service->formatForDisplay(),
-                    'has_score_override' => $hasScoreOverride,
+                    'display' => $hasOverride ? null : $service->formatForDisplay(),
+                    'has_override' => $hasOverride,
                 ];
             },
         ]);

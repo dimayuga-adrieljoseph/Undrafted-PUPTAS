@@ -107,14 +107,17 @@ class ConfirmationService
             'requires_admission_office' => (bool) ($application?->requires_admission_office ?? false),
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
             'cutoff' => (function () use ($user) {
-                $isScoreAllowedOverride = false;
+                $isOverrideAllowed = false;
                 $testPasser = \App\Models\TestPasser::where('user_id', $user->id)->first();
-                if ($testPasser && $this->cutoffSettingsService->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
-                    $isScoreAllowedOverride = true;
+                if ($testPasser) {
+                    if ($this->cutoffSettingsService->isScoreAllowed((float) $testPasser->pupcet_total_score) || 
+                        $this->cutoffSettingsService->isEmailAllowed($user->email)) {
+                        $isOverrideAllowed = true;
+                    }
                 }
                 return [
-                    'is_passed' => $isScoreAllowedOverride ? false : $this->cutoffSettingsService->isCutoffPassed(),
-                    'display'   => $isScoreAllowedOverride ? null : $this->cutoffSettingsService->formatForDisplay(),
+                    'is_passed' => $isOverrideAllowed ? false : $this->cutoffSettingsService->isCutoffPassed(),
+                    'display'   => $isOverrideAllowed ? null : $this->cutoffSettingsService->formatForDisplay(),
                 ];
             })(),
         ];
@@ -221,13 +224,16 @@ class ConfirmationService
     public function submitApplication(User $user, array $validated): Application
     {
         return DB::transaction(function () use ($user, $validated) {
-            $isScoreAllowedOverride = false;
+            $isOverrideAllowed = false;
             $testPasser = $user->testPasser;
-            if ($testPasser && $this->cutoffSettingsService->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
-                $isScoreAllowedOverride = true;
+            if ($testPasser) {
+                if ($this->cutoffSettingsService->isScoreAllowed((float) $testPasser->pupcet_total_score) ||
+                    $this->cutoffSettingsService->isEmailAllowed($user->email)) {
+                    $isOverrideAllowed = true;
+                }
             }
 
-            if (!$isScoreAllowedOverride && $this->cutoffSettingsService->isCutoffPassed()) {
+            if (!$isOverrideAllowed && $this->cutoffSettingsService->isCutoffPassed()) {
                 abort(422, 'The application submission period has closed.');
             }
 
@@ -571,13 +577,16 @@ class ConfirmationService
      */
     public function resubmitApplication(User $user): Application
     {
-        $isScoreAllowedOverride = false;
+        $isOverrideAllowed = false;
         $testPasser = $user->testPasser;
-        if ($testPasser && $this->cutoffSettingsService->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
-            $isScoreAllowedOverride = true;
+        if ($testPasser) {
+            if ($this->cutoffSettingsService->isScoreAllowed((float) $testPasser->pupcet_total_score) ||
+                $this->cutoffSettingsService->isEmailAllowed($user->email)) {
+                $isOverrideAllowed = true;
+            }
         }
 
-        if (!$isScoreAllowedOverride && $this->cutoffSettingsService->isCutoffPassed()) {
+        if (!$isOverrideAllowed && $this->cutoffSettingsService->isCutoffPassed()) {
             abort(422, 'The application submission period has closed.');
         }
 
