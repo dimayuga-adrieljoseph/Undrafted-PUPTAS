@@ -640,6 +640,12 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/admin/logbook/export/pdf', [AdmissionLogbookController::class, 'exportPdf'])->name('reports.logbook.export.pdf');
     Route::get('/admin/control-list', [ControlListController::class, 'index'])->name('reports.control-list.index');
     Route::get('/admin/control-list/export', [ControlListController::class, 'export'])->name('reports.control-list.export');
+
+    // Waiver Management
+    Route::get('/admin/waiver-management', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'index'])->name('waiver.index');
+    Route::post('/admin/waiver-management/search', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'searchEligible'])->name('waiver.search');
+    Route::post('/admin/waiver-management/tag', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'tag'])->name('waiver.tag');
+    Route::post('/admin/waiver-management/untag', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'untag'])->name('waiver.untag');
 });
 
 // Audit log routes - Protected by Superadmin middleware
@@ -678,12 +684,6 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/score-overrides/search-email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'searchEmail'])->name('score-overrides.search-email');
     Route::post('/admin/score-overrides/email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'storeEmail'])->name('score-overrides.store-email');
     Route::delete('/admin/score-overrides/email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'destroyEmail'])->name('score-overrides.destroy-email');
-
-    // Waiver Management
-    Route::get('/admin/waiver-management', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'index'])->name('waiver.index');
-    Route::post('/admin/waiver-management/search', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'searchEligible'])->name('waiver.search');
-    Route::post('/admin/waiver-management/tag', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'tag'])->name('waiver.tag');
-    Route::post('/admin/waiver-management/untag', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'untag'])->name('waiver.untag');
 
     // Global System Settings (Deprecated in favor of CutoffSettings)
     // Removed SystemSettingsController routes
