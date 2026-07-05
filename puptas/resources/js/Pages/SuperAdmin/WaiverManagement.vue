@@ -176,9 +176,43 @@ const importingFile = ref(false)
 const confirmingImport = ref(false)
 const importError = ref(null)
 const importFileInput = ref(null)
+const isDragging = ref(false)
+
+const previewPage = ref(1)
+const previewPerPage = 10
+
+const paginatedPreview = computed(() => {
+    if (!importPreviewData.value) return []
+    const start = (previewPage.value - 1) * previewPerPage
+    return importPreviewData.value.slice(start, start + previewPerPage)
+})
+
+const totalPreviewPages = computed(() => {
+    if (!importPreviewData.value) return 0
+    return Math.ceil(importPreviewData.value.length / previewPerPage)
+})
+
+const nextPreviewPage = () => { if (previewPage.value < totalPreviewPages.value) previewPage.value++ }
+const prevPreviewPage = () => { if (previewPage.value > 1) previewPage.value-- }
 
 const triggerFileInput = () => {
     importFileInput.value.click()
+}
+
+const onDragOver = (e) => { e.preventDefault(); isDragging.value = true; }
+const onDragLeave = (e) => { e.preventDefault(); isDragging.value = false; }
+const onDrop = (e) => {
+    e.preventDefault()
+    isDragging.value = false
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+        const file = files[0]
+        if (file.name.endsWith('.xlsx') || file.name.endsWith('.csv')) {
+            handleFileUpload({ target: { files: [file] } })
+        } else {
+            importError.value = "Please upload a valid .xlsx or .csv file."
+        }
+    }
 }
 
 const handleFileUpload = async (event) => {
@@ -190,6 +224,7 @@ const handleFileUpload = async (event) => {
     importError.value = null
     importPreviewData.value = null
     importUnmatched.value = []
+    previewPage.value = 1
 
     const formData = new FormData()
     formData.append('file', file)
@@ -330,7 +365,6 @@ const confirmImport = () => {
                             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-800/50">
                                     <tr>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rank</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applicant</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Strand / Score</th>
@@ -340,9 +374,6 @@ const confirmImport = () => {
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     <tr v-for="applicant in eligibleApplicants" :key="applicant.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.waiver_rank || '-' }}</span>
-                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex flex-col">
                                                 <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.surname }}, {{ applicant.first_name }} {{ applicant.middle_name }}</span>
@@ -360,11 +391,12 @@ const confirmImport = () => {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex flex-col gap-1">
-                                                <span class="text-xs text-gray-500 dark:text-gray-400">Sheet: {{ applicant.waiver_list_status || 'N/A' }}</span>
-                                                <span class="px-2.5 py-1 w-fit rounded-full text-xs font-medium" :class="getStatusBadgeClass(applicant.passer_status_id)">
-                                                    {{ getStatusLabel(applicant.passer_status?.status) }}
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">
+                                                    {{ applicant.waiver_list_status || getStatusLabel(applicant.passer_status?.status) }}
                                                 </span>
-                                                <span class="text-xs text-[#9E122C] font-medium mt-1">{{ applicant.waiver_program_offering || 'N/A' }}</span>
+                                                <span class="text-xs text-[#9E122C] font-medium mt-1">
+                                                    {{ applicant.waiver_program_offering || applicant.user?.current_application?.program?.code || 'N/A' }}
+                                                </span>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -410,7 +442,6 @@ const confirmImport = () => {
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead class="bg-gray-50 dark:bg-gray-800/50">
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rank</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applicant</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Strand / Score</th>
@@ -420,7 +451,7 @@ const confirmImport = () => {
                         </thead>
                         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             <tr v-if="tagged_applicants.data.length === 0">
-                                <td colspan="4" class="px-6 py-12 text-center">
+                                <td colspan="5" class="px-6 py-12 text-center">
                                     <div class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
                                         <FontAwesomeIcon icon="user-slash" class="text-4xl mb-4 text-gray-300 dark:text-gray-600" />
                                         <p class="text-base font-medium">No tagged waiver applicants found</p>
@@ -428,9 +459,6 @@ const confirmImport = () => {
                                 </td>
                             </tr>
                             <tr v-for="applicant in tagged_applicants.data" :key="applicant.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.waiver_rank || '-' }}</span>
-                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex flex-col">
                                         <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.surname }}, {{ applicant.first_name }} {{ applicant.middle_name }}</span>
@@ -448,11 +476,15 @@ const confirmImport = () => {
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex flex-col gap-1 items-start">
-                                        <span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Sheet: {{ applicant.waiver_list_status || 'N/A' }}</span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                            {{ applicant.waiver_list_status || getStatusLabel(applicant.passer_status?.status) }}
+                                        </span>
                                         <span class="px-2.5 py-1 inline-flex items-center gap-1.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800">
                                             🔴 On Probation
                                         </span>
-                                        <span class="text-xs text-[#9E122C] font-medium mt-1">{{ applicant.waiver_program_offering || 'N/A' }}</span>
+                                        <span class="text-xs text-[#9E122C] font-medium mt-1">
+                                            {{ applicant.waiver_program_offering || applicant.user?.current_application?.program?.code || 'N/A' }}
+                                        </span>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -543,11 +575,15 @@ const confirmImport = () => {
             <template #content>
                 <div class="flex flex-col gap-4">
                     <!-- Step 1: Upload -->
-                    <div v-if="!importPreviewData" class="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-                        <FontAwesomeIcon icon="upload" class="text-4xl text-gray-400 mb-4" />
+                    <div v-if="!importPreviewData" 
+                         @dragover="onDragOver"
+                         @dragleave="onDragLeave"
+                         @drop="onDrop"
+                         :class="['flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl transition-colors', isDragging ? 'border-[#9E122C] bg-red-50 dark:bg-red-900/10' : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50']">
+                        <FontAwesomeIcon icon="upload" :class="['text-4xl mb-4 transition-colors', isDragging ? 'text-[#9E122C]' : 'text-gray-400']" />
                         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Upload Excel Sheet</h3>
                         <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">
-                            Upload the official waiver applicants list (.xlsx, .csv). <br>
+                            Drag and drop the official waiver applicants list (.xlsx, .csv) here, or click to browse. <br>
                             The system will match applicants based on the "Reference Number" column.
                         </p>
                         
@@ -590,19 +626,20 @@ const confirmImport = () => {
                         </div>
 
                         <div>
-                            <h4 class="font-medium text-gray-900 dark:text-white mb-2 text-sm">Matched Applicants Preview (First 5):</h4>
+                            <h4 class="font-medium text-gray-900 dark:text-white mb-2 text-sm flex items-center justify-between">
+                                Matched Applicants Preview
+                                <span class="text-xs text-gray-500 font-normal">Page {{ previewPage }} of {{ totalPreviewPages }}</span>
+                            </h4>
                             <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                     <thead class="bg-gray-50 dark:bg-gray-800/50">
                                         <tr>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
                                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Applicant</th>
                                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                        <tr v-for="ap in importPreviewData.slice(0, 5)" :key="ap.reference_number">
-                                            <td class="px-4 py-2 text-xs text-gray-900 dark:text-gray-300">{{ ap.rank || '-' }}</td>
+                                        <tr v-for="ap in paginatedPreview" :key="ap.reference_number">
                                             <td class="px-4 py-2 text-xs">
                                                 <div class="font-medium text-gray-900 dark:text-white">{{ ap.system_name }}</div>
                                                 <div class="text-gray-500">{{ ap.reference_number }}</div>
@@ -615,7 +652,17 @@ const confirmImport = () => {
                                     </tbody>
                                 </table>
                             </div>
-                            <p class="text-xs text-gray-500 mt-2 text-center" v-if="importPreviewData.length > 5">...and {{ importPreviewData.length - 5 }} more</p>
+                            
+                            <!-- Pagination Controls -->
+                            <div class="flex items-center justify-between mt-3" v-if="totalPreviewPages > 1">
+                                <button @click="prevPreviewPage" :disabled="previewPage === 1" class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 text-xs font-medium transition">
+                                    Previous
+                                </button>
+                                <span class="text-xs text-gray-500">Showing {{ (previewPage - 1) * previewPerPage + 1 }} - {{ Math.min(previewPage * previewPerPage, importPreviewData.length) }} of {{ importPreviewData.length }}</span>
+                                <button @click="nextPreviewPage" :disabled="previewPage === totalPreviewPages" class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 text-xs font-medium transition">
+                                    Next
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
