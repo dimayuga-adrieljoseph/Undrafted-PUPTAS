@@ -237,10 +237,12 @@ class WaiverManagementController extends Controller
                     $applicant->surname . ', ' . $applicant->first_name,
                     $applicant->user?->email,
                     $applicant->user?->currentApplication?->program?->name ?? 'N/A',
-                    $applicant->passerStatus?->name ?? 'N/A',
-                    $applicant->updated_at->format('Y-m-d h:i A')
+                    ucwords(str_replace('_', ' ', $applicant->passerStatus?->status ?? 'N/A')),
+                    $applicant->updated_at->format('M d, Y h:i A')
                 ]);
             }
+            fputcsv($file, []);
+            fputcsv($file, ['*** This is a system generated report ***']);
             fclose($file);
         };
 

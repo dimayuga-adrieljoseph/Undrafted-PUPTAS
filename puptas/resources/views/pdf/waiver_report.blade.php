@@ -40,7 +40,7 @@
                     <td>{{ $applicant->surname }}, {{ $applicant->first_name }}</td>
                     <td>{{ $applicant->user?->email }}</td>
                     <td>{{ $applicant->user?->currentApplication?->program?->name ?? 'N/A' }}</td>
-                    <td class="status">{{ $applicant->passerStatus?->name ?? 'N/A' }}</td>
+                    <td class="status">{{ ucwords(str_replace('_', ' ', $applicant->passerStatus?->status ?? 'N/A')) }}</td>
                     <td>{{ $applicant->updated_at->format('M d, Y h:i A') }}</td>
                 </tr>
             @endforeach
@@ -52,5 +52,9 @@
             @endif
         </tbody>
     </table>
+
+    <div style="margin-top: 30px; text-align: center; font-style: italic; color: #777; font-size: 11px;">
+        *** This is a system generated report ***
+    </div>
 </body>
 </html>
