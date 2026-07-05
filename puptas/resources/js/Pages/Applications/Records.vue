@@ -147,7 +147,10 @@
                             class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 transition"
                         >
                             <td class="py-3 text-gray-900 dark:text-white font-medium">
-                                {{ user.firstname }} {{ user.lastname }}
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span>{{ user.firstname }} {{ user.lastname }}</span>
+                                    <span v-if="user.application?.is_waivered" class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">Waiver</span>
+                                </div>
                             </td>
                             <td class="py-3 text-gray-700 dark:text-gray-300">
                                 {{ user.program?.name || "—" }}
@@ -246,6 +249,12 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2 flex-shrink-0">
+                            <!-- Waiver Badges -->
+                            <div v-if="selectedUser?.application?.is_waivered" class="hidden sm:flex gap-2 flex-wrap items-center">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">⚠️ Waiver Program</span>
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800">🔴 On Probation</span>
+                            </div>
+
                             <span :class="getStatusClass(selectedUser)" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold">
                                 {{ getStatusText(selectedUser) }}
                             </span>

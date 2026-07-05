@@ -267,6 +267,12 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 flex-shrink-0">
+                                <span v-if="selectedUser?.application?.is_waivered" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                    ⚠️ Waiver Program
+                                </span>
+                                <span v-if="selectedUser?.application?.is_waivered" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800">
+                                    🔴 On Probation
+                                </span>
                                 <span :class="getStatusBadgeClass(selectedUser)" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold">
                                     {{ getEvaluationStatusText(selectedUser) }}
                                 </span>
@@ -1281,7 +1287,7 @@ const isApplicantQualified = computed(() => {
     if (!selectedProgramId.value || !selectedUser.value?.unqualified_programs) return true;
     
     // Check if the selected program is in the unqualified list
-    const isUnqualified = selectedUser.value.unqualified_programs.some(p => p.id === selectedProgramId.value);
+    const isUnqualified = selectedUser.value.unqualified_programs.some(p => p.id == selectedProgramId.value);
     return !isUnqualified;
 });
 

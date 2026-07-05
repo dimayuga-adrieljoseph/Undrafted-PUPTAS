@@ -278,6 +278,7 @@ const selectUser = async (user) => {
                 program: response.data.user.application?.program || null,
             },
             grades: response.data.user.grades || null,
+            unqualified_programs: response.data.user.unqualified_programs || [],
         };
 
         selectedUserFiles.value = response.data.uploadedFiles || {};
@@ -435,7 +436,7 @@ const isApplicantQualified = computed(() => {
     if (!selectedProgramId.value || !selectedUser.value?.unqualified_programs) return true;
     
     // Check if the selected program is in the unqualified list
-    const isUnqualified = selectedUser.value.unqualified_programs.some(p => p.id === selectedProgramId.value);
+    const isUnqualified = selectedUser.value.unqualified_programs.some(p => p.id == selectedProgramId.value);
     return !isUnqualified;
 });
 
@@ -832,11 +833,19 @@ const fetchPrograms = async () => {
                                     <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">Interview Details</h3>
                                     <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
                                 </div>
-                                <button @click="closeUserCard" class="flex-shrink-0 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
-                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span v-if="selectedUser?.application?.is_waivered" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                        ⚠️ Waiver Program
+                                    </span>
+                                    <span v-if="selectedUser?.application?.is_waivered" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800">
+                                        🔴 On Probation
+                                    </span>
+                                    <button @click="closeUserCard" class="flex-shrink-0 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
+                                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

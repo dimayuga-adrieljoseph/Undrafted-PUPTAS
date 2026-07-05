@@ -144,13 +144,22 @@ export function useSidebarNavigation() {
                     activeRoutes: ['reports.control-list.index'],
                 },
                 // Role-gated: Admin or Superadmin only
-                ...(isAdminOrSuperAdmin.value ? [{
-                    key: 'email-tracking',
-                    label: 'Email Tracking',
-                    icon: 'envelope',
-                    route: 'email-tracking.index',
-                    activeRoutes: ['email-tracking.index'],
-                }] : []),
+                ...(isAdminOrSuperAdmin.value ? [
+                    {
+                        key: 'waiver-management',
+                        label: 'Waiver Management',
+                        icon: 'user-tag',
+                        route: 'waiver.index',
+                        activeRoutes: ['waiver.index'],
+                    },
+                    {
+                        key: 'email-tracking',
+                        label: 'Email Tracking',
+                        icon: 'envelope',
+                        route: 'email-tracking.index',
+                        activeRoutes: ['email-tracking.index'],
+                    }
+                ] : []),
             ]),
         },
         {

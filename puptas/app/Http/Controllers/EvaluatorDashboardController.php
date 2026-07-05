@@ -335,12 +335,13 @@ class EvaluatorDashboardController extends Controller
             return response()->json(['message' => 'Review already started.'], 409);
         }
 
+        $now = now();
         $applicationProcess->update([
-            'started_at'  => now(),
+            'started_at'  => $now,
             'reviewed_by' => auth()->id(),
         ]);
 
-        return response()->json(['started_at' => $applicationProcess->started_at]);
+        return response()->json(['started_at' => $now]);
     }
 
     public function cancelReview(ApplicationProcess $applicationProcess)

@@ -61,7 +61,7 @@ class ApplicantProfile extends Model
     public function currentApplication()
     {
         return $this->hasOne(Application::class, 'user_id', 'user_id')
-            ->select('applications.id', 'applications.user_id', 'applications.status', 'applications.submitted_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.created_at', 'applications.updated_at', 'applications.deleted_at')
+            ->select('applications.id', 'applications.user_id', 'applications.status', 'applications.submitted_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.enrollment_status', 'applications.enrollment_position', 'applications.created_at', 'applications.updated_at', 'applications.deleted_at', 'applications.is_waivered', 'applications.requires_guidance_office', 'applications.requires_admission_office')
             ->whereNull('applications.deleted_at')
             ->ofMany('id', 'max');
     }

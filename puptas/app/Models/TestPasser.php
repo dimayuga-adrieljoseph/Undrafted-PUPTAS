@@ -26,6 +26,7 @@ class TestPasser extends Model
         'user_id',
         'status',
         'passer_status_id',
+        'previous_passer_status_id',
         'graduate_of',
         'graduation_date'
     ];

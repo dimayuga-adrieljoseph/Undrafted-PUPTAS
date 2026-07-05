@@ -136,16 +136,17 @@ class InterviewerDashboardController extends Controller
         }
 
         // Only start if not already started
+        $now = now();
         if (!$interviewerInProgress->started_at) {
             $interviewerInProgress->update([
-                'started_at' => now(),
+                'started_at' => $now,
                 'performed_by' => auth()->id(),
             ]);
         }
 
         return response()->json([
             'message' => 'Interview started successfully.',
-            'started_at' => $interviewerInProgress->started_at
+            'started_at' => $interviewerInProgress->started_at ?? $now
         ]);
     }
 

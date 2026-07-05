@@ -679,6 +679,12 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/score-overrides/email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'storeEmail'])->name('score-overrides.store-email');
     Route::delete('/admin/score-overrides/email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'destroyEmail'])->name('score-overrides.destroy-email');
 
+    // Waiver Management
+    Route::get('/admin/waiver-management', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'index'])->name('waiver.index');
+    Route::post('/admin/waiver-management/search', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'searchEligible'])->name('waiver.search');
+    Route::post('/admin/waiver-management/tag', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'tag'])->name('waiver.tag');
+    Route::post('/admin/waiver-management/untag', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'untag'])->name('waiver.untag');
+
     // Global System Settings (Deprecated in favor of CutoffSettings)
     // Removed SystemSettingsController routes
 
