@@ -854,7 +854,7 @@ const handleTermsCancel = () => {
     </div>
 </template>
 
-<style>
+<style scoped>
 .animation-delay-2000 {
     animation-delay: 2s;
 }

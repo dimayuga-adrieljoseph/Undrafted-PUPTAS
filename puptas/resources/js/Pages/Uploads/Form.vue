@@ -1,3 +1,108 @@
+<script setup>
+import { ref, onMounted } from "vue";
+import AppLayout from "@/Layouts/AppLayout.vue";
+import { Head } from "@inertiajs/vue3";
+import { useGlobalLoading } from "@/Composables/useGlobalLoading";
+const axios = window.axios;
+const { start, finish } = useGlobalLoading();
+
+const batch = ref("Batch 1");
+const customBatch = ref("");
+const year = ref("");
+const customYear = ref("");
+const file = ref(null);
+const showDialog = ref(false);
+const yearOptions = ref([]);
+const passerStatus = ref("");
+const showStatusError = ref(false);
+const importedCount = ref(0);
+const skippedCount = ref(0);
+const uploading = ref(false);
+
+onMounted(() => {
+  const currentYear = new Date().getFullYear();
+  yearOptions.value = [
+    `${currentYear}-${currentYear + 1}`,
+    `${currentYear - 1}-${currentYear}`,
+    `${currentYear - 2}-${currentYear - 1}`,
+    `${currentYear - 3}-${currentYear - 2}`,
+  ];
+  year.value = `${currentYear}-${currentYear + 1}`;
+});
+
+const onBatchChange = () => {
+  if (batch.value !== "--Custom--") customBatch.value = "";
+};
+const onYearChange = () => {
+  if (year.value !== "--Custom--") customYear.value = "";
+};
+const onFileChange = (e) => {
+  file.value = e.target.files[0];
+};
+
+const submitForm = async () => {
+  const resolvedYear = year.value === "--Custom--" ? customYear.value : String(year.value);
+  const resolvedBatch = batch.value === "--Custom--" ? customBatch.value : batch.value;
+
+  showStatusError.value = false;
+
+  // Validate status selector presence
+  if (!passerStatus.value) {
+    showStatusError.value = true;
+    return;
+  }
+  if (!resolvedBatch) return alert("Please enter a batch number.");
+  if (!resolvedYear) return alert("Please select a school year.");
+  if (!file.value) return alert("Please select a file to upload.");
+
+  const formData = new FormData();
+  formData.append("batch_number", resolvedBatch);
+  formData.append("school_year", resolvedYear);
+  formData.append("passer_status_id", passerStatus.value);
+  formData.append("file", file.value);
+
+  uploading.value = true;
+  start();
+  try {
+    const response = await axios.post("/test-passers/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    importedCount.value = response.data?.imported_count ?? 0;
+    skippedCount.value = response.data?.skipped_count ?? 0;
+    showDialog.value = true;
+  } catch (error) {
+    handleUploadError(error);
+  } finally {
+    uploading.value = false;
+    finish();
+  }
+};
+
+const handleUploadError = (error) => {
+  console.error(error);
+  const status = error.response?.status;
+  const data = error.response?.data;
+  const message = data?.message || data?.error || null;
+  if (status === 403) {
+    alert("Upload failed: You do not have permission to upload passers.");
+  } else if (status === 422) {
+    if (data?.imported_count !== undefined && data?.skipped_count !== undefined) {
+      alert(`Upload complete but no new records were added.\n\nSkipped: ${data.skipped_count} duplicate(s).\n\nAll entries in this file already exist in the system.`);
+    } else {
+      const errors = data?.errors;
+      const detail = errors ? Object.values(errors).flat().join("\n") : message;
+      alert("Upload failed: " + (detail || "Validation error."));
+    }
+  } else {
+    alert("Upload failed." + (message ? " " + message : ""));
+  }
+};
+
+const redirectToEmails = () => {
+  window.location.href = "/test-passers";
+};
+</script>
+
 <template>
   <Head title="Upload Passers" />
   <AppLayout>
@@ -143,111 +248,6 @@
     </div>
   </AppLayout>
 </template>
-
-<script setup>
-import { ref, onMounted } from "vue";
-import AppLayout from "@/Layouts/AppLayout.vue";
-import { Head } from "@inertiajs/vue3";
-import { useGlobalLoading } from "@/Composables/useGlobalLoading";
-const axios = window.axios;
-const { start, finish } = useGlobalLoading();
-
-const batch = ref("Batch 1");
-const customBatch = ref("");
-const year = ref("");
-const customYear = ref("");
-const file = ref(null);
-const showDialog = ref(false);
-const yearOptions = ref([]);
-const passerStatus = ref("");
-const showStatusError = ref(false);
-const importedCount = ref(0);
-const skippedCount = ref(0);
-const uploading = ref(false);
-
-onMounted(() => {
-  const currentYear = new Date().getFullYear();
-  yearOptions.value = [
-    `${currentYear}-${currentYear + 1}`,
-    `${currentYear - 1}-${currentYear}`,
-    `${currentYear - 2}-${currentYear - 1}`,
-    `${currentYear - 3}-${currentYear - 2}`,
-  ];
-  year.value = `${currentYear}-${currentYear + 1}`;
-});
-
-const onBatchChange = () => {
-  if (batch.value !== "--Custom--") customBatch.value = "";
-};
-const onYearChange = () => {
-  if (year.value !== "--Custom--") customYear.value = "";
-};
-const onFileChange = (e) => {
-  file.value = e.target.files[0];
-};
-
-const submitForm = async () => {
-  const resolvedYear = year.value === "--Custom--" ? customYear.value : String(year.value);
-  const resolvedBatch = batch.value === "--Custom--" ? customBatch.value : batch.value;
-
-  showStatusError.value = false;
-
-  // Validate status selector presence
-  if (!passerStatus.value) {
-    showStatusError.value = true;
-    return;
-  }
-  if (!resolvedBatch) return alert("Please enter a batch number.");
-  if (!resolvedYear) return alert("Please select a school year.");
-  if (!file.value) return alert("Please select a file to upload.");
-
-  const formData = new FormData();
-  formData.append("batch_number", resolvedBatch);
-  formData.append("school_year", resolvedYear);
-  formData.append("passer_status_id", passerStatus.value);
-  formData.append("file", file.value);
-
-  uploading.value = true;
-  start();
-  try {
-    const response = await axios.post("/test-passers/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    importedCount.value = response.data?.imported_count ?? 0;
-    skippedCount.value = response.data?.skipped_count ?? 0;
-    showDialog.value = true;
-  } catch (error) {
-    handleUploadError(error);
-  } finally {
-    uploading.value = false;
-    finish();
-  }
-};
-
-const handleUploadError = (error) => {
-  console.error(error);
-  const status = error.response?.status;
-  const data = error.response?.data;
-  const message = data?.message || data?.error || null;
-  if (status === 403) {
-    alert("Upload failed: You do not have permission to upload passers.");
-  } else if (status === 422) {
-    if (data?.imported_count !== undefined && data?.skipped_count !== undefined) {
-      alert(`Upload complete but no new records were added.\n\nSkipped: ${data.skipped_count} duplicate(s).\n\nAll entries in this file already exist in the system.`);
-    } else {
-      const errors = data?.errors;
-      const detail = errors ? Object.values(errors).flat().join("\n") : message;
-      alert("Upload failed: " + (detail || "Validation error."));
-    }
-  } else {
-    alert("Upload failed." + (message ? " " + message : ""));
-  }
-};
-
-const redirectToEmails = () => {
-  window.location.href = "/test-passers";
-};
-</script>
 
 <style scoped>
 .fade-enter-active,

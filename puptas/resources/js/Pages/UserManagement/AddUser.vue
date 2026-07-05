@@ -1,3 +1,86 @@
+<script setup>
+import { ref, computed } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import axios from 'axios';
+import AppLayout from '@/Layouts/AppLayout.vue';
+
+const props = defineProps({
+    programs:         Array,
+    totalUsers:       Number,
+    userCountsByRole: Object,
+    roles:            Object,
+    currentUserRoleId: Number,
+});
+
+const isSuperAdmin = computed(() => props.currentUserRoleId === 7);
+
+const form = ref({
+    firstname:        '',
+    lastname:         '',
+    middlename:       '',
+    extension_name:   '',
+    email:            '',
+    role_id:          '',
+    program:          [],
+    applicant_program: '',
+});
+
+const errors      = ref({});
+const isSubmitting  = ref(false);
+const isCheckingEmail = ref(false);
+const submitted   = ref(false);
+
+const hasAnyError = computed(() => Object.values(errors.value).some(e => e !== ''));
+
+const showProgramAssignment = computed(() => ['3', '4', '8'].includes(form.value.role_id));
+const showApplicantProgram  = computed(() => form.value.role_id === '1');
+
+const onRoleChange = () => {
+    if (!showProgramAssignment.value) form.value.program = [];
+    if (!showApplicantProgram.value)  form.value.applicant_program = '';
+};
+
+const validateField = (fieldName) => {
+    if (fieldName !== 'email') errors.value[fieldName] = '';
+};
+
+const checkEmailUnique = async () => {
+    if (!form.value.email) { errors.value.email = ''; return; }
+    isCheckingEmail.value = true;
+    try {
+        const response = await axios.post('/check-email', { email: form.value.email });
+        errors.value.email = response.data.taken ? 'This email has already been taken.' : '';
+    } catch {
+        // fall through to server-side validation
+    } finally {
+        isCheckingEmail.value = false;
+    }
+};
+
+const submitForm = async () => {
+    submitted.value = true;
+    Object.keys(form.value).forEach(key => validateField(key));
+
+    if (form.value.email && !errors.value.email) {
+        await checkEmailUnique();
+    }
+
+    if (hasAnyError.value) return;
+
+    isSubmitting.value = true;
+
+    router.post(route('users.store'), form.value, {
+        onError: (serverErrors) => {
+            errors.value = serverErrors;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+        onFinish: () => {
+            isSubmitting.value = false;
+        },
+    });
+};
+</script>
+
 <template>
     <Head title="Add User" />
     <AppLayout>
@@ -225,89 +308,6 @@
         </div>
     </AppLayout>
 </template>
-
-<script setup>
-import { ref, computed } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
-import axios from 'axios';
-import AppLayout from '@/Layouts/AppLayout.vue';
-
-const props = defineProps({
-    programs:         Array,
-    totalUsers:       Number,
-    userCountsByRole: Object,
-    roles:            Object,
-    currentUserRoleId: Number,
-});
-
-const isSuperAdmin = computed(() => props.currentUserRoleId === 7);
-
-const form = ref({
-    firstname:        '',
-    lastname:         '',
-    middlename:       '',
-    extension_name:   '',
-    email:            '',
-    role_id:          '',
-    program:          [],
-    applicant_program: '',
-});
-
-const errors      = ref({});
-const isSubmitting  = ref(false);
-const isCheckingEmail = ref(false);
-const submitted   = ref(false);
-
-const hasAnyError = computed(() => Object.values(errors.value).some(e => e !== ''));
-
-const showProgramAssignment = computed(() => ['3', '4', '8'].includes(form.value.role_id));
-const showApplicantProgram  = computed(() => form.value.role_id === '1');
-
-const onRoleChange = () => {
-    if (!showProgramAssignment.value) form.value.program = [];
-    if (!showApplicantProgram.value)  form.value.applicant_program = '';
-};
-
-const validateField = (fieldName) => {
-    if (fieldName !== 'email') errors.value[fieldName] = '';
-};
-
-const checkEmailUnique = async () => {
-    if (!form.value.email) { errors.value.email = ''; return; }
-    isCheckingEmail.value = true;
-    try {
-        const response = await axios.post('/check-email', { email: form.value.email });
-        errors.value.email = response.data.taken ? 'This email has already been taken.' : '';
-    } catch {
-        // fall through to server-side validation
-    } finally {
-        isCheckingEmail.value = false;
-    }
-};
-
-const submitForm = async () => {
-    submitted.value = true;
-    Object.keys(form.value).forEach(key => validateField(key));
-
-    if (form.value.email && !errors.value.email) {
-        await checkEmailUnique();
-    }
-
-    if (hasAnyError.value) return;
-
-    isSubmitting.value = true;
-
-    router.post(route('users.store'), form.value, {
-        onError: (serverErrors) => {
-            errors.value = serverErrors;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        },
-        onFinish: () => {
-            isSubmitting.value = false;
-        },
-    });
-};
-</script>
 
 <style scoped>
 /* ── Root ─────────────────────────────────────────────────── */

@@ -1,3 +1,21 @@
+<script setup>
+import { defineProps, defineEmits } from 'vue';
+
+const props = defineProps({
+    isOpen: Boolean,
+});
+
+const emit = defineEmits(["confirm", "close"]);
+
+const confirmDelete = () => {
+    emit("confirm");
+};
+
+const closeModal = () => {
+    emit("close");
+};
+</script>
+
 <template>
     <transition name="fade">
         <div
@@ -31,25 +49,7 @@
     </transition>
 </template>
 
-<script setup>
-import { defineProps, defineEmits } from 'vue';
-
-const props = defineProps({
-    isOpen: Boolean,
-});
-
-const emit = defineEmits(["confirm", "close"]);
-
-const confirmDelete = () => {
-    emit("confirm");
-};
-
-const closeModal = () => {
-    emit("close");
-};
-</script>
-
-<style>
+<style scoped>
 /* Fade transition for modal */
 .fade-enter-active, .fade-leave-active {
     transition: opacity 0.3s ease;

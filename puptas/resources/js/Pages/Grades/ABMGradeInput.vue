@@ -1,3 +1,185 @@
+<script setup>
+import { ref, computed } from "vue";
+import { Head } from "@inertiajs/vue3";
+import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
+import GradesReviewModal from "@/Components/GradesReviewModal.vue";
+import DynamicSubjectRow from "@/Components/DynamicSubjectRow.vue";
+import FieldError from "@/Components/FieldError.vue";
+import { useGradeForm } from "@/Composables/useGradeForm.js";
+
+const props = defineProps({
+    grade: Object,
+    user: Object,
+    programs: Array,
+    strand: String,
+    profile: Object,
+    extractionResult: { type: Object, default: null },
+    isLocked: { type: Boolean, default: false },
+});
+
+// ABM-specific default subjects
+const defaultSubjects = {
+    math: [
+        'g11_general_mathematics',
+        'g11_business_mathematics',
+        'g11_statistics_probability',
+    ],
+    english: [
+        'g11_oral_communication',
+        'g11_academic_professional',
+        'g11_reading_writing',
+        'g12_21st_century_lit',
+    ],
+    science: [
+        'g11_earth_life_science',
+        'g11_physical_science',
+    ],
+};
+
+// Use the composable for all grade form logic
+const {
+    form,
+    dynamicSubjects,
+    mathAverage,
+    englishAverage,
+    scienceAverage,
+    g12GWA,
+    mathCount,
+    englishCount,
+    scienceCount,
+    addSubject,
+    removeSubject,
+    canAddSubject,
+    qualifiedPrograms,
+    notQualifiedPrograms,
+    noSlotsPrograms,
+    programChoiceDisabled,
+    hasAvailableSlots,
+    checkSlotAvailability,
+    validateGrade,
+    preventInvalidInput,
+    errors,
+    submitForm,
+    retrySubmit,
+    loading,
+    toastMessage,
+    toastType,
+    toastVisible,
+    showRetryOption,
+    dismissToast,
+} = useGradeForm({
+    strand: props.strand || 'ABM',
+    defaultSubjects,
+    grade: props.grade,
+    programs: props.programs,
+    profile: props.profile,
+    isLocked: props.isLocked,
+});
+
+const successMessage = ref("");
+const bannerDismissed = ref(false);
+const showReviewModal = ref(false);
+
+// Helper function to get selected program name
+const getSelectedProgramName = (programId) => {
+    const program = props.programs?.find((p) => p.id === programId);
+    return program ? `${program.code} - ${program.name}` : "";
+};
+
+// Computed property for review data
+const reviewData = computed(() => ({
+    g11_general_mathematics: form.g11_general_mathematics,
+    g11_business_mathematics: form.g11_business_mathematics,
+    g11_statistics_probability: form.g11_statistics_probability,
+    g11_oral_communication: form.g11_oral_communication,
+    g11_academic_professional: form.g11_academic_professional,
+    g11_reading_writing: form.g11_reading_writing,
+    g12_21st_century_lit: form.g12_21st_century_lit,
+    g11_earth_life_science: form.g11_earth_life_science,
+    g11_physical_science: form.g11_physical_science,
+    g12_first_sem_gwa: form.g12_first_sem_gwa,
+    g12_second_sem_gwa: form.g12_second_sem_gwa,
+    first_choice_program: getSelectedProgramName(form.first_choice_program),
+    second_choice_program: getSelectedProgramName(form.second_choice_program),
+    third_choice_program: getSelectedProgramName(form.third_choice_program),
+    math_average: mathAverage.value,
+    english_average: englishAverage.value,
+    science_average: scienceAverage.value,
+    g12_gwa: g12GWA.value,
+}));
+
+// Computed property for review modal sections
+const reviewSections = computed(() => [
+    {
+        title: 'Grade 11 Math Subjects',
+        items: [
+            { label: 'General Mathematics', value: reviewData.value.g11_general_mathematics },
+            { label: 'Business Mathematics', value: reviewData.value.g11_business_mathematics },
+            { label: 'Statistics and Probability', value: reviewData.value.g11_statistics_probability },
+        ],
+    },
+    {
+        title: 'English Subjects',
+        items: [
+            { label: 'Oral Communication', value: reviewData.value.g11_oral_communication },
+            { label: 'English for Academic Purposes', value: reviewData.value.g11_academic_professional },
+            { label: 'Reading and Writing', value: reviewData.value.g11_reading_writing },
+            { label: '21st Century Literature', value: reviewData.value.g12_21st_century_lit },
+        ],
+    },
+    {
+        title: 'Science Subjects',
+        items: [
+            { label: 'Earth and Life Science', value: reviewData.value.g11_earth_life_science },
+            { label: 'Physical Science', value: reviewData.value.g11_physical_science },
+        ],
+    },
+    {
+        title: 'Grade 12 GWA',
+        items: [
+            { label: '1st Semester', value: reviewData.value.g12_first_sem_gwa },
+            { label: '2nd Semester', value: reviewData.value.g12_second_sem_gwa },
+        ],
+    },
+    {
+        title: 'Additional Subjects',
+        items: [
+            ...dynamicSubjects.value.math.filter(s => s.name && s.grade != null).map(s => ({ label: `Math: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.english.filter(s => s.name && s.grade != null).map(s => ({ label: `English: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.science.filter(s => s.name && s.grade != null).map(s => ({ label: `Science: ${s.name}`, value: s.grade })),
+        ],
+    },
+    {
+        title: 'Program Choices and Averages',
+        items: [
+            { label: 'First Choice Program *', value: reviewData.value.first_choice_program || '—' },
+            { label: 'Second Choice Program *', value: reviewData.value.second_choice_program || '—' },
+            { label: 'Third Choice Program *', value: reviewData.value.third_choice_program || '—' },
+            { label: 'Math Average', value: reviewData.value.math_average },
+            { label: 'English Average', value: reviewData.value.english_average },
+            { label: 'Science Average', value: reviewData.value.science_average },
+            { label: 'G12 GWA', value: reviewData.value.g12_gwa },
+        ],
+    },
+]);
+
+const openReviewModal = () => {
+    errors.value = {};
+    showReviewModal.value = true;
+};
+
+const closeReviewModal = () => {
+    if (!loading.value) {
+        showReviewModal.value = false;
+    }
+};
+
+const confirmSaveGrades = () => {
+    showReviewModal.value = false;
+    submitForm();
+};
+</script>
+
 <template>
     <Head title="ABM Grade Input" />
     <ApplicantLayout>
@@ -775,188 +957,6 @@
         </div>
     </ApplicantLayout>
 </template>
-
-<script setup>
-import { ref, computed } from "vue";
-import { Head } from "@inertiajs/vue3";
-import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
-import GradesReviewModal from "@/Components/GradesReviewModal.vue";
-import DynamicSubjectRow from "@/Components/DynamicSubjectRow.vue";
-import FieldError from "@/Components/FieldError.vue";
-import { useGradeForm } from "@/Composables/useGradeForm.js";
-
-const props = defineProps({
-    grade: Object,
-    user: Object,
-    programs: Array,
-    strand: String,
-    profile: Object,
-    extractionResult: { type: Object, default: null },
-    isLocked: { type: Boolean, default: false },
-});
-
-// ABM-specific default subjects
-const defaultSubjects = {
-    math: [
-        'g11_general_mathematics',
-        'g11_business_mathematics',
-        'g11_statistics_probability',
-    ],
-    english: [
-        'g11_oral_communication',
-        'g11_academic_professional',
-        'g11_reading_writing',
-        'g12_21st_century_lit',
-    ],
-    science: [
-        'g11_earth_life_science',
-        'g11_physical_science',
-    ],
-};
-
-// Use the composable for all grade form logic
-const {
-    form,
-    dynamicSubjects,
-    mathAverage,
-    englishAverage,
-    scienceAverage,
-    g12GWA,
-    mathCount,
-    englishCount,
-    scienceCount,
-    addSubject,
-    removeSubject,
-    canAddSubject,
-    qualifiedPrograms,
-    notQualifiedPrograms,
-    noSlotsPrograms,
-    programChoiceDisabled,
-    hasAvailableSlots,
-    checkSlotAvailability,
-    validateGrade,
-    preventInvalidInput,
-    errors,
-    submitForm,
-    retrySubmit,
-    loading,
-    toastMessage,
-    toastType,
-    toastVisible,
-    showRetryOption,
-    dismissToast,
-} = useGradeForm({
-    strand: props.strand || 'ABM',
-    defaultSubjects,
-    grade: props.grade,
-    programs: props.programs,
-    profile: props.profile,
-    isLocked: props.isLocked,
-});
-
-const successMessage = ref("");
-const bannerDismissed = ref(false);
-const showReviewModal = ref(false);
-
-// Helper function to get selected program name
-const getSelectedProgramName = (programId) => {
-    const program = props.programs?.find((p) => p.id === programId);
-    return program ? `${program.code} - ${program.name}` : "";
-};
-
-// Computed property for review data
-const reviewData = computed(() => ({
-    g11_general_mathematics: form.g11_general_mathematics,
-    g11_business_mathematics: form.g11_business_mathematics,
-    g11_statistics_probability: form.g11_statistics_probability,
-    g11_oral_communication: form.g11_oral_communication,
-    g11_academic_professional: form.g11_academic_professional,
-    g11_reading_writing: form.g11_reading_writing,
-    g12_21st_century_lit: form.g12_21st_century_lit,
-    g11_earth_life_science: form.g11_earth_life_science,
-    g11_physical_science: form.g11_physical_science,
-    g12_first_sem_gwa: form.g12_first_sem_gwa,
-    g12_second_sem_gwa: form.g12_second_sem_gwa,
-    first_choice_program: getSelectedProgramName(form.first_choice_program),
-    second_choice_program: getSelectedProgramName(form.second_choice_program),
-    third_choice_program: getSelectedProgramName(form.third_choice_program),
-    math_average: mathAverage.value,
-    english_average: englishAverage.value,
-    science_average: scienceAverage.value,
-    g12_gwa: g12GWA.value,
-}));
-
-// Computed property for review modal sections
-const reviewSections = computed(() => [
-    {
-        title: 'Grade 11 Math Subjects',
-        items: [
-            { label: 'General Mathematics', value: reviewData.value.g11_general_mathematics },
-            { label: 'Business Mathematics', value: reviewData.value.g11_business_mathematics },
-            { label: 'Statistics and Probability', value: reviewData.value.g11_statistics_probability },
-        ],
-    },
-    {
-        title: 'English Subjects',
-        items: [
-            { label: 'Oral Communication', value: reviewData.value.g11_oral_communication },
-            { label: 'English for Academic Purposes', value: reviewData.value.g11_academic_professional },
-            { label: 'Reading and Writing', value: reviewData.value.g11_reading_writing },
-            { label: '21st Century Literature', value: reviewData.value.g12_21st_century_lit },
-        ],
-    },
-    {
-        title: 'Science Subjects',
-        items: [
-            { label: 'Earth and Life Science', value: reviewData.value.g11_earth_life_science },
-            { label: 'Physical Science', value: reviewData.value.g11_physical_science },
-        ],
-    },
-    {
-        title: 'Grade 12 GWA',
-        items: [
-            { label: '1st Semester', value: reviewData.value.g12_first_sem_gwa },
-            { label: '2nd Semester', value: reviewData.value.g12_second_sem_gwa },
-        ],
-    },
-    {
-        title: 'Additional Subjects',
-        items: [
-            ...dynamicSubjects.value.math.filter(s => s.name && s.grade != null).map(s => ({ label: `Math: ${s.name}`, value: s.grade })),
-            ...dynamicSubjects.value.english.filter(s => s.name && s.grade != null).map(s => ({ label: `English: ${s.name}`, value: s.grade })),
-            ...dynamicSubjects.value.science.filter(s => s.name && s.grade != null).map(s => ({ label: `Science: ${s.name}`, value: s.grade })),
-        ],
-    },
-    {
-        title: 'Program Choices and Averages',
-        items: [
-            { label: 'First Choice Program *', value: reviewData.value.first_choice_program || '—' },
-            { label: 'Second Choice Program *', value: reviewData.value.second_choice_program || '—' },
-            { label: 'Third Choice Program *', value: reviewData.value.third_choice_program || '—' },
-            { label: 'Math Average', value: reviewData.value.math_average },
-            { label: 'English Average', value: reviewData.value.english_average },
-            { label: 'Science Average', value: reviewData.value.science_average },
-            { label: 'G12 GWA', value: reviewData.value.g12_gwa },
-        ],
-    },
-]);
-
-const openReviewModal = () => {
-    errors.value = {};
-    showReviewModal.value = true;
-};
-
-const closeReviewModal = () => {
-    if (!loading.value) {
-        showReviewModal.value = false;
-    }
-};
-
-const confirmSaveGrades = () => {
-    showReviewModal.value = false;
-    submitForm();
-};
-</script>
 
 <style scoped>
 .fade-enter-active,

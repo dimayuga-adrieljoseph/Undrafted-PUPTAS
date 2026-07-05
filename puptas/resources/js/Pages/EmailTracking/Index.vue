@@ -1,3 +1,128 @@
+<script setup>
+import { computed } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import AppLayout from '@/Layouts/AppLayout.vue';
+
+const props = defineProps({
+  operations: Object,
+});
+
+/**
+ * Navigate to the detail page for a bulk operation.
+ */
+const navigateToDetail = (id) => {
+  router.visit(`/admin/email-tracking/${id}`);
+};
+
+/**
+ * Format email_type for display.
+ */
+const formatEmailType = (type) => {
+  const labels = {
+    pupcet_result: 'PUPCET Result',
+    sar_form: 'SAR Form',
+    waitlisted: 'Waitlisted',
+    congratulations: 'Congratulations',
+    user_created: 'User Created',
+  };
+  return labels[type] || type;
+};
+
+/**
+ * Get badge classes for email type.
+ */
+const getEmailTypeBadgeClass = (type) => {
+  const classes = {
+    pupcet_result: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+    sar_form: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
+    waitlisted: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+    congratulations: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+    user_created: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+  };
+  return classes[type] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+};
+
+/**
+ * Format status for display.
+ */
+const formatStatus = (status) => {
+  const labels = {
+    in_progress: 'In Progress',
+    completed: 'Completed',
+    completed_with_failures: 'Completed with Failures',
+  };
+  return labels[status] || status;
+};
+
+/**
+ * Get badge classes for status.
+ */
+const getStatusBadgeClass = (status) => {
+  const classes = {
+    in_progress: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
+    completed: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+    completed_with_failures: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+  };
+  return classes[status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+};
+
+/**
+ * Format date for display.
+ */
+const formatDate = (dateString) => {
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+
+/**
+ * Compute visible page numbers for pagination.
+ */
+const visiblePages = computed(() => {
+  const current = props.operations.current_page;
+  const last = props.operations.last_page;
+
+  if (last <= 7) {
+    return Array.from({ length: last }, (_, i) => i + 1);
+  }
+
+  const pages = [];
+
+  if (current <= 4) {
+    for (let i = 1; i <= 5; i++) pages.push(i);
+    pages.push('...');
+    pages.push(last);
+  } else if (current >= last - 3) {
+    pages.push(1);
+    pages.push('...');
+    for (let i = last - 4; i <= last; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    pages.push('...');
+    for (let i = current - 1; i <= current + 1; i++) pages.push(i);
+    pages.push('...');
+    pages.push(last);
+  }
+
+  return pages;
+});
+
+/**
+ * Build page URL from page number.
+ */
+const getPageUrl = (page) => {
+  const url = new URL(window.location.href);
+  url.searchParams.set('page', page);
+  return url.pathname + url.search;
+};
+</script>
+
 <template>
   <Head title="Email Tracking" />
   <AppLayout>
@@ -133,128 +258,3 @@
     </div>
   </AppLayout>
 </template>
-
-<script setup>
-import { computed } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/Layouts/AppLayout.vue';
-
-const props = defineProps({
-  operations: Object,
-});
-
-/**
- * Navigate to the detail page for a bulk operation.
- */
-const navigateToDetail = (id) => {
-  router.visit(`/admin/email-tracking/${id}`);
-};
-
-/**
- * Format email_type for display.
- */
-const formatEmailType = (type) => {
-  const labels = {
-    pupcet_result: 'PUPCET Result',
-    sar_form: 'SAR Form',
-    waitlisted: 'Waitlisted',
-    congratulations: 'Congratulations',
-    user_created: 'User Created',
-  };
-  return labels[type] || type;
-};
-
-/**
- * Get badge classes for email type.
- */
-const getEmailTypeBadgeClass = (type) => {
-  const classes = {
-    pupcet_result: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-    sar_form: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-    waitlisted: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
-    congratulations: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-    user_created: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
-  };
-  return classes[type] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-};
-
-/**
- * Format status for display.
- */
-const formatStatus = (status) => {
-  const labels = {
-    in_progress: 'In Progress',
-    completed: 'Completed',
-    completed_with_failures: 'Completed with Failures',
-  };
-  return labels[status] || status;
-};
-
-/**
- * Get badge classes for status.
- */
-const getStatusBadgeClass = (status) => {
-  const classes = {
-    in_progress: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
-    completed: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-    completed_with_failures: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-  };
-  return classes[status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-};
-
-/**
- * Format date for display.
- */
-const formatDate = (dateString) => {
-  if (!dateString) return '—';
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-};
-
-/**
- * Compute visible page numbers for pagination.
- */
-const visiblePages = computed(() => {
-  const current = props.operations.current_page;
-  const last = props.operations.last_page;
-
-  if (last <= 7) {
-    return Array.from({ length: last }, (_, i) => i + 1);
-  }
-
-  const pages = [];
-
-  if (current <= 4) {
-    for (let i = 1; i <= 5; i++) pages.push(i);
-    pages.push('...');
-    pages.push(last);
-  } else if (current >= last - 3) {
-    pages.push(1);
-    pages.push('...');
-    for (let i = last - 4; i <= last; i++) pages.push(i);
-  } else {
-    pages.push(1);
-    pages.push('...');
-    for (let i = current - 1; i <= current + 1; i++) pages.push(i);
-    pages.push('...');
-    pages.push(last);
-  }
-
-  return pages;
-});
-
-/**
- * Build page URL from page number.
- */
-const getPageUrl = (page) => {
-  const url = new URL(window.location.href);
-  url.searchParams.set('page', page);
-  return url.pathname + url.search;
-};
-</script>

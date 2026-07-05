@@ -1,3 +1,185 @@
+<script setup>
+import { ref, computed } from "vue";
+import { Head } from "@inertiajs/vue3";
+import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
+import GradesReviewModal from "@/Components/GradesReviewModal.vue";
+import DynamicSubjectRow from "@/Components/DynamicSubjectRow.vue";
+import FieldError from "@/Components/FieldError.vue";
+import { useGradeForm } from "@/Composables/useGradeForm";
+
+const props = defineProps({
+    grade: Object,
+    user: Object,
+    programs: Array,
+    strand: String,
+    profile: Object,
+    extractionResult: { type: Object, default: null },
+    isLocked: { type: Boolean, default: false },
+});
+
+const successMessage = ref("");
+const bannerDismissed = ref(false);
+const showReviewModal = ref(false);
+
+// STEM default subjects grouped by category
+const stemDefaultSubjects = {
+    math: [
+        'g11_general_mathematics',
+        'g11_statistics_probability',
+        'g11_pre_calculus',
+        'g11_basic_calculus',
+    ],
+    english: [
+        'g11_oral_communication',
+        'g11_reading_writing',
+        'g12_21st_century_lit',
+        'g12_academic_professional',
+    ],
+    science: [
+        'g11_earth_science',
+        'g11_general_chemistry_1',
+        'g12_general_physics_1',
+        'g12_general_biology_1',
+        'g12_general_physics_2',
+        'g12_general_biology_2',
+        'g12_general_chemistry_2',
+    ],
+};
+
+// Use the shared grade form composable
+const {
+    form,
+    dynamicSubjects,
+    mathAverage,
+    englishAverage,
+    scienceAverage,
+    g12GWA,
+    mathCount,
+    englishCount,
+    scienceCount,
+    addSubject,
+    removeSubject,
+    canAddSubject,
+    qualifiedPrograms,
+    notQualifiedPrograms,
+    noSlotsPrograms,
+    programChoiceDisabled,
+    hasAvailableSlots,
+    checkSlotAvailability,
+    validateGrade,
+    preventInvalidInput,
+    errors,
+    submitForm,
+    retrySubmit,
+    loading,
+    toastMessage,
+    toastType,
+    toastVisible,
+    showRetryOption,
+    dismissToast,
+} = useGradeForm({
+    strand: props.strand || 'STEM',
+    defaultSubjects: stemDefaultSubjects,
+    grade: props.grade,
+    programs: props.programs,
+    profile: props.profile,
+    isLocked: props.isLocked,
+});
+
+// Helper function to get selected program name
+const getSelectedProgramName = (programId) => {
+    const program = props.programs?.find((p) => p.id === programId);
+    return program ? `${program.code} - ${program.name}` : "";
+};
+
+// Computed property for review modal sections
+const reviewSections = computed(() => [
+    {
+        title: 'Grade 11 Math Subjects',
+        items: [
+            { label: 'General Mathematics', value: form.g11_general_mathematics },
+            { label: 'Statistics and Probability', value: form.g11_statistics_probability },
+            { label: 'Pre-Calculus', value: form.g11_pre_calculus },
+            { label: 'Basic Calculus', value: form.g11_basic_calculus },
+        ],
+    },
+    {
+        title: 'Grade 11 Science Subjects',
+        items: [
+            { label: 'Earth Science', value: form.g11_earth_science },
+            { label: 'General Chemistry 1', value: form.g11_general_chemistry_1 },
+        ],
+    },
+    {
+        title: 'Grade 12 Science Subjects',
+        items: [
+            { label: 'General Physics 1', value: form.g12_general_physics_1 },
+            { label: 'General Biology 1', value: form.g12_general_biology_1 },
+            { label: 'General Physics 2', value: form.g12_general_physics_2 },
+            { label: 'General Biology 2', value: form.g12_general_biology_2 },
+            { label: 'General Chemistry 2', value: form.g12_general_chemistry_2 },
+        ],
+    },
+    {
+        title: 'Grade 11 English Subjects',
+        items: [
+            { label: 'Oral Communication in Context', value: form.g11_oral_communication },
+            { label: 'Reading and Writing Skills', value: form.g11_reading_writing },
+        ],
+    },
+    {
+        title: 'Grade 12 English Subjects',
+        items: [
+            { label: '21st Century Literature', value: form.g12_21st_century_lit },
+            { label: 'English for Academic and Professional Purposes', value: form.g12_academic_professional },
+        ],
+    },
+    {
+        title: 'Grade 12 GWA',
+        items: [
+            { label: '1st Semester', value: form.g12_first_sem_gwa },
+            { label: '2nd Semester', value: form.g12_second_sem_gwa },
+        ],
+    },
+    {
+        title: 'Additional Subjects',
+        items: [
+            ...dynamicSubjects.value.math.filter(s => s.name && s.grade != null).map(s => ({ label: `Math: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.science.filter(s => s.name && s.grade != null).map(s => ({ label: `Science: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.english.filter(s => s.name && s.grade != null).map(s => ({ label: `English: ${s.name}`, value: s.grade })),
+        ],
+    },
+    {
+        title: 'Program Choices and Averages',
+        items: [
+            { label: 'First Choice Program *', value: getSelectedProgramName(form.first_choice_program) || '—' },
+            { label: 'Second Choice Program *', value: getSelectedProgramName(form.second_choice_program) || '—' },
+            { label: 'Third Choice Program *', value: getSelectedProgramName(form.third_choice_program) || '—' },
+            { label: 'Math Average', value: mathAverage.value },
+            { label: 'Science Average', value: scienceAverage.value },
+            { label: 'English Average', value: englishAverage.value },
+            { label: 'G12 GWA', value: g12GWA.value },
+        ],
+    },
+]);
+
+const openReviewModal = () => {
+    errors.value = {};
+    showReviewModal.value = true;
+};
+
+const closeReviewModal = () => {
+    if (!loading.value) {
+        showReviewModal.value = false;
+    }
+};
+
+const confirmSaveGrades = () => {
+    showReviewModal.value = false;
+    submitForm();
+};
+</script>
+
 <template>
     <Head title="STEM Grade Input" />
     <ApplicantLayout>
@@ -874,188 +1056,6 @@
         </div>
     </ApplicantLayout>
 </template>
-
-<script setup>
-import { ref, computed } from "vue";
-import { Head } from "@inertiajs/vue3";
-import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
-import GradesReviewModal from "@/Components/GradesReviewModal.vue";
-import DynamicSubjectRow from "@/Components/DynamicSubjectRow.vue";
-import FieldError from "@/Components/FieldError.vue";
-import { useGradeForm } from "@/Composables/useGradeForm";
-
-const props = defineProps({
-    grade: Object,
-    user: Object,
-    programs: Array,
-    strand: String,
-    profile: Object,
-    extractionResult: { type: Object, default: null },
-    isLocked: { type: Boolean, default: false },
-});
-
-const successMessage = ref("");
-const bannerDismissed = ref(false);
-const showReviewModal = ref(false);
-
-// STEM default subjects grouped by category
-const stemDefaultSubjects = {
-    math: [
-        'g11_general_mathematics',
-        'g11_statistics_probability',
-        'g11_pre_calculus',
-        'g11_basic_calculus',
-    ],
-    english: [
-        'g11_oral_communication',
-        'g11_reading_writing',
-        'g12_21st_century_lit',
-        'g12_academic_professional',
-    ],
-    science: [
-        'g11_earth_science',
-        'g11_general_chemistry_1',
-        'g12_general_physics_1',
-        'g12_general_biology_1',
-        'g12_general_physics_2',
-        'g12_general_biology_2',
-        'g12_general_chemistry_2',
-    ],
-};
-
-// Use the shared grade form composable
-const {
-    form,
-    dynamicSubjects,
-    mathAverage,
-    englishAverage,
-    scienceAverage,
-    g12GWA,
-    mathCount,
-    englishCount,
-    scienceCount,
-    addSubject,
-    removeSubject,
-    canAddSubject,
-    qualifiedPrograms,
-    notQualifiedPrograms,
-    noSlotsPrograms,
-    programChoiceDisabled,
-    hasAvailableSlots,
-    checkSlotAvailability,
-    validateGrade,
-    preventInvalidInput,
-    errors,
-    submitForm,
-    retrySubmit,
-    loading,
-    toastMessage,
-    toastType,
-    toastVisible,
-    showRetryOption,
-    dismissToast,
-} = useGradeForm({
-    strand: props.strand || 'STEM',
-    defaultSubjects: stemDefaultSubjects,
-    grade: props.grade,
-    programs: props.programs,
-    profile: props.profile,
-    isLocked: props.isLocked,
-});
-
-// Helper function to get selected program name
-const getSelectedProgramName = (programId) => {
-    const program = props.programs?.find((p) => p.id === programId);
-    return program ? `${program.code} - ${program.name}` : "";
-};
-
-// Computed property for review modal sections
-const reviewSections = computed(() => [
-    {
-        title: 'Grade 11 Math Subjects',
-        items: [
-            { label: 'General Mathematics', value: form.g11_general_mathematics },
-            { label: 'Statistics and Probability', value: form.g11_statistics_probability },
-            { label: 'Pre-Calculus', value: form.g11_pre_calculus },
-            { label: 'Basic Calculus', value: form.g11_basic_calculus },
-        ],
-    },
-    {
-        title: 'Grade 11 Science Subjects',
-        items: [
-            { label: 'Earth Science', value: form.g11_earth_science },
-            { label: 'General Chemistry 1', value: form.g11_general_chemistry_1 },
-        ],
-    },
-    {
-        title: 'Grade 12 Science Subjects',
-        items: [
-            { label: 'General Physics 1', value: form.g12_general_physics_1 },
-            { label: 'General Biology 1', value: form.g12_general_biology_1 },
-            { label: 'General Physics 2', value: form.g12_general_physics_2 },
-            { label: 'General Biology 2', value: form.g12_general_biology_2 },
-            { label: 'General Chemistry 2', value: form.g12_general_chemistry_2 },
-        ],
-    },
-    {
-        title: 'Grade 11 English Subjects',
-        items: [
-            { label: 'Oral Communication in Context', value: form.g11_oral_communication },
-            { label: 'Reading and Writing Skills', value: form.g11_reading_writing },
-        ],
-    },
-    {
-        title: 'Grade 12 English Subjects',
-        items: [
-            { label: '21st Century Literature', value: form.g12_21st_century_lit },
-            { label: 'English for Academic and Professional Purposes', value: form.g12_academic_professional },
-        ],
-    },
-    {
-        title: 'Grade 12 GWA',
-        items: [
-            { label: '1st Semester', value: form.g12_first_sem_gwa },
-            { label: '2nd Semester', value: form.g12_second_sem_gwa },
-        ],
-    },
-    {
-        title: 'Additional Subjects',
-        items: [
-            ...dynamicSubjects.value.math.filter(s => s.name && s.grade != null).map(s => ({ label: `Math: ${s.name}`, value: s.grade })),
-            ...dynamicSubjects.value.science.filter(s => s.name && s.grade != null).map(s => ({ label: `Science: ${s.name}`, value: s.grade })),
-            ...dynamicSubjects.value.english.filter(s => s.name && s.grade != null).map(s => ({ label: `English: ${s.name}`, value: s.grade })),
-        ],
-    },
-    {
-        title: 'Program Choices and Averages',
-        items: [
-            { label: 'First Choice Program *', value: getSelectedProgramName(form.first_choice_program) || '—' },
-            { label: 'Second Choice Program *', value: getSelectedProgramName(form.second_choice_program) || '—' },
-            { label: 'Third Choice Program *', value: getSelectedProgramName(form.third_choice_program) || '—' },
-            { label: 'Math Average', value: mathAverage.value },
-            { label: 'Science Average', value: scienceAverage.value },
-            { label: 'English Average', value: englishAverage.value },
-            { label: 'G12 GWA', value: g12GWA.value },
-        ],
-    },
-]);
-
-const openReviewModal = () => {
-    errors.value = {};
-    showReviewModal.value = true;
-};
-
-const closeReviewModal = () => {
-    if (!loading.value) {
-        showReviewModal.value = false;
-    }
-};
-
-const confirmSaveGrades = () => {
-    showReviewModal.value = false;
-    submitForm();
-};
-</script>
 
 <style scoped>
 .fade-enter-active,

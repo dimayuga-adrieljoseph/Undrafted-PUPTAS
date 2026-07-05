@@ -1,3 +1,1073 @@
+<script setup>
+import { ref, computed, watch, nextTick} from "vue";
+const axios = window.axios;
+import AppLayout from "@/Layouts/AppLayout.vue";
+import { Head, router } from "@inertiajs/vue3";
+import { QuillEditor } from "@vueup/vue-quill";
+import "@vueup/vue-quill/dist/vue-quill.snow.css";
+import { useGlobalLoading } from "@/Composables/useGlobalLoading";
+import { useSnackbar } from "@/Composables/useSnackbar";
+import EmailProgressBar from "@/Components/EmailProgressBar.vue";
+import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
+
+// Scroll functionality (unchanged)
+const scrollWrapper = ref(null);
+const scrollAmount = 200;
+const showScrollUp = ref(false);
+const showScrollDown = ref(true);
+
+// Email progress tracking
+const activeBulkOperationId = ref(null);
+
+const scrollUp = () => {
+    if (scrollWrapper.value) {
+        scrollWrapper.value.scrollBy({
+            top: -scrollAmount,
+            behavior: "smooth",
+        });
+    }
+};
+
+const scrollDown = () => {
+    if (scrollWrapper.value) {
+        scrollWrapper.value.scrollBy({
+            top: scrollAmount,
+            behavior: "smooth"
+        });
+    }
+};
+
+const handleScroll = () => {
+    if (!scrollWrapper.value) return;
+    
+    const scrollTop = scrollWrapper.value.scrollTop;
+    const scrollHeight = scrollWrapper.value.scrollHeight;
+    const clientHeight = scrollWrapper.value.clientHeight;
+
+    showScrollUp.value = scrollTop > 10;
+    showScrollDown.value = scrollTop < 10;
+
+    if (scrollHeight <= clientHeight) {
+        showScrollUp.value = false;
+        showScrollDown.value = false;
+    }
+};
+
+import { onMounted, onUnmounted } from "vue";
+
+onMounted(() => {
+    handleScroll();
+});
+
+const templateTypes = [
+    { label: 'Default', value: 'default' },
+    { label: 'Custom', value: 'custom' },
+    { label: 'Waitlisted (Below Cut-off)', value: 'waitlisted-cutoff' },
+    { label: 'Waitlisted (Limited Slots)', value: 'waitlisted-limited' }
+];
+
+// All existing functionality remains exactly the same
+const { snackbar, show } = useSnackbar();
+
+function debounce(fn, delay) {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn(...args), delay);
+    };
+}
+
+const { start, finish } = useGlobalLoading();
+
+const props = defineProps({
+    groupedPassers: Object,
+    passers: Object,
+    filterOptions: Object,
+    filters: Object,
+    programs: Array,
+    registrationUrl: String,
+    admissionCriteriaUrl: String,
+    facebookUrl: String,
+});
+
+// Email template and settings (unchanged)
+const emailTemplate = ref(
+    `
+  <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
+    <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
+      <h1 style="color: #cc0000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
+      <p style="font-size: 16px; color: #333; text-align: center;">
+        You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
+      </p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${props.registrationUrl}" 
+           style="background-color: #cc0000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
+           Complete Your Registration
+        </a>
+      </div>
+
+      <p style="font-size: 14px; color: #555; text-align: center;">
+        If you have any questions or need help, please contact the Admission and Registration Office at
+        <a href="mailto:taguig@pup.edu.ph" style="color:#9E122C;">taguig@pup.edu.ph</a> /
+        <a href="mailto:puptadmission@gmail.com" style="color:#9E122C;">puptadmission@gmail.com</a>.
+      </p>
+    </div>
+  </div>
+`.trim()
+);
+
+const templateType = ref("default");
+const sarEnrollmentDate = ref(new Date().toISOString().split('T')[0]);
+const sarEnrollmentTime = ref('09:00');
+const defaultTemplatePreview = `
+<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>    
+    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 10, 2026 (Wednesday)</strong>. You will receive an email within three working days containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long bond paper, sign, and bring them on the day of the interview. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
+    <div style="text-align:center;margin:24px 0;">
+    <a 
+        href="${props.registrationUrl}" 
+        style="
+        display:inline-block;
+        padding:12px 24px;
+        background:#9E122C;
+        color:#ffffff;
+        text-decoration:none;
+        border-radius:6px;
+        font-weight:bold;
+        font-size:14px;
+        "
+    >
+        CLICK TO CONFIRM YOUR INTERVIEW SLOT
+    </a>
+    </div>    
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="${props.facebookUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP - Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;font-style:italic;">Kindly disregard this email if you already have confirmed your interview slot.</p>
+    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
+    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
+    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Admission and Registration Office</p>
+  </div>
+</div>`.trim();
+
+const waitlistedTemplatePreview = `
+<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>    
+    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 10, 2026 (Wednesday)</strong>. You will receive an email within three working days containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long bond paper, sign, and bring them on the day of the interview. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
+    <div style="text-align:center;margin:24px 0;">
+    <a 
+        href="${props.registrationUrl}" 
+        style="
+        display:inline-block;
+        padding:12px 24px;
+        background:#9E122C;
+        color:#ffffff;
+        text-decoration:none;
+        border-radius:6px;
+        font-weight:bold;
+        font-size:14px;
+        "
+    >
+        CLICK TO CONFIRM YOUR INTERVIEW SLOT
+    </a>
+    </div>    
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="${props.facebookUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP - Taguig Facebook page</a>).</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
+    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
+    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
+    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Admission and Registration Office</p>
+  </div>
+</div>`.trim();
+
+const waitlistedCutoffTemplatePreview = `
+<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#9E122C;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Thank you for considering <strong>PUP-Taguig Campus</strong> for your higher education.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Based on evaluation, we regret to inform you that your score in the PUP College Entrance Test did not place you in the Top 500 requirement of the Campus.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Nevertheless, you might still be notified (via email) of the possible remaining slots, based on your evaluated rank. Admission to these slots, however, shall be on a first-come, first-served basis, and subject to specific academic program admission requirements.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Since we cannot give you an assurance that a slot will be made available to you, we recommend you to still consider your admission options in other higher education institutions.</p>
+    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.</p>
+    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
+    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Campus Admission and Registration Office</p>
+  </div>
+</div>`.trim();
+
+const selectedPrograms = ref([]);
+
+const waitlistSlotDate = ref("2026-06-28");
+const waitlistInterviewDate = ref("2026-07-01");
+
+const formatDateForEmail = (dateString) => {
+    if (!dateString) return '';
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return dateString;
+    const date = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    const monthStr = date.toLocaleString('en-US', { month: 'long' });
+    const weekdayStr = date.toLocaleString('en-US', { weekday: 'long' });
+    return `${monthStr} ${date.getDate()}, ${date.getFullYear()} (${weekdayStr})`;
+};
+
+const getWaitlistedLimitedTemplateHTML = () => {
+    let listItems = "";
+    if (selectedPrograms.value.length === 0) {
+        listItems = "<li><em>No programs selected</em></li>";
+    } else {
+        selectedPrograms.value.forEach(pId => {
+            const p = props.programs?.find(prog => prog.id === pId);
+            if (p) {
+                listItems += `<li>${p.name}</li>`;
+            }
+        });
+    }
+
+    return `
+<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations!</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">The following programs have limited slots available:</p>
+    <ul style="margin:0 0 12px 0;padding-left:40px;font-size:14px;color:#222;line-height:1.6;list-style-type:disc;">
+        ${listItems}
+    </ul>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;font-weight:bold;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until ${formatDateForEmail(waitlistSlotDate.value)}</strong>. You will receive an email containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long-sized bond paper, sign, and bring them on the day of the interview on <strong>${formatDateForEmail(waitlistInterviewDate.value)}</strong>. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
+    <div style="text-align:center;margin:24px 0;">
+    <a 
+        href="${props.registrationUrl}" 
+        style="
+        display:inline-block;
+        padding:12px 24px;
+        background:#9E122C;
+        color:#ffffff;
+        text-decoration:none;
+        border-radius:6px;
+        font-weight:bold;
+        font-size:14px;
+        "
+    >
+        CLICK TO CONFIRM YOUR INTERVIEW SLOT
+    </a>
+    </div>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with three photocopies on <strong>${formatDateForEmail(waitlistInterviewDate.value)}</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
+    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
+  </div>
+</div>`.trim();
+};
+
+const formattedDefaultTemplatePreview = computed(() => {
+    return defaultTemplatePreview
+        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
+        .replace(/\{\{firstname\}\}/g, 'John')
+        .replace(/\{\{surname\}\}/g, 'Doe');
+});
+
+const formattedWaitlistedTemplatePreview = computed(() => {
+    return waitlistedTemplatePreview
+        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
+        .replace(/\{\{firstname\}\}/g, 'John')
+        .replace(/\{\{surname\}\}/g, 'Doe');
+});
+
+const formattedWaitlistedCutoffTemplatePreview = computed(() => {
+    return waitlistedCutoffTemplatePreview
+        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#9E122C;font-weight:bold;">John Doe</span>')
+        .replace(/\{\{firstname\}\}/g, 'John')
+        .replace(/\{\{surname\}\}/g, 'Doe');
+});
+
+const formattedWaitlistedLimitedTemplatePreview = computed(() => {
+    return getWaitlistedLimitedTemplateHTML()
+        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
+        .replace(/\{\{firstname\}\}/g, 'John')
+        .replace(/\{\{surname\}\}/g, 'Doe');
+});
+
+const flatPassers = ref([]);
+
+watch(
+    () => [props.groupedPassers, props.passers],
+    ([groupedVal, paginatedVal]) => {
+        const result = [];
+
+        // New paginated format: passers is a Laravel LengthAwarePaginator object
+        if (paginatedVal && paginatedVal.data) {
+            paginatedVal.data.forEach((passer) => {
+                result.push({
+                    ...passer,
+                    schoolYear: passer.school_year,
+                    batchNumber: passer.batch_number,
+                });
+            });
+        }
+        // Legacy grouped format: groupedPassers is { school_year: { batch_number: [...] } }
+        else if (groupedVal) {
+            for (const schoolYear in groupedVal) {
+                for (const batchNumber in groupedVal[schoolYear]) {
+                    groupedVal[schoolYear][batchNumber].forEach((passer) => {
+                        result.push({
+                            ...passer,
+                            schoolYear,
+                            batchNumber,
+                        });
+                    });
+                }
+            }
+        }
+
+        flatPassers.value = result;
+    },
+    { immediate: true }
+);
+
+const searchTerm = ref(props.filters?.search || "");
+const debouncedSearchTerm = ref(props.filters?.search || "");
+const filterScore = ref(props.filters?.score || "");
+const debouncedFilterScore = ref(props.filters?.score || "");
+const filterSchoolYear = ref(props.filters?.school_year || "all");
+const filterBatchNumber = ref(props.filters?.batch_number || "all");
+const sortKey = ref(props.filters?.sort_key || "pupcet_total_score");
+const sortOrder = ref(props.filters?.sort_order || "desc");
+
+// Server-side pagination: read from the paginator metadata
+const currentPage = computed(() => props.passers?.current_page || 1);
+const totalPages = computed(() => props.passers?.last_page || 1);
+const itemsPerPage = computed(() => props.passers?.per_page || 15);
+
+// Central function to make server requests with all current params
+function buildServerParams(overrides = {}) {
+    const params = {
+        school_year: filterSchoolYear.value || 'all',
+        batch_number: filterBatchNumber.value || 'all',
+        search: debouncedSearchTerm.value || undefined,
+        score: debouncedFilterScore.value || undefined,
+        sort_key: sortKey.value || undefined,
+        sort_order: sortOrder.value || undefined,
+        per_page: itemsPerPage.value,
+        page: 1,
+        ...overrides,
+    };
+    // Remove undefined values
+    Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+    return params;
+}
+
+// Navigate to a different page via Inertia (server-side pagination)
+function goToPage(page) {
+    if (page < 1 || page > totalPages.value || page === currentPage.value) return;
+    router.get('/test-passers', buildServerParams({ page }), {
+        preserveState: true,
+        preserveScroll: true,
+    });
+}
+
+// Reload from server with current filters (resets to page 1)
+function applyServerFilters() {
+    router.get('/test-passers', buildServerParams({ page: 1 }), {
+        preserveState: true,
+        preserveScroll: true,
+    });
+}
+
+const onSearchInput = debounce(() => {
+    debouncedSearchTerm.value = searchTerm.value.toLowerCase();
+    applyServerFilters();
+}, 300);
+
+const onScoreInput = debounce(() => {
+    debouncedFilterScore.value = filterScore.value;
+    applyServerFilters();
+}, 300);
+
+// When server-side filters change, reload from server
+watch([filterSchoolYear, filterBatchNumber], () => {
+    applyServerFilters();
+}, { deep: true });
+
+// When sort changes, reload from server (keeps current page 1)
+watch([sortKey, sortOrder], () => {
+    applyServerFilters();
+});
+
+const schoolYears = computed(() => {
+    // Use server-provided filter options if available
+    if (props.filterOptions && props.filterOptions.schoolYears && props.filterOptions.schoolYears.length > 0) {
+        return props.filterOptions.schoolYears;
+    }
+    // Fallback to client-side derivation
+    const years = new Set(flatPassers.value.map((p) => p.schoolYear));
+    return Array.from(years).sort();
+});
+
+const academicYearOptions = computed(() => {
+    const currentYear = new Date().getFullYear();
+    return [
+        `${currentYear}-${currentYear + 1}`,
+        `${currentYear - 1}-${currentYear}`,
+        `${currentYear - 2}-${currentYear - 1}`,
+        `${currentYear - 3}-${currentYear - 2}`,
+    ];
+});
+
+const batchNumbers = computed(() => {
+    // Use server-provided filter options if available
+    if (props.filterOptions && props.filterOptions.batchNumbers && props.filterOptions.batchNumbers.length > 0) {
+        return props.filterOptions.batchNumbers;
+    }
+    // Fallback to client-side derivation
+    const batches = new Set(
+        flatPassers.value
+            .map((p) => p.batchNumber)
+            .filter((b) => b !== null && b !== undefined && b !== '')
+    );
+    return Array.from(batches).sort();
+});
+
+const filteredPassers = computed(() => {
+    // Filtering is now done server-side; just return all records from the current page
+    return flatPassers.value;
+});
+
+const sortedPassers = computed(() => {
+    // Sorting is now done server-side; data arrives pre-sorted
+    return filteredPassers.value;
+});
+
+/**
+ * Returns the 1-based global rank of a passer within the full result set.
+ * Uses the server paginator's 'from' value for correct offset across pages.
+ */
+function getGlobalRank(passer, pageIndex) {
+    const from = props.passers?.from || 1;
+    return from + pageIndex;
+}
+
+// visiblePages for pagination UI (uses server-side totalPages)
+
+// Pagination range for display
+const visiblePages = computed(() => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    if (totalPages.value <= maxVisible) {
+        for (let i = 1; i <= totalPages.value; i++) {
+            pages.push(i);
+        }
+    } else {
+        let start = Math.max(1, currentPage.value - 2);
+        let end = Math.min(totalPages.value, start + maxVisible - 1);
+        
+        if (end - start + 1 < maxVisible) {
+            start = end - maxVisible + 1;
+        }
+        
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+    }
+    
+    return pages;
+});
+
+const paginatedPassers = computed(() => {
+    // Data is already paginated by the server; just apply client-side search/sort
+    return sortedPassers.value;
+});
+
+const selectedPassers = ref([]);
+const allFilteredSelected = ref(false);
+const totalFilteredCount = computed(() => props.passers?.total || 0);
+
+// Check if all filtered passers are selected (uses the allFilteredSelected flag)
+const areAllSelected = computed(() => {
+    if (totalFilteredCount.value === 0) return false;
+    return allFilteredSelected.value;
+});
+
+const areAllSelectedOnCurrentPage = computed(() => {
+    if (!paginatedPassers.value.length) return false;
+    return paginatedPassers.value.every((p) =>
+        selectedPassers.value.includes(p.test_passer_id)
+    );
+});
+
+const toggleSelectAll = async (isSelected) => {
+    if (isSelected) {
+        // Fetch ALL IDs matching current filters from the server
+        try {
+            const params = {};
+            if (filterSchoolYear.value) params.school_year = filterSchoolYear.value;
+            if (filterBatchNumber.value) params.batch_number = filterBatchNumber.value;
+            if (debouncedSearchTerm.value) params.search = debouncedSearchTerm.value;
+            if (debouncedFilterScore.value) params.score = debouncedFilterScore.value;
+
+            const response = await axios.get('/test-passers/select-all-ids', { params });
+            const allIds = response.data.ids;
+
+            // Merge all IDs into selectedPassers (avoid duplicates)
+            const currentSet = new Set(selectedPassers.value);
+            allIds.forEach(id => currentSet.add(id));
+            selectedPassers.value = Array.from(currentSet);
+            allFilteredSelected.value = true;
+        } catch (error) {
+            console.error('Failed to fetch all IDs:', error);
+            // Fallback: select only current page
+            const pageIds = paginatedPassers.value.map(p => p.test_passer_id);
+            const currentSet = new Set(selectedPassers.value);
+            pageIds.forEach(id => currentSet.add(id));
+            selectedPassers.value = Array.from(currentSet);
+        }
+    } else {
+        // Deselect all — clear everything
+        selectedPassers.value = [];
+        allFilteredSelected.value = false;
+    }
+};
+
+// Reset allFilteredSelected when filters change
+watch([filterSchoolYear, filterBatchNumber], () => {
+    allFilteredSelected.value = false;
+}, { deep: true });
+
+const showSendEmailsConfirmModal = ref(false);
+
+const selectedPassersList = computed(() => {
+    return flatPassers.value.filter(p => selectedPassers.value.includes(p.test_passer_id));
+});
+
+const promptSendEmails = () => {
+    if (selectedPassers.value.length === 0) {
+        show('Please select at least one passer first.', 'error');
+        return;
+    }
+
+    if (templateType.value === 'sar') {
+        if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
+            show("Please set enrollment date and time for SAR forms.", "error");
+            return;
+        }
+    }
+
+    showSendEmailsConfirmModal.value = true;
+};
+
+const executeSendEmails = async () => {
+    showSendEmailsConfirmModal.value = false;
+    let messageHtml;
+
+    if (templateType.value === 'default') {
+        messageHtml = defaultTemplatePreview;
+    } else if (templateType.value === 'waitlisted') {
+        messageHtml = waitlistedTemplatePreview;
+    } else if (templateType.value === 'waitlisted-cutoff') {
+        messageHtml = waitlistedCutoffTemplatePreview;
+    } else if (templateType.value === 'waitlisted-limited') {
+        messageHtml = getWaitlistedLimitedTemplateHTML();
+    } else {
+        const quillContainer = document.querySelector(".ql-editor");
+        messageHtml = quillContainer
+            ? quillContainer.innerHTML
+            : emailTemplate.value;
+    }
+
+    if (templateType.value === 'sar') {
+        if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
+            show("Please set enrollment date and time for SAR forms.", "error");
+            return;
+        }
+    }
+
+    start();
+    try {
+        const response = await axios.post("/test-passers/send-emails", {
+            passer_ids: selectedPassers.value,
+            message_template: messageHtml,
+            template_type: templateType.value,
+            enrollment_date: sarEnrollmentDate.value,
+            enrollment_time: sarEnrollmentTime.value,
+        });
+
+        // Extract bulk_operation_id and show progress bar
+        if (response.data && response.data.bulk_operation_id) {
+            activeBulkOperationId.value = response.data.bulk_operation_id;
+        }
+
+        const successMsg = templateType.value === 'sar' 
+            ? 'SAR PDFs generated and emails sent successfully!' 
+            : 'Emails sent successfully!';
+        show(successMsg, "success");
+        selectedPassers.value = [];
+    } catch (error) {
+        show("Failed to send emails.", "error");
+        console.error(error);
+    } finally {
+        finish();
+    }
+};
+
+// ── Edit Confirmation State ──────────────────────────────
+const showEditConfirmModal = ref(false);
+const editChanges = ref([]);
+const originalPasserData = ref(null);
+
+const passerFieldLabels = {
+    surname: 'Surname',
+    first_name: 'First Name',
+    middle_name: 'Middle Name',
+    email: 'Email',
+    shs_school: 'High School',
+    strand: 'Strand',
+    school_year: 'School Year',
+    batch_number: 'Batch Number',
+    passer_status_id: 'Status',
+};
+
+const statusLabels = { '1': 'Qualified', '2': 'Waitlisted', '3': 'Unqualified', '4': 'Waitlisted Below Cut Off' };
+
+// Modal state (unchanged)
+const showEditModal = ref(false);
+const editingPasser = ref(null);
+const saving = ref(false);
+
+// Delete state
+const showDeleteConfirm = ref(false);
+const deleteTarget = ref(null);   // null = bulk, passer object = single
+const deleting = ref(false);
+
+function confirmDelete(passer) {
+    deleteTarget.value = passer;
+    showDeleteConfirm.value = true;
+}
+
+function confirmBulkDelete() {
+    deleteTarget.value = null;
+    showDeleteConfirm.value = true;
+}
+
+async function executeDelete() {
+    deleting.value = true;
+    start();
+    try {
+        if (deleteTarget.value) {
+            // Single delete
+            const id = deleteTarget.value.test_passer_id;
+            await axios.delete(`/test-passers/${id}`);
+            flatPassers.value = flatPassers.value.filter(p => p.test_passer_id !== id);
+            selectedPassers.value = selectedPassers.value.filter(sid => sid !== id);
+            show('Passer deleted successfully.', 'success');
+        } else {
+            // Bulk delete
+            await axios.post('/test-passers/bulk-destroy', { passer_ids: selectedPassers.value });
+            const deletedSet = new Set(selectedPassers.value);
+            flatPassers.value = flatPassers.value.filter(p => !deletedSet.has(p.test_passer_id));
+            show(`${selectedPassers.value.length} passer(s) deleted.`, 'success');
+            selectedPassers.value = [];
+        }
+        showDeleteConfirm.value = false;
+        deleteTarget.value = null;
+    } catch (error) {
+        show('Failed to delete passer(s).', 'error');
+        console.error(error);
+    } finally {
+        finish();
+        deleting.value = false;
+    }
+}
+
+function openEditModal(passer) {
+    let yearGradVal = '';
+    if (passer.year_graduated != null) {
+        const yearInt = parseInt(passer.year_graduated, 10);
+        if (yearInt >= 2026) {
+            yearGradVal = 'Senior High School of A.Y. 2025-2026';
+        } else {
+            yearGradVal = 'Senior High School of Past School Years';
+        }
+    }
+
+    editingPasser.value = { 
+        ...passer,
+        // Ensure passer_status_id is a string for the <select> v-model binding
+        passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
+        pupcet_total_score: passer.pupcet_total_score != null ? passer.pupcet_total_score : '',
+        year_graduated: yearGradVal,
+        shs_school: passer.shs_school || '',
+    };
+
+    // Snapshot original data for comparison
+    originalPasserData.value = {
+        surname: passer.surname ?? '',
+        first_name: passer.first_name ?? '',
+        middle_name: passer.middle_name ?? '',
+        email: passer.email ?? '',
+        shs_school: passer.shs_school ?? '',
+        strand: passer.strand ?? '',
+        school_year: passer.school_year ?? '',
+        batch_number: passer.batch_number ?? '',
+        passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
+    };
+
+    showEditModal.value = true;
+}
+
+function closeEditModal() {
+    showEditModal.value = false;
+    editingPasser.value = null;
+    originalPasserData.value = null;
+}
+
+async function savePasser() {
+    // Build changes list from edit modal
+    const changes = [];
+    const fieldsToCheck = ['surname', 'first_name', 'middle_name', 'email', 'shs_school', 'strand', 'school_year', 'batch_number', 'passer_status_id'];
+
+    fieldsToCheck.forEach(key => {
+        const oldVal = originalPasserData.value?.[key] ?? '';
+        let newVal = editingPasser.value?.[key] ?? '';
+        if (newVal === '' || newVal == null) newVal = '';
+        else newVal = String(newVal);
+
+        const oldNorm = String(oldVal ?? '');
+        const newNorm = String(newVal ?? '');
+
+        if (oldNorm !== newNorm) {
+            let oldDisplay = oldNorm || '—';
+            let newDisplay = newNorm || '—';
+
+            if (key === 'passer_status_id') {
+                oldDisplay = statusLabels[oldNorm] || oldNorm || '—';
+                newDisplay = statusLabels[newNorm] || newNorm || '—';
+            }
+
+            changes.push({
+                field: passerFieldLabels[key] || key,
+                oldValue: oldDisplay,
+                newValue: newDisplay,
+            });
+        }
+    });
+
+    if (changes.length === 0) {
+        closeEditModal();
+        return;
+    }
+
+    editChanges.value = changes;
+    showEditConfirmModal.value = true;
+}
+
+async function confirmEditSave() {
+    showEditConfirmModal.value = false;
+    saving.value = true;
+    start();
+    try {
+        const dataToSend = { ...editingPasser.value };
+        if (dataToSend.year_graduated === 'Senior High School of A.Y. 2025-2026') {
+            dataToSend.year_graduated = 2026;
+        } else if (dataToSend.year_graduated === 'Senior High School of Past School Years') {
+            dataToSend.year_graduated = 2025;
+        } else if (dataToSend.year_graduated === "" || dataToSend.year_graduated === null || dataToSend.year_graduated === undefined) {
+            dataToSend.year_graduated = null;
+        } else {
+            dataToSend.year_graduated = parseInt(dataToSend.year_graduated, 10);
+        }
+
+        const response = await axios.put(
+            `/test-passers/${editingPasser.value.test_passer_id}`,
+            dataToSend
+        );
+        show("Passer updated successfully!", "success");
+
+        // Normalize passer_status_id to integer for consistent comparisons
+        const updatedData = {
+            ...editingPasser.value,
+            passer_status_id: editingPasser.value.passer_status_id 
+                ? parseInt(editingPasser.value.passer_status_id) 
+                : null,
+            pupcet_total_score: editingPasser.value.pupcet_total_score !== '' && editingPasser.value.pupcet_total_score !== null
+                ? parseFloat(editingPasser.value.pupcet_total_score)
+                : null,
+        };
+
+        // Update the local data to reflect changes immediately
+        const index = flatPassers.value.findIndex(
+            (p) => p.test_passer_id === editingPasser.value.test_passer_id
+        );
+        if (index !== -1) {
+            // Use Vue's reactivity by replacing the entire object
+            flatPassers.value.splice(index, 1, { 
+                ...flatPassers.value[index], 
+                ...updatedData,
+                // Ensure computed properties are updated
+                schoolYear: updatedData.school_year,
+                batchNumber: updatedData.batch_number
+            });
+        }
+
+        // Clear selected passers if the updated passer no longer matches current filters
+        // This ensures the UI stays consistent
+        const updatedPasser = flatPassers.value[index];
+        if (updatedPasser) {
+            const matchesCurrentFilters = (
+                (!filterSchoolYear.value || filterSchoolYear.value === 'all' || updatedPasser.schoolYear === filterSchoolYear.value) &&
+                (!filterBatchNumber.value || filterBatchNumber.value === 'all' || updatedPasser.batchNumber === filterBatchNumber.value)
+            );
+            
+            if (!matchesCurrentFilters) {
+                // Remove from selected if it no longer matches filters
+                selectedPassers.value = selectedPassers.value.filter(
+                    id => id !== editingPasser.value.test_passer_id
+                );
+            }
+        }
+
+        closeEditModal();
+        
+        // Ensure the UI updates immediately
+        await nextTick();
+    } catch (error) {
+        show("Failed to update passer.", "error");
+        console.error(error);
+    } finally {
+        finish();
+        saving.value = false;
+    }
+}
+
+const showAddModal = ref(false);
+const newPasserData = ref({});
+
+function getStatusAndBatchFromScore(score) {
+    if (score === null || score === undefined || score === "") {
+        return { passer_status_id: "", batch_number: "" };
+    }
+    const numScore = parseFloat(score);
+    if (isNaN(numScore)) {
+        return { passer_status_id: "", batch_number: "" };
+    }
+
+    // Updated thresholds as of May 29, 2026:
+    // 79+ = Qualified (Status 1), Batch 1
+    // 75-78 = Waitlisted (Status 2), Batch 2
+    // 55-74 = Waitlisted Below Cut Off (Status 4), Batch 3
+    // <55 = Unqualified (Status 3), Batch 4
+    
+    if (numScore >= 79.00) {
+        return { passer_status_id: "1", batch_number: "Batch 1" };
+    } else if (numScore >= 75.00) {
+        return { passer_status_id: "2", batch_number: "Batch 2" };
+    } else if (numScore >= 55.00) {
+        return { passer_status_id: "4", batch_number: "Batch 3" };
+    } else {
+        return { passer_status_id: "3", batch_number: "Batch 4" };
+    }
+}
+
+watch(
+    () => newPasserData.value?.pupcet_total_score,
+    (newScore) => {
+        if (!newPasserData.value) return;
+        const { passer_status_id, batch_number } = getStatusAndBatchFromScore(newScore);
+        if (passer_status_id !== "") {
+            newPasserData.value.passer_status_id = passer_status_id;
+        }
+        newPasserData.value.batch_number = batch_number;
+    }
+);
+
+// REMOVED: Automatic status recalculation when editing existing records
+// This was causing WBC (status 4) records to be incorrectly changed to Waitlisted (status 2)
+// when editing other fields like email. Status should only be auto-calculated for NEW records.
+// When editing, the admin must manually change the status if needed.
+
+function openAddModal() {
+    newPasserData.value = {
+        surname: "",
+        first_name: "",
+        middle_name: "",
+        strand: "",
+        shs_school: "",
+        year_graduated: "",
+        email: "",
+        reference_number: "",
+        batch_number: "",
+        school_year: "",
+        pupcet_total_score: "",
+        passer_status_id: "",
+    };
+    showAddModal.value = true;
+}
+
+function closeAddModal() {
+    showAddModal.value = false;
+}
+
+async function saveNewPasser() {
+    // Check for duplicate email
+    const duplicateEmail = flatPassers.value.find(
+        (p) => p.email && p.email.toLowerCase() === newPasserData.value.email?.toLowerCase()
+    );
+    if (duplicateEmail) {
+        show("A passer with this email already exists.", "error");
+        return;
+    }
+
+    // Check for duplicate reference number
+    if (newPasserData.value.reference_number) {
+        const duplicateRef = flatPassers.value.find(
+            (p) => p.reference_number && p.reference_number === newPasserData.value.reference_number
+        );
+        if (duplicateRef) {
+            show("A passer with this reference number already exists.", "error");
+            return;
+        }
+    }
+
+    saving.value = true;
+    start();
+    try {
+        const dataToSend = { ...newPasserData.value };
+        if (dataToSend.year_graduated === 'Senior High School of A.Y. 2025-2026') {
+            dataToSend.year_graduated = 2026;
+        } else if (dataToSend.year_graduated === 'Senior High School of Past School Years') {
+            dataToSend.year_graduated = 2025;
+        } else if (dataToSend.year_graduated === "" || dataToSend.year_graduated === null || dataToSend.year_graduated === undefined) {
+            dataToSend.year_graduated = null;
+        } else {
+            dataToSend.year_graduated = parseInt(dataToSend.year_graduated, 10);
+        }
+
+        const response = await axios.post(
+            "/test-passers-store",
+            dataToSend
+        );
+        show("Passer added successfully!", "success");
+
+        // Add the new passer with computed properties
+        const newPasser = {
+            ...response.data,
+            schoolYear: response.data.school_year,
+            batchNumber: response.data.batch_number
+        };
+        flatPassers.value.unshift(newPasser);
+
+        closeAddModal();
+        
+        // Ensure the UI updates immediately
+        await nextTick();
+    } catch (error) {
+        if (error.response?.status === 422) {
+            const errors = error.response.data?.errors;
+            if (errors?.email) {
+                show(errors.email[0], "error");
+            } else if (errors?.reference_number) {
+                show(errors.reference_number[0], "error");
+            } else {
+                show("Validation failed. Please check your input.", "error");
+            }
+        } else {
+            show("Failed to add passer.", "error");
+        }
+        console.error(error);
+    } finally {
+        finish();
+        saving.value = false;
+    }
+}
+
+// Waitlisted Email Template Preview
+const showWaitlistedEmailPreview = ref(false);
+const waitlistedEmailPreviewHtml = ref('');
+const loadingWaitlistedPreview = ref(false);
+
+const previewWaitlistedEmailTemplate = async () => {
+    if (selectedPassers.value.length === 0) {
+        show('Please select at least one passer to preview', 'error');
+        return;
+    }
+
+    loadingWaitlistedPreview.value = true;
+    showWaitlistedEmailPreview.value = true;
+    
+    try {
+        const response = await axios.post('/admin/waitlisted/preview-email-template', {
+            passer_id: selectedPassers.value[0],
+            message_template: emailTemplate.value
+        });
+        waitlistedEmailPreviewHtml.value = response.data;
+    } catch (error) {
+        console.error('Failed to preview waitlisted email template:', error);
+        show('Failed to load email preview', 'error');
+        closeWaitlistedEmailPreview();
+    } finally {
+        loadingWaitlistedPreview.value = false;
+    }
+};
+
+const closeWaitlistedEmailPreview = () => {
+    showWaitlistedEmailPreview.value = false;
+    waitlistedEmailPreviewHtml.value = '';
+};
+
+
+// â”€â”€ Bulk Enroll â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const bulkEnrollRunning    = ref(false);
+const showBulkEnrollResult = ref(false);
+const bulkEnrollResult     = ref({ message: '', enrolled: [], errors: [] });
+
+const runBulkEnroll = async () => {
+    if (selectedPassers.value.length === 0) {
+        show('Please select at least one passer first.', 'error');
+        return;
+    }
+
+    if (!confirm(
+        `Auto-enroll ${selectedPassers.value.length} selected passer(s) as Officially Enrolled?\n\n` +
+        `This will create their accounts, profiles, and complete all admission stages automatically.\n` +
+        `The operation is safe to run multiple times.`
+    )) return;
+
+    bulkEnrollRunning.value = true;
+
+    try {
+        const response = await axios.post('/test-passers/bulk-enroll', {
+            passer_ids: selectedPassers.value,
+        });
+
+        bulkEnrollResult.value = {
+            message:  response.data.message ?? 'Enrollment complete.',
+            enrolled: response.data.enrolled ?? [],
+            errors:   response.data.errors ?? [],
+        };
+
+        showBulkEnrollResult.value = true;
+
+        if (response.data.enrolled?.length > 0) {
+            show(`${response.data.enrolled.length} passer(s) successfully enrolled!`, 'success');
+        }
+    } catch (error) {
+        const msg = error.response?.data?.error
+            ?? error.response?.data?.message
+            ?? 'Enrollment failed. Please try again.';
+        show(msg, 'error');
+    } finally {
+        bulkEnrollRunning.value = false;
+    }
+};
+</script>
+
 <template>
     <Head title="PUPCET Passers Email" />
     <div
@@ -1197,1077 +2267,7 @@
     </div>
 </template>
 
-<script setup>
-import { ref, computed, watch, nextTick} from "vue";
-const axios = window.axios;
-import AppLayout from "@/Layouts/AppLayout.vue";
-import { Head, router } from "@inertiajs/vue3";
-import { QuillEditor } from "@vueup/vue-quill";
-import "@vueup/vue-quill/dist/vue-quill.snow.css";
-import { useGlobalLoading } from "@/Composables/useGlobalLoading";
-import { useSnackbar } from "@/Composables/useSnackbar";
-import EmailProgressBar from "@/Components/EmailProgressBar.vue";
-import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
-
-// Scroll functionality (unchanged)
-const scrollWrapper = ref(null);
-const scrollAmount = 200;
-const showScrollUp = ref(false);
-const showScrollDown = ref(true);
-
-// Email progress tracking
-const activeBulkOperationId = ref(null);
-
-const scrollUp = () => {
-    if (scrollWrapper.value) {
-        scrollWrapper.value.scrollBy({
-            top: -scrollAmount,
-            behavior: "smooth",
-        });
-    }
-};
-
-const scrollDown = () => {
-    if (scrollWrapper.value) {
-        scrollWrapper.value.scrollBy({
-            top: scrollAmount,
-            behavior: "smooth"
-        });
-    }
-};
-
-const handleScroll = () => {
-    if (!scrollWrapper.value) return;
-    
-    const scrollTop = scrollWrapper.value.scrollTop;
-    const scrollHeight = scrollWrapper.value.scrollHeight;
-    const clientHeight = scrollWrapper.value.clientHeight;
-
-    showScrollUp.value = scrollTop > 10;
-    showScrollDown.value = scrollTop < 10;
-
-    if (scrollHeight <= clientHeight) {
-        showScrollUp.value = false;
-        showScrollDown.value = false;
-    }
-};
-
-import { onMounted, onUnmounted } from "vue";
-
-onMounted(() => {
-    handleScroll();
-});
-
-const templateTypes = [
-    { label: 'Default', value: 'default' },
-    { label: 'Custom', value: 'custom' },
-    { label: 'Waitlisted (Below Cut-off)', value: 'waitlisted-cutoff' },
-    { label: 'Waitlisted (Limited Slots)', value: 'waitlisted-limited' }
-];
-
-// All existing functionality remains exactly the same
-const { snackbar, show } = useSnackbar();
-
-function debounce(fn, delay) {
-    let timeout;
-    return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => fn(...args), delay);
-    };
-}
-
-const { start, finish } = useGlobalLoading();
-
-const props = defineProps({
-    groupedPassers: Object,
-    passers: Object,
-    filterOptions: Object,
-    filters: Object,
-    programs: Array,
-    registrationUrl: String,
-    admissionCriteriaUrl: String,
-    facebookUrl: String,
-});
-
-// Email template and settings (unchanged)
-const emailTemplate = ref(
-    `
-  <div style="font-family: Arial, sans-serif; background-color: #f7f7f7; padding: 40px;">
-    <div style="max-width: 600px; margin: auto; background-color: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-      <h1 style="color: #cc0000; text-align: center;">🎉 Congratulations, {{firstname}} {{surname}}!</h1>
-      <p style="font-size: 16px; color: #333; text-align: center;">
-        You have successfully passed the <strong>PUPCET</strong>! We are thrilled to welcome you as part of our growing community at Polytechnic University of the Philippines - Taguig Branch.
-      </p>
-
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${props.registrationUrl}" 
-           style="background-color: #cc0000; color: #FFD700; text-decoration: none; padding: 15px 25px; font-weight: bold; border-radius: 8px; display: inline-block;">
-           Complete Your Registration
-        </a>
-      </div>
-
-      <p style="font-size: 14px; color: #555; text-align: center;">
-        If you have any questions or need help, please contact the Admission and Registration Office at
-        <a href="mailto:taguig@pup.edu.ph" style="color:#9E122C;">taguig@pup.edu.ph</a> /
-        <a href="mailto:puptadmission@gmail.com" style="color:#9E122C;">puptadmission@gmail.com</a>.
-      </p>
-    </div>
-  </div>
-`.trim()
-);
-
-const templateType = ref("default");
-const sarEnrollmentDate = ref(new Date().toISOString().split('T')[0]);
-const sarEnrollmentTime = ref('09:00');
-const defaultTemplatePreview = `
-<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 10, 2026 (Wednesday)</strong>. You will receive an email within three working days containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long bond paper, sign, and bring them on the day of the interview. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
-    <div style="text-align:center;margin:24px 0;">
-    <a 
-        href="${props.registrationUrl}" 
-        style="
-        display:inline-block;
-        padding:12px 24px;
-        background:#9E122C;
-        color:#ffffff;
-        text-decoration:none;
-        border-radius:6px;
-        font-weight:bold;
-        font-size:14px;
-        "
-    >
-        CLICK TO CONFIRM YOUR INTERVIEW SLOT
-    </a>
-    </div>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="${props.facebookUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP - Taguig Facebook page</a>).</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;font-style:italic;">Kindly disregard this email if you already have confirmed your interview slot.</p>
-    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
-    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
-    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Admission and Registration Office</p>
-  </div>
-</div>`.trim();
-
-const waitlistedTemplatePreview = `
-<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations! 🎉</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">2026 PUP-Taguig Campus Admission Criteria</a></p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until June 10, 2026 (Wednesday)</strong>. You will receive an email within three working days containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long bond paper, sign, and bring them on the day of the interview. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
-    <div style="text-align:center;margin:24px 0;">
-    <a 
-        href="${props.registrationUrl}" 
-        style="
-        display:inline-block;
-        padding:12px 24px;
-        background:#9E122C;
-        color:#ffffff;
-        text-decoration:none;
-        border-radius:6px;
-        font-weight:bold;
-        font-size:14px;
-        "
-    >
-        CLICK TO CONFIRM YOUR INTERVIEW SLOT
-    </a>
-    </div>    
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">All PUPCET Passers and Waitlisted Applicants are also invited to attend the <strong>Career Orientation for the Incoming First-Year Students</strong> on June 8, 2026 (Monday), 2:00PM, via Facebook Live (<a href="${props.facebookUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;">PUP - Taguig Facebook page</a>).</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with two photocopies on <strong>June 24, 2026 (Wednesday)</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
-    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
-    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
-    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Admission and Registration Office</p>
-  </div>
-</div>`.trim();
-
-const waitlistedCutoffTemplatePreview = `
-<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#9E122C;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Thank you for considering <strong>PUP-Taguig Campus</strong> for your higher education.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Based on evaluation, we regret to inform you that your score in the PUP College Entrance Test did not place you in the Top 500 requirement of the Campus.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Nevertheless, you might still be notified (via email) of the possible remaining slots, based on your evaluated rank. Admission to these slots, however, shall be on a first-come, first-served basis, and subject to specific academic program admission requirements.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Since we cannot give you an assurance that a slot will be made available to you, we recommend you to still consider your admission options in other higher education institutions.</p>
-    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">We hope that you will still be able to pursue your career plans and be successful in your academic endeavor.</p>
-    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
-    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Campus Admission and Registration Office</p>
-  </div>
-</div>`.trim();
-
-const selectedPrograms = ref([]);
-
-const waitlistSlotDate = ref("2026-06-28");
-const waitlistInterviewDate = ref("2026-07-01");
-
-const formatDateForEmail = (dateString) => {
-    if (!dateString) return '';
-    const parts = dateString.split('-');
-    if (parts.length !== 3) return dateString;
-    const date = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-    const monthStr = date.toLocaleString('en-US', { month: 'long' });
-    const weekdayStr = date.toLocaleString('en-US', { weekday: 'long' });
-    return `${monthStr} ${date.getDate()}, ${date.getFullYear()} (${weekdayStr})`;
-};
-
-const getWaitlistedLimitedTemplateHTML = () => {
-    let listItems = "";
-    if (selectedPrograms.value.length === 0) {
-        listItems = "<li><em>No programs selected</em></li>";
-    } else {
-        selectedPrograms.value.forEach(pId => {
-            const p = props.programs?.find(prog => prog.id === pId);
-            if (p) {
-                listItems += `<li>${p.name}</li>`;
-            }
-        });
-    }
-
-    return `
-<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#cc0000;font-weight:bold;line-height:1.6;">Congratulations!</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may choose a curricular program you intend to enroll in, subject to fulfillment of college requirements and the availability of slots.</p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">The following programs have limited slots available:</p>
-    <ul style="margin:0 0 12px 0;padding-left:40px;font-size:14px;color:#222;line-height:1.6;list-style-type:disc;">
-        ${listItems}
-    </ul>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;font-weight:bold;">2026 PUP-Taguig Campus Admission Criteria</a></p>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your <strong>slot until ${formatDateForEmail(waitlistSlotDate.value)}</strong>. You will receive an email containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long-sized bond paper, sign, and bring them on the day of the interview on <strong>${formatDateForEmail(waitlistInterviewDate.value)}</strong>. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
-    <div style="text-align:center;margin:24px 0;">
-    <a 
-        href="${props.registrationUrl}" 
-        style="
-        display:inline-block;
-        padding:12px 24px;
-        background:#9E122C;
-        color:#ffffff;
-        text-decoration:none;
-        border-radius:6px;
-        font-weight:bold;
-        font-size:14px;
-        "
-    >
-        CLICK TO CONFIRM YOUR INTERVIEW SLOT
-    </a>
-    </div>
-    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with three photocopies on <strong>${formatDateForEmail(waitlistInterviewDate.value)}</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
-    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
-  </div>
-</div>`.trim();
-};
-
-const formattedDefaultTemplatePreview = computed(() => {
-    return defaultTemplatePreview
-        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
-        .replace(/\{\{firstname\}\}/g, 'John')
-        .replace(/\{\{surname\}\}/g, 'Doe');
-});
-
-const formattedWaitlistedTemplatePreview = computed(() => {
-    return waitlistedTemplatePreview
-        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
-        .replace(/\{\{firstname\}\}/g, 'John')
-        .replace(/\{\{surname\}\}/g, 'Doe');
-});
-
-const formattedWaitlistedCutoffTemplatePreview = computed(() => {
-    return waitlistedCutoffTemplatePreview
-        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#9E122C;font-weight:bold;">John Doe</span>')
-        .replace(/\{\{firstname\}\}/g, 'John')
-        .replace(/\{\{surname\}\}/g, 'Doe');
-});
-
-const formattedWaitlistedLimitedTemplatePreview = computed(() => {
-    return getWaitlistedLimitedTemplateHTML()
-        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
-        .replace(/\{\{firstname\}\}/g, 'John')
-        .replace(/\{\{surname\}\}/g, 'Doe');
-});
-
-const flatPassers = ref([]);
-
-watch(
-    () => [props.groupedPassers, props.passers],
-    ([groupedVal, paginatedVal]) => {
-        const result = [];
-
-        // New paginated format: passers is a Laravel LengthAwarePaginator object
-        if (paginatedVal && paginatedVal.data) {
-            paginatedVal.data.forEach((passer) => {
-                result.push({
-                    ...passer,
-                    schoolYear: passer.school_year,
-                    batchNumber: passer.batch_number,
-                });
-            });
-        }
-        // Legacy grouped format: groupedPassers is { school_year: { batch_number: [...] } }
-        else if (groupedVal) {
-            for (const schoolYear in groupedVal) {
-                for (const batchNumber in groupedVal[schoolYear]) {
-                    groupedVal[schoolYear][batchNumber].forEach((passer) => {
-                        result.push({
-                            ...passer,
-                            schoolYear,
-                            batchNumber,
-                        });
-                    });
-                }
-            }
-        }
-
-        flatPassers.value = result;
-    },
-    { immediate: true }
-);
-
-const searchTerm = ref(props.filters?.search || "");
-const debouncedSearchTerm = ref(props.filters?.search || "");
-const filterScore = ref(props.filters?.score || "");
-const debouncedFilterScore = ref(props.filters?.score || "");
-const filterSchoolYear = ref(props.filters?.school_year || "all");
-const filterBatchNumber = ref(props.filters?.batch_number || "all");
-const sortKey = ref(props.filters?.sort_key || "pupcet_total_score");
-const sortOrder = ref(props.filters?.sort_order || "desc");
-
-// Server-side pagination: read from the paginator metadata
-const currentPage = computed(() => props.passers?.current_page || 1);
-const totalPages = computed(() => props.passers?.last_page || 1);
-const itemsPerPage = computed(() => props.passers?.per_page || 15);
-
-// Central function to make server requests with all current params
-function buildServerParams(overrides = {}) {
-    const params = {
-        school_year: filterSchoolYear.value || 'all',
-        batch_number: filterBatchNumber.value || 'all',
-        search: debouncedSearchTerm.value || undefined,
-        score: debouncedFilterScore.value || undefined,
-        sort_key: sortKey.value || undefined,
-        sort_order: sortOrder.value || undefined,
-        per_page: itemsPerPage.value,
-        page: 1,
-        ...overrides,
-    };
-    // Remove undefined values
-    Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
-    return params;
-}
-
-// Navigate to a different page via Inertia (server-side pagination)
-function goToPage(page) {
-    if (page < 1 || page > totalPages.value || page === currentPage.value) return;
-    router.get('/test-passers', buildServerParams({ page }), {
-        preserveState: true,
-        preserveScroll: true,
-    });
-}
-
-// Reload from server with current filters (resets to page 1)
-function applyServerFilters() {
-    router.get('/test-passers', buildServerParams({ page: 1 }), {
-        preserveState: true,
-        preserveScroll: true,
-    });
-}
-
-const onSearchInput = debounce(() => {
-    debouncedSearchTerm.value = searchTerm.value.toLowerCase();
-    applyServerFilters();
-}, 300);
-
-const onScoreInput = debounce(() => {
-    debouncedFilterScore.value = filterScore.value;
-    applyServerFilters();
-}, 300);
-
-// When server-side filters change, reload from server
-watch([filterSchoolYear, filterBatchNumber], () => {
-    applyServerFilters();
-}, { deep: true });
-
-// When sort changes, reload from server (keeps current page 1)
-watch([sortKey, sortOrder], () => {
-    applyServerFilters();
-});
-
-const schoolYears = computed(() => {
-    // Use server-provided filter options if available
-    if (props.filterOptions && props.filterOptions.schoolYears && props.filterOptions.schoolYears.length > 0) {
-        return props.filterOptions.schoolYears;
-    }
-    // Fallback to client-side derivation
-    const years = new Set(flatPassers.value.map((p) => p.schoolYear));
-    return Array.from(years).sort();
-});
-
-const academicYearOptions = computed(() => {
-    const currentYear = new Date().getFullYear();
-    return [
-        `${currentYear}-${currentYear + 1}`,
-        `${currentYear - 1}-${currentYear}`,
-        `${currentYear - 2}-${currentYear - 1}`,
-        `${currentYear - 3}-${currentYear - 2}`,
-    ];
-});
-
-const batchNumbers = computed(() => {
-    // Use server-provided filter options if available
-    if (props.filterOptions && props.filterOptions.batchNumbers && props.filterOptions.batchNumbers.length > 0) {
-        return props.filterOptions.batchNumbers;
-    }
-    // Fallback to client-side derivation
-    const batches = new Set(
-        flatPassers.value
-            .map((p) => p.batchNumber)
-            .filter((b) => b !== null && b !== undefined && b !== '')
-    );
-    return Array.from(batches).sort();
-});
-
-const filteredPassers = computed(() => {
-    // Filtering is now done server-side; just return all records from the current page
-    return flatPassers.value;
-});
-
-const sortedPassers = computed(() => {
-    // Sorting is now done server-side; data arrives pre-sorted
-    return filteredPassers.value;
-});
-
-/**
- * Returns the 1-based global rank of a passer within the full result set.
- * Uses the server paginator's 'from' value for correct offset across pages.
- */
-function getGlobalRank(passer, pageIndex) {
-    const from = props.passers?.from || 1;
-    return from + pageIndex;
-}
-
-// visiblePages for pagination UI (uses server-side totalPages)
-
-// Pagination range for display
-const visiblePages = computed(() => {
-    const pages = [];
-    const maxVisible = 5;
-    
-    if (totalPages.value <= maxVisible) {
-        for (let i = 1; i <= totalPages.value; i++) {
-            pages.push(i);
-        }
-    } else {
-        let start = Math.max(1, currentPage.value - 2);
-        let end = Math.min(totalPages.value, start + maxVisible - 1);
-        
-        if (end - start + 1 < maxVisible) {
-            start = end - maxVisible + 1;
-        }
-        
-        for (let i = start; i <= end; i++) {
-            pages.push(i);
-        }
-    }
-    
-    return pages;
-});
-
-const paginatedPassers = computed(() => {
-    // Data is already paginated by the server; just apply client-side search/sort
-    return sortedPassers.value;
-});
-
-const selectedPassers = ref([]);
-const allFilteredSelected = ref(false);
-const totalFilteredCount = computed(() => props.passers?.total || 0);
-
-// Check if all filtered passers are selected (uses the allFilteredSelected flag)
-const areAllSelected = computed(() => {
-    if (totalFilteredCount.value === 0) return false;
-    return allFilteredSelected.value;
-});
-
-const areAllSelectedOnCurrentPage = computed(() => {
-    if (!paginatedPassers.value.length) return false;
-    return paginatedPassers.value.every((p) =>
-        selectedPassers.value.includes(p.test_passer_id)
-    );
-});
-
-const toggleSelectAll = async (isSelected) => {
-    if (isSelected) {
-        // Fetch ALL IDs matching current filters from the server
-        try {
-            const params = {};
-            if (filterSchoolYear.value) params.school_year = filterSchoolYear.value;
-            if (filterBatchNumber.value) params.batch_number = filterBatchNumber.value;
-            if (debouncedSearchTerm.value) params.search = debouncedSearchTerm.value;
-            if (debouncedFilterScore.value) params.score = debouncedFilterScore.value;
-
-            const response = await axios.get('/test-passers/select-all-ids', { params });
-            const allIds = response.data.ids;
-
-            // Merge all IDs into selectedPassers (avoid duplicates)
-            const currentSet = new Set(selectedPassers.value);
-            allIds.forEach(id => currentSet.add(id));
-            selectedPassers.value = Array.from(currentSet);
-            allFilteredSelected.value = true;
-        } catch (error) {
-            console.error('Failed to fetch all IDs:', error);
-            // Fallback: select only current page
-            const pageIds = paginatedPassers.value.map(p => p.test_passer_id);
-            const currentSet = new Set(selectedPassers.value);
-            pageIds.forEach(id => currentSet.add(id));
-            selectedPassers.value = Array.from(currentSet);
-        }
-    } else {
-        // Deselect all — clear everything
-        selectedPassers.value = [];
-        allFilteredSelected.value = false;
-    }
-};
-
-// Reset allFilteredSelected when filters change
-watch([filterSchoolYear, filterBatchNumber], () => {
-    allFilteredSelected.value = false;
-}, { deep: true });
-
-const showSendEmailsConfirmModal = ref(false);
-
-const selectedPassersList = computed(() => {
-    return flatPassers.value.filter(p => selectedPassers.value.includes(p.test_passer_id));
-});
-
-const promptSendEmails = () => {
-    if (selectedPassers.value.length === 0) {
-        show('Please select at least one passer first.', 'error');
-        return;
-    }
-
-    if (templateType.value === 'sar') {
-        if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
-            show("Please set enrollment date and time for SAR forms.", "error");
-            return;
-        }
-    }
-
-    showSendEmailsConfirmModal.value = true;
-};
-
-const executeSendEmails = async () => {
-    showSendEmailsConfirmModal.value = false;
-    let messageHtml;
-
-    if (templateType.value === 'default') {
-        messageHtml = defaultTemplatePreview;
-    } else if (templateType.value === 'waitlisted') {
-        messageHtml = waitlistedTemplatePreview;
-    } else if (templateType.value === 'waitlisted-cutoff') {
-        messageHtml = waitlistedCutoffTemplatePreview;
-    } else if (templateType.value === 'waitlisted-limited') {
-        messageHtml = getWaitlistedLimitedTemplateHTML();
-    } else {
-        const quillContainer = document.querySelector(".ql-editor");
-        messageHtml = quillContainer
-            ? quillContainer.innerHTML
-            : emailTemplate.value;
-    }
-
-    if (templateType.value === 'sar') {
-        if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
-            show("Please set enrollment date and time for SAR forms.", "error");
-            return;
-        }
-    }
-
-    start();
-    try {
-        const response = await axios.post("/test-passers/send-emails", {
-            passer_ids: selectedPassers.value,
-            message_template: messageHtml,
-            template_type: templateType.value,
-            enrollment_date: sarEnrollmentDate.value,
-            enrollment_time: sarEnrollmentTime.value,
-        });
-
-        // Extract bulk_operation_id and show progress bar
-        if (response.data && response.data.bulk_operation_id) {
-            activeBulkOperationId.value = response.data.bulk_operation_id;
-        }
-
-        const successMsg = templateType.value === 'sar' 
-            ? 'SAR PDFs generated and emails sent successfully!' 
-            : 'Emails sent successfully!';
-        show(successMsg, "success");
-        selectedPassers.value = [];
-    } catch (error) {
-        show("Failed to send emails.", "error");
-        console.error(error);
-    } finally {
-        finish();
-    }
-};
-
-// ── Edit Confirmation State ──────────────────────────────
-const showEditConfirmModal = ref(false);
-const editChanges = ref([]);
-const originalPasserData = ref(null);
-
-const passerFieldLabels = {
-    surname: 'Surname',
-    first_name: 'First Name',
-    middle_name: 'Middle Name',
-    email: 'Email',
-    shs_school: 'High School',
-    strand: 'Strand',
-    school_year: 'School Year',
-    batch_number: 'Batch Number',
-    passer_status_id: 'Status',
-};
-
-const statusLabels = { '1': 'Qualified', '2': 'Waitlisted', '3': 'Unqualified', '4': 'Waitlisted Below Cut Off' };
-
-// Modal state (unchanged)
-const showEditModal = ref(false);
-const editingPasser = ref(null);
-const saving = ref(false);
-
-// Delete state
-const showDeleteConfirm = ref(false);
-const deleteTarget = ref(null);   // null = bulk, passer object = single
-const deleting = ref(false);
-
-function confirmDelete(passer) {
-    deleteTarget.value = passer;
-    showDeleteConfirm.value = true;
-}
-
-function confirmBulkDelete() {
-    deleteTarget.value = null;
-    showDeleteConfirm.value = true;
-}
-
-async function executeDelete() {
-    deleting.value = true;
-    start();
-    try {
-        if (deleteTarget.value) {
-            // Single delete
-            const id = deleteTarget.value.test_passer_id;
-            await axios.delete(`/test-passers/${id}`);
-            flatPassers.value = flatPassers.value.filter(p => p.test_passer_id !== id);
-            selectedPassers.value = selectedPassers.value.filter(sid => sid !== id);
-            show('Passer deleted successfully.', 'success');
-        } else {
-            // Bulk delete
-            await axios.post('/test-passers/bulk-destroy', { passer_ids: selectedPassers.value });
-            const deletedSet = new Set(selectedPassers.value);
-            flatPassers.value = flatPassers.value.filter(p => !deletedSet.has(p.test_passer_id));
-            show(`${selectedPassers.value.length} passer(s) deleted.`, 'success');
-            selectedPassers.value = [];
-        }
-        showDeleteConfirm.value = false;
-        deleteTarget.value = null;
-    } catch (error) {
-        show('Failed to delete passer(s).', 'error');
-        console.error(error);
-    } finally {
-        finish();
-        deleting.value = false;
-    }
-}
-
-function openEditModal(passer) {
-    let yearGradVal = '';
-    if (passer.year_graduated != null) {
-        const yearInt = parseInt(passer.year_graduated, 10);
-        if (yearInt >= 2026) {
-            yearGradVal = 'Senior High School of A.Y. 2025-2026';
-        } else {
-            yearGradVal = 'Senior High School of Past School Years';
-        }
-    }
-
-    editingPasser.value = { 
-        ...passer,
-        // Ensure passer_status_id is a string for the <select> v-model binding
-        passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
-        pupcet_total_score: passer.pupcet_total_score != null ? passer.pupcet_total_score : '',
-        year_graduated: yearGradVal,
-        shs_school: passer.shs_school || '',
-    };
-
-    // Snapshot original data for comparison
-    originalPasserData.value = {
-        surname: passer.surname ?? '',
-        first_name: passer.first_name ?? '',
-        middle_name: passer.middle_name ?? '',
-        email: passer.email ?? '',
-        shs_school: passer.shs_school ?? '',
-        strand: passer.strand ?? '',
-        school_year: passer.school_year ?? '',
-        batch_number: passer.batch_number ?? '',
-        passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
-    };
-
-    showEditModal.value = true;
-}
-
-function closeEditModal() {
-    showEditModal.value = false;
-    editingPasser.value = null;
-    originalPasserData.value = null;
-}
-
-async function savePasser() {
-    // Build changes list from edit modal
-    const changes = [];
-    const fieldsToCheck = ['surname', 'first_name', 'middle_name', 'email', 'shs_school', 'strand', 'school_year', 'batch_number', 'passer_status_id'];
-
-    fieldsToCheck.forEach(key => {
-        const oldVal = originalPasserData.value?.[key] ?? '';
-        let newVal = editingPasser.value?.[key] ?? '';
-        if (newVal === '' || newVal == null) newVal = '';
-        else newVal = String(newVal);
-
-        const oldNorm = String(oldVal ?? '');
-        const newNorm = String(newVal ?? '');
-
-        if (oldNorm !== newNorm) {
-            let oldDisplay = oldNorm || '—';
-            let newDisplay = newNorm || '—';
-
-            if (key === 'passer_status_id') {
-                oldDisplay = statusLabels[oldNorm] || oldNorm || '—';
-                newDisplay = statusLabels[newNorm] || newNorm || '—';
-            }
-
-            changes.push({
-                field: passerFieldLabels[key] || key,
-                oldValue: oldDisplay,
-                newValue: newDisplay,
-            });
-        }
-    });
-
-    if (changes.length === 0) {
-        closeEditModal();
-        return;
-    }
-
-    editChanges.value = changes;
-    showEditConfirmModal.value = true;
-}
-
-async function confirmEditSave() {
-    showEditConfirmModal.value = false;
-    saving.value = true;
-    start();
-    try {
-        const dataToSend = { ...editingPasser.value };
-        if (dataToSend.year_graduated === 'Senior High School of A.Y. 2025-2026') {
-            dataToSend.year_graduated = 2026;
-        } else if (dataToSend.year_graduated === 'Senior High School of Past School Years') {
-            dataToSend.year_graduated = 2025;
-        } else if (dataToSend.year_graduated === "" || dataToSend.year_graduated === null || dataToSend.year_graduated === undefined) {
-            dataToSend.year_graduated = null;
-        } else {
-            dataToSend.year_graduated = parseInt(dataToSend.year_graduated, 10);
-        }
-
-        const response = await axios.put(
-            `/test-passers/${editingPasser.value.test_passer_id}`,
-            dataToSend
-        );
-        show("Passer updated successfully!", "success");
-
-        // Normalize passer_status_id to integer for consistent comparisons
-        const updatedData = {
-            ...editingPasser.value,
-            passer_status_id: editingPasser.value.passer_status_id 
-                ? parseInt(editingPasser.value.passer_status_id) 
-                : null,
-            pupcet_total_score: editingPasser.value.pupcet_total_score !== '' && editingPasser.value.pupcet_total_score !== null
-                ? parseFloat(editingPasser.value.pupcet_total_score)
-                : null,
-        };
-
-        // Update the local data to reflect changes immediately
-        const index = flatPassers.value.findIndex(
-            (p) => p.test_passer_id === editingPasser.value.test_passer_id
-        );
-        if (index !== -1) {
-            // Use Vue's reactivity by replacing the entire object
-            flatPassers.value.splice(index, 1, { 
-                ...flatPassers.value[index], 
-                ...updatedData,
-                // Ensure computed properties are updated
-                schoolYear: updatedData.school_year,
-                batchNumber: updatedData.batch_number
-            });
-        }
-
-        // Clear selected passers if the updated passer no longer matches current filters
-        // This ensures the UI stays consistent
-        const updatedPasser = flatPassers.value[index];
-        if (updatedPasser) {
-            const matchesCurrentFilters = (
-                (!filterSchoolYear.value || filterSchoolYear.value === 'all' || updatedPasser.schoolYear === filterSchoolYear.value) &&
-                (!filterBatchNumber.value || filterBatchNumber.value === 'all' || updatedPasser.batchNumber === filterBatchNumber.value)
-            );
-            
-            if (!matchesCurrentFilters) {
-                // Remove from selected if it no longer matches filters
-                selectedPassers.value = selectedPassers.value.filter(
-                    id => id !== editingPasser.value.test_passer_id
-                );
-            }
-        }
-
-        closeEditModal();
-        
-        // Ensure the UI updates immediately
-        await nextTick();
-    } catch (error) {
-        show("Failed to update passer.", "error");
-        console.error(error);
-    } finally {
-        finish();
-        saving.value = false;
-    }
-}
-
-const showAddModal = ref(false);
-const newPasserData = ref({});
-
-function getStatusAndBatchFromScore(score) {
-    if (score === null || score === undefined || score === "") {
-        return { passer_status_id: "", batch_number: "" };
-    }
-    const numScore = parseFloat(score);
-    if (isNaN(numScore)) {
-        return { passer_status_id: "", batch_number: "" };
-    }
-
-    // Updated thresholds as of May 29, 2026:
-    // 79+ = Qualified (Status 1), Batch 1
-    // 75-78 = Waitlisted (Status 2), Batch 2
-    // 55-74 = Waitlisted Below Cut Off (Status 4), Batch 3
-    // <55 = Unqualified (Status 3), Batch 4
-    
-    if (numScore >= 79.00) {
-        return { passer_status_id: "1", batch_number: "Batch 1" };
-    } else if (numScore >= 75.00) {
-        return { passer_status_id: "2", batch_number: "Batch 2" };
-    } else if (numScore >= 55.00) {
-        return { passer_status_id: "4", batch_number: "Batch 3" };
-    } else {
-        return { passer_status_id: "3", batch_number: "Batch 4" };
-    }
-}
-
-watch(
-    () => newPasserData.value?.pupcet_total_score,
-    (newScore) => {
-        if (!newPasserData.value) return;
-        const { passer_status_id, batch_number } = getStatusAndBatchFromScore(newScore);
-        if (passer_status_id !== "") {
-            newPasserData.value.passer_status_id = passer_status_id;
-        }
-        newPasserData.value.batch_number = batch_number;
-    }
-);
-
-// REMOVED: Automatic status recalculation when editing existing records
-// This was causing WBC (status 4) records to be incorrectly changed to Waitlisted (status 2)
-// when editing other fields like email. Status should only be auto-calculated for NEW records.
-// When editing, the admin must manually change the status if needed.
-
-function openAddModal() {
-    newPasserData.value = {
-        surname: "",
-        first_name: "",
-        middle_name: "",
-        strand: "",
-        shs_school: "",
-        year_graduated: "",
-        email: "",
-        reference_number: "",
-        batch_number: "",
-        school_year: "",
-        pupcet_total_score: "",
-        passer_status_id: "",
-    };
-    showAddModal.value = true;
-}
-
-function closeAddModal() {
-    showAddModal.value = false;
-}
-
-async function saveNewPasser() {
-    // Check for duplicate email
-    const duplicateEmail = flatPassers.value.find(
-        (p) => p.email && p.email.toLowerCase() === newPasserData.value.email?.toLowerCase()
-    );
-    if (duplicateEmail) {
-        show("A passer with this email already exists.", "error");
-        return;
-    }
-
-    // Check for duplicate reference number
-    if (newPasserData.value.reference_number) {
-        const duplicateRef = flatPassers.value.find(
-            (p) => p.reference_number && p.reference_number === newPasserData.value.reference_number
-        );
-        if (duplicateRef) {
-            show("A passer with this reference number already exists.", "error");
-            return;
-        }
-    }
-
-    saving.value = true;
-    start();
-    try {
-        const dataToSend = { ...newPasserData.value };
-        if (dataToSend.year_graduated === 'Senior High School of A.Y. 2025-2026') {
-            dataToSend.year_graduated = 2026;
-        } else if (dataToSend.year_graduated === 'Senior High School of Past School Years') {
-            dataToSend.year_graduated = 2025;
-        } else if (dataToSend.year_graduated === "" || dataToSend.year_graduated === null || dataToSend.year_graduated === undefined) {
-            dataToSend.year_graduated = null;
-        } else {
-            dataToSend.year_graduated = parseInt(dataToSend.year_graduated, 10);
-        }
-
-        const response = await axios.post(
-            "/test-passers-store",
-            dataToSend
-        );
-        show("Passer added successfully!", "success");
-
-        // Add the new passer with computed properties
-        const newPasser = {
-            ...response.data,
-            schoolYear: response.data.school_year,
-            batchNumber: response.data.batch_number
-        };
-        flatPassers.value.unshift(newPasser);
-
-        closeAddModal();
-        
-        // Ensure the UI updates immediately
-        await nextTick();
-    } catch (error) {
-        if (error.response?.status === 422) {
-            const errors = error.response.data?.errors;
-            if (errors?.email) {
-                show(errors.email[0], "error");
-            } else if (errors?.reference_number) {
-                show(errors.reference_number[0], "error");
-            } else {
-                show("Validation failed. Please check your input.", "error");
-            }
-        } else {
-            show("Failed to add passer.", "error");
-        }
-        console.error(error);
-    } finally {
-        finish();
-        saving.value = false;
-    }
-}
-
-// Waitlisted Email Template Preview
-const showWaitlistedEmailPreview = ref(false);
-const waitlistedEmailPreviewHtml = ref('');
-const loadingWaitlistedPreview = ref(false);
-
-const previewWaitlistedEmailTemplate = async () => {
-    if (selectedPassers.value.length === 0) {
-        show('Please select at least one passer to preview', 'error');
-        return;
-    }
-
-    loadingWaitlistedPreview.value = true;
-    showWaitlistedEmailPreview.value = true;
-    
-    try {
-        const response = await axios.post('/admin/waitlisted/preview-email-template', {
-            passer_id: selectedPassers.value[0],
-            message_template: emailTemplate.value
-        });
-        waitlistedEmailPreviewHtml.value = response.data;
-    } catch (error) {
-        console.error('Failed to preview waitlisted email template:', error);
-        show('Failed to load email preview', 'error');
-        closeWaitlistedEmailPreview();
-    } finally {
-        loadingWaitlistedPreview.value = false;
-    }
-};
-
-const closeWaitlistedEmailPreview = () => {
-    showWaitlistedEmailPreview.value = false;
-    waitlistedEmailPreviewHtml.value = '';
-};
-
-
-// â”€â”€ Bulk Enroll â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const bulkEnrollRunning    = ref(false);
-const showBulkEnrollResult = ref(false);
-const bulkEnrollResult     = ref({ message: '', enrolled: [], errors: [] });
-
-const runBulkEnroll = async () => {
-    if (selectedPassers.value.length === 0) {
-        show('Please select at least one passer first.', 'error');
-        return;
-    }
-
-    if (!confirm(
-        `Auto-enroll ${selectedPassers.value.length} selected passer(s) as Officially Enrolled?\n\n` +
-        `This will create their accounts, profiles, and complete all admission stages automatically.\n` +
-        `The operation is safe to run multiple times.`
-    )) return;
-
-    bulkEnrollRunning.value = true;
-
-    try {
-        const response = await axios.post('/test-passers/bulk-enroll', {
-            passer_ids: selectedPassers.value,
-        });
-
-        bulkEnrollResult.value = {
-            message:  response.data.message ?? 'Enrollment complete.',
-            enrolled: response.data.enrolled ?? [],
-            errors:   response.data.errors ?? [],
-        };
-
-        showBulkEnrollResult.value = true;
-
-        if (response.data.enrolled?.length > 0) {
-            show(`${response.data.enrolled.length} passer(s) successfully enrolled!`, 'success');
-        }
-    } catch (error) {
-        const msg = error.response?.data?.error
-            ?? error.response?.data?.message
-            ?? 'Enrollment failed. Please try again.';
-        show(msg, 'error');
-    } finally {
-        bulkEnrollRunning.value = false;
-    }
-};
-</script>
-
-<style>
+<style scoped>
 .scroll-wrapper {
     height: 100vh;
     overflow-y: auto;

@@ -1,14 +1,4 @@
-<template>
-    <TheMask
-      class="ant-input"
-      :value="modelValue"
-      :mask="mask"
-      :masked="masked"
-      @input="$emit('update:modelValue', $event)"
-    />
-  </template>
-  
-  <script setup>
+<script setup>
   import { TheMask } from 'vue-the-mask';
   defineProps({
     modelValue: String,
@@ -20,4 +10,14 @@
   });
   defineEmits(['update:modelValue']);
   </script>
+  
+  <template>
+    <TheMask
+      class="ant-input"
+      :value="modelValue"
+      :mask="mask"
+      :masked="masked"
+      @input="$emit('update:modelValue', $event)"
+    />
+  </template>
   

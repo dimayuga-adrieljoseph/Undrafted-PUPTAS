@@ -1,3 +1,18 @@
+<script setup>
+const props = defineProps({
+    show: {
+        type: Boolean,
+        required: true,
+    }
+});
+
+const emit = defineEmits(["close"]);
+
+const closeModal = () => {
+    emit("close");
+};
+</script>
+
 <template>
     <!-- Modal Backdrop -->
     <div
@@ -82,21 +97,6 @@
         </div>
     </div>
 </template>
-
-<script setup>
-const props = defineProps({
-    show: {
-        type: Boolean,
-        required: true,
-    }
-});
-
-const emit = defineEmits(["close"]);
-
-const closeModal = () => {
-    emit("close");
-};
-</script>
 
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar {
