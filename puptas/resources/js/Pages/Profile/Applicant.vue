@@ -425,7 +425,7 @@ const cancelAcademic = () => {
   </ApplicantLayout>
 </template>
 
-<style>
+<style scoped>
 :root { --brand: #9E122C; --brand-light: #c81e3d; --brand-pale: #fdf2f4; --brand-dim: rgba(158,18,44,.08); }
 .hero-card { background:linear-gradient(135deg,var(--brand) 0%,var(--brand-light) 100%); border-radius:20px; border:none; overflow:hidden; margin-bottom:1.25rem; box-shadow:0 4px 20px rgba(158,18,44,.35); position:relative; }
 .hero-body { padding:1.5rem 1.5rem 1.25rem; position:relative; z-index:1; }

@@ -1,449 +1,3 @@
-<template>
-    <Head title="All Records Applications" />
-    <RecordStaffLayout>
-        <div class="max-w-9xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto">
-            <!-- Filters and Controls -->
-            <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
-                <!-- Search Input -->
-                <div class="flex-1 relative">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 dark:text-gray-200"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                    </svg>
-                    <input
-                        v-model="searchQuery"
-                        type="text"
-                        placeholder="Search by name..."
-                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                    />
-                </div>
-
-                <!-- Status Filter Dropdown -->
-                <div class="relative">
-                    <button
-                        @click="showStatusDropdown = !showStatusDropdown"
-                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
-                            />
-                        </svg>
-                        <span>{{ statusFilter ? getStatusText({ pipeline_status: statusFilter }) : 'All Status' }}</span>
-                    </button>
-                    <div
-                        v-if="showStatusDropdown"
-                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[200px] dark:border-gray-700"
-                    >
-                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="statusFilter = ''; showStatusDropdown = false;">
-                            All
-                        </button>
-                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="statusFilter = 'medical_cleared'; showStatusDropdown = false;">
-                            Medical Cleared
-                        </button>
-                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="statusFilter = 'for_records'; showStatusDropdown = false;">
-                            For Records
-                        </button>
-                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="statusFilter = 'officially_enrolled'; showStatusDropdown = false;">
-                            Officially Enrolled
-                        </button>
-                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="statusFilter = 'rejected'; showStatusDropdown = false;">
-                            Rejected
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Sort By -->
-                <select v-model="sortKey" class="px-7 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent">
-                    <option value="lastname">Last Name</option>
-                    <option value="firstname">First Name</option>
-                    <option value="program.name">Course</option>
-                    <option value="status">Status</option>
-                </select>
-
-                <!-- Sort Order -->
-                <button 
-                    @click="sortAsc = !sortAsc" 
-                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
-                >
-                    <span>{{ sortAsc ? 'Ascending' : 'Descending' }}</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path v-if="sortAsc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                        <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4" />
-                    </svg>
-                </button>
-
-                <!-- Clear Filters -->
-                <button 
-                    @click="clearFilters" 
-                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium"
-                >
-                    Clear
-                </button>
-            </div>
-
-            <!-- Users Table -->
-            <div v-if="isLoading" class="text-center text-gray-500 py-8 dark:text-gray-300">Loading applicants…</div>
-            <div v-else-if="errorMessage" class="text-center text-red-500 py-8 dark:text-red-300">Error: {{ errorMessage }}</div>
-
-            <!-- Users Table -->
-            <div v-else class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
-                <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    Showing {{ paginatedUsers.length }} of {{ filteredUsers.length }} users
-                </div>
-                
-                <table class="min-w-full text-base">
-                    <thead>
-                        <tr class="text-left font-semibold text-black dark:text-white">
-                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('lastname')">
-                                Name
-                                <span v-if="sortKey === 'lastname'" class="ml-1">
-                                    {{ sortAsc ? '↑' : '↓' }}
-                                </span>
-                            </th>
-                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('program.name')">
-                                Course
-                                <span v-if="sortKey === 'program.name'" class="ml-1">
-                                    {{ sortAsc ? '↑' : '↓' }}
-                                </span>
-                            </th>
-                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('status')">
-                                Status
-                                <span v-if="sortKey === 'status'" class="ml-1">
-                                    {{ sortAsc ? '↑' : '↓' }}
-                                </span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                        <tr
-                            v-for="user in paginatedUsers"
-                            :key="user.id"
-                            @click="selectUser(user)"
-                            class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 transition"
-                        >
-                            <td class="py-3 text-gray-900 dark:text-white font-medium">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <span>{{ user.firstname }} {{ user.lastname }}</span>
-                                    <span v-if="user.application?.is_waivered" class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">Waiver</span>
-                                </div>
-                            </td>
-                            <td class="py-3 text-gray-700 dark:text-gray-300">
-                                {{ user.program?.name || "—" }}
-                            </td>
-                            <td class="py-3">
-                                <span
-                                    :class="getStatusClass(user)"
-                                    class="px-2.5 py-1 rounded-full text-xs font-medium"
-                                >
-                                    {{ getStatusText(user) }}
-                                </span>
-                            </td>
-                        </tr>
-                        <tr v-if="paginatedUsers.length === 0">
-                            <td colspan="3" class="py-8 text-center text-gray-500 dark:text-gray-400">
-                                No applicants found matching your criteria.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <!-- Pagination -->
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-                    <div class="flex items-center justify-between">
-                        <div class="text-sm text-gray-700 dark:text-gray-400">
-                            <span v-if="!filteredUsers.length || filteredUsers.length === 0">
-                                Showing 0 to 0 of 0 results
-                            </span>
-                            <span v-else>
-                                Showing {{ (currentPage - 1) * itemsPerPage + 1 }} 
-                                to {{ Math.min(currentPage * itemsPerPage, filteredUsers.length) }} 
-                                of {{ filteredUsers.length }} results
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button
-                                :disabled="currentPage === 1"
-                                @click.prevent="currentPage--"
-                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
-                            >
-                                <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                                </svg>
-                                Previous
-                            </button>
-                            <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
-                                <span>Page</span>
-                                <input
-                                    type="number"
-                                    :value="currentPage"
-                                    min="1"
-                                    :max="totalPages || 1"
-                                    @change="currentPage = Math.max(1, Math.min($event.target.value, totalPages || 1))"
-                                    class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
-                                />
-                                <span>of <span class="font-semibold">{{ totalPages || 1 }}</span></span>
-                            </div>
-                            <button
-                                :disabled="currentPage === totalPages || totalPages === 0"
-                                @click.prevent="currentPage++"
-                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
-                            >
-                                Next
-                                <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Applicant Details Modal -->
-        <transition name="fade">
-            <div
-                v-if="selectedUser"
-                class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto"
-                @click.self="closeUserCard"
-            >
-                <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-7xl my-4 sm:my-8 flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] overflow-hidden">
-
-                    <!-- Modal Header -->
-                    <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-10 h-10 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-lg font-bold shrink-0">
-                                {{ (selectedUser.firstname || selectedUser.email || '?').charAt(0).toUpperCase() }}{{ (selectedUser.lastname || '').charAt(0).toUpperCase() }}
-                            </div>
-                            <div class="min-w-0">
-                                <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
-                                    {{ [selectedUser.firstname, selectedUser.middlename, selectedUser.lastname].filter(Boolean).join(' ') }}
-                                </h2>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                    {{ selectedUser.reference_number || 'No ref' }} · {{ selectedUser.email }}
-                                </p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 flex-shrink-0">
-                            <!-- Waiver Badges -->
-                            <div v-if="selectedUser?.application?.is_waivered" class="hidden sm:flex gap-2 flex-wrap items-center">
-                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">⚠️ Waiver Program</span>
-                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800">🔴 On Probation</span>
-                            </div>
-
-                            <span :class="getStatusClass(selectedUser)" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold">
-                                {{ getStatusText(selectedUser) }}
-                            </span>
-                            <button @click="closeUserCard"
-                                class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition min-h-[44px] min-w-[44px]" aria-label="Close">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Modal Body: 2-column layout -->
-                    <div class="flex-1 overflow-hidden px-4 sm:px-6 py-5 flex flex-col">
-                        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-                            <!-- Left Column: Info & History -->
-                            <div class="lg:col-span-7 space-y-5 overflow-y-auto pr-2 pb-4 min-h-0">
-
-                                <!-- Personal Info -->
-                                <div>
-                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Personal Information</h4>
-                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Sex</p>
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white capitalize">{{ selectedUser.sex || '—' }}</p>
-                                        </div>
-                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School</p>
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ selectedUser.school || '—' }}</p>
-                                        </div>
-                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Strand</p>
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ selectedUser.strand || '—' }}</p>
-                                        </div>
-                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">G12 1st Sem</p>
-                                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.grades?.g12_first_sem ?? '—' }}</p>
-                                        </div>
-                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">G12 2nd Sem</p>
-                                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.grades?.g12_second_sem ?? '—' }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Program Choices -->
-                                <div>
-                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Program</h4>
-                                    <div class="p-3 rounded-xl border border-[#9E122C]/30 bg-[#9E122C]/5 dark:bg-[#9E122C]/10">
-                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                                            {{ selectedUser?.application?.enrollment_status === 'officially_enrolled' ? 'Officially Enrolled In' : 'Temporarily Enrolled In' }}
-                                        </h4>
-                                        <p class="text-base font-semibold text-gray-900 dark:text-white">
-                                            {{ selectedUser?.application?.program?.code }} – {{ selectedUser?.application?.program?.name }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <!-- Academic Grades -->
-                                <div v-if="selectedUser?.grades">
-                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Academic Grades</h4>
-                                    <div class="grid grid-cols-3 gap-3">
-                                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
-                                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.mathematics ?? '—' }}</p>
-                                        </div>
-                                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Science</p>
-                                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.science ?? '—' }}</p>
-                                        </div>
-                                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">English</p>
-                                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.english ?? '—' }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Application History -->
-                                <div v-if="selectedUser?.application?.processes?.length">
-                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Application History</h4>
-                                    <div class="space-y-2">
-                                        <div v-for="(process, index) in selectedUser.application.processes" :key="index"
-                                            class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                            <div :class="[
-                                                'w-2.5 h-2.5 rounded-full mt-1.5 shrink-0',
-                                                process.status === 'completed' ? 'bg-green-500' :
-                                                process.status === 'returned' ? 'bg-red-500' : 'bg-yellow-500'
-                                            ]"></div>
-                                            <div class="flex-1 min-w-0">
-                                                <div class="flex justify-between items-start">
-                                                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ formatStage(process.stage) }}</p>
-                                                    <span :class="[
-                                                        'px-2 py-0.5 rounded-full text-xs font-medium',
-                                                        process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
-                                                        process.status === 'returned' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
-                                                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                                    ]">{{ capitalize(process.status) }}</span>
-                                                </div>
-                                                <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.notes }}</p>
-                                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(process.created_at) }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Right Column: Actions & Documents -->
-                            <div class="lg:col-span-5 space-y-5 overflow-y-auto pr-2 pb-4 min-h-0">
-
-                                <!-- Enrollment Actions -->
-                                <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Enrollment Actions</h4>
-                                    <div class="flex gap-2">
-                                        <button
-                                            v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
-                                            @click="acceptApplication"
-                                            class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                            Tag: Officially Enrolled
-                                        </button>
-                                        <button
-                                            @click="untagApplication"
-                                            class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                            Untag
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Uploaded Documents -->
-                                <div>
-                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Uploaded Documents</h4>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div v-for="(file, key) in selectedUserFiles" :key="key"
-                                            class="p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden min-w-0">
-                                            <div class="flex items-center gap-1.5 mb-1.5 min-w-0">
-                                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{{ formatFileKey(key) }}</span>
-                                            </div>
-                                            <img v-if="hasImagePreview(file)" :src="getFileUrl(file)" alt="Uploaded Document"
-                                                class="w-full aspect-[4/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
-                                                @click="openImageModal(file)" />
-                                            <div v-else class="w-full aspect-[4/3] flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg">
-                                                No file
-                                            </div>
-                                        </div>
-                                        <div v-if="!Object.keys(selectedUserFiles).length" class="col-span-2 text-center text-xs text-gray-400 dark:text-gray-500 py-4">
-                                            No documents uploaded.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </transition>
-        <!-- Snackbar -->
-        <transition name="fade">
-            <div
-                v-if="snackbar.visible"
-                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded shadow-lg z-50 dark:text-gray-900"
-            >
-                {{ snackbar.message }}
-            </div>
-        </transition>
-
-        <!-- Image Preview Modal -->
-        <div
-            v-if="showImageModal"
-            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 dark:bg-white"
-            @click.self="closeImageModal"
-        >
-            <img
-                :src="previewImage"
-                alt="Preview"
-                class="max-w-full max-h-full rounded shadow-lg"
-            />
-            <button
-                @click="closeImageModal"
-                class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300 dark:text-gray-900"
-                aria-label="Close preview"
-            >
-                &times;
-            </button>
-        </div>
-    </RecordStaffLayout>
-</template>
-
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
@@ -903,6 +457,443 @@ const clearFilters = () => {
     showStatusDropdown.value = false;
 };
 </script>
+
+<template>
+    <Head title="All Records Applications" />
+    <RecordStaffLayout>
+        <div class="max-w-9xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden overflow-y-auto">
+            <!-- Filters and Controls -->
+            <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
+                <!-- Search Input -->
+                <div class="flex-1 relative">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 dark:text-gray-200"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                    </svg>
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Search by name..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                    />
+                </div>
+
+                <!-- Status Filter Dropdown -->
+                <div class="relative">
+                    <button
+                        @click="showStatusDropdown = !showStatusDropdown"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 019 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
+                            />
+                        </svg>
+                        <span>{{ statusFilter ? getStatusText({ pipeline_status: statusFilter }) : 'All Status' }}</span>
+                    </button>
+                    <div
+                        v-if="showStatusDropdown"
+                        class="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 shadow-md border border-gray-200 rounded z-50 text-sm min-w-[200px] dark:border-gray-700"
+                    >
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = ''; showStatusDropdown = false;">
+                            All
+                        </button>
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'medical_cleared'; showStatusDropdown = false;">
+                            Medical Cleared
+                        </button>
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'for_records'; showStatusDropdown = false;">
+                            For Records
+                        </button>
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'officially_enrolled'; showStatusDropdown = false;">
+                            Officially Enrolled
+                        </button>
+                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                            @click="statusFilter = 'rejected'; showStatusDropdown = false;">
+                            Rejected
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sort By -->
+                <select v-model="sortKey" class="px-7 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent">
+                    <option value="lastname">Last Name</option>
+                    <option value="firstname">First Name</option>
+                    <option value="program.name">Course</option>
+                    <option value="status">Status</option>
+                </select>
+
+                <!-- Sort Order -->
+                <button 
+                    @click="sortAsc = !sortAsc" 
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium flex items-center space-x-2"
+                >
+                    <span>{{ sortAsc ? 'Ascending' : 'Descending' }}</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path v-if="sortAsc" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                        <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4" />
+                    </svg>
+                </button>
+
+                <!-- Clear Filters -->
+                <button 
+                    @click="clearFilters" 
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium"
+                >
+                    Clear
+                </button>
+            </div>
+
+            <!-- Users Table -->
+            <div v-if="isLoading" class="text-center text-gray-500 py-8 dark:text-gray-300">Loading applicants…</div>
+            <div v-else-if="errorMessage" class="text-center text-red-500 py-8 dark:text-red-300">Error: {{ errorMessage }}</div>
+
+            <!-- Users Table -->
+            <div v-else class="bg-white dark:bg-gray-800/20 rounded-xl shadow p-2 overflow-x-auto">
+                <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Showing {{ paginatedUsers.length }} of {{ filteredUsers.length }} users
+                </div>
+                
+                <table class="min-w-full text-base">
+                    <thead>
+                        <tr class="text-left font-semibold text-black dark:text-white">
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('lastname')">
+                                Name
+                                <span v-if="sortKey === 'lastname'" class="ml-1">
+                                    {{ sortAsc ? '↑' : '↓' }}
+                                </span>
+                            </th>
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('program.name')">
+                                Course
+                                <span v-if="sortKey === 'program.name'" class="ml-1">
+                                    {{ sortAsc ? '↑' : '↓' }}
+                                </span>
+                            </th>
+                            <th class="pb-2 cursor-pointer hover:text-[#9E122C] dark:hover:text-white" @click="sortBy('status')">
+                                Status
+                                <span v-if="sortKey === 'status'" class="ml-1">
+                                    {{ sortAsc ? '↑' : '↓' }}
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <tr
+                            v-for="user in paginatedUsers"
+                            :key="user.id"
+                            @click="selectUser(user)"
+                            class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 transition"
+                        >
+                            <td class="py-3 text-gray-900 dark:text-white font-medium">
+                                {{ user.firstname }} {{ user.lastname }}
+                            </td>
+                            <td class="py-3 text-gray-700 dark:text-gray-300">
+                                {{ user.program?.name || "—" }}
+                            </td>
+                            <td class="py-3">
+                                <span
+                                    :class="getStatusClass(user)"
+                                    class="px-2.5 py-1 rounded-full text-xs font-medium"
+                                >
+                                    {{ getStatusText(user) }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr v-if="paginatedUsers.length === 0">
+                            <td colspan="3" class="py-8 text-center text-gray-500 dark:text-gray-400">
+                                No applicants found matching your criteria.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-700 dark:text-gray-400">
+                            <span v-if="!filteredUsers.length || filteredUsers.length === 0">
+                                Showing 0 to 0 of 0 results
+                            </span>
+                            <span v-else>
+                                Showing {{ (currentPage - 1) * itemsPerPage + 1 }} 
+                                to {{ Math.min(currentPage * itemsPerPage, filteredUsers.length) }} 
+                                of {{ filteredUsers.length }} results
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button
+                                :disabled="currentPage === 1"
+                                @click.prevent="currentPage--"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                            >
+                                <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                                Previous
+                            </button>
+                            <div class="flex items-center space-x-2 mx-2 text-sm text-gray-700 dark:text-gray-300">
+                                <span>Page</span>
+                                <input
+                                    type="number"
+                                    :value="currentPage"
+                                    min="1"
+                                    :max="totalPages || 1"
+                                    @change="currentPage = Math.max(1, Math.min($event.target.value, totalPages || 1))"
+                                    class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                                />
+                                <span>of <span class="font-semibold">{{ totalPages || 1 }}</span></span>
+                            </div>
+                            <button
+                                :disabled="currentPage === totalPages || totalPages === 0"
+                                @click.prevent="currentPage++"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-900"
+                            >
+                                Next
+                                <svg class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Applicant Details Modal -->
+        <transition name="fade">
+            <div
+                v-if="selectedUser"
+                class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto"
+                @click.self="closeUserCard"
+            >
+                <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-7xl my-4 sm:my-8 flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] overflow-hidden">
+
+                    <!-- Modal Header -->
+                    <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-lg font-bold shrink-0">
+                                {{ (selectedUser.firstname || selectedUser.email || '?').charAt(0).toUpperCase() }}{{ (selectedUser.lastname || '').charAt(0).toUpperCase() }}
+                            </div>
+                            <div class="min-w-0">
+                                <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
+                                    {{ [selectedUser.firstname, selectedUser.middlename, selectedUser.lastname].filter(Boolean).join(' ') }}
+                                </h2>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                    {{ selectedUser.reference_number || 'No ref' }} · {{ selectedUser.email }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <span :class="getStatusClass(selectedUser)" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold">
+                                {{ getStatusText(selectedUser) }}
+                            </span>
+                            <button @click="closeUserCard"
+                                class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition min-h-[44px] min-w-[44px]" aria-label="Close">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Modal Body: 2-column layout -->
+                    <div class="flex-1 overflow-hidden px-4 sm:px-6 py-5 flex flex-col">
+                        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                            <!-- Left Column: Info & History -->
+                            <div class="lg:col-span-7 space-y-5 overflow-y-auto pr-2 pb-4 min-h-0">
+
+                                <!-- Personal Info -->
+                                <div>
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Personal Information</h4>
+                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Sex</p>
+                                            <p class="text-sm font-medium text-gray-900 dark:text-white capitalize">{{ selectedUser.sex || '—' }}</p>
+                                        </div>
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School</p>
+                                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ selectedUser.school || '—' }}</p>
+                                        </div>
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Strand</p>
+                                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ selectedUser.strand || '—' }}</p>
+                                        </div>
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">G12 1st Sem</p>
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.grades?.g12_first_sem ?? '—' }}</p>
+                                        </div>
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">G12 2nd Sem</p>
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.grades?.g12_second_sem ?? '—' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Program Choices -->
+                                <div>
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Program</h4>
+                                    <div class="p-3 rounded-xl border border-[#9E122C]/30 bg-[#9E122C]/5 dark:bg-[#9E122C]/10">
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                                            {{ selectedUser?.application?.enrollment_status === 'officially_enrolled' ? 'Officially Enrolled In' : 'Temporarily Enrolled In' }}
+                                        </h4>
+                                        <p class="text-base font-semibold text-gray-900 dark:text-white">
+                                            {{ selectedUser?.application?.program?.code }} – {{ selectedUser?.application?.program?.name }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Academic Grades -->
+                                <div v-if="selectedUser?.grades">
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Academic Grades</h4>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
+                                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.mathematics ?? '—' }}</p>
+                                        </div>
+                                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Science</p>
+                                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.science ?? '—' }}</p>
+                                        </div>
+                                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">English</p>
+                                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.english ?? '—' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Application History -->
+                                <div v-if="selectedUser?.application?.processes?.length">
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Application History</h4>
+                                    <div class="space-y-2">
+                                        <div v-for="(process, index) in selectedUser.application.processes" :key="index"
+                                            class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <div :class="[
+                                                'w-2.5 h-2.5 rounded-full mt-1.5 shrink-0',
+                                                process.status === 'completed' ? 'bg-green-500' :
+                                                process.status === 'returned' ? 'bg-red-500' : 'bg-yellow-500'
+                                            ]"></div>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex justify-between items-start">
+                                                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ formatStage(process.stage) }}</p>
+                                                    <span :class="[
+                                                        'px-2 py-0.5 rounded-full text-xs font-medium',
+                                                        process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                                                        process.status === 'returned' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                                                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                                    ]">{{ capitalize(process.status) }}</span>
+                                                </div>
+                                                <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.notes }}</p>
+                                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(process.created_at) }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Actions & Documents -->
+                            <div class="lg:col-span-5 space-y-5 overflow-y-auto pr-2 pb-4 min-h-0">
+
+                                <!-- Enrollment Actions -->
+                                <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Enrollment Actions</h4>
+                                    <div class="flex gap-2">
+                                        <button
+                                            v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
+                                            @click="acceptApplication"
+                                            class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                            Tag: Officially Enrolled
+                                        </button>
+                                        <button
+                                            @click="untagApplication"
+                                            class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            Untag
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Uploaded Documents -->
+                                <div>
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Uploaded Documents</h4>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div v-for="(file, key) in selectedUserFiles" :key="key"
+                                            class="p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden min-w-0">
+                                            <div class="flex items-center gap-1.5 mb-1.5 min-w-0">
+                                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{{ formatFileKey(key) }}</span>
+                                            </div>
+                                            <img v-if="hasImagePreview(file)" :src="getFileUrl(file)" alt="Uploaded Document"
+                                                class="w-full aspect-[4/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
+                                                @click="openImageModal(file)" />
+                                            <div v-else class="w-full aspect-[4/3] flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                                                No file
+                                            </div>
+                                        </div>
+                                        <div v-if="!Object.keys(selectedUserFiles).length" class="col-span-2 text-center text-xs text-gray-400 dark:text-gray-500 py-4">
+                                            No documents uploaded.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+        <!-- Snackbar -->
+        <transition name="fade">
+            <div
+                v-if="snackbar.visible"
+                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded shadow-lg z-50 dark:text-gray-900"
+            >
+                {{ snackbar.message }}
+            </div>
+        </transition>
+
+        <!-- Image Preview Modal -->
+        <div
+            v-if="showImageModal"
+            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 dark:bg-white"
+            @click.self="closeImageModal"
+        >
+            <img
+                :src="previewImage"
+                alt="Preview"
+                class="max-w-full max-h-full rounded shadow-lg"
+            />
+            <button
+                @click="closeImageModal"
+                class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300 dark:text-gray-900"
+                aria-label="Close preview"
+            >
+                &times;
+            </button>
+        </div>
+    </RecordStaffLayout>
+</template>
 
 <style scoped>
 .fade-enter-active,

@@ -1,3 +1,337 @@
+<script setup>
+import { ref, watch, onMounted, computed } from "vue";
+
+const props = defineProps({
+    show: Boolean,
+    userEmail: String,
+});
+
+const emit = defineEmits(["close", "refreshDashboard"]);
+
+// State
+const showModal = ref(props.show || false);
+const loading = ref(false);
+const error = ref("");
+const applicationData = ref(null);
+const eligiblePrograms = ref([]);
+const previewImage = ref(null);
+const showImageModal = ref(false);
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+const hasImagePreview = (file) => Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
+
+// Submit state
+const selectedProgramId = ref("");
+const selectedSecondChoiceId = ref("");
+const selectedThirdChoiceId = ref("");
+const submitting = ref(false);
+const submitError = ref("");
+const submitSuccess = ref("");
+const showSubmitConfirmation = ref(false);
+
+// Computed: Check if application can be submitted (draft status)
+const canSubmit = computed(() => {
+    return (
+        applicationData.value?.status === "draft" ||
+        !applicationData.value?.status
+    );
+});
+
+// Computed: Check if application can be resubmitted (returned or rejected status, no rejected/returned files)
+const canResubmit = computed(() => {
+    if (!["returned", "rejected"].includes(applicationData.value?.status)) return false;
+    const files = applicationData.value?.uploadedFiles || {};
+    const hasUnresolvedFiles = Object.values(files).some(f => f?.status === 'rejected' || f?.status === 'returned');
+    return !hasUnresolvedFiles;
+});
+
+// Computed: Check if all required documents are uploaded
+const allDocumentsUploaded = computed(() => {
+    if (!applicationData.value?.uploadedFiles) return false;
+    const files = applicationData.value.uploadedFiles;
+    return Object.values(files).every((file) => file?.url);
+});
+
+// Computed: Cutoff data from application response
+const cutoff = computed(() => applicationData.value?.cutoff ?? null);
+const cutoffPassed = computed(() => cutoff.value?.is_passed === true);
+const cutoffDisplay = computed(() => cutoff.value?.display ?? null);
+
+// Computed: Check if application can be submitted (all conditions)
+const canSubmitApplication = computed(() => {
+    if (cutoffPassed.value) return false;
+    return (
+        canSubmit.value &&
+        allDocumentsUploaded.value &&
+        selectedProgramId.value &&
+        selectedSecondChoiceId.value &&
+        selectedThirdChoiceId.value &&
+        eligiblePrograms.value.length > 0
+    );
+});
+
+// Watch for prop changes
+watch(
+    () => props.show,
+    async (visible) => {
+        showModal.value = visible;
+        if (visible) {
+            submitError.value = "";
+            submitSuccess.value = "";
+            await fetchApplicationData();
+            await fetchEligiblePrograms();
+        }
+    }
+);
+
+
+
+// Helper Functions
+const formatStatus = (status) => {
+    if (!status) return "Unknown";
+    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
+};
+
+const getStatusClass = (status) => {
+    switch ((status || "").toLowerCase()) {
+        case "approved":
+        case "completed":
+            return "bg-green-600";
+        case "pending":
+        case "submitted":
+            return "bg-blue-600";
+        case "in_progress":
+        case "processing":
+            return "bg-yellow-600";
+        case "rejected":
+        case "returned":
+            return "bg-red-600";
+        case "draft":
+            return "bg-gray-600";
+        default:
+            return "bg-gray-500";
+    }
+};
+
+const formatDate = (date) => {
+    if (!date) return "Not provided";
+    return date;
+};
+
+const formatContact = (contact) => {
+    if (!contact) return "Not provided";
+    return contact;
+};
+
+const formatFileName = (key) => {
+    if (!key) return "";
+    if (key === "file10") return "Grade 10 Report Back";
+    if (key === "file10Front") return "Grade 10 Report Front";
+    if (key === "file11") return "Grade 11 Report Back";
+    if (key === "file11Front") return "Grade 11 Report Front";
+    if (key === "file12") return "Grade 12 Report Back";
+    if (key === "file12Front") return "Grade 12 Report Front";
+    return key
+        .replace(/([A-Z])/g, " $1")
+        .replace(/_/g, " ")
+        .replace(/^./, (str) => str.toUpperCase());
+};
+
+const getProgramName = (programId) => {
+    if (!programId || !eligiblePrograms.value.length) return null;
+    // Use == (loose) to handle potential string/integer type mismatch
+    const program = eligiblePrograms.value.find((p) => p.id == programId);
+    return program ? program.name : null;
+};
+
+// Data fetching
+const fetchApplicationData = async () => {
+    loading.value = true;
+    error.value = "";
+    try {
+        const response = await window.axios.get("/user/application");
+        applicationData.value = response.data;
+
+        // Pre-populate program selections if they exist
+        if (response.data.program_id) {
+            selectedProgramId.value = response.data.program_id;
+        }
+        if (response.data.second_choice_id) {
+            selectedSecondChoiceId.value = response.data.second_choice_id;
+        }
+        if (response.data.third_choice_id) {
+            selectedThirdChoiceId.value = response.data.third_choice_id;
+        }
+    } catch (e) {
+        error.value = "Failed to load application data.";
+    } finally {
+        loading.value = false;
+    }
+};
+
+const fetchEligiblePrograms = async () => {
+    try {
+        const response = await window.axios.get("/user/eligible-programs");
+        eligiblePrograms.value = response.data.programs || [];
+    } catch (e) {
+        console.error("Failed to load programs:", e);
+    }
+};
+
+// Submit application
+const openSubmitConfirmation = () => {
+    if (!selectedProgramId.value) {
+        submitError.value = "Please select a first choice program.";
+        return;
+    }
+    if (!selectedSecondChoiceId.value) {
+        submitError.value = "Please select a second choice program.";
+        return;
+    }
+    if (!selectedThirdChoiceId.value) {
+        submitError.value = "Please select a third choice program.";
+        return;
+    }
+    submitError.value = "";
+    showSubmitConfirmation.value = true;
+};
+
+const confirmAndSubmit = async () => {
+    showSubmitConfirmation.value = false;
+    await submitApplication();
+};
+
+const submitApplication = async () => {
+    if (!selectedProgramId.value) {
+        submitError.value = "Please select a first choice program.";
+        return;
+    }
+    
+    if (!selectedSecondChoiceId.value) {
+        submitError.value = "Please select a second choice program.";
+        return;
+    }
+    
+    if (!selectedThirdChoiceId.value) {
+        submitError.value = "Please select a third choice program.";
+        return;
+    }
+
+    // Capture names NOW from all programs (not just filtered lists) before any state changes
+    const allPrograms = eligiblePrograms.value;
+    const findName = (id) => allPrograms.find((p) => p.id == id)?.name ?? null;
+    const capturedFirstName  = findName(selectedProgramId.value);
+    const capturedSecondName = findName(selectedSecondChoiceId.value);
+    const capturedThirdName  = findName(selectedThirdChoiceId.value);
+
+    submitting.value = true;
+    submitError.value = "";
+    submitSuccess.value = "";
+
+    try {
+        const payload = {
+            program_id: selectedProgramId.value,
+            second_choice_id: selectedSecondChoiceId.value,
+            third_choice_id: selectedThirdChoiceId.value,
+        };
+
+        const response = await window.axios.post(
+            "/user/application/submit",
+            payload
+        );
+
+        submitSuccess.value =
+            response.data.message || "Application submitted successfully!";
+
+        // Update local application data using pre-captured names
+        if (applicationData.value) {
+            applicationData.value.status = response.data.status;
+            applicationData.value.program_id = selectedProgramId.value ? Number(selectedProgramId.value) : null;
+            applicationData.value.second_choice_id = selectedSecondChoiceId.value ? Number(selectedSecondChoiceId.value) : null;
+            applicationData.value.third_choice_id = selectedThirdChoiceId.value ? Number(selectedThirdChoiceId.value) : null;
+            applicationData.value.program_name       = capturedFirstName;
+            applicationData.value.second_choice_name = capturedSecondName;
+            applicationData.value.third_choice_name  = capturedThirdName;
+        }
+
+        // Emit refresh event to parent
+        emit("refreshDashboard");
+
+        // Close modal after a short delay
+        setTimeout(() => {
+            closeModal();
+        }, 1500);
+    } catch (e) {
+        const message =
+            e.response?.data?.message ||
+            "Failed to submit application. Please try again.";
+        submitError.value = message;
+    } finally {
+        submitting.value = false;
+    }
+};
+
+// Resubmit application
+const resubmitApplication = async () => {
+    submitting.value = true;
+    submitError.value = "";
+    submitSuccess.value = "";
+
+    try {
+        const response = await window.axios.post("/user/application/resubmit");
+
+        submitSuccess.value =
+            response.data.message || "Application resubmitted for evaluation!";
+
+        // Update local application data
+        if (applicationData.value) {
+            applicationData.value.status = response.data.status || "submitted";
+        }
+
+        // Emit refresh event to parent
+        emit("refreshDashboard");
+
+        // Close modal after a short delay
+        setTimeout(() => {
+            closeModal();
+        }, 1500);
+    } catch (e) {
+        const message =
+            e.response?.data?.message ||
+            "Failed to resubmit application. Please try again.";
+        submitError.value = message;
+    } finally {
+        submitting.value = false;
+    }
+};
+
+// Modal functions
+const closeModal = () => {
+    showModal.value = false;
+    emit("close");
+};
+
+const openImageModal = (fileObj) => {
+    const src = getFileUrl(fileObj);
+    if (!src || !hasImagePreview(fileObj)) return;
+    previewImage.value = src;
+    showImageModal.value = true;
+};
+
+const closeImageModal = () => {
+    showImageModal.value = false;
+    previewImage.value = null;
+};
+
+// Make sure modal opens when prop is true on mount
+onMounted(() => {
+    if (props.show) {
+        showModal.value = true;
+        fetchApplicationData();
+        fetchEligiblePrograms();
+    }
+});
+</script>
+
 <template>
     <!-- Modal Backdrop -->
     <div
@@ -438,340 +772,6 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import { ref, watch, onMounted, computed } from "vue";
-
-const props = defineProps({
-    show: Boolean,
-    userEmail: String,
-});
-
-const emit = defineEmits(["close", "refreshDashboard"]);
-
-// State
-const showModal = ref(props.show || false);
-const loading = ref(false);
-const error = ref("");
-const applicationData = ref(null);
-const eligiblePrograms = ref([]);
-const previewImage = ref(null);
-const showImageModal = ref(false);
-const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
-const hasImagePreview = (file) => Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
-
-// Submit state
-const selectedProgramId = ref("");
-const selectedSecondChoiceId = ref("");
-const selectedThirdChoiceId = ref("");
-const submitting = ref(false);
-const submitError = ref("");
-const submitSuccess = ref("");
-const showSubmitConfirmation = ref(false);
-
-// Computed: Check if application can be submitted (draft status)
-const canSubmit = computed(() => {
-    return (
-        applicationData.value?.status === "draft" ||
-        !applicationData.value?.status
-    );
-});
-
-// Computed: Check if application can be resubmitted (returned or rejected status, no rejected/returned files)
-const canResubmit = computed(() => {
-    if (!["returned", "rejected"].includes(applicationData.value?.status)) return false;
-    const files = applicationData.value?.uploadedFiles || {};
-    const hasUnresolvedFiles = Object.values(files).some(f => f?.status === 'rejected' || f?.status === 'returned');
-    return !hasUnresolvedFiles;
-});
-
-// Computed: Check if all required documents are uploaded
-const allDocumentsUploaded = computed(() => {
-    if (!applicationData.value?.uploadedFiles) return false;
-    const files = applicationData.value.uploadedFiles;
-    return Object.values(files).every((file) => file?.url);
-});
-
-// Computed: Cutoff data from application response
-const cutoff = computed(() => applicationData.value?.cutoff ?? null);
-const cutoffPassed = computed(() => cutoff.value?.is_passed === true);
-const cutoffDisplay = computed(() => cutoff.value?.display ?? null);
-
-// Computed: Check if application can be submitted (all conditions)
-const canSubmitApplication = computed(() => {
-    if (cutoffPassed.value) return false;
-    return (
-        canSubmit.value &&
-        allDocumentsUploaded.value &&
-        selectedProgramId.value &&
-        selectedSecondChoiceId.value &&
-        selectedThirdChoiceId.value &&
-        eligiblePrograms.value.length > 0
-    );
-});
-
-// Watch for prop changes
-watch(
-    () => props.show,
-    async (visible) => {
-        showModal.value = visible;
-        if (visible) {
-            submitError.value = "";
-            submitSuccess.value = "";
-            await fetchApplicationData();
-            await fetchEligiblePrograms();
-        }
-    }
-);
-
-
-
-// Helper Functions
-const formatStatus = (status) => {
-    if (!status) return "Unknown";
-    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
-};
-
-const getStatusClass = (status) => {
-    switch ((status || "").toLowerCase()) {
-        case "approved":
-        case "completed":
-            return "bg-green-600";
-        case "pending":
-        case "submitted":
-            return "bg-blue-600";
-        case "in_progress":
-        case "processing":
-            return "bg-yellow-600";
-        case "rejected":
-        case "returned":
-            return "bg-red-600";
-        case "draft":
-            return "bg-gray-600";
-        default:
-            return "bg-gray-500";
-    }
-};
-
-const formatDate = (date) => {
-    if (!date) return "Not provided";
-    return date;
-};
-
-const formatContact = (contact) => {
-    if (!contact) return "Not provided";
-    return contact;
-};
-
-const formatFileName = (key) => {
-    if (!key) return "";
-    if (key === "file10") return "Grade 10 Report Back";
-    if (key === "file10Front") return "Grade 10 Report Front";
-    if (key === "file11") return "Grade 11 Report Back";
-    if (key === "file11Front") return "Grade 11 Report Front";
-    if (key === "file12") return "Grade 12 Report Back";
-    if (key === "file12Front") return "Grade 12 Report Front";
-    return key
-        .replace(/([A-Z])/g, " $1")
-        .replace(/_/g, " ")
-        .replace(/^./, (str) => str.toUpperCase());
-};
-
-const getProgramName = (programId) => {
-    if (!programId || !eligiblePrograms.value.length) return null;
-    // Use == (loose) to handle potential string/integer type mismatch
-    const program = eligiblePrograms.value.find((p) => p.id == programId);
-    return program ? program.name : null;
-};
-
-// Data fetching
-const fetchApplicationData = async () => {
-    loading.value = true;
-    error.value = "";
-    try {
-        const response = await window.axios.get("/user/application");
-        applicationData.value = response.data;
-
-        // Pre-populate program selections if they exist
-        if (response.data.program_id) {
-            selectedProgramId.value = response.data.program_id;
-        }
-        if (response.data.second_choice_id) {
-            selectedSecondChoiceId.value = response.data.second_choice_id;
-        }
-        if (response.data.third_choice_id) {
-            selectedThirdChoiceId.value = response.data.third_choice_id;
-        }
-    } catch (e) {
-        error.value = "Failed to load application data.";
-    } finally {
-        loading.value = false;
-    }
-};
-
-const fetchEligiblePrograms = async () => {
-    try {
-        const response = await window.axios.get("/user/eligible-programs");
-        eligiblePrograms.value = response.data.programs || [];
-    } catch (e) {
-        console.error("Failed to load programs:", e);
-    }
-};
-
-// Submit application
-const openSubmitConfirmation = () => {
-    if (!selectedProgramId.value) {
-        submitError.value = "Please select a first choice program.";
-        return;
-    }
-    if (!selectedSecondChoiceId.value) {
-        submitError.value = "Please select a second choice program.";
-        return;
-    }
-    if (!selectedThirdChoiceId.value) {
-        submitError.value = "Please select a third choice program.";
-        return;
-    }
-    submitError.value = "";
-    showSubmitConfirmation.value = true;
-};
-
-const confirmAndSubmit = async () => {
-    showSubmitConfirmation.value = false;
-    await submitApplication();
-};
-
-const submitApplication = async () => {
-    if (!selectedProgramId.value) {
-        submitError.value = "Please select a first choice program.";
-        return;
-    }
-    
-    if (!selectedSecondChoiceId.value) {
-        submitError.value = "Please select a second choice program.";
-        return;
-    }
-    
-    if (!selectedThirdChoiceId.value) {
-        submitError.value = "Please select a third choice program.";
-        return;
-    }
-
-    // Capture names NOW from all programs (not just filtered lists) before any state changes
-    const allPrograms = eligiblePrograms.value;
-    const findName = (id) => allPrograms.find((p) => p.id == id)?.name ?? null;
-    const capturedFirstName  = findName(selectedProgramId.value);
-    const capturedSecondName = findName(selectedSecondChoiceId.value);
-    const capturedThirdName  = findName(selectedThirdChoiceId.value);
-
-    submitting.value = true;
-    submitError.value = "";
-    submitSuccess.value = "";
-
-    try {
-        const payload = {
-            program_id: selectedProgramId.value,
-            second_choice_id: selectedSecondChoiceId.value,
-            third_choice_id: selectedThirdChoiceId.value,
-        };
-
-        const response = await window.axios.post(
-            "/user/application/submit",
-            payload
-        );
-
-        submitSuccess.value =
-            response.data.message || "Application submitted successfully!";
-
-        // Update local application data using pre-captured names
-        if (applicationData.value) {
-            applicationData.value.status = response.data.status;
-            applicationData.value.program_id = selectedProgramId.value ? Number(selectedProgramId.value) : null;
-            applicationData.value.second_choice_id = selectedSecondChoiceId.value ? Number(selectedSecondChoiceId.value) : null;
-            applicationData.value.third_choice_id = selectedThirdChoiceId.value ? Number(selectedThirdChoiceId.value) : null;
-            applicationData.value.program_name       = capturedFirstName;
-            applicationData.value.second_choice_name = capturedSecondName;
-            applicationData.value.third_choice_name  = capturedThirdName;
-        }
-
-        // Emit refresh event to parent
-        emit("refreshDashboard");
-
-        // Close modal after a short delay
-        setTimeout(() => {
-            closeModal();
-        }, 1500);
-    } catch (e) {
-        const message =
-            e.response?.data?.message ||
-            "Failed to submit application. Please try again.";
-        submitError.value = message;
-    } finally {
-        submitting.value = false;
-    }
-};
-
-// Resubmit application
-const resubmitApplication = async () => {
-    submitting.value = true;
-    submitError.value = "";
-    submitSuccess.value = "";
-
-    try {
-        const response = await window.axios.post("/user/application/resubmit");
-
-        submitSuccess.value =
-            response.data.message || "Application resubmitted for evaluation!";
-
-        // Update local application data
-        if (applicationData.value) {
-            applicationData.value.status = response.data.status || "submitted";
-        }
-
-        // Emit refresh event to parent
-        emit("refreshDashboard");
-
-        // Close modal after a short delay
-        setTimeout(() => {
-            closeModal();
-        }, 1500);
-    } catch (e) {
-        const message =
-            e.response?.data?.message ||
-            "Failed to resubmit application. Please try again.";
-        submitError.value = message;
-    } finally {
-        submitting.value = false;
-    }
-};
-
-// Modal functions
-const closeModal = () => {
-    showModal.value = false;
-    emit("close");
-};
-
-const openImageModal = (fileObj) => {
-    const src = getFileUrl(fileObj);
-    if (!src || !hasImagePreview(fileObj)) return;
-    previewImage.value = src;
-    showImageModal.value = true;
-};
-
-const closeImageModal = () => {
-    showImageModal.value = false;
-    previewImage.value = null;
-};
-
-// Make sure modal opens when prop is true on mount
-onMounted(() => {
-    if (props.show) {
-        showModal.value = true;
-        fetchApplicationData();
-        fetchEligiblePrograms();
-    }
-});
-</script>
 
 <style scoped>
 /* Loading animation */

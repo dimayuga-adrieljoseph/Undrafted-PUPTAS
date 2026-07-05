@@ -1,3 +1,233 @@
+<script setup>
+import { ref, computed, watch } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import AppLayout from '@/Layouts/AppLayout.vue';
+import axios from 'axios';
+
+const props = defineProps({
+  operation: Object,
+  logs: Object,
+});
+
+// --- State ---
+const selectedIds = ref([]);
+const filterStatus = ref(new URL(window.location.href).searchParams.get('status') || '');
+const searchQuery = ref(new URL(window.location.href).searchParams.get('search') || '');
+const retryingSelected = ref(false);
+const retryingAll = ref(false);
+const feedbackMessage = ref('');
+const feedbackType = ref('success');
+
+let searchDebounceTimer = null;
+
+// --- Computed ---
+const hasFailedLogs = computed(() => {
+  return props.logs.data.some(log => log.status === 'failed');
+});
+
+const allFailedSelected = computed(() => {
+  const failedLogs = props.logs.data.filter(log => log.status === 'failed');
+  if (failedLogs.length === 0) return false;
+  return failedLogs.every(log => selectedIds.value.includes(log.id));
+});
+
+const visiblePages = computed(() => {
+  const current = props.logs.current_page;
+  const last = props.logs.last_page;
+
+  if (last <= 7) {
+    return Array.from({ length: last }, (_, i) => i + 1);
+  }
+
+  const pages = [];
+
+  if (current <= 4) {
+    for (let i = 1; i <= 5; i++) pages.push(i);
+    pages.push('...');
+    pages.push(last);
+  } else if (current >= last - 3) {
+    pages.push(1);
+    pages.push('...');
+    for (let i = last - 4; i <= last; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    pages.push('...');
+    for (let i = current - 1; i <= current + 1; i++) pages.push(i);
+    pages.push('...');
+    pages.push(last);
+  }
+
+  return pages;
+});
+
+// --- Watchers ---
+watch(searchQuery, (newVal) => {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    if (newVal.length === 0 || newVal.length >= 2) {
+      applyFilters();
+    }
+  }, 300);
+});
+
+// --- Methods ---
+function applyFilters() {
+  const params = {};
+  if (filterStatus.value) {
+    params.status = filterStatus.value;
+  }
+  if (searchQuery.value && searchQuery.value.length >= 2) {
+    params.search = searchQuery.value;
+  }
+
+  router.get(`/admin/email-tracking/${props.operation.id}`, params, {
+    preserveState: true,
+    preserveScroll: true,
+  });
+}
+
+function toggleSelectAll(event) {
+  const failedLogs = props.logs.data.filter(log => log.status === 'failed');
+  if (event.target.checked) {
+    const failedIds = failedLogs.map(log => log.id);
+    selectedIds.value = [...new Set([...selectedIds.value, ...failedIds])];
+  } else {
+    const failedIds = failedLogs.map(log => log.id);
+    selectedIds.value = selectedIds.value.filter(id => !failedIds.includes(id));
+  }
+}
+
+async function retrySelected() {
+  if (selectedIds.value.length === 0) return;
+  retryingSelected.value = true;
+  feedbackMessage.value = '';
+
+  try {
+    const response = await axios.post('/admin/email-tracking/retry-selected', {
+      email_log_ids: selectedIds.value,
+    });
+    feedbackMessage.value = `Successfully queued ${response.data.retried_count} email(s) for retry.`;
+    feedbackType.value = 'success';
+    selectedIds.value = [];
+    router.reload({ preserveScroll: true });
+  } catch (error) {
+    feedbackMessage.value = error.response?.data?.message || 'Failed to retry selected emails. Please try again.';
+    feedbackType.value = 'error';
+  } finally {
+    retryingSelected.value = false;
+    clearFeedbackAfterDelay();
+  }
+}
+
+async function retryAllFailed() {
+  retryingAll.value = true;
+  feedbackMessage.value = '';
+
+  try {
+    const response = await axios.post(`/admin/email-tracking/${props.operation.id}/retry-all`);
+    feedbackMessage.value = `Successfully queued ${response.data.retried_count} email(s) for retry.`;
+    feedbackType.value = 'success';
+    selectedIds.value = [];
+    router.reload({ preserveScroll: true });
+  } catch (error) {
+    feedbackMessage.value = error.response?.data?.message || 'Failed to retry all failed emails. Please try again.';
+    feedbackType.value = 'error';
+  } finally {
+    retryingAll.value = false;
+    clearFeedbackAfterDelay();
+  }
+}
+
+function clearFeedbackAfterDelay() {
+  setTimeout(() => {
+    feedbackMessage.value = '';
+  }, 5000);
+}
+
+function getPageUrl(page) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('page', page);
+  return url.pathname + url.search;
+}
+
+// --- Formatting Helpers ---
+function formatEmailType(type) {
+  const labels = {
+    pupcet_result: 'PUPCET Result',
+    sar_form: 'SAR Form',
+    waitlisted: 'Waitlisted',
+    congratulations: 'Congratulations',
+    user_created: 'User Created',
+  };
+  return labels[type] || type;
+}
+
+function getEmailTypeBadgeClass(type) {
+  const classes = {
+    pupcet_result: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+    sar_form: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
+    waitlisted: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+    congratulations: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+    user_created: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+  };
+  return classes[type] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+}
+
+function formatStatus(status) {
+  const labels = {
+    in_progress: 'In Progress',
+    completed: 'Completed',
+    completed_with_failures: 'Completed with Failures',
+  };
+  return labels[status] || status;
+}
+
+function getStatusBadgeClass(status) {
+  const classes = {
+    in_progress: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
+    completed: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+    completed_with_failures: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+  };
+  return classes[status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+}
+
+function getLogStatusBadgeClass(status) {
+  const classes = {
+    sent: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+    failed: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+    pending: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+  };
+  return classes[status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+}
+
+function capitalizeFirst(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function getLogTimestamp(log) {
+  if (log.status === 'sent' && log.sent_at) {
+    return formatDate(log.sent_at);
+  }
+  if (log.status === 'failed' && log.failed_at) {
+    return formatDate(log.failed_at);
+  }
+  return formatDate(log.created_at);
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+</script>
+
 <template>
   <Head :title="`Email Tracking - ${formatEmailType(operation.email_type)}`" />
   <AppLayout>
@@ -250,233 +480,3 @@
     </div>
   </AppLayout>
 </template>
-
-<script setup>
-import { ref, computed, watch } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/Layouts/AppLayout.vue';
-import axios from 'axios';
-
-const props = defineProps({
-  operation: Object,
-  logs: Object,
-});
-
-// --- State ---
-const selectedIds = ref([]);
-const filterStatus = ref(new URL(window.location.href).searchParams.get('status') || '');
-const searchQuery = ref(new URL(window.location.href).searchParams.get('search') || '');
-const retryingSelected = ref(false);
-const retryingAll = ref(false);
-const feedbackMessage = ref('');
-const feedbackType = ref('success');
-
-let searchDebounceTimer = null;
-
-// --- Computed ---
-const hasFailedLogs = computed(() => {
-  return props.logs.data.some(log => log.status === 'failed');
-});
-
-const allFailedSelected = computed(() => {
-  const failedLogs = props.logs.data.filter(log => log.status === 'failed');
-  if (failedLogs.length === 0) return false;
-  return failedLogs.every(log => selectedIds.value.includes(log.id));
-});
-
-const visiblePages = computed(() => {
-  const current = props.logs.current_page;
-  const last = props.logs.last_page;
-
-  if (last <= 7) {
-    return Array.from({ length: last }, (_, i) => i + 1);
-  }
-
-  const pages = [];
-
-  if (current <= 4) {
-    for (let i = 1; i <= 5; i++) pages.push(i);
-    pages.push('...');
-    pages.push(last);
-  } else if (current >= last - 3) {
-    pages.push(1);
-    pages.push('...');
-    for (let i = last - 4; i <= last; i++) pages.push(i);
-  } else {
-    pages.push(1);
-    pages.push('...');
-    for (let i = current - 1; i <= current + 1; i++) pages.push(i);
-    pages.push('...');
-    pages.push(last);
-  }
-
-  return pages;
-});
-
-// --- Watchers ---
-watch(searchQuery, (newVal) => {
-  clearTimeout(searchDebounceTimer);
-  searchDebounceTimer = setTimeout(() => {
-    if (newVal.length === 0 || newVal.length >= 2) {
-      applyFilters();
-    }
-  }, 300);
-});
-
-// --- Methods ---
-function applyFilters() {
-  const params = {};
-  if (filterStatus.value) {
-    params.status = filterStatus.value;
-  }
-  if (searchQuery.value && searchQuery.value.length >= 2) {
-    params.search = searchQuery.value;
-  }
-
-  router.get(`/admin/email-tracking/${props.operation.id}`, params, {
-    preserveState: true,
-    preserveScroll: true,
-  });
-}
-
-function toggleSelectAll(event) {
-  const failedLogs = props.logs.data.filter(log => log.status === 'failed');
-  if (event.target.checked) {
-    const failedIds = failedLogs.map(log => log.id);
-    selectedIds.value = [...new Set([...selectedIds.value, ...failedIds])];
-  } else {
-    const failedIds = failedLogs.map(log => log.id);
-    selectedIds.value = selectedIds.value.filter(id => !failedIds.includes(id));
-  }
-}
-
-async function retrySelected() {
-  if (selectedIds.value.length === 0) return;
-  retryingSelected.value = true;
-  feedbackMessage.value = '';
-
-  try {
-    const response = await axios.post('/admin/email-tracking/retry-selected', {
-      email_log_ids: selectedIds.value,
-    });
-    feedbackMessage.value = `Successfully queued ${response.data.retried_count} email(s) for retry.`;
-    feedbackType.value = 'success';
-    selectedIds.value = [];
-    router.reload({ preserveScroll: true });
-  } catch (error) {
-    feedbackMessage.value = error.response?.data?.message || 'Failed to retry selected emails. Please try again.';
-    feedbackType.value = 'error';
-  } finally {
-    retryingSelected.value = false;
-    clearFeedbackAfterDelay();
-  }
-}
-
-async function retryAllFailed() {
-  retryingAll.value = true;
-  feedbackMessage.value = '';
-
-  try {
-    const response = await axios.post(`/admin/email-tracking/${props.operation.id}/retry-all`);
-    feedbackMessage.value = `Successfully queued ${response.data.retried_count} email(s) for retry.`;
-    feedbackType.value = 'success';
-    selectedIds.value = [];
-    router.reload({ preserveScroll: true });
-  } catch (error) {
-    feedbackMessage.value = error.response?.data?.message || 'Failed to retry all failed emails. Please try again.';
-    feedbackType.value = 'error';
-  } finally {
-    retryingAll.value = false;
-    clearFeedbackAfterDelay();
-  }
-}
-
-function clearFeedbackAfterDelay() {
-  setTimeout(() => {
-    feedbackMessage.value = '';
-  }, 5000);
-}
-
-function getPageUrl(page) {
-  const url = new URL(window.location.href);
-  url.searchParams.set('page', page);
-  return url.pathname + url.search;
-}
-
-// --- Formatting Helpers ---
-function formatEmailType(type) {
-  const labels = {
-    pupcet_result: 'PUPCET Result',
-    sar_form: 'SAR Form',
-    waitlisted: 'Waitlisted',
-    congratulations: 'Congratulations',
-    user_created: 'User Created',
-  };
-  return labels[type] || type;
-}
-
-function getEmailTypeBadgeClass(type) {
-  const classes = {
-    pupcet_result: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-    sar_form: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-    waitlisted: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
-    congratulations: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-    user_created: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
-  };
-  return classes[type] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-}
-
-function formatStatus(status) {
-  const labels = {
-    in_progress: 'In Progress',
-    completed: 'Completed',
-    completed_with_failures: 'Completed with Failures',
-  };
-  return labels[status] || status;
-}
-
-function getStatusBadgeClass(status) {
-  const classes = {
-    in_progress: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
-    completed: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-    completed_with_failures: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-  };
-  return classes[status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-}
-
-function getLogStatusBadgeClass(status) {
-  const classes = {
-    sent: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-    failed: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-    pending: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
-  };
-  return classes[status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-}
-
-function capitalizeFirst(str) {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-function getLogTimestamp(log) {
-  if (log.status === 'sent' && log.sent_at) {
-    return formatDate(log.sent_at);
-  }
-  if (log.status === 'failed' && log.failed_at) {
-    return formatDate(log.failed_at);
-  }
-  return formatDate(log.created_at);
-}
-
-function formatDate(dateString) {
-  if (!dateString) return '—';
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-}
-</script>
