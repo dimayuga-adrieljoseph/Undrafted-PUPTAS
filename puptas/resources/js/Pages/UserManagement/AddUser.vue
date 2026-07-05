@@ -1,1176 +1,532 @@
 <template>
     <Head title="Add User" />
     <AppLayout>
-        <div class="page-container">
-            <!-- Header Section -->
-            <div class="header-section">
-                <div class="header-content">
-                    <div class="header-left">
-                        <div class="breadcrumb">
-                            <Link
-                                :href="route('users.index')"
-                                class="breadcrumb-link"
-                            >
-                                <svg
-                                    class="breadcrumb-icon"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"
-                                    />
-                                </svg>
-                                Manage Users
-                            </Link>
-                            <span class="breadcrumb-separator">/</span>
-                            <span class="breadcrumb-current">Add User</span>
-                        </div>
-                        <h1 class="page-title">
-                            <span class="title-icon">
-                                <svg class="icon" viewBox="0 0 24 24">
-                                    <path
-                                        d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"
-                                    />
-                                </svg>
-                            </span>
-                            Add New User
-                        </h1>
-                        <p class="page-subtitle">
-                            Create new user accounts and assign roles &
-                            permissions
-                        </p>
-                    </div>
+        <div class="add-user-root">
 
-                    <div class="header-actions">
-                        <Link :href="route('users.index')" class="back-btn">
-                            <svg viewBox="0 0 24 24">
-                                <path
-                                    d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"
-                                />
-                            </svg>
-                            Back to Users
-                        </Link>
+            <!-- Access Denied -->
+            <div v-if="!isSuperAdmin" class="card" style="max-width:600px;margin:4rem auto;">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Access Denied</h2>
+                        <p class="card-subtitle">You do not have permission to create users.</p>
                     </div>
                 </div>
-
-                <!-- User Stats Cards -->
-                <div class="stats-grid">
-                    <div class="stat-card total">
-                        <div class="stat-icon">
-                            <svg viewBox="0 0 24 24">
-                                <path
-                                    d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
-                                />
-                            </svg>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ totalUsers }}</div>
-                            <div class="stat-label">Total Users</div>
-                        </div>
-                    </div>
-
-                    <div
-                        class="stat-card role-card"
-                        v-for="(count, roleId) in userCountsByRole"
-                        :key="roleId"
-                    >
-                        <div class="stat-icon">
-                            <svg
-                                :class="`role-icon-${roleId}`"
-                                viewBox="0 0 24 24"
-                            >
-                                <!-- Applicant Icon -->
-                                <path
-                                    v-if="roleId == 1"
-                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z"
-                                />
-
-                                <!-- Admin Icon -->
-                                <path
-                                    v-if="roleId == 2"
-                                    d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm0 4c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-1.4c0-2 4-3.1 6-3.1s6 1.1 6 3.1V19z"
-                                />
-
-                                <!-- Evaluator Icon -->
-                                <path
-                                    v-if="roleId == 3"
-                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-                                />
-
-                                <!-- Interviewer Icon -->
-                                <path
-                                    v-if="roleId == 4"
-                                    d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"
-                                />
-
-                                <!-- Medical Staff Icon -->
-                                <g v-if="roleId == 5">
-                                    <path
-                                        d="M20 8l-8 5-8-5v10h16zm0-2H4l8 4.99z"
-                                        opacity=".3"
-                                    />
-                                    <path
-                                        d="M4 20h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2zM20 6l-8 4.99L4 6h16zM4 8l8 5 8-5v10H4V8z"
-                                    />
-                                </g>
-
-                                <!-- Registrar Icon (default) -->
-                                <path
-                                    v-if="roleId == 6"
-                                    d="M14 6v15H3v-2h2V3h9v1h5v15h2v2h-4V6h-3zm-4 5v2h2v-2h-2z"
-                                />
-                            </svg>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">{{ count }}</div>
-                            <div class="stat-label">
-                                {{ roles[roleId] || `Role ${roleId}` }}
-                            </div>
-                        </div>
-                    </div>
+                <div style="padding:1rem 1.5rem 1.5rem;">
+                    <Link :href="route('users.index')" class="btn btn--primary">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                        Back to User Management
+                    </Link>
                 </div>
             </div>
 
-            <!-- Main Form Card -->
-            <div class="form-container">
-                <div class="form-card">
-                    <!-- Form Header -->
-                    <div class="form-header">
-                        <div class="form-header-icon">
-                            <svg viewBox="0 0 24 24">
-                                <path
-                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z"
-                                />
-                            </svg>
+            <template v-else>
+                <!-- Breadcrumb -->
+                <nav class="breadcrumb">
+                    <Link :href="route('users.index')" class="breadcrumb-link">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                        Manage Users
+                    </Link>
+                    <span class="breadcrumb-sep">/</span>
+                    <span class="breadcrumb-current">Add User</span>
+                </nav>
+
+                <!-- Form card -->
+                <div class="form-wrap">
+                    <div class="card">
+                        <!-- Card header -->
+                        <div class="card-header">
+                            <div class="card-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                            </div>
+                            <div>
+                                <h2 class="card-title">Add New User</h2>
+                                <p class="card-subtitle">Create a user account and assign a role &amp; permissions</p>
+                            </div>
+                            <Link :href="route('users.index')" class="btn btn--ghost" style="margin-left:auto;">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                                Back
+                            </Link>
                         </div>
-                        <div>
-                            <h2 class="form-title">User Information</h2>
-                            <p class="form-subtitle">
-                                Fill in the details to create a new user account
-                            </p>
-                        </div>
-                    </div>
 
-                    <form @submit.prevent="submitForm" class="form-content" novalidate>
+                        <form @submit.prevent="submitForm" class="form-body" novalidate>
 
-                        <!-- Personal Details Section -->
-                        <div class="form-section">
-                            <h3 class="section-title">Personal Details</h3>
-
-                            <div class="form-grid flex flex-col md:flex-row gap-4">
-                                <div class="form-group">
-                                    <label for="firstname" class="form-label">
-                                        First Name <span class="required">*</span>
-                                    </label>
-                                    <input
-                                        id="firstname"
-                                        v-model="form.firstname"
-                                        @blur="validateField('firstname')"
-                                        :class="['form-input w-full', { error: errors.firstname }]"
-                                        type="text"
-                                        required
-                                        placeholder="Juan"
-                                    />
-                                    <div v-if="errors.firstname" class="form-error">
-                                        {{ errors.firstname }}
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="lastname" class="form-label">
-                                        Last Name <span class="required">*</span>
-                                    </label>
-                                    <input
-                                        id="lastname"
-                                        v-model="form.lastname"
-                                        @blur="validateField('lastname')"
-                                        :class="['form-input w-full', { error: errors.lastname }]"
-                                        type="text"
-                                        required
-                                        placeholder="Dela Cruz"
-                                    />
-                                    <div v-if="errors.lastname" class="form-error">
-                                        {{ errors.lastname }}
-                                    </div>
+                            <!-- Server-side error banner -->
+                            <div v-if="hasAnyError && submitted" class="error-banner">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                                <div>
+                                    <p class="error-banner-title">Please fix the following errors:</p>
+                                    <ul class="error-list">
+                                        <li v-for="(err, key) in errors" :key="key" v-if="err">{{ err }}</li>
+                                    </ul>
                                 </div>
                             </div>
 
-                            <div class="form-grid flex flex-col md:flex-row gap-4">
-                                <div class="form-group">
-                                    <label for="middlename" class="form-label">
-                                        Middle Name
-                                    </label>
-                                    <input
-                                        id="middlename"
-                                        v-model="form.middlename"
-                                        :class="['form-input w-full', { error: errors.middlename }]"
-                                        type="text"
-                                        placeholder="Santos"
-                                    />
-                                    <div v-if="errors.middlename" class="form-error">
-                                        {{ errors.middlename }}
+                            <!-- Personal Information -->
+                            <fieldset class="fieldset">
+                                <legend class="fieldset-legend">Personal Information</legend>
+                                <div class="field-grid">
+                                    <div class="field">
+                                        <label for="firstname" class="field-label">First Name <span class="req">*</span></label>
+                                        <input
+                                            id="firstname"
+                                            v-model="form.firstname"
+                                            @blur="validateField('firstname')"
+                                            type="text"
+                                            :class="['field-input', errors.firstname ? 'field-input--error' : '']"
+                                            placeholder="Juan"
+                                        />
+                                        <p v-if="errors.firstname" class="field-error">{{ errors.firstname }}</p>
+                                    </div>
+
+                                    <div class="field">
+                                        <label for="lastname" class="field-label">Last Name <span class="req">*</span></label>
+                                        <input
+                                            id="lastname"
+                                            v-model="form.lastname"
+                                            @blur="validateField('lastname')"
+                                            type="text"
+                                            :class="['field-input', errors.lastname ? 'field-input--error' : '']"
+                                            placeholder="Dela Cruz"
+                                        />
+                                        <p v-if="errors.lastname" class="field-error">{{ errors.lastname }}</p>
+                                    </div>
+
+                                    <div class="field">
+                                        <label for="middlename" class="field-label">Middle Name</label>
+                                        <input
+                                            id="middlename"
+                                            v-model="form.middlename"
+                                            type="text"
+                                            class="field-input"
+                                            placeholder="Santos"
+                                        />
+                                    </div>
+
+                                    <div class="field">
+                                        <label for="extension_name" class="field-label">Extension Name</label>
+                                        <select id="extension_name" v-model="form.extension_name" class="field-input">
+                                            <option value="">None</option>
+                                            <option value="Jr.">Jr.</option>
+                                            <option value="Sr.">Sr.</option>
+                                            <option value="II">II</option>
+                                            <option value="III">III</option>
+                                            <option value="IV">IV</option>
+                                            <option value="V">V</option>
+                                        </select>
                                     </div>
                                 </div>
+                            </fieldset>
 
-                                <div class="form-group">
-                                    <label for="extension_name" class="form-label">
-                                        Extension Name
-                                    </label>
-                                    <select
-                                        id="extension_name"
-                                        v-model="form.extension_name"
-                                        :class="['form-input w-full', { error: errors.extension_name }]"
-                                    >
-                                        <option value="">None</option>
-                                        <option value="Jr.">Jr.</option>
-                                        <option value="Sr.">Sr.</option>
-                                        <option value="II">II</option>
-                                        <option value="III">III</option>
-                                        <option value="IV">IV</option>
-                                        <option value="V">V</option>
-                                    </select>
-                                    <div v-if="errors.extension_name" class="form-error">
-                                        {{ errors.extension_name }}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Account Details Section -->
-                        <div class="form-section">
-                            <h3 class="section-title">Account Details</h3>
-
-                            <div
-                                class="form-grid flex flex-col md:flex-row gap-4"
-                            >
-                                <div class="form-group">
-                                    <label for="email" class="form-label">
-                                        Email Address
-                                        <span class="required">*</span>
-                                    </label>
-                                    <div class="input-with-hint">
+                            <!-- Account Details -->
+                            <fieldset class="fieldset">
+                                <legend class="fieldset-legend">Account Details</legend>
+                                <div class="field-grid">
+                                    <div class="field">
+                                        <label for="email" class="field-label">Email Address <span class="req">*</span></label>
                                         <input
                                             id="email"
                                             v-model="form.email"
                                             @blur="checkEmailUnique"
                                             @input="errors.email = ''"
-                                            :class="[
-                                                'form-input w-full',
-                                                { error: errors.email },
-                                            ]"
                                             type="email"
-                                            required
+                                            :class="['field-input', errors.email ? 'field-input--error' : '']"
                                             placeholder="user@example.com"
                                         />
+                                        <p v-if="isCheckingEmail" class="field-hint">Checking email availability…</p>
+                                        <p v-else-if="errors.email" class="field-error">{{ errors.email }}</p>
                                     </div>
-                                    <div v-if="isCheckingEmail" class="form-hint" style="color: #64748b; font-size: 0.875rem; margin-top: 0.5rem;">
-                                        Checking email availability...
-                                    </div>
-                                    <div v-else-if="errors.email" class="form-error">
-                                        <svg
-                                            class="error-icon"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
-                                            />
-                                        </svg>
-                                        {{ errors.email }}
-                                    </div>
-                                </div>
 
-                                <div class="form-group">
-                                    <label for="role_id" class="form-label">
-                                        User Role
-                                        <span class="required">*</span>
-                                    </label>
-                                    <div class="role-select">
+                                    <div class="field">
+                                        <label for="role_id" class="field-label">User Role <span class="req">*</span></label>
                                         <select
                                             id="role_id"
                                             v-model="form.role_id"
                                             @change="onRoleChange"
-                                            :class="[
-                                                'form-input w-full',
-                                                { error: errors.role_id },
-                                            ]"
-                                            required
+                                            :class="['field-input', errors.role_id ? 'field-input--error' : '']"
                                         >
-                                            <option value="" disabled>
-                                                Select a role
-                                            </option>
+                                            <option value="" disabled>Select a role</option>
                                             <option value="1">Applicant</option>
                                             <option value="2">Admin</option>
                                             <option value="3">Evaluator</option>
                                             <option value="8">Grade Evaluator</option>
-                                            <option value="4">
-                                                Interviewer
-                                            </option>
-                                            <option value="5">
-                                                Medical Staff
-                                            </option>
+                                            <option value="4">Interviewer</option>
+                                            <option value="5">Medical Staff</option>
                                             <option value="6">Registrar</option>
                                         </select>
-                                        <div class="role-hint">
-                                            Determines user permissions and
-                                            access
-                                        </div>
-                                    </div>
-                                    <div
-                                        v-if="errors.role_id"
-                                        class="form-error"
-                                    >
-                                        <svg
-                                            class="error-icon"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
-                                            />
-                                        </svg>
-                                        {{ errors.role_id }}
+                                        <p class="field-hint">Determines user permissions and access</p>
+                                        <p v-if="errors.role_id" class="field-error">{{ errors.role_id }}</p>
                                     </div>
                                 </div>
+                            </fieldset>
 
-                                <!-- Program Assignment for Evaluators and Interviewers -->
-                                <div
-                                    v-if="showProgramAssignment"
-                                    class="form-group"
-                                >
-                                    <label for="program" class="form-label">
-                                        Program Assignment
-                                        <span class="required">*</span>
-                                    </label>
-                                    <div class="program-select">
+                            <!-- Role-specific Assignment -->
+                            <fieldset v-if="showProgramAssignment || showApplicantProgram" class="fieldset">
+                                <legend class="fieldset-legend">Program Assignment</legend>
+                                <div class="field-grid">
+
+                                    <!-- Multi-select for Evaluator / Interviewer / Grade Evaluator -->
+                                    <div v-if="showProgramAssignment" class="field">
+                                        <label for="program" class="field-label">Program Assignment <span class="req">*</span></label>
                                         <select
                                             id="program"
                                             v-model="form.program"
-                                            :class="[
-                                                'form-input w-full',
-                                                { error: errors.program },
-                                            ]"
-                                            :required="showProgramAssignment"
                                             multiple
                                             size="4"
+                                            :class="['field-input field-input--multi', errors.program ? 'field-input--error' : '']"
                                         >
-                                            <option
-                                                v-for="program in programs"
-                                                :key="program.code"
-                                                :value="program.code"
-                                            >
-                                                {{ program.name }} ({{
-                                                    program.code
-                                                }})
+                                            <option v-for="program in programs" :key="program.code" :value="program.code">
+                                                {{ program.name }} ({{ program.code }})
                                             </option>
                                         </select>
-                                        <div class="program-hint">
-                                            Evaluators, Grade Evaluators, and Interviewers must be
-                                            assigned to at least one program.
-                                            Hold Ctrl/Cmd to select multiple.
-                                        </div>
+                                        <p class="field-hint">Hold Ctrl / Cmd to select multiple programs.</p>
+                                        <p v-if="errors.program" class="field-error">{{ errors.program }}</p>
                                     </div>
-                                    <div
-                                        v-if="errors.program"
-                                        class="form-error"
-                                    >
-                                        <svg
-                                            class="error-icon"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
-                                            />
-                                        </svg>
-                                        {{ errors.program }}
-                                    </div>
-                                </div>
 
-                                <!-- Program Assignment for Applicants -->
-                                <div
-                                    v-if="showApplicantProgram"
-                                    class="form-group"
-                                >
-                                    <label
-                                        for="applicant_program"
-                                        class="form-label"
-                                    >
-                                        Program Selection
-                                        <span class="required">*</span>
-                                    </label>
-                                    <select
-                                        id="applicant_program"
-                                        v-model="form.applicant_program"
-                                        :class="[
-                                            'form-input w-full',
-                                            { error: errors.applicant_program },
-                                        ]"
-                                        :required="showApplicantProgram"
-                                    >
-                                        <option value="" disabled>
-                                            Select program to apply for
-                                        </option>
-                                        <option
-                                            v-for="program in programs"
-                                            :key="program.code"
-                                            :value="program.code"
+                                    <!-- Single-select for Applicant -->
+                                    <div v-if="showApplicantProgram" class="field">
+                                        <label for="applicant_program" class="field-label">1st Program Choice <span class="req">*</span></label>
+                                        <select
+                                            id="applicant_program"
+                                            v-model="form.applicant_program"
+                                            :class="['field-input', errors.applicant_program ? 'field-input--error' : '']"
                                         >
-                                            {{ program.name }}
-                                        </option>
-                                    </select>
-                                    <div
-                                        v-if="errors.applicant_program"
-                                        class="form-error"
-                                    >
-                                        <svg
-                                            class="error-icon"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
-                                            />
-                                        </svg>
-                                        {{ errors.applicant_program }}
+                                            <option value="" disabled>Select program to apply for</option>
+                                            <option v-for="program in programs" :key="program.code" :value="program.code">
+                                                {{ program.name }}
+                                            </option>
+                                        </select>
+                                        <p v-if="errors.applicant_program" class="field-error">{{ errors.applicant_program }}</p>
                                     </div>
+
                                 </div>
+                            </fieldset>
+
+                            <!-- Form Actions -->
+                            <div class="form-actions">
+                                <Link :href="route('users.index')" class="btn btn--ghost">Cancel</Link>
+                                <button
+                                    type="submit"
+                                    class="btn btn--primary"
+                                    :disabled="isSubmitting || isCheckingEmail"
+                                >
+                                    <span v-if="isSubmitting" class="spinner"></span>
+                                    <svg v-else viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                                    {{ isSubmitting ? 'Creating User…' : 'Create User' }}
+                                </button>
                             </div>
-                        </div>
 
-                        <!-- Form Actions -->
-                        <div class="form-actions">
-                            <Link
-                                :href="route('users.index')"
-                                class="cancel-btn"
-                            >
-                                Cancel
-                            </Link>
-                            <button
-                                type="submit"
-                                class="submit-btn"
-                                :disabled="isSubmitting || isCheckingEmail || hasAnyError"
-                            >
-                                <span
-                                    v-if="isSubmitting"
-                                    class="spinner"
-                                ></span>
-                                <svg
-                                    v-else
-                                    class="submit-icon"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"
-                                    />
-                                </svg>
-                                {{
-                                    isSubmitting
-                                        ? "Creating User..."
-                                        : "Create User"
-                                }}
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
-            </div>
+            </template>
         </div>
     </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { Head, Link, router } from "@inertiajs/vue3";
-import axios from "axios";
-import AppLayout from "@/Layouts/AppLayout.vue";
+import { ref, computed } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import axios from 'axios';
+import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
-    programs: Array,
-    totalUsers: Number,
+    programs:         Array,
+    totalUsers:       Number,
     userCountsByRole: Object,
-    roles: Object,
+    roles:            Object,
     currentUserRoleId: Number,
 });
 
 const isSuperAdmin = computed(() => props.currentUserRoleId === 7);
 
 const form = ref({
-    firstname: "",
-    lastname: "",
-    middlename: "",
-    extension_name: "",
-    email: "",
-    role_id: "",
-    program: [],
-    applicant_program: "",
+    firstname:        '',
+    lastname:         '',
+    middlename:       '',
+    extension_name:   '',
+    email:            '',
+    role_id:          '',
+    program:          [],
+    applicant_program: '',
 });
 
-const errors = ref({});
-const isSubmitting = ref(false);
+const errors      = ref({});
+const isSubmitting  = ref(false);
 const isCheckingEmail = ref(false);
+const submitted   = ref(false);
 
-const hasAnyError = computed(() => Object.values(errors.value).some((error) => error !== ""));
+const hasAnyError = computed(() => Object.values(errors.value).some(e => e !== ''));
 
-const showProgramAssignment = computed(() => {
-    return ["3", "4", "8"].includes(form.value.role_id); // Evaluator (3), Interviewer (4), Grade Evaluator (8)
-});
-
-const showApplicantProgram = computed(() => {
-    return form.value.role_id === "1"; // Applicant
-});
+const showProgramAssignment = computed(() => ['3', '4', '8'].includes(form.value.role_id));
+const showApplicantProgram  = computed(() => form.value.role_id === '1');
 
 const onRoleChange = () => {
-    // Clear program selections when role changes
-    if (!showProgramAssignment.value) {
-        form.value.program = [];
-    }
-    if (!showApplicantProgram.value) {
-        form.value.applicant_program = "";
-    }
+    if (!showProgramAssignment.value) form.value.program = [];
+    if (!showApplicantProgram.value)  form.value.applicant_program = '';
 };
 
 const validateField = (fieldName) => {
-    // Only clear if we aren't handling email asynchronously here
-    if (fieldName !== "email") {
-        errors.value[fieldName] = "";
-    }
+    if (fieldName !== 'email') errors.value[fieldName] = '';
 };
 
 const checkEmailUnique = async () => {
-    if (!form.value.email) {
-        errors.value.email = "";
-        return;
-    }
-    
+    if (!form.value.email) { errors.value.email = ''; return; }
     isCheckingEmail.value = true;
     try {
-        const response = await axios.post("/check-email", { email: form.value.email });
-        if (response.data.taken) {
-            errors.value.email = "The email has already been taken.";
-        } else {
-            errors.value.email = "";
-        }
-    } catch (error) {
-        // Fallback to checking via POST validation later if this fails
-        console.error("Error checking email uniqueness:", error);
+        const response = await axios.post('/check-email', { email: form.value.email });
+        errors.value.email = response.data.taken ? 'This email has already been taken.' : '';
+    } catch {
+        // fall through to server-side validation
     } finally {
         isCheckingEmail.value = false;
     }
 };
 
 const submitForm = async () => {
-    // Validate all fields
-    Object.keys(form.value).forEach((key) => validateField(key));
+    submitted.value = true;
+    Object.keys(form.value).forEach(key => validateField(key));
 
-    // Await email check if not already checked or in progress
     if (form.value.email && !errors.value.email) {
         await checkEmailUnique();
     }
 
-    // Check for errors
     if (hasAnyError.value) return;
 
     isSubmitting.value = true;
 
-    try {
-        await router.post(route("users.store"), form.value, {
-            onSuccess: () => {
-                // Reset form
-                Object.keys(form.value).forEach((key) => {
-                    form.value[key] = "";
-                });
-                isSubmitting.value = false;
-
-                // Show success message (you could add a toast notification here)
-                alert("User created successfully!");
-            },
-            onError: (serverErrors) => {
-                errors.value = serverErrors;
-                window.scrollTo({ top: 0, behavior: "smooth" });
-            },
-            onFinish: () => {
-                isSubmitting.value = false;
-            },
-        });
-    } catch (error) {
-        isSubmitting.value = false;
-        console.error("Error submitting form:", error);
-    }
+    router.post(route('users.store'), form.value, {
+        onError: (serverErrors) => {
+            errors.value = serverErrors;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+        onFinish: () => {
+            isSubmitting.value = false;
+        },
+    });
 };
 </script>
 
 <style scoped>
-.page-container {
+/* ── Root ─────────────────────────────────────────────────── */
+.add-user-root {
     min-height: 100vh;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    padding: 1.5rem;
-    font-family:
-        "Inter",
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+    background: #f4f5f7;
+    padding: 1.25rem 1rem 3rem;
+    font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+}
+@media (min-width: 768px) {
+    .add-user-root { padding: 1.75rem 1.5rem 3rem; }
 }
 
-/* Header Section */
-.header-section {
-    margin-bottom: 2rem;
-}
-
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 2rem;
-}
-
-.header-left {
-    flex: 1;
-}
-
+/* ── Breadcrumb ───────────────────────────────────────────── */
 .breadcrumb {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    font-size: 0.875rem;
-    color: #64748b;
+    gap: .5rem;
+    font-size: .8rem;
+    color: #6b7280;
+    margin-bottom: 1.25rem;
 }
-
 .breadcrumb-link {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    color: #64748b;
+    gap: .3rem;
+    color: #6b7280;
     text-decoration: none;
-    transition: color 0.2s;
+    transition: color .15s;
 }
+.breadcrumb-link:hover { color: #9e122c; }
+.breadcrumb-link svg { width: 14px; height: 14px; }
+.breadcrumb-sep   { color: #d1d5db; }
+.breadcrumb-current { color: #111827; font-weight: 600; }
 
-.breadcrumb-link:hover {
-    color: #9e122c;
-}
-
-.breadcrumb-icon {
-    width: 16px;
-    height: 16px;
-    fill: currentColor;
-}
-
-.breadcrumb-separator {
-    color: #cbd5e1;
-}
-
-.breadcrumb-current {
-    color: #1a202c;
-    font-weight: 500;
-}
-
-.page-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #1a202c;
-    margin: 0 0 0.5rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.title-icon .icon {
-    width: 32px;
-    height: 32px;
-    fill: #9e122c;
-}
-
-.page-subtitle {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
-}
-
-.header-actions {
-    display: flex;
-    gap: 1rem;
-}
-
-.back-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    color: #64748b;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.3s ease;
-}
-
-.back-btn:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-}
-
-.back-btn svg {
-    width: 20px;
-    height: 20px;
-    fill: currentColor;
-}
-
-/* Stats Grid */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.stat-card {
-    background: white;
-    border-radius: 16px;
-    padding: 1.25rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    transition: all 0.3s ease;
-    border: 1px solid #e2e8f0;
-}
-
-.stat-card.total {
-    background: linear-gradient(135deg, #9e122c 0%, #c81e3d 100%);
-    color: white;
-}
-
-.stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.stat-card.total:hover {
-    box-shadow: 0 4px 12px rgba(158, 18, 44, 0.3);
-}
-
-.stat-icon svg {
-    width: 32px;
-    height: 32px;
-}
-
-.stat-card.total .stat-icon svg {
-    fill: white;
-}
-
-.role-card .stat-icon svg {
-    fill: #9e122c;
-}
-
-.stat-content {
-    flex: 1;
-}
-
-.stat-value {
-    font-size: 1.75rem;
-    font-weight: 700;
-    line-height: 1;
-    margin-bottom: 0.25rem;
-}
-
-.stat-label {
-    font-size: 0.875rem;
-    opacity: 0.9;
-    font-weight: 500;
-}
-
-.stat-card.total .stat-label {
-    opacity: 0.95;
-}
-
-/* Form Container */
-.form-container {
-    max-width: 1000px;
+/* ── Form container ───────────────────────────────────────── */
+.form-wrap {
+    max-width: 780px;
     margin: 0 auto;
 }
 
-.form-card {
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+/* ── Card ─────────────────────────────────────────────────── */
+.card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
     overflow: hidden;
-    border: 1px solid #e2e8f0;
 }
-
-.form-header {
+.card-header {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 2rem 2rem 1.5rem;
-    border-bottom: 1px solid #f1f5f9;
+    gap: .75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f3f4f6;
 }
-
-.form-header-icon svg {
-    width: 48px;
-    height: 48px;
-    fill: #9e122c;
-}
-
-.form-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin: 0 0 0.25rem 0;
-}
-
-.form-subtitle {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin: 0;
-}
-
-/* Form Content */
-.form-content {
-    padding: 2rem;
-}
-
-.form-section {
-    margin-bottom: 2.5rem;
-}
-
-/* Error Banner */
-.error-banner {
-    background-color: #fee2e2;
-    border: 1px solid #f87171;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
+.card-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: #fdf2f4;
     display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    color: #991b1b;
-}
-
-.error-banner svg {
-    width: 24px;
-    height: 24px;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-    margin-top: 2px;
 }
+.card-icon svg { width: 16px; height: 16px; fill: #9e122c; }
+.card-title    { font-size: .9rem; font-weight: 700; color: #111827; margin: 0; }
+.card-subtitle { font-size: .73rem; color: #6b7280; margin: 2px 0 0; }
 
-.error-banner-title {
-    font-weight: 600;
-    margin: 0 0 0.5rem 0;
-}
-
-.error-list {
-    margin: 0;
-    padding-left: 1.25rem;
-    font-size: 0.9rem;
-}
-
-.section-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin: 0 0 1.5rem 0;
-    padding-bottom: 0.75rem;
-    border-bottom: 2px solid #f1f5f9;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+/* ── Form body ────────────────────────────────────────────── */
+.form-body {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
     gap: 1.5rem;
 }
 
-@media (max-width: 768px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.form-group {
-    margin-bottom: 1rem;
-}
-
-.form-label {
+/* ── Fieldset ─────────────────────────────────────────────── */
+.fieldset { border: none; padding: 0; margin: 0; }
+.fieldset-legend {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    margin-bottom: .75rem;
     display: block;
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
 }
 
-.required {
-    color: #ef4444;
-}
-
-.form-input {
-    width: 100%;
-    padding: 0.875rem 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
-    background: #f8fafc;
-    color: #1a202c;
-}
-
-.form-input:focus {
-    outline: none;
-    border-color: #9e122c;
-    background: white;
-    box-shadow: 0 0 0 3px rgba(158, 18, 44, 0.1);
-}
-
-.form-input.error {
-    border-color: #ef4444;
-    background: #fef2f2;
-}
-
-.form-input.error:focus {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-}
-
-/* Input Groups */
-.input-with-hint {
-    position: relative;
-}
-
-.input-hint {
-    font-size: 0.75rem;
-    color: #64748b;
-    margin-top: 0.375rem;
-}
-
-.phone-input {
-    display: flex;
-}
-
-.country-code {
-    padding: 0.875rem 0.75rem;
-    background: #e2e8f0;
-    border: 2px solid #e2e8f0;
-    border-right: none;
-    border-radius: 12px 0 0 12px;
-    font-weight: 500;
-    color: #64748b;
-}
-
-.phone-input .form-input {
-    border-radius: 0 12px 12px 0;
-    flex: 1;
-}
-
-.password-input {
-    position: relative;
-}
-
-.password-toggle {
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: #64748b;
-    cursor: pointer;
-    padding: 0.25rem;
-}
-
-.password-toggle svg {
-    width: 20px;
-    height: 20px;
-    fill: currentColor;
-}
-
-.password-toggle:hover {
-    color: #4a5568;
-}
-
-/* Password Requirements */
-.password-requirements {
+/* ── Field grid ───────────────────────────────────────────── */
+.field-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-    margin-top: 0.75rem;
+    grid-template-columns: 1fr;
+    gap: .875rem;
 }
-
-@media (max-width: 480px) {
-    .password-requirements {
-        grid-template-columns: 1fr;
-    }
+@media (min-width: 640px) {
+    .field-grid { grid-template-columns: 1fr 1fr; }
 }
-
-.requirement {
+.field {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.75rem;
-    color: #64748b;
+    flex-direction: column;
+    gap: .3rem;
 }
-
-.requirement.met {
-    color: #10b981;
+.field-label {
+    font-size: .8rem;
+    font-weight: 600;
+    color: #374151;
 }
+.req { color: #9e122c; }
 
-.requirement svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
+/* ── Field inputs ─────────────────────────────────────────── */
+.field-input {
+    width: 100%;
+    padding: .55rem .75rem;
+    border-radius: 10px;
+    border: 1.5px solid #e5e7eb;
+    background: #f9fafb;
+    font-size: .83rem;
+    color: #111827;
+    transition: border-color .15s, box-shadow .15s;
+    outline: none;
+    appearance: none;
 }
-
-.requirement.met svg {
-    fill: #10b981;
+.field-input:focus {
+    border-color: #9e122c;
+    box-shadow: 0 0 0 3px rgba(158,18,44,.08);
+    background: #fff;
 }
-
-.requirement:not(.met) svg {
-    fill: #cbd5e1;
+.field-input--error {
+    border-color: #f87171;
+    background: #fff5f5;
 }
+.field-input--multi { height: auto; }
+.field-error { font-size: .72rem; color: #dc2626; }
+.field-hint  { font-size: .72rem; color: #9ca3af; }
 
-/* Error Messages */
-.form-error {
+/* ── Error banner ─────────────────────────────────────────── */
+.error-banner {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #ef4444;
-    font-size: 0.875rem;
-    margin-top: 0.375rem;
+    gap: .75rem;
+    padding: .9rem 1rem;
+    background: #fff5f5;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
 }
+.error-banner svg { width: 18px; height: 18px; fill: #dc2626; flex-shrink: 0; margin-top: 1px; }
+.error-banner-title { font-size: .8rem; font-weight: 700; color: #dc2626; margin-bottom: .3rem; }
+.error-list { font-size: .78rem; color: #b91c1c; padding-left: 1.1rem; margin: 0; }
 
-.error-icon {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    fill: #ef4444;
-}
-
-/* Role & Program Select */
-.role-select,
-.program-select {
-    position: relative;
-}
-
-.role-hint,
-.program-hint {
-    font-size: 0.75rem;
-    color: #64748b;
-    margin-top: 0.375rem;
-}
-
-/* Form Actions */
+/* ── Form actions ─────────────────────────────────────────── */
 .form-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    padding-top: 2rem;
-    border-top: 1px solid #f1f5f9;
-    margin-top: 2rem;
+    gap: .75rem;
+    padding-top: .5rem;
+    border-top: 1px solid #f3f4f6;
 }
 
-.cancel-btn {
-    padding: 0.875rem 1.75rem;
-    background: white;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    color: #64748b;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.3s ease;
-}
-
-.cancel-btn:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-}
-
-.submit-btn {
-    display: flex;
+/* ── Buttons ──────────────────────────────────────────────── */
+.btn {
+    display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.875rem 2rem;
-    background: linear-gradient(135deg, #9e122c 0%, #c81e3d 100%);
-    border: none;
-    border-radius: 12px;
-    color: white;
+    gap: .5rem;
+    padding: .55rem 1.1rem;
+    border-radius: 10px;
+    font-size: .83rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(158, 18, 44, 0.2);
+    transition: all .15s;
+    border: none;
+    text-decoration: none;
 }
-
-.submit-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(158, 18, 44, 0.3);
+.btn svg { width: 15px; height: 15px; }
+.btn--ghost {
+    background: transparent;
+    border: 1.5px solid #e5e7eb;
+    color: #374151;
 }
-
-.submit-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
+.btn--ghost:hover { background: #f9fafb; }
+.btn--primary {
+    background: linear-gradient(135deg, #9e122c, #c81e3d);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(158,18,44,.3);
 }
-
-.submit-icon {
-    width: 20px;
-    height: 20px;
-    fill: currentColor;
+.btn--primary:hover:not(:disabled) {
+    box-shadow: 0 4px 14px rgba(158,18,44,.4);
+    transform: translateY(-1px);
 }
+.btn--primary:disabled { opacity: .6; transform: none; cursor: not-allowed; }
 
+/* ── Spinner ──────────────────────────────────────────────── */
 .spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff;
     border-radius: 50%;
-    border-top-color: white;
-    animation: spin 1s linear infinite;
+    animation: spin .6s linear infinite;
+    flex-shrink: 0;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Select Styling */
-select.form-input {
-    appearance: none;
+/* ── Select arrow ─────────────────────────────────────────── */
+select.field-input {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 1rem center;
+    background-position: right .75rem center;
     background-size: 1rem;
-    padding-right: 3rem;
+    padding-right: 2.5rem;
+}
+/* Multi-select should not show the chevron arrow */
+select[multiple].field-input {
+    background-image: none;
+    padding-right: .75rem;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (max-width: 768px) {
-    .page-container {
-        padding: 1rem;
-    }
-
-    .header-content {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .form-header {
-        padding: 1.5rem;
-    }
-
-    .form-content {
-        padding: 1.5rem;
-    }
-}
-
-@media (max-width: 640px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .form-actions {
-        flex-direction: column;
-    }
-
-    .cancel-btn,
-    .submit-btn {
-        width: 100%;
-        justify-content: center;
-    }
+@media (max-width: 480px) {
+    .form-actions { flex-direction: column; }
+    .btn { width: 100%; justify-content: center; }
 }
 </style>

@@ -221,121 +221,185 @@
             </div>
         </div>
 
-        <!-- Applicant Details Panel -->
-        <transition name="slide-fade">
+        <!-- Applicant Details Modal -->
+        <transition name="fade">
             <div
                 v-if="selectedUser"
-                class="fixed top-0 right-0 w-full md:w-[400px] h-full bg-white dark:bg-gray-900 z-50 shadow-2xl flex flex-col overflow-hidden"
+                class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto"
+                @click.self="closeUserCard"
             >
-                <!-- Panel Header -->
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shrink-0">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Applicant Details</h3>
-                    <button
-                        @click="closeUserCard"
-                        class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                        aria-label="Close panel"
-                    >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
+                <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-7xl my-4 sm:my-8 flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] overflow-hidden">
 
-                <!-- Scrollable Body -->
-                <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-                    <!-- Profile Card -->
-                    <div class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                        <div class="w-14 h-14 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-xl font-bold shrink-0">
-                            {{ (selectedUser.firstname || selectedUser.email || '?').charAt(0).toUpperCase() }}{{ (selectedUser.lastname || '').charAt(0).toUpperCase() }}
+                    <!-- Modal Header -->
+                    <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-full bg-[#9E122C] text-white flex items-center justify-center text-lg font-bold shrink-0">
+                                {{ (selectedUser.firstname || selectedUser.email || '?').charAt(0).toUpperCase() }}{{ (selectedUser.lastname || '').charAt(0).toUpperCase() }}
+                            </div>
+                            <div class="min-w-0">
+                                <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
+                                    {{ [selectedUser.firstname, selectedUser.middlename, selectedUser.lastname].filter(Boolean).join(' ') }}
+                                </h2>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                    {{ selectedUser.reference_number || 'No ref' }} · {{ selectedUser.email }}
+                                </p>
+                            </div>
                         </div>
-                        <div class="min-w-0">
-                            <h4 class="text-base font-semibold text-gray-900 dark:text-white truncate">
-                                {{ selectedUser.lastname ? `${selectedUser.lastname}, ${selectedUser.firstname}` : (selectedUser.email || '—') }}
-                            </h4>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedUser.reference_number || 'No reference number' }}</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ selectedUser.email }}</p>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <span :class="getStatusClass(selectedUser)" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold">
+                                {{ getStatusText(selectedUser) }}
+                            </span>
+                            <button @click="closeUserCard"
+                                class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition min-h-[44px] min-w-[44px]" aria-label="Close">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Enrollment Status + Program -->
-                    <div class="p-4 bg-[#9E122C]/5 dark:bg-[#9E122C]/10 rounded-xl border border-[#9E122C]/20">
-                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                            {{ selectedUser?.application?.enrollment_status === 'officially_enrolled' ? 'Officially Enrolled In' : 'Temporarily Enrolled In' }}
-                        </h4>
-                        <p class="text-base font-semibold text-gray-900 dark:text-white">
-                            {{ selectedUser?.application?.program?.code }} – {{ selectedUser?.application?.program?.name }}
-                        </p>
-                    </div>
+                    <!-- Modal Body: 2-column layout -->
+                    <div class="flex-1 overflow-hidden px-4 sm:px-6 py-5 flex flex-col">
+                        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-                    <!-- Enrollment Actions -->
-                    <div class="flex gap-2">
-                        <button
-                            v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
-                            @click="acceptApplication"
-                            class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition"
-                        >
-                            Tag: Officially Enrolled
-                        </button>
-                        <button
-                            @click="untagApplication"
-                            class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
-                        >
-                            Untag
-                        </button>
-                    </div>
+                            <!-- Left Column: Info & History -->
+                            <div class="lg:col-span-7 space-y-5 overflow-y-auto pr-2 pb-4 min-h-0">
 
-                    <!-- Uploaded Documents -->
-                    <div>
-                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Uploaded Documents</h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div
-                                v-for="(file, key) in selectedUserFiles"
-                                :key="key"
-                                class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden min-w-0"
-                            >
-                                <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 truncate">{{ formatFileKey(key) }}</p>
-                                <img
-                                    v-if="hasImagePreview(file)"
-                                    :src="getFileUrl(file)"
-                                    alt="Uploaded Document"
-                                    class="w-full aspect-[4/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
-                                    @click="openImageModal(file)"
-                                />
-                                <div
-                                    v-else
-                                    class="w-full aspect-[4/3] flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg"
-                                >
-                                    No file
+                                <!-- Personal Info -->
+                                <div>
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Personal Information</h4>
+                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Sex</p>
+                                            <p class="text-sm font-medium text-gray-900 dark:text-white capitalize">{{ selectedUser.sex || '—' }}</p>
+                                        </div>
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School</p>
+                                            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ selectedUser.school || '—' }}</p>
+                                        </div>
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Strand</p>
+                                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ selectedUser.strand || '—' }}</p>
+                                        </div>
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">G12 1st Sem</p>
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.grades?.g12_first_sem ?? '—' }}</p>
+                                        </div>
+                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">G12 2nd Sem</p>
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ selectedUser.grades?.g12_second_sem ?? '—' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Program Choices -->
+                                <div>
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Program</h4>
+                                    <div class="p-3 rounded-xl border border-[#9E122C]/30 bg-[#9E122C]/5 dark:bg-[#9E122C]/10">
+                                        <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                                            {{ selectedUser?.application?.enrollment_status === 'officially_enrolled' ? 'Officially Enrolled In' : 'Temporarily Enrolled In' }}
+                                        </h4>
+                                        <p class="text-base font-semibold text-gray-900 dark:text-white">
+                                            {{ selectedUser?.application?.program?.code }} – {{ selectedUser?.application?.program?.name }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Academic Grades -->
+                                <div v-if="selectedUser?.grades">
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Academic Grades</h4>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
+                                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.mathematics ?? '—' }}</p>
+                                        </div>
+                                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Science</p>
+                                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.science ?? '—' }}</p>
+                                        </div>
+                                        <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-center">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">English</p>
+                                            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser.grades?.english ?? '—' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Application History -->
+                                <div v-if="selectedUser?.application?.processes?.length">
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Application History</h4>
+                                    <div class="space-y-2">
+                                        <div v-for="(process, index) in selectedUser.application.processes" :key="index"
+                                            class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                            <div :class="[
+                                                'w-2.5 h-2.5 rounded-full mt-1.5 shrink-0',
+                                                process.status === 'completed' ? 'bg-green-500' :
+                                                process.status === 'returned' ? 'bg-red-500' : 'bg-yellow-500'
+                                            ]"></div>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex justify-between items-start">
+                                                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ formatStage(process.stage) }}</p>
+                                                    <span :class="[
+                                                        'px-2 py-0.5 rounded-full text-xs font-medium',
+                                                        process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                                                        process.status === 'returned' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                                                        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                                    ]">{{ capitalize(process.status) }}</span>
+                                                </div>
+                                                <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.notes }}</p>
+                                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(process.created_at) }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Actions & Documents -->
+                            <div class="lg:col-span-5 space-y-5 overflow-y-auto pr-2 pb-4 min-h-0">
+
+                                <!-- Enrollment Actions -->
+                                <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Enrollment Actions</h4>
+                                    <div class="flex gap-2">
+                                        <button
+                                            v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
+                                            @click="acceptApplication"
+                                            class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                            Tag: Officially Enrolled
+                                        </button>
+                                        <button
+                                            @click="untagApplication"
+                                            class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            Untag
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Uploaded Documents -->
+                                <div>
+                                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Uploaded Documents</h4>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div v-for="(file, key) in selectedUserFiles" :key="key"
+                                            class="p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden min-w-0">
+                                            <div class="flex items-center gap-1.5 mb-1.5 min-w-0">
+                                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{{ formatFileKey(key) }}</span>
+                                            </div>
+                                            <img v-if="hasImagePreview(file)" :src="getFileUrl(file)" alt="Uploaded Document"
+                                                class="w-full aspect-[4/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
+                                                @click="openImageModal(file)" />
+                                            <div v-else class="w-full aspect-[4/3] flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                                                No file
+                                            </div>
+                                        </div>
+                                        <div v-if="!Object.keys(selectedUserFiles).length" class="col-span-2 text-center text-xs text-gray-400 dark:text-gray-500 py-4">
+                                            No documents uploaded.
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Application History -->
-                    <div v-if="selectedUser?.application?.processes?.length">
-                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Application History</h4>
-                        <div class="space-y-3">
-                            <div
-                                v-for="(process, index) in selectedUser.application.processes"
-                                :key="index"
-                                class="relative pl-6 pb-3 border-l-2 border-[#9E122C] last:border-0"
-                            >
-                                <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#9E122C] border-2 border-white dark:border-gray-900"></div>
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                                    {{ formatStage(process.stage) }}
-                                    <span :class="{
-                                        'text-green-600 dark:text-green-400': process.status === 'completed',
-                                        'text-yellow-600 dark:text-yellow-400': process.status === 'in_progress',
-                                        'text-red-600 dark:text-red-400': process.status === 'returned',
-                                    }">• {{ capitalize(process.status) }}</span>
-                                </p>
-                                <p v-if="process.notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ process.notes }}</p>
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(process.created_at) }}</p>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </transition>
@@ -832,6 +896,15 @@ const clearFilters = () => {
 </script>
 
 <style scoped>
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
 .slide-fade-enter-active,
 .slide-fade-leave-active {
     transition: all 0.3s ease;
