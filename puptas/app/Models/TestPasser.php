@@ -28,7 +28,10 @@ class TestPasser extends Model
         'passer_status_id',
         'previous_passer_status_id',
         'graduate_of',
-        'graduation_date'
+        'graduation_date',
+        'waiver_rank',
+        'waiver_list_status',
+        'waiver_program_offering',
     ];
 
     protected $casts = [

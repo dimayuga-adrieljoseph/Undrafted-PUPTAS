@@ -23,31 +23,37 @@
     <table>
         <thead>
             <tr>
-                <th>#</th>
+                <th>Rank</th>
                 <th>Reference Number</th>
                 <th>Applicant Name</th>
                 <th>Email</th>
-                <th>Program</th>
+                <th>Strand</th>
+                <th>Score</th>
                 <th>Status</th>
+                <th>System Status</th>
+                <th>Program Offering</th>
                 <th>Tagged Date</th>
             </tr>
         </thead>
         <tbody>
             @foreach($applicants as $index => $applicant)
                 <tr>
-                    <td>{{ $index + 1 }}</td>
+                    <td>{{ $applicant->waiver_rank ?? '-' }}</td>
                     <td>{{ $applicant->reference_number }}</td>
                     <td>{{ $applicant->surname }}, {{ $applicant->first_name }}</td>
                     <td>{{ $applicant->user?->email }}</td>
-                    <td>{{ $applicant->user?->currentApplication?->program?->name ?? 'N/A' }}</td>
+                    <td>{{ $applicant->strand ?? 'N/A' }}</td>
+                    <td>{{ $applicant->pupcet_total_score ?? 'N/A' }}</td>
+                    <td>{{ $applicant->waiver_list_status ?? 'N/A' }}</td>
                     <td class="status">{{ ucwords(str_replace('_', ' ', $applicant->passerStatus?->status ?? 'N/A')) }}</td>
+                    <td>{{ $applicant->waiver_program_offering ?? 'N/A' }}</td>
                     <td>{{ $applicant->updated_at->format('M d, Y h:i A') }}</td>
                 </tr>
             @endforeach
             
             @if(count($applicants) === 0)
                 <tr>
-                    <td colspan="7" style="text-align: center; color: #777;">No waiver applicants found.</td>
+                    <td colspan="10" style="text-align: center; color: #777;">No waiver applicants found.</td>
                 </tr>
             @endif
         </tbody>
