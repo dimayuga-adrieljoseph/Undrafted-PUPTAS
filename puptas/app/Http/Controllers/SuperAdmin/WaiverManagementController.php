@@ -168,4 +168,82 @@ class WaiverManagementController extends Controller
             return redirect()->back()->withErrors(['message' => 'Failed to untag applicant. Please try again.']);
         }
     }
+
+    /**
+     * Export the waiver applicants list to PDF.
+     */
+    public function exportPdf(Request $request)
+    {
+        $query = TestPasser::with(['user.currentApplication.program', 'passerStatus'])
+            ->whereHas('user.currentApplication', function($q) {
+                $q->where('is_waivered', true);
+            })
+            ->orderBy('updated_at', 'desc');
+
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('surname', 'like', "%{$search}%")
+                  ->orWhere('reference_number', 'like', "%{$search}%");
+            });
+        }
+
+        $taggedApplicants = $query->get();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.waiver_report', ['applicants' => $taggedApplicants]);
+        $pdf->setPaper('A4', 'landscape');
+        
+        return $pdf->download('waiver_applicants_report_' . date('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Export the waiver applicants list to CSV.
+     */
+    public function exportCsv(Request $request)
+    {
+        $query = TestPasser::with(['user.currentApplication.program', 'passerStatus'])
+            ->whereHas('user.currentApplication', function($q) {
+                $q->where('is_waivered', true);
+            })
+            ->orderBy('updated_at', 'desc');
+
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('surname', 'like', "%{$search}%")
+                  ->orWhere('reference_number', 'like', "%{$search}%");
+            });
+        }
+
+        $taggedApplicants = $query->get();
+
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=waiver_applicants_report_" . date('Y-m-d') . ".csv",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $callback = function() use ($taggedApplicants) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Reference Number', 'Name', 'Email', 'Program', 'Status', 'Tagged Date']);
+
+            foreach ($taggedApplicants as $applicant) {
+                fputcsv($file, [
+                    $applicant->reference_number,
+                    $applicant->surname . ', ' . $applicant->first_name,
+                    $applicant->user?->email,
+                    $applicant->user?->currentApplication?->program?->name ?? 'N/A',
+                    $applicant->passerStatus?->name ?? 'N/A',
+                    $applicant->updated_at->format('Y-m-d h:i A')
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

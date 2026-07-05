@@ -156,6 +156,14 @@ const getStatusLabel = (status) => {
     }
     return map[status] || status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
+
+const exportData = (type) => {
+    let url = type === 'pdf' ? route('waiver.export.pdf') : route('waiver.export.csv')
+    if (taggedSearch.value) {
+        url += `?search=${encodeURIComponent(taggedSearch.value)}`
+    }
+    window.location.href = url
+}
 </script>
 
 <template>
@@ -174,6 +182,17 @@ const getStatusLabel = (status) => {
                             Manage applicants on the Waiver Program (On Probation).
                         </p>
                     </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button @click="exportData('csv')" class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm">
+                        <FontAwesomeIcon icon="file-excel" class="text-green-600" />
+                        Export CSV
+                    </button>
+                    <button @click="exportData('pdf')" class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm">
+                        <FontAwesomeIcon icon="file-pdf" class="text-red-500" />
+                        Export PDF
+                    </button>
                 </div>
             </div>
 
