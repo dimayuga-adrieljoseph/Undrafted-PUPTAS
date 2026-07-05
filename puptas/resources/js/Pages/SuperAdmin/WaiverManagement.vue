@@ -357,11 +357,12 @@ const getStatusLabel = (status) => {
         <!-- Confirmation Modals -->
         <ChangesConfirmationModal
             :show="confirmingAction !== null"
-            @close="confirmingAction = null; confirmData = null"
+            @cancel="confirmingAction = null; confirmData = null"
             @confirm="proceedAction"
-            :processing="tagForm.processing || untagForm.processing"
-            :confirm-button-text="confirmingAction === 'tag' ? 'Confirm Tagging' : 'Confirm Untagging'"
-            :is-destructive="confirmingAction === 'untag'"
+            :loading="tagForm.processing || untagForm.processing"
+            :confirm-text="confirmingAction === 'tag' ? 'Confirm Tagging' : 'Confirm Untagging'"
+            :confirm-button-class="confirmingAction === 'untag' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-[#9E122C] hover:bg-[#800918] text-white'"
+            disable-changes-validation
         >
             <template #title>
                 {{ confirmingAction === 'tag' ? 'Tag as Waiver Applicant' : 'Remove Waiver Tag' }}
