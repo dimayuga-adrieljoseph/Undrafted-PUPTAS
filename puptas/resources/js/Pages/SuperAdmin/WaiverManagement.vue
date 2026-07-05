@@ -18,7 +18,9 @@ import {
     faInfoCircle,
     faFilePdf,
     faFileExcel,
-    faUserSlash
+    faUserSlash,
+    faFileImport,
+    faUpload
 } from '@fortawesome/free-solid-svg-icons'
 import axios from 'axios'
 function debounce(fn, delay) {
@@ -28,7 +30,7 @@ function debounce(fn, delay) {
         timeoutId = setTimeout(() => fn(...args), delay);
     };
 }
-library.add(faSearch, faCheckCircle, faExclamationCircle, faExclamationTriangle, faTrash, faUserTag, faChevronRight, faInfoCircle, faFilePdf, faFileExcel, faUserSlash)
+library.add(faSearch, faCheckCircle, faExclamationCircle, faExclamationTriangle, faTrash, faUserTag, faChevronRight, faInfoCircle, faFilePdf, faFileExcel, faUserSlash, faFileImport, faUpload)
 
 const props = defineProps({
     tagged_applicants: {
@@ -164,6 +166,77 @@ const exportData = (type) => {
     }
     window.location.href = url
 }
+
+// Bulk Import
+const showImportModal = ref(false)
+const importFile = ref(null)
+const importPreviewData = ref(null)
+const importUnmatched = ref([])
+const importingFile = ref(false)
+const confirmingImport = ref(false)
+const importError = ref(null)
+const importFileInput = ref(null)
+
+const triggerFileInput = () => {
+    importFileInput.value.click()
+}
+
+const handleFileUpload = async (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    importFile.value = file
+    importingFile.value = true
+    importError.value = null
+    importPreviewData.value = null
+    importUnmatched.value = []
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+        const response = await axios.post(route('waiver.import.preview'), formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        importPreviewData.value = response.data.matched
+        importUnmatched.value = response.data.unmatched
+    } catch (error) {
+        importError.value = error.response?.data?.message || 'Failed to upload and parse file.'
+        importFile.value = null
+    } finally {
+        importingFile.value = false
+        event.target.value = null
+    }
+}
+
+const cancelImport = () => {
+    showImportModal.value = false
+    importFile.value = null
+    importPreviewData.value = null
+    importUnmatched.value = []
+    importError.value = null
+}
+
+const confirmImport = () => {
+    if (!importPreviewData.value || importPreviewData.value.length === 0) return
+
+    confirmingImport.value = true
+    importError.value = null
+
+    router.post(route('waiver.import.confirm'), {
+        applicants: importPreviewData.value
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            cancelImport()
+            confirmingImport.value = false
+        },
+        onError: (errors) => {
+            importError.value = errors.message || 'An error occurred during import.'
+            confirmingImport.value = false
+        }
+    })
+}
 </script>
 
 <template>
@@ -185,6 +258,10 @@ const exportData = (type) => {
                 </div>
                 
                 <div class="flex items-center gap-3">
+                    <button @click="showImportModal = true" class="inline-flex items-center gap-2 px-4 py-2 bg-[#9E122C] border border-transparent rounded-xl text-sm font-medium text-white hover:bg-[#800918] transition shadow-sm">
+                        <FontAwesomeIcon icon="file-import" />
+                        Import from Sheet
+                    </button>
                     <button @click="exportData('csv')" class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm">
                         <FontAwesomeIcon icon="file-excel" class="text-green-600" />
                         Export CSV
@@ -253,14 +330,19 @@ const exportData = (type) => {
                             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-800/50">
                                     <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rank</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applicant</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Program</th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current Status</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Strand / Score</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status / Prog. Offering</th>
                                         <th scope="col" class="relative px-6 py-3"><span class="sr-only">Action</span></th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     <tr v-for="applicant in eligibleApplicants" :key="applicant.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.waiver_rank || '-' }}</span>
+                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex flex-col">
                                                 <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.surname }}, {{ applicant.first_name }} {{ applicant.middle_name }}</span>
@@ -268,12 +350,22 @@ const exportData = (type) => {
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="text-sm text-gray-900 dark:text-white">{{ applicant.user?.current_application?.program?.code || 'N/A' }}</span>
+                                            <span class="text-sm text-gray-600 dark:text-gray-400">{{ applicant.user?.email || 'N/A' }}</span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2.5 py-1 rounded-full text-xs font-medium" :class="getStatusBadgeClass(applicant.passer_status_id)">
-                                                {{ getStatusLabel(applicant.passer_status?.status) }}
-                                            </span>
+                                            <div class="flex flex-col">
+                                                <span class="text-sm text-gray-900 dark:text-white">{{ applicant.strand || 'N/A' }}</span>
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Score: {{ applicant.pupcet_total_score || 'N/A' }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Sheet: {{ applicant.waiver_list_status || 'N/A' }}</span>
+                                                <span class="px-2.5 py-1 w-fit rounded-full text-xs font-medium" :class="getStatusBadgeClass(applicant.passer_status_id)">
+                                                    {{ getStatusLabel(applicant.passer_status?.status) }}
+                                                </span>
+                                                <span class="text-xs text-[#9E122C] font-medium mt-1">{{ applicant.waiver_program_offering || 'N/A' }}</span>
+                                            </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <button 
@@ -318,9 +410,11 @@ const exportData = (type) => {
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead class="bg-gray-50 dark:bg-gray-800/50">
                             <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rank</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applicant</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Program</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Strand / Score</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status / Prog. Offering</th>
                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -335,22 +429,30 @@ const exportData = (type) => {
                             </tr>
                             <tr v-for="applicant in tagged_applicants.data" :key="applicant.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.waiver_rank || '-' }}</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex flex-col">
                                         <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.surname }}, {{ applicant.first_name }} {{ applicant.middle_name }}</span>
                                         <span class="text-xs text-gray-500 dark:text-gray-400">{{ applicant.reference_number }}</span>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="text-sm text-gray-900 dark:text-white">{{ applicant.user?.current_application?.program?.code || 'N/A' }}</span>
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ applicant.user?.email || 'N/A' }}</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm text-gray-900 dark:text-white">{{ applicant.strand || 'N/A' }}</span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">Score: {{ applicant.pupcet_total_score || 'N/A' }}</span>
+                                    </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex flex-col gap-1 items-start">
-                                        <span class="px-2.5 py-1 inline-flex items-center gap-1.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                                            ⚠️ Waiver Program
-                                        </span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 mb-1">Sheet: {{ applicant.waiver_list_status || 'N/A' }}</span>
                                         <span class="px-2.5 py-1 inline-flex items-center gap-1.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800">
                                             🔴 On Probation
                                         </span>
+                                        <span class="text-xs text-[#9E122C] font-medium mt-1">{{ applicant.waiver_program_offering || 'N/A' }}</span>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -421,6 +523,101 @@ const exportData = (type) => {
                         <p v-if="untagForm.errors.reason" class="mt-1 text-sm text-red-600">{{ untagForm.errors.reason }}</p>
                     </div>
                     <p class="mt-4 text-sm text-gray-500">The applicant's status will revert to their previous status before being tagged (or Unqualified if unavailable).</p>
+                </div>
+            </template>
+        </ChangesConfirmationModal>
+
+        <!-- Import Modal -->
+        <ChangesConfirmationModal
+            :show="showImportModal"
+            @cancel="cancelImport"
+            @confirm="confirmImport"
+            :loading="confirmingImport"
+            confirm-text="Confirm Import"
+            confirm-button-class="bg-[#9E122C] hover:bg-[#800918] text-white"
+            disable-changes-validation
+        >
+            <template #title>
+                Import Waiver Applicants
+            </template>
+            <template #content>
+                <div class="flex flex-col gap-4">
+                    <!-- Step 1: Upload -->
+                    <div v-if="!importPreviewData" class="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+                        <FontAwesomeIcon icon="upload" class="text-4xl text-gray-400 mb-4" />
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Upload Excel Sheet</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">
+                            Upload the official waiver applicants list (.xlsx, .csv). <br>
+                            The system will match applicants based on the "Reference Number" column.
+                        </p>
+                        
+                        <input type="file" ref="importFileInput" accept=".xlsx,.csv" class="hidden" @change="handleFileUpload" />
+                        
+                        <button 
+                            @click="triggerFileInput"
+                            :disabled="importingFile"
+                            class="px-5 py-2.5 bg-gray-900 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition disabled:opacity-50 font-medium"
+                        >
+                            {{ importingFile ? 'Processing file...' : 'Select File' }}
+                        </button>
+                        
+                        <p v-if="importError" class="mt-4 text-sm text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 p-2 rounded w-full text-center">{{ importError }}</p>
+                    </div>
+                    
+                    <!-- Step 2: Preview -->
+                    <div v-else class="flex flex-col gap-4">
+                        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-3">
+                            <FontAwesomeIcon icon="info-circle" class="text-blue-500 mt-0.5" />
+                            <div class="text-sm text-blue-800 dark:text-blue-300">
+                                <p class="font-medium">File successfully processed!</p>
+                                <p class="mt-1">Found <strong>{{ importPreviewData.length }}</strong> matched applicants ready to be tagged/updated.</p>
+                            </div>
+                        </div>
+
+                        <div v-if="importUnmatched.length > 0" class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-3">
+                            <FontAwesomeIcon icon="exclamation-triangle" class="text-amber-500 mt-0.5" />
+                            <div class="text-sm text-amber-800 dark:text-amber-300">
+                                <p class="font-medium">Warning: {{ importUnmatched.length }} applicants not found</p>
+                                <p class="mt-1">The following reference numbers were not found in the system. They will be skipped during import.</p>
+                                <div class="mt-2 max-h-32 overflow-y-auto bg-white/50 dark:bg-black/20 p-2 rounded border border-amber-200/50 dark:border-amber-800/50">
+                                    <ul class="list-disc list-inside text-xs space-y-1">
+                                        <li v-for="um in importUnmatched" :key="um.reference_number">
+                                            {{ um.reference_number }} - {{ um.name || 'Unknown' }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-medium text-gray-900 dark:text-white mb-2 text-sm">Matched Applicants Preview (First 5):</h4>
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-800/50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Applicant</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        <tr v-for="ap in importPreviewData.slice(0, 5)" :key="ap.reference_number">
+                                            <td class="px-4 py-2 text-xs text-gray-900 dark:text-gray-300">{{ ap.rank || '-' }}</td>
+                                            <td class="px-4 py-2 text-xs">
+                                                <div class="font-medium text-gray-900 dark:text-white">{{ ap.system_name }}</div>
+                                                <div class="text-gray-500">{{ ap.reference_number }}</div>
+                                            </td>
+                                            <td class="px-4 py-2 text-xs">
+                                                <span v-if="ap.is_already_tagged" class="text-amber-600 font-medium">Update Info</span>
+                                                <span v-else class="text-green-600 font-medium">Tag & Update</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2 text-center" v-if="importPreviewData.length > 5">...and {{ importPreviewData.length - 5 }} more</p>
+                        </div>
+                    </div>
                 </div>
             </template>
         </ChangesConfirmationModal>
