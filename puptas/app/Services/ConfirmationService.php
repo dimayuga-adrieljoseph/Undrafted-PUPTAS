@@ -106,6 +106,7 @@ class ConfirmationService
             'requires_guidance_office' => (bool) ($application?->requires_guidance_office ?? false),
             'requires_admission_office' => (bool) ($application?->requires_admission_office ?? false),
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
+            'show_f137_button'      => $this->shouldShowF137Button($application),
             'cutoff' => (function () use ($user) {
                 $isOverrideAllowed = false;
                 $testPasser = \App\Models\TestPasser::where('user_id', $user->id)->first();
@@ -144,9 +145,9 @@ class ConfirmationService
     }
 
     /**
-     * Check if medical redirect should be shown
+     * Check if medical redirect should be shown.
      * Returns true when both evaluator and interviewer stages are completed
-     * but medical stage has not been completed yet
+     * but medical stage has not been completed yet (in_progress only).
      *
      * @param Application|null $application
      * @return bool
@@ -178,6 +179,39 @@ class ConfirmationService
 
         // Show redirect only when evaluator and interviewer are done, but medical is not yet completed
         return $evaluatorCompleted && $interviewerCompleted && !$medicalCompleted;
+    }
+
+    /**
+     * Check if the F137 download button should be shown.
+     * Returns true when both evaluator and interviewer stages are completed
+     * AND the medical stage exists (in_progress OR completed).
+     *
+     * @param Application|null $application
+     * @return bool
+     */
+    private function shouldShowF137Button(?Application $application): bool
+    {
+        if (!$application) {
+            return false;
+        }
+
+        $evaluatorCompleted = $application->processes()
+            ->where('stage', 'grade_evaluator')
+            ->where('status', 'completed')
+            ->exists();
+
+        $interviewerCompleted = $application->processes()
+            ->where('stage', 'interviewer')
+            ->where('status', 'completed')
+            ->whereIn('action', ['passed', 'transferred'])
+            ->exists();
+
+        // Medical stage exists (in_progress or completed)
+        $medicalExists = $application->processes()
+            ->where('stage', 'medical')
+            ->exists();
+
+        return $evaluatorCompleted && $interviewerCompleted && $medicalExists;
     }
 
     /**
