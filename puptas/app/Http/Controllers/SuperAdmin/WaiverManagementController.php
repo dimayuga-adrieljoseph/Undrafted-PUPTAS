@@ -239,7 +239,11 @@ class WaiverManagementController extends Controller
             'applicants.*.test_passer_id' => 'required|exists:test_passers,test_passer_id',
         ]);
 
-        $applicantsData = collect($request->input('applicants'));
+        // Cast test_passer_id to int to prevent type mismatch (frontend sends JSON strings)
+        $applicantsData = collect($request->input('applicants'))->map(function ($item) {
+            $item['test_passer_id'] = (int) $item['test_passer_id'];
+            return $item;
+        });
         $testPasserIds = $applicantsData->pluck('test_passer_id')->toArray();
 
         $testPassers = TestPasser::with('user.currentApplication')
@@ -252,7 +256,12 @@ class WaiverManagementController extends Controller
         DB::beginTransaction();
         try {
             foreach ($testPassers as $testPasser) {
-                $sheetData = $applicantsData->firstWhere('test_passer_id', $testPasser->test_passer_id);
+                // Match by int comparison
+                $sheetData = $applicantsData->first(function ($item) use ($testPasser) {
+                    return (int) $item['test_passer_id'] === (int) $testPasser->test_passer_id;
+                });
+
+                if (!$sheetData) continue;
 
                 // Update sheet columns regardless of if they are already tagged
                 $testPasser->waiver_rank = $sheetData['rank'] ?? null;
@@ -265,7 +274,7 @@ class WaiverManagementController extends Controller
                 $wasTagged = false;
 
                 // Tag test passer as On Probation
-                if ($testPasser->passer_status_id !== 5) {
+                if ((int) $testPasser->passer_status_id !== 5) {
                     $testPasser->previous_passer_status_id = $testPasser->passer_status_id;
                     $testPasser->passer_status_id = 5; // On Probation
                     $wasTagged = true;
