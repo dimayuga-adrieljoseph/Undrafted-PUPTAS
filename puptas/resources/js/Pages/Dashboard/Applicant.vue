@@ -64,6 +64,7 @@ const canEditGrades = computed(() => {
 const showImageModal = ref(false);
 const previewSrc = ref("");
 const showMedicalRedirect = ref(false);
+const showF137Button = ref(false);
 const activeUploadKey = ref("");
 const activeUploadFile = ref(null);
 const activeUploadDropActive = ref(false);
@@ -193,6 +194,7 @@ const fetchData = async () => {
     enrollmentStatus.value = data.enrollment_status || "";
     applicationProcesses.value = data.processes || [];
     showMedicalRedirect.value = data.show_medical_redirect || false;
+    showF137Button.value = data.show_f137_button || false;
     requiresPromissoryNote.value = data.requires_promissory_note || false;
     requiresGuidanceOffice.value = data.requires_guidance_office || false;
     requiresAdmissionOffice.value = data.requires_admission_office || false;
@@ -971,8 +973,8 @@ onMounted(() => {
               Download Verification Slip
             </button>
 
-            <!-- Download F137 Request Letter — only shown at medical stage -->
-            <template v-if="showMedicalRedirect">
+            <!-- Download F137 Request Letter — shown when medical stage is in progress or completed -->
+            <template v-if="showF137Button">
               <button
                 v-if="props.canDownloadF137"
                 @click="downloadF137RequestLetter"

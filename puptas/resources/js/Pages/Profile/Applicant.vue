@@ -285,7 +285,10 @@ const cancelAcademic = () => {
                   <Transition name="fade">
                     <div v-if="academicSaved" style="padding:.5rem 1.25rem;border-top:1px solid #f3f4f6;display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#15803d;">
                       <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;flex-shrink:0;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                      Saved successfully
+                      <span v-if="formerSchoolComplete">
+                        Academic information saved. You can now download your F137 Request Letter in the dashboard.
+                      </span>
+                      <span v-else>Saved successfully</span>
                     </div>
                   </Transition>
                 </template>
