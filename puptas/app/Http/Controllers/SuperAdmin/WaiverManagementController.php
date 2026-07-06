@@ -28,9 +28,13 @@ class WaiverManagementController extends Controller
      */
     public function index(Request $request): Response
     {
+        // Show all test passers who are On Probation (status=5) OR have is_waivered=true on their application
         $query = TestPasser::with(['user.currentApplication.program', 'passerStatus'])
-            ->whereHas('user.currentApplication', function($q) {
-                $q->where('is_waivered', true);
+            ->where(function($q) {
+                $q->where('passer_status_id', 5)
+                  ->orWhereHas('user.currentApplication', function($q2) {
+                      $q2->where('is_waivered', true);
+                  });
             })
             ->orderBy('updated_at', 'desc');
 
@@ -252,7 +256,6 @@ class WaiverManagementController extends Controller
 
         $taggedCount = 0;
         $updatedCount = 0;
-        $debugLines = [];
 
         DB::beginTransaction();
         try {
@@ -262,26 +265,18 @@ class WaiverManagementController extends Controller
                     return (int) $item['test_passer_id'] === (int) $testPasser->test_passer_id;
                 });
 
-                if (!$sheetData) {
-                    $debugLines[] = "ID {$testPasser->test_passer_id}: no sheetData match";
-                    continue;
-                }
+                if (!$sheetData) continue;
 
                 $application = $testPasser->user?->currentApplication;
-                $debugLines[] = "ID {$testPasser->test_passer_id}: status={$testPasser->passer_status_id}, app=" . ($application ? $application->id : 'null') . ", waivered=" . ($application?->is_waivered ? '1' : '0');
 
-                // Update sheet columns - skip waiver columns if they don't exist yet
-                try {
-                    $testPasser->waiver_list_status = $sheetData['status'] ?? null;
-                    $testPasser->waiver_program_offering = $sheetData['program_offering'] ?? null;
-                    $testPasser->pupcet_total_score = isset($sheetData['score']) ? floatval($sheetData['score']) : $testPasser->pupcet_total_score;
-                } catch (\Exception $colEx) {
-                    $debugLines[] = "Column error: " . $colEx->getMessage();
-                }
+                // Update sheet columns
+                $testPasser->waiver_list_status = $sheetData['status'] ?? null;
+                $testPasser->waiver_program_offering = $sheetData['program_offering'] ?? null;
+                $testPasser->pupcet_total_score = isset($sheetData['score']) ? floatval($sheetData['score']) : $testPasser->pupcet_total_score;
 
                 $wasTagged = false;
 
-                // Tag test passer as On Probation
+                // Tag test passer as On Probation if not already
                 if ((int) $testPasser->passer_status_id !== 5) {
                     $testPasser->previous_passer_status_id = $testPasser->passer_status_id;
                     $testPasser->passer_status_id = 5; // On Probation
@@ -311,12 +306,11 @@ class WaiverManagementController extends Controller
 
             DB::commit();
 
-            $debugSummary = implode(' | ', array_slice($debugLines, 0, 5));
-            return redirect()->back()->with('success', "DEBUG: imported $updatedCount ($taggedCount tagged). First 5: $debugSummary");
+            return redirect()->back()->with('success', "Successfully imported $updatedCount applicants ($taggedCount newly tagged).");
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Waiver Excel Import Confirm Error: ' . $e->getMessage());
-            return redirect()->back()->withErrors(['message' => 'DEBUG ERROR: ' . $e->getMessage() . ' | Lines: ' . implode(' | ', array_slice($debugLines, 0, 3))]);
+            return redirect()->back()->withErrors(['message' => 'Failed to import applicants: ' . $e->getMessage()]);
         }
     }
 
