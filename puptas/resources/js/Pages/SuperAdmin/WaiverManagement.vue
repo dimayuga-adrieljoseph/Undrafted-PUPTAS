@@ -466,7 +466,7 @@ const confirmImport = () => {
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ applicant.user?.email || 'N/A' }}</span>
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ applicant.email || applicant.user?.email || 'N/A' }}</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex flex-col">
