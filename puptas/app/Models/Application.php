@@ -24,10 +24,12 @@ class Application extends Model
         'enrollment_position',
         'requires_guidance_office',
         'requires_admission_office',
+        'is_waivered',
     ];
 
     protected $casts = [
         'submitted_at' => 'datetime',
+        'is_waivered' => 'boolean',
     ];
 
     public function user()

@@ -1038,7 +1038,7 @@ REPLACE
     />
 </template>
 
-<style>
+<style scoped>
 :root { --brand: #9E122C; --brand-light: #c81e3d; --brand-pale: #fdf2f4; --brand-dim: rgba(158,18,44,.08); }
 .profile-root { min-height:100vh; background:#f4f5f7; padding:1.25rem 1rem 3rem; font-family:'DM Sans','Segoe UI',system-ui,sans-serif; }
 @media (min-width:768px) { .profile-root { padding:1.75rem 1.5rem 3rem; } }

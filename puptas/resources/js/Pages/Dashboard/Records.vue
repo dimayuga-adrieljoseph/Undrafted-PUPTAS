@@ -1,3 +1,311 @@
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { Head, Link } from "@inertiajs/vue3";
+import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
+import BlurText from "@/Components/BlurText.vue";
+
+import { usePage } from "@inertiajs/vue3";
+
+const page = usePage();
+const users = ref(page.props.users || []);
+const programs = ref(page.props.programs || []);
+const summary = ref(
+    page.props.summary || { total: 0, accepted: 0, pending: 0, returned: 0 }
+);
+
+const props = defineProps({
+    user: Object,
+    allUsers: Array,
+});
+
+// Summary items with icons and percentages
+const summaryItems = computed(() => [
+    {
+        label: "Total Applications",
+        value: summary.value?.total ?? 0,
+        icon: {
+            template:
+                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>',
+        },
+        percentage: 100,
+        color: "blue",
+    },
+    {
+        label: "Officially Enrolled",
+        value: summary.value?.accepted ?? 0,
+        icon: {
+            template:
+                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
+        },
+        percentage:
+            summary.value?.total > 0
+                ? Math.round(
+                      (summary.value.accepted / summary.value.total) * 100
+                  )
+                : 0,
+        color: "green",
+    },
+    {
+        label: "Temporary Enrolled",
+        value: summary.value?.pending ?? 0,
+        icon: {
+            template:
+                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
+        },
+        percentage:
+            summary.value?.total > 0
+                ? Math.round(
+                      (summary.value.pending / summary.value.total) * 100
+                  )
+                : 0,
+        color: "yellow",
+    },
+    {
+        label: "Returned",
+        value: summary.value?.returned ?? 0,
+        icon: {
+            template:
+                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>',
+        },
+        percentage:
+            summary.value?.total > 0
+                ? Math.round(
+                      (summary.value.returned / summary.value.total) * 100
+                  )
+                : 0,
+        color: "red",
+    },
+]);
+
+const selectedUser = ref(null);
+const isLoading = ref(true);
+const errorMessage = ref("");
+const searchQuery = ref("");
+const selectedUserFiles = ref({});
+const snackbar = ref({
+    visible: false,
+    message: "",
+});
+const autoRefreshTimer = ref(null);
+const POLL_INTERVAL_MS = 10000;
+
+const showSnackbar = (msg, duration = 3000) => {
+    snackbar.value.message = msg;
+    snackbar.value.visible = true;
+    setTimeout(() => {
+        snackbar.value.visible = false;
+    }, duration);
+};
+
+const getStatusClass = (status) => {
+    const s = (status || "").toLowerCase();
+    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "returned")
+        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
+};
+
+const fetchUsers = async () => {
+    try {
+        const response = await fetch("/record-dashboard/applicants", {
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        if (!response.ok) throw new Error("Failed to fetch users");
+        users.value = await response.json();
+    } catch (error) {
+        errorMessage.value = error.message;
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const fetchStats = async () => {
+    try {
+        const response = await axios.get("/record-dashboard/stats");
+        summary.value = response.data.summary || { total: 0, accepted: 0, pending: 0, returned: 0 };
+        programs.value = response.data.programs || [];
+    } catch (error) {
+        console.error("Failed to fetch stats:", error);
+    }
+};
+
+onMounted(() => {
+    fetchUsers();
+    fetchStats();
+    autoRefreshTimer.value = setInterval(async () => {
+        await fetchUsers();
+        await fetchStats();
+
+        if (!selectedUser.value) {
+            return;
+        }
+
+        const existsInQueue = users.value.some((u) => String(u.id) === String(selectedUser.value.id));
+        if (!existsInQueue) {
+            closeUserCard();
+        }
+    }, POLL_INTERVAL_MS);
+});
+
+onBeforeUnmount(() => {
+    if (autoRefreshTimer.value) {
+        clearInterval(autoRefreshTimer.value);
+        autoRefreshTimer.value = null;
+    }
+});
+
+const filteredUsers = computed(() => {
+    if (!searchQuery.value.trim()) return users.value;
+    const query = searchQuery.value.toLowerCase();
+    return users.value.filter((user) => {
+        return (
+            user.firstname?.toLowerCase().includes(query) ||
+            user.lastname?.toLowerCase().includes(query) ||
+            user.email?.toLowerCase().includes(query)
+        );
+    });
+});
+
+const displayedUsers = computed(() => {
+    // Recent applications = only those NOT yet officially enrolled
+    const pending = users.value.filter(
+        u => u.enrollment_status !== 'officially_enrolled' &&
+             u.application?.enrollment_status !== 'officially_enrolled'
+    );
+    if (searchQuery.value.trim()) {
+        const q = searchQuery.value.toLowerCase();
+        return pending.filter(u =>
+            u.firstname?.toLowerCase().includes(q) ||
+            u.lastname?.toLowerCase().includes(q) ||
+            u.email?.toLowerCase().includes(q)
+        );
+    }
+    return pending.slice(0, 5);
+});
+
+const selectUser = async (user) => {
+    try {
+        const response = await axios.get(
+            `/record-dashboard/application/${user.id}`
+        );
+
+        selectedUser.value = {
+            ...user,
+            application: {
+                ...response.data.user.application,
+                processes: response.data.user.application?.processes || [],
+                program: response.data.user.application?.program || null,
+            },
+        };
+
+        selectedUserFiles.value = response.data.uploadedFiles || {};
+    } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        selectedUserFiles.value = {};
+        selectedUser.value = null;
+        showSnackbar("Failed to load applicant data");
+    }
+};
+
+const closeUserCard = () => {
+    selectedUser.value = null;
+};
+
+const formatFileKey = (key) => {
+    const map = {
+        file10Front: 'Grade 10 Report Front',
+        file10: 'Grade 10 Report Back',
+        file11Front: "Grade 11 Report Front",
+        file11: "Grade 11 Report Back",
+        file12Front: "Grade 12 Report Front",
+        file12: "Grade 12 Report Back",
+        schoolId: "School ID",
+        nonEnrollCert: "Non-Enrollment Cert",
+        psa: "PSA Birth Certificate",
+        goodMoral: "Good Moral Certificate",
+        underOath: "Under Oath Document",
+        photo2x2: "2x2 Photo",
+    };
+    return map[key] || key;
+};
+
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+
+const hasImagePreview = (file) =>
+    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
+
+const previewImage = ref(null);
+const showImageModal = ref(false);
+
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) {
+        return;
+    }
+
+    previewImage.value = src;
+    showImageModal.value = true;
+};
+
+const closeImageModal = () => {
+    showImageModal.value = false;
+};
+
+const capitalize = (str) =>
+    typeof str === "string"
+        ? str.charAt(0).toUpperCase() + str.slice(1).replace("_", " ")
+        : "";
+
+const formatDate = (date) => {
+    if (!date) return "—";
+    return new Date(date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+const acceptApplication = async () => {
+    try {
+        const taggedId = selectedUser.value.id;
+        await axios.post(`/record-dashboard/tag/${taggedId}`);
+        showSnackbar("Tagged as officially enrolled");
+
+        // Immediately remove from the list so UI updates without waiting for refetch
+        users.value = users.value.filter(u => u.id !== taggedId);
+        selectedUser.value = null;
+
+        await fetchUsers();
+        await fetchStats();
+    } catch (e) {
+        console.error("Tag failed:", e);
+        const msg = e.response?.data?.message || "Failed to tag application";
+        showSnackbar(msg);
+    }
+};
+
+const untagApplication = async () => {
+    try {
+        await axios.post(`/record-dashboard/untag/${selectedUser.value.id}`);
+        showSnackbar("Reverted to temporary enrolled");
+        selectedUser.value = null;
+        await fetchUsers();
+        await fetchStats();
+    } catch (e) {
+        console.error("Untag failed:", e);
+        const msg = e.response?.data?.message || "Failed to untag application";
+        showSnackbar(msg);
+    }
+};
+</script>
+
 <template>
     <Head title="Record Staff Dashboard" />
     <RecordStaffLayout>
@@ -728,314 +1036,6 @@
         </transition>
     </RecordStaffLayout>
 </template>
-
-<script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
-import { Head, Link } from "@inertiajs/vue3";
-import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
-import BlurText from "@/Components/BlurText.vue";
-
-import { usePage } from "@inertiajs/vue3";
-
-const page = usePage();
-const users = ref(page.props.users || []);
-const programs = ref(page.props.programs || []);
-const summary = ref(
-    page.props.summary || { total: 0, accepted: 0, pending: 0, returned: 0 }
-);
-
-const props = defineProps({
-    user: Object,
-    allUsers: Array,
-});
-
-// Summary items with icons and percentages
-const summaryItems = computed(() => [
-    {
-        label: "Total Applications",
-        value: summary.value?.total ?? 0,
-        icon: {
-            template:
-                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>',
-        },
-        percentage: 100,
-        color: "blue",
-    },
-    {
-        label: "Officially Enrolled",
-        value: summary.value?.accepted ?? 0,
-        icon: {
-            template:
-                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
-        },
-        percentage:
-            summary.value?.total > 0
-                ? Math.round(
-                      (summary.value.accepted / summary.value.total) * 100
-                  )
-                : 0,
-        color: "green",
-    },
-    {
-        label: "Temporary Enrolled",
-        value: summary.value?.pending ?? 0,
-        icon: {
-            template:
-                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
-        },
-        percentage:
-            summary.value?.total > 0
-                ? Math.round(
-                      (summary.value.pending / summary.value.total) * 100
-                  )
-                : 0,
-        color: "yellow",
-    },
-    {
-        label: "Returned",
-        value: summary.value?.returned ?? 0,
-        icon: {
-            template:
-                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>',
-        },
-        percentage:
-            summary.value?.total > 0
-                ? Math.round(
-                      (summary.value.returned / summary.value.total) * 100
-                  )
-                : 0,
-        color: "red",
-    },
-]);
-
-const selectedUser = ref(null);
-const isLoading = ref(true);
-const errorMessage = ref("");
-const searchQuery = ref("");
-const selectedUserFiles = ref({});
-const snackbar = ref({
-    visible: false,
-    message: "",
-});
-const autoRefreshTimer = ref(null);
-const POLL_INTERVAL_MS = 10000;
-
-const showSnackbar = (msg, duration = 3000) => {
-    snackbar.value.message = msg;
-    snackbar.value.visible = true;
-    setTimeout(() => {
-        snackbar.value.visible = false;
-    }, duration);
-};
-
-const getStatusClass = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
-    if (s === "returned")
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-};
-
-const fetchUsers = async () => {
-    try {
-        const response = await fetch("/record-dashboard/applicants", {
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json();
-    } catch (error) {
-        errorMessage.value = error.message;
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const fetchStats = async () => {
-    try {
-        const response = await axios.get("/record-dashboard/stats");
-        summary.value = response.data.summary || { total: 0, accepted: 0, pending: 0, returned: 0 };
-        programs.value = response.data.programs || [];
-    } catch (error) {
-        console.error("Failed to fetch stats:", error);
-    }
-};
-
-onMounted(() => {
-    fetchUsers();
-    fetchStats();
-    autoRefreshTimer.value = setInterval(async () => {
-        await fetchUsers();
-        await fetchStats();
-
-        if (!selectedUser.value) {
-            return;
-        }
-
-        const existsInQueue = users.value.some((u) => String(u.id) === String(selectedUser.value.id));
-        if (!existsInQueue) {
-            closeUserCard();
-        }
-    }, POLL_INTERVAL_MS);
-});
-
-onBeforeUnmount(() => {
-    if (autoRefreshTimer.value) {
-        clearInterval(autoRefreshTimer.value);
-        autoRefreshTimer.value = null;
-    }
-});
-
-const filteredUsers = computed(() => {
-    if (!searchQuery.value.trim()) return users.value;
-    const query = searchQuery.value.toLowerCase();
-    return users.value.filter((user) => {
-        return (
-            user.firstname?.toLowerCase().includes(query) ||
-            user.lastname?.toLowerCase().includes(query) ||
-            user.email?.toLowerCase().includes(query)
-        );
-    });
-});
-
-const displayedUsers = computed(() => {
-    // Recent applications = only those NOT yet officially enrolled
-    const pending = users.value.filter(
-        u => u.enrollment_status !== 'officially_enrolled' &&
-             u.application?.enrollment_status !== 'officially_enrolled'
-    );
-    if (searchQuery.value.trim()) {
-        const q = searchQuery.value.toLowerCase();
-        return pending.filter(u =>
-            u.firstname?.toLowerCase().includes(q) ||
-            u.lastname?.toLowerCase().includes(q) ||
-            u.email?.toLowerCase().includes(q)
-        );
-    }
-    return pending.slice(0, 5);
-});
-
-const selectUser = async (user) => {
-    try {
-        const response = await axios.get(
-            `/record-dashboard/application/${user.id}`
-        );
-
-        selectedUser.value = {
-            ...user,
-            application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
-                program: response.data.user.application?.program || null,
-            },
-        };
-
-        selectedUserFiles.value = response.data.uploadedFiles || {};
-    } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        selectedUserFiles.value = {};
-        selectedUser.value = null;
-        showSnackbar("Failed to load applicant data");
-    }
-};
-
-const closeUserCard = () => {
-    selectedUser.value = null;
-};
-
-const formatFileKey = (key) => {
-    const map = {
-        file10Front: 'Grade 10 Report Front',
-        file10: 'Grade 10 Report Back',
-        file11Front: "Grade 11 Report Front",
-        file11: "Grade 11 Report Back",
-        file12Front: "Grade 12 Report Front",
-        file12: "Grade 12 Report Back",
-        schoolId: "School ID",
-        nonEnrollCert: "Non-Enrollment Cert",
-        psa: "PSA Birth Certificate",
-        goodMoral: "Good Moral Certificate",
-        underOath: "Under Oath Document",
-        photo2x2: "2x2 Photo",
-    };
-    return map[key] || key;
-};
-
-const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
-
-const hasImagePreview = (file) =>
-    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
-
-const previewImage = ref(null);
-const showImageModal = ref(false);
-
-const openImageModal = (file) => {
-    const src = getFileUrl(file);
-    if (!src || !hasImagePreview(file)) {
-        return;
-    }
-
-    previewImage.value = src;
-    showImageModal.value = true;
-};
-
-const closeImageModal = () => {
-    showImageModal.value = false;
-};
-
-const capitalize = (str) =>
-    typeof str === "string"
-        ? str.charAt(0).toUpperCase() + str.slice(1).replace("_", " ")
-        : "";
-
-const formatDate = (date) => {
-    if (!date) return "—";
-    return new Date(date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
-
-const acceptApplication = async () => {
-    try {
-        const taggedId = selectedUser.value.id;
-        await axios.post(`/record-dashboard/tag/${taggedId}`);
-        showSnackbar("Tagged as officially enrolled");
-
-        // Immediately remove from the list so UI updates without waiting for refetch
-        users.value = users.value.filter(u => u.id !== taggedId);
-        selectedUser.value = null;
-
-        await fetchUsers();
-        await fetchStats();
-    } catch (e) {
-        console.error("Tag failed:", e);
-        const msg = e.response?.data?.message || "Failed to tag application";
-        showSnackbar(msg);
-    }
-};
-
-const untagApplication = async () => {
-    try {
-        await axios.post(`/record-dashboard/untag/${selectedUser.value.id}`);
-        showSnackbar("Reverted to temporary enrolled");
-        selectedUser.value = null;
-        await fetchUsers();
-        await fetchStats();
-    } catch (e) {
-        console.error("Untag failed:", e);
-        const msg = e.response?.data?.message || "Failed to untag application";
-        showSnackbar(msg);
-    }
-};
-</script>
 
 <style scoped>
 .fade-enter-active,

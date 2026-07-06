@@ -1,3 +1,139 @@
+<script setup>
+import { ref, computed, watch } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
+import AppLayout from '@/Layouts/AppLayout.vue';
+
+const props = defineProps({
+  users:            Array,
+  pagination:       Object,   // { total, per_page, current_page, last_page }
+  userCountsByRole: Object,
+  roles:            Object,
+  totalUsers:       Number,
+  currentUserRoleId: Number,
+});
+
+const page = usePage();
+
+const isSuperAdmin = computed(() => props.currentUserRoleId === 7);
+const isAdmin = computed(() => props.currentUserRoleId === 2);
+const canViewProfiles = computed(() => isSuperAdmin.value || isAdmin.value);
+
+// ── State ──────────────────────────────────────────────────────────────────
+const searchTerm     = ref('');
+const selectedRole   = ref('');
+const searching      = ref(false);
+const displayedUsers = ref([...(props.users ?? [])]);
+const paginationInfo = ref({ ...(props.pagination ?? { total: 0, per_page: 15, current_page: 1, last_page: 1 }) });
+
+let debounceTimer = null;
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+async function fetchPage(q, p) {
+  searching.value = true;
+  try {
+    const params = { page: p };
+    if (q) params.q = q;
+    if (selectedRole.value) params.role = selectedRole.value;
+    const { data } = await axios.get(route('users.search'), { params });
+    displayedUsers.value = data.data;
+    paginationInfo.value = {
+      total:        data.total,
+      per_page:     data.per_page,
+      current_page: data.current_page,
+      last_page:    data.last_page,
+    };
+  } finally {
+    searching.value = false;
+  }
+}
+
+function changePage(p) {
+  if (p < 1 || p > paginationInfo.value.last_page || searching.value) return;
+  fetchPage(searchTerm.value, p);
+}
+
+// Debounced search — 350 ms after last keystroke
+watch(searchTerm, (val) => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => fetchPage(val, 1), 350);
+});
+
+// Immediately filter when role selection changes
+watch(selectedRole, () => {
+  fetchPage(searchTerm.value, 1);
+});
+
+// Visible page numbers (max 5 around current page)
+const visiblePages = computed(() => {
+  const { current_page, last_page } = paginationInfo.value;
+  const delta = 2;
+  const range = [];
+  const start = Math.max(1, current_page - delta);
+  const end   = Math.min(last_page, current_page + delta);
+  for (let i = start; i <= end; i++) range.push(i);
+  return range;
+});
+
+// ── Display helpers ────────────────────────────────────────────────────────
+const roleStats = [
+  {
+    label: 'Applicants', roleId: 1,
+    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z',
+    bg: 'bg-blue-100 dark:bg-blue-900/30', color: 'text-blue-600 dark:text-blue-300',
+  },
+  {
+    label: 'Admins', roleId: 2,
+    icon: 'M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm0 4c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-1.4c0-2 4-3.1 6-3.1s6 1.1 6 3.1V19z',
+    bg: 'bg-yellow-100 dark:bg-yellow-900/30', color: 'text-yellow-600 dark:text-yellow-300',
+  },
+  {
+    label: 'Evaluators', roleId: 3,
+    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
+    bg: 'bg-purple-100 dark:bg-purple-900/30', color: 'text-purple-600 dark:text-purple-300',
+  },
+  {
+    label: 'Interviewers', roleId: 4,
+    icon: 'M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z',
+    bg: 'bg-green-100 dark:bg-green-900/30', color: 'text-green-600 dark:text-green-300',
+  },
+];
+
+const getRoleBadgeClass = (roleId) => {
+  const map = {
+    1: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+    2: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
+    3: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
+    4: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+    5: 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300',
+    6: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+  };
+  return map[roleId] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+};
+
+const getProgramName = (user) => {
+  if (user.role_id === 1) {
+    return user.officially_enrolled_application?.program?.name
+      || user.current_application?.program?.name
+      || user.applicant_profile?.first_choice_program?.name
+      || '—';
+  }
+  return user.programs?.[0]?.name || '—';
+};
+
+const getInitials = (firstName, lastName) =>
+  `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+
+const formatDate = (dateString) =>
+  new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+const confirmDelete = (userId) => {
+  if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    router.delete(route('users.destroy', userId));
+  }
+};
+</script>
+
 <template>
   <Head title="Manage Users" />
   <AppLayout>
@@ -358,142 +494,6 @@
     </Link>
   </AppLayout>
 </template>
-
-<script setup>
-import { ref, computed, watch } from 'vue';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import axios from 'axios';
-import AppLayout from '@/Layouts/AppLayout.vue';
-
-const props = defineProps({
-  users:            Array,
-  pagination:       Object,   // { total, per_page, current_page, last_page }
-  userCountsByRole: Object,
-  roles:            Object,
-  totalUsers:       Number,
-  currentUserRoleId: Number,
-});
-
-const page = usePage();
-
-const isSuperAdmin = computed(() => props.currentUserRoleId === 7);
-const isAdmin = computed(() => props.currentUserRoleId === 2);
-const canViewProfiles = computed(() => isSuperAdmin.value || isAdmin.value);
-
-// ── State ──────────────────────────────────────────────────────────────────
-const searchTerm     = ref('');
-const selectedRole   = ref('');
-const searching      = ref(false);
-const displayedUsers = ref([...(props.users ?? [])]);
-const paginationInfo = ref({ ...(props.pagination ?? { total: 0, per_page: 15, current_page: 1, last_page: 1 }) });
-
-let debounceTimer = null;
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-async function fetchPage(q, p) {
-  searching.value = true;
-  try {
-    const params = { page: p };
-    if (q) params.q = q;
-    if (selectedRole.value) params.role = selectedRole.value;
-    const { data } = await axios.get(route('users.search'), { params });
-    displayedUsers.value = data.data;
-    paginationInfo.value = {
-      total:        data.total,
-      per_page:     data.per_page,
-      current_page: data.current_page,
-      last_page:    data.last_page,
-    };
-  } finally {
-    searching.value = false;
-  }
-}
-
-function changePage(p) {
-  if (p < 1 || p > paginationInfo.value.last_page || searching.value) return;
-  fetchPage(searchTerm.value, p);
-}
-
-// Debounced search — 350 ms after last keystroke
-watch(searchTerm, (val) => {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => fetchPage(val, 1), 350);
-});
-
-// Immediately filter when role selection changes
-watch(selectedRole, () => {
-  fetchPage(searchTerm.value, 1);
-});
-
-// Visible page numbers (max 5 around current page)
-const visiblePages = computed(() => {
-  const { current_page, last_page } = paginationInfo.value;
-  const delta = 2;
-  const range = [];
-  const start = Math.max(1, current_page - delta);
-  const end   = Math.min(last_page, current_page + delta);
-  for (let i = start; i <= end; i++) range.push(i);
-  return range;
-});
-
-// ── Display helpers ────────────────────────────────────────────────────────
-const roleStats = [
-  {
-    label: 'Applicants', roleId: 1,
-    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78C15.57 19.36 13.86 20 12 20s-3.57-.64-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33C4.62 15.49 4 13.82 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z',
-    bg: 'bg-blue-100 dark:bg-blue-900/30', color: 'text-blue-600 dark:text-blue-300',
-  },
-  {
-    label: 'Admins', roleId: 2,
-    icon: 'M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm0 4c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-1.4c0-2 4-3.1 6-3.1s6 1.1 6 3.1V19z',
-    bg: 'bg-yellow-100 dark:bg-yellow-900/30', color: 'text-yellow-600 dark:text-yellow-300',
-  },
-  {
-    label: 'Evaluators', roleId: 3,
-    icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
-    bg: 'bg-purple-100 dark:bg-purple-900/30', color: 'text-purple-600 dark:text-purple-300',
-  },
-  {
-    label: 'Interviewers', roleId: 4,
-    icon: 'M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z',
-    bg: 'bg-green-100 dark:bg-green-900/30', color: 'text-green-600 dark:text-green-300',
-  },
-];
-
-const getRoleBadgeClass = (roleId) => {
-  const map = {
-    1: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-    2: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
-    3: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-    4: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-    5: 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300',
-    6: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
-  };
-  return map[roleId] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
-};
-
-const getProgramName = (user) => {
-  if (user.role_id === 1) {
-    return user.officially_enrolled_application?.program?.name
-      || user.current_application?.program?.name
-      || user.applicant_profile?.first_choice_program?.name
-      || '—';
-  }
-  return user.programs?.[0]?.name || '—';
-};
-
-const getInitials = (firstName, lastName) =>
-  `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
-
-const formatDate = (dateString) =>
-  new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-const confirmDelete = (userId) => {
-  if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-    router.delete(route('users.destroy', userId));
-  }
-};
-</script>
 
 <style scoped>
 ::-webkit-scrollbar { width: 5px; }

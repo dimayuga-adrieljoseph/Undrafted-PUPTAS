@@ -1,3 +1,624 @@
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { Head } from "@inertiajs/vue3";
+import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
+import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue';
+
+import {
+    Chart as ChartJS,
+    LineController,
+    LineElement,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    Tooltip,
+    Title,
+    Legend,
+} from "chart.js";
+
+ChartJS.register(
+    LineController,
+    LineElement,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    Tooltip,
+    Title,
+    Legend
+);
+
+import { usePage } from "@inertiajs/vue3";
+
+const props = defineProps({
+    user: Object,
+    assignedPrograms: Array,
+    selectedUserId: {
+        type: [Number, String],
+        default: null
+    }
+});
+
+const currentPage = ref(1);
+const itemsPerPage = 10;
+const sortKey = ref("lastname");
+const evaluationStatusFilter = ref("");
+const sortAsc = ref(true);
+const showStatusDropdown = ref(false);
+const showSortDropdown = ref(false);
+const filterDropdownRef = ref(null);
+
+// Low Slot Alert
+const lowSlotThreshold = 10;
+const showLowSlotAlert = ref(true);
+
+const lowSlotPrograms = computed(() => {
+    return (props.assignedPrograms || [])
+        .filter(p => p.slots != null && p.slots <= lowSlotThreshold)
+        .map(p => ({ id: p.id, code: p.code, name: p.name, slots: p.slots }));
+});
+
+watch(() => props.assignedPrograms, () => {
+    showLowSlotAlert.value = true;
+}, { deep: true });
+
+const decrementLocalSlot = (programId) => {
+    const prog = (props.assignedPrograms || []).find(p => p.id == programId);
+    if (prog && prog.slots != null && prog.slots > 0) {
+        prog.slots -= 1;
+    }
+};
+
+const page = usePage();
+const users = ref(page.props.users || []);
+
+const selectedUser = ref(null);
+const isLoading = ref(true);
+const errorMessage = ref("");
+const searchQuery = ref("");
+const selectedUserFiles = ref({});
+const showAcceptModal = ref(false);
+const showRejectModal = ref(false);
+const isSubmitting = ref(false);
+const interviewNotes = ref("");
+const interviewStartTime = ref(null);
+const snackbar = ref({
+    visible: false,
+    message: "",
+    type: "success",
+});
+
+const showSnackbar = (msg, type = "success", duration = 3000) => {
+    snackbar.value.message = msg;
+    snackbar.value.type = type;
+    snackbar.value.visible = true;
+    setTimeout(() => {
+        snackbar.value.visible = false;
+    }, duration);
+};
+
+// Subject label mapping
+const SUBJECT_LABELS = {
+    g11_general_mathematics: 'G11 General Mathematics',
+    g11_statistics_probability: 'G11 Statistics & Probability',
+    g11_business_mathematics: 'G11 Business Mathematics',
+    g11_pre_calculus: 'G11 Pre-Calculus',
+    g11_basic_calculus: 'G11 Basic Calculus',
+    g11_earth_life_science: 'G11 Earth & Life Science',
+    g11_physical_science: 'G11 Physical Science',
+    g11_earth_science: 'G11 Earth Science',
+    g11_general_chemistry_1: 'G11 General Chemistry 1',
+    g12_general_physics_1: 'G12 General Physics 1',
+    g12_general_biology_1: 'G12 General Biology 1',
+    g12_general_physics_2: 'G12 General Physics 2',
+    g12_general_biology_2: 'G12 General Biology 2',
+    g12_general_chemistry_2: 'G12 General Chemistry 2',
+    g12_earth_life_science: 'G12 Earth & Life Science',
+    g12_physical_science: 'G12 Physical Science',
+    g11_oral_communication: 'G11 Oral Communication',
+    'g11_21st_century_lit': 'G11 21st Century Literature',
+    g11_academic_professional: 'G11 Academic & Professional',
+    g11_reading_writing: 'G11 Reading & Writing',
+    'g12_21st_century_lit': 'G12 21st Century Literature',
+    g12_academic_professional: 'G12 Academic & Professional',
+};
+
+const MATH_KEYS = ['g11_general_mathematics', 'g11_statistics_probability', 'g11_business_mathematics', 'g11_pre_calculus', 'g11_basic_calculus'];
+const SCIENCE_KEYS = ['g11_earth_life_science', 'g11_physical_science', 'g11_earth_science', 'g11_general_chemistry_1', 'g12_general_physics_1', 'g12_general_biology_1', 'g12_general_physics_2', 'g12_general_biology_2', 'g12_general_chemistry_2', 'g12_earth_life_science', 'g12_physical_science'];
+const ENGLISH_KEYS = ['g11_oral_communication', 'g11_21st_century_lit', 'g11_academic_professional', 'g11_reading_writing', 'g12_21st_century_lit', 'g12_academic_professional'];
+
+function buildSubjectList(keys, grades) {
+    return keys.filter(key => grades?.[key] != null && grades[key] !== '').map(key => ({ key, label: SUBJECT_LABELS[key] || key, value: grades[key] }));
+}
+
+const mathSubjects = computed(() => buildSubjectList(MATH_KEYS, selectedUser.value?.grades));
+const scienceSubjects = computed(() => buildSubjectList(SCIENCE_KEYS, selectedUser.value?.grades));
+const englishSubjects = computed(() => buildSubjectList(ENGLISH_KEYS, selectedUser.value?.grades));
+
+const dynamicSubjectList = computed(() => {
+    const dyn = selectedUser.value?.grades?.dynamic_subjects;
+    if (!dyn || !Array.isArray(dyn)) return [];
+    return dyn.map(s => ({ label: s.name || 'Dynamic Subject', value: s.grade }));
+});
+
+const hasIndividualSubjects = computed(() => mathSubjects.value.length > 0 || scienceSubjects.value.length > 0 || englishSubjects.value.length > 0);
+
+const getStatusBadgeClass = (user) => {
+    switch (user.pipeline_status) {
+        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+};
+
+const getStatusClass = (status) => {
+    const s = (status || "").toLowerCase();
+    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+    if (s === "rejected") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
+};
+
+const getButtonClass = (type) => {
+    const classes = {
+        primary: 'bg-[#9E122C] text-white hover:bg-[#b51834]',
+        success: 'bg-green-600 text-white hover:bg-green-700',
+        danger: 'bg-red-600 text-white hover:bg-red-700',
+        secondary: 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+    };
+    return classes[type] || classes.secondary;
+};
+
+const getEvaluationStatusText = (user) => {
+    switch (user.pipeline_status) {
+        case 'for_evaluation': return 'For Evaluation';
+        case 'evaluation_returned': return 'Returned for Revision';
+        case 'evaluation_passed': return 'Evaluation Passed';
+        case 'for_interview': return 'For Interview';
+        case 'interview_returned': return 'Returned for Revision';
+        case 'interview_passed': return 'Interview Passed';
+        case 'interview_transferred': return 'Course Transferred';
+        case 'for_medical': return 'For Medical';
+        case 'medical_cleared': return 'Medical Cleared';
+        case 'medical_rejected': return 'Medical Rejected';
+        case 'for_records': return 'For Records';
+        case 'officially_enrolled': return 'Officially Enrolled';
+        case 'rejected': return 'Rejected';
+        default: return 'Unknown';
+    }
+};
+
+const getEvaluationStatusClass = (user) => {
+    switch (user.pipeline_status) {
+        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+        case 'for_medical': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+        case 'medical_cleared': return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
+        case 'medical_rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'for_records': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
+        case 'officially_enrolled': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold';
+        case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+};
+
+const fetchUsers = async () => {
+    try {
+        const response = await fetch("/interviewer-dashboard/applicants", {
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        if (!response.ok) throw new Error("Failed to fetch users");
+        users.value = await response.json();
+
+        // Auto-select user if selectedUserId prop was provided
+        if (props.selectedUserId && !selectedUser.value) {
+            const user = users.value.find(u => u.id == props.selectedUserId);
+            if (user) {
+                await selectUser(user);
+            }
+        }
+    } catch (error) {
+        errorMessage.value = error.message;
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const handleOutsideClick = (e) => {
+    if (filterDropdownRef.value && !filterDropdownRef.value.contains(e.target)) {
+        showStatusDropdown.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchUsers();
+    // fetchPrograms(); removed since assignedPrograms comes from props
+    document.addEventListener('click', handleOutsideClick);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', handleOutsideClick);
+});
+
+const filteredUsers = computed(() => {
+    const q = searchQuery.value.trim().toLowerCase();
+    return users.value
+        .filter((u) => {
+            const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
+            const matchesSearch = fullName.includes(q);
+            const matchesEvaluationStatus = evaluationStatusFilter.value
+                ? u.pipeline_status === evaluationStatusFilter.value
+                : true;
+            return matchesSearch && matchesEvaluationStatus;
+        })
+        .sort((a, b) => {
+            let aVal, bVal;
+            
+            if (sortKey.value === 'program.name') {
+                aVal = (a.program?.name || "").toString().toLowerCase();
+                bVal = (b.program?.name || "").toString().toLowerCase();
+            } else {
+                aVal = (a[sortKey.value] || "").toString().toLowerCase();
+                bVal = (b[sortKey.value] || "").toString().toLowerCase();
+            }
+            
+            return sortAsc.value
+                ? aVal.localeCompare(bVal)
+                : bVal.localeCompare(aVal);
+        });
+});
+
+const selectUser = async (user) => {
+    try {
+        // Open panel immediately with basic user data
+        selectedUser.value = {
+            ...user,
+            grades: null,
+            application: user.application || null,
+        };
+        
+        // Show loading state for files
+        selectedUserFiles.value = { loading: true };
+
+        // Fetch full data in background
+        const response = await axios.get(
+            `/interviewer-dashboard/application/${user.id}`
+        );
+
+        // Update with full data
+        selectedUser.value = {
+            ...user,
+            ...response.data.user,
+            application: {
+                ...response.data.user.application,
+                processes: response.data.user.application?.processes || [],
+                program: response.data.user.application?.program || null,
+                second_choice: response.data.user.application?.second_choice || null,
+                third_choice: response.data.user.application?.third_choice || null,
+            },
+            grades: response.data.user.grades || null,
+        };
+
+        selectedUserFiles.value = response.data.uploadedFiles || {};
+
+        // Check if there is an interview already in progress
+        const interviewerInProgress = selectedUser.value.application?.processes?.find(
+            p => p.stage === 'interviewer' && p.status === 'in_progress'
+        );
+        if (interviewerInProgress && interviewerInProgress.started_at) {
+            interviewStartTime.value = interviewerInProgress.started_at.endsWith('Z') 
+                ? interviewerInProgress.started_at 
+                : interviewerInProgress.started_at + 'Z';
+        } else {
+            interviewStartTime.value = null;
+        }
+
+    } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        
+        if (error.response && error.response.status === 403) {
+            showSnackbar("Unauthorized access. Application is not at the interviewer stage.", "error");
+        } else {
+            showSnackbar("Failed to load applicant data. Please try again.", "error");
+        }
+        
+        selectedUserFiles.value = {};
+        selectedUser.value = null;
+    }
+};
+
+const closeUserCard = () => {
+    selectedUser.value = null;
+    interviewNotes.value = "";
+    interviewStartTime.value = null;
+};
+const isCancellingInterview = ref(false);
+const showCancelModal = ref(false);
+
+const beginInterview = async () => {
+    try {
+        const response = await axios.post(`/interviewer-dashboard/start/${selectedUser.value.id}`);
+        const startedAt = response.data.started_at;
+        interviewStartTime.value = startedAt.endsWith('Z') ? startedAt : startedAt + 'Z';
+    } catch (e) {
+        console.error("Failed to start interview:", e);
+        const msg = e.response?.data?.message || "Failed to start interview";
+        showSnackbar(msg, "error");
+    }
+};
+
+const cancelInterview = () => {
+    showCancelModal.value = true;
+};
+
+const confirmCancelInterview = async () => {
+    isCancellingInterview.value = true;
+    try {
+        await axios.post(`/interviewer-dashboard/cancel/${selectedUser.value.id}`);
+        // Update local state directly
+        interviewStartTime.value = null;
+        if (selectedUser.value && selectedUser.value.application) {
+            const processes = selectedUser.value.application.processes;
+            const idx = processes.findIndex(p => p.stage === 'interviewer');
+            if (idx !== -1) {
+                processes[idx].started_at = null;
+                processes[idx].performed_by = null;
+            }
+        }
+        showSnackbar("Interview cancelled.", "info");
+        showCancelModal.value = false;
+    } catch (e) {
+        console.error("Failed to cancel interview:", e);
+        const msg = e.response?.data?.message || "Failed to cancel interview";
+        showSnackbar(msg, "error");
+    } finally {
+        isCancellingInterview.value = false;
+    }
+};
+
+// Check if the current user's interviewer process is completed
+const isEvaluationCompleted = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) {
+        return false;
+    }
+    const interviewerProcess = selectedUser.value.application.processes.find(
+        p => p.stage === 'interviewer'
+    );
+    return interviewerProcess && interviewerProcess.status === 'completed';
+});
+
+const formatFileKey = (key) => {
+    const map = {
+        file10Front: 'Grade 10 Report Front',
+        file10: 'Grade 10 Report Back',
+        file11Front: "Grade 11 Report Front",
+        file11: "Grade 11 Report Back",
+        file12Front: "Grade 12 Report Front",
+        file12: "Grade 12 Report Back",
+        schoolId: "School ID",
+        nonEnrollCert: "Certificate of Non-Enrollment",
+        psa: "PSA Birth Certificate",
+        goodMoral: "Good Moral Certificate",
+        underOath: "Under Oath Document",
+        photo2x2: "2x2 Photo",
+    };
+    return map[key] || key;
+};
+
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+const hasImagePreview = (file) => Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
+
+const previewImage = ref(null);
+const showImageModal = ref(false);
+
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) return;
+    previewImage.value = src;
+    showImageModal.value = true;
+};
+
+const closeImageModal = () => { showImageModal.value = false; };
+
+const capitalize = (str) =>
+    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+
+const formatStage = (stage) => {
+    const map = {
+        'evaluator': 'DE, GE',
+        'interviewer': 'Interviewer',
+        'medical': 'Medical',
+        'record_staff': 'Record Staff'
+    };
+    return map[stage] || (stage ? stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ") : "");
+};
+
+const getInterviewerName = () => {
+    const interviewerProcess = selectedUser.value?.application?.processes?.find(
+        p => p.stage === 'interviewer' && p.status === 'completed' && p.action === 'passed'
+    );
+    
+    if (!interviewerProcess) {
+        return '—';
+    }
+    
+    if (typeof interviewerProcess.performed_by === 'object' && interviewerProcess.performed_by !== null) {
+        if (interviewerProcess.performed_by.firstname && interviewerProcess.performed_by.lastname) {
+            return `${interviewerProcess.performed_by.firstname} ${interviewerProcess.performed_by.lastname}`;
+        }
+    }
+    
+    if (interviewerProcess.performedBy?.firstname && interviewerProcess.performedBy?.lastname) {
+        return `${interviewerProcess.performedBy.firstname} ${interviewerProcess.performedBy.lastname}`;
+    }
+    
+    if (interviewerProcess.performed_by_user?.firstname && interviewerProcess.performed_by_user?.lastname) {
+        return `${interviewerProcess.performed_by_user.firstname} ${interviewerProcess.performed_by_user.lastname}`;
+    }
+    
+    if (typeof interviewerProcess.performed_by === 'number') {
+        return `User ID: ${interviewerProcess.performed_by}`;
+    }
+    
+    return '—';
+};
+
+const formatDate = (date) => {
+    const d = new Date(date);
+    return d.toLocaleString();
+};
+
+const formatDateOnly = (date) => {
+    if (!date) return '—';
+    const d = new Date(date);
+    return d.toLocaleDateString('en-GB'); // DD/MM/YYYY
+};
+
+const selectedProgramId = ref("");
+const requiresPromissoryNote = ref(false);
+
+const isApplicantQualified = computed(() => {
+    if (!selectedProgramId.value || !selectedUser.value?.unqualified_programs) return true;
+    
+    // Check if the selected program is in the unqualified list
+    const isUnqualified = selectedUser.value.unqualified_programs.some(p => p.id === selectedProgramId.value);
+    return !isUnqualified;
+});
+
+const promptAccept = () => {
+    if (!selectedProgramId.value) {
+        showSnackbar("Please select a program to accept the applicant into", "error");
+        return;
+    }
+    showAcceptModal.value = true;
+};
+
+const acceptApplication = async () => {
+    isSubmitting.value = true;
+    const currentUserId = selectedUser.value.id;
+    const acceptedProgramId = selectedProgramId.value;
+    try {
+        await axios.post(
+            `/interviewer-dashboard/accept/${currentUserId}`,
+            {
+                program_id: acceptedProgramId,
+                requires_promissory_note: requiresPromissoryNote.value,
+                notes: interviewNotes.value,
+                start_time: interviewStartTime.value,
+            }
+        );
+        showSnackbar("Application accepted successfully", "success");
+        decrementLocalSlot(acceptedProgramId);
+        selectedProgramId.value = "";
+        requiresPromissoryNote.value = false;
+        showAcceptModal.value = false;
+        
+        await fetchUsers();
+        
+        const updatedUser = users.value.find(u => u.id === currentUserId);
+        if (updatedUser) {
+            await selectUser(updatedUser);
+        } else {
+            selectedUser.value = null;
+        }
+    } catch (e) {
+        console.error("Accept failed:", e);
+        const msg =
+            e.response?.data?.message ||
+            "Failed to accept application due to an unexpected error.";
+        showSnackbar(msg, "error");
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
+const promptReject = () => {
+    if (!selectedProgramId.value) {
+        showSnackbar("Please select a program to reject the applicant from", "error");
+        return;
+    }
+    showRejectModal.value = true;
+};
+
+const rejectApplication = async () => {
+    isSubmitting.value = true;
+    const currentUserId = selectedUser.value.id;
+    try {
+        await axios.post(
+            `/interviewer-dashboard/reject/${currentUserId}`,
+            {
+                program_id: selectedProgramId.value,
+                notes: interviewNotes.value,
+                start_time: interviewStartTime.value,
+            }
+        );
+        showSnackbar("Application rejected successfully", "success");
+        selectedProgramId.value = "";
+        showRejectModal.value = false;
+        
+        await fetchUsers();
+        
+        const updatedUser = users.value.find(u => u.id === currentUserId);
+        if (updatedUser) {
+            await selectUser(updatedUser);
+        } else {
+            selectedUser.value = null;
+        }
+    } catch (e) {
+        console.error("Reject failed:", e);
+        const msg =
+            e.response?.data?.message ||
+            "Failed to reject application due to an unexpected error.";
+        showSnackbar(msg, "error");
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
+
+
+const totalPages = computed(() =>
+    Math.ceil(filteredUsers.value.length / itemsPerPage)
+);
+
+const paginatedUsers = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return filteredUsers.value.slice(start, start + itemsPerPage);
+});
+
+watch([searchQuery, evaluationStatusFilter, sortKey, sortAsc], () => {
+    currentPage.value = 1;
+});
+
+const sortBy = (key) => {
+    if (sortKey.value === key) {
+        sortAsc.value = !sortAsc.value;
+    } else {
+        sortKey.value = key;
+        sortAsc.value = true;
+    }
+};
+
+const clearFilters = () => {
+    searchQuery.value = "";
+    evaluationStatusFilter.value = "";
+    sortKey.value = "lastname";
+    sortAsc.value = true;
+    currentPage.value = 1;
+    showStatusDropdown.value = false;
+};
+</script>
+
 <template>
     <Head title="All Interviewer Applications" />
     <InterviewerLayout>
@@ -787,627 +1408,6 @@
 
     </InterviewerLayout>
 </template>
-
-<script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
-import { Head } from "@inertiajs/vue3";
-import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
-import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue';
-
-import {
-    Chart as ChartJS,
-    LineController,
-    LineElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    Tooltip,
-    Title,
-    Legend,
-} from "chart.js";
-
-ChartJS.register(
-    LineController,
-    LineElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    Tooltip,
-    Title,
-    Legend
-);
-
-import { usePage } from "@inertiajs/vue3";
-
-const props = defineProps({
-    user: Object,
-    assignedPrograms: Array,
-    selectedUserId: {
-        type: [Number, String],
-        default: null
-    }
-});
-
-const currentPage = ref(1);
-const itemsPerPage = 10;
-const sortKey = ref("lastname");
-const evaluationStatusFilter = ref("");
-const sortAsc = ref(true);
-const showStatusDropdown = ref(false);
-const showSortDropdown = ref(false);
-const filterDropdownRef = ref(null);
-
-// Low Slot Alert
-const lowSlotThreshold = 10;
-const showLowSlotAlert = ref(true);
-
-const lowSlotPrograms = computed(() => {
-    return (props.assignedPrograms || [])
-        .filter(p => p.slots != null && p.slots <= lowSlotThreshold)
-        .map(p => ({ id: p.id, code: p.code, name: p.name, slots: p.slots }));
-});
-
-watch(() => props.assignedPrograms, () => {
-    showLowSlotAlert.value = true;
-}, { deep: true });
-
-const decrementLocalSlot = (programId) => {
-    const prog = (props.assignedPrograms || []).find(p => p.id == programId);
-    if (prog && prog.slots != null && prog.slots > 0) {
-        prog.slots -= 1;
-    }
-};
-
-const page = usePage();
-const users = ref(page.props.users || []);
-
-const selectedUser = ref(null);
-const isLoading = ref(true);
-const errorMessage = ref("");
-const searchQuery = ref("");
-const selectedUserFiles = ref({});
-const showAcceptModal = ref(false);
-const showRejectModal = ref(false);
-const isSubmitting = ref(false);
-const interviewNotes = ref("");
-const interviewStartTime = ref(null);
-const snackbar = ref({
-    visible: false,
-    message: "",
-    type: "success",
-});
-
-const showSnackbar = (msg, type = "success", duration = 3000) => {
-    snackbar.value.message = msg;
-    snackbar.value.type = type;
-    snackbar.value.visible = true;
-    setTimeout(() => {
-        snackbar.value.visible = false;
-    }, duration);
-};
-
-// Subject label mapping
-const SUBJECT_LABELS = {
-    g11_general_mathematics: 'G11 General Mathematics',
-    g11_statistics_probability: 'G11 Statistics & Probability',
-    g11_business_mathematics: 'G11 Business Mathematics',
-    g11_pre_calculus: 'G11 Pre-Calculus',
-    g11_basic_calculus: 'G11 Basic Calculus',
-    g11_earth_life_science: 'G11 Earth & Life Science',
-    g11_physical_science: 'G11 Physical Science',
-    g11_earth_science: 'G11 Earth Science',
-    g11_general_chemistry_1: 'G11 General Chemistry 1',
-    g12_general_physics_1: 'G12 General Physics 1',
-    g12_general_biology_1: 'G12 General Biology 1',
-    g12_general_physics_2: 'G12 General Physics 2',
-    g12_general_biology_2: 'G12 General Biology 2',
-    g12_general_chemistry_2: 'G12 General Chemistry 2',
-    g12_earth_life_science: 'G12 Earth & Life Science',
-    g12_physical_science: 'G12 Physical Science',
-    g11_oral_communication: 'G11 Oral Communication',
-    'g11_21st_century_lit': 'G11 21st Century Literature',
-    g11_academic_professional: 'G11 Academic & Professional',
-    g11_reading_writing: 'G11 Reading & Writing',
-    'g12_21st_century_lit': 'G12 21st Century Literature',
-    g12_academic_professional: 'G12 Academic & Professional',
-};
-
-const MATH_KEYS = ['g11_general_mathematics', 'g11_statistics_probability', 'g11_business_mathematics', 'g11_pre_calculus', 'g11_basic_calculus'];
-const SCIENCE_KEYS = ['g11_earth_life_science', 'g11_physical_science', 'g11_earth_science', 'g11_general_chemistry_1', 'g12_general_physics_1', 'g12_general_biology_1', 'g12_general_physics_2', 'g12_general_biology_2', 'g12_general_chemistry_2', 'g12_earth_life_science', 'g12_physical_science'];
-const ENGLISH_KEYS = ['g11_oral_communication', 'g11_21st_century_lit', 'g11_academic_professional', 'g11_reading_writing', 'g12_21st_century_lit', 'g12_academic_professional'];
-
-function buildSubjectList(keys, grades) {
-    return keys.filter(key => grades?.[key] != null && grades[key] !== '').map(key => ({ key, label: SUBJECT_LABELS[key] || key, value: grades[key] }));
-}
-
-const mathSubjects = computed(() => buildSubjectList(MATH_KEYS, selectedUser.value?.grades));
-const scienceSubjects = computed(() => buildSubjectList(SCIENCE_KEYS, selectedUser.value?.grades));
-const englishSubjects = computed(() => buildSubjectList(ENGLISH_KEYS, selectedUser.value?.grades));
-
-const dynamicSubjectList = computed(() => {
-    const dyn = selectedUser.value?.grades?.dynamic_subjects;
-    if (!dyn || !Array.isArray(dyn)) return [];
-    return dyn.map(s => ({ label: s.name || 'Dynamic Subject', value: s.grade }));
-});
-
-const hasIndividualSubjects = computed(() => mathSubjects.value.length > 0 || scienceSubjects.value.length > 0 || englishSubjects.value.length > 0);
-
-const getStatusBadgeClass = (user) => {
-    switch (user.pipeline_status) {
-        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
-    }
-};
-
-const getStatusClass = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
-    if (s === "rejected") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-    if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-};
-
-const getButtonClass = (type) => {
-    const classes = {
-        primary: 'bg-[#9E122C] text-white hover:bg-[#b51834]',
-        success: 'bg-green-600 text-white hover:bg-green-700',
-        danger: 'bg-red-600 text-white hover:bg-red-700',
-        secondary: 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-    };
-    return classes[type] || classes.secondary;
-};
-
-const getEvaluationStatusText = (user) => {
-    switch (user.pipeline_status) {
-        case 'for_evaluation': return 'For Evaluation';
-        case 'evaluation_returned': return 'Returned for Revision';
-        case 'evaluation_passed': return 'Evaluation Passed';
-        case 'for_interview': return 'For Interview';
-        case 'interview_returned': return 'Returned for Revision';
-        case 'interview_passed': return 'Interview Passed';
-        case 'interview_transferred': return 'Course Transferred';
-        case 'for_medical': return 'For Medical';
-        case 'medical_cleared': return 'Medical Cleared';
-        case 'medical_rejected': return 'Medical Rejected';
-        case 'for_records': return 'For Records';
-        case 'officially_enrolled': return 'Officially Enrolled';
-        case 'rejected': return 'Rejected';
-        default: return 'Unknown';
-    }
-};
-
-const getEvaluationStatusClass = (user) => {
-    switch (user.pipeline_status) {
-        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
-        case 'for_medical': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
-        case 'medical_cleared': return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
-        case 'medical_rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'for_records': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
-        case 'officially_enrolled': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold';
-        case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
-    }
-};
-
-const fetchUsers = async () => {
-    try {
-        const response = await fetch("/interviewer-dashboard/applicants", {
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json();
-
-        // Auto-select user if selectedUserId prop was provided
-        if (props.selectedUserId && !selectedUser.value) {
-            const user = users.value.find(u => u.id == props.selectedUserId);
-            if (user) {
-                await selectUser(user);
-            }
-        }
-    } catch (error) {
-        errorMessage.value = error.message;
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const handleOutsideClick = (e) => {
-    if (filterDropdownRef.value && !filterDropdownRef.value.contains(e.target)) {
-        showStatusDropdown.value = false;
-    }
-};
-
-onMounted(() => {
-    fetchUsers();
-    // fetchPrograms(); removed since assignedPrograms comes from props
-    document.addEventListener('click', handleOutsideClick);
-});
-
-onBeforeUnmount(() => {
-    document.removeEventListener('click', handleOutsideClick);
-});
-
-const filteredUsers = computed(() => {
-    const q = searchQuery.value.trim().toLowerCase();
-    return users.value
-        .filter((u) => {
-            const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
-            const matchesSearch = fullName.includes(q);
-            const matchesEvaluationStatus = evaluationStatusFilter.value
-                ? u.pipeline_status === evaluationStatusFilter.value
-                : true;
-            return matchesSearch && matchesEvaluationStatus;
-        })
-        .sort((a, b) => {
-            let aVal, bVal;
-            
-            if (sortKey.value === 'program.name') {
-                aVal = (a.program?.name || "").toString().toLowerCase();
-                bVal = (b.program?.name || "").toString().toLowerCase();
-            } else {
-                aVal = (a[sortKey.value] || "").toString().toLowerCase();
-                bVal = (b[sortKey.value] || "").toString().toLowerCase();
-            }
-            
-            return sortAsc.value
-                ? aVal.localeCompare(bVal)
-                : bVal.localeCompare(aVal);
-        });
-});
-
-const selectUser = async (user) => {
-    try {
-        // Open panel immediately with basic user data
-        selectedUser.value = {
-            ...user,
-            grades: null,
-            application: user.application || null,
-        };
-        
-        // Show loading state for files
-        selectedUserFiles.value = { loading: true };
-
-        // Fetch full data in background
-        const response = await axios.get(
-            `/interviewer-dashboard/application/${user.id}`
-        );
-
-        // Update with full data
-        selectedUser.value = {
-            ...user,
-            ...response.data.user,
-            application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
-                program: response.data.user.application?.program || null,
-                second_choice: response.data.user.application?.second_choice || null,
-                third_choice: response.data.user.application?.third_choice || null,
-            },
-            grades: response.data.user.grades || null,
-        };
-
-        selectedUserFiles.value = response.data.uploadedFiles || {};
-
-        // Check if there is an interview already in progress
-        const interviewerInProgress = selectedUser.value.application?.processes?.find(
-            p => p.stage === 'interviewer' && p.status === 'in_progress'
-        );
-        if (interviewerInProgress && interviewerInProgress.started_at) {
-            interviewStartTime.value = interviewerInProgress.started_at.endsWith('Z') 
-                ? interviewerInProgress.started_at 
-                : interviewerInProgress.started_at + 'Z';
-        } else {
-            interviewStartTime.value = null;
-        }
-
-    } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        
-        if (error.response && error.response.status === 403) {
-            showSnackbar("Unauthorized access. Application is not at the interviewer stage.", "error");
-        } else {
-            showSnackbar("Failed to load applicant data. Please try again.", "error");
-        }
-        
-        selectedUserFiles.value = {};
-        selectedUser.value = null;
-    }
-};
-
-const closeUserCard = () => {
-    selectedUser.value = null;
-    interviewNotes.value = "";
-    interviewStartTime.value = null;
-};
-const isCancellingInterview = ref(false);
-const showCancelModal = ref(false);
-
-const beginInterview = async () => {
-    try {
-        const response = await axios.post(`/interviewer-dashboard/start/${selectedUser.value.id}`);
-        const startedAt = response.data.started_at;
-        interviewStartTime.value = startedAt.endsWith('Z') ? startedAt : startedAt + 'Z';
-    } catch (e) {
-        console.error("Failed to start interview:", e);
-        const msg = e.response?.data?.message || "Failed to start interview";
-        showSnackbar(msg, "error");
-    }
-};
-
-const cancelInterview = () => {
-    showCancelModal.value = true;
-};
-
-const confirmCancelInterview = async () => {
-    isCancellingInterview.value = true;
-    try {
-        await axios.post(`/interviewer-dashboard/cancel/${selectedUser.value.id}`);
-        // Update local state directly
-        interviewStartTime.value = null;
-        if (selectedUser.value && selectedUser.value.application) {
-            const processes = selectedUser.value.application.processes;
-            const idx = processes.findIndex(p => p.stage === 'interviewer');
-            if (idx !== -1) {
-                processes[idx].started_at = null;
-                processes[idx].performed_by = null;
-            }
-        }
-        showSnackbar("Interview cancelled.", "info");
-        showCancelModal.value = false;
-    } catch (e) {
-        console.error("Failed to cancel interview:", e);
-        const msg = e.response?.data?.message || "Failed to cancel interview";
-        showSnackbar(msg, "error");
-    } finally {
-        isCancellingInterview.value = false;
-    }
-};
-
-// Check if the current user's interviewer process is completed
-const isEvaluationCompleted = computed(() => {
-    if (!selectedUser.value || !selectedUser.value.application?.processes) {
-        return false;
-    }
-    const interviewerProcess = selectedUser.value.application.processes.find(
-        p => p.stage === 'interviewer'
-    );
-    return interviewerProcess && interviewerProcess.status === 'completed';
-});
-
-const formatFileKey = (key) => {
-    const map = {
-        file10Front: 'Grade 10 Report Front',
-        file10: 'Grade 10 Report Back',
-        file11Front: "Grade 11 Report Front",
-        file11: "Grade 11 Report Back",
-        file12Front: "Grade 12 Report Front",
-        file12: "Grade 12 Report Back",
-        schoolId: "School ID",
-        nonEnrollCert: "Certificate of Non-Enrollment",
-        psa: "PSA Birth Certificate",
-        goodMoral: "Good Moral Certificate",
-        underOath: "Under Oath Document",
-        photo2x2: "2x2 Photo",
-    };
-    return map[key] || key;
-};
-
-const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
-const hasImagePreview = (file) => Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
-
-const previewImage = ref(null);
-const showImageModal = ref(false);
-
-const openImageModal = (file) => {
-    const src = getFileUrl(file);
-    if (!src || !hasImagePreview(file)) return;
-    previewImage.value = src;
-    showImageModal.value = true;
-};
-
-const closeImageModal = () => { showImageModal.value = false; };
-
-const capitalize = (str) =>
-    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
-
-const formatStage = (stage) => {
-    const map = {
-        'evaluator': 'DE, GE',
-        'interviewer': 'Interviewer',
-        'medical': 'Medical',
-        'record_staff': 'Record Staff'
-    };
-    return map[stage] || (stage ? stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ") : "");
-};
-
-const getInterviewerName = () => {
-    const interviewerProcess = selectedUser.value?.application?.processes?.find(
-        p => p.stage === 'interviewer' && p.status === 'completed' && p.action === 'passed'
-    );
-    
-    if (!interviewerProcess) {
-        return '—';
-    }
-    
-    if (typeof interviewerProcess.performed_by === 'object' && interviewerProcess.performed_by !== null) {
-        if (interviewerProcess.performed_by.firstname && interviewerProcess.performed_by.lastname) {
-            return `${interviewerProcess.performed_by.firstname} ${interviewerProcess.performed_by.lastname}`;
-        }
-    }
-    
-    if (interviewerProcess.performedBy?.firstname && interviewerProcess.performedBy?.lastname) {
-        return `${interviewerProcess.performedBy.firstname} ${interviewerProcess.performedBy.lastname}`;
-    }
-    
-    if (interviewerProcess.performed_by_user?.firstname && interviewerProcess.performed_by_user?.lastname) {
-        return `${interviewerProcess.performed_by_user.firstname} ${interviewerProcess.performed_by_user.lastname}`;
-    }
-    
-    if (typeof interviewerProcess.performed_by === 'number') {
-        return `User ID: ${interviewerProcess.performed_by}`;
-    }
-    
-    return '—';
-};
-
-const formatDate = (date) => {
-    const d = new Date(date);
-    return d.toLocaleString();
-};
-
-const formatDateOnly = (date) => {
-    if (!date) return '—';
-    const d = new Date(date);
-    return d.toLocaleDateString('en-GB'); // DD/MM/YYYY
-};
-
-const selectedProgramId = ref("");
-const requiresPromissoryNote = ref(false);
-
-const isApplicantQualified = computed(() => {
-    if (!selectedProgramId.value || !selectedUser.value?.unqualified_programs) return true;
-    
-    // Check if the selected program is in the unqualified list
-    const isUnqualified = selectedUser.value.unqualified_programs.some(p => p.id === selectedProgramId.value);
-    return !isUnqualified;
-});
-
-const promptAccept = () => {
-    if (!selectedProgramId.value) {
-        showSnackbar("Please select a program to accept the applicant into", "error");
-        return;
-    }
-    showAcceptModal.value = true;
-};
-
-const acceptApplication = async () => {
-    isSubmitting.value = true;
-    const currentUserId = selectedUser.value.id;
-    const acceptedProgramId = selectedProgramId.value;
-    try {
-        await axios.post(
-            `/interviewer-dashboard/accept/${currentUserId}`,
-            {
-                program_id: acceptedProgramId,
-                requires_promissory_note: requiresPromissoryNote.value,
-                notes: interviewNotes.value,
-                start_time: interviewStartTime.value,
-            }
-        );
-        showSnackbar("Application accepted successfully", "success");
-        decrementLocalSlot(acceptedProgramId);
-        selectedProgramId.value = "";
-        requiresPromissoryNote.value = false;
-        showAcceptModal.value = false;
-        
-        await fetchUsers();
-        
-        const updatedUser = users.value.find(u => u.id === currentUserId);
-        if (updatedUser) {
-            await selectUser(updatedUser);
-        } else {
-            selectedUser.value = null;
-        }
-    } catch (e) {
-        console.error("Accept failed:", e);
-        const msg =
-            e.response?.data?.message ||
-            "Failed to accept application due to an unexpected error.";
-        showSnackbar(msg, "error");
-    } finally {
-        isSubmitting.value = false;
-    }
-};
-
-const promptReject = () => {
-    if (!selectedProgramId.value) {
-        showSnackbar("Please select a program to reject the applicant from", "error");
-        return;
-    }
-    showRejectModal.value = true;
-};
-
-const rejectApplication = async () => {
-    isSubmitting.value = true;
-    const currentUserId = selectedUser.value.id;
-    try {
-        await axios.post(
-            `/interviewer-dashboard/reject/${currentUserId}`,
-            {
-                program_id: selectedProgramId.value,
-                notes: interviewNotes.value,
-                start_time: interviewStartTime.value,
-            }
-        );
-        showSnackbar("Application rejected successfully", "success");
-        selectedProgramId.value = "";
-        showRejectModal.value = false;
-        
-        await fetchUsers();
-        
-        const updatedUser = users.value.find(u => u.id === currentUserId);
-        if (updatedUser) {
-            await selectUser(updatedUser);
-        } else {
-            selectedUser.value = null;
-        }
-    } catch (e) {
-        console.error("Reject failed:", e);
-        const msg =
-            e.response?.data?.message ||
-            "Failed to reject application due to an unexpected error.";
-        showSnackbar(msg, "error");
-    } finally {
-        isSubmitting.value = false;
-    }
-};
-
-
-
-const totalPages = computed(() =>
-    Math.ceil(filteredUsers.value.length / itemsPerPage)
-);
-
-const paginatedUsers = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage;
-    return filteredUsers.value.slice(start, start + itemsPerPage);
-});
-
-watch([searchQuery, evaluationStatusFilter, sortKey, sortAsc], () => {
-    currentPage.value = 1;
-});
-
-const sortBy = (key) => {
-    if (sortKey.value === key) {
-        sortAsc.value = !sortAsc.value;
-    } else {
-        sortKey.value = key;
-        sortAsc.value = true;
-    }
-};
-
-const clearFilters = () => {
-    searchQuery.value = "";
-    evaluationStatusFilter.value = "";
-    sortKey.value = "lastname";
-    sortAsc.value = true;
-    currentPage.value = 1;
-    showStatusDropdown.value = false;
-};
-</script>
 
 <style scoped>
 .fade-enter-active,

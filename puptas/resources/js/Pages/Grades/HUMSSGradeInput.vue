@@ -1,3 +1,258 @@
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { usePage } from "@inertiajs/vue3";
+import { Head } from "@inertiajs/vue3";
+import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
+import GradesReviewModal from "@/Components/GradesReviewModal.vue";
+import DynamicSubjectRow from "@/Components/DynamicSubjectRow.vue";
+import FieldError from "@/Components/FieldError.vue";
+import { useGradeForm } from "@/Composables/useGradeForm.js";
+
+const page = usePage();
+const props = defineProps({
+    grade: Object,
+    user: Object,
+    programs: Array,
+    strand: String,
+    profile: Object,
+    extractionResult: { type: Object, default: null },
+    isLocked: { type: Boolean, default: false },
+});
+
+// HUMSS-specific default subjects
+const humssDefaultSubjects = {
+    math: [
+        'g11_general_mathematics',
+        'g11_statistics_probability',
+    ],
+    english: [
+        'g11_oral_communication',
+        'g11_21st_century_lit',
+        'g11_academic_professional',
+        'g11_reading_writing',
+    ],
+    science: [
+        'g11_earth_life_science',
+        'g12_physical_science',
+    ],
+};
+
+// Use the shared grade form composable
+const {
+    form,
+    dynamicSubjects,
+    mathAverage,
+    englishAverage,
+    scienceAverage,
+    g12GWA,
+    mathCount,
+    englishCount,
+    scienceCount,
+    addSubject,
+    removeSubject,
+    canAddSubject,
+    qualifiedPrograms,
+    notQualifiedPrograms,
+    noSlotsPrograms,
+    programChoiceDisabled,
+    hasAvailableSlots,
+    checkSlotAvailability,
+    validateGrade,
+    preventInvalidInput,
+    errors,
+    submitForm,
+    retrySubmit,
+    loading,
+    toastMessage,
+    toastType,
+    toastVisible,
+    showRetryOption,
+    dismissToast,
+} = useGradeForm({
+    strand: props.strand || 'HUMSS',
+    defaultSubjects: humssDefaultSubjects,
+    grade: props.grade,
+    programs: props.programs,
+    profile: props.profile,
+    isLocked: props.isLocked,
+});
+
+const successMessage = ref("");
+const confidenceMap = ref({});
+const bannerDismissed = ref(false);
+const showReviewModal = ref(false);
+
+// Helper function to get selected program name
+const getSelectedProgramName = (programId) => {
+    const program = props.programs?.find((p) => p.id === programId);
+    return program ? `${program.code} - ${program.name}` : "";
+};
+
+const getConfidence = (fieldKey) => {
+    const normalizedKey = fieldKey.toLowerCase().trim();
+    return confidenceMap.value[normalizedKey] ?? null;
+};
+
+const isLowConfidence = (fieldKey) => {
+    const c = getConfidence(fieldKey);
+    return c !== null && c < 0.80;
+};
+
+const G11_MAP = {
+    'general mathematics': 'g11_general_mathematics',
+    'statistics and probability': 'g11_statistics_probability',
+    'oral communication': 'g11_oral_communication',
+    'oral communication in context': 'g11_oral_communication',
+    '21st century literature': 'g11_21st_century_lit',
+    '21st century literature from the philippines and the world': 'g11_21st_century_lit',
+    'english for academic and professional purposes': 'g11_academic_professional',
+    'english for academic purposes': 'g11_academic_professional',
+    'eapp': 'g11_academic_professional',
+    'reading and writing': 'g11_reading_writing',
+    'reading and writing skills': 'g11_reading_writing',
+    'earth and life science': 'g11_earth_life_science',
+};
+
+const applyAutofill = (result) => {
+    if (!result || !result.subjects) return;
+    const newConfidenceMap = {};
+    
+    for (const group of ['math', 'science', 'english', 'others']) {
+        if (!result.subjects[group]) continue;
+        for (const [subjectKey, gradeVal] of Object.entries(result.subjects[group])) {
+            const normalizedKey = subjectKey.toLowerCase().trim();
+            newConfidenceMap[normalizedKey] = 1.0; 
+            const numericGrade = parseFloat(gradeVal);
+            if (isNaN(numericGrade)) continue;
+
+            const g11FormKey = G11_MAP[normalizedKey];
+            if (g11FormKey && g11FormKey in form) {
+                form[g11FormKey] = numericGrade;
+            } else if (group === 'math' || group === 'english' || group === 'science') {
+                if (canAddSubject(group)) {
+                    dynamicSubjects.value[group].push({
+                        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+                        name: subjectKey,
+                        grade: numericGrade,
+                    });
+                }
+            }
+        }
+    }
+    confidenceMap.value = newConfidenceMap;
+};
+
+onMounted(() => {
+    // Apply autofill from extraction if available (takes precedence over saved grades)
+    if (props.extractionResult) {
+        applyAutofill(props.extractionResult);
+    }
+});
+
+// Computed property for review data
+const reviewData = computed(() => ({
+    // G11 Math
+    g11_general_mathematics: form.g11_general_mathematics,
+    g11_statistics_probability: form.g11_statistics_probability,
+    // G11 English
+    g11_oral_communication: form.g11_oral_communication,
+    g11_21st_century_lit: form.g11_21st_century_lit,
+    g11_academic_professional: form.g11_academic_professional,
+    g11_reading_writing: form.g11_reading_writing,
+    // G11 Science
+    g11_earth_life_science: form.g11_earth_life_science,
+    // G12 Science
+    g12_physical_science: form.g12_physical_science,
+    // Grade 12 GWA
+    g12_first_sem_gwa: form.g12_first_sem_gwa,
+    g12_second_sem_gwa: form.g12_second_sem_gwa,
+    // Program choices
+    first_choice_program: getSelectedProgramName(form.first_choice_program),
+    second_choice_program: getSelectedProgramName(form.second_choice_program),
+    third_choice_program: getSelectedProgramName(form.third_choice_program),
+    // Averages
+    math_average: mathAverage.value,
+    english_average: englishAverage.value,
+    science_average: scienceAverage.value,
+    g12_gwa: g12GWA.value,
+}));
+
+// Computed property for review modal sections
+const reviewSections = computed(() => [
+    {
+        title: 'Grade 11 Math Subjects',
+        items: [
+            { label: 'General Mathematics', value: reviewData.value.g11_general_mathematics },
+            { label: 'Statistics and Probability', value: reviewData.value.g11_statistics_probability },
+        ],
+    },
+    {
+        title: 'Grade 11 English Subjects',
+        items: [
+            { label: 'Oral Communication', value: reviewData.value.g11_oral_communication },
+            { label: '21st Century Literature', value: reviewData.value.g11_21st_century_lit },
+            { label: 'English for Academic Purposes', value: reviewData.value.g11_academic_professional },
+            { label: 'Reading and Writing', value: reviewData.value.g11_reading_writing },
+        ],
+    },
+    {
+        title: 'Grade 11 Science Subject',
+        items: [
+            { label: 'Earth and Life Science', value: reviewData.value.g11_earth_life_science },
+        ],
+    },
+    {
+        title: 'Grade 12 Science Subject',
+        items: [
+            { label: 'Physical Science', value: reviewData.value.g12_physical_science },
+        ],
+    },
+    {
+        title: 'Grade 12 GWA',
+        items: [
+            { label: '1st Semester', value: reviewData.value.g12_first_sem_gwa },
+            { label: '2nd Semester', value: reviewData.value.g12_second_sem_gwa },
+        ],
+    },
+    {
+        title: 'Additional Subjects',
+        items: [
+            ...dynamicSubjects.value.math.filter(s => s.name && s.grade != null).map(s => ({ label: `Math: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.english.filter(s => s.name && s.grade != null).map(s => ({ label: `English: ${s.name}`, value: s.grade })),
+            ...dynamicSubjects.value.science.filter(s => s.name && s.grade != null).map(s => ({ label: `Science: ${s.name}`, value: s.grade })),
+        ],
+    },
+    {
+        title: 'Program Choices and Averages',
+        items: [
+            { label: 'First Choice Program *', value: reviewData.value.first_choice_program || '—' },
+            { label: 'Second Choice Program *', value: reviewData.value.second_choice_program || '—' },
+            { label: 'Third Choice Program *', value: reviewData.value.third_choice_program || '—' },
+            { label: 'Math Average', value: reviewData.value.math_average },
+            { label: 'English Average', value: reviewData.value.english_average },
+            { label: 'Science Average', value: reviewData.value.science_average },
+            { label: 'G12 GWA', value: reviewData.value.g12_gwa },
+        ],
+    },
+]);
+
+const openReviewModal = () => {
+    errors.value = {};
+    showReviewModal.value = true;
+};
+
+const closeReviewModal = () => {
+    if (!loading.value) {
+        showReviewModal.value = false;
+    }
+};
+
+const confirmSaveGrades = () => {
+    showReviewModal.value = false;
+    submitForm();
+};
+</script>
+
 <template>
     <Head title="HUMSS Grade Input" />
     <ApplicantLayout>
@@ -765,261 +1020,6 @@
         </div>
     </ApplicantLayout>
 </template>
-
-<script setup>
-import { ref, computed, onMounted } from "vue";
-import { usePage } from "@inertiajs/vue3";
-import { Head } from "@inertiajs/vue3";
-import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
-import GradesReviewModal from "@/Components/GradesReviewModal.vue";
-import DynamicSubjectRow from "@/Components/DynamicSubjectRow.vue";
-import FieldError from "@/Components/FieldError.vue";
-import { useGradeForm } from "@/Composables/useGradeForm.js";
-
-const page = usePage();
-const props = defineProps({
-    grade: Object,
-    user: Object,
-    programs: Array,
-    strand: String,
-    profile: Object,
-    extractionResult: { type: Object, default: null },
-    isLocked: { type: Boolean, default: false },
-});
-
-// HUMSS-specific default subjects
-const humssDefaultSubjects = {
-    math: [
-        'g11_general_mathematics',
-        'g11_statistics_probability',
-    ],
-    english: [
-        'g11_oral_communication',
-        'g11_21st_century_lit',
-        'g11_academic_professional',
-        'g11_reading_writing',
-    ],
-    science: [
-        'g11_earth_life_science',
-        'g12_physical_science',
-    ],
-};
-
-// Use the shared grade form composable
-const {
-    form,
-    dynamicSubjects,
-    mathAverage,
-    englishAverage,
-    scienceAverage,
-    g12GWA,
-    mathCount,
-    englishCount,
-    scienceCount,
-    addSubject,
-    removeSubject,
-    canAddSubject,
-    qualifiedPrograms,
-    notQualifiedPrograms,
-    noSlotsPrograms,
-    programChoiceDisabled,
-    hasAvailableSlots,
-    checkSlotAvailability,
-    validateGrade,
-    preventInvalidInput,
-    errors,
-    submitForm,
-    retrySubmit,
-    loading,
-    toastMessage,
-    toastType,
-    toastVisible,
-    showRetryOption,
-    dismissToast,
-} = useGradeForm({
-    strand: props.strand || 'HUMSS',
-    defaultSubjects: humssDefaultSubjects,
-    grade: props.grade,
-    programs: props.programs,
-    profile: props.profile,
-    isLocked: props.isLocked,
-});
-
-const successMessage = ref("");
-const confidenceMap = ref({});
-const bannerDismissed = ref(false);
-const showReviewModal = ref(false);
-
-// Helper function to get selected program name
-const getSelectedProgramName = (programId) => {
-    const program = props.programs?.find((p) => p.id === programId);
-    return program ? `${program.code} - ${program.name}` : "";
-};
-
-const getConfidence = (fieldKey) => {
-    const normalizedKey = fieldKey.toLowerCase().trim();
-    return confidenceMap.value[normalizedKey] ?? null;
-};
-
-const isLowConfidence = (fieldKey) => {
-    const c = getConfidence(fieldKey);
-    return c !== null && c < 0.80;
-};
-
-const G11_MAP = {
-    'general mathematics': 'g11_general_mathematics',
-    'statistics and probability': 'g11_statistics_probability',
-    'oral communication': 'g11_oral_communication',
-    'oral communication in context': 'g11_oral_communication',
-    '21st century literature': 'g11_21st_century_lit',
-    '21st century literature from the philippines and the world': 'g11_21st_century_lit',
-    'english for academic and professional purposes': 'g11_academic_professional',
-    'english for academic purposes': 'g11_academic_professional',
-    'eapp': 'g11_academic_professional',
-    'reading and writing': 'g11_reading_writing',
-    'reading and writing skills': 'g11_reading_writing',
-    'earth and life science': 'g11_earth_life_science',
-};
-
-const applyAutofill = (result) => {
-    if (!result || !result.subjects) return;
-    const newConfidenceMap = {};
-    
-    for (const group of ['math', 'science', 'english', 'others']) {
-        if (!result.subjects[group]) continue;
-        for (const [subjectKey, gradeVal] of Object.entries(result.subjects[group])) {
-            const normalizedKey = subjectKey.toLowerCase().trim();
-            newConfidenceMap[normalizedKey] = 1.0; 
-            const numericGrade = parseFloat(gradeVal);
-            if (isNaN(numericGrade)) continue;
-
-            const g11FormKey = G11_MAP[normalizedKey];
-            if (g11FormKey && g11FormKey in form) {
-                form[g11FormKey] = numericGrade;
-            } else if (group === 'math' || group === 'english' || group === 'science') {
-                if (canAddSubject(group)) {
-                    dynamicSubjects.value[group].push({
-                        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
-                        name: subjectKey,
-                        grade: numericGrade,
-                    });
-                }
-            }
-        }
-    }
-    confidenceMap.value = newConfidenceMap;
-};
-
-onMounted(() => {
-    // Apply autofill from extraction if available (takes precedence over saved grades)
-    if (props.extractionResult) {
-        applyAutofill(props.extractionResult);
-    }
-});
-
-// Computed property for review data
-const reviewData = computed(() => ({
-    // G11 Math
-    g11_general_mathematics: form.g11_general_mathematics,
-    g11_statistics_probability: form.g11_statistics_probability,
-    // G11 English
-    g11_oral_communication: form.g11_oral_communication,
-    g11_21st_century_lit: form.g11_21st_century_lit,
-    g11_academic_professional: form.g11_academic_professional,
-    g11_reading_writing: form.g11_reading_writing,
-    // G11 Science
-    g11_earth_life_science: form.g11_earth_life_science,
-    // G12 Science
-    g12_physical_science: form.g12_physical_science,
-    // Grade 12 GWA
-    g12_first_sem_gwa: form.g12_first_sem_gwa,
-    g12_second_sem_gwa: form.g12_second_sem_gwa,
-    // Program choices
-    first_choice_program: getSelectedProgramName(form.first_choice_program),
-    second_choice_program: getSelectedProgramName(form.second_choice_program),
-    third_choice_program: getSelectedProgramName(form.third_choice_program),
-    // Averages
-    math_average: mathAverage.value,
-    english_average: englishAverage.value,
-    science_average: scienceAverage.value,
-    g12_gwa: g12GWA.value,
-}));
-
-// Computed property for review modal sections
-const reviewSections = computed(() => [
-    {
-        title: 'Grade 11 Math Subjects',
-        items: [
-            { label: 'General Mathematics', value: reviewData.value.g11_general_mathematics },
-            { label: 'Statistics and Probability', value: reviewData.value.g11_statistics_probability },
-        ],
-    },
-    {
-        title: 'Grade 11 English Subjects',
-        items: [
-            { label: 'Oral Communication', value: reviewData.value.g11_oral_communication },
-            { label: '21st Century Literature', value: reviewData.value.g11_21st_century_lit },
-            { label: 'English for Academic Purposes', value: reviewData.value.g11_academic_professional },
-            { label: 'Reading and Writing', value: reviewData.value.g11_reading_writing },
-        ],
-    },
-    {
-        title: 'Grade 11 Science Subject',
-        items: [
-            { label: 'Earth and Life Science', value: reviewData.value.g11_earth_life_science },
-        ],
-    },
-    {
-        title: 'Grade 12 Science Subject',
-        items: [
-            { label: 'Physical Science', value: reviewData.value.g12_physical_science },
-        ],
-    },
-    {
-        title: 'Grade 12 GWA',
-        items: [
-            { label: '1st Semester', value: reviewData.value.g12_first_sem_gwa },
-            { label: '2nd Semester', value: reviewData.value.g12_second_sem_gwa },
-        ],
-    },
-    {
-        title: 'Additional Subjects',
-        items: [
-            ...dynamicSubjects.value.math.filter(s => s.name && s.grade != null).map(s => ({ label: `Math: ${s.name}`, value: s.grade })),
-            ...dynamicSubjects.value.english.filter(s => s.name && s.grade != null).map(s => ({ label: `English: ${s.name}`, value: s.grade })),
-            ...dynamicSubjects.value.science.filter(s => s.name && s.grade != null).map(s => ({ label: `Science: ${s.name}`, value: s.grade })),
-        ],
-    },
-    {
-        title: 'Program Choices and Averages',
-        items: [
-            { label: 'First Choice Program *', value: reviewData.value.first_choice_program || '—' },
-            { label: 'Second Choice Program *', value: reviewData.value.second_choice_program || '—' },
-            { label: 'Third Choice Program *', value: reviewData.value.third_choice_program || '—' },
-            { label: 'Math Average', value: reviewData.value.math_average },
-            { label: 'English Average', value: reviewData.value.english_average },
-            { label: 'Science Average', value: reviewData.value.science_average },
-            { label: 'G12 GWA', value: reviewData.value.g12_gwa },
-        ],
-    },
-]);
-
-const openReviewModal = () => {
-    errors.value = {};
-    showReviewModal.value = true;
-};
-
-const closeReviewModal = () => {
-    if (!loading.value) {
-        showReviewModal.value = false;
-    }
-};
-
-const confirmSaveGrades = () => {
-    showReviewModal.value = false;
-    submitForm();
-};
-</script>
 
 <style scoped>
 .fade-enter-active,

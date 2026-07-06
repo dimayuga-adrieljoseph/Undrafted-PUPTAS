@@ -1,2 +1,22 @@
 .kiro
 VAPT_CHECKLIST.md
+
+# Jira import files
+.env.jira.example
+JIRA_IMPORT_FILES.txt
+JIRA_IMPORT_SETUP.md
+JIRA_IMPORT_WORKFLOW.md
+PRE_FLIGHT_CHECKLIST.md
+QUICK_START_JIRA_IMPORT.md
+README_JIRA_IMPORT.md
+fix-jira-status-to-done.py
+git-to-jira-import.py
+jira-fix-assignee-log.txt
+jira-fix-status-log.txt
+jira-fix-status.txt
+jira-import-batch1.txt
+jira-import-batch2.txt
+jira-import-dec-mar.txt
+jira-import-full.txt
+jira-import-log.txt
+requirements-jira.txt

@@ -1,3 +1,141 @@
+<script setup>
+import { ref, onMounted } from "vue";
+const axios = window.axios;
+import AppLayout from "@/Layouts/AppLayout.vue";
+import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
+import { Head, Link, router } from '@inertiajs/vue3';
+
+const newProgram = ref({
+  code: "",
+  name: "",
+  strand_ids: [],
+  math: null,
+  science: null,
+  english: null,
+  gwa: null,
+  slots: 1,
+});
+
+const availableStrands = ref([]);
+const showStrandDropdown = ref(false);
+const errorMessage = ref("");
+const isSubmitting = ref(false);
+
+const confirmModalOpen = ref(false);
+const confirmActionType = ref(""); // 'save' or 'cancel'
+const confirmModalTitle = ref("");
+const confirmModalMessage = ref("");
+const confirmModalConfirmText = ref("Confirm");
+const confirmButtonClass = ref("");
+const confirmModalHideTable = ref(true);
+
+const promptSave = () => {
+  confirmActionType.value = 'save';
+  confirmModalTitle.value = 'Add New Program?';
+  confirmModalMessage.value = 'Are you sure you want to add this program?';
+  confirmModalConfirmText.value = 'Add Program';
+  confirmButtonClass.value = 'bg-green-600 hover:bg-green-700 text-white';
+  confirmModalHideTable.value = true;
+  confirmModalOpen.value = true;
+};
+
+const promptCancel = () => {
+  confirmActionType.value = 'cancel';
+  confirmModalTitle.value = 'Cancel Adding Program?';
+  confirmModalMessage.value = 'Are you sure you want to cancel? All entered data will be lost.';
+  confirmModalConfirmText.value = 'Yes, Cancel';
+  confirmButtonClass.value = 'bg-red-600 hover:bg-red-700 text-white';
+  confirmModalHideTable.value = true;
+  confirmModalOpen.value = true;
+};
+
+const executeConfirm = () => {
+  if (confirmActionType.value === 'save') {
+    addProgram();
+  } else if (confirmActionType.value === 'cancel') {
+    router.get('/programs');
+  }
+  confirmModalOpen.value = false;
+};
+
+// Fetch available strands on mount
+onMounted(async () => {
+  try {
+    const response = await axios.get("/programs/strands");
+    availableStrands.value = response.data;
+  } catch (error) {
+    console.error("Error fetching strands:", error);
+  }
+});
+
+// Get strand name by ID
+const getStrandName = (strandId) => {
+  const strand = availableStrands.value.find(s => s.id === strandId);
+  return strand ? strand.code : strandId;
+};
+
+// Toggle strand selection
+const toggleStrand = (strandId) => {
+  const index = newProgram.value.strand_ids.indexOf(strandId);
+  if (index === -1) {
+    newProgram.value.strand_ids.push(strandId);
+  } else {
+    newProgram.value.strand_ids.splice(index, 1);
+  }
+};
+
+// Remove strand from selection
+const removeStrand = (strandId) => {
+  const index = newProgram.value.strand_ids.indexOf(strandId);
+  if (index !== -1) {
+    newProgram.value.strand_ids.splice(index, 1);
+  }
+};
+
+// Function to Add Program
+const addProgram = async () => {
+  if (isSubmitting.value) return;
+  isSubmitting.value = true;
+  
+  try {
+    errorMessage.value = "";
+    
+    const response = await axios.post("/programs", newProgram.value);
+    
+    // Reset form
+    newProgram.value = { 
+      code: "", 
+      name: "", 
+      strand_ids: [], 
+      math: null, 
+      science: null, 
+      english: null, 
+      gwa: null, 
+      slots: 1 
+    };
+    
+    router.get('/programs');
+
+  } catch (error) {
+    console.error("Error creating program:", error);
+    
+    // Show validation errors or generic error message
+    if (error.response?.data?.errors) {
+      const errors = error.response.data.errors;
+      errorMessage.value = Object.values(errors).flat().join(", ");
+    } else if (error.response?.data?.message) {
+      errorMessage.value = error.response.data.message;
+    } else {
+      errorMessage.value = "Failed to create program. Please try again.";
+    }
+    
+    alert(errorMessage.value);
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+</script>
+
 <template>
   <Head title="Add Program" />
   <AppLayout>
@@ -228,141 +366,3 @@
 
   </AppLayout>
 </template>
-
-<script setup>
-import { ref, onMounted } from "vue";
-const axios = window.axios;
-import AppLayout from "@/Layouts/AppLayout.vue";
-import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
-import { Head, Link, router } from '@inertiajs/vue3';
-
-const newProgram = ref({
-  code: "",
-  name: "",
-  strand_ids: [],
-  math: null,
-  science: null,
-  english: null,
-  gwa: null,
-  slots: 1,
-});
-
-const availableStrands = ref([]);
-const showStrandDropdown = ref(false);
-const errorMessage = ref("");
-const isSubmitting = ref(false);
-
-const confirmModalOpen = ref(false);
-const confirmActionType = ref(""); // 'save' or 'cancel'
-const confirmModalTitle = ref("");
-const confirmModalMessage = ref("");
-const confirmModalConfirmText = ref("Confirm");
-const confirmButtonClass = ref("");
-const confirmModalHideTable = ref(true);
-
-const promptSave = () => {
-  confirmActionType.value = 'save';
-  confirmModalTitle.value = 'Add New Program?';
-  confirmModalMessage.value = 'Are you sure you want to add this program?';
-  confirmModalConfirmText.value = 'Add Program';
-  confirmButtonClass.value = 'bg-green-600 hover:bg-green-700 text-white';
-  confirmModalHideTable.value = true;
-  confirmModalOpen.value = true;
-};
-
-const promptCancel = () => {
-  confirmActionType.value = 'cancel';
-  confirmModalTitle.value = 'Cancel Adding Program?';
-  confirmModalMessage.value = 'Are you sure you want to cancel? All entered data will be lost.';
-  confirmModalConfirmText.value = 'Yes, Cancel';
-  confirmButtonClass.value = 'bg-red-600 hover:bg-red-700 text-white';
-  confirmModalHideTable.value = true;
-  confirmModalOpen.value = true;
-};
-
-const executeConfirm = () => {
-  if (confirmActionType.value === 'save') {
-    addProgram();
-  } else if (confirmActionType.value === 'cancel') {
-    router.get('/programs');
-  }
-  confirmModalOpen.value = false;
-};
-
-// Fetch available strands on mount
-onMounted(async () => {
-  try {
-    const response = await axios.get("/programs/strands");
-    availableStrands.value = response.data;
-  } catch (error) {
-    console.error("Error fetching strands:", error);
-  }
-});
-
-// Get strand name by ID
-const getStrandName = (strandId) => {
-  const strand = availableStrands.value.find(s => s.id === strandId);
-  return strand ? strand.code : strandId;
-};
-
-// Toggle strand selection
-const toggleStrand = (strandId) => {
-  const index = newProgram.value.strand_ids.indexOf(strandId);
-  if (index === -1) {
-    newProgram.value.strand_ids.push(strandId);
-  } else {
-    newProgram.value.strand_ids.splice(index, 1);
-  }
-};
-
-// Remove strand from selection
-const removeStrand = (strandId) => {
-  const index = newProgram.value.strand_ids.indexOf(strandId);
-  if (index !== -1) {
-    newProgram.value.strand_ids.splice(index, 1);
-  }
-};
-
-// Function to Add Program
-const addProgram = async () => {
-  if (isSubmitting.value) return;
-  isSubmitting.value = true;
-  
-  try {
-    errorMessage.value = "";
-    
-    const response = await axios.post("/programs", newProgram.value);
-    
-    // Reset form
-    newProgram.value = { 
-      code: "", 
-      name: "", 
-      strand_ids: [], 
-      math: null, 
-      science: null, 
-      english: null, 
-      gwa: null, 
-      slots: 1 
-    };
-    
-    router.get('/programs');
-
-  } catch (error) {
-    console.error("Error creating program:", error);
-    
-    // Show validation errors or generic error message
-    if (error.response?.data?.errors) {
-      const errors = error.response.data.errors;
-      errorMessage.value = Object.values(errors).flat().join(", ");
-    } else if (error.response?.data?.message) {
-      errorMessage.value = error.response.data.message;
-    } else {
-      errorMessage.value = "Failed to create program. Please try again.";
-    }
-    
-    alert(errorMessage.value);
-  } finally {
-    isSubmitting.value = false;
-  }
-};
-</script>

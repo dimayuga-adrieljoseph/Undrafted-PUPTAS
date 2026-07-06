@@ -1,3 +1,57 @@
+<script setup>
+import { defineProps, defineEmits, ref, watch } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+
+const props = defineProps({
+    show: {
+        type: Boolean,
+        default: false
+    },
+    canClose: {
+        type: Boolean,
+        default: true
+    }
+});
+
+const emit = defineEmits(['close', 'accept', 'cancel']);
+
+const page = usePage();
+const isChecked = ref(false);
+
+// Reset checkbox when modal closes
+watch(() => props.show, (newVal) => {
+    if (!newVal) {
+        isChecked.value = false;
+    }
+});
+
+const accept = () => {
+    if (isChecked.value) {
+        emit('accept');
+    }
+};
+
+const cancel = () => {
+    emit('cancel');
+};
+
+// Close modal on ESC key
+const handleEscKey = (event) => {
+    if (event.key === 'Escape' && props.canClose) {
+        cancel();
+    }
+};
+
+// Add event listener for ESC key
+watch(() => props.show, (newVal) => {
+    if (newVal) {
+        document.addEventListener('keydown', handleEscKey);
+    } else {
+        document.removeEventListener('keydown', handleEscKey);
+    }
+});
+</script>
+
 <template>
     <!-- Modal Background -->
     <div v-if="show" class="fixed inset-0 z-[9999] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -131,60 +185,6 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import { defineProps, defineEmits, ref, watch } from 'vue';
-import { usePage } from '@inertiajs/vue3';
-
-const props = defineProps({
-    show: {
-        type: Boolean,
-        default: false
-    },
-    canClose: {
-        type: Boolean,
-        default: true
-    }
-});
-
-const emit = defineEmits(['close', 'accept', 'cancel']);
-
-const page = usePage();
-const isChecked = ref(false);
-
-// Reset checkbox when modal closes
-watch(() => props.show, (newVal) => {
-    if (!newVal) {
-        isChecked.value = false;
-    }
-});
-
-const accept = () => {
-    if (isChecked.value) {
-        emit('accept');
-    }
-};
-
-const cancel = () => {
-    emit('cancel');
-};
-
-// Close modal on ESC key
-const handleEscKey = (event) => {
-    if (event.key === 'Escape' && props.canClose) {
-        cancel();
-    }
-};
-
-// Add event listener for ESC key
-watch(() => props.show, (newVal) => {
-    if (newVal) {
-        document.addEventListener('keydown', handleEscKey);
-    } else {
-        document.removeEventListener('keydown', handleEscKey);
-    }
-});
-</script>
 
 <style scoped>
 /* Custom scrollbar for modal content */

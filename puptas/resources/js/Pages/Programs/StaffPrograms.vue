@@ -9,8 +9,14 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 const page = usePage();
 const user = computed(() => page.props.auth?.user ?? null);
 
+const props = defineProps({
+    user: Object,
+    stage: String,
+    variant: String,
+});
+
 const layoutComponent = computed(() => {
-    const variant = page.props.variant;
+    const variant = props.variant || page.props.variant;
     if (variant === 'interviewer') return InterviewerLayout;
     if (variant === 'record') return RecordStaffLayout;
     if (variant === 'evaluator') return EvaluatorLayout;

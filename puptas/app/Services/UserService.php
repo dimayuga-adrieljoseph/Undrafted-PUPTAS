@@ -401,6 +401,7 @@ class UserService
                     'status'            => $app->status,
                     'enrollment_status' => $app->enrollment_status,
                     'program_id'        => $app->program_id,
+                    'is_waivered'       => (bool) $app->is_waivered,
                     'created_at'        => $app->created_at,
                     'processes'         => $app->processes ?? [],
                     'program'           => $program ? [

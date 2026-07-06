@@ -5,7 +5,9 @@
         "build": "vite build",
         "dev": "vite",
         "dev:all": "concurrently \"php artisan serve\" \"npm run dev\"",
-        "test": "vitest"
+        "test": "vitest",
+        "lint": "eslint \"resources/js/**/*.vue\"",
+        "lint:fix": "eslint --fix \"resources/js/**/*.vue\""
     },
     "devDependencies": {
         "@inertiajs/vue3": "^1.0.14",
@@ -16,6 +18,8 @@
         "autoprefixer": "^10.4.16",
         "axios": "^1.7.4",
         "concurrently": "^9.2.1",
+        "eslint": "9.28.0",
+        "eslint-plugin-vue": "9.33.0",
         "fast-check": "^4.6.0",
         "jsdom": "^29.0.1",
         "laravel-vite-plugin": "^1.2.0",

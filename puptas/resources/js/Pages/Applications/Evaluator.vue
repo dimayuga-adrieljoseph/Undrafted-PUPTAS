@@ -1,3 +1,555 @@
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { Head } from "@inertiajs/vue3";
+import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
+import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
+
+import {
+    Chart as ChartJS,
+    LineController,
+    LineElement,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    Tooltip,
+    Title,
+    Legend,
+} from "chart.js";
+
+ChartJS.register(
+    LineController,
+    LineElement,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    Tooltip,
+    Title,
+    Legend
+);
+
+import { usePage } from "@inertiajs/vue3";
+
+const props = defineProps({
+    selectedUserId: {
+        type: [Number, String],
+        default: null
+    }
+});
+
+const currentPage = ref(1);
+const itemsPerPage = 10;
+const sortKey = ref("lastname");
+const evaluationStatusFilter = ref("");
+const sortAsc = ref(true);
+const showStatusDropdown = ref(false);
+const filterDropdownRef = ref(null);
+const autoRefreshTimer = ref(null);
+const POLL_INTERVAL_MS = 10000;
+
+const page = usePage();
+const users = ref(page.props.users || []);
+const hasAutoSelected = ref(false);
+
+const selectedUser = ref(null);
+const isLoading = ref(true);
+const errorMessage = ref("");
+const searchQuery = ref("");
+const selectedUserFiles = ref({});
+const selectedProgramId = ref("");
+const snackbar = ref({ visible: false, message: "" });
+
+const showSnackbar = (msg, duration = 3000) => {
+    snackbar.value.message = msg;
+    snackbar.value.visible = true;
+    setTimeout(() => { snackbar.value.visible = false; }, duration);
+};
+
+// Subject label mapping
+const SUBJECT_LABELS = {
+    g11_general_mathematics: 'G11 General Mathematics',
+    g11_statistics_probability: 'G11 Statistics & Probability',
+    g11_business_mathematics: 'G11 Business Mathematics',
+    g11_pre_calculus: 'G11 Pre-Calculus',
+    g11_basic_calculus: 'G11 Basic Calculus',
+    g11_earth_life_science: 'G11 Earth & Life Science',
+    g11_physical_science: 'G11 Physical Science',
+    g11_earth_science: 'G11 Earth Science',
+    g11_general_chemistry_1: 'G11 General Chemistry 1',
+    g12_general_physics_1: 'G12 General Physics 1',
+    g12_general_biology_1: 'G12 General Biology 1',
+    g12_general_physics_2: 'G12 General Physics 2',
+    g12_general_biology_2: 'G12 General Biology 2',
+    g12_general_chemistry_2: 'G12 General Chemistry 2',
+    g12_earth_life_science: 'G12 Earth & Life Science',
+    g12_physical_science: 'G12 Physical Science',
+    g11_oral_communication: 'G11 Oral Communication',
+    'g11_21st_century_lit': 'G11 21st Century Literature',
+    g11_academic_professional: 'G11 Academic & Professional',
+    g11_reading_writing: 'G11 Reading & Writing',
+    'g12_21st_century_lit': 'G12 21st Century Literature',
+    g12_academic_professional: 'G12 Academic & Professional',
+};
+
+const MATH_KEYS = ['g11_general_mathematics', 'g11_statistics_probability', 'g11_business_mathematics', 'g11_pre_calculus', 'g11_basic_calculus'];
+const SCIENCE_KEYS = ['g11_earth_life_science', 'g11_physical_science', 'g11_earth_science', 'g11_general_chemistry_1', 'g12_general_physics_1', 'g12_general_biology_1', 'g12_general_physics_2', 'g12_general_biology_2', 'g12_general_chemistry_2', 'g12_earth_life_science', 'g12_physical_science'];
+const ENGLISH_KEYS = ['g11_oral_communication', 'g11_21st_century_lit', 'g11_academic_professional', 'g11_reading_writing', 'g12_21st_century_lit', 'g12_academic_professional'];
+
+function buildSubjectList(keys, grades) {
+    return keys.filter(key => grades?.[key] != null && grades[key] !== '').map(key => ({ key, label: SUBJECT_LABELS[key] || key, value: grades[key] }));
+}
+
+const mathSubjects = computed(() => buildSubjectList(MATH_KEYS, selectedUser.value?.grades));
+const scienceSubjects = computed(() => buildSubjectList(SCIENCE_KEYS, selectedUser.value?.grades));
+const englishSubjects = computed(() => buildSubjectList(ENGLISH_KEYS, selectedUser.value?.grades));
+
+const dynamicSubjectList = computed(() => {
+    const dyn = selectedUser.value?.grades?.dynamic_subjects;
+    if (!dyn || !Array.isArray(dyn)) return [];
+    return dyn.map(s => ({ label: s.name || 'Dynamic Subject', value: s.grade }));
+});
+
+const hasIndividualSubjects = computed(() => mathSubjects.value.length > 0 || scienceSubjects.value.length > 0 || englishSubjects.value.length > 0);
+
+const getStatusBadgeClass = (user) => {
+    switch (user.pipeline_status) {
+        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+};
+
+const getEvaluationStatusText = (user) => {
+    switch (user.pipeline_status) {
+        case 'for_evaluation': return 'For Evaluation';
+        case 'evaluation_returned': return 'Returned for Revision';
+        case 'evaluation_passed': return 'Evaluation Passed';
+        case 'for_interview': return 'For Interview';
+        case 'interview_returned': return 'Returned for Revision';
+        case 'interview_passed': return 'Interview Passed';
+        case 'interview_transferred': return 'Course Transferred';
+        case 'for_medical': return 'For Medical';
+        case 'medical_cleared': return 'Medical Cleared';
+        case 'medical_rejected': return 'Medical Rejected';
+        case 'for_records': return 'For Records';
+        case 'officially_enrolled': return 'Officially Enrolled';
+        case 'rejected': return 'Rejected';
+        default: return 'Unknown';
+    }
+};
+
+const getEvaluationStatusClass = (user) => {
+    switch (user.pipeline_status) {
+        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
+        case 'for_medical': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+        case 'medical_cleared': return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
+        case 'medical_rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        case 'for_records': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
+        case 'officially_enrolled': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold';
+        case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    }
+};
+
+const fetchUsers = async () => {
+    try {
+        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+        const response = await fetch(`/evaluator-dashboard/applicants?stage=${targetStageForApi}`, {
+            headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
+        });
+        if (!response.ok) throw new Error("Failed to fetch users");
+        users.value = await response.json();
+
+        // Auto-select user if selectedUserId prop was provided
+        if (props.selectedUserId && !selectedUser.value && !hasAutoSelected.value) {
+            const user = users.value.find(u => u.id == props.selectedUserId);
+            if (user) {
+                hasAutoSelected.value = true;
+                await selectUser(user);
+            }
+        }
+    } catch (error) {
+        errorMessage.value = error.message;
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const handleOutsideClick = (e) => {
+    if (filterDropdownRef.value && !filterDropdownRef.value.contains(e.target)) {
+        showStatusDropdown.value = false;
+    }
+};
+
+const refreshApplicants = async () => {
+    await fetchUsers();
+    if (!selectedUser.value) return;
+    const existsInQueue = users.value.some((u) => String(u.id) === String(selectedUser.value.id));
+    if (!existsInQueue) closeUserCard();
+};
+
+onMounted(() => {
+    fetchUsers();
+    document.addEventListener('click', handleOutsideClick);
+    document.addEventListener('click', handleOutsideClick);
+    autoRefreshTimer.value = setInterval(refreshApplicants, POLL_INTERVAL_MS);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', handleOutsideClick);
+    if (autoRefreshTimer.value) { clearInterval(autoRefreshTimer.value); autoRefreshTimer.value = null; }
+});
+
+const filteredUsers = computed(() => {
+    const q = searchQuery.value.trim().toLowerCase();
+    return users.value
+        .filter((u) => {
+            const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
+            const matchesSearch = fullName.includes(q);
+            const matchesEvaluationStatus = evaluationStatusFilter.value ? u.pipeline_status === evaluationStatusFilter.value : true;
+            return matchesSearch && matchesEvaluationStatus;
+        })
+        .sort((a, b) => {
+            let aVal, bVal;
+            if (sortKey.value === 'program.name') {
+                aVal = (a.program?.name || "").toString().toLowerCase();
+                bVal = (b.program?.name || "").toString().toLowerCase();
+            } else {
+                aVal = (a[sortKey.value] || "").toString().toLowerCase();
+                bVal = (b[sortKey.value] || "").toString().toLowerCase();
+            }
+            return sortAsc.value ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        });
+});
+
+const selectUser = async (user) => {
+    try {
+        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+        const response = await axios.get(`/dashboard/user-files/${user.id}?stage=${targetStageForApi}`);
+        selectedUser.value = {
+            ...user,
+            ...response.data.user,
+            application: {
+                ...response.data.user.application,
+                processes: response.data.user.application?.processes || [],
+                program: response.data.user.application?.program || null,
+                second_choice: response.data.user.application?.second_choice || null,
+                third_choice: response.data.user.application?.third_choice || null,
+            },
+            grades: response.data.user.grades || null,
+        };
+        selectedUserFiles.value = response.data.uploadedFiles || {};
+    } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        selectedUserFiles.value = {};
+        selectedUser.value = null;
+    }
+};
+
+const isEvaluationCompleted = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
+    return evaluatorProcess && evaluatorProcess.status === 'completed';
+});
+
+const hasStartedReview = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
+    return evaluatorProcess && !!evaluatorProcess.started_at;
+});
+
+const reviewStartTime = computed(() => {
+    if (!selectedUser.value || !selectedUser.value.application?.processes) return null;
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
+    return evaluatorProcess ? evaluatorProcess.started_at : null;
+});
+
+const isStartingReview = ref(false);
+const isCancellingReview = ref(false);
+const showCancelModal = ref(false);
+
+const startReview = async () => {
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+    const processes = selectedUser.value.application.processes;
+    const processIndex = processes.findIndex(p => p.stage === targetStage);
+
+    if (processIndex === -1) {
+        showToast("Error finding application process.", "error");
+        return;
+    }
+
+    const evaluatorProcess = processes[processIndex];
+    isStartingReview.value = true;
+    try {
+        const response = await axios.post(`/evaluator/start-review/${evaluatorProcess.id}`);
+        // Rebuild selectedUser.value to trigger Vue reactivity
+        selectedUser.value = {
+            ...selectedUser.value,
+            application: {
+                ...selectedUser.value.application,
+                processes: processes.map((p, i) =>
+                    i === processIndex ? { ...p, started_at: response.data.started_at } : p
+                ),
+            },
+        };
+        showToast("Review started successfully.", "success");
+    } catch (error) {
+        if (error.response?.status === 409) {
+            // Already started — re-fetch user to sync UI with DB state
+            try {
+                const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${targetStageForApi}`);
+                const userData = refetch.data.user;
+                selectedUser.value = {
+                    ...selectedUser.value,
+                    ...userData,
+                    application: {
+                        ...userData.application,
+                        processes: userData.application?.processes || [],
+                        program: userData.application?.program || null,
+                        second_choice: userData.application?.second_choice || null,
+                        third_choice: userData.application?.third_choice || null,
+                    },
+                    grades: userData.grades || null,
+                };
+                showToast("Review was already started.", "success");
+            } catch (refetchErr) {
+                console.error("Refetch failed:", refetchErr);
+            }
+        } else {
+            console.error("Error starting review:", error);
+            showToast(error.response?.data?.message || "Failed to start review.", "error");
+        }
+    } finally {
+        isStartingReview.value = false;
+    }
+};
+
+const cancelReview = () => {
+    showCancelModal.value = true;
+};
+
+const confirmCancelReview = async () => {
+    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+    const processes = selectedUser.value.application.processes;
+    const processIndex = processes.findIndex(p => p.stage === targetStage);
+
+    if (processIndex === -1) return;
+
+    const evaluatorProcess = processes[processIndex];
+    isCancellingReview.value = true;
+    try {
+        await axios.post(`/evaluator/cancel-review/${evaluatorProcess.id}?stage=${targetStage}`);
+        // Rebuild selectedUser.value to clear started_at
+        selectedUser.value = {
+            ...selectedUser.value,
+            application: {
+                ...selectedUser.value.application,
+                processes: processes.map((p, i) =>
+                    i === processIndex ? { ...p, started_at: null, reviewed_by: null } : p
+                ),
+            },
+        };
+        showToast("Review cancelled.", "info");
+        showCancelModal.value = false;
+    } catch (error) {
+        showToast(error.response?.data?.message || "Failed to cancel review.", "error");
+    } finally {
+        isCancellingReview.value = false;
+    }
+};
+
+const closeUserCard = () => { selectedUser.value = null; };
+
+const formatFileKey = (key) => {
+    const map = {
+        file10Front: 'Grade 10 Report Front', file10: 'Grade 10 Report Back',
+        file11Front: "Grade 11 Report Front", file11: "Grade 11 Report Back",
+        file12Front: "Grade 12 Report Front", file12: "Grade 12 Report Back",
+        schoolId: "School ID", nonEnrollCert: "Certificate of Non-Enrollment",
+        psa: "PSA Birth Certificate", goodMoral: "Good Moral Certificate",
+        underOath: "Under Oath Document", photo2x2: "2x2 Photo",
+    };
+    return map[key] || key;
+};
+
+const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+const hasImagePreview = (file) => Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
+
+const previewImage = ref(null);
+const showImageModal = ref(false);
+
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) return;
+    previewImage.value = src;
+    showImageModal.value = true;
+};
+
+const closeImageModal = () => { showImageModal.value = false; };
+
+const isEvaluating = ref(false);
+const evaluationError = ref("");
+const filesToReturn = ref({});
+const returnNote = ref("");
+const returnNoteCharCount = computed(() => {
+    return returnNote.value.length;
+});
+const requiresPromissoryNote = ref(false);
+
+const startEvaluation = () => {
+    isEvaluating.value = true;
+    evaluationError.value = "";
+    filesToReturn.value = {};
+    returnNote.value = "";
+};
+const cancelEvaluation = () => { isEvaluating.value = false; filesToReturn.value = {}; returnNote.value = ""; };
+
+const promptFlag = () => {
+    if (!returnNote.value.trim()) {
+        evaluationError.value = "Please provide a reason.";
+        showToast("Please provide a reason.", "error");
+        return;
+    }
+    showFlagModal.value = true;
+};
+
+const isSubmitting = ref(false);
+
+const submitFlag = async () => {
+    evaluationError.value = "";
+    const note = returnNote.value.trim();
+
+    if (returnNoteCharCount.value > 400) {
+        evaluationError.value = "The reason cannot exceed 400 characters.";
+        showFlagModal.value = false;
+        return;
+    }
+
+    isSubmitting.value = true;
+    try {
+        const currentUserId = selectedUser.value.id;
+        const isGradeEvaluator = page.props.auth?.user?.role_id !== 3;
+
+        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+        await axios.post(`/evaluator/flag-application/${currentUserId}?stage=${targetStageForApi}`, {
+            note,
+            requires_promissory_note: requiresPromissoryNote.value,
+            requires_guidance_office: !isGradeEvaluator,
+            requires_admission_office: isGradeEvaluator
+        });
+
+        showToast("Application flagged successfully!");
+
+        showFlagModal.value = false;
+        isEvaluating.value = false; filesToReturn.value = {}; returnNote.value = "";
+        closeUserCard();
+        await fetchUsers();
+    } catch (error) {
+        console.error(error);
+        showFlagModal.value = false;
+        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0];
+        evaluationError.value = msg || "Action failed. Please try again.";
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
+const capitalize = (str) => typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+const formatStage = (stage) => {
+    const map = {
+        'evaluator': 'DE, GE',
+        'interviewer': 'Interviewer',
+        'medical': 'Medical',
+        'record_staff': 'Record Staff'
+    };
+    return map[stage] || (stage ? stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ") : "");
+};
+
+const formatDate = (date) => { const d = new Date(date); return d.toLocaleString(); };
+
+const formatDateOnly = (date) => {
+    if (!date) return '—';
+    const d = new Date(date);
+    return d.toLocaleDateString('en-GB'); // DD/MM/YYYY
+};
+
+const submitPass = async () => {
+    isSubmitting.value = true;
+    try {
+        const currentUserId = selectedUser.value.id;
+        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
+        await axios.post(`/evaluator/pass-application/${currentUserId}?stage=${targetStageForApi}`, {
+            note: ""
+        });
+        showPassModal.value = false;
+        isEvaluating.value = false;
+        filesToReturn.value = {};
+        returnNote.value = "";
+        requiresPromissoryNote.value = false;
+        showPassModal.value = false;
+        closeUserCard();
+        showToast("Applicant passed successfully!");
+        await fetchUsers();
+    } catch (error) {
+        console.error("Error passing application:", error);
+        showPassModal.value = false;
+        const msg = error.response?.data?.message || "Failed to pass application.";
+        showToast(msg, "error");
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
+const showPassModal = ref(false);
+const showFlagModal = ref(false);
+
+// Toast notification state
+const toastMessage = ref('');
+const toastType = ref('success');
+const toastVisible = ref(false);
+let toastTimeout = null;
+
+const showToast = (message, type = 'success') => {
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastMessage.value = message;
+    toastType.value = type;
+    toastVisible.value = true;
+    toastTimeout = setTimeout(() => {
+        toastVisible.value = false;
+    }, 3000);
+};
+
+const totalPages = computed(() => Math.ceil(filteredUsers.value.length / itemsPerPage));
+
+const paginatedUsers = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return filteredUsers.value.slice(start, start + itemsPerPage);
+});
+
+watch([searchQuery, evaluationStatusFilter, sortKey, sortAsc], () => { currentPage.value = 1; });
+
+const sortBy = (key) => {
+    if (sortKey.value === key) { sortAsc.value = !sortAsc.value; }
+    else { sortKey.value = key; sortAsc.value = true; }
+};
+
+const clearFilters = () => {
+    searchQuery.value = ""; evaluationStatusFilter.value = "";
+    sortKey.value = "lastname"; sortAsc.value = true;
+    currentPage.value = 1; showStatusDropdown.value = false;
+};
+</script>
+
 <template>
     <Head title="All Evaluator Applications" />
     <EvaluatorLayout>
@@ -763,555 +1315,3 @@
         </transition>
     </EvaluatorLayout>
 </template>
-
-<script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
-import { Head } from "@inertiajs/vue3";
-import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
-import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
-
-import {
-    Chart as ChartJS,
-    LineController,
-    LineElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    Tooltip,
-    Title,
-    Legend,
-} from "chart.js";
-
-ChartJS.register(
-    LineController,
-    LineElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    Tooltip,
-    Title,
-    Legend
-);
-
-import { usePage } from "@inertiajs/vue3";
-
-const props = defineProps({
-    selectedUserId: {
-        type: [Number, String],
-        default: null
-    }
-});
-
-const currentPage = ref(1);
-const itemsPerPage = 10;
-const sortKey = ref("lastname");
-const evaluationStatusFilter = ref("");
-const sortAsc = ref(true);
-const showStatusDropdown = ref(false);
-const filterDropdownRef = ref(null);
-const autoRefreshTimer = ref(null);
-const POLL_INTERVAL_MS = 10000;
-
-const page = usePage();
-const users = ref(page.props.users || []);
-const hasAutoSelected = ref(false);
-
-const selectedUser = ref(null);
-const isLoading = ref(true);
-const errorMessage = ref("");
-const searchQuery = ref("");
-const selectedUserFiles = ref({});
-const selectedProgramId = ref("");
-const snackbar = ref({ visible: false, message: "" });
-
-const showSnackbar = (msg, duration = 3000) => {
-    snackbar.value.message = msg;
-    snackbar.value.visible = true;
-    setTimeout(() => { snackbar.value.visible = false; }, duration);
-};
-
-// Subject label mapping
-const SUBJECT_LABELS = {
-    g11_general_mathematics: 'G11 General Mathematics',
-    g11_statistics_probability: 'G11 Statistics & Probability',
-    g11_business_mathematics: 'G11 Business Mathematics',
-    g11_pre_calculus: 'G11 Pre-Calculus',
-    g11_basic_calculus: 'G11 Basic Calculus',
-    g11_earth_life_science: 'G11 Earth & Life Science',
-    g11_physical_science: 'G11 Physical Science',
-    g11_earth_science: 'G11 Earth Science',
-    g11_general_chemistry_1: 'G11 General Chemistry 1',
-    g12_general_physics_1: 'G12 General Physics 1',
-    g12_general_biology_1: 'G12 General Biology 1',
-    g12_general_physics_2: 'G12 General Physics 2',
-    g12_general_biology_2: 'G12 General Biology 2',
-    g12_general_chemistry_2: 'G12 General Chemistry 2',
-    g12_earth_life_science: 'G12 Earth & Life Science',
-    g12_physical_science: 'G12 Physical Science',
-    g11_oral_communication: 'G11 Oral Communication',
-    'g11_21st_century_lit': 'G11 21st Century Literature',
-    g11_academic_professional: 'G11 Academic & Professional',
-    g11_reading_writing: 'G11 Reading & Writing',
-    'g12_21st_century_lit': 'G12 21st Century Literature',
-    g12_academic_professional: 'G12 Academic & Professional',
-};
-
-const MATH_KEYS = ['g11_general_mathematics', 'g11_statistics_probability', 'g11_business_mathematics', 'g11_pre_calculus', 'g11_basic_calculus'];
-const SCIENCE_KEYS = ['g11_earth_life_science', 'g11_physical_science', 'g11_earth_science', 'g11_general_chemistry_1', 'g12_general_physics_1', 'g12_general_biology_1', 'g12_general_physics_2', 'g12_general_biology_2', 'g12_general_chemistry_2', 'g12_earth_life_science', 'g12_physical_science'];
-const ENGLISH_KEYS = ['g11_oral_communication', 'g11_21st_century_lit', 'g11_academic_professional', 'g11_reading_writing', 'g12_21st_century_lit', 'g12_academic_professional'];
-
-function buildSubjectList(keys, grades) {
-    return keys.filter(key => grades?.[key] != null && grades[key] !== '').map(key => ({ key, label: SUBJECT_LABELS[key] || key, value: grades[key] }));
-}
-
-const mathSubjects = computed(() => buildSubjectList(MATH_KEYS, selectedUser.value?.grades));
-const scienceSubjects = computed(() => buildSubjectList(SCIENCE_KEYS, selectedUser.value?.grades));
-const englishSubjects = computed(() => buildSubjectList(ENGLISH_KEYS, selectedUser.value?.grades));
-
-const dynamicSubjectList = computed(() => {
-    const dyn = selectedUser.value?.grades?.dynamic_subjects;
-    if (!dyn || !Array.isArray(dyn)) return [];
-    return dyn.map(s => ({ label: s.name || 'Dynamic Subject', value: s.grade }));
-});
-
-const hasIndividualSubjects = computed(() => mathSubjects.value.length > 0 || scienceSubjects.value.length > 0 || englishSubjects.value.length > 0);
-
-const getStatusBadgeClass = (user) => {
-    switch (user.pipeline_status) {
-        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
-    }
-};
-
-const getEvaluationStatusText = (user) => {
-    switch (user.pipeline_status) {
-        case 'for_evaluation': return 'For Evaluation';
-        case 'evaluation_returned': return 'Returned for Revision';
-        case 'evaluation_passed': return 'Evaluation Passed';
-        case 'for_interview': return 'For Interview';
-        case 'interview_returned': return 'Returned for Revision';
-        case 'interview_passed': return 'Interview Passed';
-        case 'interview_transferred': return 'Course Transferred';
-        case 'for_medical': return 'For Medical';
-        case 'medical_cleared': return 'Medical Cleared';
-        case 'medical_rejected': return 'Medical Rejected';
-        case 'for_records': return 'For Records';
-        case 'officially_enrolled': return 'Officially Enrolled';
-        case 'rejected': return 'Rejected';
-        default: return 'Unknown';
-    }
-};
-
-const getEvaluationStatusClass = (user) => {
-    switch (user.pipeline_status) {
-        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
-        case 'for_medical': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
-        case 'medical_cleared': return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
-        case 'medical_rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'for_records': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
-        case 'officially_enrolled': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 font-semibold';
-        case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
-    }
-};
-
-const fetchUsers = async () => {
-    try {
-        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-        const response = await fetch(`/evaluator-dashboard/applicants?stage=${targetStageForApi}`, {
-            headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json();
-
-        // Auto-select user if selectedUserId prop was provided
-        if (props.selectedUserId && !selectedUser.value && !hasAutoSelected.value) {
-            const user = users.value.find(u => u.id == props.selectedUserId);
-            if (user) {
-                hasAutoSelected.value = true;
-                await selectUser(user);
-            }
-        }
-    } catch (error) {
-        errorMessage.value = error.message;
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const handleOutsideClick = (e) => {
-    if (filterDropdownRef.value && !filterDropdownRef.value.contains(e.target)) {
-        showStatusDropdown.value = false;
-    }
-};
-
-const refreshApplicants = async () => {
-    await fetchUsers();
-    if (!selectedUser.value) return;
-    const existsInQueue = users.value.some((u) => String(u.id) === String(selectedUser.value.id));
-    if (!existsInQueue) closeUserCard();
-};
-
-onMounted(() => {
-    fetchUsers();
-    document.addEventListener('click', handleOutsideClick);
-    document.addEventListener('click', handleOutsideClick);
-    autoRefreshTimer.value = setInterval(refreshApplicants, POLL_INTERVAL_MS);
-});
-
-onBeforeUnmount(() => {
-    document.removeEventListener('click', handleOutsideClick);
-    if (autoRefreshTimer.value) { clearInterval(autoRefreshTimer.value); autoRefreshTimer.value = null; }
-});
-
-const filteredUsers = computed(() => {
-    const q = searchQuery.value.trim().toLowerCase();
-    return users.value
-        .filter((u) => {
-            const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
-            const matchesSearch = fullName.includes(q);
-            const matchesEvaluationStatus = evaluationStatusFilter.value ? u.pipeline_status === evaluationStatusFilter.value : true;
-            return matchesSearch && matchesEvaluationStatus;
-        })
-        .sort((a, b) => {
-            let aVal, bVal;
-            if (sortKey.value === 'program.name') {
-                aVal = (a.program?.name || "").toString().toLowerCase();
-                bVal = (b.program?.name || "").toString().toLowerCase();
-            } else {
-                aVal = (a[sortKey.value] || "").toString().toLowerCase();
-                bVal = (b[sortKey.value] || "").toString().toLowerCase();
-            }
-            return sortAsc.value ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        });
-});
-
-const selectUser = async (user) => {
-    try {
-        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-        const response = await axios.get(`/dashboard/user-files/${user.id}?stage=${targetStageForApi}`);
-        selectedUser.value = {
-            ...user,
-            ...response.data.user,
-            application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
-                program: response.data.user.application?.program || null,
-                second_choice: response.data.user.application?.second_choice || null,
-                third_choice: response.data.user.application?.third_choice || null,
-            },
-            grades: response.data.user.grades || null,
-        };
-        selectedUserFiles.value = response.data.uploadedFiles || {};
-    } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        selectedUserFiles.value = {};
-        selectedUser.value = null;
-    }
-};
-
-const isEvaluationCompleted = computed(() => {
-    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
-    return evaluatorProcess && evaluatorProcess.status === 'completed';
-});
-
-const hasStartedReview = computed(() => {
-    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
-    return evaluatorProcess && !!evaluatorProcess.started_at;
-});
-
-const reviewStartTime = computed(() => {
-    if (!selectedUser.value || !selectedUser.value.application?.processes) return null;
-    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
-    return evaluatorProcess ? evaluatorProcess.started_at : null;
-});
-
-const isStartingReview = ref(false);
-const isCancellingReview = ref(false);
-const showCancelModal = ref(false);
-
-const startReview = async () => {
-    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-    const processes = selectedUser.value.application.processes;
-    const processIndex = processes.findIndex(p => p.stage === targetStage);
-
-    if (processIndex === -1) {
-        showToast("Error finding application process.", "error");
-        return;
-    }
-
-    const evaluatorProcess = processes[processIndex];
-    isStartingReview.value = true;
-    try {
-        const response = await axios.post(`/evaluator/start-review/${evaluatorProcess.id}`);
-        // Rebuild selectedUser.value to trigger Vue reactivity
-        selectedUser.value = {
-            ...selectedUser.value,
-            application: {
-                ...selectedUser.value.application,
-                processes: processes.map((p, i) =>
-                    i === processIndex ? { ...p, started_at: response.data.started_at } : p
-                ),
-            },
-        };
-        showToast("Review started successfully.", "success");
-    } catch (error) {
-        if (error.response?.status === 409) {
-            // Already started — re-fetch user to sync UI with DB state
-            try {
-                const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${targetStageForApi}`);
-                const userData = refetch.data.user;
-                selectedUser.value = {
-                    ...selectedUser.value,
-                    ...userData,
-                    application: {
-                        ...userData.application,
-                        processes: userData.application?.processes || [],
-                        program: userData.application?.program || null,
-                        second_choice: userData.application?.second_choice || null,
-                        third_choice: userData.application?.third_choice || null,
-                    },
-                    grades: userData.grades || null,
-                };
-                showToast("Review was already started.", "success");
-            } catch (refetchErr) {
-                console.error("Refetch failed:", refetchErr);
-            }
-        } else {
-            console.error("Error starting review:", error);
-            showToast(error.response?.data?.message || "Failed to start review.", "error");
-        }
-    } finally {
-        isStartingReview.value = false;
-    }
-};
-
-const cancelReview = () => {
-    showCancelModal.value = true;
-};
-
-const confirmCancelReview = async () => {
-    const targetStage = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-    const processes = selectedUser.value.application.processes;
-    const processIndex = processes.findIndex(p => p.stage === targetStage);
-
-    if (processIndex === -1) return;
-
-    const evaluatorProcess = processes[processIndex];
-    isCancellingReview.value = true;
-    try {
-        await axios.post(`/evaluator/cancel-review/${evaluatorProcess.id}?stage=${targetStage}`);
-        // Rebuild selectedUser.value to clear started_at
-        selectedUser.value = {
-            ...selectedUser.value,
-            application: {
-                ...selectedUser.value.application,
-                processes: processes.map((p, i) =>
-                    i === processIndex ? { ...p, started_at: null, reviewed_by: null } : p
-                ),
-            },
-        };
-        showToast("Review cancelled.", "info");
-        showCancelModal.value = false;
-    } catch (error) {
-        showToast(error.response?.data?.message || "Failed to cancel review.", "error");
-    } finally {
-        isCancellingReview.value = false;
-    }
-};
-
-const closeUserCard = () => { selectedUser.value = null; };
-
-const formatFileKey = (key) => {
-    const map = {
-        file10Front: 'Grade 10 Report Front', file10: 'Grade 10 Report Back',
-        file11Front: "Grade 11 Report Front", file11: "Grade 11 Report Back",
-        file12Front: "Grade 12 Report Front", file12: "Grade 12 Report Back",
-        schoolId: "School ID", nonEnrollCert: "Certificate of Non-Enrollment",
-        psa: "PSA Birth Certificate", goodMoral: "Good Moral Certificate",
-        underOath: "Under Oath Document", photo2x2: "2x2 Photo",
-    };
-    return map[key] || key;
-};
-
-const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
-const hasImagePreview = (file) => Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
-
-const previewImage = ref(null);
-const showImageModal = ref(false);
-
-const openImageModal = (file) => {
-    const src = getFileUrl(file);
-    if (!src || !hasImagePreview(file)) return;
-    previewImage.value = src;
-    showImageModal.value = true;
-};
-
-const closeImageModal = () => { showImageModal.value = false; };
-
-const isEvaluating = ref(false);
-const evaluationError = ref("");
-const filesToReturn = ref({});
-const returnNote = ref("");
-const returnNoteCharCount = computed(() => {
-    return returnNote.value.length;
-});
-const requiresPromissoryNote = ref(false);
-
-const startEvaluation = () => {
-    isEvaluating.value = true;
-    evaluationError.value = "";
-    filesToReturn.value = {};
-    returnNote.value = "";
-};
-const cancelEvaluation = () => { isEvaluating.value = false; filesToReturn.value = {}; returnNote.value = ""; };
-
-const promptFlag = () => {
-    if (!returnNote.value.trim()) {
-        evaluationError.value = "Please provide a reason.";
-        showToast("Please provide a reason.", "error");
-        return;
-    }
-    showFlagModal.value = true;
-};
-
-const isSubmitting = ref(false);
-
-const submitFlag = async () => {
-    evaluationError.value = "";
-    const note = returnNote.value.trim();
-
-    if (returnNoteCharCount.value > 400) {
-        evaluationError.value = "The reason cannot exceed 400 characters.";
-        showFlagModal.value = false;
-        return;
-    }
-
-    isSubmitting.value = true;
-    try {
-        const currentUserId = selectedUser.value.id;
-        const isGradeEvaluator = page.props.auth?.user?.role_id !== 3;
-
-        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-        await axios.post(`/evaluator/flag-application/${currentUserId}?stage=${targetStageForApi}`, {
-            note,
-            requires_promissory_note: requiresPromissoryNote.value,
-            requires_guidance_office: !isGradeEvaluator,
-            requires_admission_office: isGradeEvaluator
-        });
-
-        showToast("Application flagged successfully!");
-
-        showFlagModal.value = false;
-        isEvaluating.value = false; filesToReturn.value = {}; returnNote.value = "";
-        closeUserCard();
-        await fetchUsers();
-    } catch (error) {
-        console.error(error);
-        showFlagModal.value = false;
-        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0];
-        evaluationError.value = msg || "Action failed. Please try again.";
-    } finally {
-        isSubmitting.value = false;
-    }
-};
-
-const capitalize = (str) => typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1) : "";
-const formatStage = (stage) => {
-    const map = {
-        'evaluator': 'DE, GE',
-        'interviewer': 'Interviewer',
-        'medical': 'Medical',
-        'record_staff': 'Record Staff'
-    };
-    return map[stage] || (stage ? stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ") : "");
-};
-
-const formatDate = (date) => { const d = new Date(date); return d.toLocaleString(); };
-
-const formatDateOnly = (date) => {
-    if (!date) return '—';
-    const d = new Date(date);
-    return d.toLocaleDateString('en-GB'); // DD/MM/YYYY
-};
-
-const submitPass = async () => {
-    isSubmitting.value = true;
-    try {
-        const currentUserId = selectedUser.value.id;
-        const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-        await axios.post(`/evaluator/pass-application/${currentUserId}?stage=${targetStageForApi}`, {
-            note: ""
-        });
-        showPassModal.value = false;
-        isEvaluating.value = false;
-        filesToReturn.value = {};
-        returnNote.value = "";
-        requiresPromissoryNote.value = false;
-        showPassModal.value = false;
-        closeUserCard();
-        showToast("Applicant passed successfully!");
-        await fetchUsers();
-    } catch (error) {
-        console.error("Error passing application:", error);
-        showPassModal.value = false;
-        const msg = error.response?.data?.message || "Failed to pass application.";
-        showToast(msg, "error");
-    } finally {
-        isSubmitting.value = false;
-    }
-};
-
-const showPassModal = ref(false);
-const showFlagModal = ref(false);
-
-// Toast notification state
-const toastMessage = ref('');
-const toastType = ref('success');
-const toastVisible = ref(false);
-let toastTimeout = null;
-
-const showToast = (message, type = 'success') => {
-    if (toastTimeout) clearTimeout(toastTimeout);
-    toastMessage.value = message;
-    toastType.value = type;
-    toastVisible.value = true;
-    toastTimeout = setTimeout(() => {
-        toastVisible.value = false;
-    }, 3000);
-};
-
-const totalPages = computed(() => Math.ceil(filteredUsers.value.length / itemsPerPage));
-
-const paginatedUsers = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage;
-    return filteredUsers.value.slice(start, start + itemsPerPage);
-});
-
-watch([searchQuery, evaluationStatusFilter, sortKey, sortAsc], () => { currentPage.value = 1; });
-
-const sortBy = (key) => {
-    if (sortKey.value === key) { sortAsc.value = !sortAsc.value; }
-    else { sortKey.value = key; sortAsc.value = true; }
-};
-
-const clearFilters = () => {
-    searchQuery.value = ""; evaluationStatusFilter.value = "";
-    sortKey.value = "lastname"; sortAsc.value = true;
-    currentPage.value = 1; showStatusDropdown.value = false;
-};
-</script>

@@ -196,9 +196,7 @@ const cancelAcademic = () => {
 <template>
   <Head title="My Profile" />
   <ApplicantLayout title="My Profile">
-    <template #header>
-      <h2 class="font-bold text-2xl text-gray-900 dark:text-gray-100">My Profile</h2>
-    </template>
+    <template #title>My Profile</template>
 
     <div class="py-8">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
@@ -287,7 +285,10 @@ const cancelAcademic = () => {
                   <Transition name="fade">
                     <div v-if="academicSaved" style="padding:.5rem 1.25rem;border-top:1px solid #f3f4f6;display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:#15803d;">
                       <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;flex-shrink:0;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                      Saved successfully
+                      <span v-if="formerSchoolComplete">
+                        Academic information saved. You can now download your F137 Request Letter in the dashboard.
+                      </span>
+                      <span v-else>Saved successfully</span>
                     </div>
                   </Transition>
                 </template>
@@ -425,9 +426,9 @@ const cancelAcademic = () => {
   </ApplicantLayout>
 </template>
 
-<style>
+<style scoped>
 :root { --brand: #9E122C; --brand-light: #c81e3d; --brand-pale: #fdf2f4; --brand-dim: rgba(158,18,44,.08); }
-.hero-card { background:linear-gradient(135deg,var(--brand) 0%,var(--brand-light) 100%); border-radius:20px; border:none; overflow:hidden; margin-bottom:1.25rem; box-shadow:0 4px 20px rgba(158,18,44,.35); position:relative; }
+.hero-card { background:linear-gradient(135deg,#9E122C 0%,#c81e3d 100%); border-radius:20px; border:none; overflow:hidden; margin-bottom:1.25rem; box-shadow:0 4px 20px rgba(158,18,44,.35); position:relative; }
 .hero-body { padding:1.5rem 1.5rem 1.25rem; position:relative; z-index:1; }
 .hero-avatar-row { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; }
 .hero-avatar { width:72px; height:72px; border-radius:16px; background:rgba(255,255,255,.15); border:2px solid rgba(255,255,255,.4); box-shadow:0 4px 16px rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:700; color:#fff; flex-shrink:0; backdrop-filter:blur(4px); }
@@ -446,7 +447,7 @@ const cancelAcademic = () => {
 .tab-btn { display:flex; align-items:center; gap:.5rem; padding:.85rem 1.25rem; font-size:.82rem; font-weight:500; color:#6b7280; border:none; background:transparent; cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; transition:color .15s,border-color .15s,background .15s; }
 .tab-btn svg { width:15px; height:15px; }
 .tab-btn:hover { color:#374151; background:#f9fafb; }
-.tab-btn--active { color:var(--brand); border-bottom-color:var(--brand); background:var(--brand-pale); }
+.tab-btn--active { color:#9E122C; border-bottom-color:#9E122C; background:#fdf2f4; }
 .tab-panel { animation:fadeIn .18s ease; }
 @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
 .two-col-layout { display:grid; grid-template-columns:1fr; gap:1.25rem; }
@@ -456,8 +457,8 @@ const cancelAcademic = () => {
 .card { background:#fff; border-radius:16px; border:1px solid #e5e7eb; box-shadow:0 1px 4px rgba(0,0,0,.05); overflow:hidden; }
 .card--wide { grid-column:1 / -1; }
 .card-header { display:flex; align-items:center; gap:.75rem; padding:1rem 1.25rem; border-bottom:1px solid #f3f4f6; }
-.card-icon { width:34px; height:34px; border-radius:10px; background:var(--brand-pale); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.card-icon svg { width:16px; height:16px; fill:var(--brand); }
+.card-icon { width:34px; height:34px; border-radius:10px; background:#fdf2f4; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.card-icon svg { width:16px; height:16px; fill:#9E122C; }
 .card-title { font-size:.9rem; font-weight:700; color:#111827; margin:0; }
 .info-list { padding:.75rem 1.25rem; display:flex; flex-direction:column; gap:0; }
 .info-row { display:flex; justify-content:space-between; align-items:baseline; gap:1rem; padding:.6rem 0; border-bottom:1px solid #f3f4f6; font-size:.82rem; }
@@ -481,9 +482,9 @@ const cancelAcademic = () => {
 .empty-card-sub { font-size:.78rem; }
 .program-list { padding:.75rem 1.25rem; display:flex; flex-direction:column; gap:.6rem; }
 .program-item { display:flex; align-items:center; gap:.75rem; padding:.7rem .9rem; border-radius:12px; background:#f9fafb; border:1px solid #f3f4f6; }
-.program-item--first { background:var(--brand-pale); border-color:rgba(158,18,44,.15); }
+.program-item--first { background:#fdf2f4; border-color:rgba(158,18,44,.15); }
 .program-rank { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:800; color:#fff; flex-shrink:0; }
-.program-rank--first { background:var(--brand); }
+.program-rank--first { background:#9E122C; }
 .program-rank--second { background:#9ca3af; }
 .program-rank--third { background:#d1d5db; color:#374151; }
 .program-name { font-size:.83rem; font-weight:700; color:#111827; margin:0 0 2px; }
@@ -529,8 +530,8 @@ const cancelAcademic = () => {
 @media (min-width:1024px) { .doc-grid { grid-template-columns:1fr 1fr 1fr; } }
 .doc-card { background:#fff; border-radius:14px; border:1px solid #e5e7eb; padding:1rem; }
 .doc-card-top { display:flex; align-items:center; gap:.75rem; }
-.doc-icon { width:36px; height:36px; border-radius:10px; background:var(--brand-pale); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.doc-icon svg { width:16px; height:16px; fill:var(--brand); }
+.doc-icon { width:36px; height:36px; border-radius:10px; background:#fdf2f4; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.doc-icon svg { width:16px; height:16px; fill:#9E122C; }
 .doc-meta { flex:1; min-width:0; }
 .doc-type { font-size:.8rem; font-weight:700; color:#111827; margin:0 0 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .doc-filename { font-size:.7rem; color:#9ca3af; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

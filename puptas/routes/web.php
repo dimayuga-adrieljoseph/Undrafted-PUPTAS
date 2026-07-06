@@ -640,6 +640,16 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/admin/logbook/export/pdf', [AdmissionLogbookController::class, 'exportPdf'])->name('reports.logbook.export.pdf');
     Route::get('/admin/control-list', [ControlListController::class, 'index'])->name('reports.control-list.index');
     Route::get('/admin/control-list/export', [ControlListController::class, 'export'])->name('reports.control-list.export');
+
+    // Waiver Management
+    Route::get('/admin/waiver-management', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'index'])->name('waiver.index');
+    Route::get('/admin/waiver-management/export/pdf', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'exportPdf'])->name('waiver.export.pdf');
+    Route::get('/admin/waiver-management/export/csv', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'exportCsv'])->name('waiver.export.csv');
+    Route::post('/admin/waiver-management/import/preview', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'importPreview'])->name('waiver.import.preview');
+    Route::post('/admin/waiver-management/import/confirm', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'importConfirm'])->name('waiver.import.confirm');
+    Route::post('/admin/waiver-management/search', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'searchEligible'])->name('waiver.search');
+    Route::post('/admin/waiver-management/tag', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'tag'])->name('waiver.tag');
+    Route::post('/admin/waiver-management/untag', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'untag'])->name('waiver.untag');
 });
 
 // Audit log routes - Protected by Superadmin middleware
