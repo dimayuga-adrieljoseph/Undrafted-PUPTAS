@@ -276,6 +276,13 @@ Route::post('/check-reference-number', function (\Illuminate\Http\Request $reque
     $pendingReg = session('pending_registration');
     $email = $pendingReg && !empty($pendingReg['email']) ? strtolower(trim($pendingReg['email'])) : null;
     
+    $cutoffService = app(\App\Services\CutoffSettingsService::class);
+    $isEmailAllowedOverride = false;
+    
+    if ($email && $cutoffService->isEmailAllowed($email)) {
+        $isEmailAllowedOverride = true;
+    }
+
     $testPasser = null;
     if ($email) {
         $testPasser = \App\Models\TestPasser::where('email', $email)->first();
@@ -285,17 +292,24 @@ Route::post('/check-reference-number', function (\Illuminate\Http\Request $reque
     }
     
     if (!$testPasser) {
+        if ($isEmailAllowedOverride) {
+            return response()->json(['valid' => true]);
+        }
         return response()->json(['valid' => false]);
     }
 
     $isScoreAllowedOverride = false;
-    $cutoffService = app(\App\Services\CutoffSettingsService::class);
     if ($cutoffService->isScoreAllowed((float) $testPasser->pupcet_total_score)) {
         $isScoreAllowedOverride = true;
     }
+    if (!$isEmailAllowedOverride && $cutoffService->isEmailAllowed($testPasser->email)) {
+        $isEmailAllowedOverride = true;
+    }
+    
+    $isOverrideAllowed = $isScoreAllowedOverride || $isEmailAllowedOverride;
     
     $isRestrictedStatus = in_array($testPasser->passer_status_id, [3, 4]);
-    if ($isRestrictedStatus && !$isScoreAllowedOverride) {
+    if ($isRestrictedStatus && !$isOverrideAllowed) {
         return response()->json(['valid' => false]);
     }
     
