@@ -252,9 +252,6 @@ class WaiverManagementController extends Controller
         DB::beginTransaction();
         try {
             foreach ($testPassers as $testPasser) {
-                $application = $testPasser->user?->currentApplication;
-                if (!$application) continue;
-
                 $sheetData = $applicantsData->firstWhere('test_passer_id', $testPasser->test_passer_id);
 
                 // Update sheet columns regardless of if they are already tagged
@@ -263,13 +260,25 @@ class WaiverManagementController extends Controller
                 $testPasser->waiver_program_offering = $sheetData['program_offering'] ?? null;
                 $testPasser->pupcet_total_score = isset($sheetData['score']) ? floatval($sheetData['score']) : $testPasser->pupcet_total_score;
                 
-                // Only tag if not already tagged
-                if (!$application->is_waivered) {
-                    $application->is_waivered = true;
-                    $application->save();
+                $application = $testPasser->user?->currentApplication;
+                
+                $wasTagged = false;
 
+                // Tag test passer as On Probation
+                if ($testPasser->passer_status_id !== 5) {
                     $testPasser->previous_passer_status_id = $testPasser->passer_status_id;
                     $testPasser->passer_status_id = 5; // On Probation
+                    $wasTagged = true;
+                }
+
+                // Tag application as waivered if it exists
+                if ($application && !$application->is_waivered) {
+                    $application->is_waivered = true;
+                    $application->save();
+                    $wasTagged = true;
+                }
+
+                if ($wasTagged) {
                     $taggedCount++;
                 }
 
