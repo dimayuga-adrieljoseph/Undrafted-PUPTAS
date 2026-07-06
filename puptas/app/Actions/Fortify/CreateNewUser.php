@@ -50,6 +50,14 @@ class CreateNewUser implements CreatesNewUsers
         $isScoreAllowedOverride = false;
         $isEmailAllowedOverride = false;
         
+        // Check email override directly from IDP session email first —
+        // this works even when the user has no TestPasser record yet.
+        if (!empty($pendingReg['email'])) {
+            if ($cutoffService->isEmailAllowed($pendingReg['email'])) {
+                $isEmailAllowedOverride = true;
+            }
+        }
+
         if (!empty($input['reference_number'])) {
             $inputRefNumber = trim($input['reference_number']);
             $testPasserCheck = null;
@@ -66,7 +74,9 @@ class CreateNewUser implements CreatesNewUsers
                 if ($cutoffService->isScoreAllowed((float) $testPasserCheck->pupcet_total_score)) {
                     $isScoreAllowedOverride = true;
                 }
-                if ($cutoffService->isEmailAllowed($testPasserCheck->email)) {
+                // Also check the test passer's own email (handles edge case where
+                // the IDP email differs from the test passer email on record)
+                if (!$isEmailAllowedOverride && $cutoffService->isEmailAllowed($testPasserCheck->email)) {
                     $isEmailAllowedOverride = true;
                 }
             }
@@ -121,13 +131,24 @@ class CreateNewUser implements CreatesNewUsers
             }
 
             if (!$testPasser) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'reference_number' => "DEBUG - NOT RECOGNIZED. Email: [{$email}] InputRef: [{$inputRefNumber}]. Only admitted test passers are allowed to create an account.",
+                // Email override allows registration even without a TestPasser record.
+                // The admin has explicitly granted this email access, so we skip the
+                // "not recognized" hard block. testPasser will remain null below and
+                // the TestPasser-linking block is guarded by `if ($testPasser)`.
+                if (!$isOverrideAllowed) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'reference_number' => 'The reference number you entered is not recognized. Only admitted test passers are allowed to create an account. Please verify your reference number and try again.',
+                    ]);
+                }
+
+                \Log::info('Email override: allowing registration without a TestPasser record.', [
+                    'email' => $email,
+                    'reference_number' => $inputRefNumber,
                 ]);
             }
 
             // Block registration for Unqualified and Waitlisted Below Cutoff
-            if (!$isOverrideAllowed && in_array($testPasser->passer_status_id, [3, 4])) {
+            if ($testPasser && !$isOverrideAllowed && in_array($testPasser->passer_status_id, [3, 4])) {
                 $statusName = $testPasser->passer_status_id === 3 ? 'Unqualified' : 'Waitlisted Below Cutoff';
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'reference_number' => "Registration is currently closed for {$statusName} applicants. Please wait for further announcements regarding open slots.",
