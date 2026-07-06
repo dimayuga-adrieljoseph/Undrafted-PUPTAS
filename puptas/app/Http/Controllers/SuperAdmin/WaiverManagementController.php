@@ -250,6 +250,13 @@ class WaiverManagementController extends Controller
             ->whereIn('test_passer_id', $testPasserIds)
             ->get();
 
+        // DEBUG - Remove after diagnosis
+        return redirect()->back()->with('success', 
+            "DEBUG: Received " . count($request->input('applicants', [])) . " applicants from frontend. " .
+            "IDs: [" . implode(', ', $testPasserIds) . "]. " .
+            "Found in DB: " . $testPassers->count() . " records."
+        );
+
         $taggedCount = 0;
         $updatedCount = 0;
 
