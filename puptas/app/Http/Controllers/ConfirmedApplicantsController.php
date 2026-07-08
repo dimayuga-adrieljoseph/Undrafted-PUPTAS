@@ -163,16 +163,20 @@ class ConfirmedApplicantsController extends Controller
         $enrollmentDate = $request->input('enrollment_date');
         $enrollmentTime = $request->input('enrollment_time');
 
-        // Verify all applicants are in any active evaluation stage
+        // Verify all applicants are in any active evaluation stage or cleared for enrollment
         $applicants = ApplicantProfile::with(['currentApplication', 'testPasser'])
             ->whereIn('user_id', $applicantIds)
-            ->whereHas('currentApplication.processes', function ($q) {
-                $q->whereIn('stage', [
-                    'document_evaluator',
-                    'grade_evaluator',
-                    'interviewer',
-                    'medical',
-                ])->whereIn('status', ['in_progress', 'returned']);
+            ->whereHas('currentApplication', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereHas('processes', function ($processQ) {
+                        $processQ->whereIn('stage', [
+                            'document_evaluator',
+                            'grade_evaluator',
+                            'interviewer',
+                            'medical',
+                        ])->whereIn('status', ['in_progress', 'returned']);
+                    })->orWhere('status', 'cleared_for_enrollment');
+                });
             })
             ->get()
             ->sortByDesc(function ($applicant) {
@@ -338,16 +342,20 @@ class ConfirmedApplicantsController extends Controller
         $applicantIds    = $request->input('applicant_ids');
         $messageTemplate = $request->input('message_template');
 
-        // Verify all applicants are in any active evaluation stage
+        // Verify all applicants are in any active evaluation stage or cleared for enrollment
         $applicants = ApplicantProfile::with(['currentApplication', 'testPasser'])
             ->whereIn('user_id', $applicantIds)
-            ->whereHas('currentApplication.processes', function ($q) {
-                $q->whereIn('stage', [
-                    'document_evaluator',
-                    'grade_evaluator',
-                    'interviewer',
-                    'medical',
-                ])->whereIn('status', ['in_progress', 'returned']);
+            ->whereHas('currentApplication', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereHas('processes', function ($processQ) {
+                        $processQ->whereIn('stage', [
+                            'document_evaluator',
+                            'grade_evaluator',
+                            'interviewer',
+                            'medical',
+                        ])->whereIn('status', ['in_progress', 'returned']);
+                    })->orWhere('status', 'cleared_for_enrollment');
+                });
             })
             ->get();
 
