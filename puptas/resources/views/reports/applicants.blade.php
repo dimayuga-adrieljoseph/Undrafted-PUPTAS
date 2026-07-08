@@ -25,6 +25,9 @@
                 <th>Name</th>
                 <th>Program</th>
                 <th>Status</th>
+                @if($reportType === 'pulled_out')
+                <th>Pull-Out Notes</th>
+                @endif
                 <th>Date</th>
             </tr>
         </thead>
@@ -35,12 +38,15 @@
                 <td>{{ $app['name'] }}</td>
                 <td>{{ $app['program'] }}</td>
                 <td>{{ $app['status'] }}</td>
+                @if($reportType === 'pulled_out')
+                <td>{{ $app['pullout_notes'] ?? '—' }}</td>
+                @endif
                 <td>{{ $app['date'] }}</td>
             </tr>
             @endforeach
             @if(count($applicants) == 0)
             <tr>
-                <td colspan="5" class="text-center">No applicants found for the selected criteria.</td>
+                <td colspan="{{ $reportType === 'pulled_out' ? '6' : '5' }}" class="text-center">No applicants found for the selected criteria.</td>
             </tr>
             @endif
         </tbody>
