@@ -895,17 +895,13 @@ onMounted(() => {
                                     </td>
                                     <td class="px-3 py-3 w-full overflow-hidden">
                                         <span
-                                            :class="
-                                                getStatusClass(
-                                                    a.passer_status_name,
-                                                )
-                                            "
+                                            :class="getStatusClass(a.display_passer_status)"
                                             class="px-2.5 py-1 rounded-xl text-xs font-medium capitalize inline-block break-words whitespace-normal text-center align-middle"
                                         >
-                                            {{ a.passer_status_name ? a.passer_status_name.replace(/_/g, ' ') : '' }}
+                                            {{ a.display_passer_status ? a.display_passer_status.replace(/_/g, ' ') : '' }}
                                         </span>
                                         <span
-                                            v-if="a.passer_status_name === 'on_probation'"
+                                            v-if="a.is_waiver"
                                             class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-700"
                                             title="This applicant was accepted through the Waiver Program"
                                         >
