@@ -118,7 +118,7 @@ class TestPasserController extends Controller
             'sort_order' => $request->input('sort_order', 'desc'),
         ];
 
-        $programs = \App\Models\Program::orderBy('name', 'asc')->get(['id', 'name']);
+        $programs = \App\Models\Program::orderBy('name', 'asc')->get(['id', 'name', 'code']);
 
         return Inertia::render('TestPassers/Email', [
             'passers' => $passers,
