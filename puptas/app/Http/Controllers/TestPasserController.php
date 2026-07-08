@@ -118,7 +118,7 @@ class TestPasserController extends Controller
             'sort_order' => $request->input('sort_order', 'desc'),
         ];
 
-        $programs = \App\Models\Program::orderBy('name', 'asc')->get(['id', 'name']);
+        $programs = \App\Models\Program::orderBy('name', 'asc')->get(['id', 'name', 'code']);
 
         return Inertia::render('TestPassers/Email', [
             'passers' => $passers,
@@ -143,7 +143,7 @@ class TestPasserController extends Controller
      */
     private function buildQuery(Request $request): Builder
     {
-        $query = TestPasser::query()->with('passerStatus');
+        $query = TestPasser::query()->with(['passerStatus', 'user.currentApplication.program']);
 
         if ($request->filled('school_year') && $request->input('school_year') !== 'all') {
             $query->where('school_year', $request->input('school_year'));
@@ -247,6 +247,8 @@ class TestPasserController extends Controller
             return response()->json(['error' => 'Missing required inputs'], 422);
         }
 
+        $allProgramsByCode = \App\Models\Program::all()->keyBy('code');
+
         // Validate recipient count against max_recipients_per_operation config
         $maxRecipients = config('email-tracking.max_recipients_per_operation', 2000);
         if (count($passerIds) > $maxRecipients) {
@@ -262,6 +264,7 @@ class TestPasserController extends Controller
             'waitlisted' => 'waitlisted',
             'waitlisted-cutoff' => 'waitlisted',
             'waitlisted-limited' => 'waitlisted',
+            'on-probation' => 'on_probation',
         ];
         $emailType = $emailTypeMap[$templateType] ?? 'pupcet_result';
 
@@ -299,7 +302,9 @@ class TestPasserController extends Controller
 
             // Load recipients in chunks
             foreach (array_chunk($passerIds, $chunkSize) as $chunkIds) {
-                $passers = TestPasser::whereIn('test_passer_id', $chunkIds)->get();
+                $passers = TestPasser::whereIn('test_passer_id', $chunkIds)
+                    ->with('user.currentApplication.program')
+                    ->get();
 
                 foreach ($passers as $passer) {
                     // Replace placeholders in template for personalization
@@ -319,8 +324,20 @@ class TestPasserController extends Controller
                         '{{reference_no}}',
                         '{{reference_number}}',
                         '{{ref_no}}',
-                        '{{confirmationUrl}}'
+                        '{{confirmationUrl}}',
+                        '{{program_offered}}'
                     ];
+                    $pCode = $passer->waiver_program_offering ?? $passer->user?->currentApplication?->program?->code;
+                    $programString = 'your specified program';
+                    if ($pCode) {
+                        $matchedProgram = $allProgramsByCode->get($pCode);
+                        if ($matchedProgram) {
+                            $programString = "{$matchedProgram->name} ({$matchedProgram->code})";
+                        } else {
+                            $programString = $pCode;
+                        }
+                    }
+
                     $replaceValues = [
                         $redName,
                         $redName,
@@ -335,7 +352,8 @@ class TestPasserController extends Controller
                         $passer->reference_number,
                         $passer->reference_number,
                         $passer->reference_number,
-                        $confirmationUrl
+                        $confirmationUrl,
+                        $programString
                     ];
 
                     $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
@@ -381,7 +399,9 @@ class TestPasserController extends Controller
 
         // Load recipients in chunks
         foreach (array_chunk($passerIds, $chunkSize) as $chunkIds) {
-            $passers = TestPasser::whereIn('test_passer_id', $chunkIds)->get();
+            $passers = TestPasser::whereIn('test_passer_id', $chunkIds)
+                ->with('user.currentApplication.program')
+                ->get();
 
             foreach ($passers as $passer) {
                 // Replace placeholders in template for personalization
@@ -396,8 +416,20 @@ class TestPasserController extends Controller
                     '{{first_name}}',
                     '{{surname}}',
                     '{{lastname}}',
-                    '{{last_name}}'
+                    '{{last_name}}',
+                    '{{program_offered}}'
                 ];
+                $pCode = $passer->waiver_program_offering ?? $passer->user?->currentApplication?->program?->code;
+                $programString = 'your specified program';
+                if ($pCode) {
+                    $matchedProgram = $allProgramsByCode->get($pCode);
+                    if ($matchedProgram) {
+                        $programString = "{$matchedProgram->name} ({$matchedProgram->code})";
+                    } else {
+                        $programString = $pCode;
+                    }
+                }
+
                 $replaceValues = [
                     $redName,
                     $redName,
@@ -408,7 +440,8 @@ class TestPasserController extends Controller
                     $passer->first_name,
                     $passer->surname,
                     $passer->surname,
-                    $passer->surname
+                    $passer->surname,
+                    $programString
                 ];
 
                 $personalizedMessage = str_ireplace($searchTags, $replaceValues, $messageTemplate);
@@ -696,7 +729,7 @@ class TestPasserController extends Controller
         $request->validate([
             'batch_number' => 'required|string',
             'school_year' => 'required|string|max:9|regex:/^\d{4}-\d{4}$/',
-            'passer_status_id' => 'required|integer|in:1,2,3,4',
+            'passer_status_id' => 'required|integer|in:1,2,3,4,5',
             'file' => 'required|file|mimes:xlsx,xls,csv',
         ]);
 
@@ -710,7 +743,7 @@ class TestPasserController extends Controller
         $importedCount = $import->getImportedCount();
         $skippedCount = $import->getSkippedCount();
 
-        $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified', 4 => 'Waitlisted Below Cut Off'];
+        $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified', 4 => 'Waitlisted Below Cut Off', 5 => 'On Probation'];
         $statusName = $statusNames[$passerStatusId] ?? 'Unknown';
         $this->auditLogService->logActivity('CREATE', 'Test Passers', "Uploaded passers file for batch {$batch}, school year {$schoolYear}, status: {$statusName}. Imported: {$importedCount}, Skipped: {$skippedCount}.", null, 'ADMISSION_DATA');
 

@@ -63,7 +63,8 @@ const templateTypes = [
     { label: 'Default', value: 'default' },
     { label: 'Custom', value: 'custom' },
     { label: 'Waitlisted (Below Cut-off)', value: 'waitlisted-cutoff' },
-    { label: 'Waitlisted (Limited Slots)', value: 'waitlisted-limited' }
+    { label: 'Waitlisted (Limited Slots)', value: 'waitlisted-limited' },
+    { label: 'On Probation', value: 'on-probation' }
 ];
 
 // All existing functionality remains exactly the same
@@ -208,6 +209,61 @@ const selectedPrograms = ref([]);
 const waitlistSlotDate = ref("2026-06-28");
 const waitlistInterviewDate = ref("2026-07-01");
 
+const onProbationDate = ref("2026-07-15");
+const onProbationTime = ref("13:00");
+
+const formatTimeForEmail = (timeString) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    let h = parseInt(hours, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${minutes} ${ampm}`;
+};
+
+const getOnProbationTemplateHTML = () => {
+    const dateStr = formatDateForEmail(onProbationDate.value);
+    const timeStr = formatTimeForEmail(onProbationTime.value);
+    
+    let shortDate = "15 July";
+    if (onProbationDate.value) {
+        const d = new Date(onProbationDate.value);
+        shortDate = `${d.getDate()} ${d.toLocaleString('en-US', { month: 'long' })}`;
+    }
+
+    return `
+<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;font-style:italic;">Mabuhay, Sinta!</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You are requested to be present at the PUP Taguig Campus Admissions Office on <strong>${shortDate}, at ${timeStr}</strong>, for the submission of your admission requirements for the <strong>{{program_offered}}</strong> program.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;font-weight:bold;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <div style="text-align:center;margin:24px 0;">
+    <a 
+        href="${props.registrationUrl}" 
+        style="
+        display:inline-block;
+        padding:12px 24px;
+        background:#9E122C;
+        color:#ffffff;
+        text-decoration:none;
+        border-radius:6px;
+        font-weight:bold;
+        font-size:14px;
+        "
+    >
+        CLICK TO CONFIRM YOUR ATTENDANCE
+    </a>
+    </div>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You will receive an email containing the SAR-Form 1 and other essential enrollment documents. Please print in long-sized bond paper, sign, and bring them on <strong>${dateStr}</strong>.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Kindly ensure that all required documents are complete. Failure to report on the scheduled date and time may affect the processing of your admission.</p>
+    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Thank you, and we look forward to seeing you.</p>
+    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
+    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Admission and Registration Office</p>
+  </div>
+</div>`.trim();
+};
+
 const formatDateForEmail = (dateString) => {
     if (!dateString) return '';
     const parts = dateString.split('-');
@@ -295,6 +351,31 @@ const formattedWaitlistedLimitedTemplatePreview = computed(() => {
         .replace(/\{\{surname\}\}/g, 'Doe');
 });
 
+const getProgramForPasser = (applicant) => {
+    if (!applicant) return '(SPECIFIED PROGRAM OFFERED TO THE APPLICANT)';
+    const code = applicant.waiver_program_offering || applicant.user?.current_application?.program?.code;
+    if (!code) return '(SPECIFIED PROGRAM OFFERED TO THE APPLICANT)';
+    
+    const programMatch = props.programs?.find(p => p.code === code);
+    return programMatch ? `${programMatch.name} (${programMatch.code})` : code;
+};
+
+const formattedOnProbationTemplatePreview = computed(() => {
+    let programOffered = '(SPECIFIED PROGRAM OFFERED TO THE APPLICANT)';
+    
+    if (selectedPassers.value && selectedPassers.value.length > 0) {
+        const firstSelectedId = selectedPassers.value[0];
+        const applicant = flatPassers.value.find(p => p.test_passer_id === firstSelectedId);
+        programOffered = getProgramForPasser(applicant);
+    }
+
+    return getOnProbationTemplateHTML()
+        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
+        .replace(/\{\{firstname\}\}/g, 'John')
+        .replace(/\{\{surname\}\}/g, 'Doe')
+        .replace(/\{\{program_offered\}\}/g, programOffered);
+});
+
 const flatPassers = ref([]);
 
 watch(
@@ -338,6 +419,7 @@ const filterScore = ref(props.filters?.score || "");
 const debouncedFilterScore = ref(props.filters?.score || "");
 const filterSchoolYear = ref(props.filters?.school_year || "all");
 const filterBatchNumber = ref(props.filters?.batch_number || "all");
+const filterStatus = ref(props.filters?.status || "all");
 const sortKey = ref(props.filters?.sort_key || "pupcet_total_score");
 const sortOrder = ref(props.filters?.sort_order || "desc");
 
@@ -351,6 +433,7 @@ function buildServerParams(overrides = {}) {
     const params = {
         school_year: filterSchoolYear.value || 'all',
         batch_number: filterBatchNumber.value || 'all',
+        status: filterStatus.value !== 'all' ? filterStatus.value : undefined,
         search: debouncedSearchTerm.value || undefined,
         score: debouncedFilterScore.value || undefined,
         sort_key: sortKey.value || undefined,
@@ -392,7 +475,7 @@ const onScoreInput = debounce(() => {
 }, 300);
 
 // When server-side filters change, reload from server
-watch([filterSchoolYear, filterBatchNumber], () => {
+watch([filterSchoolYear, filterBatchNumber, filterStatus], () => {
     applyServerFilters();
 }, { deep: true });
 
@@ -510,6 +593,7 @@ const toggleSelectAll = async (isSelected) => {
             const params = {};
             if (filterSchoolYear.value) params.school_year = filterSchoolYear.value;
             if (filterBatchNumber.value) params.batch_number = filterBatchNumber.value;
+            if (filterStatus.value !== 'all') params.status = filterStatus.value;
             if (debouncedSearchTerm.value) params.search = debouncedSearchTerm.value;
             if (debouncedFilterScore.value) params.score = debouncedFilterScore.value;
 
@@ -537,7 +621,7 @@ const toggleSelectAll = async (isSelected) => {
 };
 
 // Reset allFilteredSelected when filters change
-watch([filterSchoolYear, filterBatchNumber], () => {
+watch([filterSchoolYear, filterBatchNumber, filterStatus], () => {
     allFilteredSelected.value = false;
 }, { deep: true });
 
@@ -558,6 +642,11 @@ const promptSendEmails = () => {
             show("Please set enrollment date and time for SAR forms.", "error");
             return;
         }
+    } else if (templateType.value === 'on-probation') {
+        if (!onProbationDate.value || !onProbationTime.value) {
+            show("Please set reporting date and time for On Probation template.", "error");
+            return;
+        }
     }
 
     showSendEmailsConfirmModal.value = true;
@@ -575,6 +664,8 @@ const executeSendEmails = async () => {
         messageHtml = waitlistedCutoffTemplatePreview;
     } else if (templateType.value === 'waitlisted-limited') {
         messageHtml = getWaitlistedLimitedTemplateHTML();
+    } else if (templateType.value === 'on-probation') {
+        messageHtml = getOnProbationTemplateHTML();
     } else {
         const quillContainer = document.querySelector(".ql-editor");
         messageHtml = quillContainer
@@ -585,6 +676,11 @@ const executeSendEmails = async () => {
     if (templateType.value === 'sar') {
         if (!sarEnrollmentDate.value || !sarEnrollmentTime.value) {
             show("Please set enrollment date and time for SAR forms.", "error");
+            return;
+        }
+    } else if (templateType.value === 'on-probation') {
+        if (!onProbationDate.value || !onProbationTime.value) {
+            show("Please set reporting date and time for On Probation template.", "error");
             return;
         }
     }
@@ -634,7 +730,7 @@ const passerFieldLabels = {
     passer_status_id: 'Status',
 };
 
-const statusLabels = { '1': 'Qualified', '2': 'Waitlisted', '3': 'Unqualified', '4': 'Waitlisted Below Cut Off' };
+const statusLabels = { '1': 'Qualified', '2': 'Waitlisted', '3': 'Unqualified', '4': 'Waitlisted Below Cut Off', '5': 'On Probation' };
 
 // Modal state (unchanged)
 const showEditModal = ref(false);
@@ -1145,6 +1241,15 @@ const runBulkEnroll = async () => {
                                 <option value="all">All Batches</option>
                                 <option v-for="batch in batchNumbers" :key="batch" :value="batch">{{ batch }}</option>
                             </select>
+                            <select v-model="filterStatus"
+                                class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
+                                <option value="all">All Statuses</option>
+                                <option value="1">Qualified</option>
+                                <option value="2">Waitlisted</option>
+                                <option value="4">Waitlisted Below Cut Off</option>
+                                <option value="3">Unqualified</option>
+                                <option value="5">On Probation</option>
+                            </select>
                             <select v-model="sortKey"
                                 class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
                                 <option value="pupcet_total_score">Sort: PUPCET Score</option>
@@ -1315,6 +1420,9 @@ const runBulkEnroll = async () => {
                                              </span>
                                              <span v-else-if="passer.passer_status_id === 3" class="px-2 py-1 bg-red-100 text-red-800 rounded-full dark:bg-red-900 dark:text-red-200">
                                                  Unqualified
+                                             </span>
+                                             <span v-else-if="passer.passer_status_id === 5" class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full dark:bg-purple-900 dark:text-purple-200">
+                                                 On Probation
                                              </span>
                                              <span v-else class="px-2 py-1 bg-gray-200 text-gray-500 rounded-full dark:bg-gray-700 dark:text-gray-400">
                                                  Pending
@@ -1495,6 +1603,39 @@ const runBulkEnroll = async () => {
                             </label>
                             <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
                                 <div v-html="formattedWaitlistedLimitedTemplatePreview"></div>
+                            </div>
+                        </div>
+
+                        <!-- On Probation Template Preview -->
+                        <div v-else-if="templateType === 'on-probation'" class="mt-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                        Reporting Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        v-model="onProbationDate"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                        Reporting Time
+                                    </label>
+                                    <input
+                                        type="time"
+                                        v-model="onProbationTime"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
+                                On Probation Template Preview
+                            </label>
+                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
+                                <div v-html="formattedOnProbationTemplatePreview"></div>
                             </div>
                         </div>
 
@@ -2180,6 +2321,13 @@ const runBulkEnroll = async () => {
                                 </div>
                             </template>
                             
+                            <template v-if="templateType === 'on-probation'">
+                                <div class="flex">
+                                    <span class="font-medium w-40 text-gray-800 dark:text-gray-200">Reporting Schedule:</span>
+                                    <span>{{ formatDateForEmail(onProbationDate) }} at {{ formatTimeForEmail(onProbationTime) }}</span>
+                                </div>
+                            </template>
+                            
                             <template v-if="templateType === 'sar'">
                                 <div class="flex">
                                     <span class="font-medium w-40 text-gray-800 dark:text-gray-200">Enrollment Schedule:</span>
@@ -2198,6 +2346,7 @@ const runBulkEnroll = async () => {
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Passer</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Email</th>
                                     <th v-if="templateType === 'sar'" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Schedule</th>
+                                    <th v-if="templateType === 'on-probation'" class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400">Program Offered</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -2213,6 +2362,9 @@ const runBulkEnroll = async () => {
                                             <span>{{ sarEnrollmentDate }}</span>
                                             <span class="text-xs text-gray-500">{{ sarEnrollmentTime }}</span>
                                         </div>
+                                    </td>
+                                    <td v-if="templateType === 'on-probation'" class="px-4 py-3 text-gray-900 dark:text-gray-200 font-medium whitespace-nowrap">
+                                        {{ getProgramForPasser(passer) }}
                                     </td>
                                 </tr>
                             </tbody>
