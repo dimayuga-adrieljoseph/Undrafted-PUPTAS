@@ -36,8 +36,13 @@ class ReportController extends Controller
         $paginator = $query->with(['user.testPasser', 'program', 'processes'])->paginate(15);
 
         $paginator->getCollection()->transform(function ($app) {
-            $interviewerProcess = $app->processes->where('stage', 'interviewer')->last();
-            $isPulledOut = $interviewerProcess && $interviewerProcess->status === 'pulled_out';
+            $interviewerProcess = $app->processes->where('stage', 'interviewer')->first();
+            $hasMedicalOrRecords = $app->processes->whereIn('stage', ['medical', 'records'])->isNotEmpty();
+            $isPulledOut = $interviewerProcess
+                && $interviewerProcess->status === 'in_progress'
+                && $interviewerProcess->action === null
+                && !$hasMedicalOrRecords
+                && ($interviewerProcess->decision_reason !== null || $interviewerProcess->reviewer_notes !== null);
             return [
                 'id'             => $app->id,
                 'user_id'        => $app->user_id,
@@ -128,10 +133,20 @@ class ReportController extends Controller
         } elseif ($type === 'enrollment') {
             $query->where('enrollment_status', 'officially_enrolled');
         } elseif ($type === 'pulled_out') {
-            // Pulled out = interviewer process that has been marked as pulled_out
+            // A pulled-out applicant has an interviewer process that is in_progress
+            // with no action set, has notes (decision_reason or reviewer_notes),
+            // and has NO medical/records processes (they were reverted back).
             $query->whereHas('processes', function ($q) {
                 $q->where('stage', 'interviewer')
-                  ->where('status', 'pulled_out');
+                  ->where('status', 'in_progress')
+                  ->whereNull('action')
+                  ->where(function($q2) {
+                      $q2->whereNotNull('decision_reason')
+                         ->orWhereNotNull('reviewer_notes');
+                  });
+            })
+            ->whereDoesntHave('processes', function ($q) {
+                $q->whereIn('stage', ['medical', 'records']);
             });
         }
 
