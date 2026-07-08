@@ -113,6 +113,7 @@ const getStatusClass = (status) => {
                         <option value="interview">Finished Interview</option>
                         <option value="medical">Finished Medical Clearance</option>
                         <option value="enrollment">Finished Enrollment Process</option>
+                        <option value="pulled_out">Pulled Out</option>
                     </select>
                 </div>
                 <div>
@@ -160,6 +161,7 @@ const getStatusClass = (status) => {
                             <th class="pb-2">Name</th>
                             <th class="pb-2">Course/Program</th>
                             <th class="pb-2">Status</th>
+                            <th v-if="filterType === 'pulled_out'" class="pb-2">Pull-Out Notes</th>
                             <th class="pb-2">Date</th>
                         </tr>
                     </thead>
@@ -173,10 +175,13 @@ const getStatusClass = (status) => {
                                     {{ app.status }}
                                 </span>
                             </td>
+                            <td v-if="filterType === 'pulled_out'" class="py-3 text-gray-600 dark:text-gray-400 text-sm italic">
+                                {{ app.pullout_notes || '—' }}
+                            </td>
                             <td class="py-3 text-gray-700 dark:text-gray-300">{{ app.date }}</td>
                         </tr>
                         <tr v-if="applicants.length === 0">
-                            <td colspan="5" class="py-8 text-center text-gray-500 dark:text-gray-400">
+                            <td :colspan="filterType === 'pulled_out' ? 6 : 5" class="py-8 text-center text-gray-500 dark:text-gray-400">
                                 No applicants found matching the report criteria.
                             </td>
                         </tr>

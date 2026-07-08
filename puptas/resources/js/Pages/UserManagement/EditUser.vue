@@ -529,6 +529,7 @@ const canPullOut = computed(() => {
 });
 
 const pulloutNotes        = ref('');
+const pulloutAddSlot      = ref(true);
 const pulloutConfirming   = ref(false);
 const pulloutSaving       = ref(false);
 const pulloutSuccess      = ref('');
@@ -551,7 +552,10 @@ const submitPullout = () => {
     pulloutSaving.value = true;
     pulloutError.value  = '';
     pulloutSuccess.value = '';
-    router.post(route('users.pullout', props.user.id), { notes: pulloutNotes.value }, {
+    router.post(route('users.pullout', props.user.id), { 
+        notes: pulloutNotes.value,
+        add_slot: pulloutAddSlot.value 
+    }, {
         preserveScroll: true,
         onSuccess: (page) => {
             pulloutConfirming.value = false;
@@ -880,10 +884,14 @@ const submitPullout = () => {
                             <div class="pullout-modal-body">
                                 <p class="pullout-modal-applicant">Applicant: <strong>{{ user.firstname }} {{ user.lastname }}</strong> ({{ user.email }})</p>
                                 <ul class="pullout-modal-list">
-                                    <li>Application status → <strong>Submitted</strong> (enrollment cleared)</li>
                                     <li>Interviewer stage → <strong>In Progress</strong> (returned to interview queue)</li>
                                     <li>Medical &amp; Records stages → <strong>Deleted</strong></li>
-                                    <li><strong>+1 slot</strong> returned to <strong>{{ user.current_application?.program?.name ?? user.program?.name ?? 'their program' }}</strong></li>
+                                    <li>
+                                        <label class="flex items-center gap-2 cursor-pointer mt-2 text-gray-800 dark:text-gray-200">
+                                            <input type="checkbox" v-model="pulloutAddSlot" class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]">
+                                            <span><strong>+1 slot</strong> return to <strong>{{ user.current_application?.program?.name ?? user.program?.name ?? 'their program' }}</strong></span>
+                                        </label>
+                                    </li>
                                 </ul>
                                 <div class="pullout-modal-notes">
                                     <p class="pullout-modal-notes-label">Reason/Notes:</p>

@@ -529,7 +529,8 @@ class UserController extends Controller
         }
 
         $request->validate([
-            'notes' => 'required|string|min:5|max:1000',
+            'notes'    => 'required|string|min:5|max:1000',
+            'add_slot' => 'boolean',
         ]);
 
         $userModel = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
@@ -592,8 +593,9 @@ class UserController extends Controller
                     'reviewer_notes'  => "[Reverted by Admin: Pull-Out] " . $request->notes,
                 ]);
 
-            // 4. Add 1 slot back to the program
-            if ($programCode) {
+            // 4. Add 1 slot back to the program (if requested)
+            $addSlot = $request->boolean('add_slot', true);
+            if ($addSlot && $programCode) {
                 \App\Models\Program::where('code', $programCode)
                     ->increment('slots');
             }
@@ -601,17 +603,22 @@ class UserController extends Controller
             // 5. Audit log
             $adminEmail = $request->user()->email;
             $applicantName = "{$applicant->firstname} {$applicant->lastname}";
+            $slotMsg = $addSlot ? "+1 slot returned to {$programCode}." : "No slot returned.";
             $this->auditLogService->logActivity(
                 'PULL_OUT',
                 'Applications',
                 "Admin {$adminEmail} processed pull-out for applicant {$applicantName} ({$applicant->email}). "
-                    . "Reverted to interviewer stage. +1 slot returned to {$programCode}. "
+                    . "Reverted to interviewer stage. {$slotMsg} "
                     . "Notes: {$request->notes}",
                 null,
                 'USER_MANAGEMENT'
             );
 
-            return back()->with('pullout_success', "Pull-out processed successfully. {$applicantName} has been reverted to the interview queue and 1 slot was returned to {$programName}.");
+            $successMsg = $addSlot 
+                ? "Pull-out processed successfully. {$applicantName} has been reverted to the interview queue and 1 slot was returned to {$programName}."
+                : "Pull-out processed successfully. {$applicantName} has been reverted to the interview queue without returning a slot.";
+
+            return back()->with('pullout_success', $successMsg);
         });
     }
 

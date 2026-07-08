@@ -126,6 +126,8 @@ const filtered = computed(() => {
             list = list.filter((a) => a.pulled_out);
         } else if (filterStage.value === 'enrollment') {
             list = list.filter((a) => a.status === 'cleared_for_enrollment' && !a.pulled_out);
+        } else if (filterStage.value === 'on_probation') {
+            list = list.filter((a) => a.passer_status_name === 'on_probation');
         } else {
             list = list.filter((a) => a.current_stage === filterStage.value && !a.pulled_out);
         }
@@ -662,7 +664,6 @@ onMounted(() => {
                             <option value="interviewer">For Interviewer</option>
                             <option value="medical">For Medical</option>
                             <option value="enrollment">For Enrollment</option>
-                            <option value="pulled_out">Pulled Out</option>
                         </select>
                         <button
                             @click="fetchApplicants"
@@ -855,17 +856,17 @@ onMounted(() => {
                                     <td class="px-3 py-3">
                                         <div class="truncate">
                                             <div
-                                                class="font-medium text-gray-900 dark:text-gray-200 truncate flex items-center gap-2"
+                                                class="font-medium text-gray-900 dark:text-gray-200 truncate"
                                             >
                                                 {{ a.lastname }},
                                                 {{ a.firstname }}
-                                                <span v-if="a.pulled_out"
-                                                    class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-800/50 cursor-help"
-                                                    :title="a.pullout_notes ? 'Notes: ' + a.pullout_notes : 'Pulled Out'"
-                                                >
-                                                    PULLED OUT
-                                                </span>
                                             </div>
+                                            <span v-if="a.pulled_out"
+                                                class="inline-flex items-center mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-800/50 cursor-help"
+                                                :title="a.pullout_notes ? 'Notes: ' + a.pullout_notes : 'Pulled Out'"
+                                            >
+                                                🔴 PULLED OUT
+                                            </span>
                                         </div>
                                     </td>
                                     <td class="px-3 py-3">
@@ -892,14 +893,17 @@ onMounted(() => {
                                     </td>
                                     <td class="px-3 py-3 w-full overflow-hidden">
                                         <span
-                                            :class="
-                                                getStatusClass(
-                                                    a.passer_status_name,
-                                                )
-                                            "
+                                            :class="getStatusClass(a.display_passer_status)"
                                             class="px-2.5 py-1 rounded-xl text-xs font-medium capitalize inline-block break-words whitespace-normal text-center align-middle"
                                         >
-                                            {{ a.passer_status_name ? a.passer_status_name.replace(/_/g, ' ') : '' }}
+                                            {{ a.display_passer_status ? a.display_passer_status.replace(/_/g, ' ') : '' }}
+                                        </span>
+                                        <span
+                                            v-if="a.is_waiver"
+                                            class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-700"
+                                            title="This applicant was accepted through the Waiver Program"
+                                        >
+                                            🎫 Waiver
                                         </span>
                                     </td>
                                     <td class="px-3 py-3">
