@@ -66,11 +66,20 @@ class ReportController extends Controller
         $applicants = $query->with(['user.testPasser', 'program', 'processes'])->limit(1000)->get();
 
         $data = $applicants->map(function ($app) {
+            $interviewerProcess = $app->processes->where('stage', 'interviewer')->first();
+            $hasMedicalOrRecords = $app->processes->whereIn('stage', ['medical', 'records'])->isNotEmpty();
+            $isPulledOut = $interviewerProcess
+                && $interviewerProcess->status === 'in_progress'
+                && $interviewerProcess->action === null
+                && !$hasMedicalOrRecords
+                && ($interviewerProcess->decision_reason !== null || $interviewerProcess->reviewer_notes !== null);
+                
             return [
                 'reference_number' => $app->user->testPasser->reference_number ?? 'N/A',
                 'name' => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
                 'program' => $app->program->code ?? 'N/A',
-                'status' => $this->statusService->determineStatus($app),
+                'status' => $isPulledOut ? 'Pulled Out' : $this->statusService->determineStatus($app),
+                'pullout_notes'  => $isPulledOut ? ($interviewerProcess->decision_reason ?? $interviewerProcess->reviewer_notes ?? '—') : null,
                 'date' => $app->updated_at->format('Y-m-d')
             ];
         });
@@ -85,7 +94,7 @@ class ReportController extends Controller
         // Pass the builder instance to the export class for chunked query execution
         $query->with(['user.testPasser', 'program', 'processes']);
 
-        return Excel::download(new ApplicantsExport($query, $this->statusService), 'applicant_report.xlsx');
+        return Excel::download(new ApplicantsExport($query, $this->statusService, $request->type), 'applicant_report.xlsx');
     }
 
     private function sanitizeExcelValue($value)
