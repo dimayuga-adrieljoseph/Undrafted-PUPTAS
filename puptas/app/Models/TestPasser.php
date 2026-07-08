@@ -51,6 +51,11 @@ class TestPasser extends Model
         return $this->belongsTo(PasserStatus::class);
     }
 
+    public function previousPasserStatus()
+    {
+        return $this->belongsTo(PasserStatus::class, 'previous_passer_status_id');
+    }
+
     /**
      * Get the SAR generations for this test passer
      */

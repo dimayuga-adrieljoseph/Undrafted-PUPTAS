@@ -55,6 +55,7 @@ class ConfirmedApplicantsController extends Controller
             'currentApplication.processes',
             'grades',
             'testPasser.passerStatus',
+            'testPasser.previousPasserStatus',
             'testPasser.sarGenerations',
             'graduateTypes',
         ])
@@ -116,8 +117,14 @@ class ConfirmedApplicantsController extends Controller
                     'test_passer_id'   => $testPasser?->test_passer_id,
                     'reference_number' => $testPasser?->reference_number,
                     'batch_number'     => $testPasser?->batch_number,
-                    'passer_status_id' => $testPasser?->passer_status_id,
+                    'passer_status_id'   => $testPasser?->passer_status_id,
                     'passer_status_name' => $testPasser?->passerStatus?->status,
+                    // For waiver (on_probation) students: show their previous status label instead,
+                    // but keep is_waiver=true so the badge still shows.
+                    'display_passer_status' => ($testPasser?->passerStatus?->status === 'on_probation' && $testPasser?->previousPasserStatus)
+                        ? $testPasser->previousPasserStatus->status
+                        : $testPasser?->passerStatus?->status,
+                    'is_waiver'          => $testPasser?->passerStatus?->status === 'on_probation',
                     'sar_sent'         => $testPasser
                         ? $testPasser->sarGenerations
                             ->where('email_sent_successfully', true)
