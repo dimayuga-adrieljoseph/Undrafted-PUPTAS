@@ -664,7 +664,6 @@ onMounted(() => {
                             <option value="interviewer">For Interviewer</option>
                             <option value="medical">For Medical</option>
                             <option value="enrollment">For Enrollment</option>
-                            <option value="pulled_out">Pulled Out</option>
                         </select>
                         <button
                             @click="fetchApplicants"
