@@ -41,8 +41,132 @@ const canDownloadSlipReactive = computed(() => {
   );
 });
 
+const enrollmentInfo = computed(() => {
+  const s = enrollmentStatus.value;
+  const appS = applicationStatus.value;
+  const procs = applicationProcesses.value;
+
+  // ── Determine the current pipeline stage label ──────────────────────────
+  const stageLabels = {
+    document_evaluator: 'Document Evaluator',
+    grade_evaluator:    'Grade Evaluator',
+    evaluator:          'Document Evaluator', // legacy key
+    interviewer:        'Interviewer',
+    medical:            'Medical',
+    record_staff:       'Registrar',
+  };
+
+  let currentStageLabel = null;
+  if (procs.length) {
+    // Find last active/problem step first
+    const active = [...procs].reverse().find(p =>
+      ['in_progress', 'returned', 'rejected'].includes(p.status) || p.action === 'rejected'
+    );
+    const last = active ?? [...procs].reverse().find(p => p.status === 'completed');
+    if (last) currentStageLabel = stageLabels[last.stage] ?? null;
+  }
+
+  const stageDesc = currentStageLabel ? `Currently at: ${currentStageLabel} stage.` : null;
+
+  // ── Terminal enrollment states ───────────────────────────────────────────
+  const enrollmentMap = {
+    officially_enrolled: {
+      label: 'Officially Enrolled',
+      description: stageDesc ?? 'You are officially enrolled. Welcome!',
+      icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+      color: 'text-green-600 dark:text-green-400',
+      bg: 'bg-green-50 dark:bg-green-400/10',
+      ring: 'ring-green-200 dark:ring-green-500/30',
+      iconBg: 'bg-green-500',
+    },
+    waitlisted: {
+      label: 'Waitlisted',
+      description: stageDesc ?? "You are on the waitlist. We'll notify you when a slot opens.",
+      icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+      color: 'text-orange-600 dark:text-orange-400',
+      bg: 'bg-orange-50 dark:bg-orange-400/10',
+      ring: 'ring-orange-200 dark:ring-orange-500/30',
+      iconBg: 'bg-orange-500',
+    },
+    temporary: {
+      label: 'Temporarily Enrolled',
+      description: stageDesc ?? 'Your enrollment is temporary pending final confirmation.',
+      icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+      color: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-50 dark:bg-blue-400/10',
+      ring: 'ring-blue-200 dark:ring-blue-500/30',
+      iconBg: 'bg-blue-500',
+    },
+    not_enrolled: {
+      label: 'Not Enrolled',
+      description: stageDesc ?? 'Your application has not yet led to enrollment.',
+      icon: 'M6 18L18 6M6 6l12 12',
+      color: 'text-red-600 dark:text-red-400',
+      bg: 'bg-red-50 dark:bg-red-400/10',
+      ring: 'ring-red-200 dark:ring-red-500/30',
+      iconBg: 'bg-red-500',
+    },
+  };
+  if (enrollmentMap[s]) return enrollmentMap[s];
+
+  // ── Derive from application status + current stage ────────────────────────
+  if (appS === 'approved') return {
+    label: 'Application Approved',
+    description: stageDesc ?? 'Your application has been approved. Await enrollment confirmation.',
+    icon: 'M5 13l4 4L19 7',
+    color: 'text-green-600 dark:text-green-400',
+    bg: 'bg-green-50 dark:bg-green-400/10',
+    ring: 'ring-green-200 dark:ring-green-500/30',
+    iconBg: 'bg-green-500',
+  };
+  if (appS === 'rejected') return {
+    label: 'Application Rejected',
+    description: stageDesc ?? 'Your application was not accepted this cycle.',
+    icon: 'M6 18L18 6M6 6l12 12',
+    color: 'text-red-600 dark:text-red-400',
+    bg: 'bg-red-50 dark:bg-red-400/10',
+    ring: 'ring-red-200 dark:ring-red-500/30',
+    iconBg: 'bg-red-500',
+  };
+  if (appS === 'returned') return {
+    label: 'Documents Returned',
+    description: stageDesc ?? 'Some documents were returned for correction. Please review and re-upload.',
+    icon: 'M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z',
+    color: 'text-orange-600 dark:text-orange-400',
+    bg: 'bg-orange-50 dark:bg-orange-400/10',
+    ring: 'ring-orange-200 dark:ring-orange-500/30',
+    iconBg: 'bg-orange-500',
+  };
+  if (appS === 'submitted') return {
+    label: currentStageLabel ? `${currentStageLabel} Stage` : 'Under Review',
+    description: stageDesc ?? 'Your application has been submitted and is currently being reviewed.',
+    icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z',
+    color: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-50 dark:bg-blue-400/10',
+    ring: 'ring-blue-200 dark:ring-blue-500/30',
+    iconBg: 'bg-blue-500',
+  };
+  if (!appS || appS === 'draft') return {
+    label: 'Not Yet Submitted',
+    description: 'Complete and submit your application to begin the review process.',
+    icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
+    color: 'text-gray-500 dark:text-gray-400',
+    bg: 'bg-gray-50 dark:bg-gray-700/40',
+    ring: 'ring-gray-200 dark:ring-gray-600',
+    iconBg: 'bg-gray-400 dark:bg-gray-600',
+  };
+  return {
+    label: currentStageLabel ? `${currentStageLabel} Stage` : capitalize((s || appS || 'Pending').replace(/_/g, ' ')),
+    description: stageDesc ?? 'Your application is being processed.',
+    icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+    color: 'text-yellow-600 dark:text-yellow-400',
+    bg: 'bg-yellow-50 dark:bg-yellow-400/10',
+    ring: 'ring-yellow-200 dark:ring-yellow-500/30',
+    iconBg: 'bg-yellow-500',
+  };
+});
+
 const canEditGrades = computed(() => {
-    if (!['returned', 'rejected'].includes(applicationStatus.value)) return false;
     
     if (applicationStatus.value === 'returned') {
         const returnedProcesses = applicationProcesses.value.filter(p => p.status === 'returned');
@@ -113,13 +237,82 @@ const formatKey = (key) => {
 };
 const formatStage = (stage) => {
     const map = {
-        'evaluator': 'DE, GE',
-        'interviewer': 'Interviewer',
-        'medical': 'Medical',
-        'record_staff': 'Record Staff'
+        'evaluator':          'DE, GE',
+        'document_evaluator': 'Document Evaluator',
+        'grade_evaluator':    'Grade Evaluator',
+        'interviewer':        'Interviewer',
+        'medical':            'Medical',
+        'record_staff':       'Registrar',
     };
     return map[stage] || (stage ? stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ") : "");
 };
+
+// All pipeline stages in order — always shown regardless of progress
+const PIPELINE_STAGES = [
+  { key: 'document_evaluator', label: 'Document Evaluator' },
+  { key: 'grade_evaluator',    label: 'Grade Evaluator' },
+  { key: 'interviewer',        label: 'Interviewer' },
+  { key: 'medical',            label: 'Medical' },
+  { key: 'record_staff',       label: 'Registrar' },
+];
+
+// Merge fixed pipeline with live process data.
+// Each step gets: key, label, status (completed/in_progress/returned/rejected/pending),
+// action, created_at, reviewer_notes, isCurrent (highlighted), isPast, isFuture.
+const timelineSteps = computed(() => {
+  const procs = applicationProcesses.value;
+
+  // Build a lookup: stage key → latest process entry
+  // Also map legacy 'evaluator' key → 'document_evaluator' so old records still display
+  const byStage = {};
+  for (const p of procs) {
+    const key = p.stage === 'evaluator' ? 'document_evaluator' : p.stage;
+    if (!byStage[key] || new Date(p.created_at) > new Date(byStage[key].created_at)) {
+      byStage[key] = p;
+    }
+  }
+
+  // Find the "current" stage: last in_progress/returned/rejected, else furthest reached
+  let currentKey = null;
+  for (const p of [...procs].reverse()) {
+    if (['in_progress', 'returned', 'rejected'].includes(p.status) || p.action === 'rejected') {
+      currentKey = p.stage === 'evaluator' ? 'document_evaluator' : p.stage;
+      break;
+    }
+  }
+  // If all completed and none active, mark the last completed one as current
+  if (!currentKey && procs.length) {
+    const last = [...procs].reverse().find(p => p.status === 'completed');
+    if (last) currentKey = last.stage === 'evaluator' ? 'document_evaluator' : last.stage;
+  }
+
+  // Determine how far the pipeline has progressed
+  const stageKeys = PIPELINE_STAGES.map(s => s.key);
+  const reachedKeys = new Set(procs.map(p => p.stage));
+
+  return PIPELINE_STAGES.map((stage) => {
+    const proc = byStage[stage.key] || null;
+    const reached = reachedKeys.has(stage.key);
+    const status = proc?.status ?? (reached ? 'pending' : 'pending');
+    const isCurrent = stage.key === currentKey;
+    const reachedIdx = stageKeys.indexOf(stage.key);
+    const currentIdx = stageKeys.indexOf(currentKey ?? '');
+    const isPast = reached && !isCurrent && (proc?.status === 'completed');
+    const isFuture = !reached;
+
+    return {
+      key: stage.key,
+      label: stage.label,
+      status: proc?.status ?? 'pending',
+      action: proc?.action ?? null,
+      created_at: proc?.created_at ?? null,
+      reviewer_notes: proc?.reviewer_notes ?? null,
+      isCurrent,
+      isPast,
+      isFuture,
+    };
+  });
+});
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const formatTimestamp = (ts) => ts ? new Date(ts).toLocaleString(undefined, { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" }) : "";
 const getFileUrl = (file) => file?.url || "";
@@ -527,8 +720,8 @@ onMounted(() => {
       />
     </template>
 
-    <div class="py-4 sm:py-8">
-      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 space-y-6">
+    <div class="py-4 sm:py-6">
+      <div class="max-w-screen-2xl mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 overflow-x-hidden">
         
         <!-- Success Notification -->
         <Transition name="slide-down">
@@ -569,18 +762,18 @@ onMounted(() => {
          </div>
 
         <!-- Promissory Note Alert -->
-        <div v-if="requiresPromissoryNote" class="bg-orange-50 dark:bg-orange-900/20 rounded-xl shadow-md border-l-4 border-orange-500 p-6">
-          <div class="flex items-start gap-4">
-            <div class="flex-shrink-0 mt-1">
-              <svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-if="requiresPromissoryNote" class="bg-orange-50 dark:bg-orange-900/20 rounded-xl shadow-md border-l-4 border-orange-500 p-4 sm:p-6">
+          <div class="flex items-start gap-3 sm:gap-4">
+            <div class="flex-shrink-0 mt-0.5">
+              <svg class="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
               </svg>
             </div>
-            <div class="flex-1">
-              <h3 class="text-xl font-bold text-orange-900 dark:text-orange-100 mb-2">
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base sm:text-xl font-bold text-orange-900 dark:text-orange-100 mb-1 sm:mb-2">
                 Action Required: Promissory Note
               </h3>
-              <p class="text-orange-800 dark:text-orange-200">
+              <p class="text-sm text-orange-800 dark:text-orange-200">
                 The evaluator has indicated that you need to submit a <strong>Promissory Note</strong>. 
                 Please prepare this document as it is required to proceed with your enrollment process.
               </p>
@@ -589,18 +782,18 @@ onMounted(() => {
         </div>
 
         <!-- Guidance Office Alert -->
-        <div v-if="requiresGuidanceOffice" class="bg-orange-50 dark:bg-orange-900/20 rounded-xl shadow-md border-l-4 border-orange-500 p-6 mb-6">
-          <div class="flex items-start gap-4">
-            <div class="flex-shrink-0 mt-1">
-              <svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-if="requiresGuidanceOffice" class="bg-orange-50 dark:bg-orange-900/20 rounded-xl shadow-md border-l-4 border-orange-500 p-4 sm:p-6">
+          <div class="flex items-start gap-3 sm:gap-4">
+            <div class="flex-shrink-0 mt-0.5">
+              <svg class="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
               </svg>
             </div>
-            <div class="flex-1">
-              <h3 class="text-xl font-bold text-orange-900 dark:text-orange-100 mb-2">
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base sm:text-xl font-bold text-orange-900 dark:text-orange-100 mb-1 sm:mb-2">
                 Action Required: Go to Guidance Office
               </h3>
-              <p class="text-orange-800 dark:text-orange-200">
+              <p class="text-sm text-orange-800 dark:text-orange-200">
                 The evaluator has indicated that you need to go to the <strong>Guidance Office</strong>. 
                 Please proceed to the Guidance Office for further instructions regarding your application.
               </p>
@@ -609,18 +802,18 @@ onMounted(() => {
         </div>
 
         <!-- Admissions Office Alert -->
-        <div v-if="requiresAdmissionOffice" class="bg-blue-50 dark:bg-blue-900/20 rounded-xl shadow-md border-l-4 border-blue-500 p-6 mb-6">
-          <div class="flex items-start gap-4">
-            <div class="flex-shrink-0 mt-1">
-              <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-if="requiresAdmissionOffice" class="bg-blue-50 dark:bg-blue-900/20 rounded-xl shadow-md border-l-4 border-blue-500 p-4 sm:p-6">
+          <div class="flex items-start gap-3 sm:gap-4">
+            <div class="flex-shrink-0 mt-0.5">
+              <svg class="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
               </svg>
             </div>
-            <div class="flex-1">
-              <h3 class="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base sm:text-xl font-bold text-blue-900 dark:text-blue-100 mb-1 sm:mb-2">
                 Action Required: Go to Admissions Office
               </h3>
-              <p class="text-blue-800 dark:text-blue-200">
+              <p class="text-sm text-blue-800 dark:text-blue-200">
                 The evaluator has indicated that you need to go to the <strong>Admissions Office</strong>. 
                 Please proceed to the Admissions Office for further instructions regarding your application.
               </p>
@@ -850,225 +1043,286 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <!-- Application Status Card -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Application Status</p>
-                <div v-if="loading && !applicationStatus" class="mt-2 h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                <p v-else class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                  {{ applicationStatus ? capitalize(applicationStatus) : 'Not Started' }}
-                </p>
-              </div>
-              <div :class="`w-12 h-12 rounded-full flex items-center justify-center ${getStatusIconBg(applicationStatus)}`">
-                <svg class="w-6 h-6 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-              </div>
+        <!-- Status Card -->
+        <div :class="[
+          'rounded-xl shadow-sm border p-4 sm:p-5 ring-1 transition-all',
+          enrollmentInfo.bg, enrollmentInfo.ring,
+          'border-transparent'
+        ]">
+          <div v-if="loading && !applicationStatus && !enrollmentStatus"
+               class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              <div class="h-3 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
             </div>
           </div>
-
-          <!-- Enrollment Status Card -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Enrollment Status</p>
-                <div v-if="loading && !enrollmentStatus" class="mt-2 h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                <p v-else class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                  {{ enrollmentStatus ? capitalize(enrollmentStatus.replace(/_/g, " ")) : 'Pending' }}
-                </p>
-              </div>
-              <div :class="`w-12 h-12 rounded-full flex items-center justify-center ${getEnrollmentIconBg(enrollmentStatus)}`">
-                <svg class="w-6 h-6 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                </svg>
-              </div>
+          <div v-else class="flex items-center gap-4">
+            <!-- Status icon -->
+            <div :class="['w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm', enrollmentInfo.iconBg]">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path :d="enrollmentInfo.icon"/>
+              </svg>
             </div>
-          </div>
-
-          <!-- Documents Progress Card -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Documents Uploaded</p>
-                <div v-if="loading && !stepKeys.length" class="mt-2 h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                <p v-else class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                  {{ uploadedCount }}/{{ stepKeys.length }}
-                </p>
-              </div>
-              <div class="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                </svg>
-              </div>
-            </div>
-            <!-- Progress Bar -->
-            <div class="mt-3">
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" :style="{ width: uploadProgressPercentage + '%' }"></div>
-              </div>
+            <!-- Text -->
+            <div class="min-w-0">
+              <p class="text-[0.7rem] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5">Current Status</p>
+              <p :class="['text-lg sm:text-xl font-extrabold leading-tight', enrollmentInfo.color]">
+                {{ enrollmentInfo.label }}
+              </p>
+              <p class="text-[0.78rem] text-gray-600 dark:text-gray-400 mt-0.5 leading-snug">
+                {{ enrollmentInfo.description }}
+              </p>
             </div>
           </div>
         </div>
 
-        <!-- Quick Actions Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+        <!-- ── Horizontal Application Timeline ── -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+
           <!-- Header -->
-          <div class="flex items-center gap-2 mb-4">
-            <svg class="w-4 h-4 flex-shrink-0" style="color:#9E122C" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <div class="flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-gray-700/80 bg-gray-50/60 dark:bg-gray-800/60">
+            <svg class="w-3.5 h-3.5 shrink-0" style="color:#9E122C" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Quick Actions</p>
+            <h3 class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Application Timeline</h3>
+            <span class="ml-auto text-[10px] font-bold tabular-nums bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
+              {{ timelineSteps.filter(s => !s.isFuture).length }} / {{ timelineSteps.length }} stages
+            </span>
           </div>
 
-          <div v-if="loading && !applicationStatus && !stepKeys.length" class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:justify-center">
-            <div class="h-11 w-full sm:w-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-            <div class="h-11 w-full sm:w-40 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-          </div>
-          <div v-else class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:justify-center">
-            <!-- Review Application Button -->
-            <button
-              @click="showModal = true"
-              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
-              style="background-color: #9E122C;"
-              onmouseover="this.style.backgroundColor='#7a0e22'"
-              onmouseout="this.style.backgroundColor='#9E122C'"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Review Application
-            </button>
+          <!-- Horizontal stepper — stretches to fill full width on desktop, scrolls on small screens -->
+          <div class="overflow-x-auto px-4 py-5 scrollbar-thin">
+            <ol class="flex items-start w-full min-w-[480px]">
+              <li v-for="(step, idx) in timelineSteps" :key="step.key" class="flex items-start flex-1 min-w-0">
 
-            <!-- Input Grades Button -->
-            <button
-              v-if="allDocumentsUploaded"
-              @click="goToGrades"
-              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
-              style="background-color: #D97706;"
-              onmouseover="this.style.backgroundColor='#b65f06'"
-              onmouseout="this.style.backgroundColor='#D97706'"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              {{ applicationStatus && applicationStatus !== 'draft' ? (canEditGrades ? 'Edit Grades' : 'View Grades') : 'Input Grades' }}
-            </button>
+                <!-- Step node -->
+                <div :class="[
+                  'flex flex-col items-center w-full px-1 py-2.5 rounded-xl transition-all',
+                  step.isCurrent
+                    ? (step.action === 'rejected' || step.status === 'rejected'
+                        ? 'bg-red-50 dark:bg-red-400/10 ring-1 ring-red-200 dark:ring-red-400/30'
+                        : step.status === 'returned'
+                          ? 'bg-orange-50 dark:bg-orange-400/10 ring-1 ring-orange-200 dark:ring-orange-400/30'
+                          : 'bg-blue-50 dark:bg-blue-400/10 ring-1 ring-blue-200 dark:ring-blue-400/30')
+                    : ''
+                ]">
+                  <!-- Dot -->
+                  <span :class="[
+                    'w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
+                    step.action === 'rejected' || step.status === 'rejected'
+                      ? 'bg-red-500 border-red-500 text-white'
+                      : step.status === 'completed'
+                        ? 'bg-green-500 border-green-500 text-white'
+                        : step.isCurrent && step.status === 'in_progress'
+                          ? 'bg-blue-500 border-blue-500 text-white ring-4 ring-blue-500/20'
+                          : step.status === 'returned'
+                            ? 'bg-orange-400 border-orange-400 text-white'
+                            : step.isFuture
+                              ? 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500'
+                              : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400'
+                  ]">
+                    <!-- Status icon -->
+                    <svg v-if="step.action === 'rejected' || step.status === 'rejected'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    <svg v-else-if="step.status === 'completed'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    <svg v-else-if="step.isCurrent && step.status === 'in_progress'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+                    <svg v-else-if="step.status === 'returned'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    <!-- Future / pending: step number -->
+                    <span v-else class="text-[11px] font-bold">{{ idx + 1 }}</span>
+                  </span>
 
-            <!-- Download Grade Verification Slip -->
-            <button
-              v-if="canDownloadSlipReactive"
-              @click="downloadGradeVerificationSlip"
-              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
-              style="background-color: #059669;"
-              onmouseover="this.style.backgroundColor='#047857'"
-              onmouseout="this.style.backgroundColor='#059669'"
-              title="Download your Grade Verification Slip"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Download Verification Slip
-            </button>
+                  <!-- Label -->
+                  <p :class="[
+                    'mt-2 text-[0.65rem] sm:text-[0.72rem] text-center leading-snug px-0.5 transition-colors break-words w-full',
+                    step.isCurrent
+                      ? 'font-bold text-gray-900 dark:text-gray-100'
+                      : step.isPast
+                        ? 'font-semibold text-gray-600 dark:text-gray-400'
+                        : 'font-medium text-gray-400 dark:text-gray-500'
+                  ]">{{ step.label }}</p>
 
-            <!-- Download F137 Request Letter — shown when medical stage is in progress or completed -->
-            <template v-if="showF137Button">
-              <button
-                v-if="props.canDownloadF137"
-                @click="downloadF137RequestLetter"
-                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
-                style="background-color: #9E122C;"
-                onmouseover="this.style.backgroundColor='#7a0e22'"
-                onmouseout="this.style.backgroundColor='#9E122C'"
-                title="Download your F137 Request Letter"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Download F137 Request Letter
-              </button>
-              <!-- F137 not available — prompt to complete profile -->
-              <div
-                v-else
-                class="w-full sm:w-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm border border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300 min-h-[44px]"
-                title="Complete Former School Information in your Profile to unlock this"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.73-3L13.73 4a2 2 0 00-3.46 0L3.27 16A2 2 0 005.07 19z" />
-                </svg>
-                <span class="text-xs">
-                  F137 Request Letter — <a :href="route('applicant.profile')" class="underline font-semibold">edit your academic information</a> in your Profile to enable this.
-                </span>
-              </div>
-            </template>
-          </div>
+                  <!-- Status badge — all steps always show one -->
+                  <span :class="[
+                    'mt-1 inline-flex items-center text-[0.6rem] font-bold px-2 py-0.5 rounded-full capitalize tracking-wide',
+                    step.action === 'rejected'
+                      ? 'bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-300'
+                      : step.status === 'completed'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-400/15 dark:text-green-300'
+                        : step.status === 'in_progress'
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300'
+                          : step.status === 'returned'
+                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-400/15 dark:text-orange-300'
+                            : step.isFuture
+                              ? 'bg-gray-100 text-gray-400 dark:bg-gray-700/60 dark:text-gray-500'
+                              : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                  ]">
+                    {{ step.action === 'rejected' ? 'Rejected' : step.isFuture ? 'Upcoming' : capitalize((step.status || '').replace(/_/g, ' ')) }}
+                  </span>
 
-          <!-- Slip download error toast -->
-          <Transition name="slide-down">
-            <div v-if="slipDownloadError" class="w-full mt-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
-              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-              {{ slipDownloadError }}
-            </div>
-          </Transition>
-          <!-- F137 download error toast -->
-          <Transition name="slide-down">
-            <div v-if="f137DownloadError" class="w-full mt-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
-              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-              {{ f137DownloadError }}
-            </div>
-          </Transition>
-        </div>
+                  <!-- Timestamp -->
+                  <p v-if="step.created_at" class="mt-1 text-[0.6rem] text-gray-400 dark:text-gray-500 tabular-nums text-center leading-snug">
+                    {{ formatTimestamp(step.created_at) }}
+                  </p>
 
-        <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Left Column - Timeline -->
-          <div class="lg:col-span-1">
-            <div v-if="applicationProcesses.length" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Application Timeline
-              </h3>
-              <div class="space-y-4">
-                <div v-for="(proc, idx) in applicationProcesses" :key="idx" class="flex gap-3">
-                  <div class="relative">
-                    <div :class="`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs ${getBadgeClass(proc.action === 'rejected' ? 'rejected' : proc.status)}`">
-                      {{ idx + 1 }}
-                    </div>
-                    <div v-if="idx < applicationProcesses.length - 1" class="absolute top-8 left-1/2 w-0.5 h-8 bg-gray-200 dark:bg-gray-700 -translate-x-1/2"></div>
-                  </div>
-                  <div class="flex-1 pb-4 min-w-0">
-                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2 flex-wrap">
-                      {{ formatStage(proc.stage) }}
-                      <span :class="`text-xs px-1.5 py-0.5 rounded-full text-white ${getBadgeClass(proc.action === 'rejected' ? 'rejected' : proc.status)}`">
-                        {{ proc.action === 'rejected' ? 'Rejected' : capitalize(proc.status.replace(/_/g, ' ')) }}
-                      </span>
-                    </h4>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ formatTimestamp(proc.created_at) }}
-                    </p>
-                    <div v-if="(proc.status === 'returned' || proc.action === 'rejected') && proc.reviewer_notes"
-                         class="mt-1 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-400 break-all whitespace-pre-wrap">
-                      <span class="font-semibold">{{ proc.action === 'rejected' ? 'Reject reason:' : 'Return reason:' }} </span>{{ proc.reviewer_notes }}
-                    </div>
-                    <p v-else-if="proc.reviewer_notes" class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic break-all whitespace-pre-wrap">
-                      {{ proc.reviewer_notes }}
+                  <!-- Reviewer note pill (current/returned/rejected only) -->
+                  <div v-if="step.isCurrent && step.reviewer_notes"
+                       class="mt-1.5 w-full px-2 py-1 rounded-lg bg-red-50 dark:bg-red-400/10 border border-red-100 dark:border-red-400/20">
+                    <p class="text-[0.6rem] text-red-700 dark:text-red-300 leading-snug line-clamp-3 text-center" :title="step.reviewer_notes">
+                      {{ step.reviewer_notes }}
                     </p>
                   </div>
                 </div>
+
+                <!-- Connector between steps -->
+                <div v-if="idx < timelineSteps.length - 1"
+                     class="flex items-start pt-[15px] shrink-0 w-4 sm:w-6">
+                  <div :class="[
+                    'h-px w-full transition-colors',
+                    step.status === 'completed' ? 'bg-green-400 dark:bg-green-600' :
+                    step.isCurrent ? 'bg-blue-300 dark:bg-blue-700' :
+                    'bg-gray-200 dark:bg-gray-700'
+                  ]"></div>
+                </div>
+
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Two-column layout: sidebar (actions/downloads) + main content -->
+        <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr] gap-6 items-start">
+
+          <!-- ── Sidebar ── -->
+          <aside class="flex flex-col gap-4 lg:sticky lg:top-6">
+
+            <!-- Quick Actions Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+              <div class="flex items-center gap-2 mb-4">
+                <svg class="w-4 h-4 flex-shrink-0" style="color:#9E122C" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Quick Actions</p>
+              </div>
+              <div v-if="loading && !applicationStatus && !stepKeys.length" class="flex flex-col gap-3">
+                <div class="h-11 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                <div class="h-11 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              </div>
+              <div v-else class="flex flex-col gap-3">
+                <!-- Review Application Button -->
+                <button
+                  @click="showModal = true"
+                  class="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
+                  style="background-color: #9E122C;"
+                  onmouseover="this.style.backgroundColor='#7a0e22'"
+                  onmouseout="this.style.backgroundColor='#9E122C'"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Review Application
+                </button>
+                <!-- Input / View / Edit Grades Button -->
+                <button
+                  v-if="allDocumentsUploaded"
+                  @click="goToGrades"
+                  class="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
+                  style="background-color: #D97706;"
+                  onmouseover="this.style.backgroundColor='#b65f06'"
+                  onmouseout="this.style.backgroundColor='#D97706'"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  {{ applicationStatus && applicationStatus !== 'draft' ? (canEditGrades ? 'Edit Grades' : 'View Grades') : 'Input Grades' }}
+                </button>
               </div>
             </div>
-          </div>
 
-          <!-- Right Column - Documents Grid -->
-          <div class="lg:col-span-2">
+            <!-- Downloads Card -->
+            <div
+              v-if="canDownloadSlipReactive || showF137Button"
+              class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5"
+            >
+              <div class="flex items-center gap-2 mb-4">
+                <svg class="w-4 h-4 flex-shrink-0 text-[#9E122C] dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Downloads</p>
+              </div>
+              <div class="flex flex-col gap-3">
+                <!-- Download Grade Verification Slip -->
+                <button
+                  v-if="canDownloadSlipReactive"
+                  @click="downloadGradeVerificationSlip"
+                  class="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
+                  style="background-color: #059669;"
+                  onmouseover="this.style.backgroundColor='#047857'"
+                  onmouseout="this.style.backgroundColor='#059669'"
+                  title="Download your Grade Verification Slip"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Download Verification Slip
+                </button>
+                <!-- Download F137 Request Letter -->
+                <template v-if="showF137Button">
+                  <button
+                    v-if="props.canDownloadF137"
+                    @click="downloadF137RequestLetter"
+                    class="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
+                    style="background-color: #9E122C;"
+                    onmouseover="this.style.backgroundColor='#7a0e22'"
+                    onmouseout="this.style.backgroundColor='#9E122C'"
+                    title="Download your F137 Request Letter"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Download F137 Request Letter
+                  </button>
+                  <!-- F137 not available — prompt to complete profile -->
+                  <div
+                    v-else
+                    class="w-full inline-flex items-start gap-2 px-4 py-3 rounded-lg text-sm border border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300"
+                    title="Complete Former School Information in your Profile to unlock this"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0 mt-0.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.73-3L13.73 4a2 2 0 00-3.46 0L3.27 16A2 2 0 005.07 19z" />
+                    </svg>
+                    <span class="text-xs leading-snug">
+                      F137 unavailable — <a :href="route('applicant.profile')" class="underline font-semibold">complete your academic info</a> in Profile to enable this.
+                    </span>
+                  </div>
+                </template>
+              </div>
+              <!-- Error toasts -->
+              <Transition name="slide-down">
+                <div v-if="slipDownloadError" class="w-full mt-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  {{ slipDownloadError }}
+                </div>
+              </Transition>
+              <Transition name="slide-down">
+                <div v-if="f137DownloadError" class="w-full mt-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  {{ f137DownloadError }}
+                </div>
+              </Transition>
+            </div>
+
+          </aside>
+
+          <!-- ── Main Content ── -->
+          <div class="min-w-0">
+            <div class="grid grid-cols-1 gap-6">
+
+          <!-- Documents (now full width) -->
+          <div class="col-span-1">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
               <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -1094,7 +1348,7 @@ onMounted(() => {
                 </div>
               </div>
 
-              <div v-else-if="stepKeys.length" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div v-else-if="stepKeys.length" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div v-for="(key, idx) in stepKeys" :key="key" class="group">
                   <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600 hover:border-maroon-500 transition-all">
                     <!-- Document Icon/Preview -->
@@ -1260,6 +1514,8 @@ onMounted(() => {
             </div>
           </div>
         </div>
+          </div><!-- end main content -->
+        </div><!-- end two-column layout grid -->
 
         <!-- Error Message -->
         <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -1322,6 +1578,28 @@ onMounted(() => {
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Thin scrollbar for the horizontal timeline */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  height: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 999px;
+}
+:global(.dark) .scrollbar-thin {
+  scrollbar-color: #4b5563 transparent;
+}
+:global(.dark) .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
 }
 
 /* Loading animation */
