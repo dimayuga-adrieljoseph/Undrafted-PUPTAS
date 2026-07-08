@@ -36,15 +36,18 @@ class ReportController extends Controller
         $paginator = $query->with(['user.testPasser', 'program', 'processes'])->paginate(15);
 
         $paginator->getCollection()->transform(function ($app) {
+            $interviewerProcess = $app->processes->where('stage', 'interviewer')->last();
+            $isPulledOut = $interviewerProcess && $interviewerProcess->status === 'pulled_out';
             return [
-                'id' => $app->id,
-                'user_id' => $app->user_id,
+                'id'             => $app->id,
+                'user_id'        => $app->user_id,
                 'reference_number' => $app->user->testPasser->reference_number ?? 'N/A',
-                'name' => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
-                'email' => $app->user->email ?? 'N/A',
-                'program' => $app->program->code ?? 'N/A',
-                'status' => $this->statusService->determineStatus($app),
-                'date' => $app->updated_at->format('Y-m-d')
+                'name'           => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
+                'email'          => $app->user->email ?? 'N/A',
+                'program'        => $app->program->code ?? 'N/A',
+                'status'         => $isPulledOut ? 'Pulled Out' : $this->statusService->determineStatus($app),
+                'pullout_notes'  => $isPulledOut ? ($interviewerProcess->decision_reason ?? $interviewerProcess->reviewer_notes ?? '—') : null,
+                'date'           => $app->updated_at->format('Y-m-d')
             ];
         });
 
@@ -124,6 +127,12 @@ class ReportController extends Controller
             });
         } elseif ($type === 'enrollment') {
             $query->where('enrollment_status', 'officially_enrolled');
+        } elseif ($type === 'pulled_out') {
+            // Pulled out = interviewer process that has been marked as pulled_out
+            $query->whereHas('processes', function ($q) {
+                $q->where('stage', 'interviewer')
+                  ->where('status', 'pulled_out');
+            });
         }
 
         // Filter by Program
