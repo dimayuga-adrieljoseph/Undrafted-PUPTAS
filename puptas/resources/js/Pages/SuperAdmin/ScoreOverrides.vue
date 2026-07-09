@@ -378,7 +378,7 @@ const getStatusBadgeClass = (statusId) => {
                             <p class="text-sm text-gray-500 dark:text-gray-400">No score overrides are currently active.</p>
                         </div>
                         
-                        <ul v-else class="space-y-3">
+                        <ul v-else class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                             <li v-for="item in allowed_scores" :key="item.score" class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
                                 <div class="flex items-center gap-3">
                                     <span class="flex items-center justify-center w-8 h-8 rounded-full bg-[#9E122C]/10 text-[#9E122C] font-bold text-sm flex-shrink-0">
@@ -545,7 +545,7 @@ const getStatusBadgeClass = (statusId) => {
                             <p class="text-sm text-gray-500 dark:text-gray-400">No email overrides active.</p>
                         </div>
                         
-                        <ul v-else class="space-y-3">
+                        <ul v-else class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                             <li v-for="item in allowed_emails" :key="item.email" class="flex flex-col p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex flex-col break-all">

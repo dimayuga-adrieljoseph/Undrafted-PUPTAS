@@ -41,12 +41,7 @@ const downloadSisPassers = () => {
     sisLoading.value = true;
     let url = route('sis-upload.passers');
     if (sisSchoolYear.value) url += `?school_year=${encodeURIComponent(sisSchoolYear.value)}`;
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = '';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.open(url, '_blank');
     setTimeout(() => { sisLoading.value = false; }, 2000);
 };
 
@@ -54,12 +49,7 @@ const downloadSisRecon = () => {
     sisLoading.value = true;
     let url = route('sis-upload.recon');
     if (sisSchoolYear.value) url += `?school_year=${encodeURIComponent(sisSchoolYear.value)}`;
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = '';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.open(url, '_blank');
     setTimeout(() => { sisLoading.value = false; }, 2000);
 };
 
