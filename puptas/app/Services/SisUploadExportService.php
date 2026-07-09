@@ -168,7 +168,9 @@ class SisUploadExportService
         }
 
         $writer   = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        $filename = $templateFilename; // keep the original template filename
+        
+        // Use the current date for the downloaded filename instead of the template's hardcoded date
+        $filename = str_replace('07.17.2026', now()->format('m.d.Y'), $templateFilename);
 
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
