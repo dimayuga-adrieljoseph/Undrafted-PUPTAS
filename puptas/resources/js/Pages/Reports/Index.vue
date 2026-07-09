@@ -250,11 +250,11 @@ const getStatusClass = (status) => {
                         <div class="flex flex-wrap items-center gap-3 mt-4 ml-1">
                             <span class="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                                 <span class="w-2 h-2 rounded-full bg-[#9E122C] inline-block"></span>
-                                <strong class="text-gray-700 dark:text-gray-300">Passers</strong> — completed interview
+                                <strong class="text-gray-700 dark:text-gray-300">Passers</strong>
                             </span>
                             <span class="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                                 <span class="w-2 h-2 rounded-full bg-gray-400 inline-block"></span>
-                                <strong class="text-gray-700 dark:text-gray-300">Recon</strong> — on probation
+                                <strong class="text-gray-700 dark:text-gray-300">Recon</strong>
                             </span>
                         </div>
                     </div>
