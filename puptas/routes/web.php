@@ -36,6 +36,7 @@ use App\Http\Controllers\GradeExtractionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AdmissionLogbookController;
 use App\Http\Controllers\ControlListController;
+use App\Http\Controllers\SisUploadController;
 use App\Http\Controllers\ConfirmedApplicantsController;
 use App\Http\Controllers\EmailTrackingController;
 
@@ -654,6 +655,11 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/admin/logbook/export/pdf', [AdmissionLogbookController::class, 'exportPdf'])->name('reports.logbook.export.pdf');
     Route::get('/admin/control-list', [ControlListController::class, 'index'])->name('reports.control-list.index');
     Route::get('/admin/control-list/export', [ControlListController::class, 'export'])->name('reports.control-list.export');
+
+    // SIS Upload XLSX Reports
+    Route::get('/admin/sis-upload/passers', [SisUploadController::class, 'exportPassers'])->name('sis-upload.passers');
+    Route::get('/admin/sis-upload/recon', [SisUploadController::class, 'exportRecon'])->name('sis-upload.recon');
+    Route::get('/admin/sis-upload/school-years', [SisUploadController::class, 'schoolYears'])->name('sis-upload.school-years');
 
     // Waiver Management
     Route::get('/admin/waiver-management', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'index'])->name('waiver.index');
