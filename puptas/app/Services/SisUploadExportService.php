@@ -143,7 +143,7 @@ class SisUploadExportService
      */
     private function buildResponse(string $templateFilename, array $rows): StreamedResponse
     {
-        $templatePath = Storage::disk('local')->path('sis-templates/' . $templateFilename);
+        $templatePath = storage_path('app/sis-templates/' . $templateFilename);
 
         $spreadsheet = IOFactory::load($templatePath);
         $sheet       = $spreadsheet->getSheetByName(self::DATA_SHEET);
