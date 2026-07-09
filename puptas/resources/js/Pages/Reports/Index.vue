@@ -20,6 +20,39 @@ const filterDate = ref("");
 const filterMonth = ref("");
 const filterProgram = ref("");
 
+// SIS Upload state
+const sisSchoolYear = ref("");
+const sisSchoolYears = ref([]);
+const sisLoading = ref(false);
+
+const fetchSisSchoolYears = async () => {
+    try {
+        const res = await axios.get(route('sis-upload.school-years'));
+        sisSchoolYears.value = res.data.school_years || [];
+        if (sisSchoolYears.value.length > 0) {
+            sisSchoolYear.value = sisSchoolYears.value[0];
+        }
+    } catch (e) {
+        console.error('Failed to load school years:', e);
+    }
+};
+
+const downloadSisPassers = () => {
+    sisLoading.value = true;
+    let url = route('sis-upload.passers');
+    if (sisSchoolYear.value) url += `?school_year=${encodeURIComponent(sisSchoolYear.value)}`;
+    window.open(url, '_blank');
+    setTimeout(() => { sisLoading.value = false; }, 2000);
+};
+
+const downloadSisRecon = () => {
+    sisLoading.value = true;
+    let url = route('sis-upload.recon');
+    if (sisSchoolYear.value) url += `?school_year=${encodeURIComponent(sisSchoolYear.value)}`;
+    window.open(url, '_blank');
+    setTimeout(() => { sisLoading.value = false; }, 2000);
+};
+
 let abortController = null;
 
 const fetchReportData = async (page = 1) => {
@@ -63,6 +96,7 @@ const fetchReportData = async (page = 1) => {
 
 onMounted(() => {
     fetchReportData(1);
+    fetchSisSchoolYears();
 });
 
 const downloadPdf = () => {
@@ -149,6 +183,77 @@ const getStatusClass = (status) => {
                 <button @click="downloadExcel" :disabled="loading" class="px-4 py-2 border border-green-600 text-green-600 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 hover:text-white dark:text-green-400 dark:hover:text-white">
                     Export Excel
                 </button>
+            </div>
+
+            <!-- SIS Upload XLSX Reports -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-5 mb-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="flex items-center justify-center w-9 h-9 rounded-lg bg-[#9E122C]/10 dark:bg-[#9E122C]/20">
+                        <svg class="w-5 h-5 text-[#9E122C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">SIS Upload Reports (XLSX)</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Download formatted XLSX sheets for SIS uploading</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-end gap-4">
+                    <!-- School Year selector -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">School Year</label>
+                        <select
+                            v-model="sisSchoolYear"
+                            id="sis-school-year"
+                            class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-[#9E122C] focus:border-[#9E122C] text-sm"
+                        >
+                            <option value="">All School Years</option>
+                            <option v-for="yr in sisSchoolYears" :key="yr" :value="yr">{{ yr }}</option>
+                        </select>
+                    </div>
+
+                    <!-- Download Passers -->
+                    <button
+                        id="btn-download-sis-passers"
+                        @click="downloadSisPassers"
+                        :disabled="sisLoading"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-[#9E122C] text-white rounded-lg text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#800000]"
+                    >
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        {{ sisLoading ? 'Preparing…' : 'Download Passers XLSX' }}
+                    </button>
+
+                    <!-- Download Recon -->
+                    <button
+                        id="btn-download-sis-recon"
+                        @click="downloadSisRecon"
+                        :disabled="sisLoading"
+                        class="inline-flex items-center gap-2 px-4 py-2 border border-[#9E122C] text-[#9E122C] dark:text-white rounded-lg text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#9E122C] hover:text-white"
+                    >
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        {{ sisLoading ? 'Preparing…' : 'Download Recon XLSX' }}
+                    </button>
+                </div>
+
+                <!-- Helper labels -->
+                <div class="mt-3 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="flex items-center gap-1">
+                        <span class="inline-block w-2 h-2 rounded-full bg-[#9E122C]"></span>
+                        <strong class="text-gray-700 dark:text-gray-300">Passers</strong> — Applicants who completed the interview step
+                    </span>
+                    <span class="flex items-center gap-1">
+                        <span class="inline-block w-2 h-2 rounded-full bg-gray-400"></span>
+                        <strong class="text-gray-700 dark:text-gray-300">Recon</strong> — On Probation (Waiver applicants)
+                    </span>
+                </div>
             </div>
 
             <!-- Table -->
