@@ -25,22 +25,31 @@ class AuthenticatedSessionController implements LoginResponse
         if ($roleId == 1) {
             $testPasser = \App\Models\TestPasser::where('email', $user->email)->first();
             if ($testPasser && in_array($testPasser->passer_status_id, [3, 4])) {
-                $cutoffService = app(\App\Services\CutoffSettingsService::class);
-                $isScoreOverride = $cutoffService->isScoreAllowed((float) $testPasser->pupcet_total_score);
-                $isEmailOverride = $cutoffService->isEmailAllowed($user->email);
+                // Allow login if the applicant has already submitted an application.
+                // Once submitted, they need access to track status, upload documents, etc.
+                $hasSubmittedApplication = \App\Models\Application::where('user_id', $user->id)
+                    ->whereNull('deleted_at')
+                    ->whereNotNull('submitted_at')
+                    ->exists();
 
-                if (!$isScoreOverride && !$isEmailOverride) {
-                    $message = $testPasser->passer_status_id === 3 
-                        ? 'Login is not available for Unqualified applicants.' 
-                        : 'Login is currently closed for Waitlisted applicants. Please wait for further announcements regarding open slots.';
-                    
-                    Auth::guard('web')->logout();
-                    $request->session()->invalidate();
-                    $request->session()->regenerateToken();
+                if (!$hasSubmittedApplication) {
+                    $cutoffService = app(\App\Services\CutoffSettingsService::class);
+                    $isScoreOverride = $cutoffService->isScoreAllowed((float) $testPasser->pupcet_total_score);
+                    $isEmailOverride = $cutoffService->isEmailAllowed($user->email);
 
-                    return redirect('/auth/idp/error')->withErrors([
-                        'idp' => $message,
-                    ]);
+                    if (!$isScoreOverride && !$isEmailOverride) {
+                        $message = $testPasser->passer_status_id === 3 
+                            ? 'Login is not available for Unqualified applicants.' 
+                            : 'Login is currently closed for Waitlisted applicants. Please wait for further announcements regarding open slots.';
+                        
+                        Auth::guard('web')->logout();
+                        $request->session()->invalidate();
+                        $request->session()->regenerateToken();
+
+                        return redirect('/auth/idp/error')->withErrors([
+                            'idp' => $message,
+                        ]);
+                    }
                 }
             }
 

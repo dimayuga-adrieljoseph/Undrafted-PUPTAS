@@ -48,15 +48,24 @@ class EmergencyLoginController extends Controller
         if ((int) $user->role_id === 1) {
             $testPasser = \App\Models\TestPasser::where('email', $request->email)->first();
             if ($testPasser && in_array($testPasser->passer_status_id, [3, 4])) {
-                $cutoffService = app(\App\Services\CutoffSettingsService::class);
-                $isScoreOverride = $cutoffService->isScoreAllowed((float) $testPasser->pupcet_total_score);
-                $isEmailOverride = $cutoffService->isEmailAllowed($request->email);
+                // Allow login if the applicant has already submitted an application.
+                // Once submitted, they need access to track status, upload documents, etc.
+                $hasSubmittedApplication = \App\Models\Application::where('user_id', $user->id)
+                    ->whereNull('deleted_at')
+                    ->whereNotNull('submitted_at')
+                    ->exists();
 
-                if (!$isScoreOverride && !$isEmailOverride) {
-                    $message = $testPasser->passer_status_id === 3 
-                        ? 'Login is not available for Unqualified applicants.' 
-                        : 'Login is currently closed for Waitlisted applicants.';
-                    return back()->withErrors(['email' => $message]);
+                if (!$hasSubmittedApplication) {
+                    $cutoffService = app(\App\Services\CutoffSettingsService::class);
+                    $isScoreOverride = $cutoffService->isScoreAllowed((float) $testPasser->pupcet_total_score);
+                    $isEmailOverride = $cutoffService->isEmailAllowed($request->email);
+
+                    if (!$isScoreOverride && !$isEmailOverride) {
+                        $message = $testPasser->passer_status_id === 3 
+                            ? 'Login is not available for Unqualified applicants.' 
+                            : 'Login is currently closed for Waitlisted applicants.';
+                        return back()->withErrors(['email' => $message]);
+                    }
                 }
 
             }
