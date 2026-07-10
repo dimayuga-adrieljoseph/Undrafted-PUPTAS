@@ -11,6 +11,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ApplicantsExport;
 use App\Services\ApplicationStatusService;
+use App\Http\Controllers\AdmissionLogbookController;
+use App\Http\Controllers\ControlListController;
 
 class ReportController extends Controller
 {
@@ -21,12 +23,43 @@ class ReportController extends Controller
         $this->statusService = $statusService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $programs = Program::all(['id', 'code', 'name']);
-        
+
+        // Resolve logbook params
+        $step = (int) $request->input('step', 1);
+        if ($step < 1 || $step > 3) $step = 1;
+        $date = $request->input('date', today()->toDateString());
+
+        // Resolve control list params
+        $programId = $request->input('program_id');
+
+        // Resolve initial tab
+        $validTabs = ['applicant', 'sis', 'logbook', 'control-list'];
+        $initialTab = in_array($request->input('tab'), $validTabs)
+            ? $request->input('tab')
+            : 'applicant';
+
+        // Logbook entries (initial load for Logbook tab)
+        $logbookController = app(AdmissionLogbookController::class);
+        $logbookEntries = $logbookController->getEntriesPaginated($step, $date);
+
+        // Control list applicants (initial load for Control List tab)
+        $controlListApplicants = null;
+        if ($programId) {
+            $controlListController = app(ControlListController::class);
+            $controlListApplicants = $controlListController->getApplicantsPaginated($programId);
+        }
+
         return Inertia::render('Reports/Index', [
-            'programs' => $programs
+            'programs'                     => $programs,
+            'logbookEntries'               => $logbookEntries,
+            'logbookCurrentStep'           => $step,
+            'logbookCurrentDate'           => $date,
+            'controlListApplicants'        => $controlListApplicants,
+            'controlListSelectedProgramId' => $programId ?? '',
+            'initialTab'                   => $initialTab,
         ]);
     }
 
