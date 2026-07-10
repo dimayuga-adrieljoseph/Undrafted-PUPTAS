@@ -630,6 +630,10 @@ Route::middleware(['auth', 'role:2,4,7'])
     ->post('/record-dashboard/change-course/{applicantId}', [RecordStaffDashboardController::class, 'changeCourse'])
     ->name('record.change-course');
 
+// Legacy report URL redirects — permanent (301) for bookmarks and external links
+Route::redirect('/admin/logbook', '/admin/reports?tab=logbook', 301);
+Route::redirect('/admin/control-list', '/admin/reports?tab=control-list', 301);
+
 // User Management Routes (Protected - Admin Only)
 Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -684,10 +688,6 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     // API Client Management (M2M / Passport)
     Route::get('/admin/api-clients', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'index'])->name('api-clients.index');
     
-    // Global System Settings
-    Route::get('/admin/system-settings', [\App\Http\Controllers\SuperAdmin\SystemSettingsController::class, 'index'])->name('system-settings.index');
-    Route::post('/admin/system-settings', [\App\Http\Controllers\SuperAdmin\SystemSettingsController::class, 'update'])->name('system-settings.update');
-
     Route::post('/admin/api-clients', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'store'])->name('api-clients.store');
     Route::delete('/admin/api-clients/{id}', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'destroy'])->name('api-clients.destroy');
     Route::post('/admin/api-clients/{id}/regenerate', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'regenerate'])->name('api-clients.regenerate');
