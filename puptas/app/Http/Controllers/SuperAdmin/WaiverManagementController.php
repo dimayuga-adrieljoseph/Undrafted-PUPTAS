@@ -320,8 +320,11 @@ class WaiverManagementController extends Controller
     public function exportPdf(Request $request)
     {
         $query = TestPasser::with(['user.currentApplication.program', 'passerStatus'])
-            ->whereHas('user.currentApplication', function($q) {
-                $q->where('is_waivered', true);
+            ->where(function($q) {
+                $q->where('passer_status_id', 5)
+                  ->orWhereHas('user.currentApplication', function($q2) {
+                      $q2->where('is_waivered', true);
+                  });
             })
             ->orderBy('updated_at', 'desc');
 
@@ -348,8 +351,11 @@ class WaiverManagementController extends Controller
     public function exportCsv(Request $request)
     {
         $query = TestPasser::with(['user.currentApplication.program', 'passerStatus'])
-            ->whereHas('user.currentApplication', function($q) {
-                $q->where('is_waivered', true);
+            ->where(function($q) {
+                $q->where('passer_status_id', 5)
+                  ->orWhereHas('user.currentApplication', function($q2) {
+                      $q2->where('is_waivered', true);
+                  });
             })
             ->orderBy('updated_at', 'desc');
 
