@@ -79,30 +79,48 @@ class TestPassersImport implements ToModel, WithHeadingRow
             }
         }
 
-        $this->importedCount++;
-
-        // If email is present, update or create using email as unique match key
+        // If email is present, check for duplicates — skip if already exists
         if ($email) {
-            return TestPasser::updateOrCreate(
-                ['email' => $email],
-                [
-                    'surname' => isset($row['surname']) ? trim((string)$row['surname']) : null,
-                    'first_name' => $firstName,
-                    'middle_name' => isset($row['middle_name']) ? trim((string)$row['middle_name']) : null,
-                    'strand' => isset($row['strand']) ? trim((string)$row['strand']) : null,
-                    'shs_school' => $schoolName,
-                    'reference_number' => $referenceNumber,
-                    'pupcet_total_score' => $pupcetScore,
-                    'batch_number' => $this->batch,
-                    'school_year' => $this->schoolYear,
-                    'user_id' => $userId,
-                    'status' => $status,
-                    'passer_status_id' => $this->passerStatusId,
-                ]
-            );
+            $exists = TestPasser::where('email', $email)->exists();
+            if ($exists) {
+                $this->skippedCount++;
+                $this->skippedReasons[] = "Duplicate email: {$email}";
+                return null;
+            }
+
+            $this->importedCount++;
+
+            return TestPasser::create([
+                'surname' => isset($row['surname']) ? trim((string)$row['surname']) : null,
+                'first_name' => $firstName,
+                'middle_name' => isset($row['middle_name']) ? trim((string)$row['middle_name']) : null,
+                'strand' => isset($row['strand']) ? trim((string)$row['strand']) : null,
+                'shs_school' => $schoolName,
+                'email' => $email,
+                'reference_number' => $referenceNumber,
+                'pupcet_total_score' => $pupcetScore,
+                'batch_number' => $this->batch,
+                'school_year' => $this->schoolYear,
+                'user_id' => $userId,
+                'status' => $status,
+                'passer_status_id' => $this->passerStatusId,
+            ]);
         }
 
-        // Without email, directly create a new TestPasser record
+        // Without email, check for duplicates by reference_number if available
+        if ($referenceNumber) {
+            $exists = TestPasser::whereNull('email')
+                ->where('reference_number', $referenceNumber)
+                ->exists();
+            if ($exists) {
+                $this->skippedCount++;
+                $this->skippedReasons[] = "Duplicate reference_number (no email): {$referenceNumber}";
+                return null;
+            }
+        }
+
+        $this->importedCount++;
+
         return TestPasser::create([
             'surname' => isset($row['surname']) ? trim((string)$row['surname']) : null,
             'first_name' => $firstName,
