@@ -380,11 +380,10 @@ class WaiverManagementController extends Controller
 
         $callback = function() use ($taggedApplicants) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['Rank', 'Reference Number', 'Name', 'Email', 'Strand', 'Score', 'Status', 'System Status', 'Program Offering', 'Tagged Date']);
+            fputcsv($file, ['Reference Number', 'Name', 'Email', 'Strand', 'Score', 'Status', 'System Status', 'Program Offering', 'Tagged Date']);
 
             foreach ($taggedApplicants as $applicant) {
                 fputcsv($file, [
-                    $applicant->waiver_rank ?? 'N/A',
                     $applicant->reference_number,
                     $applicant->surname . ', ' . $applicant->first_name,
                     $applicant->user?->email ?? 'N/A',
