@@ -768,11 +768,46 @@ class TestPasserController extends Controller
         $schoolYear = $request->input('school_year');
         $passerStatusId = (int) $request->input('passer_status_id');
 
-        $import = new TestPassersImport($batch, $schoolYear, $passerStatusId);
-        \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('file'));
+        try {
+            $import = new TestPassersImport($batch, $schoolYear, $passerStatusId);
+            \Maatwebsite\Excel\Facades\Excel::import($import, $request->file('file'));
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            $errorDetails = [];
+            foreach ($failures as $failure) {
+                $errorDetails[] = "Row {$failure->row()}: " . implode(', ', $failure->errors());
+            }
+            return response()->json([
+                'message' => 'The file contains validation errors.',
+                'errors' => $errorDetails,
+            ], 422);
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('Upload failed — database error', [
+                'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+            ]);
+            $detail = 'A database error occurred.';
+            if (str_contains($e->getMessage(), 'Duplicate entry') || $e->getCode() == 23000) {
+                $detail = 'Some records in your file already exist in the system (duplicate email or reference number). Please remove duplicate entries and try uploading only new records.';
+            }
+            return response()->json([
+                'message' => 'Upload failed due to a database issue.',
+                'errors' => [$detail],
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Upload failed — unexpected error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'message' => 'Upload failed due to an unexpected error.',
+                'errors' => ['The server encountered an error while processing your file. Please check the file format and try again. If the problem persists, contact support.'],
+            ], 500);
+        }
 
         $importedCount = $import->getImportedCount();
         $skippedCount = $import->getSkippedCount();
+        $skippedReasons = $import->getSkippedReasons();
 
         $statusNames = [1 => 'Qualified', 2 => 'Waitlisted', 3 => 'Unqualified', 4 => 'Waitlisted Below Cut Off', 5 => 'On Probation'];
         $statusName = $statusNames[$passerStatusId] ?? 'Unknown';
@@ -783,6 +818,7 @@ class TestPasserController extends Controller
                 'message' => 'No new records were imported. All entries already exist in the system.',
                 'imported_count' => $importedCount,
                 'skipped_count' => $skippedCount,
+                'skipped_reasons' => $skippedReasons,
             ], 422);
         }
 
@@ -790,6 +826,7 @@ class TestPasserController extends Controller
             'message' => 'Excel file uploaded and data imported successfully.',
             'imported_count' => $importedCount,
             'skipped_count' => $skippedCount,
+            'skipped_reasons' => $skippedReasons,
         ]);
     }
 
