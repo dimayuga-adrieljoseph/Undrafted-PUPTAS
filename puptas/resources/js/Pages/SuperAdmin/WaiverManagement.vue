@@ -172,6 +172,7 @@ const showImportModal = ref(false)
 const importFile = ref(null)
 const importPreviewData = ref(null)
 const importUnmatched = ref([])
+const importDuplicateCount = ref(0)
 const importingFile = ref(false)
 const confirmingImport = ref(false)
 const importError = ref(null)
@@ -235,6 +236,7 @@ const handleFileUpload = async (event) => {
         })
         importPreviewData.value = response.data.matched
         importUnmatched.value = response.data.unmatched
+        importDuplicateCount.value = response.data.duplicate_count ?? 0
     } catch (error) {
         importError.value = error.response?.data?.message || 'Failed to upload and parse file.'
         importFile.value = null
@@ -575,7 +577,10 @@ const confirmImport = () => {
             <template #content>
                 <div class="flex flex-col gap-4">
                     <!-- Step 1: Upload -->
-                    <div v-if="!importPreviewData" 
+                <!-- Importerror -->
+                    <p v-if="importError" class="mt-4 text-sm text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 p-2 rounded w-full text-center">{{ importError }}</p>
+
+                    <div v-if="!importPreviewData"
                          @dragover="onDragOver"
                          @dragleave="onDragLeave"
                          @drop="onDrop"
@@ -597,7 +602,6 @@ const confirmImport = () => {
                             {{ importingFile ? 'Processing file...' : 'Select File' }}
                         </button>
                         
-                        <p v-if="importError" class="mt-4 text-sm text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 p-2 rounded w-full text-center">{{ importError }}</p>
                     </div>
                     
                     <!-- Step 2: Preview -->
@@ -607,6 +611,13 @@ const confirmImport = () => {
                             <div class="text-sm text-blue-800 dark:text-blue-300">
                                 <p class="font-medium">File successfully processed!</p>
                                 <p class="mt-1">Found <strong>{{ importPreviewData.length }}</strong> matched applicants ready to be tagged/updated.</p>
+                            </div>
+                        </div>
+
+                        <div v-if="importDuplicateCount > 0" class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-3">
+                            <FontAwesomeIcon icon="info-circle" class="text-blue-500 mt-0.5" />
+                            <div class="text-sm text-blue-800 dark:text-blue-300">
+                                <p>Found <strong>{{ importDuplicateCount }}</strong> duplicate reference number(s) in the uploaded file. Only the first occurrence of each will be imported.</p>
                             </div>
                         </div>
 
