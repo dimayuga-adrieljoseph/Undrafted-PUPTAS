@@ -689,12 +689,15 @@ watch([filterSchoolYear, filterBatchNumber, filterStatus], () => {
 }, { deep: true });
 
 const showSendEmailsConfirmModal = ref(false);
+const selectedPassersForModal = ref([]);
+const loadingModalPassers = ref(false);
 
 const selectedPassersList = computed(() => {
+    // Returns passers from the current page that are selected (used as fallback)
     return flatPassers.value.filter(p => selectedPassers.value.includes(p.test_passer_id));
 });
 
-const promptSendEmails = () => {
+const promptSendEmails = async () => {
     if (selectedPassers.value.length === 0) {
         show('Please select at least one passer first.', 'error');
         return;
@@ -719,6 +722,21 @@ const promptSendEmails = () => {
             show("Please set slot confirmation date and interview date for On Probation (Admission) template.", "error");
             return;
         }
+    }
+
+    // Fetch full passer data for ALL selected IDs (not just those on current page)
+    loadingModalPassers.value = true;
+    try {
+        const response = await axios.post('/test-passers/get-by-ids', {
+            ids: selectedPassers.value,
+        });
+        selectedPassersForModal.value = response.data.passers;
+    } catch (error) {
+        console.error('Failed to fetch selected passers:', error);
+        // Fallback: use whatever is on the current page
+        selectedPassersForModal.value = selectedPassersList.value;
+    } finally {
+        loadingModalPassers.value = false;
     }
 
     showSendEmailsConfirmModal.value = true;
@@ -2501,7 +2519,7 @@ const runBulkEnroll = async () => {
                     </div>
 
                     <!-- Passers List -->
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Selected Passers ({{ selectedPassersList.length }})</h3>
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Selected Passers ({{ selectedPassersForModal.length }})</h3>
                     <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 max-h-[40vh] overflow-y-auto">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
@@ -2513,7 +2531,7 @@ const runBulkEnroll = async () => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                <tr v-for="passer in selectedPassersList" :key="passer.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition">
+                                <tr v-for="passer in selectedPassersForModal" :key="passer.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition">
                                     <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-200 whitespace-nowrap">
                                         {{ passer.first_name }} {{ passer.surname }}
                                     </td>
