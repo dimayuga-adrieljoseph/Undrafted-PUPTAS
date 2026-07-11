@@ -23,7 +23,6 @@
     <table>
         <thead>
             <tr>
-                <th>Rank</th>
                 <th>Reference Number</th>
                 <th>Applicant Name</th>
                 <th>Email</th>
@@ -38,7 +37,6 @@
         <tbody>
             @foreach($applicants as $index => $applicant)
                 <tr>
-                    <td>{{ $applicant->waiver_rank ?? '-' }}</td>
                     <td>{{ $applicant->reference_number }}</td>
                     <td>{{ $applicant->surname }}, {{ $applicant->first_name }}</td>
                     <td>{{ $applicant->user?->email }}</td>
@@ -53,7 +51,7 @@
             
             @if(count($applicants) === 0)
                 <tr>
-                    <td colspan="10" style="text-align: center; color: #777;">No waiver applicants found.</td>
+                    <td colspan="9" style="text-align: center; color: #777;">No waiver applicants found.</td>
                 </tr>
             @endif
         </tbody>
