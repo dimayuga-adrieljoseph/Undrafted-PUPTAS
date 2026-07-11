@@ -479,6 +479,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
 Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
     Route::get('/test-passers', [TestPasserController::class, 'index'])->name('lists');
     Route::get('/test-passers/select-all-ids', [TestPasserController::class, 'selectAllIds'])->name('test-passers.select-all-ids');
+    Route::post('/test-passers/get-by-ids', [TestPasserController::class, 'getByIds'])->name('test-passers.get-by-ids');
     Route::post('/test-passers/send-emails', [TestPasserController::class, 'sendEmails']);
 
     Route::get('/admin/sar-generations', [TestPasserController::class, 'getSarGenerations'])->name('admin.sar-generations');
