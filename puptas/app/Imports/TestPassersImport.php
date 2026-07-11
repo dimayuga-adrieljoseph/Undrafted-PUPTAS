@@ -107,14 +107,13 @@ class TestPassersImport implements ToModel, WithHeadingRow
             ]);
         }
 
-        // Without email, check for duplicates by reference_number if available
+        // Without email, check for duplicates by reference_number globally
+        // (DB has a global UNIQUE constraint on reference_number)
         if ($referenceNumber) {
-            $exists = TestPasser::whereNull('email')
-                ->where('reference_number', $referenceNumber)
-                ->exists();
+            $exists = TestPasser::where('reference_number', $referenceNumber)->exists();
             if ($exists) {
                 $this->skippedCount++;
-                $this->skippedReasons[] = "Duplicate reference_number (no email): {$referenceNumber}";
+                $this->skippedReasons[] = "Duplicate reference_number: {$referenceNumber}";
                 return null;
             }
         }
