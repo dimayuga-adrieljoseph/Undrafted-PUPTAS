@@ -64,7 +64,8 @@ const templateTypes = [
     { label: 'Custom', value: 'custom' },
     { label: 'Waitlisted (Below Cut-off)', value: 'waitlisted-cutoff' },
     { label: 'Waitlisted (Limited Slots)', value: 'waitlisted-limited' },
-    { label: 'On Probation', value: 'on-probation' }
+    { label: 'On Probation', value: 'on-probation' },
+    { label: 'On Probation (Admission)', value: 'on-probation-admission' },
 ];
 
 // All existing functionality remains exactly the same
@@ -212,6 +213,12 @@ const waitlistInterviewDate = ref("2026-07-01");
 const onProbationDate = ref("2026-07-15");
 const onProbationTime = ref("13:00");
 
+// On Probation (Admission) — new template with slot/interview dates
+const onProbationAdmissionSelectedProgram = ref(null);
+const onProbationAdmissionSlotDate = ref("2026-07-13");
+const onProbationAdmissionInterviewDate = ref("2026-07-21");
+const onProbationAdmissionDocumentDate = ref("2026-07-22"); // DOMT document submission date
+
 const formatTimeForEmail = (timeString) => {
     if (!timeString) return '';
     const [hours, minutes] = timeString.split(':');
@@ -272,6 +279,49 @@ const formatDateForEmail = (dateString) => {
     const monthStr = date.toLocaleString('en-US', { month: 'long' });
     const weekdayStr = date.toLocaleString('en-US', { weekday: 'long' });
     return `${monthStr} ${date.getDate()}, ${date.getFullYear()} (${weekdayStr})`;
+};
+
+const getOnProbationAdmissionTemplateHTML = () => {
+    const slotDateStr = formatDateForEmail(onProbationAdmissionSlotDate.value);
+    const interviewDateStr = formatDateForEmail(onProbationAdmissionInterviewDate.value);
+    const documentDateStr = formatDateForEmail(onProbationAdmissionDocumentDate.value);
+
+    const selectedProgram = onProbationAdmissionSelectedProgram.value != null
+        ? props.programs?.find(p => p.id == onProbationAdmissionSelectedProgram.value)
+        : null;
+
+    const programName = selectedProgram?.name ?? '(program)';
+    const isDOMT = programName.toLowerCase().includes('diploma in office management');
+
+    // DOMT: hyperlinked name + extra description; others: plain bold
+    const programLine = isDOMT
+        ? `<a href="https://drive.google.com/drive/folders/1piiovl2Mq4d3-AZmnDorWodFHaNrE0dD" target="_blank" rel="noopener noreferrer" style="color:#1155cc;font-weight:bold;">Diploma in Office Management Technology</a>, a 3-year diploma program that can be ladderized into the <strong>Bachelor of Science in Office Administration (BSOA)</strong> after completion`
+        : `<strong>${programName}</strong>`;
+
+    // DOMT uses a separate document submission date; others reuse interviewDateStr
+    const officialDateStr = isDOMT ? documentDateStr : interviewDateStr;
+
+    return `
+<div style="background:#f3f4f6;padding:40px 20px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Dear <strong><span style="color:#cc0000;font-weight:bold;">{{firstname}} {{surname}}</span></strong>,</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">We are pleased to inform you that you qualify to be admitted to <strong>PUP-Taguig Campus</strong> for the First Semester of the Academic Year 2026-2027 for the ${programLine}.</p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">You may view the Admission Requirements here: <a href="${props.admissionCriteriaUrl}" target="_blank" rel="noopener noreferrer" style="color:#1155cc;font-weight:bold;">2026 PUP-Taguig Campus Admission Criteria</a></p>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Please confirm your slot until <strong>${slotDateStr}</strong>. You will receive an email containing the SAR-Form 1, your interview schedule; and other essential enrollment documents. Please print in long-sized bond paper, sign, and bring them on the day of the interview on <strong>${interviewDateStr}</strong>. We encourage you to come on this date as enrollment is on a first-come, first-served basis. However, you will not be accommodated for enrollment if you come earlier than this date.</p>
+    <div style="text-align:center;margin:24px 0;">
+      <a
+        href="${props.registrationUrl}"
+        style="display:inline-block;padding:12px 24px;background:#9E122C;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;font-size:14px;"
+      >
+        CLICK TO CONFIRM YOUR INTERVIEW SLOT
+      </a>
+    </div>
+    <p style="margin:0 0 12px 0;font-size:14px;color:#222;line-height:1.6;">Your enrollment will only be considered official when you bring the original documents with three photocopies on <strong>${officialDateStr}</strong> and pass the interview. Incomplete requirements will not be entertained, so please ensure that you have all the necessary documents.</p>
+    <p style="margin:0 0 24px 0;font-size:14px;color:#222;line-height:1.6;">Once again, congratulations on this remarkable achievement, and we look forward to meeting you at PUP-Taguig Campus!</p>
+    <p style="margin:0 0 4px 0;font-size:14px;color:#222;">Regards,</p>
+    <p style="margin:0;font-size:14px;font-weight:bold;color:#222;">PUP-Taguig Admission and Registration Office</p>
+  </div>
+</div>`.trim();
 };
 
 const getWaitlistedLimitedTemplateHTML = () => {
@@ -374,6 +424,19 @@ const formattedOnProbationTemplatePreview = computed(() => {
         .replace(/\{\{firstname\}\}/g, 'John')
         .replace(/\{\{surname\}\}/g, 'Doe')
         .replace(/\{\{program_offered\}\}/g, programOffered);
+});
+
+const formattedOnProbationAdmissionTemplatePreview = computed(() => {
+    // Depend on reactive state so preview updates live
+    void onProbationAdmissionSelectedProgram.value;
+    void onProbationAdmissionSlotDate.value;
+    void onProbationAdmissionInterviewDate.value;
+    void onProbationAdmissionDocumentDate.value;
+
+    return getOnProbationAdmissionTemplateHTML()
+        .replace(/\{\{firstname\}\} \{\{surname\}\}/g, '<span style="color:#cc0000;font-weight:bold;">John Doe</span>')
+        .replace(/\{\{firstname\}\}/g, 'John')
+        .replace(/\{\{surname\}\}/g, 'Doe');
 });
 
 const flatPassers = ref([]);
@@ -626,12 +689,15 @@ watch([filterSchoolYear, filterBatchNumber, filterStatus], () => {
 }, { deep: true });
 
 const showSendEmailsConfirmModal = ref(false);
+const selectedPassersForModal = ref([]);
+const loadingModalPassers = ref(false);
 
 const selectedPassersList = computed(() => {
+    // Returns passers from the current page that are selected (used as fallback)
     return flatPassers.value.filter(p => selectedPassers.value.includes(p.test_passer_id));
 });
 
-const promptSendEmails = () => {
+const promptSendEmails = async () => {
     if (selectedPassers.value.length === 0) {
         show('Please select at least one passer first.', 'error');
         return;
@@ -647,6 +713,30 @@ const promptSendEmails = () => {
             show("Please set reporting date and time for On Probation template.", "error");
             return;
         }
+    } else if (templateType.value === 'on-probation-admission') {
+        if (!onProbationAdmissionSelectedProgram.value) {
+            show("Please select a program for On Probation (Admission) template.", "error");
+            return;
+        }
+        if (!onProbationAdmissionSlotDate.value || !onProbationAdmissionInterviewDate.value) {
+            show("Please set slot confirmation date and interview date for On Probation (Admission) template.", "error");
+            return;
+        }
+    }
+
+    // Fetch full passer data for ALL selected IDs (not just those on current page)
+    loadingModalPassers.value = true;
+    try {
+        const response = await axios.post('/test-passers/get-by-ids', {
+            ids: selectedPassers.value,
+        });
+        selectedPassersForModal.value = response.data.passers;
+    } catch (error) {
+        console.error('Failed to fetch selected passers:', error);
+        // Fallback: use whatever is on the current page
+        selectedPassersForModal.value = selectedPassersList.value;
+    } finally {
+        loadingModalPassers.value = false;
     }
 
     showSendEmailsConfirmModal.value = true;
@@ -666,6 +756,8 @@ const executeSendEmails = async () => {
         messageHtml = getWaitlistedLimitedTemplateHTML();
     } else if (templateType.value === 'on-probation') {
         messageHtml = getOnProbationTemplateHTML();
+    } else if (templateType.value === 'on-probation-admission') {
+        messageHtml = getOnProbationAdmissionTemplateHTML();
     } else {
         const quillContainer = document.querySelector(".ql-editor");
         messageHtml = quillContainer
@@ -681,6 +773,15 @@ const executeSendEmails = async () => {
     } else if (templateType.value === 'on-probation') {
         if (!onProbationDate.value || !onProbationTime.value) {
             show("Please set reporting date and time for On Probation template.", "error");
+            return;
+        }
+    } else if (templateType.value === 'on-probation-admission') {
+        if (!onProbationAdmissionSelectedProgram.value) {
+            show("Please select a program for On Probation (Admission) template.", "error");
+            return;
+        }
+        if (!onProbationAdmissionSlotDate.value || !onProbationAdmissionInterviewDate.value) {
+            show("Please set slot confirmation date and interview date for On Probation (Admission) template.", "error");
             return;
         }
     }
@@ -1639,6 +1740,71 @@ const runBulkEnroll = async () => {
                             </div>
                         </div>
 
+                        <!-- On Probation (Admission) Template Preview -->
+                        <div v-else-if="templateType === 'on-probation-admission'" class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
+                                Select Available Program
+                            </label>
+                            <div class="grid grid-cols-1 gap-2 mb-6 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900">
+                                <label v-for="program in programs" :key="program.id" class="flex items-start space-x-3 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        :value="program.id"
+                                        v-model="onProbationAdmissionSelectedProgram"
+                                        name="onProbationAdmissionProgram"
+                                        class="mt-0.5 h-4 w-4 border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:bg-gray-800"
+                                    >
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ program.name }}</span>
+                                </label>
+                                <div v-if="!programs || programs.length === 0" class="text-sm text-gray-500 italic">No programs available.</div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                        Slot Confirmation Deadline
+                                    </label>
+                                    <input
+                                        type="date"
+                                        v-model="onProbationAdmissionSlotDate"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                        Interview Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        v-model="onProbationAdmissionInterviewDate"
+                                        class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- DOMT only: separate document submission date -->
+                            <div
+                                v-if="onProbationAdmissionSelectedProgram && programs.find(p => p.id == onProbationAdmissionSelectedProgram)?.name?.toLowerCase().includes('diploma in office management')"
+                                class="mb-6"
+                            >
+                                <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
+                                    Document Submission Date <span class="text-xs text-gray-400">(DOMT only)</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    v-model="onProbationAdmissionDocumentDate"
+                                    class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                                />
+                            </div>
+
+                            <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
+                                On Probation (Admission) Template Preview
+                            </label>
+                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
+                                <div v-html="formattedOnProbationAdmissionTemplatePreview"></div>
+                            </div>
+                        </div>
+
                         <!-- Default Template Preview -->
                         <div v-else class="mt-4">
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
@@ -2327,6 +2493,21 @@ const runBulkEnroll = async () => {
                                     <span>{{ formatDateForEmail(onProbationDate) }} at {{ formatTimeForEmail(onProbationTime) }}</span>
                                 </div>
                             </template>
+
+                            <template v-if="templateType === 'on-probation-admission'">
+                                <div class="flex">
+                                    <span class="font-medium w-40 text-gray-800 dark:text-gray-200">Program:</span>
+                                    <span>{{ onProbationAdmissionSelectedProgram ? programs.find(p => p.id == onProbationAdmissionSelectedProgram)?.name : 'None selected' }}</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="font-medium w-40 text-gray-800 dark:text-gray-200">Slot Confirmation:</span>
+                                    <span>{{ formatDateForEmail(onProbationAdmissionSlotDate) }}</span>
+                                </div>
+                                <div class="flex">
+                                    <span class="font-medium w-40 text-gray-800 dark:text-gray-200">Interview Date:</span>
+                                    <span>{{ formatDateForEmail(onProbationAdmissionInterviewDate) }}</span>
+                                </div>
+                            </template>
                             
                             <template v-if="templateType === 'sar'">
                                 <div class="flex">
@@ -2338,7 +2519,7 @@ const runBulkEnroll = async () => {
                     </div>
 
                     <!-- Passers List -->
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Selected Passers ({{ selectedPassersList.length }})</h3>
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Selected Passers ({{ selectedPassersForModal.length }})</h3>
                     <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 max-h-[40vh] overflow-y-auto">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
@@ -2350,7 +2531,7 @@ const runBulkEnroll = async () => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                <tr v-for="passer in selectedPassersList" :key="passer.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition">
+                                <tr v-for="passer in selectedPassersForModal" :key="passer.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition">
                                     <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-200 whitespace-nowrap">
                                         {{ passer.first_name }} {{ passer.surname }}
                                     </td>

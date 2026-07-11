@@ -101,15 +101,24 @@ class AdmissionLogbookController extends Controller
             ->orderBy('updated_at', 'asc');
     }
 
+    public function getEntriesPaginated(int $step, string $date)
+    {
+        return $this->fetchEntriesQuery($this->getStage($step), $date)
+            ->paginate(10)
+            ->through(fn ($e) => $this->buildEntry($e, $step));
+    }
+
     public function index(Request $request)
     {
         $step = (int) $request->input('step', 1);
         $date = $request->input('date', today()->toDateString());
 
-        // Use pagination for the UI to prevent slow loading
-        $paginator = $this->fetchEntriesQuery($this->getStage($step), $date)
-            ->paginate(10)
-            ->through(fn ($e) => $this->buildEntry($e, $step));
+        $paginator = $this->getEntriesPaginated($step, $date);
+
+        // axios fetch from unified reports page — return JSON
+        if ($request->wantsJson()) {
+            return response()->json($paginator);
+        }
 
         $programs = Program::orderBy('name')->get();
 

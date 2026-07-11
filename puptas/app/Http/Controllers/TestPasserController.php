@@ -234,6 +234,36 @@ class TestPasserController extends Controller
         return response()->json(['ids' => $ids]);
     }
 
+    /**
+     * Return full passer records for a given list of IDs.
+     * Used by the confirmation modal so it can show all selected passers
+     * regardless of which page is currently visible.
+     */
+    public function getByIds(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $ids = $request->input('ids', []);
+
+        if (empty($ids)) {
+            return response()->json(['passers' => []]);
+        }
+
+        $passers = TestPasser::whereIn('test_passer_id', $ids)
+            ->select([
+                'test_passer_id',
+                'surname',
+                'first_name',
+                'middle_name',
+                'email',
+                'school_year',
+                'batch_number',
+                'passer_status_id',
+                'waiver_program_offering',
+            ])
+            ->get();
+
+        return response()->json(['passers' => $passers]);
+    }
+
     public function sendEmails(Request $request)
     {
         $passerIds = $request->input('passer_ids');
@@ -265,6 +295,7 @@ class TestPasserController extends Controller
             'waitlisted-cutoff' => 'waitlisted',
             'waitlisted-limited' => 'waitlisted',
             'on-probation' => 'on_probation',
+            'on-probation-admission' => 'on_probation',
         ];
         $emailType = $emailTypeMap[$templateType] ?? 'pupcet_result';
 

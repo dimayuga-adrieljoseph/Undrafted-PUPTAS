@@ -20,42 +20,55 @@ class ControlListController extends Controller
     public function index(Request $request)
     {
         $programs = Program::orderBy('name')->get();
-        $applicants = null;
+        $programId = $request->input('program_id');
+        $applicants = $programId ? $this->getApplicantsPaginated($programId) : null;
 
-        if ($request->filled('program_id')) {
-            $programId = $request->input('program_id');
-            
-            $applicants = Application::with(['user.grades', 'processes'])
-                ->where('program_id', $programId)
-                ->has('user')
-                ->whereHas('processes', function ($q) {
-                    $q->where('stage', 'interviewer')
-                      ->where('status', 'completed')
-                      ->whereIn('action', ['passed', 'accepted']);
-                })
-                ->orderBy('created_at')
-                ->paginate(10)
-                ->through(fn($app) => [
-                    'id'          => $app->id,
-                    'full_name'   => strtoupper(
-                        trim(($app->user->lastname ?? '') . ', ' .
-                        ($app->user->firstname ?? '') . ' ' .
-                        ($app->user->middlename ?? ''))
-                    ),
-                    'strand'      => $app->user->strand ?? '',
-                    'gwa'         => $app->user->grades->g12_first_sem ?? '',
-                    'math_gwa'    => $app->user->grades->mathematics ?? '',
-                    'science_gwa' => $app->user->grades->science ?? '',
-                    'english_gwa' => $app->user->grades->english ?? '',
-                    'notes'       => explode(' - Notes: ', $app->processes->where('stage', 'interviewer')->where('status', 'completed')->whereIn('action', ['passed', 'accepted'])->last()?->reviewer_notes ?? '')[1] ?? '',
-                ])->withQueryString();
+        if ($request->wantsJson()) {
+            return response()->json([
+                'programs'   => $programs,
+                'applicants' => $applicants,
+            ]);
         }
 
         return Inertia::render('Reports/ControlList', [
             'programs'          => $programs,
             'applicants'        => $applicants,
-            'selectedProgramId' => $request->input('program_id', ''),
+            'selectedProgramId' => $programId ?? '',
         ]);
+    }
+
+    public function getApplicantsPaginated(int|string $programId)
+    {
+        return Application::with(['user.grades', 'processes'])
+            ->where('program_id', $programId)
+            ->has('user')
+            ->whereHas('processes', fn ($q) =>
+                $q->where('stage', 'interviewer')
+                  ->where('status', 'completed')
+                  ->whereIn('action', ['passed', 'accepted'])
+            )
+            ->orderBy('created_at')
+            ->paginate(10)
+            ->through(fn ($app) => $this->mapApplicant($app))
+            ->withQueryString();
+    }
+
+    public function mapApplicant(Application $app): array
+    {
+        return [
+            'id'          => $app->id,
+            'full_name'   => strtoupper(
+                trim(($app->user->lastname ?? '') . ', ' .
+                ($app->user->firstname ?? '') . ' ' .
+                ($app->user->middlename ?? ''))
+            ),
+            'strand'      => $app->user->strand ?? '',
+            'gwa'         => $app->user->grades->g12_first_sem ?? '',
+            'math_gwa'    => $app->user->grades->mathematics ?? '',
+            'science_gwa' => $app->user->grades->science ?? '',
+            'english_gwa' => $app->user->grades->english ?? '',
+            'notes'       => explode(' - Notes: ', $app->processes->where('stage', 'interviewer')->where('status', 'completed')->whereIn('action', ['passed', 'accepted'])->last()?->reviewer_notes ?? '')[1] ?? '',
+        ];
     }
 
     public function export(Request $request)

@@ -120,28 +120,14 @@ export function useSidebarNavigation() {
             key: 'reports',
             label: 'Reports',
             icon: 'chart-pie',
-            activeRoutes: ['reports.index', 'reports.logbook.index', 'reports.control-list.index', 'email-tracking.index'],
+            activeRoutes: ['reports.index', 'email-tracking.index'],
             children: computed(() => [
                 {
-                    key: 'applicant-reports',
-                    label: 'Applicant Reports',
+                    key: 'reports',
+                    label: 'Reports',
                     icon: 'chart-line',
                     route: 'reports.index',
                     activeRoutes: ['reports.index'],
-                },
-                {
-                    key: 'logbook',
-                    label: 'Official Logbook',
-                    icon: 'file-alt',
-                    route: 'reports.logbook.index',
-                    activeRoutes: ['reports.logbook.index'],
-                },
-                {
-                    key: 'control-list',
-                    label: 'Control List',
-                    icon: 'clipboard-list',
-                    route: 'reports.control-list.index',
-                    activeRoutes: ['reports.control-list.index'],
                 },
                 // Role-gated: Admin or Superadmin only
                 ...(isAdminOrSuperAdmin.value ? [
