@@ -265,6 +265,7 @@ class TestPasserController extends Controller
             'waitlisted-cutoff' => 'waitlisted',
             'waitlisted-limited' => 'waitlisted',
             'on-probation' => 'on_probation',
+            'on-probation-admission' => 'on_probation',
         ];
         $emailType = $emailTypeMap[$templateType] ?? 'pupcet_result';
 
