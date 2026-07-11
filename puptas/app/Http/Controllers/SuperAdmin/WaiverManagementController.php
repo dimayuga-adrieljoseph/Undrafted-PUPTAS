@@ -386,7 +386,7 @@ class WaiverManagementController extends Controller
                 fputcsv($file, [
                     $applicant->reference_number,
                     $applicant->surname . ', ' . $applicant->first_name,
-                    $applicant->user?->email ?? 'N/A',
+                    $applicant->email ?? $applicant->user?->email ?? 'N/A',
                     $applicant->strand ?? 'N/A',
                     $applicant->pupcet_total_score ?? 'N/A',
                     $applicant->waiver_list_status ?? 'N/A',

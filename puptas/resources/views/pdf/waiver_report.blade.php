@@ -39,7 +39,7 @@
                 <tr>
                     <td>{{ $applicant->reference_number }}</td>
                     <td>{{ $applicant->surname }}, {{ $applicant->first_name }}</td>
-                    <td>{{ $applicant->user?->email }}</td>
+                    <td>{{ $applicant->email ?? $applicant->user?->email ?? 'N/A' }}</td>
                     <td>{{ $applicant->strand ?? 'N/A' }}</td>
                     <td>{{ $applicant->pupcet_total_score ?? 'N/A' }}</td>
                     <td>{{ $applicant->waiver_list_status ?? 'N/A' }}</td>
