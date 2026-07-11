@@ -62,6 +62,23 @@ class TestPassersImport implements ToModel, WithHeadingRow
             $schoolName = trim((string)$row['school']);
         }
 
+        // ── Centralized duplicate check ──────────────────────────────
+        // Both `email` and `reference_number` have global UNIQUE
+        // constraints at the database level.  We must check BOTH before
+        // inserting, regardless of whether the row has an email or not.
+        if ($email && TestPasser::where('email', $email)->exists()) {
+            $this->skippedCount++;
+            $this->skippedReasons[] = "Duplicate email: {$email}";
+            return null;
+        }
+
+        if ($referenceNumber && TestPasser::where('reference_number', $referenceNumber)->exists()) {
+            $this->skippedCount++;
+            $this->skippedReasons[] = "Duplicate reference_number: {$referenceNumber}";
+            return null;
+        }
+
+        // ── Build payload ────────────────────────────────────────────
         $userId = null;
         $status = 'pending';
 
@@ -72,68 +89,30 @@ class TestPassersImport implements ToModel, WithHeadingRow
                 $userId = $user->id;
                 $status = 'registered';
 
-                // Update applicantProfile's student_number if profile and reference number are present
+                // Update applicantProfile's student_number if profile
+                // and reference number are present
                 if ($user->applicantProfile && $referenceNumber) {
                     $user->applicantProfile->update(['student_number' => $referenceNumber]);
                 }
             }
         }
 
-        // If email is present, check for duplicates — skip if already exists
-        if ($email) {
-            $exists = TestPasser::where('email', $email)->exists();
-            if ($exists) {
-                $this->skippedCount++;
-                $this->skippedReasons[] = "Duplicate email: {$email}";
-                return null;
-            }
-
-            $this->importedCount++;
-
-            return TestPasser::create([
-                'surname' => isset($row['surname']) ? trim((string)$row['surname']) : null,
-                'first_name' => $firstName,
-                'middle_name' => isset($row['middle_name']) ? trim((string)$row['middle_name']) : null,
-                'strand' => isset($row['strand']) ? trim((string)$row['strand']) : null,
-                'shs_school' => $schoolName,
-                'email' => $email,
-                'reference_number' => $referenceNumber,
-                'pupcet_total_score' => $pupcetScore,
-                'batch_number' => $this->batch,
-                'school_year' => $this->schoolYear,
-                'user_id' => $userId,
-                'status' => $status,
-                'passer_status_id' => $this->passerStatusId,
-            ]);
-        }
-
-        // Without email, check for duplicates by reference_number globally
-        // (DB has a global UNIQUE constraint on reference_number)
-        if ($referenceNumber) {
-            $exists = TestPasser::where('reference_number', $referenceNumber)->exists();
-            if ($exists) {
-                $this->skippedCount++;
-                $this->skippedReasons[] = "Duplicate reference_number: {$referenceNumber}";
-                return null;
-            }
-        }
-
         $this->importedCount++;
 
         return TestPasser::create([
-            'surname' => isset($row['surname']) ? trim((string)$row['surname']) : null,
-            'first_name' => $firstName,
-            'middle_name' => isset($row['middle_name']) ? trim((string)$row['middle_name']) : null,
-            'strand' => isset($row['strand']) ? trim((string)$row['strand']) : null,
-            'shs_school' => $schoolName,
-            'email' => null,
-            'reference_number' => $referenceNumber,
+            'surname'            => isset($row['surname']) ? trim((string)$row['surname']) : null,
+            'first_name'         => $firstName,
+            'middle_name'        => isset($row['middle_name']) ? trim((string)$row['middle_name']) : null,
+            'strand'             => isset($row['strand']) ? trim((string)$row['strand']) : null,
+            'shs_school'         => $schoolName,
+            'email'              => $email,
+            'reference_number'   => $referenceNumber,
             'pupcet_total_score' => $pupcetScore,
-            'batch_number' => $this->batch,
-            'school_year' => $this->schoolYear,
-            'user_id' => null,
-            'status' => 'pending',
-            'passer_status_id' => $this->passerStatusId,
+            'batch_number'       => $this->batch,
+            'school_year'        => $this->schoolYear,
+            'user_id'            => $userId,
+            'status'             => $status,
+            'passer_status_id'   => $this->passerStatusId,
         ]);
     }
 
