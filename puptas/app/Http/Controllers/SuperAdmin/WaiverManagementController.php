@@ -190,12 +190,22 @@ class WaiverManagementController extends Controller
             
             $matched = [];
             $unmatched = [];
+            $seenRefs = [];
+            $duplicateCount = 0;
 
             foreach ($sheet as $row) {
                 // Ensure we have a reference number
                 if (empty($row['reference_number'])) continue;
 
                 $refNo = trim($row['reference_number']);
+
+                // Skip duplicate reference numbers within the sheet
+                if (in_array($refNo, $seenRefs, true)) {
+                    $duplicateCount++;
+                    continue;
+                }
+                $seenRefs[] = $refNo;
+
                 $testPasser = TestPasser::with('user.currentApplication')
                     ->where('reference_number', $refNo)
                     ->first();
@@ -226,6 +236,7 @@ class WaiverManagementController extends Controller
             return response()->json([
                 'matched' => $matched,
                 'unmatched' => $unmatched,
+                'duplicate_count' => $duplicateCount,
             ]);
         } catch (\Exception $e) {
             Log::error('Waiver Excel Preview Error: ' . $e->getMessage());
