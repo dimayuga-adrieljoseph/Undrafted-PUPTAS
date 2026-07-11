@@ -12,6 +12,10 @@ const year = ref("");
 const customYear = ref("");
 const file = ref(null);
 const showDialog = ref(false);
+const showErrorDialog = ref(false);
+const errorTitle = ref("");
+const errorMessage = ref("");
+const errorDetails = ref([]);
 const yearOptions = ref([]);
 const passerStatus = ref("");
 const showStatusError = ref(false);
@@ -83,19 +87,52 @@ const handleUploadError = (error) => {
   const status = error.response?.status;
   const data = error.response?.data;
   const message = data?.message || data?.error || null;
+
   if (status === 403) {
-    alert("Upload failed: You do not have permission to upload passers.");
+    errorTitle.value = "Permission Denied";
+    errorMessage.value = "You do not have permission to upload passers. Please contact an administrator.";
+    errorDetails.value = [];
   } else if (status === 422) {
+    // Case 1: All dupes — show as a "warning" rather than an error
     if (data?.imported_count !== undefined && data?.skipped_count !== undefined) {
-      alert(`Upload complete but no new records were added.\n\nSkipped: ${data.skipped_count} duplicate(s).\n\nAll entries in this file already exist in the system.`);
-    } else {
-      const errors = data?.errors;
-      const detail = errors ? Object.values(errors).flat().join("\n") : message;
-      alert("Upload failed: " + (detail || "Validation error."));
+      importedCount.value = data.imported_count;
+      skippedCount.value = data.skipped_count;
+      showDialog.value = true;
+      return;
     }
+    // Case 2: Validation errors from the backend
+    if (data?.errors) {
+      errorTitle.value = "Upload Validation Failed";
+      if (Array.isArray(data.errors)) {
+        errorMessage.value = "The following issues were found in your upload:";
+        errorDetails.value = data.errors;
+      } else {
+        errorMessage.value = "The following issues were found in your upload:";
+        errorDetails.value = Object.values(data.errors).flat();
+      }
+    } else if (message) {
+      errorTitle.value = "Upload Failed";
+      errorMessage.value = message;
+      errorDetails.value = [];
+    } else {
+      errorTitle.value = "Upload Failed";
+      errorMessage.value = "Validation error. Please check your file and try again.";
+      errorDetails.value = [];
+    }
+  } else if (status === 500) {
+    errorTitle.value = "Server Error";
+    errorMessage.value = message || "The server encountered an error while processing your file.";
+    errorDetails.value = data?.errors || [];
   } else {
-    alert("Upload failed." + (message ? " " + message : ""));
+    errorTitle.value = "Upload Failed";
+    errorMessage.value = message || "An unexpected error occurred. Please try again.";
+    errorDetails.value = [];
   }
+  showErrorDialog.value = true;
+};
+
+const closeErrorDialog = () => {
+  showErrorDialog.value = false;
 };
 
 const redirectToEmails = () => {
@@ -230,8 +267,8 @@ const redirectToEmails = () => {
           class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
         >
           <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-96 text-center shadow-xl border border-gray-100 dark:border-gray-700">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Success!</h2>
-            <p class="text-gray-600 dark:text-gray-300 mb-4">Your records have been uploaded successfully.</p>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Upload Complete</h2>
+            <p class="text-gray-600 dark:text-gray-300 mb-4">Your file has been processed.</p>
             <div class="text-left bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4 space-y-1">
               <p class="text-gray-700 dark:text-gray-200"><span class="font-medium">Imported:</span> {{ importedCount }} records</p>
               <p class="text-gray-700 dark:text-gray-200"><span class="font-medium">Skipped (duplicates):</span> {{ skippedCount }} records</p>
@@ -241,6 +278,48 @@ const redirectToEmails = () => {
               class="px-6 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition dark:bg-gray-900 dark:text-gray-900 dark:hover:bg-gray-800"
             >
               OK
+            </button>
+          </div>
+        </div>
+      </transition>
+
+      <!-- Error Dialog Modal -->
+      <transition name="fade">
+        <div
+          v-if="showErrorDialog"
+          class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+        >
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-xl border border-red-200 dark:border-red-800">
+            <div class="flex items-start gap-3 mb-4">
+              <div class="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ errorTitle }}</h2>
+                <p class="text-gray-600 dark:text-gray-300 mt-1">{{ errorMessage }}</p>
+              </div>
+            </div>
+            <div v-if="errorDetails.length > 0" class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4 max-h-48 overflow-y-auto">
+              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                <li v-for="(detail, idx) in errorDetails" :key="idx">{{ detail }}</li>
+              </ul>
+            </div>
+            <div class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-3 mb-4">
+              <p class="text-sm text-yellow-800 dark:text-yellow-200 font-medium">How to fix:</p>
+              <ul class="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300 mt-1 space-y-1">
+                <li>Ensure your Excel file has the correct column headers: <strong>firstname, surname, email, reference_number, pupcet_score, strand, school_name</strong></li>
+                <li>If you're uploading the same file again, duplicate entries will be automatically skipped.</li>
+                <li>Make sure the file format is <strong>.xlsx, .xls, or .csv</strong></li>
+                <li>If the error persists, check the skipped reasons in the success dialog or review your file for missing required fields.</li>
+              </ul>
+            </div>
+            <button
+              @click="closeErrorDialog"
+              class="w-full px-6 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition"
+            >
+              Close
             </button>
           </div>
         </div>
