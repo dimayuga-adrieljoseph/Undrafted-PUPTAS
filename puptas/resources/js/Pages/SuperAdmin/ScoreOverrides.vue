@@ -839,91 +839,48 @@ const getStatusBadgeClass = (statusId) => {
 
         <!-- Duplicate Email Warning Modal -->
         <Teleport to="body">
-            <Transition
-                enter-active-class="transition duration-200 ease-out"
-                enter-from-class="opacity-0 scale-95"
-                enter-to-class="opacity-100 scale-100"
-                leave-active-class="transition duration-150 ease-in"
-                leave-from-class="opacity-100 scale-100"
-                leave-to-class="opacity-0 scale-95"
-            >
-                <div v-if="duplicateWarning" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <!-- Backdrop -->
-                    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="skipDuplicate"></div>
+            <div v-if="duplicateWarning" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <!-- Backdrop -->
+                <div class="absolute inset-0 bg-black/40" @click="skipDuplicate"></div>
 
-                    <!-- Modal -->
-                    <div class="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-amber-200 dark:border-amber-700 overflow-hidden">
-                        <!-- Top accent bar -->
-                        <div class="h-1.5 w-full bg-gradient-to-r from-amber-400 to-orange-400"></div>
+                <!-- Modal -->
+                <div class="relative w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
 
-                        <div class="p-6">
-                            <!-- Icon + Title -->
-                            <div class="flex items-start gap-4 mb-5">
-                                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-                                    <FontAwesomeIcon icon="exclamation-triangle" class="w-5 h-5 text-amber-500" />
-                                </div>
-                                <div>
-                                    <h3 class="text-base font-bold text-gray-900 dark:text-white">Email Already Allowed</h3>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                                        This email already has an active override entry.
-                                    </p>
-                                </div>
-                            </div>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Email already has an override</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        <span class="font-medium text-gray-700 dark:text-gray-200 break-all">{{ duplicateWarning.applicant.email }}</span>
+                        ({{ duplicateWarning.applicant.surname }}, {{ duplicateWarning.applicant.first_name }}) is already allowed until
+                        <span class="font-medium text-gray-700 dark:text-gray-200">{{ duplicateWarning.existingEntry.expires_at ? new Date(duplicateWarning.existingEntry.expires_at).toLocaleString() : 'never' }}</span>.
+                        Proceeding will update their expiry to the new date you set.
+                    </p>
 
-                            <!-- Details -->
-                            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-5 space-y-2">
-                                <div>
-                                    <p class="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wide">Email</p>
-                                    <p class="text-sm font-bold text-gray-900 dark:text-white mt-0.5 break-all">{{ duplicateWarning.applicant.email }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wide">Applicant</p>
-                                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-0.5">{{ duplicateWarning.applicant.surname }}, {{ duplicateWarning.applicant.first_name }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wide">Current Expiry</p>
-                                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-0.5">
-                                        {{ duplicateWarning.existingEntry.expires_at ? new Date(duplicateWarning.existingEntry.expires_at).toLocaleString() : 'Never expires' }}
-                                    </p>
-                                </div>
-                            </div>
+                    <p v-if="duplicateBulkQueue.length > 0" class="text-xs text-gray-400 dark:text-gray-500 mb-4">
+                        {{ duplicateBulkQueue.length }} more duplicate(s) remaining.
+                    </p>
 
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">
-                                Proceeding will add this applicant to the selection. When you submit, their expiry date will be <strong class="text-gray-900 dark:text-white">updated</strong> to the new date you set.
-                            </p>
-
-                            <!-- Bulk queue info -->
-                            <p v-if="duplicateBulkQueue.length > 0" class="text-xs text-gray-500 dark:text-gray-400 mb-4 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
-                                <strong>{{ duplicateBulkQueue.length }}</strong> more duplicate(s) in queue.
-                            </p>
-
-                            <!-- Actions -->
-                            <div class="flex flex-col sm:flex-row gap-2 justify-end">
-                                <!-- Skip all (only when bulk) -->
-                                <button
-                                    v-if="duplicateBulkQueue.length > 0"
-                                    @click="skipAllDuplicates"
-                                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition font-medium"
-                                >
-                                    Skip All Duplicates
-                                </button>
-                                <button
-                                    @click="skipDuplicate"
-                                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition font-medium"
-                                >
-                                    Skip
-                                </button>
-                                <button
-                                    @click="proceedAddDespiteDuplicate"
-                                    class="px-4 py-2 text-sm rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold transition shadow-sm"
-                                >
-                                    Proceed &amp; Update Expiry
-                                </button>
-                            </div>
-                        </div>
+                    <div class="flex items-center justify-end gap-2">
+                        <button
+                            v-if="duplicateBulkQueue.length > 0"
+                            @click="skipAllDuplicates"
+                            class="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+                        >
+                            Skip all
+                        </button>
+                        <button
+                            @click="skipDuplicate"
+                            class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                        >
+                            Skip
+                        </button>
+                        <button
+                            @click="proceedAddDespiteDuplicate"
+                            class="px-3 py-1.5 text-sm rounded-lg bg-[#9E122C] hover:bg-[#800000] text-white font-medium transition"
+                        >
+                            Proceed & Update
+                        </button>
                     </div>
                 </div>
-            </Transition>
+            </div>
         </Teleport>
     </SuperAdminLayout>
 </template>
