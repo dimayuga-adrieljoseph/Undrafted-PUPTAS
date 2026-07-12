@@ -709,6 +709,7 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/score-overrides/search-email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'searchEmail'])->name('score-overrides.search-email');
     Route::post('/admin/score-overrides/email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'storeEmail'])->name('score-overrides.store-email');
     Route::delete('/admin/score-overrides/email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'destroyEmail'])->name('score-overrides.destroy-email');
+    Route::get('/admin/score-overrides/probation-applicants', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'getProbationApplicants'])->name('score-overrides.probation-applicants');
 
     // Global System Settings (Deprecated in favor of CutoffSettings)
     // Removed SystemSettingsController routes

@@ -14,11 +14,12 @@ import {
     faTrash,
     faUserCheck,
     faChevronRight,
+    faChevronDown,
     faInfoCircle
 } from '@fortawesome/free-solid-svg-icons'
 import axios from 'axios'
 
-library.add(faSearch, faCheckCircle, faExclamationCircle, faExclamationTriangle, faTrash, faUserCheck, faChevronRight, faInfoCircle)
+library.add(faSearch, faCheckCircle, faExclamationCircle, faExclamationTriangle, faTrash, faUserCheck, faChevronRight, faChevronDown, faInfoCircle)
 
 const props = defineProps({
     allowed_scores: {
@@ -98,6 +99,54 @@ const isSearchingEmail = ref(false)
 const searchEmailError = ref(null)
 const selectedEmails = ref(JSON.parse(sessionStorage.getItem('score_overrides_selected_emails') || '[]'))
 
+const probationApplicants = ref([])
+const isLoadingProbation = ref(false)
+const probationError = ref(null)
+const showProbationPanel = ref(false)
+
+const loadProbationApplicants = async () => {
+    if (showProbationPanel.value && probationApplicants.value.length > 0) {
+        showProbationPanel.value = !showProbationPanel.value
+        return
+    }
+    
+    showProbationPanel.value = !showProbationPanel.value
+    if (!showProbationPanel.value) return
+
+    isLoadingProbation.value = true
+    probationError.value = null
+
+    try {
+        const response = await axios.get(route('score-overrides.probation-applicants'))
+        probationApplicants.value = response.data.applicants
+        if (probationApplicants.value.length === 0) {
+            probationError.value = "No applicants found on probation."
+        }
+    } catch (error) {
+        probationError.value = error.response?.data?.message || "An error occurred while fetching."
+    } finally {
+        isLoadingProbation.value = false
+    }
+}
+
+const addAllProbationApplicants = () => {
+    const duplicates = []
+    probationApplicants.value.forEach(applicant => {
+        if (selectedEmails.value.find(e => e.email === applicant.email)) return
+        const existing = isAlreadyAllowed(applicant.email)
+        if (existing) {
+            duplicates.push({ applicant, existingEntry: existing })
+        } else {
+            selectedEmails.value.push(applicant)
+        }
+    })
+    if (duplicates.length > 0) {
+        const first = duplicates.shift()
+        duplicateWarning.value = { applicant: first.applicant, existingEntry: first.existingEntry }
+        duplicateBulkQueue.value = duplicates
+    }
+}
+
 watch(selectedEmails, (newVal) => {
     sessionStorage.setItem('score_overrides_selected_emails', JSON.stringify(newVal))
 }, { deep: true })
@@ -127,15 +176,80 @@ const handleEmailSearch = async () => {
     }
 }
 
+// Duplicate email warning state
+const duplicateWarning = ref(null) // { applicant, existingEntry } | null
+const duplicateBulkQueue = ref([])  // for bulk "add all" duplicates
+
+const isAlreadyAllowed = (email) => {
+    return props.allowed_emails.find(e => e.email.toLowerCase() === email.toLowerCase()) || null
+}
+
 const addToSelection = (applicant) => {
-    if (!selectedEmails.value.find(e => e.email === applicant.email)) {
-        selectedEmails.value.push(applicant)
+    // Already in staging — ignore
+    if (selectedEmails.value.find(e => e.email === applicant.email)) return
+
+    const existing = isAlreadyAllowed(applicant.email)
+    if (existing) {
+        // Show duplicate warning for this single applicant
+        duplicateWarning.value = { applicant, existingEntry: existing }
+        return
     }
+    selectedEmails.value.push(applicant)
+}
+
+const proceedAddDespiteDuplicate = () => {
+    if (duplicateWarning.value) {
+        if (!selectedEmails.value.find(e => e.email === duplicateWarning.value.applicant.email)) {
+            selectedEmails.value.push(duplicateWarning.value.applicant)
+        }
+        duplicateWarning.value = null
+    }
+    // Drain any remaining bulk-queue duplicates
+    if (duplicateBulkQueue.value.length > 0) {
+        const next = duplicateBulkQueue.value.shift()
+        duplicateWarning.value = { applicant: next.applicant, existingEntry: next.existingEntry }
+    }
+}
+
+const skipDuplicate = () => {
+    duplicateWarning.value = null
+    if (duplicateBulkQueue.value.length > 0) {
+        const next = duplicateBulkQueue.value.shift()
+        duplicateWarning.value = { applicant: next.applicant, existingEntry: next.existingEntry }
+    }
+}
+
+const skipAllDuplicates = () => {
+    duplicateWarning.value = null
+    duplicateBulkQueue.value = []
 }
 
 const removeFromSelection = (email) => {
     selectedEmails.value = selectedEmails.value.filter(e => e.email !== email)
 }
+
+const allowedEmailsSearch = ref('')
+const allowedEmailsCurrentPage = ref(1)
+const allowedEmailsItemsPerPage = 5
+
+const filteredAllowedEmails = computed(() => {
+    if (!allowedEmailsSearch.value) return props.allowed_emails;
+    const query = allowedEmailsSearch.value.toLowerCase();
+    return props.allowed_emails.filter(item => item.email.toLowerCase().includes(query));
+});
+
+const paginatedAllowedEmails = computed(() => {
+    const start = (allowedEmailsCurrentPage.value - 1) * allowedEmailsItemsPerPage;
+    return filteredAllowedEmails.value.slice(start, start + allowedEmailsItemsPerPage);
+});
+
+const allowedEmailsTotalPages = computed(() => {
+    return Math.ceil(filteredAllowedEmails.value.length / allowedEmailsItemsPerPage);
+});
+
+watch(allowedEmailsSearch, () => {
+    allowedEmailsCurrentPage.value = 1;
+});
 
 const addEmailForm = useForm({
     emails: [],
@@ -414,6 +528,83 @@ const getStatusBadgeClass = (statusId) => {
             <div v-if="activeTab === 'email'" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Left Column: Search & Add -->
                 <div class="lg:col-span-2 space-y-6">
+
+                    <!-- Probation Bulk Add Panel -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-[#9E122C]/20 dark:border-[#9E122C]/40 overflow-hidden">
+                        <div 
+                            @click="loadProbationApplicants"
+                            class="flex items-center justify-between p-4 bg-red-50/50 dark:bg-[#9E122C]/10 cursor-pointer hover:bg-red-50 dark:hover:bg-[#9E122C]/20 transition-colors"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-red-100 dark:border-red-900/30">
+                                    <FontAwesomeIcon icon="user-check" class="w-5 h-5 text-[#9E122C]" />
+                                </div>
+                                <div>
+                                    <h2 class="text-base font-bold text-gray-900 dark:text-white">On Probation Applicants</h2>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Bulk load and select all applicants with "On Probation" status</p>
+                                </div>
+                            </div>
+                            <FontAwesomeIcon 
+                                :icon="showProbationPanel ? 'chevron-down' : 'chevron-right'" 
+                                class="w-4 h-4 text-gray-400 transition-transform duration-200"
+                            />
+                        </div>
+
+                        <div v-show="showProbationPanel" class="p-5 border-t border-[#9E122C]/10 dark:border-[#9E122C]/20 bg-white dark:bg-gray-800">
+                            <div v-if="isLoadingProbation" class="flex justify-center py-8">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9E122C]"></div>
+                            </div>
+                            
+                            <div v-else-if="probationError" class="text-center py-6 text-sm text-gray-500">
+                                {{ probationError }}
+                            </div>
+                            
+                            <div v-else-if="probationApplicants.length > 0">
+                                <div class="flex items-center justify-between mb-4">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Found <strong class="text-[#9E122C]">{{ probationApplicants.length }}</strong> applicants
+                                    </span>
+                                    <button 
+                                        @click="addAllProbationApplicants"
+                                        class="px-4 py-2 bg-[#9E122C]/10 text-[#9E122C] hover:bg-[#9E122C]/20 rounded-lg text-sm font-semibold transition flex items-center gap-2"
+                                    >
+                                        <FontAwesomeIcon icon="check-circle" class="w-4 h-4" />
+                                        Select All {{ probationApplicants.length }} Applicants
+                                    </button>
+                                </div>
+                                
+                                <div class="max-h-60 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <table class="w-full text-sm text-left">
+                                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700/50 dark:text-gray-300 sticky top-0 shadow-sm z-10">
+                                            <tr>
+                                                <th scope="col" class="px-4 py-2.5">Email / Name</th>
+                                                <th scope="col" class="px-4 py-2.5 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="applicant in probationApplicants" :key="applicant.test_passer_id" class="bg-white dark:bg-gray-800 border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                                <td class="px-4 py-2">
+                                                    <div class="font-medium text-gray-900 dark:text-white">{{ applicant.email }}</div>
+                                                    <div class="text-xs text-gray-500">{{ applicant.surname }}, {{ applicant.first_name }}</div>
+                                                </td>
+                                                <td class="px-4 py-2 text-right">
+                                                    <button 
+                                                        v-if="!selectedEmails.find(e => e.email === applicant.email)"
+                                                        @click="addToSelection(applicant)"
+                                                        class="px-3 py-1 bg-[#9E122C]/10 text-[#9E122C] hover:bg-[#9E122C]/20 rounded-md text-xs font-semibold transition"
+                                                    >
+                                                        Add
+                                                    </button>
+                                                    <span v-else class="text-xs text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-md border border-green-200 dark:border-green-800">Selected</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Find Applicants by Name or Email</h2>
                         
@@ -535,8 +726,23 @@ const getStatusBadgeClass = (statusId) => {
 
                 <!-- Right Column: Allowed Emails List -->
                 <div class="lg:col-span-1 space-y-6">
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Allowed Emails</h2>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col min-h-[500px]">
+                        <div class="flex flex-col mb-4 gap-3">
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Allowed Emails</h2>
+                            
+                            <!-- Search Input -->
+                            <div class="relative" v-if="allowed_emails.length > 0">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                                    <FontAwesomeIcon icon="search" class="w-3.5 h-3.5 text-gray-400" />
+                                </div>
+                                <input 
+                                    v-model="allowedEmailsSearch"
+                                    type="text" 
+                                    placeholder="Search emails..."
+                                    class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-1 focus:ring-[#9E122C] focus:border-[#9E122C] outline-none transition"
+                                />
+                            </div>
+                        </div>
                         
                         <div v-if="allowed_emails.length === 0" class="text-center py-8">
                             <div class="text-gray-400 mb-2">
@@ -545,31 +751,58 @@ const getStatusBadgeClass = (statusId) => {
                             <p class="text-sm text-gray-500 dark:text-gray-400">No email overrides active.</p>
                         </div>
                         
-                        <ul v-else class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                            <li v-for="item in allowed_emails" :key="item.email" class="flex flex-col p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="flex flex-col break-all">
-                                        <span class="text-sm font-bold text-gray-900 dark:text-white">
-                                            {{ item.email }}
-                                        </span>
-                                        <span v-if="item.expires_at" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            Expires: {{ new Date(item.expires_at).toLocaleString() }}
-                                        </span>
-                                        <span v-else class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            Never expires
-                                        </span>
+                        <div v-else-if="filteredAllowedEmails.length === 0" class="text-center py-6 text-sm text-gray-500">
+                            No emails match your search.
+                        </div>
+                        
+                        <div v-else class="flex flex-col flex-1">
+                            <ul class="space-y-3 flex-1 overflow-y-auto pr-2">
+                                <li v-for="item in paginatedAllowedEmails" :key="item.email" class="flex flex-col p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex flex-col break-all">
+                                            <span class="text-sm font-bold text-gray-900 dark:text-white">
+                                                {{ item.email }}
+                                            </span>
+                                            <span v-if="item.expires_at" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                Expires: {{ new Date(item.expires_at).toLocaleString() }}
+                                            </span>
+                                            <span v-else class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                Never expires
+                                            </span>
+                                        </div>
+                                        <button 
+                                            @click="confirmRemoveEmail(item.email)"
+                                            :disabled="deleteEmailForm.processing"
+                                            class="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition ml-2 flex-shrink-0"
+                                            title="Revoke Access"
+                                        >
+                                            <FontAwesomeIcon icon="trash" class="w-4 h-4" />
+                                        </button>
                                     </div>
-                                    <button 
-                                        @click="confirmRemoveEmail(item.email)"
-                                        :disabled="deleteEmailForm.processing"
-                                        class="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg transition ml-2 flex-shrink-0"
-                                        title="Revoke Access"
-                                    >
-                                        <FontAwesomeIcon icon="trash" class="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </li>
-                        </ul>
+                                </li>
+                            </ul>
+
+                            <!-- Pagination Controls -->
+                            <div v-if="allowedEmailsTotalPages > 1" class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                                <button 
+                                    @click="allowedEmailsCurrentPage--"
+                                    :disabled="allowedEmailsCurrentPage === 1"
+                                    class="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Prev
+                                </button>
+                                <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                                    Page {{ allowedEmailsCurrentPage }} of {{ allowedEmailsTotalPages }}
+                                </span>
+                                <button 
+                                    @click="allowedEmailsCurrentPage++"
+                                    :disabled="allowedEmailsCurrentPage === allowedEmailsTotalPages"
+                                    class="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -603,5 +836,51 @@ const getStatusBadgeClass = (statusId) => {
                 </div>
             </template>
         </ChangesConfirmationModal>
+
+        <!-- Duplicate Email Warning Modal -->
+        <Teleport to="body">
+            <div v-if="duplicateWarning" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <!-- Backdrop -->
+                <div class="absolute inset-0 bg-black/40" @click="skipDuplicate"></div>
+
+                <!-- Modal -->
+                <div class="relative w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Email already has an override</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        <span class="font-medium text-gray-700 dark:text-gray-200 break-all">{{ duplicateWarning.applicant.email }}</span>
+                        ({{ duplicateWarning.applicant.surname }}, {{ duplicateWarning.applicant.first_name }}) is already allowed until
+                        <span class="font-medium text-gray-700 dark:text-gray-200">{{ duplicateWarning.existingEntry.expires_at ? new Date(duplicateWarning.existingEntry.expires_at).toLocaleString() : 'never' }}</span>.
+                        Proceeding will update their expiry to the new date you set.
+                    </p>
+
+                    <p v-if="duplicateBulkQueue.length > 0" class="text-xs text-gray-400 dark:text-gray-500 mb-4">
+                        {{ duplicateBulkQueue.length }} more duplicate(s) remaining.
+                    </p>
+
+                    <div class="flex items-center justify-end gap-2">
+                        <button
+                            v-if="duplicateBulkQueue.length > 0"
+                            @click="skipAllDuplicates"
+                            class="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+                        >
+                            Skip all
+                        </button>
+                        <button
+                            @click="skipDuplicate"
+                            class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                        >
+                            Skip
+                        </button>
+                        <button
+                            @click="proceedAddDespiteDuplicate"
+                            class="px-3 py-1.5 text-sm rounded-lg bg-[#9E122C] hover:bg-[#800000] text-white font-medium transition"
+                        >
+                            Proceed & Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </SuperAdminLayout>
 </template>
