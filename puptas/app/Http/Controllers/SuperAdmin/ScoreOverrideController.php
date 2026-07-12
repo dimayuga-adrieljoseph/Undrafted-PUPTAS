@@ -170,4 +170,20 @@ class ScoreOverrideController extends Controller
 
         return redirect()->back()->with('success', "Email $email has been removed from allowed registration.");
     }
+
+    /**
+     * Fetch all applicants with on_probation status.
+     */
+    public function getProbationApplicants()
+    {
+        $applicants = TestPasser::whereHas('passerStatus', function ($query) {
+            $query->where('status', 'on_probation');
+        })
+        ->with(['passerStatus'])
+        ->get(['test_passer_id', 'reference_number', 'email', 'first_name', 'surname', 'middle_name', 'status', 'passer_status_id']);
+
+        return response()->json([
+            'applicants' => $applicants
+        ]);
+    }
 }
