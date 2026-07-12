@@ -130,11 +130,21 @@ const loadProbationApplicants = async () => {
 }
 
 const addAllProbationApplicants = () => {
+    const duplicates = []
     probationApplicants.value.forEach(applicant => {
-        if (!selectedEmails.value.find(e => e.email === applicant.email)) {
+        if (selectedEmails.value.find(e => e.email === applicant.email)) return
+        const existing = isAlreadyAllowed(applicant.email)
+        if (existing) {
+            duplicates.push({ applicant, existingEntry: existing })
+        } else {
             selectedEmails.value.push(applicant)
         }
     })
+    if (duplicates.length > 0) {
+        const first = duplicates.shift()
+        duplicateWarning.value = { applicant: first.applicant, existingEntry: first.existingEntry }
+        duplicateBulkQueue.value = duplicates
+    }
 }
 
 watch(selectedEmails, (newVal) => {
@@ -166,10 +176,52 @@ const handleEmailSearch = async () => {
     }
 }
 
+// Duplicate email warning state
+const duplicateWarning = ref(null) // { applicant, existingEntry } | null
+const duplicateBulkQueue = ref([])  // for bulk "add all" duplicates
+
+const isAlreadyAllowed = (email) => {
+    return props.allowed_emails.find(e => e.email.toLowerCase() === email.toLowerCase()) || null
+}
+
 const addToSelection = (applicant) => {
-    if (!selectedEmails.value.find(e => e.email === applicant.email)) {
-        selectedEmails.value.push(applicant)
+    // Already in staging — ignore
+    if (selectedEmails.value.find(e => e.email === applicant.email)) return
+
+    const existing = isAlreadyAllowed(applicant.email)
+    if (existing) {
+        // Show duplicate warning for this single applicant
+        duplicateWarning.value = { applicant, existingEntry: existing }
+        return
     }
+    selectedEmails.value.push(applicant)
+}
+
+const proceedAddDespiteDuplicate = () => {
+    if (duplicateWarning.value) {
+        if (!selectedEmails.value.find(e => e.email === duplicateWarning.value.applicant.email)) {
+            selectedEmails.value.push(duplicateWarning.value.applicant)
+        }
+        duplicateWarning.value = null
+    }
+    // Drain any remaining bulk-queue duplicates
+    if (duplicateBulkQueue.value.length > 0) {
+        const next = duplicateBulkQueue.value.shift()
+        duplicateWarning.value = { applicant: next.applicant, existingEntry: next.existingEntry }
+    }
+}
+
+const skipDuplicate = () => {
+    duplicateWarning.value = null
+    if (duplicateBulkQueue.value.length > 0) {
+        const next = duplicateBulkQueue.value.shift()
+        duplicateWarning.value = { applicant: next.applicant, existingEntry: next.existingEntry }
+    }
+}
+
+const skipAllDuplicates = () => {
+    duplicateWarning.value = null
+    duplicateBulkQueue.value = []
 }
 
 const removeFromSelection = (email) => {
@@ -784,5 +836,94 @@ const getStatusBadgeClass = (statusId) => {
                 </div>
             </template>
         </ChangesConfirmationModal>
+
+        <!-- Duplicate Email Warning Modal -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="opacity-0 scale-95"
+                enter-to-class="opacity-100 scale-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="opacity-100 scale-100"
+                leave-to-class="opacity-0 scale-95"
+            >
+                <div v-if="duplicateWarning" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <!-- Backdrop -->
+                    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="skipDuplicate"></div>
+
+                    <!-- Modal -->
+                    <div class="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-amber-200 dark:border-amber-700 overflow-hidden">
+                        <!-- Top accent bar -->
+                        <div class="h-1.5 w-full bg-gradient-to-r from-amber-400 to-orange-400"></div>
+
+                        <div class="p-6">
+                            <!-- Icon + Title -->
+                            <div class="flex items-start gap-4 mb-5">
+                                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                                    <FontAwesomeIcon icon="exclamation-triangle" class="w-5 h-5 text-amber-500" />
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-gray-900 dark:text-white">Email Already Allowed</h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                                        This email already has an active override entry.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Details -->
+                            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-5 space-y-2">
+                                <div>
+                                    <p class="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wide">Email</p>
+                                    <p class="text-sm font-bold text-gray-900 dark:text-white mt-0.5 break-all">{{ duplicateWarning.applicant.email }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wide">Applicant</p>
+                                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-0.5">{{ duplicateWarning.applicant.surname }}, {{ duplicateWarning.applicant.first_name }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wide">Current Expiry</p>
+                                    <p class="text-sm text-gray-700 dark:text-gray-300 mt-0.5">
+                                        {{ duplicateWarning.existingEntry.expires_at ? new Date(duplicateWarning.existingEntry.expires_at).toLocaleString() : 'Never expires' }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">
+                                Proceeding will add this applicant to the selection. When you submit, their expiry date will be <strong class="text-gray-900 dark:text-white">updated</strong> to the new date you set.
+                            </p>
+
+                            <!-- Bulk queue info -->
+                            <p v-if="duplicateBulkQueue.length > 0" class="text-xs text-gray-500 dark:text-gray-400 mb-4 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
+                                <strong>{{ duplicateBulkQueue.length }}</strong> more duplicate(s) in queue.
+                            </p>
+
+                            <!-- Actions -->
+                            <div class="flex flex-col sm:flex-row gap-2 justify-end">
+                                <!-- Skip all (only when bulk) -->
+                                <button
+                                    v-if="duplicateBulkQueue.length > 0"
+                                    @click="skipAllDuplicates"
+                                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition font-medium"
+                                >
+                                    Skip All Duplicates
+                                </button>
+                                <button
+                                    @click="skipDuplicate"
+                                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition font-medium"
+                                >
+                                    Skip
+                                </button>
+                                <button
+                                    @click="proceedAddDespiteDuplicate"
+                                    class="px-4 py-2 text-sm rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold transition shadow-sm"
+                                >
+                                    Proceed &amp; Update Expiry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
     </SuperAdminLayout>
 </template>
