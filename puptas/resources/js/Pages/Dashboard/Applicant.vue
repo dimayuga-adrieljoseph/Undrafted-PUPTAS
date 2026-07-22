@@ -94,13 +94,11 @@ const enrollmentInfo = computed(() => {
     }
   }
 
-  const stageDesc = currentStageLabel ? `Currently at: ${currentStageLabel} stage.` : null;
-
   // ── Terminal enrollment states ───────────────────────────────────────────
   const enrollmentMap = {
     officially_enrolled: {
       label: 'Officially Enrolled',
-      description: stageDesc ?? 'You are officially enrolled. Welcome!',
+      description: 'You are officially enrolled. Welcome!',
       icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
       color: 'text-green-600 dark:text-green-400',
       bg: 'bg-green-50 dark:bg-green-400/10',
@@ -109,7 +107,7 @@ const enrollmentInfo = computed(() => {
     },
     waitlisted: {
       label: 'Waitlisted',
-      description: stageDesc ?? "You are on the waitlist. We'll notify you when a slot opens.",
+      description: "You are on the waitlist. We'll notify you when a slot opens.",
       icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
       color: 'text-orange-600 dark:text-orange-400',
       bg: 'bg-orange-50 dark:bg-orange-400/10',
@@ -118,7 +116,7 @@ const enrollmentInfo = computed(() => {
     },
     temporary: {
       label: 'Temporarily Enrolled',
-      description: stageDesc ?? 'Your enrollment is temporary pending final confirmation.',
+      description: 'Your enrollment is temporary pending final confirmation.',
       icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
       color: 'text-blue-600 dark:text-blue-400',
       bg: 'bg-blue-50 dark:bg-blue-400/10',
@@ -127,7 +125,7 @@ const enrollmentInfo = computed(() => {
     },
     not_enrolled: {
       label: 'Not Enrolled',
-      description: stageDesc ?? 'Your application has not yet led to enrollment.',
+      description: 'Your application has not yet led to enrollment.',
       icon: 'M6 18L18 6M6 6l12 12',
       color: 'text-red-600 dark:text-red-400',
       bg: 'bg-red-50 dark:bg-red-400/10',
@@ -140,7 +138,7 @@ const enrollmentInfo = computed(() => {
   // ── Derive from application status + current stage ────────────────────────
   if (appS === 'approved') return {
     label: 'Application Approved',
-    description: stageDesc ?? 'Your application has been approved. Await enrollment confirmation.',
+    description: 'Your application has been approved. Await enrollment confirmation.',
     icon: 'M5 13l4 4L19 7',
     color: 'text-green-600 dark:text-green-400',
     bg: 'bg-green-50 dark:bg-green-400/10',
@@ -149,7 +147,7 @@ const enrollmentInfo = computed(() => {
   };
   if (appS === 'rejected') return {
     label: 'Application Rejected',
-    description: stageDesc ?? 'Your application was not accepted this cycle.',
+    description: 'Your application was not accepted this cycle.',
     icon: 'M6 18L18 6M6 6l12 12',
     color: 'text-red-600 dark:text-red-400',
     bg: 'bg-red-50 dark:bg-red-400/10',
@@ -158,7 +156,7 @@ const enrollmentInfo = computed(() => {
   };
   if (appS === 'returned') return {
     label: 'Documents Returned',
-    description: stageDesc ?? 'Some documents were returned for correction. Please review and re-upload.',
+    description: 'Some documents were returned for correction. Please review and re-upload.',
     icon: 'M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z',
     color: 'text-orange-600 dark:text-orange-400',
     bg: 'bg-orange-50 dark:bg-orange-400/10',
@@ -167,7 +165,7 @@ const enrollmentInfo = computed(() => {
   };
   if (appS === 'submitted') return {
     label: currentStageLabel ? `${currentStageLabel} Stage` : 'Under Review',
-    description: stageDesc ?? 'Your application has been submitted and is currently being reviewed.',
+    description: 'Your application has been submitted and is currently being reviewed.',
     icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z',
     color: 'text-blue-600 dark:text-blue-400',
     bg: 'bg-blue-50 dark:bg-blue-400/10',
@@ -185,7 +183,7 @@ const enrollmentInfo = computed(() => {
   };
   return {
     label: currentStageLabel ? `${currentStageLabel} Stage` : capitalize((s || appS || 'Pending').replace(/_/g, ' ')),
-    description: stageDesc ?? 'Your application is being processed.',
+    description: 'Your application is being processed.',
     icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
     color: 'text-yellow-600 dark:text-yellow-400',
     bg: 'bg-yellow-50 dark:bg-yellow-400/10',
