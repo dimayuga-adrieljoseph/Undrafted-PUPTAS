@@ -248,6 +248,8 @@ const formatFileKey = (key) => {
         file12: "Grade 12 Report Back",
         schoolId: "School ID",
         nonEnrollCert: "Certificate of Non-Enrollment",
+        fileCorFront: "COR Front",
+        fileCorBack: "COR Back",
         psa: "PSA Birth Certificate",
         goodMoral: "Good Moral Certificate",
         underOath: "Under Oath Document",

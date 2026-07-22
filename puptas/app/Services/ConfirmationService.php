@@ -94,7 +94,24 @@ class ConfirmationService
             'strand' => $profile->strand ?? null,
             'track' => $profile->track ?? null,
             'status' => $application?->status ?? null,
-            'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType),
+            'uploadedFiles' => (function () use ($files, $graduateType, $application) {
+                $medicalCompleted = $application && $application->processes()
+                    ->where('stage', 'medical')
+                    ->where('status', 'completed')
+                    ->exists();
+
+                $uploadedFiles = FileMapper::formatFilesForGraduateType($files, $graduateType, true, $medicalCompleted);
+                
+                if ($medicalCompleted) {
+                    if (!array_key_exists('fileCorFront', $uploadedFiles)) {
+                        $uploadedFiles['fileCorFront'] = null;
+                    }
+                    if (!array_key_exists('fileCorBack', $uploadedFiles)) {
+                        $uploadedFiles['fileCorBack'] = null;
+                    }
+                }
+                return $uploadedFiles;
+            })(),
             'processes' => $this->getApplicationProcesses($application),
             'enrollment_status' => $application?->enrollment_status ?? null,
             'program_id'       => $firstId,
@@ -107,6 +124,7 @@ class ConfirmationService
             'requires_admission_office' => (bool) ($application?->requires_admission_office ?? false),
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
             'show_f137_button'      => $this->shouldShowF137Button($application),
+            'show_cor_upload'       => $application && $application->processes()->where('stage', 'medical')->where('status', 'completed')->exists(),
             'cutoff' => (function () use ($user) {
                 $isOverrideAllowed = false;
                 $testPasser = \App\Models\TestPasser::where('user_id', $user->id)->first();
