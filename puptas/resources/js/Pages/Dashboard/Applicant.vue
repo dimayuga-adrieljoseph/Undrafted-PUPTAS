@@ -53,7 +53,7 @@ const enrollmentInfo = computed(() => {
     evaluator:          'Document Evaluator', // legacy key
     interviewer:        'Interviewer',
     medical:            'Medical',
-    record_staff:       'Registrar',
+    records:            'Registrar',
   };
 
   let currentStageLabel = null;
@@ -278,7 +278,7 @@ const PIPELINE_STAGES = [
   { key: 'grade_evaluator',    label: 'Grade Evaluator' },
   { key: 'interviewer',        label: 'Interviewer' },
   { key: 'medical',            label: 'Medical' },
-  { key: 'record_staff',       label: 'Registrar' },
+  { key: 'records',            label: 'Registrar' },
 ];
 
 // Merge fixed pipeline with live process data.
