@@ -219,6 +219,8 @@ const formatFileKey = (key) => {
     goodMoral: "Good Moral Certificate",
     underOath: "Under Oath Document",
     photo2x2: "2x2 Photo",
+    fileCorFront: "COR Front",
+    fileCorBack: "COR Back",
   };
   return map[key] || key;
 };

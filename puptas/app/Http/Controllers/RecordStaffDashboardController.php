@@ -285,7 +285,7 @@ class RecordStaffDashboardController extends Controller
 
             return response()->json([
                 'user' => $userData,
-                'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false),
+                'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false, true),
                 'lazyLoad' => false,
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -330,6 +330,14 @@ class RecordStaffDashboardController extends Controller
 
         if (!$medicalCompleted) {
             return response()->json(['message' => 'Medical assessment must be completed first'], 400);
+        }
+
+        // Check if COR is uploaded
+        $corFront = \App\Models\UserFile::where('user_id', (string) $application->user_id)->where('type', 'cor_front')->first();
+        $corBack = \App\Models\UserFile::where('user_id', (string) $application->user_id)->where('type', 'cor_back')->first();
+
+        if (!$corFront || !$corBack || !$corFront->isUploaded() || !$corBack->isUploaded()) {
+            return response()->json(['message' => 'Applicant must upload COR Front and Back before records processing.'], 400);
         }
 
         DB::beginTransaction();
@@ -528,6 +536,16 @@ class RecordStaffDashboardController extends Controller
         if (!$medicalCompleted) {
             return response()->json([
                 'message' => 'Cannot tag as officially enrolled. Medical process not completed.'
+            ], 403);
+        }
+
+        // Check if COR is uploaded
+        $corFront = \App\Models\UserFile::where('user_id', (string) $id)->where('type', 'cor_front')->first();
+        $corBack = \App\Models\UserFile::where('user_id', (string) $id)->where('type', 'cor_back')->first();
+
+        if (!$corFront || !$corBack || !$corFront->isUploaded() || !$corBack->isUploaded()) {
+            return response()->json([
+                'message' => 'Cannot tag as officially enrolled. Applicant must upload COR Front and Back.'
             ], 403);
         }
 
