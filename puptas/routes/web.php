@@ -745,29 +745,3 @@ Route::get('/callback-loading', [CallbackController::class, 'index']);
 
 // Public Admission Status Checker - No auth required
 Route::get('/admission-results', fn () => Inertia::render('Public/CheckStatus'))->name('public.check-status');
-
-// TODO: REMOVE THIS BEFORE DEPLOYING TO PRODUCTION!
-Route::get('/dev/bypass-medical/{userId}', function ($userId) {
-    if (!app()->environment('staging', 'local')) {
-        abort(403, 'Only available in staging/local environments.');
-    }
-
-    $application = \App\Models\Application::where('user_id', $userId)->firstOrFail();
-
-    // 1. Update the application status
-    $application->status = 'cleared_for_enrollment';
-    $application->enrollment_status = 'temporary';
-    $application->save();
-
-    // 2. Insert the completed medical process log so the system thinks they passed
-    \App\Models\ApplicationProcess::create([
-        'application_id' => $application->id,
-        'stage' => 'medical',
-        'status' => 'completed',
-        'action' => 'passed',
-        'performed_by' => 1, // Fallback Admin ID
-        'reviewer_notes' => 'Bypassed via staging dev route for testing.',
-    ]);
-
-    return "Success! User ID {$userId} has bypassed the medical stage. They should now be in the Records stage and can upload their COR.";
-});
