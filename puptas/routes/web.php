@@ -755,7 +755,7 @@ Route::get('/dev/bypass-medical/{userId}', function ($userId) {
     $application = \App\Models\Application::where('user_id', $userId)->firstOrFail();
 
     // 1. Update the application status
-    $application->status = 'medical_cleared';
+    $application->status = 'cleared_for_enrollment';
     $application->enrollment_status = 'temporary_enrolled';
     $application->save();
 
