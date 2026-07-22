@@ -58,12 +58,40 @@ const enrollmentInfo = computed(() => {
 
   let currentStageLabel = null;
   if (procs.length) {
-    // Find last active/problem step first
-    const active = [...procs].reverse().find(p =>
-      ['in_progress', 'returned', 'rejected'].includes(p.status) || p.action === 'rejected'
-    );
-    const last = active ?? [...procs].reverse().find(p => p.status === 'completed');
-    if (last) currentStageLabel = stageLabels[last.stage] ?? null;
+    const byStage = {};
+    for (const p of procs) {
+      const key = p.stage === 'evaluator' ? 'document_evaluator' : p.stage;
+      if (!byStage[key] || new Date(p.created_at) > new Date(byStage[key].created_at)) {
+        byStage[key] = p;
+      }
+    }
+    
+    const stageKeys = ['document_evaluator', 'grade_evaluator', 'interviewer', 'medical', 'records'];
+    let currentKey = null;
+    
+    for (let i = stageKeys.length - 1; i >= 0; i--) {
+      const key = stageKeys[i];
+      const proc = byStage[key];
+      if (proc && (['in_progress', 'returned', 'rejected'].includes(proc.status) || proc.action === 'rejected')) {
+        currentKey = key;
+        break;
+      }
+    }
+    
+    if (!currentKey) {
+      for (let i = stageKeys.length - 1; i >= 0; i--) {
+        const key = stageKeys[i];
+        const proc = byStage[key];
+        if (proc && proc.status === 'completed') {
+          currentKey = key;
+          break;
+        }
+      }
+    }
+    
+    if (currentKey) {
+      currentStageLabel = stageLabels[currentKey] ?? null;
+    }
   }
 
   const stageDesc = currentStageLabel ? `Currently at: ${currentStageLabel} stage.` : null;
@@ -297,23 +325,31 @@ const timelineSteps = computed(() => {
     }
   }
 
-  // Find the "current" stage: last in_progress/returned/rejected, else furthest reached
   let currentKey = null;
-  for (const p of [...procs].reverse()) {
-    if (['in_progress', 'returned', 'rejected'].includes(p.status) || p.action === 'rejected') {
-      currentKey = p.stage === 'evaluator' ? 'document_evaluator' : p.stage;
+  const stageKeys = PIPELINE_STAGES.map(s => s.key);
+  
+  for (let i = stageKeys.length - 1; i >= 0; i--) {
+    const key = stageKeys[i];
+    const proc = byStage[key];
+    if (proc && (['in_progress', 'returned', 'rejected'].includes(proc.status) || proc.action === 'rejected')) {
+      currentKey = key;
       break;
     }
   }
-  // If all completed and none active, mark the last completed one as current
-  if (!currentKey && procs.length) {
-    const last = [...procs].reverse().find(p => p.status === 'completed');
-    if (last) currentKey = last.stage === 'evaluator' ? 'document_evaluator' : last.stage;
+  
+  if (!currentKey) {
+    for (let i = stageKeys.length - 1; i >= 0; i--) {
+      const key = stageKeys[i];
+      const proc = byStage[key];
+      if (proc && proc.status === 'completed') {
+        currentKey = key;
+        break;
+      }
+    }
   }
 
   // Determine how far the pipeline has progressed
-  const stageKeys = PIPELINE_STAGES.map(s => s.key);
-  const reachedKeys = new Set(procs.map(p => p.stage));
+  const reachedKeys = new Set(procs.map(p => p.stage === 'evaluator' ? 'document_evaluator' : p.stage));
 
   return PIPELINE_STAGES.map((stage) => {
     const proc = byStage[stage.key] || null;
