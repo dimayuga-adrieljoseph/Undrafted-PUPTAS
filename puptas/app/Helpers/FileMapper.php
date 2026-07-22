@@ -37,6 +37,8 @@ class FileMapper
         'fileGoodMoral' => 'good_moral',
         'fileUnderOath' => 'under_oath',
         'filePhoto2x2'  => 'photo_2x2',
+        'fileCorFront'  => 'cor_front',
+        'fileCorBack'   => 'cor_back',
     ];
 
     /**
@@ -70,7 +72,7 @@ class FileMapper
      * @param bool $includeStatus
      * @return array
      */
-    public static function formatFilesForGraduateType(Collection $files, ?string $graduateType, bool $includeStatus = true): array
+    public static function formatFilesForGraduateType(Collection $files, ?string $graduateType, bool $includeStatus = true, bool $includeCor = false): array
     {
         $requiredKeys = self::REQUIRED_BY_GRADUATE_TYPE[$graduateType] ?? null;
 
@@ -81,9 +83,16 @@ class FileMapper
                 'fileCount' => $files->count(),
             ]);
             
+            // COR keys that should only be included when explicitly requested
+            $corKeys = ['fileCorFront', 'fileCorBack'];
+
             // Return all files that exist, using all possible keys from MAPPING
             $uploadedFiles = [];
             foreach (self::MAPPING as $apiKey => $databaseType) {
+                // Skip COR keys unless explicitly included
+                if (!$includeCor && in_array($apiKey, $corKeys, true)) {
+                    continue;
+                }
                 if (isset($files[$databaseType])) {
                     $uploadedFiles[$apiKey] = self::buildFilePayload($files[$databaseType], $includeStatus);
                 }
@@ -99,6 +108,15 @@ class FileMapper
                 : null;
         }
 
+        if ($includeCor) {
+            foreach (['fileCorFront', 'fileCorBack'] as $apiKey) {
+                $databaseType = self::MAPPING[$apiKey];
+                if (isset($files[$databaseType])) {
+                    $uploadedFiles[$apiKey] = self::buildFilePayload($files[$databaseType], $includeStatus);
+                }
+            }
+        }
+
         return $uploadedFiles;
     }
 
@@ -110,7 +128,7 @@ class FileMapper
      * @param string|null $graduateType
      * @return array
      */
-    public static function formatFilesForGraduateTypeMinimal(Collection $files, ?string $graduateType): array
+    public static function formatFilesForGraduateTypeMinimal(Collection $files, ?string $graduateType, bool $includeCor = false): array
     {
         $requiredKeys = self::REQUIRED_BY_GRADUATE_TYPE[$graduateType] ?? null;
 
@@ -139,6 +157,21 @@ class FileMapper
             }
         }
 
+        if ($includeCor) {
+            foreach (['fileCorFront', 'fileCorBack'] as $apiKey) {
+                $databaseType = self::MAPPING[$apiKey];
+                if (isset($files[$databaseType])) {
+                    $file = $files[$databaseType];
+                    $uploadedFiles[$apiKey] = [
+                        'status' => $file->status ?? 'pending',
+                        'comment' => $file->comment,
+                        'originalName' => self::sanitizeFilename($file->original_name),
+                        'hasFile' => true,
+                    ];
+                }
+            }
+        }
+
         return $uploadedFiles;
     }
 
@@ -162,8 +195,13 @@ class FileMapper
     public static function formatFiles(Collection $files, bool $includeStatus = true): array
     {
         $uploadedFiles = [];
+        // COR keys are only surfaced through explicit $includeCor paths
+        $corKeys = ['fileCorFront', 'fileCorBack'];
 
         foreach (self::MAPPING as $apiKey => $databaseType) {
+            if (in_array($apiKey, $corKeys, true)) {
+                continue;
+            }
             if (isset($files[$databaseType])) {
                 $file = $files[$databaseType];
                 $uploadedFiles[$apiKey] = self::buildFilePayload($file, $includeStatus);
@@ -185,8 +223,13 @@ class FileMapper
     public static function formatFilesUrls(Collection $files): array
     {
         $uploadedFiles = [];
+        // COR keys are only surfaced through explicit $includeCor paths
+        $corKeys = ['fileCorFront', 'fileCorBack'];
 
         foreach (self::MAPPING as $apiKey => $databaseType) {
+            if (in_array($apiKey, $corKeys, true)) {
+                continue;
+            }
             $uploadedFiles[$apiKey] = isset($files[$databaseType])
                 ? self::buildFilePayload($files[$databaseType])
                 : null;

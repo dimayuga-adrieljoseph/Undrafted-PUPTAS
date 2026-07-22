@@ -203,9 +203,13 @@ const downloadingSlip = ref(false);
 const slipDownloadError = ref('');
 const showSchedule = ref(false);
 
-// checks if all documents have been uploaded (i.e. all fileStatuses have a completed status with a url)
+// COR keys are post-medical requirements — excluded from pre-submission progress checks
+const COR_KEYS = ['fileCorFront', 'fileCorBack'];
+
+// checks if all pre-submission documents have been uploaded
 const allDocumentsUploaded = computed(() => {
-  const values = Object.values(fileStatuses.value);
+  const entries = Object.entries(fileStatuses.value).filter(([key]) => !COR_KEYS.includes(key));
+  const values = entries.map(([, v]) => v);
   return values.length > 0 && values.every(f => f?.url != null && f?.status !== 'uploading' && f?.status !== 'failed');
 });
 
@@ -214,13 +218,19 @@ const allDocumentsUploaded = computed(() => {
 // File statuses come directly from the backend
 const stepKeys = computed(() => Object.keys(fileStatuses.value));
 
+// Pre-submission document keys (excludes COR)
+const preSubmissionKeys = computed(() => stepKeys.value.filter(k => !COR_KEYS.includes(k)));
+
 const uploadedCount = computed(() => {
-  return Object.values(fileStatuses.value).filter(f => f?.url && f?.status !== 'uploading' && f?.status !== 'failed').length;
+  return preSubmissionKeys.value.filter(k => {
+    const f = fileStatuses.value[k];
+    return f?.url && f?.status !== 'uploading' && f?.status !== 'failed';
+  }).length;
 });
 
 const uploadProgressPercentage = computed(() => {
-  if (!stepKeys.value.length) return 0;
-  return (uploadedCount.value / stepKeys.value.length) * 100;
+  if (!preSubmissionKeys.value.length) return 0;
+  return (uploadedCount.value / preSubmissionKeys.value.length) * 100;
 });
 
 const formatKey = (key) => {
@@ -231,6 +241,8 @@ const formatKey = (key) => {
     file11: "Grade 11 Report Card (Back)",
     file12Front: "Grade 12 Report Card (Front)",
     file12: "Grade 12 Report Card (Back)",
+    fileCorFront: "Certificate of Registration (Front)",
+    fileCorBack: "Certificate of Registration (Back)",
   };
 
   return labels[key] || key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
