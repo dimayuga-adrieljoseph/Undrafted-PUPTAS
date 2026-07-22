@@ -756,7 +756,7 @@ Route::get('/dev/bypass-medical/{userId}', function ($userId) {
 
     // 1. Update the application status
     $application->status = 'cleared_for_enrollment';
-    $application->enrollment_status = 'temporary_enrolled';
+    $application->enrollment_status = 'temporary';
     $application->save();
 
     // 2. Insert the completed medical process log so the system thinks they passed
@@ -764,9 +764,9 @@ Route::get('/dev/bypass-medical/{userId}', function ($userId) {
         'application_id' => $application->id,
         'stage' => 'medical',
         'status' => 'completed',
-        'action' => 'cleared',
-        'reviewer_id' => 1, // Fallback Admin ID
-        'notes' => 'Bypassed via staging dev route for testing.',
+        'action' => 'passed',
+        'performed_by' => 1, // Fallback Admin ID
+        'reviewer_notes' => 'Bypassed via staging dev route for testing.',
     ]);
 
     return "Success! User ID {$userId} has bypassed the medical stage. They should now be in the Records stage and can upload their COR.";
