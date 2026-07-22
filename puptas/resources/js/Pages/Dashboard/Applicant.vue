@@ -206,6 +206,19 @@ const showSchedule = ref(false);
 // COR keys are post-medical requirements — excluded from pre-submission progress checks
 const COR_KEYS = ['fileCorFront', 'fileCorBack'];
 
+const needsCorUpload = computed(() => {
+  if (applicationStatus.value !== 'cleared_for_enrollment') return false;
+  if (enrollmentStatus.value === 'officially_enrolled') return false;
+  
+  const front = fileStatuses.value['fileCorFront'];
+  const back = fileStatuses.value['fileCorBack'];
+  
+  const frontNeedsUpload = !front?.url || front?.status === 'returned' || front?.status === 'rejected';
+  const backNeedsUpload = !back?.url || back?.status === 'returned' || back?.status === 'rejected';
+  
+  return frontNeedsUpload || backNeedsUpload;
+});
+
 // checks if all pre-submission documents have been uploaded
 const allDocumentsUploaded = computed(() => {
   const entries = Object.entries(fileStatuses.value).filter(([key]) => !COR_KEYS.includes(key));
@@ -772,6 +785,25 @@ onMounted(() => {
           </div>
           
          </div>
+
+        <!-- COR Upload Alert -->
+        <div v-if="needsCorUpload" class="bg-blue-50 dark:bg-blue-900/20 rounded-xl shadow-md border-l-4 border-blue-500 p-4 sm:p-6 mb-6">
+          <div class="flex items-start gap-3 sm:gap-4">
+            <div class="flex-shrink-0 mt-0.5">
+              <svg class="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base sm:text-xl font-bold text-blue-900 dark:text-blue-100 mb-1 sm:mb-2">
+                Action Required: Upload Certificate of Registration (COR)
+              </h3>
+              <p class="text-sm text-blue-800 dark:text-blue-200">
+                You have been cleared for enrollment! To complete your final registration, please scroll down to the documents section and upload clear photos of the <strong>Front and Back of your Certificate of Registration (COR)</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <!-- Promissory Note Alert -->
         <div v-if="requiresPromissoryNote" class="bg-orange-50 dark:bg-orange-900/20 rounded-xl shadow-md border-l-4 border-orange-500 p-4 sm:p-6">
