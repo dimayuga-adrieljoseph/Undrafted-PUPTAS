@@ -19,13 +19,8 @@ beforeEach(function () {
     PasserStatus::firstOrCreate(['id' => 3], ['status' => 'unqualified']);
 });
 
-it('defaults to the maximum school_year when no school_year filter is provided', function () {
-    // Create records with different school years
-    TestPasser::factory()->create(['school_year' => '2022-2023', 'batch_number' => '1']);
-    TestPasser::factory()->create(['school_year' => '2023-2024', 'batch_number' => '1']);
-    TestPasser::factory()->create(['school_year' => '2024-2025', 'batch_number' => '1']);
-
-    // Use reflection to call the private method
+it('returns null school_year when no school_year filter is provided and database is empty', function () {
+    // No records in the database
     $controller = app(TestPasserController::class);
     $method = new ReflectionMethod($controller, 'getDefaultFilters');
     $method->setAccessible(true);
@@ -33,7 +28,7 @@ it('defaults to the maximum school_year when no school_year filter is provided',
     $request = Request::create('/test-passers', 'GET', []);
     $result = $method->invoke($controller, $request);
 
-    expect($result['school_year'])->toBe('2024-2025');
+    expect($result['school_year'])->toBeNull();
 });
 
 it('uses the provided school_year when it is in the request', function () {
@@ -50,7 +45,7 @@ it('uses the provided school_year when it is in the request', function () {
     expect($result['school_year'])->toBe('2022-2023');
 });
 
-it('defaults to the first available batch_number for the resolved school_year', function () {
+it('defaults batch_number to "all" when not provided', function () {
     TestPasser::factory()->create(['school_year' => '2024-2025', 'batch_number' => '3']);
     TestPasser::factory()->create(['school_year' => '2024-2025', 'batch_number' => '1']);
     TestPasser::factory()->create(['school_year' => '2024-2025', 'batch_number' => '2']);
@@ -63,7 +58,7 @@ it('defaults to the first available batch_number for the resolved school_year', 
     $result = $method->invoke($controller, $request);
 
     expect($result['school_year'])->toBe('2024-2025');
-    expect($result['batch_number'])->toBe('1'); // first when ordered ascending
+    expect($result['batch_number'])->toBeNull(); // defaults to "all" in index(), null in getDefaultFilters
 });
 
 it('uses the provided batch_number when it is in the request', function () {

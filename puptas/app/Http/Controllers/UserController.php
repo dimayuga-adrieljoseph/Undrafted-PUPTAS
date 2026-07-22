@@ -17,6 +17,7 @@ use App\Rules\ValidationRules;
 use Inertia\Inertia;
 use App\Services\AuditLogService;
 use App\Services\UserService;
+use App\Helpers\FileMapper;
 
 class UserController extends Controller
 {
@@ -195,6 +196,8 @@ class UserController extends Controller
                     'original_name' => $f->original_name,
                     'status'        => $f->status,
                     'comment'       => $f->comment,
+                    'url'           => FileMapper::buildPreviewUrl($f),
+                    'isImage'       => str_starts_with(FileMapper::detectMimeType($f), 'image/'),
                     'created_at'    => $f->created_at,
                 ]);
 

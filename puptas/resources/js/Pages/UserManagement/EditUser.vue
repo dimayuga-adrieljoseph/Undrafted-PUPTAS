@@ -290,6 +290,27 @@ const enrollmentBadge = computed(() => {
 
 const docTypeLabels = { file10_front: 'Grade 10 Report Card (Front)', file10_back: 'Grade 10 Report Card (Back)', file11_front: 'Grade 11 Report Card (Front)', file11_back: 'Grade 11 Report Card (Back)', file12_front: 'Grade 12 Report Card (Front)', file12_back: 'Grade 12 Report Card (Back)', school_id: 'School ID', non_enroll_cert: 'Non-Enrollment Certificate', psa: 'PSA Birth Certificate', good_moral: 'Good Moral Certificate', under_oath: 'Under Oath Statement', photo_2x2: '2x2 Photo' };
 
+// ── Document Preview ─────────────────────────────────────────
+const showImageModal = ref(false);
+const previewSrc = ref("");
+
+const getFileUrl = (file) => file?.url || "";
+const hasImagePreview = (file) => Boolean(getFileUrl(file)) && file?.isImage !== false;
+
+const openImageModal = (file) => {
+    const src = getFileUrl(file);
+    if (!src || !hasImagePreview(file)) return;
+    previewSrc.value = src;
+    showImageModal.value = true;
+    document.body.style.overflow = 'hidden';
+};
+
+const closeImageModal = () => {
+    showImageModal.value = false;
+    previewSrc.value = "";
+    document.body.style.overflow = '';
+};
+
 const docStatusBadge = (status) => {
     const map = { pending: { label: 'Pending', cls: 'status-pending' }, approved: { label: 'Approved', cls: 'status-approved' }, returned: { label: 'Returned', cls: 'status-rejected' }, failed: { label: 'Failed', cls: 'status-rejected' }, uploading: { label: 'Uploading', cls: 'status-submitted' } };
     return map[status] ?? { label: status, cls: 'status-default' };
@@ -751,13 +772,6 @@ const submitPullout = () => {
                                     <div class="info-row"><dt>Graduate Type</dt><dd>{{ user.graduate_types?.[0]?.label || '—' }}</dd></div>
                                 </dl>
                             </div>
-                            <div class="card">
-                                <div class="card-header"><div class="card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></div><div><h3 class="card-title">Document Status</h3></div></div>
-                                <div class="chip-group">
-                                    <span v-for="ds in user.document_statuses" :key="ds.id" class="chip">{{ ds.document_status?.replace(/_/g, ' ') ?? ds.label ?? '—' }}</span>
-                                    <span v-if="!user.document_statuses?.length" class="empty-note">No status yet</span>
-                                </div>
-                            </div>
                             <div v-if="user.test_passer" class="card">
                                 <div class="card-header"><div class="card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93C9.33 17.79 7 14.5 7 11V7.18L12 5z"/></svg></div><div><h3 class="card-title">PUPCET Result</h3></div></div>
                                 <dl class="info-list">
@@ -888,7 +902,7 @@ const submitPullout = () => {
                                     <li>Medical &amp; Records stages → <strong>Deleted</strong></li>
                                     <li>
                                         <label class="flex items-center gap-2 cursor-pointer mt-2 text-gray-800 dark:text-gray-200">
-                                            <input type="checkbox" v-model="pulloutAddSlot" class="rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]">
+                                            <input type="checkbox" v-model="pulloutAddSlot" class="checkbox-brand rounded border-gray-300">
                                             <span><strong>+1 slot</strong> return to <strong>{{ user.current_application?.program?.name ?? user.program?.name ?? 'their program' }}</strong></span>
                                         </label>
                                     </li>
@@ -972,28 +986,36 @@ const submitPullout = () => {
                     <template v-if="user.files?.length">
                         <div class="doc-grid">
                             <div v-for="file in user.files" :key="file.id" class="doc-card">
-                                <div class="doc-card-top">
-                                    <div class="doc-icon shrink-0"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></div>
-                                    <div class="doc-meta"><p class="doc-type" :title="docTypeLabels[file.type] ?? file.type?.replace(/_/g, ' ') ?? 'Document'">{{ docTypeLabels[file.type] ?? file.type?.replace(/_/g, ' ') ?? 'Document' }}</p><p class="doc-filename" :title="file.original_name ?? '—'">{{ file.original_name ?? '—' }}</p></div>
-                                    <span :class="['status-badge', 'shrink-0', docStatusBadge(file.status).cls]">{{ docStatusBadge(file.status).label }}</span>
+                                <div class="doc-preview-area" @click="openImageModal(file)">
+                                    <img v-if="hasImagePreview(file)" :src="getFileUrl(file)" alt="Document preview" class="doc-preview-img" />
+                                    <div v-else class="doc-preview-placeholder">
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                                        <span>Click to view</span>
+                                    </div>
+                                </div>
+                                <div class="doc-meta">
+                                    <p class="doc-type" :title="docTypeLabels[file.type] ?? file.type?.replace(/_/g, ' ') ?? 'Document'">{{ docTypeLabels[file.type] ?? file.type?.replace(/_/g, ' ') ?? 'Document' }}</p>
+                                    <p class="doc-filename" :title="file.original_name ?? '—'">{{ file.original_name ?? '—' }}</p>
                                 </div>
                                 <div v-if="file.comment" class="doc-remark"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg><span>{{ file.comment }}</span></div>
                                 <p class="doc-date">Uploaded {{ file.created_at ? new Date(file.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' }}</p>
                             </div>
                         </div>
-REPLACE
-                        <div class="card summary-card card--wide">
-                            <div class="card-header"><div class="card-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg></div><h3 class="card-title">Upload Summary</h3></div>
-                            <div class="summary-grid">
-                                <div class="summary-stat summary-stat--neutral"><span class="summary-num">{{ user.files.length }}</span><span class="summary-label">Total Files</span></div>
-                                <div class="summary-stat summary-stat--green"><span class="summary-num">{{ user.files.filter(f => f.status === 'approved').length }}</span><span class="summary-label">Approved</span></div>
-                                <div class="summary-stat summary-stat--yellow"><span class="summary-num">{{ user.files.filter(f => f.status === 'pending').length }}</span><span class="summary-label">Pending</span></div>
-                                <div class="summary-stat summary-stat--red"><span class="summary-num">{{ user.files.filter(f => f.status === 'returned').length }}</span><span class="summary-label">Returned</span></div>
-                            </div>
-                        </div>
                     </template>
                     <div v-else class="empty-card"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg><p class="empty-card-title">No documents uploaded yet</p><p class="empty-card-sub">Documents will appear here once the applicant uploads their requirements.</p></div>
                 </div>
+
+                <!-- ── Image Preview Modal ────────────────────────── -->
+                <Teleport to="body">
+                    <div v-if="showImageModal" class="doc-preview-overlay" @click.self="closeImageModal">
+                        <div class="doc-preview-modal">
+                            <button class="doc-preview-close" @click="closeImageModal" title="Close">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                            <img :src="previewSrc" alt="Document Preview" class="doc-preview-full" />
+                        </div>
+                    </div>
+                </Teleport>
             </template>
 
             <!-- ══════════════════════════════════════════════════════ -->
@@ -1047,7 +1069,13 @@ REPLACE
 </template>
 
 <style scoped>
-:root { --brand: #9E122C; --brand-light: #c81e3d; --brand-pale: #fdf2f4; --brand-dim: rgba(158,18,44,.08); }
+:root, :deep(:root) { --brand: #9E122C; --brand-light: #c81e3d; --brand-pale: #fdf2f4; --brand-dim: rgba(158,18,44,.08); }
+.profile-root { --brand: #9E122C; --brand-light: #c81e3d; --brand-pale: #fdf2f4; --brand-dim: rgba(158,18,44,.08); }
+
+/* Brand checkbox (scoped to avoid Tailwind purge) */
+.checkbox-brand {
+  accent-color: #9E122C;
+}
 .profile-root { min-height:100vh; background:#f4f5f7; padding:1.25rem 1rem 3rem; font-family:'DM Sans','Segoe UI',system-ui,sans-serif; }
 @media (min-width:768px) { .profile-root { padding:1.75rem 1.5rem 3rem; } }
 .breadcrumb { display:flex; align-items:center; gap:.5rem; font-size:.8rem; color:#6b7280; margin-bottom:1.25rem; }
@@ -1056,7 +1084,7 @@ REPLACE
 .breadcrumb-link svg { width:14px; height:14px; }
 .breadcrumb-sep { color:#d1d5db; }
 .breadcrumb-current { color:#111827; font-weight:600; }
-.hero-card { background:linear-gradient(135deg,var(--brand) 0%,var(--brand-light) 100%); border-radius:20px; border:none; overflow:hidden; margin-bottom:1.25rem; box-shadow:0 4px 20px rgba(158,18,44,.35); position:relative; }
+.hero-card { background:linear-gradient(135deg,#9E122C 0%,#c81e3d 100%); border-radius:20px; border:none; overflow:hidden; margin-bottom:1.25rem; box-shadow:0 4px 20px rgba(158,18,44,.35); position:relative; }
 .hero-banner { display:none; }
 .hero-banner-pattern { position:absolute; inset:0; z-index:0; pointer-events:none; background-image:radial-gradient(circle at 10% 30%, rgba(255,255,255,.12) 0%, transparent 50%), radial-gradient(circle at 85% 15%, rgba(255,255,255,.08) 0%, transparent 40%), radial-gradient(circle at 60% 80%, rgba(0,0,0,.08) 0%, transparent 40%); }
 .hero-body { padding:1.5rem 1.5rem 1.25rem; position:relative; z-index:1; }
@@ -1123,7 +1151,7 @@ REPLACE
 .btn svg { width:15px; height:15px; }
 .btn--ghost { background:transparent; border:1.5px solid #e5e7eb; color:#374151; text-decoration:none; }
 .btn--ghost:hover { background:#f9fafb; }
-.btn--primary { background:linear-gradient(135deg,var(--brand),var(--brand-light)); color:#fff; box-shadow:0 2px 8px rgba(158,18,44,.3); }
+.btn--primary { background:linear-gradient(135deg,#9E122C,#c81e3d); color:#fff; box-shadow:0 2px 8px rgba(158,18,44,.3); }
 .btn--primary:hover { box-shadow:0 4px 14px rgba(158,18,44,.4); transform:translateY(-1px); }
 .btn--primary:disabled { opacity:.6; transform:none; cursor:not-allowed; }
 .spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; flex-shrink:0; }
@@ -1230,19 +1258,25 @@ REPLACE
 .doc-remark span { min-width:0; word-break:break-word; }
 .doc-remark svg { width:14px; height:14px; fill:#dc2626; flex-shrink:0; margin-top:1px; }
 .doc-date { font-size:.72rem; color:#9ca3af; margin:auto 0 0; }
-.summary-card { max-width:100%; }
-.summary-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:.75rem; padding:.75rem 1.25rem 1.25rem; }
-@media (min-width:640px) { .summary-grid { grid-template-columns:repeat(4,1fr); } }
-.summary-stat { border-radius:12px; padding:.9rem .75rem; display:flex; flex-direction:column; align-items:center; gap:.2rem; }
-.summary-stat--neutral { background:#f3f4f6; }
-.summary-stat--green { background:#dcfce7; }
-.summary-stat--yellow { background:#fef9c3; }
-.summary-stat--red { background:#fee2e2; }
-.summary-num { font-size:1.6rem; font-weight:800; line-height:1; color:#111827; }
-.summary-stat--green .summary-num { color:#15803d; }
-.summary-stat--yellow .summary-num { color:#92400e; }
-.summary-stat--red .summary-num { color:#b91c1c; }
-.summary-label { font-size:.72rem; color:#6b7280; font-weight:500; }
+
+/* ── Document Preview Styles ────────────────────────────────── */
+.doc-preview-area { width:100%; aspect-ratio:4/3; border-radius:10px; overflow:hidden; cursor:pointer; background:#f9fafb; border:1.5px solid #e5e7eb; transition:border-color .15s,box-shadow .15s; }
+.doc-preview-area:hover { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-dim); }
+.doc-preview-img { width:100%; height:100%; object-fit:cover; display:block; }
+.doc-preview-placeholder { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.35rem; color:#9ca3af; }
+.doc-preview-placeholder svg { width:28px; height:28px; fill:#d1d5db; }
+.doc-preview-placeholder span { font-size:.72rem; font-weight:500; }
+
+/* Image Preview Modal */
+.doc-preview-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); backdrop-filter:blur(3px); z-index:9999; display:flex; align-items:center; justify-content:center; padding:2rem; }
+.doc-preview-modal { position:relative; max-width:90vw; max-height:90vh; border-radius:12px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+.doc-preview-close { position:absolute; top:.75rem; right:.75rem; width:36px; height:36px; border-radius:50%; background:rgba(0,0,0,.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#fff; transition:background .15s; z-index:1; }
+.doc-preview-close:hover { background:rgba(0,0,0,.7); }
+.doc-preview-close svg { width:18px; height:18px; }
+.doc-preview-full { display:block; max-width:90vw; max-height:85vh; object-fit:contain; }
+.dark .doc-preview-area { background:#1e2130; border-color:#2a2d3a; }
+.dark .doc-preview-placeholder svg { fill:#3a3d4a; }
+.dark .doc-preview-placeholder span { color:#64748b; }
 .readonly-banner { display:flex; align-items:flex-start; gap:.75rem; padding:.85rem 1rem; margin-bottom:1.25rem; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; }
 .readonly-banner svg { width:18px; height:18px; fill:#3b82f6; flex-shrink:0; margin-top:2px; }
 .readonly-banner-title { font-size:.82rem; font-weight:700; color:#1d4ed8; margin-bottom:1px; }

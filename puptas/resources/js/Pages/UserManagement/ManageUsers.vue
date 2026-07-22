@@ -147,7 +147,7 @@ const confirmDelete = (userId) => {
         <Link
           v-if="isSuperAdmin"
           :href="route('users.create')"
-          class="hidden md:inline-flex items-center gap-2 px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium"
+          class="hidden md:inline-flex items-center gap-2 px-4 py-2 btn-brand text-white rounded-lg transition font-medium"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -160,7 +160,7 @@ const confirmDelete = (userId) => {
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 px-4 md:px-8 mb-8">
-      <div class="bg-[#9E122C] text-white rounded-xl p-5 shadow-lg col-span-2 sm:col-span-1 flex items-center gap-4">
+      <div class="bg-brand text-white rounded-xl p-5 shadow-lg col-span-2 sm:col-span-1 flex items-center gap-4">
         <div class="p-2 bg-white/20 rounded-lg">
           <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
             <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
@@ -221,7 +221,7 @@ const confirmDelete = (userId) => {
                 v-model="searchTerm"
                 type="text"
                 placeholder="Search by name or email..."
-                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand focus:border-transparent"
               />
             </div>
 
@@ -234,7 +234,7 @@ const confirmDelete = (userId) => {
               <select
                 id="role-filter"
                 v-model="selectedRole"
-                class="pl-9 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-[#9E122C] focus:border-transparent cursor-pointer min-w-[160px]"
+                class="pl-9 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-brand focus:border-transparent cursor-pointer min-w-[160px]"
               >
                 <option value="">All Roles</option>
                 <option v-for="(label, roleId) in roles" :key="roleId" :value="roleId">
@@ -270,7 +270,7 @@ const confirmDelete = (userId) => {
               >
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-lg bg-[#9E122C] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    <div class="w-9 h-9 rounded-lg bg-brand text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
                       {{ getInitials(user.firstname, user.lastname) }}
                     </div>
                     <div>
@@ -311,7 +311,7 @@ const confirmDelete = (userId) => {
                     <template v-if="isSuperAdmin">
                       <Link
                         :href="route('users.edit', user.id)"
-                        class="p-2 text-gray-400 hover:text-[#9E122C] dark:text-gray-400 dark:hover:text-[#9E122C] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        class="p-2 text-gray-400 hover:text-brand dark:text-gray-400 dark:hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                         title="Edit user"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -344,7 +344,7 @@ const confirmDelete = (userId) => {
           >
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-lg bg-[#9E122C] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                <div class="w-10 h-10 rounded-lg bg-brand text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
                   {{ getInitials(user.firstname, user.lastname) }}
                 </div>
                 <div class="min-w-0">
@@ -371,7 +371,7 @@ const confirmDelete = (userId) => {
                 <template v-if="isSuperAdmin">
                   <Link
                     :href="route('users.edit', user.id)"
-                    class="p-2 text-gray-400 hover:text-[#9E122C] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    class="p-2 text-gray-400 hover:text-brand rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                     title="Edit user"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -417,7 +417,7 @@ const confirmDelete = (userId) => {
           <Link
             v-if="isSuperAdmin"
             :href="route('users.create')"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-[#9E122C] text-white rounded-lg hover:bg-[#b51834] transition font-medium"
+            class="inline-flex items-center gap-2 px-4 py-2 btn-brand text-white rounded-lg transition font-medium"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -460,7 +460,7 @@ const confirmDelete = (userId) => {
                             min="1"
                             :max="paginationInfo.last_page || 1"
                             @change="changePage(Math.max(1, Math.min($event.target.value, paginationInfo.last_page || 1)))"
-                            class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent font-medium text-sm"
+                            class="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand focus:border-transparent font-medium text-sm"
                         />
                         <span>of <span class="font-semibold">{{ paginationInfo.last_page || 1 }}</span></span>
                     </div>
@@ -484,7 +484,7 @@ const confirmDelete = (userId) => {
     <Link
       v-if="isSuperAdmin"
       :href="route('users.create')"
-      class="md:hidden fixed bottom-6 right-6 bg-[#9E122C] text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-[#b51834] transition hover:scale-110 z-40"
+      class="md:hidden fixed bottom-6 right-6 btn-brand text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition hover:scale-110 z-40"
       title="Add New User"
     >
       <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -496,6 +496,26 @@ const confirmDelete = (userId) => {
 </template>
 
 <style scoped>
+/* ── Brand color classes (scoped to avoid Tailwind purge issues) ── */
+.bg-brand {
+  background-color: #9E122C;
+}
+.btn-brand {
+  background-color: #9E122C;
+}
+.btn-brand:hover {
+  background-color: #b51834;
+}
+:deep(.focus\:ring-brand:focus) {
+  --tw-ring-color: #9E122C;
+}
+.text-brand {
+  color: #9E122C;
+}
+.hover\:text-brand:hover {
+  color: #9E122C;
+}
+
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: #FBCB77; border-radius: 5px; }
 ::-webkit-scrollbar-thumb { background: #9E122C; border-radius: 10px; }

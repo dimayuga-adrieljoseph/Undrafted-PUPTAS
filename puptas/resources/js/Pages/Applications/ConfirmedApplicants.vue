@@ -13,7 +13,6 @@ const loading = ref(false);
 const fetchError = ref(null);
 const searchQuery = ref("");
 const filterProgram = ref("");
-const filterBatch = ref("");
 const filterPasserStatus = ref([]);
 const showStatusDropdown = ref(false);
 const filterSarStatus = ref("");
@@ -77,13 +76,6 @@ const programs = computed(() => {
     return Array.from(codes).sort();
 });
 
-const batches = computed(() => {
-    const batchSet = new Set(
-        applicants.value.map((a) => a.batch_number).filter(Boolean),
-    );
-    return Array.from(batchSet).sort();
-});
-
 const passerStatuses = computed(() => {
     const statusSet = new Set(
         applicants.value.map((a) => a.passer_status_name).filter(Boolean),
@@ -110,8 +102,6 @@ const filtered = computed(() => {
         );
     if (filterProgram.value)
         list = list.filter((a) => a.program?.code === filterProgram.value);
-    if (filterBatch.value)
-        list = list.filter((a) => a.batch_number === filterBatch.value);
     if (filterPasserStatus.value.length > 0)
         list = list.filter(
             (a) => filterPasserStatus.value.includes(a.passer_status_name),
@@ -174,7 +164,6 @@ watch(
     [
         searchQuery,
         filterProgram,
-        filterBatch,
         filterPasserStatus,
         filterSarStatus,
         filterGraduateType,
@@ -601,28 +590,19 @@ onMounted(() => {
                     </div>
 
                     <!-- Filter row -->
-                    <div class="flex gap-3 flex-wrap">
+                    <div class="flex gap-2 flex-nowrap">
                         <select
                             v-model="filterProgram"
-                            class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Programs</option>
                             <option v-for="p in programs" :key="p" :value="p">
                                 {{ p }}
                             </option>
                         </select>
-                        <select
-                            v-model="filterBatch"
-                            class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
-                        >
-                            <option value="">All Batches</option>
-                            <option v-for="b in batches" :key="b" :value="b">
-                                {{ b }}
-                            </option>
-                        </select>
                         <div class="relative flex-1 min-w-[140px]">
                             <button @click="showStatusDropdown = !showStatusDropdown" type="button"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C] text-left flex items-center justify-between">
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C] text-left flex items-center justify-between truncate">
                                 <span>{{ filterPasserStatus.length === 0 ? 'All Statuses' : filterPasserStatus.length + ' selected' }}</span>
                                 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </button>
@@ -647,7 +627,7 @@ onMounted(() => {
                         </select>
                         <select
                             v-model="filterGraduateType"
-                            class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="flex-1 min-w-[175px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Graduate Types</option>
                             <option v-for="gt in graduateTypes" :key="gt" :value="gt">
@@ -665,12 +645,6 @@ onMounted(() => {
                             <option value="medical">For Medical</option>
                             <option value="enrollment">For Enrollment</option>
                         </select>
-                        <button
-                            @click="fetchApplicants"
-                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                        >
-                            ↻ Refresh
-                        </button>
                     </div>
 
                     <!-- Select All + count -->

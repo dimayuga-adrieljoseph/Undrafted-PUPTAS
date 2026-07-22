@@ -177,25 +177,24 @@ const cancelAcademic = () => {
     <div class="py-8">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-5">
 
-        <!-- ── Hero Card (crimson gradient — untouched per constraint, minor polish only) ── -->
-        <div class="rounded-2xl overflow-hidden shadow-[0_4px_24px_rgba(158,18,44,.32)]"
-             style="background:linear-gradient(135deg,#9E122C 0%,#c81e3d 100%)">
+        <!-- ── Hero Card (crimson gradient) ── -->
+        <div class="hero-card rounded-2xl overflow-hidden shadow-[0_4px_24px_rgba(158,18,44,.32)]">
           <div class="px-6 pt-6 pb-5 relative z-[1]">
             <div class="flex flex-wrap items-center gap-4">
               <!-- Avatar -->
-              <div class="w-[68px] h-[68px] rounded-2xl flex items-center justify-center text-[1.35rem] font-extrabold text-white flex-shrink-0"
-                   style="background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.38);box-shadow:0 4px 18px rgba(0,0,0,.18)">
+              <div class="w-[68px] h-[68px] rounded-2xl flex items-center justify-center text-[1.35rem] font-extrabold text-white flex-shrink-0 border-2 border-white/40 shadow-[0_4px_18px_rgba(0,0,0,.18)]"
+                   style="background:rgba(255,255,255,.18)">
                 {{ initials }}
               </div>
               <!-- Name + chips -->
               <div class="min-w-0">
                 <h1 class="text-[1.1rem] font-extrabold text-white leading-snug mb-2 truncate">{{ fullName }}</h1>
                 <div class="flex flex-wrap gap-1.5 items-center">
-                  <span class="text-[0.65rem] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full text-white"
-                        style="background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.32)">Applicant</span>
+                  <span class="text-[0.65rem] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full text-white border border-white/30"
+                        style="background:rgba(255,255,255,.22)">Applicant</span>
                   <span v-if="user.test_passer?.reference_number"
-                        class="inline-flex items-center gap-1 text-[0.68rem] font-semibold rounded-full px-2.5 py-0.5"
-                        style="color:rgba(255,255,255,.92);background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24)">
+                        class="inline-flex items-center gap-1 text-[0.68rem] font-semibold rounded-full px-2.5 py-0.5 border border-white/25"
+                        style="color:rgba(255,255,255,.92);background:rgba(255,255,255,.14)">
                     <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
                     Ref: {{ user.test_passer.reference_number }}
                   </span>
@@ -203,9 +202,9 @@ const cancelAcademic = () => {
               </div>
             </div>
             <!-- Contact strip -->
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 pt-3.5" style="border-top:1px solid rgba(255,255,255,.18)">
-              <span class="inline-flex items-center gap-1.5 text-[0.78rem]" style="color:rgba(255,255,255,.82)">
-                <svg class="w-3.5 h-3.5 shrink-0" style="color:rgba(255,255,255,.55)" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 pt-3.5 border-t border-white/20">
+              <span class="inline-flex items-center gap-1.5 text-[0.78rem] text-white/80">
+                <svg class="w-3.5 h-3.5 shrink-0 text-white/55" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
                 {{ user.email }}
               </span>
             </div>
@@ -217,9 +216,9 @@ const cancelAcademic = () => {
           <button v-for="tab in tabs" :key="tab.id"
                   @click="activeTab = tab.id"
                   :class="[
-                    'flex items-center gap-2 px-4 py-2.5 text-[0.8rem] font-semibold whitespace-nowrap rounded-xl transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E122C] focus-visible:ring-offset-1',
+                    'flex items-center gap-2 px-4 py-2.5 text-[0.8rem] font-semibold whitespace-nowrap rounded-xl transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1',
                     activeTab === tab.id
-                      ? 'bg-[#9E122C] text-white shadow-sm dark:bg-red-600'
+                      ? 'bg-brand text-white shadow-sm dark:bg-red-600'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                   ]">
             <svg class="w-[15px] h-[15px] shrink-0" viewBox="0 0 24 24" fill="currentColor"><path :d="tab.icon"/></svg>
@@ -236,7 +235,7 @@ const cancelAcademic = () => {
             <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
               <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/80 bg-gray-50/60 dark:bg-gray-800/60">
                 <div class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-400/10 flex items-center justify-center shrink-0">
-                  <svg class="w-4 h-4 fill-[#9E122C] dark:fill-red-400" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                  <svg class="w-4 h-4 icon-brand dark:fill-red-400" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
                 </div>
                 <h2 class="text-[0.88rem] font-bold text-gray-800 dark:text-gray-100 tracking-[-0.01em]">Personal Information</h2>
               </div>
@@ -262,7 +261,7 @@ const cancelAcademic = () => {
               <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/80 bg-gray-50/60 dark:bg-gray-800/60">
                   <div class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-400/10 flex items-center justify-center shrink-0">
-                    <svg class="w-4 h-4 fill-[#9E122C] dark:fill-red-400" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+                    <svg class="w-4 h-4 icon-brand dark:fill-red-400" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
                   </div>
                   <h3 class="flex-1 text-[0.88rem] font-bold text-gray-800 dark:text-gray-100 tracking-[-0.01em]">Academic Background</h3>
                   <button v-if="!academicEditing" @click="academicEditing = true"
@@ -285,7 +284,7 @@ const cancelAcademic = () => {
                     </div>
                     <!-- F137 sub-header -->
                     <div class="px-5 pt-3 pb-1.5">
-                      <span class="inline-flex items-center gap-1.5 text-[0.65rem] font-extrabold text-[#9E122C] dark:text-red-400 uppercase tracking-widest">
+                      <span class="inline-flex items-center gap-1.5 text-[0.65rem] font-extrabold text-brand dark:text-red-400 uppercase tracking-widest">
                         <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
                         For F137 Request Letter
                       </span>
@@ -317,7 +316,7 @@ const cancelAcademic = () => {
                 <form v-else @submit.prevent="submitAcademic" class="px-5 py-4 flex flex-col gap-3.5">
                   <div class="flex items-center gap-2">
                     <div class="flex-1 h-px bg-gray-200 dark:bg-gray-600"></div>
-                    <span class="inline-flex items-center gap-1.5 text-[0.65rem] font-extrabold text-[#9E122C] dark:text-red-400 uppercase tracking-widest whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1.5 text-[0.65rem] font-extrabold text-brand dark:text-red-400 uppercase tracking-widest whitespace-nowrap">
                       <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
                       For F137 Request Letter
                     </span>
@@ -325,7 +324,7 @@ const cancelAcademic = () => {
                   </div>
                   <div>
                     <label class="block text-[0.76rem] font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                      School (SHS) <span class="text-[#9E122C] dark:text-red-400">*</span>
+                      School (SHS) <span class="text-brand dark:text-red-400">*</span>
                     </label>
                     <input v-model="academicForm.school" type="text" required placeholder="e.g. PUP Taguig SHS"
                            class="field-input w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-[0.82rem] text-gray-900 dark:text-gray-100 outline-none transition-colors" />
@@ -333,7 +332,7 @@ const cancelAcademic = () => {
                   </div>
                   <div>
                     <label class="block text-[0.76rem] font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                      School Address <span class="text-[#9E122C] dark:text-red-400">*</span>
+                      School Address <span class="text-brand dark:text-red-400">*</span>
                     </label>
                     <input v-model="academicForm.former_school_address" type="text" required placeholder="e.g. General Santos Ave, Taguig City"
                            class="field-input w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-[0.82rem] text-gray-900 dark:text-gray-100 outline-none transition-colors" />
@@ -349,7 +348,7 @@ const cancelAcademic = () => {
                   </div>
                   <div class="flex gap-2 pt-0.5">
                     <button type="submit" :disabled="academicForm.processing"
-                            class="text-[0.78rem] font-bold px-4 py-2 rounded-lg bg-[#9E122C] hover:bg-[#7a0e22] active:bg-[#6a0b1c] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px]">
+                            class="btn-brand text-[0.78rem] font-bold px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px]">
                       {{ academicForm.processing ? 'Saving…' : 'Save' }}
                     </button>
                     <button type="button" @click="cancelAcademic" :disabled="academicForm.processing"
@@ -365,17 +364,17 @@ const cancelAcademic = () => {
               <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/80 bg-gray-50/60 dark:bg-gray-800/60">
                   <div class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-400/10 flex items-center justify-center shrink-0">
-                    <svg class="w-4 h-4 fill-[#9E122C] dark:fill-red-400" viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+                    <svg class="w-4 h-4 icon-brand dark:fill-red-400" viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
                   </div>
                   <h3 class="text-[0.88rem] font-bold text-gray-800 dark:text-gray-100 tracking-[-0.01em]">Program Choices</h3>
                 </div>
                 <div class="px-5 py-3 flex flex-col gap-2">
                   <div v-if="application?.program"
                        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 transition-colors">
-                    <span class="w-6 h-6 rounded-full bg-[#9E122C] flex items-center justify-center text-[0.68rem] font-extrabold text-white shrink-0">1</span>
+                    <span class="w-6 h-6 rounded-full bg-brand flex items-center justify-center text-[0.68rem] font-extrabold text-white shrink-0">1</span>
                     <div class="min-w-0">
                       <p class="text-[0.83rem] font-bold text-gray-900 dark:text-gray-100 mb-0.5 leading-snug truncate">{{ application.program.name }}</p>
-                      <p class="text-[0.7rem] font-semibold text-[#9E122C] dark:text-red-400">{{ application.program.code }}</p>
+                      <p class="text-[0.7rem] font-semibold text-brand dark:text-red-400">{{ application.program.code }}</p>
                     </div>
                   </div>
                   <div v-if="application?.second_choice"
@@ -412,7 +411,7 @@ const cancelAcademic = () => {
             <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
               <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/80 bg-gray-50/60 dark:bg-gray-800/60">
                 <div class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-400/10 flex items-center justify-center shrink-0">
-                  <svg class="w-4 h-4 fill-[#9E122C] dark:fill-red-400" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                  <svg class="w-4 h-4 icon-brand dark:fill-red-400" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
                 </div>
                 <h2 class="text-[0.88rem] font-bold text-gray-800 dark:text-gray-100 tracking-[-0.01em]">Application Status</h2>
               </div>
@@ -450,7 +449,7 @@ const cancelAcademic = () => {
                  class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:col-span-2">
               <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/80 bg-gray-50/60 dark:bg-gray-800/60">
                 <div class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-400/10 flex items-center justify-center shrink-0">
-                  <svg class="w-4 h-4 fill-[#9E122C] dark:fill-red-400" viewBox="0 0 24 24"><path d="M13 2.05V4.05C17.39 4.59 20.5 8.58 19.96 12.97C19.5 16.61 16.64 19.5 13 19.93V21.93C18.5 21.38 22.5 16.5 21.95 11C21.5 6.25 17.73 2.5 13 2.05M11 2.06C9.05 2.25 7.19 3 5.67 4.26L7.1 5.74C8.22 4.84 9.57 4.26 11 4.06V2.06M4.26 5.67C3 7.19 2.25 9.04 2.05 11H4.05C4.24 9.58 4.8 8.23 5.69 7.1L4.26 5.67M2.06 13C2.26 14.96 3.03 16.81 4.27 18.33L5.69 16.9C4.81 15.77 4.24 14.42 4.06 13H2.06M7.1 18.37L5.67 19.74C7.18 21 9.04 21.79 11 22V20C9.58 19.82 8.23 19.25 7.1 18.37M12 7L9.5 11.5H11.5V17L14.5 12.5H12.5L12 7Z"/></svg>
+                  <svg class="w-4 h-4 icon-brand dark:fill-red-400" viewBox="0 0 24 24"><path d="M13 2.05V4.05C17.39 4.59 20.5 8.58 19.96 12.97C19.5 16.61 16.64 19.5 13 19.93V21.93C18.5 21.38 22.5 16.5 21.95 11C21.5 6.25 17.73 2.5 13 2.05M11 2.06C9.05 2.25 7.19 3 5.67 4.26L7.1 5.74C8.22 4.84 9.57 4.26 11 4.06V2.06M4.26 5.67C3 7.19 2.25 9.04 2.05 11H4.05C4.24 9.58 4.8 8.23 5.69 7.1L4.26 5.67M2.06 13C2.26 14.96 3.03 16.81 4.27 18.33L5.69 16.9C4.81 15.77 4.24 14.42 4.06 13H2.06M7.1 18.37L5.67 19.74C7.18 21 9.04 21.79 11 22V20C9.58 19.82 8.23 19.25 7.1 18.37M12 7L9.5 11.5H11.5V17L14.5 12.5H12.5L12 7Z"/></svg>
                 </div>
                 <h2 class="text-[0.88rem] font-bold text-gray-800 dark:text-gray-100 tracking-[-0.01em]">Application Process Timeline</h2>
               </div>
@@ -505,7 +504,7 @@ const cancelAcademic = () => {
                  class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
               <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/80 bg-gray-50/60 dark:bg-gray-800/60">
                 <div class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-400/10 flex items-center justify-center shrink-0">
-                  <svg class="w-4 h-4 fill-[#9E122C] dark:fill-red-400" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                  <svg class="w-4 h-4 icon-brand dark:fill-red-400" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                 </div>
                 <h2 class="text-[0.88rem] font-bold text-gray-800 dark:text-gray-100 tracking-[-0.01em]">{{ group.title }}</h2>
                 <span class="ml-auto text-[0.68rem] font-bold text-gray-400 dark:text-gray-500 tabular-nums">{{ group.subjects.length }} subject{{ group.subjects.length !== 1 ? 's' : '' }}</span>
@@ -528,6 +527,44 @@ const cancelAcademic = () => {
 
 
 <style scoped>
+/* ── Brand color classes (scoped to avoid Tailwind purge issues) ── */
+.bg-brand {
+  background-color: #9E122C;
+}
+.hover\:bg-brand-hover:hover {
+  background-color: #7a0e22;
+}
+.active\:bg-brand-active:active {
+  background-color: #6a0b1c;
+}
+.text-brand {
+  color: #9E122C;
+}
+.icon-brand {
+  fill: #9E122C;
+}
+
+/* Hero card gradient */
+.hero-card {
+  background: linear-gradient(135deg, #9E122C 0%, #c81e3d 100%);
+}
+
+/* Brand button with hover/active states built in */
+.btn-brand {
+  background-color: #9E122C;
+}
+.btn-brand:hover {
+  background-color: #7a0e22;
+}
+.btn-brand:active {
+  background-color: #6a0b1c;
+}
+
+/* Focus ring using brand color */
+.focus-visible\:ring-brand:focus-visible {
+  --tw-ring-color: #9E122C;
+}
+
 /* Timeline vertical connector — needs pseudo-element, can't use Tailwind alone */
 .timeline-wrapper::before {
   content: '';
@@ -560,7 +597,7 @@ const cancelAcademic = () => {
 .scrollbar-none { scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 
-/* Focus ring for inputs — Tailwind focus: variants can be inconsistent across browsers */
+/* Focus ring for inputs */
 .field-input:focus {
   border-color: #9E122C;
   box-shadow: 0 0 0 3px rgba(158, 18, 44, 0.12);

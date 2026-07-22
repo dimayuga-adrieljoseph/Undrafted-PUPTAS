@@ -62,26 +62,11 @@ class TestPasserController extends Controller
             'per_page' => 'nullable|integer|min:1|max:100',
         ]);
 
-        // Default school_year: most recent when not provided
-        $schoolYear = $request->input('school_year');
-        if (!$request->has('school_year')) {
-            $schoolYear = TestPasser::max('school_year');
-            if ($schoolYear) {
-                $request->merge(['school_year' => $schoolYear]);
-            }
-        }
+        // Default school_year: "all" when not provided (show all years)
+        $schoolYear = $request->input('school_year', 'all');
 
-        // Default batch_number: first available for selected school_year when not provided
-        $batchNumber = $request->input('batch_number');
-        if (!$request->has('batch_number') && $schoolYear && $schoolYear !== 'all') {
-            $batchNumber = TestPasser::where('school_year', $schoolYear)
-                ->whereNotNull('batch_number')
-                ->orderBy('batch_number')
-                ->value('batch_number');
-            if ($batchNumber) {
-                $request->merge(['batch_number' => $batchNumber]);
-            }
-        }
+        // Default batch_number: "all" when not provided (show all batches)
+        $batchNumber = $request->input('batch_number', 'all');
 
         try {
             // Build filtered query and paginate
