@@ -12,8 +12,8 @@ use App\Models\User;
  * **Validates: Requirements 3.5**
  *
  * For any non-empty dataset where no school_year filter is provided,
- * the system SHALL default to the school_year with the maximum value (most recent),
- * and the first available batch_number within that school_year.
+ * the system SHALL default school_year to "all" (showing all years),
+ * and batch_number SHALL default to "all" (showing all batches).
  */
 
 beforeEach(function () {
@@ -66,26 +66,20 @@ for ($i = 0; $i < $iterations; $i++) {
 }
 
 it(
-    'Property 6: Default filter selection - defaults to maximum school_year and first batch_number when no filter provided',
+    'Property 6: Default filter selection - defaults to "all" for both school_year and batch_number when no filter provided',
     function (array $schoolYears, array $batchNumbersForMaxYear) {
-        // Determine expected defaults
-        $maxSchoolYear = max($schoolYears);
-        $expectedBatchNumber = min($batchNumbersForMaxYear); // first when ordered ascending
-
-        // Create records for non-max school years with arbitrary batch numbers
+        // Create records for all school years with the specified batch numbers
         foreach ($schoolYears as $sy) {
-            if ($sy !== $maxSchoolYear) {
-                TestPasser::factory()->create([
-                    'school_year' => $sy,
-                    'batch_number' => '1',
-                ]);
-            }
+            TestPasser::factory()->create([
+                'school_year' => $sy,
+                'batch_number' => '1',
+            ]);
         }
 
         // Create records for the max school year with the specified batch numbers
         foreach ($batchNumbersForMaxYear as $bn) {
             TestPasser::factory()->create([
-                'school_year' => $maxSchoolYear,
+                'school_year' => max($schoolYears),
                 'batch_number' => $bn,
             ]);
         }
@@ -103,16 +97,16 @@ it(
         $page = $response->viewData('page');
         $filters = $page['props']['filters'];
 
-        // Assert: system defaults to the maximum school_year
+        // Assert: school_year defaults to "all" (showing all years, not narrowing to most recent)
         expect($filters['school_year'])->toBe(
-            $maxSchoolYear,
-            "Expected default school_year to be '{$maxSchoolYear}' (maximum), got '{$filters['school_year']}'"
+            'all',
+            "Expected default school_year to be 'all', got '{$filters['school_year']}'"
         );
 
-        // Assert: first available batch_number within that school_year is selected
+        // Assert: batch_number defaults to "all" (showing all batches)
         expect($filters['batch_number'])->toBe(
-            $expectedBatchNumber,
-            "Expected default batch_number to be '{$expectedBatchNumber}' (first ascending), got '{$filters['batch_number']}'"
+            'all',
+            "Expected default batch_number to be 'all', got '{$filters['batch_number']}'"
         );
     }
 )->with($defaultFilterCases);

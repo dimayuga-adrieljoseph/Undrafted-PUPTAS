@@ -1352,7 +1352,7 @@ const runBulkEnroll = async () => {
                                 <option value="5">On Probation</option>
                             </select>
                             <select v-model="sortKey"
-                                class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
+                                class="flex-1 min-w-[175px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
                                 <option value="pupcet_total_score">Sort: PUPCET Score</option>
                                 <option value="surname">Sort: Surname</option>
                                 <option value="first_name">Sort: First Name</option>
@@ -1360,7 +1360,7 @@ const runBulkEnroll = async () => {
                                 <option value="school_year">Sort: School Year</option>
                             </select>
                             <select v-model="sortOrder"
-                                class="flex-1 min-w-[100px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
+                                class="flex-1 min-w-[130px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]">
                                 <option value="asc">Ascending</option>
                                 <option value="desc">Descending</option>
                             </select>
