@@ -288,7 +288,7 @@ const enrollmentBadge = computed(() => {
     return map[status] ?? { label: status ?? 'N/A', cls: 'status-default' };
 });
 
-const docTypeLabels = { file10_front: 'Grade 10 Report Card (Front)', file10_back: 'Grade 10 Report Card (Back)', file11_front: 'Grade 11 Report Card (Front)', file11_back: 'Grade 11 Report Card (Back)', file12_front: 'Grade 12 Report Card (Front)', file12_back: 'Grade 12 Report Card (Back)', school_id: 'School ID', non_enroll_cert: 'Non-Enrollment Certificate', psa: 'PSA Birth Certificate', good_moral: 'Good Moral Certificate', under_oath: 'Under Oath Statement', photo_2x2: '2x2 Photo' };
+const docTypeLabels = { file10_front: 'Grade 10 Report Card (Front)', file10_back: 'Grade 10 Report Card (Back)', file11_front: 'Grade 11 Report Card (Front)', file11_back: 'Grade 11 Report Card (Back)', file12_front: 'Grade 12 Report Card (Front)', file12_back: 'Grade 12 Report Card (Back)', school_id: 'School ID', cor_front: 'Certificate of Registration (Front)', cor_back: 'Certificate of Registration (Back)', non_enroll_cert: 'Non-Enrollment Certificate', psa: 'PSA Birth Certificate', good_moral: 'Good Moral Certificate', under_oath: 'Under Oath Statement', photo_2x2: '2x2 Photo' };
 
 // ── Document Preview ─────────────────────────────────────────
 const showImageModal = ref(false);
