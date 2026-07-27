@@ -94,101 +94,89 @@ const enrollmentInfo = computed(() => {
     }
   }
 
+  // Shared green style used for all active/positive states
+  const green = {
+    color:   'text-green-600 dark:text-green-400',
+    bg:      'bg-green-50 dark:bg-green-400/10',
+    ring:    'ring-green-200 dark:ring-green-500/30',
+    iconBg:  'bg-green-500',
+    // Consistent checkmark-circle icon across all green states
+    icon:    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  };
+
   // ── Terminal enrollment states ───────────────────────────────────────────
   const enrollmentMap = {
     officially_enrolled: {
+      ...green,
       label: 'Officially Enrolled',
       description: 'You are officially enrolled. Welcome!',
-      icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-      color: 'text-green-600 dark:text-green-400',
-      bg: 'bg-green-50 dark:bg-green-400/10',
-      ring: 'ring-green-200 dark:ring-green-500/30',
-      iconBg: 'bg-green-500',
     },
     waitlisted: {
+      ...green,
       label: 'Waitlisted',
       description: "You are on the waitlist. We'll notify you when a slot opens.",
-      icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-      color: 'text-orange-600 dark:text-orange-400',
-      bg: 'bg-orange-50 dark:bg-orange-400/10',
-      ring: 'ring-orange-200 dark:ring-orange-500/30',
-      iconBg: 'bg-orange-500',
     },
     temporary: {
+      ...green,
       label: 'Temporarily Enrolled',
       description: 'Your enrollment is temporary pending final confirmation.',
-      icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
-      color: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-50 dark:bg-blue-400/10',
-      ring: 'ring-blue-200 dark:ring-blue-500/30',
-      iconBg: 'bg-blue-500',
     },
     not_enrolled: {
+      color:   'text-red-600 dark:text-red-400',
+      bg:      'bg-red-50 dark:bg-red-400/10',
+      ring:    'ring-red-200 dark:ring-red-500/30',
+      iconBg:  'bg-red-500',
+      icon:    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
       label: 'Not Enrolled',
       description: 'Your application has not yet led to enrollment.',
-      icon: 'M6 18L18 6M6 6l12 12',
-      color: 'text-red-600 dark:text-red-400',
-      bg: 'bg-red-50 dark:bg-red-400/10',
-      ring: 'ring-red-200 dark:ring-red-500/30',
-      iconBg: 'bg-red-500',
     },
   };
   if (enrollmentMap[s]) return enrollmentMap[s];
 
   // ── Derive from application status + current stage ────────────────────────
   if (appS === 'approved') return {
+    ...green,
     label: 'Application Approved',
     description: 'Your application has been approved. Await enrollment confirmation.',
-    icon: 'M5 13l4 4L19 7',
-    color: 'text-green-600 dark:text-green-400',
-    bg: 'bg-green-50 dark:bg-green-400/10',
-    ring: 'ring-green-200 dark:ring-green-500/30',
-    iconBg: 'bg-green-500',
   };
   if (appS === 'rejected') return {
+    color:   'text-red-600 dark:text-red-400',
+    bg:      'bg-red-50 dark:bg-red-400/10',
+    ring:    'ring-red-200 dark:ring-red-500/30',
+    iconBg:  'bg-red-500',
+    icon:    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
     label: 'Application Rejected',
     description: 'Your application was not accepted this cycle.',
-    icon: 'M6 18L18 6M6 6l12 12',
-    color: 'text-red-600 dark:text-red-400',
-    bg: 'bg-red-50 dark:bg-red-400/10',
-    ring: 'ring-red-200 dark:ring-red-500/30',
-    iconBg: 'bg-red-500',
   };
   if (appS === 'returned') return {
+    ...green,
     label: 'Documents Returned',
     description: 'Some documents were returned for correction. Please review and re-upload.',
-    icon: 'M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z',
-    color: 'text-orange-600 dark:text-orange-400',
-    bg: 'bg-orange-50 dark:bg-orange-400/10',
-    ring: 'ring-orange-200 dark:ring-orange-500/30',
-    iconBg: 'bg-orange-500',
   };
   if (appS === 'submitted') return {
+    ...green,
     label: currentStageLabel ? `${currentStageLabel} Stage` : 'Under Review',
     description: 'Your application has been submitted and is currently being reviewed.',
-    icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z',
-    color: 'text-blue-600 dark:text-blue-400',
-    bg: 'bg-blue-50 dark:bg-blue-400/10',
-    ring: 'ring-blue-200 dark:ring-blue-500/30',
-    iconBg: 'bg-blue-500',
+  };
+  if (appS === 'cleared_for_enrollment') return {
+    ...green,
+    label: currentStageLabel ? `${currentStageLabel} Stage` : 'Cleared for Enrollment',
+    description: 'Your application has been submitted and is currently being reviewed.',
+  };
+  if (appS === 'accepted') return {
+    ...green,
+    label: currentStageLabel ? `${currentStageLabel} Stage` : 'Accepted',
+    description: 'Your application has been submitted and is currently being reviewed.',
   };
   if (!appS || appS === 'draft') return {
+    ...green,
     label: 'Not Yet Submitted',
     description: 'Complete and submit your application to begin the review process.',
-    icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-    color: 'text-gray-500 dark:text-gray-400',
-    bg: 'bg-gray-50 dark:bg-gray-700/40',
-    ring: 'ring-gray-200 dark:ring-gray-600',
-    iconBg: 'bg-gray-400 dark:bg-gray-600',
   };
   return {
+    ...green,
     label: currentStageLabel ? `${currentStageLabel} Stage` : capitalize((s || appS || 'Pending').replace(/_/g, ' ')),
     description: 'Your application is being processed.',
-    icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-    color: 'text-yellow-600 dark:text-yellow-400',
-    bg: 'bg-yellow-50 dark:bg-yellow-400/10',
-    ring: 'ring-yellow-200 dark:ring-yellow-500/30',
-    iconBg: 'bg-yellow-500',
   };
 });
 
@@ -228,6 +216,7 @@ const activeUploadSuccess = ref(false);
 const downloadingSlip = ref(false);
 const slipDownloadError = ref('');
 const showSchedule = ref(false);
+const showCorUpload = ref(false);
 
 // COR keys are post-medical requirements — excluded from pre-submission progress checks
 const COR_KEYS = ['fileCorFront', 'fileCorBack'];
@@ -447,6 +436,7 @@ const fetchData = async () => {
     applicationProcesses.value = data.processes || [];
     showMedicalRedirect.value = data.show_medical_redirect || false;
     showF137Button.value = data.show_f137_button || false;
+    showCorUpload.value = data.show_cor_upload || false;
     requiresPromissoryNote.value = data.requires_promissory_note || false;
     requiresGuidanceOffice.value = data.requires_guidance_office || false;
     requiresAdmissionOffice.value = data.requires_admission_office || false;
@@ -1399,7 +1389,146 @@ onMounted(() => {
           <div class="min-w-0">
             <div class="grid grid-cols-1 gap-6">
 
-          <!-- Documents (now full width) -->
+          <!-- Certificate of Registration Card (shown only after medical stage is completed) -->
+          <div v-if="showCorUpload" class="col-span-1">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 p-5">
+              <div class="flex items-center justify-between mb-1 flex-wrap gap-3">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <svg class="w-5 h-5 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7 20H5a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2h-2M9 12l2 2 4-4" />
+                  </svg>
+                  Certificate of Registration (COR)
+                </h3>
+
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                Upload the front and back of your Certificate of Registration (COR). This is required after you have been cleared for enrollment.
+              </p>
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div v-for="key in COR_KEYS.filter(k => fileStatuses[k] !== undefined)" :key="key" class="group">
+                  <div class="bg-blue-50/60 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-500 transition-all">
+                    <div class="relative mb-2">
+                      <div v-if="fileStatuses[key]?.status === 'uploading' && activeUploadKey !== key" class="w-full h-20 bg-yellow-50 dark:bg-yellow-900/20 rounded-md flex flex-col items-center justify-center border border-yellow-200 dark:border-yellow-700">
+                        <svg class="animate-spin h-6 w-6 text-yellow-600 dark:text-yellow-400 mb-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-[10px] text-yellow-700 dark:text-yellow-300 font-medium">Processing...</span>
+                      </div>
+                      <div v-else-if="fileStatuses[key]?.status === 'failed'" class="w-full h-20 bg-red-50 dark:bg-red-900/20 rounded-md flex flex-col items-center justify-center border border-red-200 dark:border-red-700">
+                        <svg class="w-6 h-6 text-red-500 dark:text-red-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        <span class="text-[10px] text-red-600 dark:text-red-300 font-medium">Upload Failed</span>
+                      </div>
+                      <div v-else-if="hasImagePreview(fileStatuses[key])" class="relative cursor-pointer" @click="openImageModal(fileStatuses[key])">
+                        <img :src="getFileUrl(fileStatuses[key])" :alt="formatKey(key)" class="w-full h-20 object-cover rounded-md" />
+                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-md transition-all pointer-events-none"></div>
+                      </div>
+                      <div v-else class="w-full h-20 bg-blue-100 dark:bg-blue-900/20 rounded-md flex items-center justify-center">
+                        <svg class="w-8 h-8 text-blue-300 dark:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                      </div>
+                      <div class="absolute -top-1 -right-1">
+                        <span :class="`px-1.5 py-0.5 rounded-full text-xs text-white ${getBadgeClass(fileStatuses[key]?.status)}`">
+                          {{ getStatusShort(fileStatuses[key]?.status) }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p class="text-xs text-center text-gray-700 dark:text-gray-300 font-medium mb-2 leading-tight break-words" :title="formatKey(key)">
+                      {{ formatKey(key) }}
+                    </p>
+
+                    <p v-if="fileStatuses[key]?.status === 'returned' && fileStatuses[key]?.comment" class="text-[10px] text-red-600 dark:text-red-400 mb-2 text-center italic">
+                      {{ fileStatuses[key].comment }}
+                    </p>
+
+                    <div v-if="activeUploadKey !== key">
+                      <button
+                        v-if="!fileStatuses[key]?.url && fileStatuses[key]?.status !== 'uploading'"
+                        @click.prevent="handleOpenUpload(key)"
+                        :disabled="activeUploadUploading"
+                        class="w-full py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors min-h-[44px] disabled:opacity-70"
+                      >Upload</button>
+                      <button
+                        v-else-if="fileStatuses[key]?.status === 'failed'"
+                        @click.prevent="handleOpenUpload(key)"
+                        :disabled="activeUploadUploading"
+                        class="w-full py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors min-h-[44px] disabled:opacity-70"
+                      >Retry Upload</button>
+                      <button
+                        v-else-if="fileStatuses[key]?.url"
+                        @click.prevent="handleOpenUpload(key)"
+                        :disabled="activeUploadUploading"
+                        class="w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded transition-colors min-h-[44px] disabled:opacity-70"
+                      >Replace</button>
+                      <input type="file" :id="'file-input-' + key" class="hidden"
+                        accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.txt,image/*,application/*,text/*"
+                        @change="reuploadFile($event, key)" />
+                    </div>
+
+                    <div v-else class="mt-3 rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-100 p-3 shadow-sm dark:border-gray-700 dark:from-gray-950/70 dark:via-gray-900 dark:to-gray-950/80">
+                      <div
+                        class="group rounded-2xl border-2 border-dashed p-2 text-center transition-all duration-200"
+                        :class="activeUploadDropActive ? 'border-blue-500 bg-blue-500/5 shadow-inner' : 'border-gray-300 bg-white/80 hover:border-blue-400 hover:bg-white dark:border-gray-700 dark:bg-gray-900/60 dark:hover:bg-gray-900/80'"
+                        @click.stop="document.getElementById('inline-file-input-' + key)?.click()"
+                        @dragenter.prevent.stop="onInlineDragEnter"
+                        @dragover.prevent.stop="onInlineDragOver"
+                        @dragleave.prevent.stop="onInlineDragLeave"
+                        @drop.prevent.stop="onInlineDrop"
+                      >
+                        <div class="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 transition-transform group-hover:scale-105 dark:bg-white/10 dark:text-white">
+                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.902A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                          </svg>
+                        </div>
+                        <p class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">Choose a file or drag and drop it here</p>
+                        <input :id="'inline-file-input-' + key" type="file" class="hidden"
+                          accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.txt,image/*,application/*,text/*"
+                          @change="onInlineFileChange" />
+                      </div>
+
+                      <div v-if="activeUploadKey === key" class="mt-3 space-y-3">
+                        <div v-if="activeUploadUploading" class="space-y-1">
+                          <div class="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                            <span class="font-medium">Uploading...</span>
+                            <span class="font-semibold text-blue-600">{{ activeUploadProgress }}%</span>
+                          </div>
+                          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                            <div class="h-2 rounded-full bg-blue-500 transition-all duration-200" :style="{ width: activeUploadProgress + '%' }"></div>
+                          </div>
+                          <div v-if="activeUploadTotal > 0" class="text-[10px] text-gray-400 dark:text-gray-500 text-right">
+                            {{ formatFileSize(activeUploadLoaded) }} / {{ formatFileSize(activeUploadTotal) }}
+                          </div>
+                        </div>
+                        <div v-if="activeUploadSuccess && !activeUploadUploading" class="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
+                          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                          Upload complete!
+                        </div>
+                        <p v-if="activeUploadError && activeUploadKey === key" class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+                          {{ activeUploadError }}
+                        </p>
+                        <div class="flex gap-2">
+                          <button
+                            class="flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+                            :disabled="activeUploadUploading"
+                            @click="closeInlineUpload"
+                          >{{ activeUploadSuccess ? 'Done' : 'Cancel' }}</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Required Documents -->
           <div class="col-span-1">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
               <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -1426,8 +1555,8 @@ onMounted(() => {
                 </div>
               </div>
 
-              <div v-else-if="stepKeys.length" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                <div v-for="(key, idx) in stepKeys" :key="key" class="group">
+              <div v-else-if="preSubmissionKeys.length" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div v-for="(key, idx) in preSubmissionKeys" :key="key" class="group">
                   <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600 hover:border-maroon-500 transition-all">
                     <!-- Document Icon/Preview -->
                     <div class="relative mb-2">

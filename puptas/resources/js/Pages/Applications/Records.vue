@@ -178,10 +178,13 @@ const filteredUsers = computed(() => {
     return users.value
         .filter((u) => {
             const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
-            const matchesSearch = fullName.includes(q);
+            const matchesSearch = !q || fullName.includes(q);
+            // Default: only show for_records and officially_enrolled
+            // When a specific status filter is selected, honour it (must still be one of the two)
+            const allowedStatuses = ['for_records', 'officially_enrolled'];
             const matchesStatus = statusFilter.value
                 ? u.pipeline_status === statusFilter.value
-                : true;
+                : allowedStatuses.includes(u.pipeline_status);
             return matchesSearch && matchesStatus;
         })
         .sort((a, b) => {
@@ -521,20 +524,12 @@ const clearFilters = () => {
                             All
                         </button>
                         <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="statusFilter = 'medical_cleared'; showStatusDropdown = false;">
-                            Medical Cleared
-                        </button>
-                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
                             @click="statusFilter = 'for_records'; showStatusDropdown = false;">
-                            For Records
+                            In Progress
                         </button>
                         <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
                             @click="statusFilter = 'officially_enrolled'; showStatusDropdown = false;">
                             Officially Enrolled
-                        </button>
-                        <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                            @click="statusFilter = 'rejected'; showStatusDropdown = false;">
-                            Rejected
                         </button>
                     </div>
                 </div>

@@ -99,6 +99,19 @@ class ProcessMedicalWebhookJob implements ShouldQueue
                         'performed_by' => null,
                     ]);
                 }
+
+                // When medical is cleared, automatically open a records process
+                // so the applicant becomes immediately visible to records staff
+                if ($actionStr === 'passed') {
+                    $application->processes()->firstOrCreate(
+                        ['stage' => 'records'],
+                        [
+                            'status'      => 'in_progress',
+                            'action'      => null,
+                            'performed_by' => null,
+                        ]
+                    );
+                }
             });
 
             $auditLogService->logActivity(
