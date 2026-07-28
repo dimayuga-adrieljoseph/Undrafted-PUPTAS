@@ -769,8 +769,8 @@ onMounted(() => {
       />
     </template>
 
-    <div class="py-4 sm:py-6">
-      <div class="max-w-screen-2xl mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-6 overflow-x-hidden">
+    <div class="w-full">
+      <div class="w-full max-w-full space-y-4 sm:space-y-6 overflow-x-hidden">
         
         <!-- Success Notification -->
         <Transition name="slide-down">
@@ -1159,14 +1159,14 @@ onMounted(() => {
             </span>
           </div>
 
-          <!-- Horizontal stepper — stretches to fill full width on desktop, scrolls on small screens -->
-          <div class="overflow-x-auto px-4 py-5 scrollbar-thin">
-            <ol class="flex items-start w-full min-w-[480px]">
+          <!-- Horizontal stepper — fixed width on all screens, no scroll -->
+          <div class="px-2 py-5 sm:px-4">
+            <ol class="flex items-start w-full">
               <li v-for="(step, idx) in timelineSteps" :key="step.key" class="flex items-start flex-1 min-w-0">
 
                 <!-- Step node -->
                 <div :class="[
-                  'flex flex-col items-center w-full px-1 py-2.5 rounded-xl transition-all',
+                  'flex flex-col items-center w-full px-0.5 sm:px-1 py-2.5 rounded-xl transition-all',
                   step.isCurrent
                     ? (step.action === 'rejected' || step.status === 'rejected'
                         ? 'bg-red-50 dark:bg-red-400/10 ring-1 ring-red-200 dark:ring-red-400/30'
@@ -1177,7 +1177,7 @@ onMounted(() => {
                 ]">
                   <!-- Dot -->
                   <span :class="[
-                    'w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
+                    'w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
                     step.action === 'rejected' || step.status === 'rejected'
                       ? 'bg-red-500 border-red-500 text-white'
                       : step.status === 'completed'
@@ -1190,18 +1190,16 @@ onMounted(() => {
                               ? 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500'
                               : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400'
                   ]">
-                    <!-- Status icon -->
-                    <svg v-if="step.action === 'rejected' || step.status === 'rejected'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                    <svg v-else-if="step.status === 'completed'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                    <svg v-else-if="step.isCurrent && step.status === 'in_progress'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
-                    <svg v-else-if="step.status === 'returned'" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                    <!-- Future / pending: step number -->
-                    <span v-else class="text-[11px] font-bold">{{ idx + 1 }}</span>
+                    <svg v-if="step.action === 'rejected' || step.status === 'rejected'" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    <svg v-else-if="step.status === 'completed'" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    <svg v-else-if="step.isCurrent && step.status === 'in_progress'" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+                    <svg v-else-if="step.status === 'returned'" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                    <span v-else class="text-[10px] font-bold">{{ idx + 1 }}</span>
                   </span>
 
                   <!-- Label -->
                   <p :class="[
-                    'mt-2 text-[0.65rem] sm:text-[0.72rem] text-center leading-snug px-0.5 transition-colors break-words w-full',
+                    'mt-1.5 text-[0.55rem] sm:text-[0.65rem] text-center leading-snug px-0.5 transition-colors break-words w-full',
                     step.isCurrent
                       ? 'font-bold text-gray-900 dark:text-gray-100'
                       : step.isPast
@@ -1209,9 +1207,9 @@ onMounted(() => {
                         : 'font-medium text-gray-400 dark:text-gray-500'
                   ]">{{ step.label }}</p>
 
-                  <!-- Status badge — all steps always show one -->
+                  <!-- Status badge -->
                   <span :class="[
-                    'mt-1 inline-flex items-center text-[0.6rem] font-bold px-2 py-0.5 rounded-full capitalize tracking-wide',
+                    'mt-1 inline-flex items-center text-[0.5rem] sm:text-[0.6rem] font-bold px-1 sm:px-2 py-0.5 rounded-full capitalize tracking-wide',
                     step.action === 'rejected'
                       ? 'bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-300'
                       : step.status === 'completed'
@@ -1228,14 +1226,14 @@ onMounted(() => {
                   </span>
 
                   <!-- Timestamp -->
-                  <p v-if="step.created_at" class="mt-1 text-[0.6rem] text-gray-400 dark:text-gray-500 tabular-nums text-center leading-snug">
+                  <p v-if="step.created_at" class="mt-1 text-[0.5rem] sm:text-[0.6rem] text-gray-400 dark:text-gray-500 tabular-nums text-center leading-snug">
                     {{ formatTimestamp(step.created_at) }}
                   </p>
 
-                  <!-- Reviewer note pill (current/returned/rejected only) -->
+                  <!-- Reviewer note pill -->
                   <div v-if="step.isCurrent && step.reviewer_notes"
-                       class="mt-1.5 w-full px-2 py-1 rounded-lg bg-red-50 dark:bg-red-400/10 border border-red-100 dark:border-red-400/20">
-                    <p class="text-[0.6rem] text-red-700 dark:text-red-300 leading-snug line-clamp-3 text-center" :title="step.reviewer_notes">
+                       class="mt-1.5 w-full px-1 py-1 rounded-lg bg-red-50 dark:bg-red-400/10 border border-red-100 dark:border-red-400/20">
+                    <p class="text-[0.5rem] text-red-700 dark:text-red-300 leading-snug line-clamp-3 text-center" :title="step.reviewer_notes">
                       {{ step.reviewer_notes }}
                     </p>
                   </div>
@@ -1243,7 +1241,7 @@ onMounted(() => {
 
                 <!-- Connector between steps -->
                 <div v-if="idx < timelineSteps.length - 1"
-                     class="flex items-start pt-[15px] shrink-0 w-4 sm:w-6">
+                     class="flex items-start pt-[13px] sm:pt-[15px] shrink-0 w-2 sm:w-4">
                   <div :class="[
                     'h-px w-full transition-colors',
                     step.status === 'completed' ? 'bg-green-400 dark:bg-green-600' :
