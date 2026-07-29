@@ -49,7 +49,7 @@ class SecurityHeaders
         // -----------------------------------------------------------------------
         // Content-Security-Policy
         // -----------------------------------------------------------------------
-        $scriptSrc  = "'self' 'unsafe-inline' https://cdn.jsdelivr.net https://chatwoot-production-49b7.up.railway.app";
+        $scriptSrc  = "'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://chatwoot-production-49b7.up.railway.app";
         $styleSrc   = "'self' 'unsafe-inline' https://fonts.bunny.net https://fonts.googleapis.com";
         $imgSrc     = "'self' data: https: blob:";
         $connectSrc = "'self' https://chatwoot-production-49b7.up.railway.app wss://chatwoot-production-49b7.up.railway.app";
