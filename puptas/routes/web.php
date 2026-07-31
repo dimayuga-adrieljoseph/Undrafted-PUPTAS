@@ -202,7 +202,9 @@ Route::middleware([])->group(function () {
 });
 
 Route::get('/auth/idp/error', function () {
-    return Inertia::render('Auth/IdpError');
+    return Inertia::render('Auth/IdpError', [
+        'referenceCode' => session()->pull('last_idp_sync_audit_id'),
+    ]);
 })->name('idp.error');
 
 

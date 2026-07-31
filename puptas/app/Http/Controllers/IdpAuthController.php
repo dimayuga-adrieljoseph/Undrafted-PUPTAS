@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Models\AuditLog;
 
 class IdpAuthController extends Controller
 {
@@ -255,18 +257,59 @@ class IdpAuthController extends Controller
 
             $idpUser = $userResponse->json();
 
-            // Extract email from IDP
-            $idpEmail = $idpUser['email'] ?? null;
+            // Extract identity fields from IDP payload.
+            // Trimmed and length-capped to prevent oversized payloads corrupting local records.
+            $idpUserId     = $idpUser['id'] ?? null;
+            $idpEmail      = $idpUser['email'] ?? null;
+            $idpFirstName  = isset($idpUser['first_name'])  ? substr(trim((string) $idpUser['first_name']),  0, 100) : null;
+            $idpLastName   = isset($idpUser['last_name'])   ? substr(trim((string) $idpUser['last_name']),   0, 100) : null;
+            $idpMiddleName = isset($idpUser['middle_name']) ? substr(trim((string) $idpUser['middle_name']), 0, 100) : null;
+
             if (!$idpEmail) {
                 return redirect('/auth/idp/error')->withErrors(['idp' => 'No email provided by IDP.']);
             }
 
-            // Cross-reference user's email with local database
-            $localDbUser = \App\Models\User::where('email', $idpEmail)->first();
+            // ── Step 1: Primary lookup by IDP UUID ──────────────────────────────────
+            $localDbUser = $idpUserId
+                ? \App\Models\User::where('idp_user_id', $idpUserId)->first()
+                : null;
 
+            // ── Step 2: Fallback lookup by email ────────────────────────────────────
             if (!$localDbUser) {
-                // Email not found in local DB -> treat as new user/applicant
-                \Log::info('Intercepting first-time IDP applicant for registration flow (email not in DB)', ['email' => $idpEmail]);
+                $localDbUser = \App\Models\User::where('email', $idpEmail)->first();
+
+                // ── Step 3: Conflict check ───────────────────────────────────────────
+                // If the email matched a user who already has a DIFFERENT idp_user_id,
+                // this is an identity mismatch — reject rather than silently overwrite.
+                if ($localDbUser
+                    && $localDbUser->idp_user_id
+                    && $localDbUser->idp_user_id !== $idpUserId
+                ) {
+                    \Log::error('IDP UUID conflict: email matched a user whose idp_user_id differs from the IDP payload', [
+                        'local_user_id'     => $localDbUser->id,
+                        'local_idp_user_id' => $localDbUser->idp_user_id,
+                        'incoming_idp_uuid' => $idpUserId,
+                        'email'             => $idpEmail,
+                        'ip'                => $request->ip(),
+                    ]);
+                    app(\App\Services\AuditLogService::class)->logActivity(
+                        \App\Models\AuditLog::ACTION_UPDATE,
+                        'Authentication',
+                        "IDP UUID conflict: email {$idpEmail} matched user {$localDbUser->id} but IDP sent a different UUID.",
+                        null,
+                        \App\Models\AuditLog::CATEGORY_AUTHENTICATION,
+                        ['idp_user_id' => $localDbUser->idp_user_id],
+                        ['idp_user_id' => $idpUserId]
+                    );
+                    return redirect('/auth/idp/error')->withErrors(['idp' => 'idp_uuid_conflict']);
+                }
+            }
+
+            // ── New-user path: both lookups failed ──────────────────────────────────
+            if (!$localDbUser) {
+                \Log::info('Intercepting first-time IDP applicant for registration flow (no match by UUID or email)', [
+                    'email' => $idpEmail,
+                ]);
 
                 $pendingRegUuid = \Illuminate\Support\Str::uuid()->toString();
 
@@ -282,15 +325,16 @@ class IdpAuthController extends Controller
 
                 session(['pending_registration' => [
                     'uuid'          => $pendingRegUuid,
-                    'user_id'       => $idpUser['id'] ?? null,
+                    'user_id'       => $idpUserId,
                     'email'         => $idpEmail,
                     'username'      => $idpUser['username'] ?? null,
+                    'registered_at' => now()->timestamp, // Used for freshness check in CreateNewUser
                 ]]);
 
                 return redirect('/register');
             }
 
-            // Check if existing user is an applicant with restricted status
+            // ── Existing applicant status gate (unchanged) ──────────────────────────
             if ((int) $localDbUser->role_id === 1) {
                 $testPasser = \App\Models\TestPasser::where('email', $idpEmail)->first();
                 if ($testPasser && in_array($testPasser->passer_status_id, [3, 4])) {
@@ -307,10 +351,10 @@ class IdpAuthController extends Controller
                         $isEmailOverride = $cutoffService->isEmailAllowed($idpEmail);
 
                         if (!$isScoreOverride && !$isEmailOverride) {
-                            $message = $testPasser->passer_status_id === 3 
-                                ? 'Login is not available for Unqualified applicants.' 
+                            $message = $testPasser->passer_status_id === 3
+                                ? 'Login is not available for Unqualified applicants.'
                                 : 'Login is currently closed for Waitlisted applicants. Please wait for further announcements regarding open slots.';
-                                
+
                             return redirect('/auth/idp/error')->withErrors([
                                 'idp' => $message,
                             ]);
@@ -319,27 +363,134 @@ class IdpAuthController extends Controller
                 }
             }
 
-            // Sync user data on login from IDP.
-            // Values are trimmed and length-capped before being written to the DB to prevent
-            // oversized or malformed IDP payloads from corrupting local records.
-            $updateData = [];
+            // ── Step 4: Email collision check (only when email is changing) ──────────
+            if ($idpEmail !== $localDbUser->email) {
+                $emailTakenInUsers = \App\Models\User::where('email', $idpEmail)
+                    ->where('id', '!=', $localDbUser->id)
+                    ->exists();
+                $emailTakenInTestPassers = \App\Models\TestPasser::where('email', $idpEmail)->exists();
 
-            if (isset($idpUser['first_name'])) {
-                $updateData['firstname'] = substr(trim((string) $idpUser['first_name']), 0, 100);
-            }
-            if (isset($idpUser['last_name'])) {
-                $updateData['lastname'] = substr(trim((string) $idpUser['last_name']), 0, 100);
-            }
-            if (isset($idpUser['middle_name'])) {
-                $updateData['middlename'] = substr(trim((string) $idpUser['middle_name']), 0, 100);
+                if ($emailTakenInUsers || $emailTakenInTestPassers) {
+                    \Log::warning('IDP email sync collision: new email is already taken by another record', [
+                        'local_user_id'   => $localDbUser->id,
+                        'incoming_email'  => $idpEmail,
+                        'collision_table' => $emailTakenInUsers ? 'users' : 'test_passers',
+                    ]);
+                    app(\App\Services\AuditLogService::class)->logActivity(
+                        \App\Models\AuditLog::ACTION_UPDATE,
+                        'Authentication',
+                        "Email collision on IDP sync: {$idpEmail} already exists in " . ($emailTakenInUsers ? 'users' : 'test_passers'),
+                        null,
+                        \App\Models\AuditLog::CATEGORY_AUTHENTICATION,
+                        ['email' => $localDbUser->email],
+                        ['email' => $idpEmail]
+                    );
+                    return redirect('/auth/idp/error')->withErrors(['idp' => 'email_collision']);
+                }
             }
 
-            if ($localDbUser->idp_user_id !== ($idpUser['id'] ?? null)) {
-                $updateData['idp_user_id'] = $idpUser['id'] ?? null;
-            }
+            // ── Step 5: Dirty check — skip the transaction if nothing has changed ────
+            // Prevents a no-op UPDATE + audit log entry on every single login.
+            $needsSync = $idpEmail      !== $localDbUser->email
+                      || $idpUserId     !== $localDbUser->idp_user_id
+                      || ($idpFirstName  !== null && $idpFirstName  !== $localDbUser->firstname)
+                      || ($idpLastName   !== null && $idpLastName   !== $localDbUser->lastname)
+                      || ($idpMiddleName !== null && $idpMiddleName !== $localDbUser->middlename);
 
-            if (!empty($updateData)) {
-                $localDbUser->update($updateData);
+            if ($needsSync) {
+                $oldValues = [
+                    'email'       => $localDbUser->email,
+                    'idp_user_id' => $localDbUser->idp_user_id,
+                    'firstname'   => $localDbUser->firstname,
+                    'lastname'    => $localDbUser->lastname,
+                    'middlename'  => $localDbUser->middlename,
+                ];
+                $newValues = [
+                    'email'            => $idpEmail,
+                    'idp_user_id'      => $idpUserId,
+                    'firstname'        => $idpFirstName  ?? $localDbUser->firstname,
+                    'lastname'         => $idpLastName   ?? $localDbUser->lastname,
+                    'middlename'       => $idpMiddleName ?? $localDbUser->middlename,
+                    'idp_payload_hash' => hash('sha256', json_encode($idpUser)),
+                    'synced_at'        => now()->toISOString(),
+                ];
+
+                // ── Step 6: Transactional sync ───────────────────────────────────────
+                try {
+                    \Illuminate\Support\Facades\DB::transaction(function () use (
+                        $localDbUser, $idpEmail, $idpUserId, $idpFirstName, $idpLastName,
+                        $idpMiddleName, $oldValues, $newValues, $idpUser
+                    ) {
+                        $localDbUser->update([
+                            'email'       => $idpEmail,
+                            'idp_user_id' => $idpUserId,
+                            'firstname'   => $idpFirstName  ?? $localDbUser->firstname,
+                            'lastname'    => $idpLastName   ?? $localDbUser->lastname,
+                            'middlename'  => $idpMiddleName ?? $localDbUser->middlename,
+                        ]);
+
+                        \App\Models\ApplicantProfile::where('user_id', $localDbUser->id)
+                            ->update(['email' => $idpEmail]);
+
+                        // Sync test_passers email only if email actually changed.
+                        // Fetch all rows first to detect dirty duplicates (same scenario as the
+                        // duplicate-SAR-form incident) before updating, avoiding a mass-update
+                        // that would throw on the unique constraint.
+                        if ($oldValues['email'] !== $idpEmail) {
+                            $testPasserMatches = \App\Models\TestPasser::where('email', $oldValues['email'])
+                                ->orderBy('test_passer_id')
+                                ->get(['test_passer_id']);
+
+                            if ($testPasserMatches->count() > 1) {
+                                $skippedIds = $testPasserMatches->slice(1)->pluck('test_passer_id')->all();
+                                \Log::warning('IDP email sync: duplicate test_passers rows found for old email — only the lowest-ID row will be updated; remaining rows are orphaned and need cleanup.', [
+                                    'user_id'            => $localDbUser->id,
+                                    'old_email'          => $oldValues['email'],
+                                    'new_email'          => $idpEmail,
+                                    'updated_passer_id'  => $testPasserMatches->first()->test_passer_id,
+                                    'skipped_passer_ids' => $skippedIds,
+                                ]);
+                            }
+
+                            $testPasserToSync = $testPasserMatches->first();
+                            if ($testPasserToSync) {
+                                $testPasserToSync->update(['email' => $idpEmail]);
+                            }
+                        }
+
+                        $auditEntry = app(\App\Services\AuditLogService::class)->logActivity(
+                            \App\Models\AuditLog::ACTION_UPDATE,
+                            'User Management',
+                            "IDP login sync for user {$localDbUser->id}: identity fields updated.",
+                            $localDbUser,
+                            \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                            $oldValues,
+                            $newValues
+                        );
+
+                        // Stash audit log ID in session so the error page can surface it
+                        // as a per-attempt reference code for support triage.
+                        session(['last_idp_sync_audit_id' => $auditEntry->id ?? null]);
+                    });
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if (str_contains((string) $e->getCode(), '23000') || str_contains($e->getMessage(), '1062')) {
+                        // Distinguish dirty-data failures (test_passers duplicate row) from
+                        // true email collisions so registrar queue can triage correctly.
+                        $isDirtyData = str_contains($e->getMessage(), 'test_passers');
+                        \Log::warning($isDirtyData
+                            ? 'IDP sync blocked by duplicate test_passers email constraint (dirty data — not a real collision)'
+                            : 'IDP sync unique constraint hit (TOCTOU race or real collision)',
+                            [
+                                'user_id'    => $localDbUser->id,
+                                'email'      => $idpEmail,
+                                'dirty_data' => $isDirtyData,
+                                'error'      => $e->getMessage(),
+                            ]
+                        );
+                        return redirect('/auth/idp/error')->withErrors(['idp' => 'email_collision']);
+                    }
+                    throw $e;
+                }
             }
 
             // Authenticate the user in the local app securely with the eloquent driver

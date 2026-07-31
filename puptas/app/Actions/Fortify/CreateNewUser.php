@@ -42,9 +42,37 @@ class CreateNewUser implements CreatesNewUsers
         }
         
         \Log::info('Pending registration found', [
-            'email' => $pendingReg['email'] ?? 'MISSING',
+            'email'   => $pendingReg['email'] ?? 'MISSING',
             'has_uuid' => !empty($pendingReg['uuid']),
         ]);
+
+        // ── Freshness check ──────────────────────────────────────────────────────
+        // 30-minute window matches the Redis pending_tokens TTL set in IdpAuthController.
+        // Prevents stale sessions on shared/kiosk browsers (admission day scenario)
+        // from completing a registration after the IDP callback has long expired.
+        $registeredAt = $pendingReg['registered_at'] ?? null;
+        if (!$registeredAt || (now()->timestamp - (int) $registeredAt) > 1800) {
+            \Log::warning('Registration rejected: pending_registration session is expired or missing registered_at', [
+                'email'         => $pendingReg['email'] ?? null,
+                'registered_at' => $registeredAt,
+            ]);
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => 'Your registration session has expired. Please sign in via IDP again to restart.',
+            ]);
+        }
+
+        // ── IDP UUID format check ────────────────────────────────────────────────
+        // PUP IDP confirmed to use RFC 4122 UUIDs — Str::isUuid() is safe to use here.
+        $idpUserId = $pendingReg['user_id'] ?? null;
+        if ($idpUserId && !\Illuminate\Support\Str::isUuid($idpUserId)) {
+            \Log::error('Registration rejected: invalid IDP UUID format in pending_registration', [
+                'user_id' => $idpUserId,
+                'email'   => $pendingReg['email'] ?? null,
+            ]);
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => 'Registration failed due to an invalid identity token. Please contact the Admission Office.',
+            ]);
+        }
 
         $cutoffService = app(\App\Services\CutoffSettingsService::class);
         $isScoreAllowedOverride = false;
