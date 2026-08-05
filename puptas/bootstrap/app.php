@@ -58,6 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'medical.webhook' => \App\Http\Middleware\VerifyMedicalWebhookSignature::class,
             'refresh.idp' => \App\Http\Middleware\RefreshIdpToken::class,
             'idp.maintenance' => \App\Http\Middleware\IdpMaintenanceMode::class,
+            'ensure.idp.down' => \App\Http\Middleware\EnsureIdpIsDown::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
@@ -72,4 +73,7 @@ return Application::configure(basePath: dirname(__DIR__))
         
         // Prune models (e.g. AuditLog) daily
         $schedule->command('model:prune')->daily();
+
+        // Check IDP Health every minute for the emergency fallback
+        $schedule->command('idp:check-health')->everyMinute();
     })->create();
