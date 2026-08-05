@@ -84,7 +84,7 @@ export function useSidebarNavigation() {
             key: 'tagging',
             label: 'Tagging',
             icon: 'tags',
-            activeRoutes: ['evaluator.dashboard', 'interviewer.dashboard'],
+            activeRoutes: ['evaluator.dashboard', 'interviewer.dashboard', 'admin.records.dashboard', 'admin.records.applications'],
             children: [
                 {
                     key: 'document-evaluate',
@@ -106,6 +106,13 @@ export function useSidebarNavigation() {
                     icon: 'comments',
                     route: 'interviewer.dashboard',
                     activeRoutes: ['interviewer.dashboard'],
+                },
+                {
+                    key: 'records',
+                    label: 'Records',
+                    icon: 'file-alt',
+                    route: 'admin.records.dashboard',
+                    activeRoutes: ['admin.records.dashboard', 'admin.records.applications'],
                 },
             ]
         },
@@ -202,22 +209,28 @@ export function useSidebarNavigation() {
             key: 'dashboard',
             label: 'Dashboard',
             icon: 'tachometer-alt',
-            route: `${variant}.dashboard`,
-            activeRoutes: [`${variant}.dashboard`, 'record.dashboard', 'interviewer.dashboard', 'evaluator.dashboard', 'document_evaluator.dashboard'],
+            route: variant === 'record'
+                ? (isAdminOrSuperAdmin.value ? 'admin.records.dashboard' : 'record.dashboard')
+                : `${variant}.dashboard`,
+            activeRoutes: [`${variant}.dashboard`, 'record.dashboard', 'admin.records.dashboard', 'interviewer.dashboard', 'evaluator.dashboard', 'document_evaluator.dashboard'],
         },
         {
             key: 'applications',
             label: 'Applications',
             icon: 'envelope-open-text',
-            route: `${variant}.applications`,
-            activeRoutes: [`${variant}.applications`, 'recordstaff.applications', 'interviewer.applications', 'evaluator.applications', 'document_evaluator.applications'],
+            route: variant === 'record'
+                ? (isAdminOrSuperAdmin.value ? 'admin.records.applications' : 'record.applications')
+                : `${variant}.applications`,
+            activeRoutes: [`${variant}.applications`, 'recordstaff.applications', 'admin.records.applications', 'interviewer.applications', 'evaluator.applications', 'document_evaluator.applications'],
         },
         {
             key: 'programs',
             label: 'Programs',
             icon: 'clipboard-list',
-            route: `${variant}.programs`,
-            activeRoutes: [`${variant}.programs`, 'evaluator.programs', 'interviewer.programs', 'record.programs', 'document_evaluator.programs'],
+            route: variant === 'record'
+                ? (isAdminOrSuperAdmin.value ? 'admin.records.programs' : 'record.programs')
+                : `${variant}.programs`,
+            activeRoutes: [`${variant}.programs`, 'evaluator.programs', 'interviewer.programs', 'record.programs', 'admin.records.programs', 'document_evaluator.programs'],
         },
     ])
 

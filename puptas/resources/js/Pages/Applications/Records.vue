@@ -43,6 +43,15 @@ const POLL_INTERVAL_MS = 10000;
 const page = usePage();
 const users = ref(page.props.users || []);
 
+const props = defineProps({
+    user: Object,
+    // Admin/superadmin pass '/admin/records'; registrar gets the default
+    baseUrl: {
+        type: String,
+        default: '/record-dashboard',
+    },
+});
+
 //const users = ref([]);
 const selectedUser = ref(null);
 const isLoading = ref(true);
@@ -124,7 +133,7 @@ const getStatusClass = (user) => {
 
 const fetchUsers = async () => {
     try {
-        const response = await fetch("/record-dashboard/applicants", {
+        const response = await fetch(`${props.baseUrl}/applicants`, {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
@@ -212,7 +221,7 @@ const displayedUsers = computed(() => {
 const selectUser = async (user) => {
     try {
         const response = await axios.get(
-            `/record-dashboard/application/${user.id}`
+            `${props.baseUrl}/application/${user.id}`
         );
 
         selectedUser.value = {
@@ -311,7 +320,7 @@ const submitReturn = async () => {
 
     try {
         await axios.post(
-            `/record-dashboard/return-files/${selectedUser.value.id}`,
+            `${props.baseUrl}/return-files/${selectedUser.value.id}`,
             {
                 files: selected,
                 note: returnNote.value.trim(),
@@ -348,7 +357,7 @@ const formatStage = (stage) => {
 
 const acceptApplication = async () => {
     try {
-        const response = await axios.post(`/record-dashboard/tag/${selectedUser.value.id}`);
+        const response = await axios.post(`${props.baseUrl}/tag/${selectedUser.value.id}`);
         showSnackbar("Tagged as officially enrolled.");
 
         // Update the selected user's enrollment status immediately in the UI
@@ -382,7 +391,7 @@ const acceptApplication = async () => {
 
 const untagApplication = async () => {
     try {
-        await axios.post(`/record-dashboard/untag/${selectedUser.value.id}`);
+        await axios.post(`${props.baseUrl}/untag/${selectedUser.value.id}`);
         showSnackbar("Reverted to temporary enrolled.");
         selectedUser.value = null;
         await fetchUsers();
@@ -423,7 +432,7 @@ const availablePrograms = ref([]);
 
 const fetchPrograms = async () => {
     try {
-        const response = await axios.get("/record-dashboard/programs");
+        const response = await axios.get(`${props.baseUrl}/programs`);
         availablePrograms.value = response.data.programs;
     } catch (e) {
         console.error("Failed to load programs", e);

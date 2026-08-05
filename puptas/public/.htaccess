@@ -22,4 +22,35 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+
+</IfModule>
+
+# =============================================================================
+# Security Headers (Apache-level fallback)
+# Suppress server identity globally.
+# Scope additional security headers to static files only so they are not
+# duplicated on PHP responses handled by Laravel's SecurityHeaders middleware.
+# =============================================================================
+<IfModule mod_headers.c>
+    # Suppress server information headers to prevent technology fingerprinting.
+    Header always unset X-Powered-By
+    Header always unset Server
+
+    # Only apply security headers to static assets served directly by Apache
+    <FilesMatch "\.(js|css|png|jpg|jpeg|gif|svg|woff2?|ttf|eot|ico|webp|pdf)$">
+        # Prevent MIME-type sniffing attacks.
+        Header always set X-Content-Type-Options "nosniff"
+
+        # Clickjacking protection for static assets.
+        Header always set X-Frame-Options "DENY"
+
+        # Referrer-Policy: limit referrer leakage to same-origin only.
+        Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+        # HSTS: enforce HTTPS for 1 year including subdomains.
+        Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+        # Permissions-Policy: deny access to sensitive browser APIs.
+        Header always set Permissions-Policy "accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), display-capture=(), document-domain=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), xr-spatial-tracking=()"
+    </FilesMatch>
 </IfModule>
