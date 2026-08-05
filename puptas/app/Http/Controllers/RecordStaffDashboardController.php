@@ -79,10 +79,14 @@ class RecordStaffDashboardController extends Controller
     {
         $dashboardData = $this->dashboardService->getRecordsDashboardData();
 
+        $user = Auth::user();
+        $isAdmin = $user && in_array($user->role_id, [2, 7]);
+
         return Inertia::render('Dashboard/Records', [
-            'user' => Auth::user() ? Auth::user()->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
+            'user'     => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $dashboardData['programs']->values()->all(),
-            'summary' => $dashboardData['summary'],
+            'summary'  => $dashboardData['summary'],
+            'baseUrl'  => $isAdmin ? '/admin/records' : '/record-dashboard',
         ]);
     }
 
@@ -630,11 +634,14 @@ class RecordStaffDashboardController extends Controller
     }
 
     /**
-     * Ensure user has the correct role
+     * Ensure user has the correct role.
+     * Admin (2) and Superadmin (7) are always permitted alongside the given role.
      */
     private function ensureRole(int $roleId): void
     {
-        if (!Auth::user() || Auth::user()->role_id !== $roleId) {
+        $user = Auth::user();
+        $allowedRoles = [$roleId, 2, 7];
+        if (!$user || !in_array($user->role_id, $allowedRoles)) {
             abort(403, 'Unauthorized access.');
         }
     }

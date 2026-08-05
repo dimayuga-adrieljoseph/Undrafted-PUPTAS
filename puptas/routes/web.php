@@ -591,6 +591,29 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::get('/record-programs', [StaffProgramController::class, 'index'])->name('record.programs');
 });
 
+// Admin/Superadmin enrollment tagging routes (same actions as registrar)
+Route::middleware(['auth', EnsureAdmin::class])->group(function () {
+    Route::post('/admin-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
+    Route::post('/admin-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);
+
+    // Records page — accessible to admin and superadmin in addition to registrar
+    Route::get('/admin/records', [RecordStaffDashboardController::class, 'index'])->name('admin.records.dashboard');
+    Route::get('/admin/records/applicants', [RecordStaffDashboardController::class, 'getUsers'])->name('admin.records.applicants');
+    Route::get('/admin/records/stats', [RecordStaffDashboardController::class, 'getStats'])->name('admin.records.stats');
+    Route::get('/admin/records/application/{id}', [RecordStaffDashboardController::class, 'getUserFiles'])->name('admin.records.files');
+    Route::post('/admin/records/tag/{id}', [RecordStaffDashboardController::class, 'tag'])->name('admin.records.tag');
+    Route::post('/admin/records/untag/{id}', [RecordStaffDashboardController::class, 'untag'])->name('admin.records.untag');
+    Route::post('/admin/records/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('admin.records.return-files');
+    Route::get('/admin/records/programs', [RecordStaffDashboardController::class, 'getPrograms'])->name('admin.records.programs-data');
+    Route::get('/admin/records/applications', function () {
+        return Inertia::render('Applications/Records', [
+            'user'    => Auth::user(),
+            'baseUrl' => '/admin/records',
+        ]);
+    })->name('admin.records.applications');
+    Route::get('/admin/records/programs-page', [StaffProgramController::class, 'index'])->name('admin.records.programs');
+});
+
 Route::middleware(['auth', 'role:2,3,4,6,8'])->group(function () {
     Route::get('/api/lazy-load/document/{userId}/{fileType}', [\App\Http\Controllers\LazyLoadController::class, 'loadDocument']);
     Route::post('/api/lazy-load/documents-batch/{userId}', [\App\Http\Controllers\LazyLoadController::class, 'loadDocumentsBatch']);

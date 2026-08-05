@@ -96,7 +96,7 @@ const VARIANT_CONFIG = {
         backgroundClass: 'bg-gradient-to-br from-[#faf6f2] to-[#f1ebe6]',
         defaultTitle: 'Record Management',
         roleLabel: 'Record Staff',
-        showBackToAdmin: false,
+        showBackToAdmin: true,
         showApplicantHelp: false,
     },
     interviewer: {

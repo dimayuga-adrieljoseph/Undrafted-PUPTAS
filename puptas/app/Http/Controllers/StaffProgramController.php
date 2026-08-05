@@ -35,7 +35,7 @@ class StaffProgramController extends Controller
             $variant = 'evaluator';
         } elseif (request()->routeIs('interviewer.programs')) {
             $variant = 'interviewer';
-        } elseif (request()->routeIs('record.programs')) {
+        } elseif (request()->routeIs('record.programs') || request()->routeIs('admin.records.programs')) {
             $variant = 'record';
         } elseif (in_array($user->role_id, [2, 7])) {
             $stage = request('stage', 'grade_evaluator');

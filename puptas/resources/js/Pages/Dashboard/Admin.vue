@@ -265,6 +265,43 @@ const closeUserCard = () => {
   selectedUser.value = null;
   selectedUserFiles.value = {};
 };
+
+// Snackbar
+const snackbar = ref({ show: false, message: '' });
+let snackbarTimer = null;
+const showSnackbar = (message) => {
+  snackbar.value = { show: true, message };
+  clearTimeout(snackbarTimer);
+  snackbarTimer = setTimeout(() => { snackbar.value.show = false; }, 3500);
+};
+
+const tagApplication = async () => {
+  try {
+    const response = await window.axios.post(`/admin-dashboard/tag/${selectedUser.value.id}`);
+    showSnackbar('Tagged as officially enrolled.');
+    if (selectedUser.value?.application) {
+      selectedUser.value.application.enrollment_status = response.data.enrollment_status || 'officially_enrolled';
+      selectedUser.value.application.status = response.data.application_status || 'accepted';
+    }
+  } catch (e) {
+    const msg = e.response?.data?.message || 'Failed to tag application.';
+    showSnackbar(msg);
+  }
+};
+
+const untagApplication = async () => {
+  try {
+    await window.axios.post(`/admin-dashboard/untag/${selectedUser.value.id}`);
+    showSnackbar('Reverted to temporary enrolled.');
+    if (selectedUser.value?.application) {
+      selectedUser.value.application.enrollment_status = 'temporary';
+      selectedUser.value.application.status = 'cleared_for_enrollment';
+    }
+  } catch (e) {
+    const msg = e.response?.data?.message || 'Failed to untag application.';
+    showSnackbar(msg);
+  }
+};
 </script>
 
 <template>
@@ -671,6 +708,26 @@ const closeUserCard = () => {
                     </div>
                   </div>
 
+                  <!-- Enrollment Actions -->
+                  <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Enrollment Actions</h4>
+                    <div class="flex gap-2">
+                      <button
+                        v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
+                        @click="tagApplication"
+                        class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                        Tag: Officially Enrolled
+                      </button>
+                      <button
+                        @click="untagApplication"
+                        class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Untag
+                      </button>
+                    </div>
+                  </div>
+
                   <!-- Uploaded Documents -->
                   <div v-if="Object.keys(selectedUserFiles).length">
                     <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Uploaded Documents</h4>
@@ -712,6 +769,17 @@ const closeUserCard = () => {
         </button>
       </div>
     </div>
+
+    <!-- Snackbar -->
+    <transition name="snackbar">
+      <div v-if="snackbar.show"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] px-5 py-3 bg-gray-900 dark:bg-gray-700 text-white text-sm font-medium rounded-xl shadow-xl flex items-center gap-3">
+        <svg class="w-4 h-4 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        {{ snackbar.message }}
+      </div>
+    </transition>
   </AppLayout>
 </template>
 
@@ -725,16 +793,15 @@ const closeUserCard = () => {
 .fade-leave-to {
   opacity: 0;
 }
-</style>
 
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
+.snackbar-enter-active,
+.snackbar-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.fade-enter-from,
-.fade-leave-to {
+.snackbar-enter-from,
+.snackbar-leave-to {
   opacity: 0;
+  transform: translateX(-50%) translateY(1rem);
 }
 </style>
