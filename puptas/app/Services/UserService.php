@@ -219,7 +219,7 @@ class UserService
      * This is the canonical status label used across all role views.
      *
      * Priority order (most terminal / most recent wins):
-     *   officially_enrolled → for_records → medical_cleared → medical_rejected
+     *   officially_enrolled → for_records → medical_rejected
      *   → for_medical → interview_transferred → interview_passed → interview_returned
      *   → for_interview → evaluation_passed → evaluation_returned → for_evaluation
      *
@@ -242,14 +242,9 @@ class UserService
         }
 
         if ($application->status === 'cleared_for_enrollment') {
-            // Medical cleared — check if records process exists
-            $recordsProcess = $application->processes
-                ->where('stage', 'records')
-                ->first();
-            if ($recordsProcess) {
-                return 'for_records';
-            }
-            return 'medical_cleared';
+            // Medical cleared — always show in records tab regardless of whether
+            // a records process exists yet; that is exactly what records staff need to act on.
+            return 'for_records';
         }
 
         // Walk the processes collection (already eager-loaded with ALL stages)
@@ -259,8 +254,8 @@ class UserService
         $medical = $processes->get('medical');
         if ($medical) {
             if ($medical->status === 'completed') {
-                if ($medical->action === 'passed') return 'medical_cleared';
-                if ($medical->action === 'failed')  return 'medical_rejected';
+                if ($medical->action === 'failed') return 'medical_rejected';
+                // passed or no action — either way, applicant moves to records
                 return 'for_records';
             }
             return 'for_medical';
