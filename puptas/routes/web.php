@@ -159,7 +159,12 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
         return redirect('/login?local=1');
     }
     $emergencySetting = \App\Models\SystemSetting::where('key', 'idp_down_emergency_login_enabled')->first();
-    $isEmergencyMode = $emergencySetting && $emergencySetting->value === '1';
+    $isManualOverride = $emergencySetting && $emergencySetting->value === '1';
+    
+    // Check if the scheduled task has flagged the IDP as down
+    $idpStatusDown = \Illuminate\Support\Facades\Cache::get('idp_status_down', false);
+    
+    $isEmergencyMode = $isManualOverride || $idpStatusDown;
 
     return Inertia::render('Public/Landing', [
         'isDevMode'       => in_array(config('app.env'), ['local', 'staging']),
@@ -176,15 +181,17 @@ Route::middleware([])->group(function () {
         ->middleware('throttle:10,1')
         ->name('idp.callback');
 
-    // Emergency OTP Login Routes
-    Route::get('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'showLoginForm'])->name('emergency.login');
-    Route::post('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'sendOtp'])
-        ->middleware('throttle:5,1')
-        ->name('emergency.send-otp');
-    Route::get('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'showVerifyForm'])->name('emergency.verify-form');
-    Route::post('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'verifyOtp'])
-        ->middleware('throttle:5,1')
-        ->name('emergency.verify');
+    // Emergency OTP Login Routes (Protected by ensure.idp.down)
+    Route::middleware(['ensure.idp.down'])->group(function () {
+        Route::get('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'showLoginForm'])->name('emergency.login');
+        Route::post('/emergency-login', [\App\Http\Controllers\EmergencyLoginController::class, 'sendOtp'])
+            ->middleware('throttle:5,1')
+            ->name('emergency.send-otp');
+        Route::get('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'showVerifyForm'])->name('emergency.verify-form');
+        Route::post('/emergency-login/verify', [\App\Http\Controllers\EmergencyLoginController::class, 'verifyOtp'])
+            ->middleware('throttle:5,1')
+            ->name('emergency.verify');
+    });
 
     Route::get('/auth/callback', [IdpAuthController::class, 'callback'])
         ->middleware('throttle:10,1')
@@ -589,6 +596,29 @@ Route::middleware(['auth', 'role:6'])->group(function () {
     Route::post('/record-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);
     Route::post('/record-dashboard/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('record-return.files');
     Route::get('/record-programs', [StaffProgramController::class, 'index'])->name('record.programs');
+});
+
+// Admin/Superadmin enrollment tagging routes (same actions as registrar)
+Route::middleware(['auth', EnsureAdmin::class])->group(function () {
+    Route::post('/admin-dashboard/tag/{id}', [RecordStaffDashboardController::class, 'tag']);
+    Route::post('/admin-dashboard/untag/{id}', [RecordStaffDashboardController::class, 'untag']);
+
+    // Records page — accessible to admin and superadmin in addition to registrar
+    Route::get('/admin/records', [RecordStaffDashboardController::class, 'index'])->name('admin.records.dashboard');
+    Route::get('/admin/records/applicants', [RecordStaffDashboardController::class, 'getUsers'])->name('admin.records.applicants');
+    Route::get('/admin/records/stats', [RecordStaffDashboardController::class, 'getStats'])->name('admin.records.stats');
+    Route::get('/admin/records/application/{id}', [RecordStaffDashboardController::class, 'getUserFiles'])->name('admin.records.files');
+    Route::post('/admin/records/tag/{id}', [RecordStaffDashboardController::class, 'tag'])->name('admin.records.tag');
+    Route::post('/admin/records/untag/{id}', [RecordStaffDashboardController::class, 'untag'])->name('admin.records.untag');
+    Route::post('/admin/records/return-files/{user}', [RecordStaffDashboardController::class, 'returnApplication'])->name('admin.records.return-files');
+    Route::get('/admin/records/programs', [RecordStaffDashboardController::class, 'getPrograms'])->name('admin.records.programs-data');
+    Route::get('/admin/records/applications', function () {
+        return Inertia::render('Applications/Records', [
+            'user'    => Auth::user(),
+            'baseUrl' => '/admin/records',
+        ]);
+    })->name('admin.records.applications');
+    Route::get('/admin/records/programs-page', [StaffProgramController::class, 'index'])->name('admin.records.programs');
 });
 
 Route::middleware(['auth', 'role:2,3,4,6,8'])->group(function () {

@@ -79,10 +79,14 @@ class RecordStaffDashboardController extends Controller
     {
         $dashboardData = $this->dashboardService->getRecordsDashboardData();
 
+        $user = Auth::user();
+        $isAdmin = $user && in_array($user->role_id, [2, 7]);
+
         return Inertia::render('Dashboard/Records', [
-            'user' => Auth::user() ? Auth::user()->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
+            'user'     => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $dashboardData['programs']->values()->all(),
-            'summary' => $dashboardData['summary'],
+            'summary'  => $dashboardData['summary'],
+            'baseUrl'  => $isAdmin ? '/admin/records' : '/record-dashboard',
         ]);
     }
 
@@ -285,7 +289,7 @@ class RecordStaffDashboardController extends Controller
 
             return response()->json([
                 'user' => $userData,
-                'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false),
+                'uploadedFiles' => FileMapper::formatFilesForGraduateType($files, $graduateType, false, true),
                 'lazyLoad' => false,
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -330,6 +334,14 @@ class RecordStaffDashboardController extends Controller
 
         if (!$medicalCompleted) {
             return response()->json(['message' => 'Medical assessment must be completed first'], 400);
+        }
+
+        // Check if COR is uploaded
+        $corFront = \App\Models\UserFile::where('user_id', (string) $application->user_id)->where('type', 'cor_front')->first();
+        $corBack = \App\Models\UserFile::where('user_id', (string) $application->user_id)->where('type', 'cor_back')->first();
+
+        if (!$corFront || !$corBack || !$corFront->isUploaded() || !$corBack->isUploaded()) {
+            return response()->json(['message' => 'Applicant must upload COR Front and Back before records processing.'], 400);
         }
 
         DB::beginTransaction();
@@ -531,6 +543,16 @@ class RecordStaffDashboardController extends Controller
             ], 403);
         }
 
+        // Check if COR is uploaded
+        $corFront = \App\Models\UserFile::where('user_id', (string) $id)->where('type', 'cor_front')->first();
+        $corBack = \App\Models\UserFile::where('user_id', (string) $id)->where('type', 'cor_back')->first();
+
+        if (!$corFront || !$corBack || !$corFront->isUploaded() || !$corBack->isUploaded()) {
+            return response()->json([
+                'message' => 'Cannot tag as officially enrolled. Applicant must upload COR Front and Back.'
+            ], 403);
+        }
+
         DB::beginTransaction();
         try {
             $application->update([
@@ -612,11 +634,14 @@ class RecordStaffDashboardController extends Controller
     }
 
     /**
-     * Ensure user has the correct role
+     * Ensure user has the correct role.
+     * Admin (2) and Superadmin (7) are always permitted alongside the given role.
      */
     private function ensureRole(int $roleId): void
     {
-        if (!Auth::user() || Auth::user()->role_id !== $roleId) {
+        $user = Auth::user();
+        $allowedRoles = [$roleId, 2, 7];
+        if (!$user || !in_array($user->role_id, $allowedRoles)) {
             abort(403, 'Unauthorized access.');
         }
     }

@@ -55,7 +55,7 @@ class ShareInertiaData
                         'lastname'    => $user->lastname,
                         'email'       => $user->email,
                         'role_id'     => $user->role_id,
-                        'idp_user_id' => $user->idp_user_id,
+                        // Intentionally excluding idp_user_id from frontend payload
                     ],
                 ];
             },

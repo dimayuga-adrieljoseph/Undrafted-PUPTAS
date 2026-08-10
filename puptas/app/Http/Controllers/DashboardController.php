@@ -178,7 +178,7 @@ class DashboardController extends Controller
             $graduateType = $applicant->graduateTypes->first()?->label ?? null;
 
             // Return full file data with URLs (not lazy loading)
-            $fileList = FileMapper::formatFilesForGraduateType($files, $graduateType, false);
+            $fileList = FileMapper::formatFilesForGraduateType($files, $graduateType, false, true);
 
 
 

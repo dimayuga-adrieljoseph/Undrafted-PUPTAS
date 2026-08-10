@@ -96,7 +96,7 @@ const VARIANT_CONFIG = {
         backgroundClass: 'bg-gradient-to-br from-[#faf6f2] to-[#f1ebe6]',
         defaultTitle: 'Record Management',
         roleLabel: 'Record Staff',
-        showBackToAdmin: false,
+        showBackToAdmin: true,
         showApplicantHelp: false,
     },
     interviewer: {
@@ -145,20 +145,20 @@ const showBackLink = computed(
 
 <template>
     <div
-        class="min-h-screen flex dark:from-gray-950 dark:to-gray-900"
+        class="min-h-screen flex overflow-x-hidden dark:from-gray-950 dark:to-gray-900"
         :class="config.backgroundClass"
     >
         <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
         <Sidebar :variant="variant" v-model:open="sidebarOpen" />
 
         <!-- ── Main area ───────────────────────────────────────────────────── -->
-        <div class="flex-1 flex flex-col ml-0 md:ml-[var(--sidebar-width,5rem)]">
+        <div class="w-full min-w-0 flex flex-col md:ml-[var(--sidebar-width,5rem)]">
 
             <!-- ── Header ─────────────────────────────────────────────────── -->
             <header class="sticky top-0 z-40 h-16 px-3 sm:px-6 flex items-center justify-between bg-white/80 backdrop-blur border-b border-gray-200 dark:bg-gray-900/80 dark:border-gray-800">
 
                 <!-- Left: hamburger + title -->
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
                     <button
                         class="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
                         aria-label="Open navigation menu"
@@ -177,7 +177,7 @@ const showBackLink = computed(
                 </div>
 
                 <!-- Right: contextual actions + dark mode + user pill -->
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
 
                     <!-- "Back to Admin" — interviewer / evaluator panels for admins -->
                     <Link
@@ -229,8 +229,8 @@ const showBackLink = computed(
             </header>
 
             <!-- ── Page content ────────────────────────────────────────────── -->
-            <main class="flex-1 p-3 sm:p-6 overflow-y-auto">
-                <div class="w-full rounded-2xl p-4 sm:p-6 bg-white min-h-[calc(100vh-12rem)] shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800">
+            <main class="flex-1 p-3 sm:p-6 overflow-y-auto overflow-x-hidden">
+                <div class="w-full rounded-2xl p-4 sm:p-6 bg-white min-h-[calc(100vh-12rem)] shadow-sm border border-gray-200 dark:bg-gray-900 dark:border-gray-800 overflow-x-hidden">
                     <slot />
                 </div>
             </main>

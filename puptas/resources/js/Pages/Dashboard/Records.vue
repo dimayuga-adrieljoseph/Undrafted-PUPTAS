@@ -16,6 +16,11 @@ const summary = ref(
 const props = defineProps({
     user: Object,
     allUsers: Array,
+    // Admin/superadmin pass '/admin/records'; registrar gets the default
+    baseUrl: {
+        type: String,
+        default: '/record-dashboard',
+    },
 });
 
 // Summary items with icons and percentages
@@ -109,7 +114,7 @@ const getStatusClass = (status) => {
 
 const fetchUsers = async () => {
     try {
-        const response = await fetch("/record-dashboard/applicants", {
+        const response = await fetch(`${props.baseUrl}/applicants`, {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
@@ -126,7 +131,7 @@ const fetchUsers = async () => {
 
 const fetchStats = async () => {
     try {
-        const response = await axios.get("/record-dashboard/stats");
+        const response = await axios.get(`${props.baseUrl}/stats`);
         summary.value = response.data.summary || { total: 0, accepted: 0, pending: 0, returned: 0 };
         programs.value = response.data.programs || [];
     } catch (error) {
@@ -172,26 +177,26 @@ const filteredUsers = computed(() => {
 });
 
 const displayedUsers = computed(() => {
-    // Recent applications = only those NOT yet officially enrolled
-    const pending = users.value.filter(
-        u => u.enrollment_status !== 'officially_enrolled' &&
-             u.application?.enrollment_status !== 'officially_enrolled'
+    // Show only in-progress (for_records) and officially enrolled records
+    const visible = users.value.filter(
+        u => u.pipeline_status === 'for_records' || u.pipeline_status === 'officially_enrolled' ||
+             u.enrollment_status === 'officially_enrolled'
     );
     if (searchQuery.value.trim()) {
         const q = searchQuery.value.toLowerCase();
-        return pending.filter(u =>
+        return visible.filter(u =>
             u.firstname?.toLowerCase().includes(q) ||
             u.lastname?.toLowerCase().includes(q) ||
             u.email?.toLowerCase().includes(q)
         );
     }
-    return pending.slice(0, 5);
+    return visible.slice(0, 5);
 });
 
 const selectUser = async (user) => {
     try {
         const response = await axios.get(
-            `/record-dashboard/application/${user.id}`
+            `${props.baseUrl}/application/${user.id}`
         );
 
         selectedUser.value = {
@@ -275,7 +280,7 @@ const formatDate = (date) => {
 const acceptApplication = async () => {
     try {
         const taggedId = selectedUser.value.id;
-        await axios.post(`/record-dashboard/tag/${taggedId}`);
+        await axios.post(`${props.baseUrl}/tag/${taggedId}`);
         showSnackbar("Tagged as officially enrolled");
 
         // Immediately remove from the list so UI updates without waiting for refetch
@@ -293,7 +298,7 @@ const acceptApplication = async () => {
 
 const untagApplication = async () => {
     try {
-        await axios.post(`/record-dashboard/untag/${selectedUser.value.id}`);
+        await axios.post(`${props.baseUrl}/untag/${selectedUser.value.id}`);
         showSnackbar("Reverted to temporary enrolled");
         selectedUser.value = null;
         await fetchUsers();

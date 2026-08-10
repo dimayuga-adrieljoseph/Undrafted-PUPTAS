@@ -379,6 +379,7 @@ class UserService
         return $profiles->map(function ($profile) use ($applications) {
             $app = $applications->get($profile->user_id);
             $program = $app?->program;
+            $pipelineStatus = $this->derivePipelineStatus($app);
 
             return [
                 'id'                => $profile->user_id,
@@ -390,7 +391,7 @@ class UserService
                 'company'           => null,
                 'status'            => $app?->status ?? null,
                 'enrollment_status' => $app?->enrollment_status ?? null,
-                'pipeline_status'   => $this->derivePipelineStatus($app),
+                'pipeline_status'   => $pipelineStatus,
                 'program'           => $program ? [
                     'id'   => $program->id,
                     'code' => $program->code,
@@ -411,7 +412,11 @@ class UserService
                     ] : null,
                 ] : null,
             ];
-        });
+        })->filter(function ($record) {
+            // Records role only sees applicants that are in progress (for_records)
+            // or officially enrolled — exclude all earlier pipeline stages
+            return in_array($record['pipeline_status'], ['for_records', 'officially_enrolled']);
+        })->values();
     }
 
     /**

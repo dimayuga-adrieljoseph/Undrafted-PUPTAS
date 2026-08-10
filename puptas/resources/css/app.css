@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent horizontal overflow / zoom on mobile */
+html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+}
+
 [x-cloak] {
     display: none;
 }
