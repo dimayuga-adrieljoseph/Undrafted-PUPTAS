@@ -92,6 +92,12 @@ const enrollmentInfo = computed(() => {
     if (currentKey) {
       currentStageLabel = stageLabels[currentKey] ?? null;
     }
+
+    // If medical is completed but no records process exists yet, the applicant
+    // is now waiting for the registrar — override the label accordingly.
+    if (!byStage['records'] && byStage['medical']?.status === 'completed') {
+      currentStageLabel = 'Registrar';
+    }
   }
 
   // Shared green style used for all active/positive states
@@ -335,8 +341,25 @@ const timelineSteps = computed(() => {
     }
   }
 
+  // If medical is completed and no records process exists yet, synthesize an
+  // in_progress records entry so the Registrar step shows "In Progress" instead
+  // of "Upcoming" — the applicant is now actively waiting for the registrar.
+  const medicalDone = byStage['medical']?.status === 'completed';
+  const hasRecordsProcess = !!byStage['records'];
+  if (medicalDone && !hasRecordsProcess) {
+    byStage['records'] = {
+      stage: 'records',
+      status: 'in_progress',
+      action: null,
+      created_at: null,
+      reviewer_notes: null,
+    };
+  }
+
   // Determine how far the pipeline has progressed
   const reachedKeys = new Set(procs.map(p => p.stage === 'evaluator' ? 'document_evaluator' : p.stage));
+  // Also count the synthetic records entry as reached when applicable
+  if (byStage['records']) reachedKeys.add('records');
 
   return PIPELINE_STAGES.map((stage) => {
     const proc = byStage[stage.key] || null;
