@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -12,6 +13,16 @@ class ProcessChatwootWebhookJob implements ShouldQueue
     use Queueable;
 
     public $queue = 'high';
+
+    /**
+     * Retry up to 5 times before giving up.
+     */
+    public int $tries = 5;
+
+    /**
+     * Exponential backoff: wait 30s, 60s, 120s, 300s, 600s between retries.
+     */
+    public array $backoff = [30, 60, 120, 300, 600];
 
     protected array $payload;
 
@@ -53,6 +64,12 @@ class ProcessChatwootWebhookJob implements ShouldQueue
                 $this->sendMessageToChatwoot((int) $conversationId, $accountId ? (int) $accountId : null, $aiResponse);
             }
 
+        } catch (ConnectionException $e) {
+            Log::warning('Chatwoot is unreachable, will retry', [
+                'attempt' => $this->attempts(),
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Chatwoot webhook job error: ' . $e->getMessage());
             $this->fail($e);
@@ -61,37 +78,52 @@ class ProcessChatwootWebhookJob implements ShouldQueue
 
     private function sendMessageToChatwoot(int $conversationId, ?int $accountId, string $message): void
     {
-        try {
-            $baseUrl = config('services.chatwoot.base_url');
-            $accessToken = config('services.chatwoot.access_token');
+        $baseUrl = config('services.chatwoot.base_url');
+        $accessToken = config('services.chatwoot.access_token');
 
-            if (empty($baseUrl) || empty($accessToken)) {
-                Log::info('Chatwoot credentials not configured, skipping message send');
-                return;
-            }
-
-            $url = rtrim($baseUrl, '/') . "/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages";
-
-            $response = Http::withHeaders([
-                'api_access_token' => $accessToken,
-                'Content-Type' => 'application/json',
-            ])->post($url, [
-                'content' => $message,
-                'message_type' => 'outgoing',
-                'private' => false,
-            ]);
-
-            if ($response->successful()) {
-                Log::info('Message sent to Chatwoot successfully', ['conversation_id' => $conversationId]);
-            } else {
-                Log::error('Failed to send message to Chatwoot', [
-                    'status' => $response->status(),
-                    'body' => $response->body()
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error('Error sending message to Chatwoot: ' . $e->getMessage());
+        if (empty($baseUrl) || empty($accessToken)) {
+            Log::info('Chatwoot credentials not configured, skipping message send');
+            return;
         }
+
+        if (empty($accountId)) {
+            Log::warning('Chatwoot account ID missing in payload, skipping message send', [
+                'conversation_id' => $conversationId,
+            ]);
+            return;
+        }
+
+        $url = rtrim($baseUrl, '/') . "/api/v1/accounts/{$accountId}/conversations/{$conversationId}/messages";
+
+        // connectTimeout: fail fast if Chatwoot is unreachable (10s)
+        // timeout: overall request timeout (15s)
+        $response = Http::withHeaders([
+            'api_access_token' => $accessToken,
+            'Content-Type' => 'application/json',
+        ])->connectTimeout(10)->timeout(15)->post($url, [
+            'content' => $message,
+            'message_type' => 'outgoing',
+            'private' => false,
+        ]);
+
+        if ($response->successful()) {
+            Log::info('Message sent to Chatwoot successfully', ['conversation_id' => $conversationId]);
+            return;
+        }
+
+        // 5xx means Chatwoot is down or erroring — throw so the job retries
+        // 4xx means a config/data problem — log and give up (retrying won't help)
+        if ($response->serverError()) {
+            throw new \RuntimeException(
+                "Chatwoot server error ({$response->status()}) for conversation {$conversationId}: {$response->body()}"
+            );
+        }
+
+        Log::error('Failed to send message to Chatwoot (client error, will not retry)', [
+            'conversation_id' => $conversationId,
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
     }
 
     private function getGeminiResponse(string $userMessage): string

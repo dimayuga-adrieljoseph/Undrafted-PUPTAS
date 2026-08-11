@@ -93,9 +93,7 @@ RUN sed -ri -e "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" \
     && sed -ri -e "s|AllowOverride None|AllowOverride All|g" \
     /etc/apache2/apache2.conf
 
-# Port is set dynamically at runtime by the entrypoint using $PORT (Railway injects this).
-# We write a placeholder config here; the entrypoint overwrites ports.conf and the
-# VirtualHost line before Apache starts. Default fallback is 8080.
+# Configure Apache to listen on port 8080
 RUN echo "Listen 8080" > /etc/apache2/ports.conf \
     && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/g' /etc/apache2/sites-available/000-default.conf
 
@@ -118,21 +116,18 @@ RUN ls -la /var/www/html/public/build/ && \
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Create all runtime directories and storage symlink at build time
-# so the entrypoint has zero artisan commands to run before Apache starts
-RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} \
-             storage/logs \
-             storage/app/public/uploads/files \
-             storage/app/templates \
-             bootstrap/cache \
-    && cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/ \
-    && ln -sfn /var/www/html/storage/app/public /var/www/html/public/storage \
+# Fix permissions
+RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache \
     && chmod -R 755 storage/framework storage/logs
 
-# Railway injects $PORT at runtime; the entrypoint configures Apache to bind to it.
-# Fallback is 8080 if $PORT is not set.
+# Note: APP_KEY is provided via Railway environment variables
+# No need to generate at build time
+
+RUN mkdir -p storage/app/templates && \
+    cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/
+
 EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

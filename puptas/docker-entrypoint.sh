@@ -2,51 +2,123 @@
 set -e
 
 echo "=========================================="
-echo "ENTRYPOINT STARTING (SERVICE_ROLE=${SERVICE_ROLE:-web})"
+echo "ENTRYPOINT STARTING"
 echo "=========================================="
 
-# Validate APP_KEY is set
-if [ -z "${APP_KEY:-}" ]; then
-    echo "ERROR: APP_KEY environment variable is not set!"
-    exit 1
-fi
+# Create required directories
+echo "[1/11] Creating directories..."
+mkdir -p /var/lib/php/sessions /var/lib/php/wsdlcache
+mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs bootstrap/cache
+touch /var/www/html/.env
 
-# Ensure writable runtime directories exist and have correct ownership
-# (These may be reset between deploys on ephemeral filesystems)
-mkdir -p storage/framework/{sessions,views,cache,maintenance} \
-         storage/logs \
-         storage/app/public/uploads/files \
-         bootstrap/cache \
-         /var/lib/php/sessions \
-         /var/lib/php/wsdlcache
-
-chown -R www-data:www-data storage bootstrap/cache \
-                           /var/lib/php/sessions \
-                           /var/lib/php/wsdlcache
+# Fix permissions
+echo "[2/11] Fixing permissions..."
+chown -R www-data:www-data storage bootstrap/cache /var/lib/php/sessions /var/lib/php/wsdlcache
 chmod -R 775 storage bootstrap/cache
 chmod -R 755 storage/framework storage/logs
 
-# =============================================================================
-# Web service: configure Apache port and start immediately
-# No artisan commands — nothing that touches DB or Redis before Apache is up
-# =============================================================================
-if [ "${SERVICE_ROLE:-web}" = "web" ]; then
-    APACHE_PORT="${PORT:-8080}"
-    echo "Listen ${APACHE_PORT}" > /etc/apache2/ports.conf
-    sed -i "s/<VirtualHost \*:[0-9]*>/<VirtualHost *:${APACHE_PORT}>/" \
-        /etc/apache2/sites-available/000-default.conf
+# Verify vendor exists
+echo "[3/11] Checking vendor..."
+if [ ! -f /var/www/html/vendor/autoload.php ]; then
+    echo "ERROR: vendor/autoload.php not found!"
+    ls -la /var/www/html/
+    exit 1
+fi
 
-    echo "Starting Apache on port ${APACHE_PORT}..."
-    exec apache2-foreground
+# Check public directory
+echo "[4/11] Checking public directory..."
+if [ ! -f /var/www/html/public/index.php ]; then
+    echo "ERROR: public/index.php not found!"
+    exit 1
 fi
 
 # =============================================================================
-# Worker / Scheduler
+# FIX: Apache MPM Conflict - Runtime verification and fix
 # =============================================================================
+echo "[5/11] Checking/fixing Apache MPM..."
+
+# Disable all MPMs
+a2dismod mpm_event 2>/dev/null || true
+a2dismod mpm_worker 2>/dev/null || true
+a2dismod mpm_prefork 2>/dev/null || true
+
+# Remove any remaining MPM config files
+rm -f /etc/apache2/mods-enabled/mpm_*.load 2>/dev/null || true
+rm -f /etc/apache2/mods-enabled/mpm_*.conf 2>/dev/null || true
+
+# Enable ONLY mpm_prefork (required for mod_php)
+a2enmod mpm_prefork
+
+# Verify only one MPM is enabled
+MPM_COUNT=$(ls -1 /etc/apache2/mods-enabled/mpm_*.load 2>/dev/null | wc -l)
+if [ "$MPM_COUNT" -gt 1 ]; then
+    echo "ERROR: Multiple MPMs enabled!"
+    ls -la /etc/apache2/mods-enabled/mpm_*.load
+    exit 1
+fi
+echo "[5/11] MPM verification: OK ($MPM_COUNT MPM enabled)"
+
+# Clear Laravel caches
+echo "[6/12] Clearing Laravel caches..."
+php artisan config:clear 2>/dev/null || true
+php artisan route:clear 2>/dev/null || true
+php artisan view:clear 2>/dev/null || true
+php artisan cache:clear 2>/dev/null || true
+php artisan optimize:clear 2>/dev/null || true
+
+# Validate APP_KEY is set (must be provided via environment variable)
+echo "[6b/12] Checking APP_KEY..."
+if [ -z "${APP_KEY:-}" ]; then
+    echo "ERROR: APP_KEY environment variable is not set!"
+    echo "Set it via Railway environment variables or your deployment platform."
+    exit 1
+fi
+echo "[6b/12] APP_KEY: present (from environment)"
+
+# Run database migrations
+echo "[7/13] Running database migrations..."
+php artisan migrate --force
+echo "[7/13] Migrations complete."
+
+# Create storage symlink so public disk is accessible
+echo "[8/13] Creating storage symlink..."
+mkdir -p storage/app/public/uploads/files
+chown -R www-data:www-data storage/app/public
+php artisan storage:link --force
+chown -h www-data:www-data public/storage 2>/dev/null || true
+echo "[8/13] Storage link created."
+
+# Verify routes are registered
+echo "[9/13] Verifying routes..."
+php artisan route:list --path=login 2>/dev/null || echo "Route verification skipped"
+
+# Test Apache configuration
+echo "[10/13] Testing Apache configuration..."
+apache2ctl configtest
+if [ $? -ne 0 ]; then
+    echo "ERROR: Apache configuration test failed!"
+    exit 1
+fi
+
+# List enabled MPM modules
+echo "[11/13] Enabled MPM modules:"
+apache2ctl -M 2>/dev/null | grep mpm || echo "No MPM modules listed"
+
+# Set proper permissions after cache clear
+echo "[12/13] Final permission fix..."
+chown -R www-data:www-data storage bootstrap/cache
+
+# Start Apache or execute custom command
 if [ "$1" != "" ]; then
-    echo "Starting: $@"
+    echo "=========================================="
+    echo "EXECUTING CUSTOM COMMAND: $@"
+    echo "=========================================="
     exec "$@"
 else
-    echo "ERROR: No command provided and SERVICE_ROLE is not 'web'."
-    exit 1
+    echo "[13/13] Starting Apache..."
+    echo "=========================================="
+    echo "APACHE STARTED SUCCESSFULLY"
+    echo "=========================================="
+    
+    exec apache2-foreground
 fi
