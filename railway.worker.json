@@ -8,6 +8,8 @@
   },
   "deploy": {
     "startCommand": "php artisan queue:work --queue=high,emails,default --tries=3 --sleep=3 --max-time=3600",
+    "preDeployCommand": null,
+    "healthcheckPath": null,
     "restartPolicyType": "ALWAYS"
   }
 }
