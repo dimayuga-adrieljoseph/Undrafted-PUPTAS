@@ -186,12 +186,15 @@ class CutoffSettingsService
         return (bool) preg_match('/[Zz]$|[+-]\d{2}:?\d{0,2}$/', trim($value));
     }
 
-    // ─── Registration Score Overrides ───────────────────────────────────────────
+    // ─── Registration Score Range Overrides ─────────────────────────────────────
 
     /**
-     * Get the list of pupcet_total_scores allowed to register regardless of cutoff.
+     * Get all score range override entries.
+     * Each entry: ['id' => string, 'score_from' => float, 'score_to' => float, 'expires_at' => string|null]
      *
-     * @return float[]
+     * Backwards-compatible: migrates legacy single-score entries on the fly.
+     *
+     * @return array
      */
     public function getAllowedRegistrationScores(): array
     {
@@ -205,94 +208,153 @@ class CutoffSettingsService
             return [];
         }
 
-        // Migrate flat array [85.5] to [['score' => 85.5, 'expires_at' => null]] on the fly
-        return array_map(function ($item) {
+        return array_values(array_map(function ($item, $index) {
+            // Legacy: flat numeric value e.g. 85.5
             if (is_numeric($item)) {
                 return [
-                    'score' => (float) $item,
+                    'id'         => 'legacy_' . $index,
+                    'score_from' => (float) $item,
+                    'score_to'   => (float) $item,
                     'expires_at' => null,
                 ];
             }
+
+            // Legacy: single-score object { score, expires_at }
+            if (isset($item['score']) && !isset($item['score_from'])) {
+                return [
+                    'id'         => $item['id'] ?? ('legacy_' . $index),
+                    'score_from' => (float) $item['score'],
+                    'score_to'   => (float) $item['score'],
+                    'expires_at' => $item['expires_at'] ?? null,
+                ];
+            }
+
+            // Current range format
             return [
-                'score' => isset($item['score']) ? (float) $item['score'] : 0.0,
+                'id'         => $item['id'] ?? ('range_' . $index),
+                'score_from' => isset($item['score_from']) ? (float) $item['score_from'] : 0.0,
+                'score_to'   => isset($item['score_to'])   ? (float) $item['score_to']   : 0.0,
                 'expires_at' => $item['expires_at'] ?? null,
             ];
-        }, $decoded);
+        }, $decoded, array_keys($decoded)));
     }
 
     /**
-     * Check if a specific pupcet_total_score is allowed to register regardless of cutoff.
+     * Check if a specific pupcet_total_score falls within any active range override.
      *
      * @param float $score
      * @return bool
      */
     public function isScoreAllowed(float $score): bool
     {
-        $allowed = $this->getAllowedRegistrationScores();
-        foreach ($allowed as $item) {
-            // Use epsilon for safe float comparison
-            if (abs($item['score'] - $score) < 0.001) {
-                // Check expiration
+        $ranges = $this->getAllowedRegistrationScores();
+
+        foreach ($ranges as $item) {
+            // Check if score falls within this range (inclusive)
+            if ($score >= $item['score_from'] && $score <= $item['score_to']) {
                 if (empty($item['expires_at'])) {
-                    return true; // No expiration means always allowed
+                    return true;
                 }
-                
-                // Compare with current Manila time
+
                 try {
                     $expiresAt = CarbonImmutable::parse($item['expires_at'], self::TIMEZONE);
                     if (CarbonImmutable::now(self::TIMEZONE)->lte($expiresAt)) {
                         return true;
                     }
                 } catch (\Exception $e) {
-                    // Fallback to true if date is unparseable for some reason
                     return true;
                 }
             }
         }
+
         return false;
     }
 
     /**
-     * Add a score to the allowed registration list.
+     * Add a new score range override entry.
      *
-     * @param float $score
+     * @param float       $scoreFrom
+     * @param float       $scoreTo
+     * @param string|null $expiresAt
      * @return void
      */
-    public function addAllowedRegistrationScore(float $score, ?string $expiresAt = null): void
+    public function addAllowedRegistrationScore(float $scoreFrom, float $scoreTo, ?string $expiresAt = null): void
     {
-        $allowed = $this->getAllowedRegistrationScores();
-        
-        // Remove any existing entry for this score to avoid duplicates
-        $filtered = array_filter($allowed, fn($item) => $item['score'] !== $score);
-        
-        // Ensure expiration is parsed into Manila time if provided
+        $ranges = $this->getAllowedRegistrationScores();
+
         $expiresAtManila = null;
         if ($expiresAt) {
             $expiresAtManila = CarbonImmutable::parse($expiresAt, self::TIMEZONE)->toDateTimeString();
         }
 
-        $filtered[] = [
-            'score' => $score,
+        $ranges[] = [
+            'id'         => 'range_' . uniqid(),
+            'score_from' => $scoreFrom,
+            'score_to'   => $scoreTo,
             'expires_at' => $expiresAtManila,
         ];
-        
+
         SystemSetting::updateOrCreate(
             ['key' => 'allowed_registration_scores'],
-            ['value' => json_encode(array_values($filtered))]
+            ['value' => json_encode(array_values($ranges))]
         );
     }
 
     /**
-     * Remove a score from the allowed registration list.
+     * Update an existing score range override by its ID.
      *
-     * @param float $score
+     * @param string      $id
+     * @param float       $scoreFrom
+     * @param float       $scoreTo
+     * @param string|null $expiresAt
+     * @return bool  Returns false when the ID is not found.
+     */
+    public function updateAllowedRegistrationScore(string $id, float $scoreFrom, float $scoreTo, ?string $expiresAt = null): bool
+    {
+        $ranges = $this->getAllowedRegistrationScores();
+        $found  = false;
+
+        $expiresAtManila = null;
+        if ($expiresAt) {
+            $expiresAtManila = CarbonImmutable::parse($expiresAt, self::TIMEZONE)->toDateTimeString();
+        }
+
+        $updated = array_map(function ($item) use ($id, $scoreFrom, $scoreTo, $expiresAtManila, &$found) {
+            if ($item['id'] === $id) {
+                $found = true;
+                return [
+                    'id'         => $id,
+                    'score_from' => $scoreFrom,
+                    'score_to'   => $scoreTo,
+                    'expires_at' => $expiresAtManila,
+                ];
+            }
+            return $item;
+        }, $ranges);
+
+        if (!$found) {
+            return false;
+        }
+
+        SystemSetting::updateOrCreate(
+            ['key' => 'allowed_registration_scores'],
+            ['value' => json_encode(array_values($updated))]
+        );
+
+        return true;
+    }
+
+    /**
+     * Remove a score range override entry by its ID.
+     *
+     * @param string $id
      * @return void
      */
-    public function removeAllowedRegistrationScore(float $score): void
+    public function removeAllowedRegistrationScore(string $id): void
     {
-        $allowed = $this->getAllowedRegistrationScores();
-        $filtered = array_filter($allowed, fn($item) => $item['score'] !== $score);
-        
+        $ranges   = $this->getAllowedRegistrationScores();
+        $filtered = array_filter($ranges, fn($item) => $item['id'] !== $id);
+
         SystemSetting::updateOrCreate(
             ['key' => 'allowed_registration_scores'],
             ['value' => json_encode(array_values($filtered))]
@@ -303,6 +365,7 @@ class CutoffSettingsService
 
     /**
      * Get the list of emails allowed to register regardless of cutoff.
+     * Each entry: ['email' => string, 'expires_at' => string|null]
      *
      * @return array
      */
@@ -318,12 +381,13 @@ class CutoffSettingsService
             return [];
         }
 
-        return array_map(function ($item) {
+        return array_values(array_map(function ($item) {
             return [
-                'email' => isset($item['email']) ? strtolower(trim($item['email'])) : '',
+                'email'      => isset($item['email']) ? strtolower(trim($item['email'])) : '',
+                'name'       => $item['name'] ?? null,
                 'expires_at' => $item['expires_at'] ?? null,
             ];
-        }, $decoded);
+        }, $decoded));
     }
 
     /**
@@ -362,32 +426,72 @@ class CutoffSettingsService
     /**
      * Add an email to the allowed registration list.
      *
-     * @param string $email
+     * @param string      $email
+     * @param string|null $name       Display name (surname, first_name)
      * @param string|null $expiresAt
      * @return void
      */
-    public function addAllowedRegistrationEmail(string $email, ?string $expiresAt = null): void
+    public function addAllowedRegistrationEmail(string $email, ?string $name = null, ?string $expiresAt = null): void
     {
-        $email = strtolower(trim($email));
+        $email   = strtolower(trim($email));
         $allowed = $this->getAllowedRegistrationEmails();
-        
-        // Remove any existing entry for this email
+
+        // Remove any existing entry for this email (upsert behaviour)
         $filtered = array_filter($allowed, fn($item) => $item['email'] !== $email);
-        
+
         $expiresAtManila = null;
         if ($expiresAt) {
             $expiresAtManila = CarbonImmutable::parse($expiresAt, self::TIMEZONE)->toDateTimeString();
         }
 
         $filtered[] = [
-            'email' => $email,
+            'email'      => $email,
+            'name'       => $name,
             'expires_at' => $expiresAtManila,
         ];
-        
+
         SystemSetting::updateOrCreate(
             ['key' => 'allowed_registration_emails'],
             ['value' => json_encode(array_values($filtered))]
         );
+    }
+
+    /**
+     * Update an existing email override entry (expiry date).
+     *
+     * @param string      $email
+     * @param string|null $expiresAt
+     * @return bool
+     */
+    public function updateAllowedRegistrationEmail(string $email, ?string $expiresAt = null): bool
+    {
+        $email   = strtolower(trim($email));
+        $allowed = $this->getAllowedRegistrationEmails();
+        $found   = false;
+
+        $expiresAtManila = null;
+        if ($expiresAt) {
+            $expiresAtManila = CarbonImmutable::parse($expiresAt, self::TIMEZONE)->toDateTimeString();
+        }
+
+        $updated = array_map(function ($item) use ($email, $expiresAtManila, &$found) {
+            if ($item['email'] === $email) {
+                $found = true;
+                return array_merge($item, ['expires_at' => $expiresAtManila]);
+            }
+            return $item;
+        }, $allowed);
+
+        if (!$found) {
+            return false;
+        }
+
+        SystemSetting::updateOrCreate(
+            ['key' => 'allowed_registration_emails'],
+            ['value' => json_encode(array_values($updated))]
+        );
+
+        return true;
     }
 
     /**
@@ -398,10 +502,10 @@ class CutoffSettingsService
      */
     public function removeAllowedRegistrationEmail(string $email): void
     {
-        $email = strtolower(trim($email));
-        $allowed = $this->getAllowedRegistrationEmails();
+        $email    = strtolower(trim($email));
+        $allowed  = $this->getAllowedRegistrationEmails();
         $filtered = array_filter($allowed, fn($item) => $item['email'] !== $email);
-        
+
         SystemSetting::updateOrCreate(
             ['key' => 'allowed_registration_emails'],
             ['value' => json_encode(array_values($filtered))]
