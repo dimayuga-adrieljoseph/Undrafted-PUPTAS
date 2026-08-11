@@ -31,6 +31,12 @@ chmod -R 755 storage/framework storage/logs
 # No artisan commands — nothing that touches DB or Redis before Apache is up
 # =============================================================================
 if [ "${SERVICE_ROLE:-web}" = "web" ]; then
+    # Fix MPM conflict at runtime (mods-enabled state can be reset by Railway's volume mount)
+    a2dismod mpm_event mpm_worker mpm_prefork 2>/dev/null || true
+    rm -f /etc/apache2/mods-enabled/mpm_*.load \
+          /etc/apache2/mods-enabled/mpm_*.conf 2>/dev/null || true
+    a2enmod mpm_prefork 2>/dev/null
+
     APACHE_PORT="${PORT:-8080}"
     echo "Listen ${APACHE_PORT}" > /etc/apache2/ports.conf
     sed -i "s/<VirtualHost \*:[0-9]*>/<VirtualHost *:${APACHE_PORT}>/" \
