@@ -8,6 +8,8 @@
   },
   "deploy": {
     "startCommand": "php artisan schedule:work",
+    "preDeployCommand": null,
+    "healthcheckPath": null,
     "restartPolicyType": "ALWAYS"
   }
 }
