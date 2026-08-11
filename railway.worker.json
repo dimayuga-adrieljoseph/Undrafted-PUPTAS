@@ -7,10 +7,7 @@
     "watchPatterns": ["**"]
   },
   "deploy": {
-    "preDeployCommand": ["php artisan migrate --force"],
-    "healthcheckPath": "/up",
-    "healthcheckTimeout": 120,
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3
+    "startCommand": "php artisan queue:work --queue=high,emails,default --tries=3 --sleep=3 --max-time=3600",
+    "restartPolicyType": "ALWAYS"
   }
 }
