@@ -118,17 +118,18 @@ RUN ls -la /var/www/html/public/build/ && \
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Fix permissions
-RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs bootstrap/cache \
+# Create all runtime directories and storage symlink at build time
+# so the entrypoint has zero artisan commands to run before Apache starts
+RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} \
+             storage/logs \
+             storage/app/public/uploads/files \
+             storage/app/templates \
+             bootstrap/cache \
+    && cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/ \
+    && ln -sfn /var/www/html/storage/app/public /var/www/html/public/storage \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache \
     && chmod -R 755 storage/framework storage/logs
-
-# Note: APP_KEY is provided via Railway environment variables
-# No need to generate at build time
-
-RUN mkdir -p storage/app/templates && \
-    cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/
 
 # Railway injects $PORT at runtime; the entrypoint configures Apache to bind to it.
 # Fallback is 8080 if $PORT is not set.
