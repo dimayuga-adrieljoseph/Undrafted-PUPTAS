@@ -73,7 +73,11 @@ class ScoreOverrideController extends Controller
         $this->auditLogService->logActivity(
             AuditLog::ACTION_CREATE,
             'Score Overrides',
-            "Allowed scores {$scoreFrom}–{$scoreTo} to bypass registration cutoff until {$expiresAt}."
+            "Added score range override {$scoreFrom}–{$scoreTo} to bypass registration cutoff until {$expiresAt}.",
+            null,
+            AuditLog::CATEGORY_ADMISSION_DATA,
+            null,
+            ['score_from' => $scoreFrom, 'score_to' => $scoreTo, 'expires_at' => $expiresAt]
         );
 
         return redirect()->back()->with('success', "Scores {$scoreFrom}–{$scoreTo} have been allowed for registration until {$expiresAt}.");
@@ -96,16 +100,28 @@ class ScoreOverrideController extends Controller
         $scoreTo   = (float) $request->input('score_to');
         $expiresAt = $request->input('expires_at');
 
+        // Capture old state before mutation
+        $existing = collect($this->cutoffService->getAllowedRegistrationScores())
+            ->firstWhere('id', $id);
+
         $updated = $this->cutoffService->updateAllowedRegistrationScore($id, $scoreFrom, $scoreTo, $expiresAt);
 
         if (!$updated) {
             return redirect()->back()->with('error', 'Score range entry not found.');
         }
 
+        $oldValues = $existing
+            ? ['score_from' => $existing['score_from'], 'score_to' => $existing['score_to'], 'expires_at' => $existing['expires_at']]
+            : null;
+
         $this->auditLogService->logActivity(
             AuditLog::ACTION_UPDATE,
             'Score Overrides',
-            "Updated score range override (ID: {$id}) to {$scoreFrom}–{$scoreTo} until {$expiresAt}."
+            "Updated score range override to {$scoreFrom}–{$scoreTo} until {$expiresAt}.",
+            null,
+            AuditLog::CATEGORY_ADMISSION_DATA,
+            $oldValues,
+            ['score_from' => $scoreFrom, 'score_to' => $scoreTo, 'expires_at' => $expiresAt]
         );
 
         return redirect()->back()->with('success', "Score range {$scoreFrom}–{$scoreTo} has been updated.");
@@ -121,15 +137,28 @@ class ScoreOverrideController extends Controller
         ]);
 
         $id = $request->input('id');
+
+        // Capture the entry before it's deleted so the log is human-readable
+        $existing = collect($this->cutoffService->getAllowedRegistrationScores())
+            ->firstWhere('id', $id);
+
         $this->cutoffService->removeAllowedRegistrationScore($id);
+
+        $rangeLabel = $existing
+            ? "{$existing['score_from']}–{$existing['score_to']}"
+            : "ID: {$id}";
 
         $this->auditLogService->logActivity(
             AuditLog::ACTION_DELETE,
             'Score Overrides',
-            "Removed score range override (ID: {$id}) from allowed registration overrides."
+            "Removed score range override {$rangeLabel} from allowed registration overrides.",
+            null,
+            AuditLog::CATEGORY_ADMISSION_DATA,
+            $existing ? ['score_from' => $existing['score_from'], 'score_to' => $existing['score_to'], 'expires_at' => $existing['expires_at']] : null,
+            null
         );
 
-        return redirect()->back()->with('success', 'Score range override has been removed.');
+        return redirect()->back()->with('success', "Score range override {$rangeLabel} has been removed.");
     }
 
     /**
@@ -176,14 +205,24 @@ class ScoreOverrideController extends Controller
             $this->cutoffService->addAllowedRegistrationEmail($email, $name, $expiresAt);
         }
 
-        $emailList = implode(', ', array_column($entries, 'email'));
+        $emailList  = implode(', ', array_column($entries, 'email'));
+        $count      = count($entries);
+        $newValues  = array_map(fn($e) => [
+            'email'      => strtolower(trim($e['email'])),
+            'name'       => isset($e['name']) ? trim($e['name']) : null,
+            'expires_at' => $expiresAt,
+        ], $entries);
+
         $this->auditLogService->logActivity(
             AuditLog::ACTION_CREATE,
             'Registration Overrides',
-            "Allowed emails to bypass registration cutoff until $expiresAt: $emailList"
+            "Added {$count} email override(s) to bypass registration cutoff until {$expiresAt}: {$emailList}",
+            null,
+            AuditLog::CATEGORY_ADMISSION_DATA,
+            null,
+            $newValues
         );
 
-        $count = count($entries);
         return redirect()->back()->with('success', "{$count} email(s) have been allowed for registration until {$expiresAt}.");
     }
 
@@ -200,6 +239,10 @@ class ScoreOverrideController extends Controller
         $email     = strtolower(trim($request->input('email')));
         $expiresAt = $request->input('expires_at');
 
+        // Capture old state before mutation
+        $existing = collect($this->cutoffService->getAllowedRegistrationEmails())
+            ->firstWhere('email', $email);
+
         $updated = $this->cutoffService->updateAllowedRegistrationEmail($email, $expiresAt);
 
         if (!$updated) {
@@ -209,7 +252,11 @@ class ScoreOverrideController extends Controller
         $this->auditLogService->logActivity(
             AuditLog::ACTION_UPDATE,
             'Registration Overrides',
-            "Updated email override for {$email} — new expiry: {$expiresAt}."
+            "Updated email override for {$email} — new expiry: {$expiresAt}.",
+            null,
+            AuditLog::CATEGORY_ADMISSION_DATA,
+            $existing ? ['email' => $existing['email'], 'expires_at' => $existing['expires_at']] : null,
+            ['email' => $email, 'expires_at' => $expiresAt]
         );
 
         return redirect()->back()->with('success', "Email override for {$email} has been updated.");
@@ -225,15 +272,24 @@ class ScoreOverrideController extends Controller
         ]);
 
         $email = strtolower(trim($request->input('email')));
+
+        // Capture old state before deletion
+        $existing = collect($this->cutoffService->getAllowedRegistrationEmails())
+            ->firstWhere('email', $email);
+
         $this->cutoffService->removeAllowedRegistrationEmail($email);
 
         $this->auditLogService->logActivity(
             AuditLog::ACTION_DELETE,
             'Registration Overrides',
-            "Removed email $email from allowed registration overrides."
+            "Removed email override for {$email} from allowed registration overrides.",
+            null,
+            AuditLog::CATEGORY_ADMISSION_DATA,
+            $existing ? ['email' => $existing['email'], 'name' => $existing['name'] ?? null, 'expires_at' => $existing['expires_at']] : null,
+            null
         );
 
-        return redirect()->back()->with('success', "Email $email has been removed from allowed registration.");
+        return redirect()->back()->with('success', "Email {$email} has been removed from allowed registration.");
     }
 
     /**
