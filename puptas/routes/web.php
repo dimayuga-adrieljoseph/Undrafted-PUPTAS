@@ -733,11 +733,13 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::get('/admin/score-overrides', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'index'])->name('score-overrides.index');
     Route::post('/admin/score-overrides/search', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'search'])->name('score-overrides.search');
     Route::post('/admin/score-overrides', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'store'])->name('score-overrides.store');
+    Route::put('/admin/score-overrides', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'update'])->name('score-overrides.update');
     Route::delete('/admin/score-overrides', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'destroy'])->name('score-overrides.destroy');
     
     // Email Registration Overrides
     Route::post('/admin/score-overrides/search-email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'searchEmail'])->name('score-overrides.search-email');
     Route::post('/admin/score-overrides/email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'storeEmail'])->name('score-overrides.store-email');
+    Route::put('/admin/score-overrides/email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'updateEmail'])->name('score-overrides.update-email');
     Route::delete('/admin/score-overrides/email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'destroyEmail'])->name('score-overrides.destroy-email');
     Route::get('/admin/score-overrides/probation-applicants', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'getProbationApplicants'])->name('score-overrides.probation-applicants');
 
