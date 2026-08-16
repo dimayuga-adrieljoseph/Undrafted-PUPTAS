@@ -284,7 +284,7 @@ const appStatusBadge = computed(() => {
 
 const enrollmentBadge = computed(() => {
     const status = props.user.current_application?.enrollment_status;
-    const map = { not_enrolled: { label: 'Not Enrolled', cls: 'status-default' }, officially_enrolled: { label: 'Officially Enrolled', cls: 'status-approved' }, waitlisted: { label: 'Waitlisted', cls: 'status-waitlisted' } };
+    const map = { not_enrolled: { label: 'Not Enrolled', cls: 'status-default' }, officially_enrolled: { label: 'Enrolled', cls: 'status-approved' }, waitlisted: { label: 'Waitlisted', cls: 'status-waitlisted' } };
     return map[status] ?? { label: status ?? 'N/A', cls: 'status-default' };
 });
 

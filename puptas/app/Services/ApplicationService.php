@@ -36,6 +36,43 @@ class ApplicationService
     }
 
     /**
+     * Get per-stage summary counts for the admin dashboard pipeline cards.
+     *
+     * Counts the number of applicants currently "in progress" at each stage,
+     * plus the two terminal-ish buckets (records and enrollment).
+     *
+     * @return array
+     */
+    public function getStageSummary(): array
+    {
+        $stages = ['document_evaluator', 'grade_evaluator', 'interviewer', 'medical'];
+
+        // Distinct applications currently in-progress at each evaluation stage.
+        // Excludes soft-deleted applications and those already officially enrolled,
+        // so stale processes that were superseded by a later enrollment don't inflate counts.
+        $inProgress = DB::table('application_processes as p')
+            ->join('applications as a', 'a.id', '=', 'p.application_id')
+            ->whereNull('a.deleted_at')
+            ->where('a.enrollment_status', '!=', 'officially_enrolled')
+            ->where('p.status', 'in_progress')
+            ->whereIn('p.stage', $stages)
+            ->selectRaw('p.stage, COUNT(DISTINCT p.application_id) as total')
+            ->groupBy('p.stage')
+            ->pluck('total', 'p.stage');
+
+        return [
+            'document_evaluator' => (int) ($inProgress['document_evaluator'] ?? 0),
+            'grade_evaluator'    => (int) ($inProgress['grade_evaluator'] ?? 0),
+            'interviewer'        => (int) ($inProgress['interviewer'] ?? 0),
+            'medical'            => (int) ($inProgress['medical'] ?? 0),
+            // Cleared for enrollment = medical completed, awaiting records processing.
+            'records'            => Application::where('status', 'cleared_for_enrollment')->count(),
+            // Officially enrolled is the terminal stage.
+            'enrollment'         => Application::where('enrollment_status', 'officially_enrolled')->count(),
+        ];
+    }
+
+    /**
      * Get application by user ID
      *
      * @param string $userId

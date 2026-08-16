@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
 import BlurText from "@/Components/BlurText.vue";
+import UserDetailsModal from "@/Pages/Applications/UserDetailsModal.vue";
 
 import { usePage } from "@inertiajs/vue3";
 
@@ -24,61 +25,25 @@ const props = defineProps({
 });
 
 // Summary items with icons and percentages
+// Summary items — 2 cards: in-queue for records + officially enrolled
 const summaryItems = computed(() => [
     {
-        label: "Total Applications",
-        value: summary.value?.total ?? 0,
+        label: "In Queue",
+        value: summary.value?.in_progress ?? 0,
         icon: {
-            template:
-                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>',
+            template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>',
         },
-        percentage: 100,
+        percentage: null,
         color: "blue",
     },
     {
-        label: "Officially Enrolled",
-        value: summary.value?.accepted ?? 0,
+        label: "Enrolled",
+        value: summary.value?.processed ?? 0,
         icon: {
-            template:
-                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
+            template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
         },
-        percentage:
-            summary.value?.total > 0
-                ? Math.round(
-                      (summary.value.accepted / summary.value.total) * 100
-                  )
-                : 0,
+        percentage: null,
         color: "green",
-    },
-    {
-        label: "Temporary Enrolled",
-        value: summary.value?.pending ?? 0,
-        icon: {
-            template:
-                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
-        },
-        percentage:
-            summary.value?.total > 0
-                ? Math.round(
-                      (summary.value.pending / summary.value.total) * 100
-                  )
-                : 0,
-        color: "yellow",
-    },
-    {
-        label: "Returned",
-        value: summary.value?.returned ?? 0,
-        icon: {
-            template:
-                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>',
-        },
-        percentage:
-            summary.value?.total > 0
-                ? Math.round(
-                      (summary.value.returned / summary.value.total) * 100
-                  )
-                : 0,
-        color: "red",
     },
 ]);
 
@@ -176,6 +141,25 @@ const filteredUsers = computed(() => {
     });
 });
 
+const PAGE_SIZE = 2;
+const currentPage = ref(1);
+
+const totalRecordPages = computed(() => {
+    const visible = users.value.filter(
+        u => u.pipeline_status === 'for_records' || u.pipeline_status === 'officially_enrolled' ||
+             u.enrollment_status === 'officially_enrolled'
+    );
+    const filtered = searchQuery.value.trim()
+        ? visible.filter(u => {
+            const q = searchQuery.value.toLowerCase();
+            return u.firstname?.toLowerCase().includes(q) ||
+                   u.lastname?.toLowerCase().includes(q) ||
+                   u.email?.toLowerCase().includes(q);
+          })
+        : visible;
+    return Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+});
+
 const displayedUsers = computed(() => {
     // Show only in-progress (for_records) and officially enrolled records
     const visible = users.value.filter(
@@ -184,14 +168,19 @@ const displayedUsers = computed(() => {
     );
     if (searchQuery.value.trim()) {
         const q = searchQuery.value.toLowerCase();
-        return visible.filter(u =>
+        const filtered = visible.filter(u =>
             u.firstname?.toLowerCase().includes(q) ||
             u.lastname?.toLowerCase().includes(q) ||
             u.email?.toLowerCase().includes(q)
         );
+        const start = (currentPage.value - 1) * PAGE_SIZE;
+        return filtered.slice(start, start + PAGE_SIZE);
     }
-    return visible.slice(0, 5);
+    const start = (currentPage.value - 1) * PAGE_SIZE;
+    return visible.slice(start, start + PAGE_SIZE);
 });
+
+watch(searchQuery, () => { currentPage.value = 1; });
 
 const selectUser = async (user) => {
     try {
@@ -281,7 +270,7 @@ const acceptApplication = async () => {
     try {
         const taggedId = selectedUser.value.id;
         await axios.post(`${props.baseUrl}/tag/${taggedId}`);
-        showSnackbar("Tagged as officially enrolled");
+        showSnackbar("Tagged as Enrolled");
 
         // Immediately remove from the list so UI updates without waiting for refetch
         users.value = users.value.filter(u => u.id !== taggedId);
@@ -314,8 +303,9 @@ const untagApplication = async () => {
 <template>
     <Head title="Record Staff Dashboard" />
     <RecordStaffLayout>
+        <div class="dash-shell">
         <!-- Header Section -->
-        <div class="px-4 md:px-8 mb-8">
+        <div class="px-4 md:px-8 mb-8 shrink-0">
             <div
                 class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
             >
@@ -362,7 +352,7 @@ const untagApplication = async () => {
 
         <!-- Stats Grid -->
         <div
-            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-8 mb-8"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-8 mb-8 shrink-0"
         >
             <div
                 v-for="(item, index) in summaryItems"
@@ -425,11 +415,11 @@ const untagApplication = async () => {
         </div>
 
         <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-8">
+        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-8">
             <!-- Left Column: Programs Overview -->
-            <div class="lg:col-span-2">
+            <div class="lg:col-span-2 flex flex-col min-h-0">
                 <div
-                    class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
+                    class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 flex-1 flex flex-col"
                 >
                     <div class="mb-6">
                         <h3
@@ -510,9 +500,9 @@ const untagApplication = async () => {
             </div>
 
             <!-- Right Column: Recent Applications -->
-            <div>
+            <div class="h-full min-h-0">
                 <div
-                    class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
+                    class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col"
                 >
                     <div class="flex justify-between items-center mb-6">
                         <div>
@@ -533,7 +523,7 @@ const untagApplication = async () => {
                         </Link>
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="space-y-3 flex-1 overflow-y-auto min-h-0">
                         <div
                             v-for="applicant in displayedUsers"
                             :key="applicant.id"
@@ -625,372 +615,81 @@ const untagApplication = async () => {
                             </p>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Applicant Detail Modal -->
-        <transition name="fade">
-            <div v-if="selectedUser" class="fixed inset-0 z-50">
-                <div
-                    class="fixed inset-0 bg-black/50"
-                    @click="closeUserCard"
-                ></div>
-
-                <div
-                    class="relative min-h-screen flex items-center justify-center p-4"
-                >
-                    <div
-                        class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-                    >
-                        <!-- Modal Header -->
-                        <div
-                            class="p-6 border-b border-gray-200 dark:border-gray-700"
-                        >
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3
-                                        class="text-xl font-bold text-gray-900 dark:text-white"
-                                    >
-                                        Enrollment Record
-                                    </h3>
-                                    <p
-                                        class="text-gray-600 dark:text-gray-400 text-sm"
-                                    >
-                                        Application ID:
-                                        {{
-                                            selectedUser.application?.id ||
-                                            "N/A"
-                                        }}
-                                    </p>
-                                </div>
-                                <button
-                                    @click="closeUserCard"
-                                    class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]"
-                                >
-                                    <svg
-                                        class="w-5 h-5 text-gray-500 dark:text-gray-300"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Modal Content -->
-                        <div class="p-6 overflow-y-auto flex-1">
-                            <!-- Applicant Info Grid -->
-                            <div
-                                class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8"
+                    <!-- Pagination -->
+                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Page {{ currentPage }} of {{ totalRecordPages }}
+                        </p>
+                        <div class="flex items-center gap-2">
+                            <button
+                                @click="currentPage--"
+                                :disabled="currentPage === 1"
+                                class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                aria-label="Previous page"
                             >
-                                <!-- Personal Info -->
-                                <div class="lg:col-span-2">
-                                    <h4
-                                        class="text-lg font-semibold text-gray-900 dark:text-white mb-4"
-                                    >
-                                        Applicant Information
-                                    </h4>
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p
-                                                class="text-sm text-gray-500 dark:text-gray-400 mb-1"
-                                            >
-                                                Full Name
-                                            </p>
-                                            <p
-                                                class="text-gray-900 dark:text-white font-medium"
-                                            >
-                                                {{ selectedUser.firstname }}
-                                                {{ selectedUser.lastname }}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p
-                                                class="text-sm text-gray-500 dark:text-gray-400 mb-1"
-                                            >
-                                                Email Address
-                                            </p>
-                                            <p
-                                                class="text-gray-900 dark:text-white"
-                                            >
-                                                {{ selectedUser.email }}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p
-                                                class="text-sm text-gray-500 dark:text-gray-400 mb-1"
-                                            >
-                                                {{
-                                                    selectedUser?.application
-                                                        ?.enrollment_status ===
-                                                    "officially_enrolled"
-                                                        ? "Officially Enrolled In"
-                                                        : "Temporary Enrolled In"
-                                                }}
-                                            </p>
-                                            <p
-                                                class="text-gray-900 dark:text-white font-medium"
-                                            >
-                                                {{
-                                                    selectedUser.application
-                                                        ?.program?.name || "—"
-                                                }}
-                                            </p>
-                                            <p
-                                                class="text-gray-600 dark:text-gray-400 text-sm"
-                                            >
-                                                {{
-                                                    selectedUser.application
-                                                        ?.program?.code || ""
-                                                }}
-                                            </p>
-                                            <p
-                                                class="text-gray-500 dark:text-gray-400 text-xs mt-1"
-                                            >
-                                                {{
-                                                    selectedUser.application
-                                                        ?.program?.slots || 0
-                                                }} slots remaining
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p
-                                                class="text-sm text-gray-500 dark:text-gray-400 mb-1"
-                                            >
-                                                Status
-                                            </p>
-                                            <span
-                                                :class="
-                                                    getStatusClass(
-                                                        selectedUser.status
-                                                    )
-                                                "
-                                                class="px-3 py-1 rounded-full text-sm font-semibold inline-block"
-                                            >
-                                                {{
-                                                    selectedUser.status ||
-                                                    "Pending"
-                                                }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Enrollment Actions -->
-                                <div>
-                                    <h4
-                                        class="text-lg font-semibold text-gray-900 dark:text-white mb-4"
-                                    >
-                                        Enrollment Status
-                                    </h4>
-                                    <div class="space-y-3">
-                                        <button
-                                            v-if="
-                                                selectedUser?.application
-                                                    ?.enrollment_status !==
-                                                'officially_enrolled'
-                                            "
-                                            @click="acceptApplication"
-                                            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center justify-center space-x-2 dark:text-gray-900 min-h-[44px]"
-                                        >
-                                            <svg
-                                                class="w-5 h-5"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M5 13l4 4L19 7"
-                                                />
-                                            </svg>
-                                            <span
-                                                >Tag: Officially Enrolled</span
-                                            >
-                                        </button>
-                                        <button
-                                            @click="untagApplication"
-                                            class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center space-x-2 dark:text-gray-900 min-h-[44px]"
-                                        >
-                                            <svg
-                                                class="w-5 h-5"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M6 18L18 6M6 6l12 12"
-                                                />
-                                            </svg>
-                                            <span>Untag / Revert</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Uploaded Documents -->
-                            <div class="mb-8">
-                                <h4
-                                    class="text-lg font-semibold text-gray-900 dark:text-white mb-4"
-                                >
-                                    Required Documents
-                                </h4>
-                                <div
-                                    class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
-                                >
-                                    <div
-                                        v-for="(file, key) in selectedUserFiles"
-                                        :key="key"
-                                        class="group relative"
-                                    >
-                                        <!-- Document Card -->
-                                        <div
-                                            class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800"
-                                        >
-                                            <div class="relative">
-                                                <img
-                                                    v-if="hasImagePreview(file)"
-                                                    :src="getFileUrl(file)"
-                                                    :alt="formatFileKey(key)"
-                                                    class="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition"
-                                                    @click="openImageModal(file)"
-                                                />
-                                                <div
-                                                    v-else
-                                                    class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
-                                                >
-                                                    <svg
-                                                        class="w-8 h-8 text-gray-400 dark:text-gray-200"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            stroke-linecap="round"
-                                                            stroke-linejoin="round"
-                                                            stroke-width="2"
-                                                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                                                        />
-                                                    </svg>
-                                                </div>
-                                            </div>
-
-                                            <!-- Document Label -->
-                                            <div
-                                                class="p-2 border-t border-gray-200 dark:border-gray-700"
-                                            >
-                                                <p
-                                                    class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate"
-                                                    :title="formatFileKey(key)"
-                                                >
-                                                    {{ formatFileKey(key) }}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Application History -->
-                            <div
-                                v-if="
-                                    selectedUser?.application?.processes?.length
-                                "
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                            <button
+                                @click="currentPage++"
+                                :disabled="currentPage === totalRecordPages"
+                                class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                aria-label="Next page"
                             >
-                                <h4
-                                    class="text-lg font-semibold text-gray-900 dark:text-white mb-4"
-                                >
-                                    Application Timeline
-                                </h4>
-                                <div class="space-y-3">
-                                    <div
-                                        v-for="(process, index) in selectedUser
-                                            .application.processes"
-                                        :key="index"
-                                        class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-                                    >
-                                        <div
-                                            :class="[
-                                                'w-3 h-3 rounded-full mt-1.5 flex-shrink-0',
-                                                process.status === 'completed'
-                                                    ? 'bg-green-500'
-                                                    : process.status ===
-                                                      'in_progress'
-                                                    ? 'bg-yellow-500'
-                                                    : 'bg-red-500',
-                                            ]"
-                                        ></div>
-                                        <div class="flex-1">
-                                            <div
-                                                class="flex justify-between items-start"
-                                            >
-                                                <div>
-                                                    <p
-                                                        class="font-semibold text-gray-900 dark:text-white"
-                                                    >
-                                                        {{
-                                                            capitalize(
-                                                                process.stage
-                                                            )
-                                                        }}
-                                                    </p>
-                                                    <p
-                                                        v-if="process.reviewer_notes"
-                                                        class="text-sm text-gray-600 dark:text-gray-400 mt-1"
-                                                    >
-                                                        {{ process.reviewer_notes }}
-                                                    </p>
-                                                </div>
-                                                <span
-                                                    :class="[
-                                                        'px-2 py-1 rounded-full text-xs font-semibold',
-                                                        process.status ===
-                                                        'completed'
-                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                                            : process.status ===
-                                                              'in_progress'
-                                                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-                                                    ]"
-                                                >
-                                                    {{
-                                                        capitalize(
-                                                            process.status
-                                                        )
-                                                    }}
-                                                </span>
-                                            </div>
-                                            <p
-                                                class="text-xs text-gray-500 dark:text-gray-400 mt-2"
-                                            >
-                                                {{
-                                                    formatDate(
-                                                        process.created_at
-                                                    )
-                                                }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </transition>
+        </div>
+
+        </div>
+
+        <!-- Applicant Detail Modal -->
+        <UserDetailsModal
+            :selected-user="selectedUser"
+            :selected-user-files="selectedUserFiles"
+            :current-user="null"
+            :available-programs="[]"
+            :is-changing-course="false"
+            :course-change-message="''"
+            :change-course-selected-id="''"
+            @close="closeUserCard"
+            @open-image="openImageModal"
+        >
+            <template #top-actions>
+                <!-- Enrollment Actions -->
+                <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Enrollment Status</h4>
+                    <div class="space-y-3">
+                        <button
+                            v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
+                            @click="acceptApplication"
+                            class="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center justify-center gap-2 text-sm min-h-[44px]"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Tag: Enrolled
+                        </button>
+                        <button
+                            @click="untagApplication"
+                            class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center gap-2 text-sm min-h-[44px]"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Untag / Revert
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </UserDetailsModal>
 
         <!-- Image Preview Modal -->
         <transition name="fade">

@@ -43,6 +43,16 @@ class DashboardService
     }
 
     /**
+     * Get per-stage summary counts for the admin dashboard pipeline cards.
+     *
+     * @return array
+     */
+    public function getStageSummary(): array
+    {
+        return $this->applicationService->getStageSummary();
+    }
+
+    /**
      * Get dashboard data with programs
      *
      * @return array
@@ -293,9 +303,26 @@ class DashboardService
             ? collect()
             : $this->userService->getApplicantsByStage($stage, $programIds);
 
+        // Count applicants currently in queue for this stage (in_progress)
+        $inProgress = DB::table('application_processes')
+            ->where('stage', $stage)
+            ->where('status', 'in_progress')
+            ->distinct('application_id')
+            ->count('application_id');
+
+        // Count applicants already processed (completed) at this stage
+        $processed = DB::table('application_processes')
+            ->where('stage', $stage)
+            ->where('status', 'completed')
+            ->distinct('application_id')
+            ->count('application_id');
+
         return [
             'pendingUsers' => $pendingUsers,
-            'summary'      => $this->applicationService->getApplicationSummary(),
+            'summary'      => [
+                'in_progress' => $inProgress,
+                'processed'   => $processed,
+            ],
             'chartData'    => $this->getApplicationChartData(),
         ];
     }
@@ -311,9 +338,26 @@ class DashboardService
         // Interviewers see all applicants (global access)
         $pendingUsers = $this->userService->getApplicantsByStage('interviewer');
 
+        // Count applicants currently in queue for interview stage
+        $inProgress = DB::table('application_processes')
+            ->where('stage', 'interviewer')
+            ->where('status', 'in_progress')
+            ->distinct('application_id')
+            ->count('application_id');
+
+        // Count applicants already processed (completed) at interview stage
+        $processed = DB::table('application_processes')
+            ->where('stage', 'interviewer')
+            ->where('status', 'completed')
+            ->distinct('application_id')
+            ->count('application_id');
+
         return [
             'pendingUsers' => $pendingUsers,
-            'summary'      => $this->applicationService->getApplicationSummary(),
+            'summary'      => [
+                'in_progress' => $inProgress,
+                'processed'   => $processed,
+            ],
             'chartData'    => $this->getDailyApplicationChartData(),
         ];
     }
@@ -359,10 +403,19 @@ class DashboardService
                 ];
             });
 
+        // Applicants currently cleared for enrollment (in queue for records)
+        $inProgress = Application::where('status', 'cleared_for_enrollment')->count();
+
+        // Applicants already officially enrolled (processed by records)
+        $processed = Application::where('enrollment_status', 'officially_enrolled')->count();
+
         return [
             'allUsers' => $this->userService->getApplicantsForRecordStaff(),
             'programs' => $programs,
-            'summary' => $this->applicationService->getApplicationSummary(),
+            'summary'  => [
+                'in_progress' => $inProgress,
+                'processed'   => $processed,
+            ],
         ];
     }
 }

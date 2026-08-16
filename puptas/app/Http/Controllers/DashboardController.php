@@ -81,7 +81,8 @@ class DashboardController extends Controller
                         ] : null,
                     ];
                 }),
-            'summary' => $summary,
+             'summary' => $summary,
+            'stageSummary' => $this->dashboardService->getStageSummary(),
             'registrationUrl' => url('/register'),
             'chartData' => [
                 'labels' => $chartData['labels'],
@@ -106,16 +107,37 @@ class DashboardController extends Controller
                 ->whereHas('currentApplication')
                 ->get()
                 ->map(function ($applicant) {
+                    $application = $applicant->currentApplication;
+                    $stage = null;
+
+                    if ($application) {
+                        if ($application->enrollment_status === 'officially_enrolled') {
+                            $stage = 'enrollment';
+                        } elseif ($application->status === 'cleared_for_enrollment') {
+                            $stage = 'records';
+                        } else {
+                            $processes = $application->processes ?? collect();
+                            // Most-advanced in-progress stage wins.
+                            foreach (['medical', 'interviewer', 'grade_evaluator', 'document_evaluator'] as $stageKey) {
+                                if ($processes->contains(fn ($p) => $p->stage === $stageKey && $p->status === 'in_progress')) {
+                                    $stage = $stageKey;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
                     return [
                         'id' => $applicant->user_id,
                         'firstname' => $applicant->firstname,
                         'lastname' => $applicant->lastname,
                         'course' => $applicant->course, // Note: does ApplicantProfile have this? Make sure.
-                        'status' => $applicant->currentApplication->status ?? null,
+                        'status' => $application->status ?? null,
+                        'stage' => $stage,
                         'email' => $applicant->email,
                         'username' => $applicant->email,
                         'company' => null,
-                        'program' => $applicant->currentApplication->program ?? null,
+                        'program' => $application->program ?? null,
                     ];
                 })
         );
