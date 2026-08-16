@@ -470,7 +470,9 @@ Route::get('/sar/download/{reference}/{filename}', [TestPasserController::class,
     ->name('sar.passer-download');
 
 Route::get('/applications', function () {
-    return Inertia::render('Applications/Index');
+    return Inertia::render('Applications/Index', [
+        'initialStage' => request('stage', ''),
+    ]);
 })->middleware(['auth', EnsureAdmin::class])->name('applications');
 
 // Confirmed Applicants Routes (Admin/Registrar only)

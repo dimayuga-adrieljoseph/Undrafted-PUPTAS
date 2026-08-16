@@ -60,7 +60,7 @@ const appStatusLabel = computed(() => {
   return map[props.application?.status] ?? props.application?.status ?? 'N/A';
 });
 const enrollmentLabel = computed(() => {
-  const map = { not_enrolled:'Not Enrolled', officially_enrolled:'Officially Enrolled', waitlisted:'Waitlisted' };
+  const map = { not_enrolled:'Not Enrolled', officially_enrolled:'Enrolled', waitlisted:'Waitlisted' };
   return map[props.application?.enrollment_status] ?? props.application?.enrollment_status ?? 'N/A';
 });
 

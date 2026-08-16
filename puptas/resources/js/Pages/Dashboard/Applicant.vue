@@ -114,8 +114,8 @@ const enrollmentInfo = computed(() => {
   const enrollmentMap = {
     officially_enrolled: {
       ...green,
-      label: 'Officially Enrolled',
-      description: 'You are officially enrolled. Welcome!',
+      label: 'Enrolled',
+      description: 'You are enrolled. Welcome!',
     },
     waitlisted: {
       ...green,

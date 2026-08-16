@@ -643,7 +643,7 @@ onMounted(() => {
                             <option value="grade_evaluator">For Grade Evaluator</option>
                             <option value="interviewer">For Interviewer</option>
                             <option value="medical">For Medical</option>
-                            <option value="enrollment">For Enrollment</option>
+                            <option value="enrollment">Enrolled</option>
                         </select>
                     </div>
 

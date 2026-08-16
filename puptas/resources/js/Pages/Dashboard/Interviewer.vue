@@ -5,6 +5,7 @@ import { Head, Link, router } from "@inertiajs/vue3";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
 import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue';
 import BlurText from "@/Components/BlurText.vue";
+import UserDetailsModal from "@/Pages/Applications/UserDetailsModal.vue";
 import {
     Chart as ChartJS,
     LineController,
@@ -116,35 +117,21 @@ const showSnackbar = (msg, type = "success", duration = 3000) => {
     }, duration);
 };
 
-// Summary items with icons and percentages
+// Summary items — 2 cards: in-queue for this stage + already processed
 const summaryItems = computed(() => [
     { 
-        label: "Total Applications", 
-        value: props.summary?.total ?? 0, 
+        label: "In Queue",
+        value: props.summary?.in_progress ?? 0, 
         icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>' },
-        percentage: 100,
+        percentage: null,
         color: 'blue'
     },
     { 
-        label: "Accepted", 
-        value: props.summary?.accepted ?? 0, 
+        label: "Processed",
+        value: props.summary?.processed ?? 0, 
         icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
-        percentage: props.summary?.total > 0 ? Math.round((props.summary.accepted / props.summary.total) * 100) : 0,
+        percentage: null,
         color: 'green'
-    },
-    { 
-        label: "Pending", 
-        value: props.summary?.pending ?? 0, 
-        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
-        percentage: props.summary?.total > 0 ? Math.round((props.summary.pending / props.summary.total) * 100) : 0,
-        color: 'yellow'
-    },
-    { 
-        label: "Returned", 
-        value: props.summary?.returned ?? 0, 
-        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>' },
-        percentage: props.summary?.total > 0 ? Math.round((props.summary.returned / props.summary.total) * 100) : 0,
-        color: 'red'
     },
 ]);
 
@@ -259,10 +246,17 @@ const filteredUsers = computed(() => {
     });
 });
 
+const PAGE_SIZE = 2;
+const currentPage = ref(1);
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / PAGE_SIZE)));
+
 const displayedUsers = computed(() => {
-    if (searchQuery.value.trim()) return filteredUsers.value;
-    return (props.pendingUsers || []).slice(0, 5);
+    const start = (currentPage.value - 1) * PAGE_SIZE;
+    return filteredUsers.value.slice(start, start + PAGE_SIZE);
 });
+
+watch(searchQuery, () => { currentPage.value = 1; });
 
 const selectUser = async (user) => {
     try {
@@ -550,11 +544,12 @@ const fetchPrograms = async () => {
 <template>
     <Head title="Interviewer Dashboard" />
     <InterviewerLayout>
+        <div class="dash-shell">
         <!-- Low Slot Warning Alert -->
         <transition name="fade">
             <div
                 v-if="showLowSlotAlert && lowSlotPrograms.length"
-                class="mb-6 mx-4 md:mx-8 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl"
+                class="mb-6 mx-4 md:mx-8 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl shrink-0"
             >
                 <div class="flex items-start gap-3">
                     <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -592,7 +587,7 @@ const fetchPrograms = async () => {
         </transition>
 
         <!-- Header Section -->
-        <div class="px-4 md:px-8 mb-8">
+        <div class="px-4 md:px-8 mb-8 shrink-0">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <BlurText
@@ -628,7 +623,7 @@ const fetchPrograms = async () => {
         </div>
 
         <!-- Stats Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-8 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-8 mb-8 shrink-0">
             <div
                 v-for="(item, index) in summaryItems"
                 :key="index"
@@ -668,10 +663,10 @@ const fetchPrograms = async () => {
         </div>
 
         <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-8">
+        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-8">
             <!-- Left Column: Chart -->
-            <div class="lg:col-span-2">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div class="lg:col-span-2 flex flex-col min-h-0">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col">
                     <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
@@ -750,15 +745,15 @@ const fetchPrograms = async () => {
                         </div>
                     </div>
                     
-                    <div class="h-64 md:h-80 w-full">
+                    <div class="flex-1 min-h-0 w-full">
                         <LineChart :chart-data="chartDataset" :options="chartOptions" class="w-full h-full" />
                     </div>
                 </div>
             </div>
 
             <!-- Right Column: Recent Applications -->
-            <div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div class="h-full min-h-0">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col">
                     <div class="flex justify-between items-center mb-6">
                         <div>
                             <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Pending Interviews</h3>
@@ -770,7 +765,7 @@ const fetchPrograms = async () => {
                         </Link>
                     </div>
                     
-                    <div class="space-y-3">
+                    <div class="space-y-3 flex-1 overflow-y-auto min-h-0">
                         <div
                             v-for="applicant in displayedUsers"
                             :key="applicant.id"
@@ -815,320 +810,159 @@ const fetchPrograms = async () => {
                             <p class="text-gray-500 dark:text-gray-400">No pending interviews</p>
                         </div>
                     </div>
+
+                    <!-- Pagination -->
+                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Page {{ currentPage }} of {{ totalPages }}
+                        </p>
+                        <div class="flex items-center gap-2">
+                            <button
+                                @click="currentPage--"
+                                :disabled="currentPage === 1"
+                                class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                aria-label="Previous page"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                            <button
+                                @click="currentPage++"
+                                :disabled="currentPage === totalPages"
+                                class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                aria-label="Next page"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Applicant Detail Modal -->
-        <transition name="fade">
-            <div v-if="selectedUser" class="fixed inset-0 z-50">
-                <div class="fixed inset-0 bg-black/50" @click="closeUserCard"></div>
+        <UserDetailsModal
+            :selected-user="selectedUser"
+            :selected-user-files="selectedUserFiles"
+            :current-user="null"
+            :available-programs="[]"
+            :is-changing-course="false"
+            :course-change-message="''"
+            :change-course-selected-id="''"
+            @close="closeUserCard"
+            @open-image="openImageModal"
+        >
+            <template #top-actions>
+                <!-- Interview Actions -->
+                <div v-if="!selectedUser?.is_evaluation_completed" class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl space-y-3">
+                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Select Program &amp; Interview</h4>
 
-                <div class="relative min-h-screen flex items-center justify-center p-2 sm:p-4">
-                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-                        <!-- Modal Header -->
-                        <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="min-w-0">
-                                    <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">Interview Details</h3>
-                                    <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
-                                </div>
-                                <div class="flex items-center gap-2 flex-shrink-0">
-                                    <span v-if="selectedUser?.application?.is_waivered" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                                        ⚠️ Waiver Program
-                                    </span>
-                                    <span v-if="selectedUser?.application?.is_waivered" class="hidden sm:inline px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800">
-                                        🔴 On Probation
-                                    </span>
-                                    <button @click="closeUserCard" class="flex-shrink-0 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
-                                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
+                    <!-- Waiver / Probation badges -->
+                    <div v-if="selectedUser?.application?.is_waivered" class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">⚠️ Waiver Program</span>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800">🔴 On Probation</span>
+                    </div>
+
+                    <div v-if="selectedUser?.application?.requires_promissory_note" class="px-3 py-2 rounded-lg text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                        📝 Promissory Note Required
+                    </div>
+
+                    <select
+                        v-model="selectedProgramId"
+                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                        :disabled="!interviewStartTime"
+                    >
+                        <option disabled value="">Select Program</option>
+                        <option v-for="p in props.assignedPrograms" :key="p.id" :value="p.id">
+                            {{ p.code }} - {{ p.name }}
+                        </option>
+                    </select>
+
+                    <div v-if="interviewStartTime">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Comments/Notes (Optional)</label>
+                        <textarea
+                            v-model="interviewNotes"
+                            rows="3"
+                            placeholder="Add any additional notes or comments here..."
+                            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent resize-none"
+                        ></textarea>
+                    </div>
+
+                    <!-- Begin Interview button -->
+                    <div v-if="!interviewStartTime">
+                        <button
+                            @click="beginInterview"
+                            class="w-full px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 bg-[#9E122C] text-white hover:bg-[#b51834]"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Begin Interview
+                        </button>
+                    </div>
+
+                    <!-- Accept / Reject buttons (interview in progress) -->
+                    <div v-else class="space-y-2">
+                        <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center justify-between border border-blue-200 dark:border-blue-800">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Interview in progress since {{ new Date(interviewStartTime).toLocaleTimeString() }}
                             </div>
+                            <button @click="cancelInterview" :disabled="isCancellingInterview" class="text-xs font-semibold hover:underline text-red-600 dark:text-red-400 disabled:opacity-50">
+                                {{ isCancellingInterview ? 'Cancelling...' : 'Cancel' }}
+                            </button>
                         </div>
-
-                        <!-- Modal Content -->
-                        <div class="p-4 sm:p-6 overflow-y-auto flex-1">
-
-                            <!-- Applicant Info Grid -->
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                            <!-- Personal Info -->
-                            <div class="lg:col-span-2">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Applicant Information</h4>
-
-                                <!-- Basic info row -->
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                    <div>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Full Name</p>
-                                        <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Email Address</p>
-                                        <p class="text-gray-900 dark:text-white">{{ selectedUser.email }}</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">SHS Strand</p>
-                                        <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.strand || "—" }}</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
-                                        <span :class="getStatusClass(selectedUser.status)"
-                                              class="px-3 py-1 rounded-full text-sm font-semibold inline-block">
-                                            {{ selectedUser.status || "Pending" }}
-                                        </span>
-                                    </div>
-                                    <div v-if="selectedUser.application?.requires_promissory_note" class="sm:col-span-2">
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Special Requirements</p>
-                                        <span class="px-3 py-1 rounded-full text-sm font-semibold inline-block bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
-                                            📝 Promissory Note Required
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <!-- Program choices row -->
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <!-- 1st Choice -->
-                                    <div class="p-3 rounded-lg border border-[#9E122C]/30 bg-[#9E122C]/5 dark:bg-[#9E122C]/10">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <span class="w-5 h-5 rounded-full bg-[#9E122C] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
-                                            <p class="text-xs font-semibold text-[#9E122C] dark:text-red-400 uppercase tracking-wide">1st Choice</p>
-                                        </div>
-                                        <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug">{{ selectedUser.application?.program?.name || "—" }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ selectedUser.application?.program?.code || "" }}</p>
-                                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ selectedUser.application?.program?.slots || 0 }} slots remaining</p>
-                                    </div>
-
-                                    <!-- 2nd Choice -->
-                                    <div class="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" :class="{ 'opacity-40': !selectedUser.application?.second_choice }">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <span class="w-5 h-5 rounded-full bg-gray-400 dark:bg-gray-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
-                                            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">2nd Choice</p>
-                                        </div>
-                                        <template v-if="selectedUser.application?.second_choice">
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug">{{ selectedUser.application.second_choice.name }}</p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ selectedUser.application.second_choice.code }}</p>
-                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ selectedUser.application.second_choice.slots || 0 }} slots remaining</p>
-                                        </template>
-                                        <p v-else class="text-sm text-gray-400 dark:text-gray-500">Not specified</p>
-                                    </div>
-
-                                    <!-- 3rd Choice -->
-                                    <div class="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" :class="{ 'opacity-40': !selectedUser.application?.third_choice }">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <span class="w-5 h-5 rounded-full bg-gray-400 dark:bg-gray-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
-                                            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">3rd Choice</p>
-                                        </div>
-                                        <template v-if="selectedUser.application?.third_choice">
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug">{{ selectedUser.application.third_choice.name }}</p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ selectedUser.application.third_choice.code }}</p>
-                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ selectedUser.application.third_choice.slots || 0 }} slots remaining</p>
-                                        </template>
-                                        <p v-else class="text-sm text-gray-400 dark:text-gray-500">Not specified</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Program Selection for Accept/Reject -->
-                            <div v-if="!selectedUser.is_evaluation_completed">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Your Program</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                    Choose the program you are interviewing for:
-                                </p>
-                                <select
-                                    v-model="selectedProgramId"
-                                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                                    :disabled="!interviewStartTime"
-                                >
-                                    <option disabled value="">Select Program</option>
-                                    <option v-for="p in props.assignedPrograms" :key="p.id" :value="p.id">
-                                        {{ p.code }} - {{ p.name }}
-                                    </option>
-                                </select>
-
-                                <div v-if="interviewStartTime" class="mb-4">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comments/Notes (Optional)</label>
-                                    <textarea
-                                        v-model="interviewNotes"
-                                        rows="3"
-                                        placeholder="Add any additional notes or comments here..."
-                                        class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent resize-none"
-                                    ></textarea>
-                                </div>
-
-                                <div v-if="!interviewStartTime">
-                                    <button
-                                        @click="beginInterview"
-                                        class="w-full px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 bg-[#9E122C] text-white hover:bg-[#b51834]"
-                                    >
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Begin Interview
-                                    </button>
-                                </div>
-                                <div v-else>
-                                    <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center justify-between border border-blue-200 dark:border-blue-800">
-                                        <div class="flex items-center gap-2">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            Interview in progress since {{ new Date(interviewStartTime).toLocaleTimeString() }}
-                                        </div>
-                                        <button @click="cancelInterview" :disabled="isCancellingInterview" class="text-xs font-semibold hover:underline text-red-600 dark:text-red-400 disabled:opacity-50">
-                                            {{ isCancellingInterview ? 'Cancelling...' : 'Cancel' }}
-                                        </button>
-                                    </div>
-                                    <div v-if="!isApplicantQualified && page.props.auth?.user?.role_id === 7 && selectedProgramId" class="p-3 mb-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-lg text-sm text-yellow-800 dark:text-yellow-200">
-                                        <strong>⚠️ Grade Override:</strong> Applicant does not meet the grade requirements for this program. As a Superadmin, you can override this restriction.
-                                    </div>
-                                    <div class="flex flex-col sm:flex-row gap-2">
-                                        <button
-                                            @click="promptAccept"
-                                            :disabled="!isApplicantQualified && page.props.auth?.user?.role_id !== 7"
-                                            :title="!isApplicantQualified && page.props.auth?.user?.role_id !== 7 ? 'Applicant does not meet grade requirements for this program' : ''"
-                                            :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2', !isApplicantQualified && page.props.auth?.user?.role_id !== 7 ? 'opacity-50 cursor-not-allowed' : '']"
-                                        >
-                                            ✓ Accept
-                                        </button>
-                                        <button
-                                            @click="promptReject"
-                                            :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2']"
-                                        >
-                                            ✗ Reject
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <Link
-                                    :href="`/applications/user/${selectedUser.id}?context=interviewer`"
-                                    :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block mt-3']"
-                                >
-                                    View Full Details
-                                </Link>
-                            </div>
-
-                            <!-- Interview Completed Summary -->
-                            <div v-else>
-                                <div class="p-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
-                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Interview Completed</h4>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-                                        This interview has been completed.
-                                    </p>
-                                    <div class="border-t border-gray-300 dark:border-gray-600 my-6"></div>
-                                    <div class="space-y-3 text-left">
-                                        <div>
-                                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Program:</p>
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ selectedUser.application?.program?.code || "—" }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Interviewer:</p>
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ getInterviewerName() }}</p>
-                                        </div>
-                                    </div>
-                                    <div v-if="selectedUser.application?.requires_promissory_note" class="mt-6 pt-6 border-t border-gray-300 dark:border-gray-600">
-                                        <div class="flex items-center justify-center gap-2 text-orange-700 dark:text-orange-300">
-                                            <span class="text-sm font-medium">Promissory Note: Required</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div v-if="!isApplicantQualified && page.props.auth?.user?.role_id === 7 && selectedProgramId" class="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-lg text-xs text-yellow-800 dark:text-yellow-200">
+                            <strong>⚠️ Grade Override:</strong> Applicant does not meet grade requirements. As a Superadmin you can override.
                         </div>
-
-                            <!-- Grades Section -->
-                            <div class="mb-8">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Academic Grades</h4>
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Mathematics</p>
-                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.mathematics || "—" }}</p>
-                                    </div>
-                                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Science</p>
-                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.science || "—" }}</p>
-                                    </div>
-                                    <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">English</p>
-                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedUser?.grades?.english || "—" }}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Uploaded Documents -->
-                            <div class="mb-8">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
-                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                                    <div v-for="(file, key) in selectedUserFiles" :key="key" class="group relative">
-                                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-                                            <div
-                                                class="relative cursor-pointer"
-                                                @click="hasImagePreview(file) ? openImageModal(file) : null"
-                                            >
-                                                <img
-                                                    v-if="hasImagePreview(file)"
-                                                    :src="getFileUrl(file)"
-                                                    :alt="formatFileKey(key)"
-                                                    class="w-full h-32 object-cover hover:opacity-90 transition pointer-events-none"
-                                                />
-                                                <div v-else class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800">
-                                                    <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                            <div class="p-2 border-t border-gray-200 dark:border-gray-700">
-                                                <p class="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate" :title="formatFileKey(key)">
-                                                    {{ formatFileKey(key) }}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Application Timeline -->
-                            <div v-if="selectedUser?.application?.processes?.length">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Timeline</h4>
-                                <div class="space-y-3">
-                                    <div
-                                        v-for="(process, index) in selectedUser.application.processes"
-                                        :key="index"
-                                        class="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-                                    >
-                                        <div :class="[
-                                            'w-3 h-3 rounded-full mt-1.5 flex-shrink-0',
-                                            process.status === 'completed' ? 'bg-green-500' :
-                                            process.status === 'in_progress' ? 'bg-yellow-500' : 'bg-red-500'
-                                        ]"></div>
-                                        <div class="flex-1">
-                                            <div class="flex justify-between items-start">
-                                                <div>
-                                                    <p class="font-semibold text-gray-900 dark:text-white">{{ formatStage(process.stage) }}</p>
-                                                    <p v-if="process.reviewer_notes" class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{ process.reviewer_notes }}</p>
-                                                </div>
-                                                <span :class="[
-                                                    'px-2 py-1 rounded-full text-xs font-semibold',
-                                                    process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
-                                                    process.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                                                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                                ]">
-                                                    {{ capitalize(process.status) }}
-                                                </span>
-                                            </div>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">{{ formatDate(process.created_at) }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="flex gap-2">
+                            <button
+                                @click="promptAccept"
+                                :disabled="!isApplicantQualified && page.props.auth?.user?.role_id !== 7"
+                                :class="[getButtonClass('success'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 text-sm', !isApplicantQualified && page.props.auth?.user?.role_id !== 7 ? 'opacity-50 cursor-not-allowed' : '']"
+                            >✓ Accept</button>
+                            <button
+                                @click="promptReject"
+                                :class="[getButtonClass('danger'), 'flex-1 px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 text-sm']"
+                            >✗ Reject</button>
                         </div>
                     </div>
-                </div>
-            </div>
-        </transition>
 
-        <!-- Success Toast Notification (Replaces Snackbar) -->
+                    <Link
+                        :href="`/applications/user/${selectedUser?.id}?context=interviewer`"
+                        :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block text-sm']"
+                    >
+                        View Full Details
+                    </Link>
+                </div>
+
+                <!-- Interview Completed Summary -->
+                <div v-else class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 text-center space-y-3">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Interview Completed</h4>
+                    <div class="space-y-2 text-left text-sm">
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Program</p>
+                            <p class="font-medium text-gray-900 dark:text-white">{{ selectedUser?.application?.program?.code || "—" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Interviewer</p>
+                            <p class="font-medium text-gray-900 dark:text-white">{{ getInterviewerName() }}</p>
+                        </div>
+                    </div>
+                    <div v-if="selectedUser?.application?.requires_promissory_note" class="flex items-center justify-center gap-2 text-orange-700 dark:text-orange-300 text-xs font-medium">
+                        Promissory Note: Required
+                    </div>
+                </div>
+            </template>
+        </UserDetailsModal>
+
+        <!-- Success Toast Notification -->
         <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
             <div v-if="snackbar.visible" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
                 <div :class="['rounded-lg shadow-lg overflow-hidden border', snackbar.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400']">
@@ -1154,6 +988,7 @@ const fetchPrograms = async () => {
                 </div>
             </div>
         </transition>
+        </div>
     </InterviewerLayout>
 
     <!-- Image Preview Modal (outside layout for proper z-index) -->
