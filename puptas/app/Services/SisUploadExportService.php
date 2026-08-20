@@ -5,12 +5,19 @@ namespace App\Services;
 use App\Models\Application;
 use App\Models\ApplicationProcess;
 use App\Models\TestPasser;
+use App\Repositories\Contracts\ApplicationRepositoryInterface;
+use App\Repositories\Contracts\TestPasserRepositoryInterface;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SisUploadExportService
 {
+    public function __construct(
+        protected ApplicationRepositoryInterface $applicationRepository,
+        protected TestPasserRepositoryInterface $testPasserRepository,
+    ) {}
+
     /**
      * Template filenames stored in storage/app/sis-templates/
      */
@@ -63,22 +70,7 @@ class SisUploadExportService
     private function fetchPassers(?string $schoolYear): array
     {
         // Fetch applications that have a completed interviewer process
-        $query = Application::with(['user.testPasser', 'user'])
-            ->whereHas('processes', function ($q) {
-                $q->where('stage', 'interviewer')
-                  ->where('status', 'completed')
-                  ->whereIn('action', ['passed', 'accepted']);
-            })
-            ->whereHas('user'); // must have a linked profile
-
-        // Filter by school year via the linked TestPasser record
-        if ($schoolYear) {
-            $query->whereHas('user.testPasser', function ($q) use ($schoolYear) {
-                $q->where('school_year', $schoolYear);
-            });
-        }
-
-        $applications = $query->get();
+        $applications = $this->applicationRepository->passedInterviewApplications($schoolYear);
 
         $rows = [];
         foreach ($applications as $app) {
@@ -104,13 +96,7 @@ class SisUploadExportService
      */
     private function fetchRecon(?string $schoolYear): array
     {
-        $query = TestPasser::where('passer_status_id', 5); // On Probation
-
-        if ($schoolYear) {
-            $query->where('school_year', $schoolYear);
-        }
-
-        $passers = $query->orderBy('surname')->get();
+        $passers = $this->testPasserRepository->onProbation($schoolYear);
 
         $rows = [];
         foreach ($passers as $passer) {

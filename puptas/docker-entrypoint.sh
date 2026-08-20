@@ -88,6 +88,12 @@ php artisan storage:link --force
 chown -h www-data:www-data public/storage 2>/dev/null || true
 echo "[8/13] Storage link created."
 
+# Generate API documentation (base URL resolves from APP_URL at runtime)
+echo "[8b/13] Generating API documentation..."
+php artisan scribe:generate
+php -r 'require "vendor/autoload.php"; $yaml = Symfony\Component\Yaml\Yaml::parseFile("public/docs/openapi.yaml"); file_put_contents("public/docs/openapi.json", json_encode($yaml, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));'
+echo "[8b/13] API documentation generated."
+
 # Verify routes are registered
 echo "[9/13] Verifying routes..."
 php artisan route:list --path=login 2>/dev/null || echo "Route verification skipped"

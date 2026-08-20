@@ -3,10 +3,17 @@
 namespace App\Services;
 
 use App\Models\TestPasser;
+use App\Repositories\Contracts\TestPasserRepositoryInterface;
+use App\Services\ScoreThresholdService;
 use Illuminate\Support\Facades\DB;
 
 class CapacityEnforcementService
 {
+    public function __construct(
+        protected TestPasserRepositoryInterface $testPasserRepository,
+        protected ScoreThresholdService $scoreThresholdService,
+    ) {}
+
     /**
      * Re-rank all eligible records (statuses 1, 2, 4) for a school year,
      * apply ScoreThresholdService::resolve() to the top 550 by score,
@@ -24,15 +31,9 @@ class CapacityEnforcementService
     public function enforce(string $schoolYear): int
     {
         return DB::transaction(function () use ($schoolYear) {
-            $scoreThresholdService = new ScoreThresholdService();
-
             // Query all eligible records (statuses 1, 2, 4) for the school year
             // sorted purely by score DESC with created_at ASC as tiebreaker
-            $records = TestPasser::where('school_year', $schoolYear)
-                ->whereIn('passer_status_id', [1, 2, 4])
-                ->orderBy('pupcet_total_score', 'desc')
-                ->orderBy('created_at', 'asc')
-                ->get();
+            $records = $this->testPasserRepository->eligibleForCapacity($schoolYear);
 
             $reassignedCount = 0;
 
@@ -40,7 +41,7 @@ class CapacityEnforcementService
             $top = $records->take(ScoreThresholdService::CAPACITY_LIMIT);
 
             foreach ($top as $record) {
-                $resolved = $scoreThresholdService->resolve($record->pupcet_total_score);
+                $resolved = $this->scoreThresholdService->resolve($record->pupcet_total_score);
 
                 if (
                     $record->passer_status_id !== $resolved['passer_status_id']

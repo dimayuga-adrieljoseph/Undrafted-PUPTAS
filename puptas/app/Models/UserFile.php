@@ -8,6 +8,7 @@ use App\Models\ApplicationProcess;
 
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class UserFile extends Model
 {
@@ -32,6 +33,42 @@ class UserFile extends Model
     protected $casts = [
         'uploadedFiles' => 'array',
     ];
+
+    /**
+     * Cache key for a single user+type file record.
+     */
+    public static function cacheKeyForUserAndType(string $userId, string $type): string
+    {
+        return "user_file:user:{$userId}:{$type}";
+    }
+
+    /**
+     * Cache key for the full file list of a user.
+     */
+    public static function cacheKeyForUser(string $userId): string
+    {
+        return "user_file:user:{$userId}";
+    }
+
+    /**
+     * Invalidate cached file records whenever a file changes.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (UserFile $file) {
+            Cache::forget(static::cacheKeyForUser((string) $file->user_id));
+            if ($file->type) {
+                Cache::forget(static::cacheKeyForUserAndType((string) $file->user_id, $file->type));
+            }
+        });
+
+        static::deleted(function (UserFile $file) {
+            Cache::forget(static::cacheKeyForUser((string) $file->user_id));
+            if ($file->type) {
+                Cache::forget(static::cacheKeyForUserAndType((string) $file->user_id, $file->type));
+            }
+        });
+    }
 
     /**
      * Check if the file is currently being uploaded (in-flight).

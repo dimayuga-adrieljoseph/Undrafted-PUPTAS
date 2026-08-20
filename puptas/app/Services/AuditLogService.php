@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
+use App\Repositories\Contracts\AuditLogRepositoryInterface;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,6 +16,10 @@ use Illuminate\Support\Facades\Auth;
  */
 class AuditLogService
 {
+    public function __construct(
+        protected AuditLogRepositoryInterface $auditLogRepository,
+    ) {}
+
     // ─── Role name map (mirrors UserService::getRoleDefinitions) ────
 
     private const ROLE_NAMES = [
@@ -40,17 +45,11 @@ class AuditLogService
         $id = $user->id ?? $user->idp_user_id;
         $isNumericId = is_numeric($id);
 
-        $query = AuditLog::where('action_type', AuditLog::ACTION_LOGIN)
-            ->where('created_at', '>=', now()->subSeconds(10))
-            ->latest();
-
-        if ($isNumericId) {
-            $query->where('user_id', (string) $id);
-        } else {
-            $query->where('username', $user->email ?? 'system');
-        }
-
-        $existing = $query->first();
+        $existing = $this->auditLogRepository->findRecentSecurityEvent(
+            AuditLog::ACTION_LOGIN,
+            $isNumericId ? (string) $id : null,
+            $isNumericId ? null : ($user->email ?? 'system'),
+        );
 
         if ($existing) {
             return $existing;
@@ -77,31 +76,18 @@ class AuditLogService
         $id = $user->id ?? $user->idp_user_id;
         $isNumericId = is_numeric($id);
 
-        $logoutQuery = AuditLog::where('action_type', AuditLog::ACTION_LOGOUT)
-            ->where('created_at', '>=', now()->subSeconds(10))
-            ->latest();
-
-        if ($isNumericId) {
-            $logoutQuery->where('user_id', (string) $id);
-        } else {
-            $logoutQuery->where('username', $user->email ?? 'system');
-        }
-
-        if ($logoutQuery->first()) {
+        if ($this->auditLogRepository->findRecentSecurityEvent(
+            AuditLog::ACTION_LOGOUT,
+            $isNumericId ? (string) $id : null,
+            $isNumericId ? null : ($user->email ?? 'system'),
+        )) {
             return;
         }
 
-        $openLoginQuery = AuditLog::where('action_type', AuditLog::ACTION_LOGIN)
-            ->whereNull('logout_time')
-            ->latest();
-
-        if ($isNumericId) {
-            $openLoginQuery->where('user_id', (string) $id);
-        } else {
-            $openLoginQuery->where('username', $user->email ?? 'system');
-        }
-
-        $openLogin = $openLoginQuery->first();
+        $openLogin = $this->auditLogRepository->findOpenLogin(
+            $isNumericId ? (string) $id : null,
+            $isNumericId ? null : ($user->email ?? 'system'),
+        );
 
         if ($openLogin) {
             $openLogin->update(['logout_time' => now()]);
@@ -300,7 +286,7 @@ class AuditLogService
             ];
 
             if (in_array($data['action_type'], [AuditLog::ACTION_LOGIN, AuditLog::ACTION_LOGOUT], true)) {
-                return \App\Models\AuditLog::create($logData);
+                return $this->auditLogRepository->create($logData);
             }
 
             \App\Jobs\ProcessAuditLog::dispatch($logData)->afterCommit();

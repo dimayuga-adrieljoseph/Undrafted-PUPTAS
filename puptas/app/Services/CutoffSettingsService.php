@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\CutoffSettings;
 use App\Models\SystemSetting;
+use App\Repositories\Contracts\CutoffSettingsRepositoryInterface;
+use App\Repositories\Contracts\SystemSettingRepositoryInterface;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Validator;
@@ -23,6 +25,12 @@ class CutoffSettingsService
     private const TIMEZONE = 'Asia/Manila';
     private const SINGLETON_ID = 1;
 
+    public function __construct(
+        protected CutoffSettingsRepositoryInterface $cutoffSettingsRepository,
+        protected SystemSettingRepositoryInterface $systemSettingRepository,
+    ) {}
+
+
     /**
      * Get the current cutoff datetime as a CarbonImmutable in Asia/Manila,
      * or null if no cutoff is configured.
@@ -31,7 +39,7 @@ class CutoffSettingsService
      */
     public function getCutoff(): ?CarbonImmutable
     {
-        $record = CutoffSettings::first();
+        $record = $this->cutoffSettingsRepository->first();
 
         if (! $record || $record->cutoff_at === null) {
             return null;
@@ -77,9 +85,9 @@ class CutoffSettingsService
 
         $utcDateTime = $parsed->clone()->utc()->toDateTimeString();
 
-        $record = CutoffSettings::first();
+        $record = $this->cutoffSettingsRepository->first();
         if (!$record) {
-            $record = CutoffSettings::create(['cutoff_at' => $utcDateTime]);
+            $record = $this->cutoffSettingsRepository->create(['cutoff_at' => $utcDateTime]);
         } else {
             $record->update(['cutoff_at' => $utcDateTime]);
         }
@@ -97,10 +105,10 @@ class CutoffSettingsService
      */
     public function clearCutoff(): CutoffSettings
     {
-        $record = CutoffSettings::first();
+        $record = $this->cutoffSettingsRepository->first();
         
         if (!$record) {
-            return CutoffSettings::create(['cutoff_at' => null]);
+            return $this->cutoffSettingsRepository->create(['cutoff_at' => null]);
         }
 
         // No-op when already null — skip the write.
@@ -198,7 +206,7 @@ class CutoffSettingsService
      */
     public function getAllowedRegistrationScores(): array
     {
-        $setting = SystemSetting::where('key', 'allowed_registration_scores')->first();
+        $setting = $this->systemSettingRepository->firstByKey('allowed_registration_scores');
         if (!$setting || empty($setting->value)) {
             return [];
         }
@@ -294,7 +302,7 @@ class CutoffSettingsService
             'expires_at' => $expiresAtManila,
         ];
 
-        SystemSetting::updateOrCreate(
+        $this->systemSettingRepository->updateOrCreate(
             ['key' => 'allowed_registration_scores'],
             ['value' => json_encode(array_values($ranges))]
         );
@@ -336,7 +344,7 @@ class CutoffSettingsService
             return false;
         }
 
-        SystemSetting::updateOrCreate(
+        $this->systemSettingRepository->updateOrCreate(
             ['key' => 'allowed_registration_scores'],
             ['value' => json_encode(array_values($updated))]
         );
@@ -355,7 +363,7 @@ class CutoffSettingsService
         $ranges   = $this->getAllowedRegistrationScores();
         $filtered = array_filter($ranges, fn($item) => $item['id'] !== $id);
 
-        SystemSetting::updateOrCreate(
+        $this->systemSettingRepository->updateOrCreate(
             ['key' => 'allowed_registration_scores'],
             ['value' => json_encode(array_values($filtered))]
         );
@@ -371,7 +379,7 @@ class CutoffSettingsService
      */
     public function getAllowedRegistrationEmails(): array
     {
-        $setting = SystemSetting::where('key', 'allowed_registration_emails')->first();
+        $setting = $this->systemSettingRepository->firstByKey('allowed_registration_emails');
         if (!$setting || empty($setting->value)) {
             return [];
         }
@@ -450,7 +458,7 @@ class CutoffSettingsService
             'expires_at' => $expiresAtManila,
         ];
 
-        SystemSetting::updateOrCreate(
+        $this->systemSettingRepository->updateOrCreate(
             ['key' => 'allowed_registration_emails'],
             ['value' => json_encode(array_values($filtered))]
         );
@@ -486,7 +494,7 @@ class CutoffSettingsService
             return false;
         }
 
-        SystemSetting::updateOrCreate(
+        $this->systemSettingRepository->updateOrCreate(
             ['key' => 'allowed_registration_emails'],
             ['value' => json_encode(array_values($updated))]
         );
@@ -506,7 +514,7 @@ class CutoffSettingsService
         $allowed  = $this->getAllowedRegistrationEmails();
         $filtered = array_filter($allowed, fn($item) => $item['email'] !== $email);
 
-        SystemSetting::updateOrCreate(
+        $this->systemSettingRepository->updateOrCreate(
             ['key' => 'allowed_registration_emails'],
             ['value' => json_encode(array_values($filtered))]
         );

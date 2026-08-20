@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Application;
 use App\Models\ApplicationProcess;
+use App\Models\Grade;
 use App\Models\Program;
 use App\Models\User;
 use App\Models\UserFile;
@@ -13,6 +14,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use App\Services\CutoffSettingsService;
+use App\Repositories\Contracts\ApplicationRepositoryInterface;
+use App\Repositories\Contracts\GradeRepositoryInterface;
+use App\Repositories\Contracts\UserFileRepositoryInterface;
+use App\Repositories\Contracts\ProgramRepositoryInterface;
+use App\Repositories\Contracts\TestPasserRepositoryInterface;
 
 /**
  * Confirmation Service
@@ -29,6 +35,11 @@ class ConfirmationService
     public function __construct(
         protected FileService $fileService,
         protected CutoffSettingsService $cutoffSettingsService,
+        protected ApplicationRepositoryInterface $applicationRepository,
+        protected GradeRepositoryInterface $gradeRepository,
+        protected UserFileRepositoryInterface $userFileRepository,
+        protected ProgramRepositoryInterface $programRepository,
+        protected TestPasserRepositoryInterface $testPasserRepository,
     ) {}
 
 
@@ -40,6 +51,7 @@ class ConfirmationService
      */
     public function getConfirmationData(User $user): array
     {
+        $user->loadMissing(['currentApplication', 'testPasser']);
         $files = $user->files()->get();
 
         // Auto-expire stale 'uploading' statuses (stuck for >10 minutes = failed)
@@ -125,9 +137,10 @@ class ConfirmationService
             'show_medical_redirect' => $this->shouldShowMedicalRedirect($application),
             'show_f137_button'      => $this->shouldShowF137Button($application),
             'show_cor_upload'       => $application && $application->processes()->where('stage', 'medical')->where('status', 'completed')->exists(),
+            'has_grades'            => $this->gradeRepository->existsForUser((string) $user->id),
             'cutoff' => (function () use ($user) {
                 $isOverrideAllowed = false;
-                $testPasser = \App\Models\TestPasser::where('user_id', $user->id)->first();
+                $testPasser = $this->testPasserRepository->firstByUser((string) $user->id);
                 if ($testPasser) {
                     if ($this->cutoffSettingsService->isScoreAllowed((float) $testPasser->pupcet_total_score) || 
                         $this->cutoffSettingsService->isEmailAllowed($user->email)) {
@@ -275,6 +288,8 @@ class ConfirmationService
      */
     public function submitApplication(User $user, array $validated): Application
     {
+        $user->loadMissing(['testPasser', 'applicantProfile']);
+
         return DB::transaction(function () use ($user, $validated) {
             $isOverrideAllowed = false;
             $testPasser = $user->testPasser;
@@ -291,7 +306,7 @@ class ConfirmationService
 
             $profile = $user->applicantProfile;
 
-            $application = Application::firstOrCreate(
+            $application = $this->applicationRepository->firstOrCreate(
                 ['user_id' => $user->id],
                 [
                     'status' => 'draft',
@@ -361,16 +376,14 @@ class ConfirmationService
         }
 
         // Get existing file path before uploading (for cleanup after)
-        $existingFile = UserFile::where('user_id', (string) $user->id)
-            ->where('type', $type)
-            ->first();
+        $existingFile = $this->userFileRepository->firstByUserAndType((string) $user->id, $type);
 
         $existingFilePath = $existingFile?->file_path;
 
         // Mark the file as "uploading" in the DB BEFORE the actual storage operation.
         // This makes the backend authoritative — the frontend can poll this status
         // instead of relying on localStorage to detect in-progress uploads.
-        $userFile = UserFile::updateOrCreate(
+        $userFile = $this->userFileRepository->updateOrCreate(
             [
                 'user_id' => $user->id,
                 'type' => $type,
@@ -481,7 +494,7 @@ class ConfirmationService
         ];
 
         // Save new file record
-        $userFile = UserFile::updateOrCreate(
+        $userFile = $this->userFileRepository->updateOrCreate(
             [
                 'user_id' => $user->id,
                 'type' => $type,
@@ -511,9 +524,7 @@ class ConfirmationService
      */
     private function deleteExistingFile(User $user, string $type): void
     {
-        $existingFile = UserFile::where('user_id', (string) $user->id)
-            ->where('type', $type)
-            ->first();
+        $existingFile = $this->userFileRepository->firstByUserAndType((string) $user->id, $type);
 
         if ($existingFile) {
             $this->fileService->delete($existingFile->file_path);
@@ -528,6 +539,7 @@ class ConfirmationService
      */
     public function getEligiblePrograms(User $user): array
     {
+        $user->loadMissing(['grades', 'applicantProfile']);
         $grades = $user->grades;
         $profile = $user->applicantProfile;
 
@@ -544,22 +556,7 @@ class ConfirmationService
         $gwa = ($grades->g12_first_sem + $grades->g12_second_sem) / 2;
         $userStrand = strtoupper($profile?->strand ?? '');
 
-        $programs = Program::with('strands')
-            ->where(function ($query) use ($english, $math, $science, $gwa) {
-                $query->where(function ($q) use ($english) {
-                    $q->whereNull('english')->orWhereRaw('? >= english', [$english]);
-                })
-                    ->where(function ($q) use ($math) {
-                        $q->whereNull('math')->orWhereRaw('? >= math', [$math]);
-                    })
-                    ->where(function ($q) use ($science) {
-                        $q->whereNull('science')->orWhereRaw('? >= science', [$science]);
-                    })
-                    ->where(function ($q) use ($gwa) {
-                        $q->whereNull('gwa')->orWhereRaw('? >= gwa', [$gwa]);
-                    });
-            })
-            ->get()
+        $programs = $this->programRepository->eligibleForGrades($english, $math, $science, $gwa)
             ->filter(function ($program) use ($userStrand) {
                 // Check strand requirements
                 if (!$userStrand) {
@@ -629,6 +626,8 @@ class ConfirmationService
      */
     public function resubmitApplication(User $user): Application
     {
+        $user->loadMissing('testPasser');
+
         $isOverrideAllowed = false;
         $testPasser = $user->testPasser;
         if ($testPasser) {
@@ -642,9 +641,7 @@ class ConfirmationService
             abort(422, 'The application submission period has closed.');
         }
 
-        $application = Application::where('user_id', $user->id)
-            ->whereIn('status', ['returned', 'rejected'])
-            ->first();
+        $application = $this->applicationRepository->findReturnedOrRejectedByUserId($user->id);
 
         if (!$application) {
             abort(400, 'No returned or rejected application found to resubmit.');
@@ -703,12 +700,7 @@ class ConfirmationService
             }
 
             // Reset all returned files back to pending
-            UserFile::where('user_id', (string) $application->user_id)
-                ->where('status', 'returned')
-                ->update([
-                    'status' => 'pending',
-                    'comment' => null,
-                ]);
+            $this->userFileRepository->resetReturnedToPending((string) $application->user_id);
 
             Log::info('Application resubmitted to evaluator', [
                 'user_id' => $application->user_id,

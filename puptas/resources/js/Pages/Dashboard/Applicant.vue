@@ -21,6 +21,7 @@ const applicationProcesses = ref([]);
 const requiresPromissoryNote = ref(false);
 const requiresGuidanceOffice = ref(false);
 const requiresAdmissionOffice = ref(false);
+const hasGrades = ref(false);
 
 // Reactively derived from live applicationStatus — updates immediately after the user
 // submits without requiring a page reload.
@@ -57,6 +58,7 @@ const enrollmentInfo = computed(() => {
   };
 
   let currentStageLabel = null;
+  let currentStageKey = null;
   if (procs.length) {
     const byStage = {};
     for (const p of procs) {
@@ -67,122 +69,282 @@ const enrollmentInfo = computed(() => {
     }
     
     const stageKeys = ['document_evaluator', 'grade_evaluator', 'interviewer', 'medical', 'records'];
-    let currentKey = null;
     
     for (let i = stageKeys.length - 1; i >= 0; i--) {
       const key = stageKeys[i];
       const proc = byStage[key];
       if (proc && (['in_progress', 'returned', 'rejected'].includes(proc.status) || proc.action === 'rejected')) {
-        currentKey = key;
+        currentStageKey = key;
         break;
       }
     }
     
-    if (!currentKey) {
+    if (!currentStageKey) {
       for (let i = stageKeys.length - 1; i >= 0; i--) {
         const key = stageKeys[i];
         const proc = byStage[key];
         if (proc && proc.status === 'completed') {
-          currentKey = key;
+          currentStageKey = key;
           break;
         }
       }
     }
     
-    if (currentKey) {
-      currentStageLabel = stageLabels[currentKey] ?? null;
+    if (currentStageKey) {
+      currentStageLabel = stageLabels[currentStageKey] ?? null;
     }
 
-    // If medical is completed but no records process exists yet, the applicant
-    // is now waiting for the registrar — override the label accordingly.
     if (!byStage['records'] && byStage['medical']?.status === 'completed') {
       currentStageLabel = 'Registrar';
+      currentStageKey = 'records';
     }
   }
 
-  // Shared green style used for all active/positive states
-  const green = {
-    color:   'text-green-600 dark:text-green-400',
-    bg:      'bg-green-50 dark:bg-green-400/10',
-    ring:    'ring-green-200 dark:ring-green-500/30',
-    iconBg:  'bg-green-500',
-    // Consistent checkmark-circle icon across all green states
-    icon:    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  // ── Color and Style Theme Presets ────────────────────────────────────────
+  const themeEmerald = {
+    type: 'success',
+    color: 'text-emerald-950 dark:text-emerald-100',
+    accentColor: 'text-emerald-700 dark:text-emerald-400',
+    cardBg: 'bg-gradient-to-br from-emerald-500/[0.08] via-teal-500/[0.04] to-emerald-500/[0.02] dark:from-emerald-950/40 dark:via-gray-900/80 dark:to-teal-950/20',
+    border: 'border-emerald-200/80 dark:border-emerald-800/60',
+    glow: 'bg-emerald-400/20 dark:bg-emerald-500/10',
+    ring: 'ring-1 ring-emerald-300/50 dark:ring-emerald-500/30',
+    badge: 'bg-emerald-100/90 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60',
+    badgeDot: 'bg-emerald-500',
+    iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25',
+    chipBg: 'bg-white/70 dark:bg-gray-800/70 border-emerald-100 dark:border-emerald-800/40 text-emerald-900 dark:text-emerald-200',
+    icon: 'academic-cap',
+  };
+
+  const themeBlue = {
+    type: 'info',
+    color: 'text-blue-950 dark:text-blue-100',
+    accentColor: 'text-blue-700 dark:text-blue-400',
+    cardBg: 'bg-gradient-to-br from-blue-500/[0.08] via-indigo-500/[0.04] to-blue-500/[0.02] dark:from-blue-950/40 dark:via-gray-900/80 dark:to-indigo-950/20',
+    border: 'border-blue-200/80 dark:border-blue-800/60',
+    glow: 'bg-blue-400/20 dark:bg-blue-500/10',
+    ring: 'ring-1 ring-blue-300/50 dark:ring-blue-500/30',
+    badge: 'bg-blue-100/90 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-700/60',
+    badgeDot: 'bg-blue-500 animate-ping',
+    iconBg: 'bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25',
+    chipBg: 'bg-white/70 dark:bg-gray-800/70 border-blue-100 dark:border-blue-800/40 text-blue-900 dark:text-blue-200',
+    icon: 'clock',
+  };
+
+  const themeAmber = {
+    type: 'warning',
+    color: 'text-amber-950 dark:text-amber-100',
+    accentColor: 'text-amber-700 dark:text-amber-400',
+    cardBg: 'bg-gradient-to-br from-amber-500/[0.09] via-orange-500/[0.05] to-amber-500/[0.02] dark:from-amber-950/40 dark:via-gray-900/80 dark:to-orange-950/20',
+    border: 'border-amber-300/80 dark:border-amber-700/60',
+    glow: 'bg-amber-400/20 dark:bg-amber-500/10',
+    ring: 'ring-1 ring-amber-300/60 dark:ring-amber-500/30',
+    badge: 'bg-amber-100/90 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60',
+    badgeDot: 'bg-amber-500 animate-ping',
+    iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/25',
+    chipBg: 'bg-white/70 dark:bg-gray-800/70 border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200',
+    icon: 'warning',
+  };
+
+  const themePurple = {
+    type: 'waitlisted',
+    color: 'text-purple-950 dark:text-purple-100',
+    accentColor: 'text-purple-700 dark:text-purple-400',
+    cardBg: 'bg-gradient-to-br from-purple-500/[0.08] via-violet-500/[0.04] to-purple-500/[0.02] dark:from-purple-950/40 dark:via-gray-900/80 dark:to-violet-950/20',
+    border: 'border-purple-200/80 dark:border-purple-800/60',
+    glow: 'bg-purple-400/20 dark:bg-purple-500/10',
+    ring: 'ring-1 ring-purple-300/50 dark:ring-purple-500/30',
+    badge: 'bg-purple-100/90 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300 border border-purple-200 dark:border-purple-700/60',
+    badgeDot: 'bg-purple-500',
+    iconBg: 'bg-gradient-to-br from-purple-600 to-indigo-600 shadow-lg shadow-purple-500/25',
+    chipBg: 'bg-white/70 dark:bg-gray-800/70 border-purple-100 dark:border-purple-800/40 text-purple-900 dark:text-purple-200',
+    icon: 'queue',
+  };
+
+  const themeRose = {
+    type: 'error',
+    color: 'text-rose-950 dark:text-rose-100',
+    accentColor: 'text-rose-700 dark:text-rose-400',
+    cardBg: 'bg-gradient-to-br from-rose-500/[0.09] via-red-500/[0.05] to-rose-500/[0.02] dark:from-rose-950/40 dark:via-gray-900/80 dark:to-red-950/20',
+    border: 'border-rose-300/80 dark:border-rose-700/60',
+    glow: 'bg-rose-400/20 dark:bg-rose-500/10',
+    ring: 'ring-1 ring-rose-300/60 dark:ring-rose-500/30',
+    badge: 'bg-rose-100/90 text-rose-900 dark:bg-rose-900/60 dark:text-rose-300 border border-rose-300 dark:border-rose-700/60',
+    badgeDot: 'bg-rose-500',
+    iconBg: 'bg-gradient-to-br from-rose-600 to-red-600 shadow-lg shadow-rose-500/25',
+    chipBg: 'bg-white/70 dark:bg-gray-800/70 border-rose-200 dark:border-rose-800/40 text-rose-900 dark:text-rose-200',
+    icon: 'x-circle',
+  };
+
+  const themeSlate = {
+    type: 'draft',
+    color: 'text-gray-900 dark:text-gray-100',
+    accentColor: 'text-gray-600 dark:text-gray-400',
+    cardBg: 'bg-gradient-to-br from-slate-100 via-gray-50/80 to-slate-100/50 dark:from-gray-800/80 dark:via-gray-900/90 dark:to-gray-800/40',
+    border: 'border-gray-200 dark:border-gray-700',
+    glow: 'bg-gray-400/10 dark:bg-gray-600/10',
+    ring: 'ring-1 ring-gray-300/60 dark:ring-gray-600/30',
+    badge: 'bg-gray-100 text-gray-700 dark:bg-gray-700/80 dark:text-gray-300 border border-gray-200 dark:border-gray-600',
+    badgeDot: 'bg-gray-400',
+    iconBg: 'bg-gradient-to-br from-slate-600 to-gray-700 shadow-lg shadow-gray-500/20',
+    chipBg: 'bg-white/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300',
+    icon: 'document-text',
   };
 
   // ── Terminal enrollment states ───────────────────────────────────────────
-  const enrollmentMap = {
-    officially_enrolled: {
-      ...green,
-      label: 'Enrolled',
-      description: 'You are enrolled. Welcome!',
-    },
-    waitlisted: {
-      ...green,
-      label: 'Waitlisted',
-      description: "You are on the waitlist. We'll notify you when a slot opens.",
-    },
-    temporary: {
-      ...green,
-      label: 'Temporarily Enrolled',
-      description: 'Your enrollment is temporary pending final confirmation.',
-    },
-    not_enrolled: {
-      color:   'text-red-600 dark:text-red-400',
-      bg:      'bg-red-50 dark:bg-red-400/10',
-      ring:    'ring-red-200 dark:ring-red-500/30',
-      iconBg:  'bg-red-500',
-      icon:    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-      label: 'Not Enrolled',
-      description: 'Your application has not yet led to enrollment.',
-    },
-  };
-  if (enrollmentMap[s]) return enrollmentMap[s];
+  if (s === 'officially_enrolled') {
+    return {
+      ...themeEmerald,
+      badgeLabel: 'Officially Enrolled',
+      statusTag: 'Enrollment Confirmed',
+      label: 'Officially Enrolled Iskolar',
+      description: 'Congratulations! You are officially enrolled in the Polytechnic University of the Philippines. Welcome to PUP, Iskolar ng Bayan!',
+      nextStep: 'Prepare for Class Opening',
+      stageLabel: 'Completed',
+      actionKey: 'download_slip',
+    };
+  }
 
-  // ── Derive from application status + current stage ────────────────────────
-  if (appS === 'approved') return {
-    ...green,
-    label: 'Application Approved',
-    description: 'Your application has been approved. Await enrollment confirmation.',
-  };
-  if (appS === 'rejected') return {
-    color:   'text-red-600 dark:text-red-400',
-    bg:      'bg-red-50 dark:bg-red-400/10',
-    ring:    'ring-red-200 dark:ring-red-500/30',
-    iconBg:  'bg-red-500',
-    icon:    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-    label: 'Application Rejected',
-    description: 'Your application was not accepted this cycle.',
-  };
-  if (appS === 'returned') return {
-    ...green,
-    label: 'Documents Returned',
-    description: 'Some documents were returned for correction. Please review and re-upload.',
-  };
-  if (appS === 'submitted') return {
-    ...green,
-    label: currentStageLabel ? `${currentStageLabel} Stage` : 'Under Review',
-    description: 'Your application has been submitted and is currently being reviewed.',
-  };
-  if (appS === 'cleared_for_enrollment') return {
-    ...green,
-    label: currentStageLabel ? `${currentStageLabel} Stage` : 'Cleared for Enrollment',
-    description: 'Your application has been submitted and is currently being reviewed.',
-  };
-  if (appS === 'accepted') return {
-    ...green,
-    label: currentStageLabel ? `${currentStageLabel} Stage` : 'Accepted',
-    description: 'Your application has been submitted and is currently being reviewed.',
-  };
-  if (!appS || appS === 'draft') return {
-    ...green,
-    label: 'Not Yet Submitted',
-    description: 'Complete and submit your application to begin the review process.',
-  };
+  if (s === 'temporary') {
+    return {
+      ...themeBlue,
+      badgeLabel: 'Temporarily Enrolled',
+      statusTag: 'Conditional Enrollment',
+      label: 'Temporarily Enrolled',
+      description: 'Your enrollment has been conditionally accepted. Please ensure any pending requirements (such as COR or promissory documents) are completed.',
+      nextStep: 'Complete Pending Requirements',
+      stageLabel: currentStageLabel || 'Registrar',
+      actionKey: 'upload_cor',
+    };
+  }
+
+  if (s === 'waitlisted') {
+    return {
+      ...themePurple,
+      badgeLabel: 'Waitlisted',
+      statusTag: 'Queue Position Active',
+      label: 'Application on Waitlist',
+      description: "You have been placed on the official waitlist. As slots open up during enrollment finalization, notifications will be issued.",
+      nextStep: 'Monitor Application Updates',
+      stageLabel: currentStageLabel || 'Evaluation Complete',
+      actionKey: 'view_programs',
+    };
+  }
+
+  if (s === 'not_enrolled') {
+    return {
+      ...themeRose,
+      badgeLabel: 'Not Enrolled',
+      statusTag: 'Admission Closed',
+      label: 'Not Enrolled for this Cycle',
+      description: 'Your application has not led to enrollment for the current admission period.',
+      nextStep: 'Admission Cycle Concluded',
+      stageLabel: 'Archived',
+      actionKey: null,
+    };
+  }
+
+  // ── Derive from application status ───────────────────────────────────────
+  if (appS === 'approved') {
+    return {
+      ...themeEmerald,
+      badgeLabel: 'Approved',
+      statusTag: 'Evaluation Complete',
+      label: 'Application Approved',
+      description: 'Your application has been approved by the admissions committee! Monitor instructions for your final enrollment clearance.',
+      nextStep: 'Await Enrollment Schedule',
+      stageLabel: currentStageLabel || 'Admissions',
+      actionKey: 'review_app',
+    };
+  }
+
+  if (appS === 'cleared_for_enrollment') {
+    return {
+      ...themeEmerald,
+      badgeLabel: 'Cleared for Enrollment',
+      statusTag: 'Ready for Final Registration',
+      label: 'Cleared for Enrollment',
+      description: 'You have cleared all evaluation and medical verification steps! Upload your Certificate of Registration (COR) below to finalize enrollment.',
+      nextStep: 'Upload Certificate of Registration (COR)',
+      stageLabel: 'COR Submission',
+      actionKey: 'upload_cor',
+    };
+  }
+
+  if (appS === 'accepted') {
+    return {
+      ...themeEmerald,
+      badgeLabel: 'Accepted',
+      statusTag: 'Application Accepted',
+      label: 'Application Accepted',
+      description: 'Your application has been accepted into your designated program. Proceed with the remaining admission stages.',
+      nextStep: 'Proceed with Pipeline Stages',
+      stageLabel: currentStageLabel || 'Accepted',
+      actionKey: 'review_app',
+    };
+  }
+
+  if (appS === 'returned') {
+    return {
+      ...themeAmber,
+      badgeLabel: 'Action Required',
+      statusTag: 'Documents Returned',
+      label: 'Documents Returned for Correction',
+      description: 'The evaluator has requested updates to some of your submitted files. Please review the reviewer comments and re-upload the required documents below.',
+      nextStep: 'Re-upload Returned Documents',
+      stageLabel: currentStageLabel || 'Document Evaluator',
+      actionKey: 'documents',
+    };
+  }
+
+  if (appS === 'rejected') {
+    return {
+      ...themeRose,
+      badgeLabel: 'Rejected',
+      statusTag: 'Application Unsuccessful',
+      label: 'Application Not Accepted',
+      description: 'We regret to inform you that your application was not accepted for this admission cycle. Review evaluator feedback below.',
+      nextStep: 'Review Evaluator Remarks',
+      stageLabel: currentStageLabel || 'Evaluator',
+      actionKey: null,
+    };
+  }
+
+  if (appS === 'submitted') {
+    return {
+      ...themeBlue,
+      badgeLabel: 'Under Review',
+      statusTag: currentStageLabel ? `${currentStageLabel} Stage` : 'Under Evaluation',
+      label: currentStageLabel ? `${currentStageLabel} Stage in Progress` : 'Application Under Active Review',
+      description: 'Your application has been submitted and is currently being evaluated by University admissions staff.',
+      nextStep: 'Staff Reviewing Application',
+      stageLabel: currentStageLabel || 'Under Review',
+      actionKey: 'review_app',
+    };
+  }
+
+  if (!appS || appS === 'draft') {
+    return {
+      ...themeSlate,
+      badgeLabel: 'Application Draft',
+      statusTag: 'Not Yet Submitted',
+      label: 'Application in Progress (Draft)',
+      description: 'Upload all required report card documents and submit your academic grades to officially file your application.',
+      nextStep: 'Complete Documents & Submit Application',
+      stageLabel: 'Pre-Submission',
+      actionKey: 'documents',
+    };
+  }
+
   return {
-    ...green,
-    label: currentStageLabel ? `${currentStageLabel} Stage` : capitalize((s || appS || 'Pending').replace(/_/g, ' ')),
-    description: 'Your application is being processed.',
+    ...themeBlue,
+    badgeLabel: capitalize((s || appS || 'Processing').replace(/_/g, ' ')),
+    statusTag: currentStageLabel || 'Processing',
+    label: currentStageLabel ? `${currentStageLabel} Stage` : capitalize((s || appS || 'In Progress').replace(/_/g, ' ')),
+    description: 'Your application is currently being processed by the admissions team.',
+    nextStep: 'Processing Application',
+    stageLabel: currentStageLabel || 'Active',
+    actionKey: 'review_app',
   };
 });
 
@@ -246,6 +408,17 @@ const allDocumentsUploaded = computed(() => {
   const values = entries.map(([, v]) => v);
   return values.length > 0 && values.every(f => f?.url != null && f?.status !== 'uploading' && f?.status !== 'failed');
 });
+
+// "Review and Submit Application" only appears once all documents are uploaded AND grades have been entered
+const canReviewAndSubmit = computed(() => allDocumentsUploaded.value && hasGrades.value);
+
+// Sidebar is visible when the actions card or downloads card has content (or while loading)
+const hasSidebarContent = computed(() =>
+  (loading.value && !applicationStatus.value && !stepKeys.value.length) ||
+  canReviewAndSubmit.value ||
+  allDocumentsUploaded.value ||
+  showF137Button.value
+);
 
 // (grades extraction removed) documents are simply uploaded
 
@@ -384,6 +557,44 @@ const timelineSteps = computed(() => {
     };
   });
 });
+
+const returnedDocumentsCount = computed(() => {
+  let count = 0;
+  for (const [, file] of Object.entries(fileStatuses.value || {})) {
+    if (file && (file.status === 'returned' || file.status === 'rejected')) {
+      count++;
+    }
+  }
+  return count;
+});
+
+const currentStageNote = computed(() => {
+  const currentStep = timelineSteps.value.find(s => s.isCurrent && s.reviewer_notes);
+  if (currentStep?.reviewer_notes) return currentStep.reviewer_notes;
+  const returnedStep = timelineSteps.value.find(s => s.status === 'returned' && s.reviewer_notes);
+  return returnedStep?.reviewer_notes || null;
+});
+
+const stageProgressInfo = computed(() => {
+  const completed = timelineSteps.value.filter(s => s.status === 'completed').length;
+  const total = timelineSteps.value.length;
+  const currentIdx = timelineSteps.value.findIndex(s => s.isCurrent);
+  const currentStepNum = currentIdx >= 0 ? currentIdx + 1 : (completed === total ? total : 1);
+  return {
+    completed,
+    total,
+    currentStepNum,
+    percent: Math.round((completed / total) * 100),
+  };
+});
+
+const scrollToDocuments = () => {
+  const el = document.getElementById('documents-section');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const formatTimestamp = (ts) => ts ? new Date(ts).toLocaleString(undefined, { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" }) : "";
 const getFileUrl = (file) => file?.url || "";
@@ -463,6 +674,7 @@ const fetchData = async () => {
     requiresPromissoryNote.value = data.requires_promissory_note || false;
     requiresGuidanceOffice.value = data.requires_guidance_office || false;
     requiresAdmissionOffice.value = data.requires_admission_office || false;
+    hasGrades.value = data.has_grades || false;
   } catch {
     error.value = "Could not load application data.";
   } finally {
@@ -830,8 +1042,168 @@ onMounted(() => {
               class-name="text-gray-600 dark:text-gray-400 mt-1"
             />
           </div>
-          
-         </div>
+        </div>
+
+        <!-- Status Card (Always on Top) -->
+        <div :class="[
+          'relative overflow-hidden rounded-2xl transition-all duration-300 border backdrop-blur-xs shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]',
+          enrollmentInfo.cardBg, enrollmentInfo.border, enrollmentInfo.ring
+        ]">
+          <!-- Decorative ambient background glow -->
+          <div class="absolute -top-16 -right-16 w-56 h-56 rounded-full blur-3xl pointer-events-none transition-transform duration-700"
+               :class="enrollmentInfo.glow"></div>
+          <div class="absolute -bottom-16 -left-16 w-48 h-48 rounded-full blur-3xl pointer-events-none transition-transform duration-700"
+               :class="enrollmentInfo.glow"></div>
+
+          <!-- Skeleton Loading -->
+          <div v-if="loading && !applicationStatus && !enrollmentStatus" class="p-5 sm:p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="h-6 w-36 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+              <div class="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse"></div>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-14 h-14 rounded-2xl bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0"></div>
+              <div class="flex-1 space-y-2.5">
+                <div class="h-6 w-52 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div class="h-4 w-full max-w-md bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Status Card Content -->
+          <div v-else class="relative p-5 sm:p-6 lg:p-7 flex flex-col gap-4 sm:gap-5">
+            
+            <!-- Top Bar: Status Category Badge & Meta Information -->
+            <div class="flex items-center justify-between flex-wrap gap-2.5 pb-3 border-b border-gray-200/50 dark:border-gray-700/40">
+              <div class="flex items-center gap-2">
+                <span :class="['inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-xs', enrollmentInfo.badge]">
+                  <span class="relative flex h-2 w-2">
+                    <span v-if="enrollmentInfo.type === 'info' || enrollmentInfo.type === 'warning'"
+                          :class="['absolute inline-flex h-full w-full rounded-full opacity-75', enrollmentInfo.badgeDot]"></span>
+                    <span :class="['relative inline-flex rounded-full h-2 w-2', enrollmentInfo.badgeDot.replace(' animate-ping', '')]"></span>
+                  </span>
+                  <span>{{ enrollmentInfo.badgeLabel }}</span>
+                </span>
+                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hidden sm:inline">
+                  • {{ enrollmentInfo.statusTag }}
+                </span>
+              </div>
+
+              <!-- Quick Progress & Target Meta -->
+              <div class="flex items-center gap-2 text-xs">
+                <span v-if="props.user?.program?.code" class="px-2.5 py-0.5 rounded-md font-mono font-bold bg-white/80 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 border border-gray-200/60 dark:border-gray-700/60 shadow-2xs">
+                  {{ props.user.program.code }}
+                </span>
+                <span v-else-if="props.user?.strand" class="px-2.5 py-0.5 rounded-md font-mono font-bold bg-white/80 dark:bg-gray-800/80 text-gray-800 dark:text-gray-200 border border-gray-200/60 dark:border-gray-700/60 shadow-2xs">
+                  {{ props.user.strand.toUpperCase() }}
+                </span>
+                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                  Stage {{ stageProgressInfo.currentStepNum }} of {{ stageProgressInfo.total }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Middle Row: Icon, Headline & Action -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5">
+              <div class="flex items-start gap-4 sm:gap-5 min-w-0">
+                <!-- Status Icon -->
+                <div :class="['w-13 h-13 sm:w-15 sm:h-15 rounded-2xl flex items-center justify-center shrink-0 text-white transition-transform duration-300 hover:scale-105', enrollmentInfo.iconBg]">
+                  <!-- Academic Cap / Enrolled -->
+                  <svg v-if="enrollmentInfo.icon === 'academic-cap'" class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                  </svg>
+                  <!-- Clock / In Progress / Under Review -->
+                  <svg v-else-if="enrollmentInfo.icon === 'clock'" class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <!-- Warning / Returned / Action Required -->
+                  <svg v-else-if="enrollmentInfo.icon === 'warning'" class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                  <!-- Queue / Waitlisted -->
+                  <svg v-else-if="enrollmentInfo.icon === 'queue'" class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <!-- X Circle / Rejected / Not Enrolled -->
+                  <svg v-else-if="enrollmentInfo.icon === 'x-circle'" class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <!-- Document / Application Form (Draft) -->
+                  <svg v-else-if="enrollmentInfo.icon === 'document-text' || enrollmentInfo.icon === 'draft'" class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                  <!-- Document Edit / Pencil-Square (Fallback 1) -->
+                  <svg v-else-if="enrollmentInfo.icon === 'document-edit'" class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 7.125l-2.638-2.638" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                  </svg>
+                  <!-- Fallback: Default Document -->
+                  <svg v-else class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                </div>
+
+                <!-- Text block -->
+                <div class="min-w-0 flex-1">
+                  <h2 :class="['text-xl sm:text-2xl font-extrabold tracking-tight leading-tight', enrollmentInfo.color]">
+                    {{ enrollmentInfo.label }}
+                  </h2>
+                  <p class="mt-1 text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed max-w-2xl">
+                    {{ enrollmentInfo.description }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Contextual Action Button -->
+              <div v-if="enrollmentInfo.actionKey" class="flex md:flex-col items-stretch sm:items-end justify-start gap-2 shrink-0 pt-1 md:pt-0">
+                <button
+                  v-if="enrollmentInfo.actionKey === 'documents' || enrollmentInfo.actionKey === 'upload_cor'"
+                  @click="scrollToDocuments"
+                  class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#9E122C] hover:bg-[#7a0e22] shadow-md shadow-red-950/20 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                  <span>{{ enrollmentInfo.actionKey === 'upload_cor' ? 'Upload COR Files' : 'Review Documents' }}</span>
+                </button>
+                <button
+                  v-else-if="enrollmentInfo.actionKey === 'review_app'"
+                  @click="showModal = true"
+                  class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#9E122C] hover:bg-[#7a0e22] shadow-md shadow-red-950/20 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>View Details</span>
+                </button>
+                <button
+                  v-else-if="enrollmentInfo.actionKey === 'view_programs'"
+                  @click="goToQualifiedPrograms"
+                  class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-md shadow-purple-600/25 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <span>Qualified Programs</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Evaluator Remarks Alert inside Status Card (if applicable) -->
+            <div v-if="currentStageNote" class="rounded-xl p-3.5 bg-amber-500/10 dark:bg-amber-950/40 border border-amber-300/80 dark:border-amber-700/60 flex items-start gap-3">
+              <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              <div class="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+                <span class="font-bold uppercase tracking-wider text-[11px] text-amber-800 dark:text-amber-300 mr-1.5">Evaluator Note:</span>
+                <span class="italic font-medium">"{{ currentStageNote }}"</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
 
         <!-- COR Upload Alert -->
         <div v-if="needsCorUpload" class="bg-blue-50 dark:bg-blue-900/20 rounded-xl shadow-md border-l-4 border-blue-500 p-4 sm:p-6 mb-6">
@@ -1134,40 +1506,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Status Card -->
-        <div :class="[
-          'rounded-xl shadow-sm border p-4 sm:p-5 ring-1 transition-all',
-          enrollmentInfo.bg, enrollmentInfo.ring,
-          'border-transparent'
-        ]">
-          <div v-if="loading && !applicationStatus && !enrollmentStatus"
-               class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0"></div>
-            <div class="flex-1 space-y-2">
-              <div class="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-              <div class="h-3 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            </div>
-          </div>
-          <div v-else class="flex items-center gap-4">
-            <!-- Status icon -->
-            <div :class="['w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-sm', enrollmentInfo.iconBg]">
-              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path :d="enrollmentInfo.icon"/>
-              </svg>
-            </div>
-            <!-- Text -->
-            <div class="min-w-0">
-              <p class="text-[0.7rem] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5">Current Status</p>
-              <p :class="['text-lg sm:text-xl font-extrabold leading-tight', enrollmentInfo.color]">
-                {{ enrollmentInfo.label }}
-              </p>
-              <p class="text-[0.78rem] text-gray-600 dark:text-gray-400 mt-0.5 leading-snug">
-                {{ enrollmentInfo.description }}
-              </p>
-            </div>
-          </div>
-        </div>
-
         <!-- ── Horizontal Application Timeline ── -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
 
@@ -1279,13 +1617,16 @@ onMounted(() => {
         </div>
 
         <!-- Two-column layout: sidebar (actions/downloads) + main content -->
-        <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr] gap-6 items-start">
+        <div :class="hasSidebarContent ? 'grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr] gap-6 items-start' : 'block'">
 
           <!-- ── Sidebar ── -->
-          <aside class="flex flex-col gap-4 lg:sticky lg:top-6">
+          <aside v-if="hasSidebarContent" class="flex flex-col gap-4 lg:sticky lg:top-6">
 
-            <!-- Quick Actions Card -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <!-- Quick Actions Card — only shown when at least one action button is available (or while loading) -->
+            <div
+              v-if="(loading && !applicationStatus && !stepKeys.length) || canReviewAndSubmit || allDocumentsUploaded"
+              class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5"
+            >
               <div class="flex items-center gap-2 mb-4">
                 <svg class="w-4 h-4 flex-shrink-0" style="color:#9E122C" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -1297,8 +1638,9 @@ onMounted(() => {
                 <div class="h-11 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
               </div>
               <div v-else class="flex flex-col gap-3">
-                <!-- Review Application Button -->
+                <!-- Review and Submit Application Button -->
                 <button
+                  v-if="canReviewAndSubmit"
                   @click="showModal = true"
                   class="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
                   style="background-color: #9E122C;"
@@ -1308,7 +1650,7 @@ onMounted(() => {
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Review Application
+                  Review and Submit Application
                 </button>
                 <!-- Input / View / Edit Grades Button -->
                 <button
@@ -1329,7 +1671,7 @@ onMounted(() => {
 
             <!-- Downloads Card -->
             <div
-              v-if="canDownloadSlipReactive || showF137Button"
+              v-if="showF137Button"
               class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5"
             >
               <div class="flex items-center gap-2 mb-4">
@@ -1339,21 +1681,6 @@ onMounted(() => {
                 <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Downloads</p>
               </div>
               <div class="flex flex-col gap-3">
-                <!-- Download Grade Verification Slip -->
-                <button
-                  v-if="canDownloadSlipReactive"
-                  @click="downloadGradeVerificationSlip"
-                  class="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 min-h-[44px]"
-                  style="background-color: #059669;"
-                  onmouseover="this.style.backgroundColor='#047857'"
-                  onmouseout="this.style.backgroundColor='#059669'"
-                  title="Download your Grade Verification Slip"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Download Verification Slip
-                </button>
                 <!-- Download F137 Request Letter -->
                 <template v-if="showF137Button">
                   <button
@@ -1386,14 +1713,6 @@ onMounted(() => {
                 </template>
               </div>
               <!-- Error toasts -->
-              <Transition name="slide-down">
-                <div v-if="slipDownloadError" class="w-full mt-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
-                  <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                  {{ slipDownloadError }}
-                </div>
-              </Transition>
               <Transition name="slide-down">
                 <div v-if="f137DownloadError" class="w-full mt-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg flex items-center gap-2 text-sm text-red-700 dark:text-red-300">
                   <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1550,7 +1869,7 @@ onMounted(() => {
           </div>
 
           <!-- Required Documents -->
-          <div class="col-span-1">
+          <div id="documents-section" class="col-span-1">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
               <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">

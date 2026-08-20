@@ -5,12 +5,14 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\UserFile;
 use App\Services\GeminiClient;
+use App\Repositories\Contracts\UserFileRepositoryInterface;
 use Illuminate\Support\Facades\Storage;
 
 class GradeExtractionService
 {
     public function __construct(
         private GeminiClient $geminiClient,
+        private UserFileRepositoryInterface $userFileRepository,
     ) {}
 
     /**
@@ -52,7 +54,7 @@ class GradeExtractionService
      */
     protected function loadImages(User $user): array
     {
-        $files = UserFile::where('user_id', (string) $user->id)->get();
+        $files = $this->userFileRepository->allByUser((string) $user->id);
 
         $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
         $images = [];

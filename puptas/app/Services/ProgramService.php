@@ -6,6 +6,8 @@ use App\Models\Program;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Repositories\Contracts\ProgramRepositoryInterface;
+use App\Services\AuditLogService;
 
 /**
  * Program Service
@@ -15,6 +17,11 @@ use Illuminate\Support\Facades\Log;
  */
 class ProgramService
 {
+    public function __construct(
+        protected ProgramRepositoryInterface $programRepository,
+        protected AuditLogService $auditLogService,
+    ) {}
+
     /**
      * Get all programs with their strands
      *
@@ -22,7 +29,7 @@ class ProgramService
      */
     public function getAllProgramsWithStrands()
     {
-        return Program::with('strands')->get();
+        return $this->programRepository->allWithStrands();
     }
 
     /**
@@ -32,7 +39,7 @@ class ProgramService
      */
     public function getAllPrograms()
     {
-        return Program::all();
+        return $this->programRepository->all();
     }
 
     /**
@@ -45,7 +52,7 @@ class ProgramService
     public function createProgram(array $data, array $strandIds = []): Program
     {
         return DB::transaction(function () use ($data, $strandIds) {
-            $program = Program::create($data);
+            $program = $this->programRepository->create($data);
 
             if (!empty($strandIds)) {
                 $program->strands()->attach($strandIds);
@@ -128,7 +135,7 @@ class ProgramService
      */
     public function findProgramOrFail(int $id): Program
     {
-        return Program::findOrFail($id);
+        return $this->programRepository->find($id);
     }
 
     /**
@@ -146,6 +153,6 @@ class ProgramService
         $actionType  = $actionTypeMap[strtolower($action)] ?? strtoupper($action);
         $description = ucfirst($action) . " program \"{$program->name}\" (ID: {$program->id}).";
 
-        app(\App\Services\AuditLogService::class)->logActivity($actionType, 'Programs', $description, null, 'SYSTEM_OPERATION', $oldValues, $newValues);
+        $this->auditLogService->logActivity($actionType, 'Programs', $description, null, 'SYSTEM_OPERATION', $oldValues, $newValues);
     }
 }
