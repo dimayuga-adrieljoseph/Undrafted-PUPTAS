@@ -99,6 +99,8 @@ class CreateNewUser implements CreatesNewUsers
             'reference_number' => ['required', 'string', 'max:100'],
             'schoolyear' => ['required', 'string', 'exists:graduate_types,label'],
             'school' => ['required', 'string', 'max:255'],
+            'school_address' => ['required', 'string', 'max:255'],
+            'school_principal' => ['nullable', 'string', 'max:255'],
         ];
 
         Validator::make($input, $rules)->validate();
@@ -182,6 +184,8 @@ class CreateNewUser implements CreatesNewUsers
                 'school' => $input['school'],
                 'strand' => $input['strand'] ?? null,
                 'track' => $input['track'] ?? null,
+                'former_school_address' => $input['school_address'] ?? null,
+                'former_school_principal' => $input['school_principal'] ?? null,
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
             ]);

@@ -1290,7 +1290,7 @@ onMounted(() => {
                 <svg class="w-4 h-4 flex-shrink-0" style="color:#9E122C" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Quick Actions</p>
+                <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">Actions</p>
               </div>
               <div v-if="loading && !applicationStatus && !stepKeys.length" class="flex flex-col gap-3">
                 <div class="h-11 w-full bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
@@ -1452,9 +1452,9 @@ onMounted(() => {
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                       </div>
-                      <div class="absolute -top-1 -right-1">
-                        <span :class="`px-1.5 py-0.5 rounded-full text-xs text-white ${getBadgeClass(fileStatuses[key]?.status)}`">
-                          {{ getStatusShort(fileStatuses[key]?.status) }}
+                      <div v-if="['rejected', 'returned'].includes((fileStatuses[key]?.status || '').toLowerCase())" class="absolute -top-1 -right-1">
+                        <span class="px-1.5 py-0.5 rounded-full text-xs text-white bg-red-600">
+                          Rejected
                         </span>
                       </div>
                     </div>
@@ -1611,9 +1611,9 @@ onMounted(() => {
                       </div>
 
                       <!-- Status Badge -->
-                      <div class="absolute -top-1 -right-1">
-                        <span :class="`px-1.5 py-0.5 rounded-full text-xs text-white ${getBadgeClass(fileStatuses[key]?.status)}`">
-                          {{ getStatusShort(fileStatuses[key]?.status) }}
+                      <div v-if="['rejected', 'returned'].includes((fileStatuses[key]?.status || '').toLowerCase())" class="absolute -top-1 -right-1">
+                        <span class="px-1.5 py-0.5 rounded-full text-xs text-white bg-red-600">
+                          Rejected
                         </span>
                       </div>
                     </div>
@@ -1634,7 +1634,7 @@ onMounted(() => {
                         v-if="!fileStatuses[key]?.url && fileStatuses[key]?.status !== 'uploading'"
                         @click.prevent="handleOpenUpload(key)"
                         :disabled="activeUploadUploading"
-                        class="w-full py-1 text-xs bg-maroon-600 hover:bg-maroon-700 text-white rounded transition-colors dark:text-gray-900 min-h-[44px] disabled:opacity-70"
+                        class="w-full py-1 text-xs bg-[#9E122C] hover:bg-[#7a0e22] text-white rounded transition-colors min-h-[44px] disabled:opacity-70"
                       >
                         Upload
                       </button>
