@@ -1,6 +1,6 @@
 <!-- PUPTAS Landing Page — Organic/Natural Design System -->
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Head } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -10,6 +10,30 @@ const props = defineProps({
 })
 
 const currentYear = computed(() => new Date().getFullYear())
+
+// Dark mode
+const isDark = ref(false)
+const toggleDarkMode = () => {
+  isDark.value = !isDark.value
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('theme', 'dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+    localStorage.setItem('theme', 'light')
+  }
+}
+
+onMounted(() => {
+  const saved = localStorage.getItem('theme')
+  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    isDark.value = true
+    document.documentElement.classList.add('dark')
+  } else {
+    isDark.value = false
+    document.documentElement.classList.remove('dark')
+  }
+})
 
 const goToLogin = () => {
   if (props.isEmergencyMode) {
@@ -22,106 +46,32 @@ const goToLogin = () => {
 }
 
 const steps = ref([
-  {
-    title: 'Receive Your PUPCET Result',
-    description: 'After the PUP College Entrance Test, qualified applicants receive an email with their result and a Student Admission Receipt (SAR) form. Check your inbox — including spam.',
-    icon: 'mail',
-  },
-  {
-    title: 'Register via PUP Identity Provider',
-    description: 'Create your PUP account using the registration link in your results email. This single account is your key to the PUPTAS admission portal.',
-    icon: 'key',
-  },
-  {
-    title: 'Complete Your Profile',
-    description: 'On first login, fill in your personal information: full name, sex, SHS strand, school attended, date graduated, and your top three program choices.',
-    icon: 'user',
-  },
-  {
-    title: 'Enter Your SHS Grades',
-    description: 'Input your Grade 11 and 12 subject grades using the form for your strand (ABM, ICT, HUMSS, GAS, STEM, or TVL). Upload your report card for AI-assisted extraction.',
-    icon: 'chart',
-  },
-  {
-    title: 'Upload Required Documents',
-    description: 'Upload your report cards and supporting documents directly to secure cloud storage. The system tells you exactly which files are needed based on your graduate type.',
-    icon: 'folder',
-  },
-  {
-    title: 'Submit Your Application',
-    description: 'Review the programs you qualify for based on your grades and strand, confirm your choices, and officially submit your application.',
-    icon: 'check-circle',
-  },
-  {
-    title: 'Evaluation & Interview',
-    description: "Staff will verify your documents and grades. Once cleared, you'll be scheduled for an interview. You'll receive email updates at every step.",
-    icon: 'chat',
-  },
-  {
-    title: 'Medical Examination',
-    description: 'After passing the interview, you will be scheduled for a medical examination as a final requirement before enrollment. Instructions will be sent to your email.',
-    icon: 'graduation',
-  },
+  { title: 'Receive Your PUPCET Result', description: 'After the PUP College Entrance Test, qualified applicants receive an email with their result and a Student Admission Receipt (SAR) form. Check your inbox — including spam.', icon: 'mail' },
+  { title: 'Register via PUP Identity Provider', description: 'Create your PUP account using the registration link in your results email. This single account is your key to the PUPTAS admission portal.', icon: 'key' },
+  { title: 'Complete Your Profile', description: 'On first login, fill in your personal information: full name, sex, SHS strand, school attended, date graduated, and your top three program choices.', icon: 'user' },
+  { title: 'Enter Your SHS Grades', description: 'Input your Grade 11 and 12 subject grades using the form for your strand (ABM, ICT, HUMSS, GAS, STEM, or TVL). Upload your report card for AI-assisted extraction.', icon: 'chart' },
+  { title: 'Upload Required Documents', description: 'Upload your report cards and supporting documents directly to secure cloud storage. The system tells you exactly which files are needed based on your graduate type.', icon: 'folder' },
+  { title: 'Submit Your Application', description: 'Review the programs you qualify for based on your grades and strand, confirm your choices, and officially submit your application.', icon: 'check-circle' },
+  { title: 'Evaluation & Interview', description: "Staff will verify your documents and grades. Once cleared, you'll be scheduled for an interview. You'll receive email updates at every step.", icon: 'chat' },
+  { title: 'Medical Examination', description: 'After passing the interview, you will be scheduled for a medical examination as a final requirement before enrollment. Instructions will be sent to your email.', icon: 'graduation' },
 ])
 
 const capabilities = ref([
-  {
-    icon: 'user',
-    title: 'Complete Your Profile',
-    desc: 'Set up your applicant profile with personal info, SHS strand, school details, and program choices on your first login.',
-  },
-  {
-    icon: 'chart',
-    title: 'Submit Your Grades',
-    desc: 'Enter your Grade 11 and 12 subject grades. Upload your report card and let AI extract grades automatically.',
-  },
-  {
-    icon: 'folder',
-    title: 'Upload Documents',
-    desc: "Directly upload your report cards and supporting documents. The portal shows exactly what's needed.",
-  },
-  {
-    icon: 'target',
-    title: 'See Your Eligible Programs',
-    desc: 'Know which college programs you qualify for based on your strand, GWA, and subject grades — instantly.',
-  },
-  {
-    icon: 'signal',
-    title: 'Track Application Status',
-    desc: 'Monitor your application in real time as it moves through evaluation, interview, medical, and enrollment.',
-  },
-  {
-    icon: 'download',
-    title: 'Download Grade Verification Slip',
-    desc: 'Once your application is submitted, download your official Grade Verification Slip directly from the portal.',
-  },
+  { icon: 'user',     title: 'Complete Your Profile',          desc: 'Set up your applicant profile with personal info, SHS strand, school details, and program choices on your first login.' },
+  { icon: 'chart',    title: 'Submit Your Grades',             desc: 'Enter your Grade 11 and 12 subject grades. Upload your report card and let AI extract grades automatically.' },
+  { icon: 'folder',   title: 'Upload Documents',               desc: "Directly upload your report cards and supporting documents. The portal shows exactly what's needed." },
+  { icon: 'target',   title: 'See Your Eligible Programs',     desc: 'Know which college programs you qualify for based on your strand, GWA, and subject grades — instantly.' },
+  { icon: 'signal',   title: 'Track Application Status',       desc: 'Monitor your application in real time as it moves through evaluation, interview, medical, and enrollment.' },
+  { icon: 'download', title: 'Download Grade Verification Slip', desc: 'Once your application is submitted, download your official Grade Verification Slip directly from the portal.' },
 ])
 
 const faqs = ref([
-  {
-    q: 'Who can use PUPTAS?',
-    a: 'PUPTAS is for PUPCET passers applying for admission to PUP Taguig Campus. You must have received a result email with a Student Admission Receipt (SAR) to be eligible.',
-  },
-  {
-    q: 'Do I need a separate account to log in?',
-    a: "No. You log in using your PUP Identity Provider (IDP) account — the same account used for all PUP online services. If you don't have one, register using the link in your PUPCET results email.",
-  },
-  {
-    q: 'What documents do I need to prepare?',
-    a: "Typically: Grade 10 Report Card, Grade 11 Report Card (front and back), Grade 12 Report Card (front and back), and your PSA Birth Certificate. The system will tell you exactly what's required based on your graduate type.",
-  },
-  {
-    q: 'Can I change my program choices after submitting?',
-    a: 'Once your application is submitted and locked, you cannot change your program choices on your own. Contact the admissions office via Chat Support for assistance.',
-  },
-  {
-    q: 'How do I know if I qualify for a program?',
-    a: 'After entering your grades, the system automatically shows which programs you are eligible for based on your GWA, strand, and subject grades. No guesswork needed.',
-  },
-  {
-    q: "What if I didn't receive my SAR form email?",
-    a: "Check your spam or junk folder first. If it's still not there, verify you used the correct registered email. Contact admissions support if the issue continues.",
-  },
+  { q: 'Who can use PUPTAS?', a: 'PUPTAS is for PUPCET passers applying for admission to PUP Taguig Campus. You must have received a result email with a Student Admission Receipt (SAR) to be eligible.' },
+  { q: 'Do I need a separate account to log in?', a: "No. You log in using your PUP Identity Provider (IDP) account — the same account used for all PUP online services. If you don't have one, register using the link in your PUPCET results email." },
+  { q: 'What documents do I need to prepare?', a: "Typically: Grade 10 Report Card, Grade 11 Report Card (front and back), Grade 12 Report Card (front and back), and your PSA Birth Certificate. The system will tell you exactly what's required based on your graduate type." },
+  { q: 'Can I change my program choices after submitting?', a: 'Once your application is submitted and locked, you cannot change your program choices on your own. Contact the admissions office via Chat Support for assistance.' },
+  { q: 'How do I know if I qualify for a program?', a: 'After entering your grades, the system automatically shows which programs you are eligible for based on your GWA, strand, and subject grades. No guesswork needed.' },
+  { q: "What if I didn't receive my SAR form email?", a: "Check your spam or junk folder first. If it's still not there, verify you used the correct registered email. Contact admissions support if the issue continues." },
 ])
 
 const openFaq = ref(null)
@@ -141,7 +91,6 @@ const scrollTo = (href) => {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-// Asymmetric border-radius patterns for feature cards
 const cardRadii = [
   'rounded-tl-[3rem] rounded-tr-[1.5rem] rounded-bl-[1.5rem] rounded-br-[3rem]',
   'rounded-tl-[1.5rem] rounded-tr-[3rem] rounded-bl-[3rem] rounded-br-[1.5rem]',
@@ -154,22 +103,22 @@ const cardRadii = [
 
 <template>
   <Head title="PUP-T Admission System" />
-  <div class="min-h-screen bg-[#FDFCF8] font-sans text-[#2C2C24] relative overflow-x-hidden">
+  <div class="min-h-screen bg-[#FDFCF8] dark:bg-gray-950 font-sans text-[#2C2C24] dark:text-gray-100 relative overflow-x-hidden transition-colors duration-300">
 
     <!-- ── GLOBAL GRAIN TEXTURE ──────────────────────────────── -->
-    <div class="pointer-events-none fixed inset-0 z-[100] opacity-[0.035] mix-blend-multiply"
+    <div class="pointer-events-none fixed inset-0 z-[100] opacity-[0.035] mix-blend-multiply dark:mix-blend-soft-light dark:opacity-[0.02]"
       style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E');
       background-size: 200px 200px;"></div>
 
     <!-- ── NAVBAR ─────────────────────────────────────────────── -->
     <nav class="sticky top-4 z-50 mx-4 sm:mx-6 lg:mx-auto lg:max-w-5xl">
-      <div class="bg-white/70 backdrop-blur-md border border-[#DED8CF]/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.15)] rounded-full px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="bg-white/70 dark:bg-gray-900/80 backdrop-blur-md border border-[#DED8CF]/50 dark:border-gray-700/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.15)] dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.4)] rounded-full px-4 sm:px-6 h-16 flex items-center justify-between">
         <!-- Logo -->
         <div class="flex items-center gap-3">
           <img src="/assets/images/pup_logo.png" alt="PUP Taguig Logo" class="h-10 w-10 object-contain flex-shrink-0" />
           <div class="leading-tight hidden sm:block">
             <p class="text-sm font-bold text-[#9E122C]">PUPTAS</p>
-            <p class="text-xs text-[#78786C]">Admission Portal</p>
+            <p class="text-xs text-[#78786C] dark:text-gray-400">Admission Portal</p>
           </div>
         </div>
 
@@ -179,18 +128,36 @@ const cardRadii = [
             v-for="link in navLinks"
             :key="link.label"
             @click="scrollTo(link.href)"
-            class="text-sm text-[#4A4A40] hover:text-[#9E122C] font-medium px-4 py-2 rounded-full hover:bg-[#9E122C]/5 transition-all duration-300"
+            class="text-sm text-[#4A4A40] dark:text-gray-300 hover:text-[#9E122C] dark:hover:text-[#e85070] font-medium px-4 py-2 rounded-full hover:bg-[#9E122C]/5 dark:hover:bg-[#9E122C]/10 transition-all duration-300"
           >
             {{ link.label }}
           </button>
           <a href="/admission-results"
-            class="text-sm text-[#4A4A40] hover:text-[#9E122C] font-medium px-4 py-2 rounded-full hover:bg-[#9E122C]/5 transition-all duration-300">
+            class="text-sm text-[#4A4A40] dark:text-gray-300 hover:text-[#9E122C] dark:hover:text-[#e85070] font-medium px-4 py-2 rounded-full hover:bg-[#9E122C]/5 dark:hover:bg-[#9E122C]/10 transition-all duration-300">
             Check Status
           </a>
         </div>
 
-        <!-- Right: Log In + mobile hamburger -->
+        <!-- Right: Dark mode toggle + Log In + mobile hamburger -->
         <div class="flex items-center gap-2">
+          <!-- Dark mode toggle -->
+          <button
+            type="button"
+            @click="toggleDarkMode"
+            :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+            :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+            class="flex items-center justify-center w-9 h-9 rounded-full border border-[#DED8CF]/60 dark:border-gray-700 bg-white/60 dark:bg-gray-800 text-[#78786C] dark:text-gray-300 hover:text-[#9E122C] dark:hover:text-yellow-300 hover:bg-[#9E122C]/5 dark:hover:bg-gray-700 transition-all duration-300"
+          >
+            <!-- Sun (shown in dark mode) -->
+            <svg v-if="isDark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            </svg>
+            <!-- Moon (shown in light mode) -->
+            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          </button>
+
           <button @click="goToLogin"
             class="px-5 py-2.5 rounded-full text-sm font-bold text-white bg-[#9E122C] shadow-[0_4px_20px_-2px_rgba(158,18,44,0.35)] hover:shadow-[0_6px_24px_-4px_rgba(158,18,44,0.45)] hover:scale-105 active:scale-95 transition-all duration-300">
             Log In
@@ -198,7 +165,7 @@ const cardRadii = [
           <!-- Hamburger (mobile only) -->
           <button
             @click="mobileMenuOpen = !mobileMenuOpen"
-            class="md:hidden flex items-center justify-center w-10 h-10 rounded-full border border-[#DED8CF]/60 bg-white/60 text-[#4A4A40] hover:bg-[#9E122C]/5 hover:text-[#9E122C] transition-all duration-300"
+            class="md:hidden flex items-center justify-center w-10 h-10 rounded-full border border-[#DED8CF]/60 dark:border-gray-700 bg-white/60 dark:bg-gray-800 text-[#4A4A40] dark:text-gray-300 hover:bg-[#9E122C]/5 hover:text-[#9E122C] transition-all duration-300"
             :aria-label="mobileMenuOpen ? 'Close menu' : 'Open menu'"
           >
             <svg v-if="!mobileMenuOpen" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -220,20 +187,20 @@ const cardRadii = [
         leave-from-class="opacity-100 translate-y-0 scale-100"
         leave-to-class="opacity-0 -translate-y-2 scale-95">
         <div v-if="mobileMenuOpen"
-          class="md:hidden mt-2 bg-white/80 backdrop-blur-md border border-[#DED8CF]/50 shadow-[0_10px_40px_-10px_rgba(93,112,82,0.2)] rounded-[2rem] px-4 py-4 flex flex-col gap-1">
+          class="md:hidden mt-2 bg-white/80 dark:bg-gray-900/90 backdrop-blur-md border border-[#DED8CF]/50 dark:border-gray-700/50 shadow-[0_10px_40px_-10px_rgba(93,112,82,0.2)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.4)] rounded-[2rem] px-4 py-4 flex flex-col gap-1">
           <button
             v-for="link in navLinks"
             :key="link.label"
             @click="scrollTo(link.href)"
-            class="w-full text-left text-sm font-semibold text-[#4A4A40] hover:text-[#9E122C] px-4 py-3 rounded-full hover:bg-[#9E122C]/5 transition-all duration-300"
+            class="w-full text-left text-sm font-semibold text-[#4A4A40] dark:text-gray-300 hover:text-[#9E122C] dark:hover:text-[#e85070] px-4 py-3 rounded-full hover:bg-[#9E122C]/5 dark:hover:bg-[#9E122C]/10 transition-all duration-300"
           >
             {{ link.label }}
           </button>
           <a href="/admission-results"
-            class="text-sm font-semibold text-[#4A4A40] hover:text-[#9E122C] px-4 py-3 rounded-full hover:bg-[#9E122C]/5 transition-all duration-300">
+            class="text-sm font-semibold text-[#4A4A40] dark:text-gray-300 hover:text-[#9E122C] dark:hover:text-[#e85070] px-4 py-3 rounded-full hover:bg-[#9E122C]/5 dark:hover:bg-[#9E122C]/10 transition-all duration-300">
             Check Status
           </a>
-          <div class="mt-1 pt-3 border-t border-[#DED8CF]/40">
+          <div class="mt-1 pt-3 border-t border-[#DED8CF]/40 dark:border-gray-700/40">
             <button @click="goToLogin"
               class="w-full px-5 py-3 rounded-full text-sm font-bold text-white bg-[#9E122C] shadow-[0_4px_20px_-2px_rgba(158,18,44,0.35)] hover:scale-[1.02] active:scale-95 transition-all duration-300">
               Log In to PUPTAS
@@ -255,7 +222,7 @@ const cardRadii = [
         <div class="flex flex-col items-center text-center">
 
           <!-- Pill badge -->
-          <div class="inline-flex items-center gap-2.5 mb-8 px-5 py-2.5 rounded-full bg-white border border-[#DED8CF]/70 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.12)]">
+          <div class="inline-flex items-center gap-2.5 mb-8 px-5 py-2.5 rounded-full bg-white dark:bg-gray-800 border border-[#DED8CF]/70 dark:border-gray-700 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.12)]">
             <span class="relative flex h-2 w-2 flex-shrink-0">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#9E122C] opacity-60"></span>
               <span class="relative inline-flex rounded-full h-2 w-2 bg-[#9E122C]"></span>
@@ -264,7 +231,7 @@ const cardRadii = [
           </div>
 
           <!-- Headline -->
-          <h1 class=" text-5xl sm:text-6xl lg:text-7xl font-bold text-[#2C2C24] leading-[1.1] mb-6 max-w-4xl">
+          <h1 class="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#2C2C24] dark:text-white leading-[1.1] mb-6 max-w-4xl">
             Welcome to the
             <span class="relative inline-block text-[#9E122C]">
               PUP - T Admission System
@@ -275,7 +242,7 @@ const cardRadii = [
           </h1>
 
           <!-- Subheadline -->
-          <p class="text-lg sm:text-xl text-[#78786C] leading-relaxed mb-10 max-w-2xl">
+          <p class="text-lg sm:text-xl text-[#78786C] dark:text-gray-400 leading-relaxed mb-10 max-w-2xl">
             PUPTAS is the official online admission portal for PUP Taguig Campus. Complete your application, upload documents, and track your progress in real-time — all from one secure platform.
           </p>
 
@@ -284,14 +251,12 @@ const cardRadii = [
             <button @click="goToLogin"
               class="group inline-flex items-center justify-center gap-2.5 px-9 py-4 rounded-full text-white font-bold text-base bg-[#9E122C] shadow-[0_4px_20px_-2px_rgba(158,18,44,0.4)] hover:shadow-[0_10px_40px_-10px_rgba(158,18,44,0.5)] hover:scale-105 active:scale-95 transition-all duration-300">
               Log In to PUPTAS
-              <!-- Arrow right icon -->
               <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
             </button>
             <a href="/admission-results"
-              class="inline-flex items-center justify-center gap-2.5 px-9 py-4 rounded-full font-bold text-base border-2 border-[#DED8CF] text-[#4A4A40] bg-white/60 hover:border-[#9E122C] hover:text-[#9E122C] hover:bg-[#9E122C]/5 transition-all duration-300">
-              <!-- Search icon -->
+              class="inline-flex items-center justify-center gap-2.5 px-9 py-4 rounded-full font-bold text-base border-2 border-[#DED8CF] dark:border-gray-600 text-[#4A4A40] dark:text-gray-300 bg-white/60 dark:bg-gray-800/60 hover:border-[#9E122C] hover:text-[#9E122C] hover:bg-[#9E122C]/5 dark:hover:border-[#9E122C] dark:hover:text-[#e85070] dark:hover:bg-[#9E122C]/10 transition-all duration-300">
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
@@ -299,73 +264,51 @@ const cardRadii = [
             </a>
           </div>
 
-
-
         </div>
       </div>
     </section>
 
     <!-- ── WHAT YOU CAN DO ────────────────────────────────────── -->
-    <section id="features" class="py-28 sm:py-32 bg-[#F0EBE5]/30">
+    <section id="features" class="py-28 sm:py-32 bg-[#F0EBE5]/30 dark:bg-gray-900/50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
           <span class="inline-block text-xs font-bold text-[#9E122C] uppercase tracking-widest mb-3">Portal Features</span>
-          <h2 class=" text-4xl sm:text-5xl font-bold text-[#2C2C24] mb-4">Everything You Need<br class="hidden sm:block"> in One Place</h2>
-          <p class="text-lg text-[#78786C] max-w-2xl mx-auto">Manage your entire admission process with intuitive tools designed for applicants.</p>
+          <h2 class="text-4xl sm:text-5xl font-bold text-[#2C2C24] dark:text-white mb-4">Everything You Need<br class="hidden sm:block"> in One Place</h2>
+          <p class="text-lg text-[#78786C] dark:text-gray-400 max-w-2xl mx-auto">Manage your entire admission process with intuitive tools designed for applicants.</p>
         </div>
 
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div
             v-for="(item, idx) in capabilities"
             :key="item.title"
-            class="group relative bg-[#FEFEFA] border border-[#DED8CF]/50 p-7 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.10)] hover:-translate-y-1 hover:shadow-[0_20px_40px_-10px_rgba(93,112,82,0.15)] transition-all duration-500 cursor-default"
+            class="group relative bg-[#FEFEFA] dark:bg-gray-800 border border-[#DED8CF]/50 dark:border-gray-700/50 p-7 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.10)] dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.3)] hover:-translate-y-1 hover:shadow-[0_20px_40px_-10px_rgba(93,112,82,0.15)] dark:hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.4)] transition-all duration-500 cursor-default"
             :class="cardRadii[idx % cardRadii.length]"
           >
-            <!-- Icon container -->
-            <div class="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[#9E122C]/10 mb-5 group-hover:bg-[#9E122C] transition-colors duration-300">
-              <!-- user icon -->
-              <svg v-if="item.icon === 'user'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-              </svg>
-              <!-- chart/grades icon -->
-              <svg v-else-if="item.icon === 'chart'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-              </svg>
-              <!-- folder icon -->
-              <svg v-else-if="item.icon === 'folder'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-              </svg>
-              <!-- target icon -->
-              <svg v-else-if="item.icon === 'target'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
-              </svg>
-              <!-- signal/tracking icon -->
-              <svg v-else-if="item.icon === 'signal'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-              </svg>
-              <!-- download icon -->
-              <svg v-else-if="item.icon === 'download'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
+            <div class="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[#9E122C]/10 dark:bg-[#9E122C]/20 mb-5 group-hover:bg-[#9E122C] transition-colors duration-300">
+              <svg v-if="item.icon === 'user'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <svg v-else-if="item.icon === 'chart'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <svg v-else-if="item.icon === 'folder'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <svg v-else-if="item.icon === 'target'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              <svg v-else-if="item.icon === 'signal'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <svg v-else-if="item.icon === 'download'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </div>
-            <h3 class="font-bold text-[#2C2C24] text-lg mb-2 ">{{ item.title }}</h3>
-            <p class="text-[#78786C] text-sm leading-relaxed">{{ item.desc }}</p>
+            <h3 class="font-bold text-[#2C2C24] dark:text-white text-lg mb-2">{{ item.title }}</h3>
+            <p class="text-[#78786C] dark:text-gray-400 text-sm leading-relaxed">{{ item.desc }}</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- ── HOW IT WORKS ───────────────────────────────────────── -->
-    <section id="how-it-works" class="py-28 sm:py-32 bg-[#FDFCF8]">
+    <section id="how-it-works" class="py-28 sm:py-32 bg-[#FDFCF8] dark:bg-gray-950">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
           <span class="inline-block text-xs font-bold text-[#9E122C] uppercase tracking-widest mb-3">Application Flow</span>
-          <h2 class=" text-4xl sm:text-5xl font-bold text-[#2C2C24] mb-4">Your Admission Journey</h2>
-          <p class="text-lg text-[#78786C]">From PUPCET results to official enrollment — 8 clear steps.</p>
+          <h2 class="text-4xl sm:text-5xl font-bold text-[#2C2C24] dark:text-white mb-4">Your Admission Journey</h2>
+          <p class="text-lg text-[#78786C] dark:text-gray-400">From PUPCET results to official enrollment — 8 clear steps.</p>
         </div>
 
         <div class="relative">
-          <!-- Curved dashed SVG connector (desktop only) -->
           <svg class="absolute left-1/2 top-0 -translate-x-1/2 w-1 hidden sm:block" style="height:100%;" preserveAspectRatio="none" viewBox="0 0 4 800" fill="none" xmlns="http://www.w3.org/2000/svg">
             <line x1="2" y1="0" x2="2" y2="800" stroke="#DED8CF" stroke-width="2" stroke-dasharray="8 6"/>
           </svg>
@@ -375,9 +318,8 @@ const cardRadii = [
 
               <!-- Left side card (even) -->
               <div v-if="i % 2 === 0" class="sm:w-1/2 sm:pr-10 w-full ml-14 sm:ml-0">
-                <div class="group bg-[#FEFEFA] border border-[#DED8CF]/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.10)] hover:shadow-[0_20px_40px_-10px_rgba(93,112,82,0.15)] hover:-translate-y-0.5 transition-all duration-500 p-6 rounded-[2rem] rounded-tr-[0.75rem]">
-                  <div class="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-[#9E122C]/10 mb-4 group-hover:bg-[#9E122C] transition-colors duration-300">
-                    <!-- step icons inline -->
+                <div class="group bg-[#FEFEFA] dark:bg-gray-800 border border-[#DED8CF]/50 dark:border-gray-700/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.10)] dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_-10px_rgba(93,112,82,0.15)] hover:-translate-y-0.5 transition-all duration-500 p-6 rounded-[2rem] rounded-tr-[0.75rem]">
+                  <div class="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-[#9E122C]/10 dark:bg-[#9E122C]/20 mb-4 group-hover:bg-[#9E122C] transition-colors duration-300">
                     <svg v-if="step.icon === 'mail'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
                     <svg v-else-if="step.icon === 'user'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     <svg v-else-if="step.icon === 'folder'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -385,13 +327,14 @@ const cardRadii = [
                     <svg v-else-if="step.icon === 'graduation'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
                     <svg v-else-if="step.icon === 'key'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
                   </div>
-                  <h3 class="font-bold text-[#2C2C24] text-base mb-1.5">{{ step.title }}</h3>
-                  <p class="text-[#78786C] text-sm leading-relaxed">{{ step.description }}</p>
+                  <h3 class="font-bold text-[#2C2C24] dark:text-white text-base mb-1.5">{{ step.title }}</h3>
+                  <p class="text-[#78786C] dark:text-gray-400 text-sm leading-relaxed">{{ step.description }}</p>
                 </div>
               </div>
+              <!-- Right side card (odd) -->
               <div v-else class="sm:w-1/2 sm:pl-10 w-full sm:ml-auto ml-14">
-                <div class="group bg-[#FEFEFA] border border-[#DED8CF]/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.10)] hover:shadow-[0_20px_40px_-10px_rgba(93,112,82,0.15)] hover:-translate-y-0.5 transition-all duration-500 p-6 rounded-[2rem] rounded-tl-[0.75rem]">
-                  <div class="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-[#9E122C]/10 mb-4 group-hover:bg-[#9E122C] transition-colors duration-300">
+                <div class="group bg-[#FEFEFA] dark:bg-gray-800 border border-[#DED8CF]/50 dark:border-gray-700/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.10)] dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_-10px_rgba(93,112,82,0.15)] hover:-translate-y-0.5 transition-all duration-500 p-6 rounded-[2rem] rounded-tl-[0.75rem]">
+                  <div class="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-[#9E122C]/10 dark:bg-[#9E122C]/20 mb-4 group-hover:bg-[#9E122C] transition-colors duration-300">
                     <svg v-if="step.icon === 'mail'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
                     <svg v-else-if="step.icon === 'user'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     <svg v-else-if="step.icon === 'folder'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -401,18 +344,17 @@ const cardRadii = [
                     <svg v-else-if="step.icon === 'check-circle'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     <svg v-else-if="step.icon === 'key'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
                   </div>
-                  <h3 class="font-bold text-[#2C2C24] text-base mb-1.5">{{ step.title }}</h3>
-                  <p class="text-[#78786C] text-sm leading-relaxed">{{ step.description }}</p>
+                  <h3 class="font-bold text-[#2C2C24] dark:text-white text-base mb-1.5">{{ step.title }}</h3>
+                  <p class="text-[#78786C] dark:text-gray-400 text-sm leading-relaxed">{{ step.description }}</p>
                 </div>
               </div>
 
               <!-- Center step number (desktop) -->
-              <div class="absolute left-1/2 -translate-x-1/2 top-6 hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-[#9E122C] text-white font-bold text-sm shadow-[0_4px_12px_rgba(158,18,44,0.35)] border-4 border-[#FDFCF8] z-10 ">
+              <div class="absolute left-1/2 -translate-x-1/2 top-6 hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-[#9E122C] text-white font-bold text-sm shadow-[0_4px_12px_rgba(158,18,44,0.35)] border-4 border-[#FDFCF8] dark:border-gray-950 z-10">
                 {{ i + 1 }}
               </div>
-
               <!-- Mobile step number -->
-              <div class="absolute left-0 top-4 sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-[#9E122C] text-white font-bold text-sm shadow-[0_4px_12px_rgba(158,18,44,0.35)] border-4 border-[#FDFCF8] z-10 ">
+              <div class="absolute left-0 top-4 sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-[#9E122C] text-white font-bold text-sm shadow-[0_4px_12px_rgba(158,18,44,0.35)] border-4 border-[#FDFCF8] dark:border-gray-950 z-10">
                 {{ i + 1 }}
               </div>
 
@@ -423,23 +365,23 @@ const cardRadii = [
     </section>
 
     <!-- ── FAQ ───────────────────────────────────────────────── -->
-    <section id="faq" class="py-28 sm:py-32 bg-[#E6DCCD]/20">
+    <section id="faq" class="py-28 sm:py-32 bg-[#E6DCCD]/20 dark:bg-gray-900/50">
       <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
           <span class="inline-block text-xs font-bold text-[#9E122C] uppercase tracking-widest mb-3">Common Questions</span>
-          <h2 class=" text-4xl sm:text-5xl font-bold text-[#2C2C24] mb-4">Frequently Asked<br>Questions</h2>
-          <p class="text-lg text-[#78786C]">Answers to the most common questions from applicants.</p>
+          <h2 class="text-4xl sm:text-5xl font-bold text-[#2C2C24] dark:text-white mb-4">Frequently Asked<br>Questions</h2>
+          <p class="text-lg text-[#78786C] dark:text-gray-400">Answers to the most common questions from applicants.</p>
         </div>
 
         <div class="space-y-3">
           <div v-for="(faq, i) in faqs" :key="i"
-            class="bg-[#FEFEFA] border border-[#DED8CF]/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.08)] overflow-hidden transition-all duration-300"
+            class="bg-[#FEFEFA] dark:bg-gray-800 border border-[#DED8CF]/50 dark:border-gray-700/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.08)] dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.3)] overflow-hidden transition-all duration-300"
             :class="openFaq === i ? 'rounded-[1.5rem]' : 'rounded-[1.25rem]'">
             <button type="button"
-              class="w-full flex items-center justify-between gap-4 px-6 py-5 text-left hover:bg-[#F0EBE5]/40 transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E122C]/30 focus-visible:ring-offset-2 rounded-[1.25rem]"
+              class="w-full flex items-center justify-between gap-4 px-6 py-5 text-left hover:bg-[#F0EBE5]/40 dark:hover:bg-gray-700/40 transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E122C]/30 focus-visible:ring-offset-2 rounded-[1.25rem]"
               @click="toggleFaq(i)">
-              <span class="text-base font-semibold text-[#2C2C24] ">{{ faq.q }}</span>
-              <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-[#9E122C]/10 transition-all duration-300" :class="openFaq === i ? 'bg-[#9E122C]' : ''">
+              <span class="text-base font-semibold text-[#2C2C24] dark:text-white">{{ faq.q }}</span>
+              <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-[#9E122C]/10 dark:bg-[#9E122C]/20 transition-all duration-300" :class="openFaq === i ? 'bg-[#9E122C] dark:bg-[#9E122C]' : ''">
                 <svg class="w-4 h-4 transition-all duration-300" :class="openFaq === i ? 'rotate-180 text-white' : 'text-[#9E122C]'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="6 9 12 15 18 9"/>
                 </svg>
@@ -452,8 +394,8 @@ const cardRadii = [
               leave-active-class="transition-all duration-200 ease-in"
               leave-from-class="opacity-100 translate-y-0"
               leave-to-class="opacity-0 -translate-y-1">
-              <div v-show="openFaq === i" class="px-6 pb-5 border-t border-[#DED8CF]/30">
-                <p class="text-sm text-[#4A4A40] leading-relaxed pt-4">{{ faq.a }}</p>
+              <div v-show="openFaq === i" class="px-6 pb-5 border-t border-[#DED8CF]/30 dark:border-gray-700/40">
+                <p class="text-sm text-[#4A4A40] dark:text-gray-400 leading-relaxed pt-4">{{ faq.a }}</p>
               </div>
             </transition>
           </div>
@@ -463,18 +405,16 @@ const cardRadii = [
 
     <!-- ── CTA ───────────────────────────────────────────────── -->
     <section class="relative py-28 sm:py-32 overflow-hidden">
-      <!-- Background: deep crimson with organic blobs -->
       <div class="absolute inset-0 bg-[#9E122C]"></div>
       <div class="absolute top-0 right-0 w-[500px] h-[500px] opacity-20 pointer-events-none"
         style="background: radial-gradient(circle, #C18C5D 0%, transparent 70%); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; filter: blur(60px); transform: translate(30%, -30%);"></div>
       <div class="absolute bottom-0 left-0 w-[400px] h-[400px] opacity-15 pointer-events-none"
         style="background: radial-gradient(circle, #ffffff 0%, transparent 70%); border-radius: 40% 60% 70% 30% / 40% 70% 30% 60%; filter: blur(50px); transform: translate(-30%, 30%);"></div>
-      <!-- Grain overlay for CTA -->
       <div class="absolute inset-0 opacity-[0.04] mix-blend-soft-light pointer-events-none"
         style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E'); background-size: 200px 200px;"></div>
 
       <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 class=" text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
+        <h2 class="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
           Ready to Pursue<br class="hidden sm:block"> Your PUP Dream?
         </h2>
 
@@ -502,30 +442,19 @@ const cardRadii = [
     </section>
 
     <!-- ── FOOTER ─────────────────────────────────────────────── -->
-    <footer class="bg-white border-t border-gray-200 py-4 px-6">
+    <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700/50 py-4 px-6">
       <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4">
-        <!-- Copyright -->
-        <p class="text-sm text-gray-500">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
           © 1998-{{ currentYear }} PUP Taguig. All rights reserved.
         </p>
-
-        <!-- Links -->
         <div class="flex items-center gap-6">
-          <a
-            href="https://www.pup.edu.ph/terms/"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-gray-600 hover:text-[#9E122C] transition-colors duration-200"
-          >
+          <a href="https://www.pup.edu.ph/terms/" target="_blank" rel="noopener noreferrer"
+            class="text-sm text-gray-600 dark:text-gray-400 hover:text-[#9E122C] dark:hover:text-[#e85070] transition-colors duration-200">
             Terms of Use
           </a>
-          <span class="text-gray-300">|</span>
-          <a
-            href="https://www.pup.edu.ph/privacy/"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-gray-600 hover:text-[#9E122C] transition-colors duration-200"
-          >
+          <span class="text-gray-300 dark:text-gray-600">|</span>
+          <a href="https://www.pup.edu.ph/privacy/" target="_blank" rel="noopener noreferrer"
+            class="text-sm text-gray-600 dark:text-gray-400 hover:text-[#9E122C] dark:hover:text-[#e85070] transition-colors duration-200">
             Privacy Statement
           </a>
         </div>
@@ -536,7 +465,6 @@ const cardRadii = [
 </template>
 
 <style scoped>
-/* Smooth global transitions */
 *, *::before, *::after {
   transition-property: color, background-color, border-color, box-shadow, transform, opacity;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
