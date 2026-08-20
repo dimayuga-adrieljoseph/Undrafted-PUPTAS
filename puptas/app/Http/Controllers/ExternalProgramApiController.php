@@ -14,6 +14,31 @@ class ExternalProgramApiController extends Controller
     {
     }
 
+    /**
+     * List active programs
+     *
+     * Returns the list of academic programs (ID, code, and name) offered by PUPTAS.
+     *
+     * Requires the `program-read` OAuth scope.
+     *
+     * @group Program Catalog
+     * @authenticated
+     *
+     * @response 200 {
+     *   "data": [
+     *     {
+     *       "id": 7,
+     *       "code": "BSIT",
+     *       "name": "Bachelor of Science in Information Technology"
+     *     },
+     *     {
+     *       "id": 8,
+     *       "code": "BSCS",
+     *       "name": "Bachelor of Science in Computer Science"
+     *     }
+     *   ]
+     * }
+     */
     public function index(Request $request): JsonResponse
     {
         $programs = Program::select('id', 'code', 'name')

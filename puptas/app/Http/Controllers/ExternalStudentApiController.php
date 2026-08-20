@@ -14,6 +14,20 @@ class ExternalStudentApiController extends Controller
     {
     }
 
+    /**
+     * List enrolled students (deprecated)
+     *
+     * This endpoint has been deprecated and always returns `410 Gone`. Use the
+     * reference-number lookup endpoint instead:
+     * `GET /api/v1/students/{referenceNumber}`.
+     *
+     * @group Student Admission
+     * @authenticated
+     *
+     * @response 410 scenario="Deprecated" {
+     *   "message": "This endpoint is deprecated. Use /api/v1/students/{referenceNumber}."
+     * }
+     */
     public function index(Request $request): JsonResponse
     {
         $this->auditLogService->logActivity(
@@ -36,6 +50,51 @@ class ExternalStudentApiController extends Controller
         ])->setStatusCode(410);
     }
 
+    /**
+     * Look up an enrolled student by reference number
+     *
+     * Returns the applicant profile, computed G12 GWA, program, and admission
+     * status for a student whose enrollment status is `officially_enrolled`.
+     *
+     * Requires the `student-read` OAuth scope.
+     *
+     * @group Student Admission
+     * @authenticated
+     *
+     * @urlParam referenceNumber string required The student's application reference number. Example: T2026-000123
+     *
+     * @response 200 {
+     *   "data": {
+     *     "id": 123,
+     *     "reference_number": "T2026-000123",
+     *     "firstname": "Juan",
+     *     "middlename": "Santos",
+     *     "extension_name": null,
+     *     "lastname": "Dela Cruz",
+     *     "email": "juan.delacruz@example.com",
+     *     "sex": "Male",
+     *     "g12_gwa": 1.25,
+     *     "application": {
+     *       "application_id": 456,
+     *       "status": "admitted",
+     *       "enrollment_status": "officially_enrolled",
+     *       "enrollment_position": 10,
+     *       "submitted_at": "2026-06-01T08:00:00.000000Z"
+     *     },
+     *     "program": {
+     *       "program_id": 7,
+     *       "program_code": "BSIT",
+     *       "program_name": "Bachelor of Science in Information Technology"
+     *     },
+     *     "created_at": "2026-05-01T08:00:00.000000Z",
+     *     "updated_at": "2026-06-01T08:00:00.000000Z"
+     *   }
+     * }
+     *
+     * @response 404 scenario="Student not found" {
+     *   "message": "Student not found"
+     * }
+     */
     public function showByReferenceNumber(Request $request, string $referenceNumber): JsonResponse
     {
         $application = Application::query()
@@ -117,6 +176,52 @@ class ExternalStudentApiController extends Controller
         ]);
     }
 
+    /**
+     * Look up an enrolled student by email address
+     *
+     * Returns the applicant profile, computed G12 GWA, program, and admission
+     * status for a student whose enrollment status is `officially_enrolled`.
+     *
+     * Requires the `student-read` OAuth scope.
+     *
+     * @group Student Admission
+     * @authenticated
+     *
+     * @urlParam email string required The student's registered email address. Example: juan.delacruz@example.com
+     *
+     * @response 200 {
+     *   "data": {
+     *     "id": 123,
+     *     "idp_user_id": "8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
+     *     "reference_number": "T2026-000123",
+     *     "firstname": "Juan",
+     *     "middlename": "Santos",
+     *     "extension_name": null,
+     *     "lastname": "Dela Cruz",
+     *     "email": "juan.delacruz@example.com",
+     *     "sex": "Male",
+     *     "g12_gwa": 1.25,
+     *     "application": {
+     *       "application_id": 456,
+     *       "status": "admitted",
+     *       "enrollment_status": "officially_enrolled",
+     *       "enrollment_position": 10,
+     *       "submitted_at": "2026-06-01T08:00:00.000000Z"
+     *     },
+     *     "program": {
+     *       "program_id": 7,
+     *       "program_code": "BSIT",
+     *       "program_name": "Bachelor of Science in Information Technology"
+     *     },
+     *     "created_at": "2026-05-01T08:00:00.000000Z",
+     *     "updated_at": "2026-06-01T08:00:00.000000Z"
+     *   }
+     * }
+     *
+     * @response 404 scenario="Student not found" {
+     *   "message": "Student not found"
+     * }
+     */
     public function showByEmail(Request $request, string $email): JsonResponse
     {
         $application = Application::query()

@@ -1,0 +1,243 @@
+name: 'Medical Integration'
+description: ''
+endpoints:
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/v1/medical/applicants
+    metadata:
+      custom: []
+      groupName: 'Medical Integration'
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'List medical applicants (deprecated)'
+      description: |-
+        This endpoint has been deprecated and always returns `410 Gone`.
+        Use a specific lookup endpoint instead:
+        `GET /api/v1/medical/applicants/{referenceNumber}` or
+        `GET /api/v1/medical/applicants/idp/{idpUserId}`.
+
+        Requires the `medical-read` OAuth scope.
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_PASSPORT_ACCESS_TOKEN}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 410
+        content: |-
+          {
+            "message": "This endpoint is deprecated. Use a specific lookup endpoint."
+          }
+        headers: []
+        description: Deprecated
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: 'api/v1/medical/applicants/idp/{idpUserId}'
+    metadata:
+      custom: []
+      groupName: 'Medical Integration'
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Look up an eligible medical applicant by IDP User ID'
+      description: |-
+        Returns identity, contact, education, program, and medical-process status
+        for an applicant who has cleared grade evaluation and interviewing and is
+        currently pending medical.
+
+        Requires the `medical-read` OAuth scope.
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_PASSPORT_ACCESS_TOKEN}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      idpUserId:
+        custom: []
+        name: idpUserId
+        description: "The applicant's IDP user UUID."
+        required: true
+        example: 8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanUrlParameters:
+      idpUserId: 8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "data": {
+              "id": 345,
+              "idp_user_id": "8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
+              "reference_number": "T2026-000123",
+              "salutation": null,
+              "firstname": "Juan",
+              "middlename": "Santos",
+              "extension_name": null,
+              "lastname": "Dela Cruz",
+              "sex": "Male",
+              "email": "juan.delacruz@example.com",
+              "date_graduated": "2025-05-30",
+              "strand": "STEM",
+              "track": "Academic",
+              "application": {
+                "id": 456,
+                "status": "admitted",
+                "created_at": "2026-06-01T08:00:00.000000Z"
+              },
+              "program": {
+                "id": 7,
+                "code": "BSIT",
+                "name": "Bachelor of Science in Information Technology"
+              },
+              "medical_process_status": "in_progress"
+            }
+          }
+        headers: []
+        description: ''
+      -
+        custom: []
+        status: 404
+        content: |-
+          {
+            "message": "Applicant not found or not eligible for medical yet."
+          }
+        headers: []
+        description: 'Applicant not found'
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: 'api/v1/medical/applicants/{referenceNumber}'
+    metadata:
+      custom: []
+      groupName: 'Medical Integration'
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Look up an eligible medical applicant by reference number'
+      description: |-
+        Returns identity, contact, education, program, and medical-process status
+        for an applicant who has cleared grade evaluation and interviewing and is
+        currently pending medical.
+
+        Requires the `medical-read` OAuth scope.
+      authenticated: true
+      deprecated: false
+    headers:
+      Authorization: 'Bearer {YOUR_PASSPORT_ACCESS_TOKEN}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      referenceNumber:
+        custom: []
+        name: referenceNumber
+        description: "The applicant's application reference number."
+        required: true
+        example: T2026-000123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        deprecated: false
+    cleanUrlParameters:
+      referenceNumber: T2026-000123
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "data": {
+              "id": 345,
+              "idp_user_id": "8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
+              "reference_number": "T2026-000123",
+              "salutation": null,
+              "firstname": "Juan",
+              "middlename": "Santos",
+              "extension_name": null,
+              "lastname": "Dela Cruz",
+              "sex": "Male",
+              "email": "juan.delacruz@example.com",
+              "date_graduated": "2025-05-30",
+              "strand": "STEM",
+              "track": "Academic",
+              "application": {
+                "id": 456,
+                "status": "admitted",
+                "created_at": "2026-06-01T08:00:00.000000Z"
+              },
+              "program": {
+                "id": 7,
+                "code": "BSIT",
+                "name": "Bachelor of Science in Information Technology"
+              },
+              "medical_process_status": "in_progress"
+            }
+          }
+        headers: []
+        description: ''
+      -
+        custom: []
+        status: 404
+        content: |-
+          {
+            "message": "Applicant not found or not eligible for medical yet."
+          }
+        headers: []
+        description: 'Applicant not found'
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
