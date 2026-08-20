@@ -51,6 +51,7 @@ class ConfirmationService
      */
     public function getConfirmationData(User $user): array
     {
+        $user->loadMissing(['currentApplication', 'testPasser']);
         $files = $user->files()->get();
 
         // Auto-expire stale 'uploading' statuses (stuck for >10 minutes = failed)
@@ -287,6 +288,8 @@ class ConfirmationService
      */
     public function submitApplication(User $user, array $validated): Application
     {
+        $user->loadMissing(['testPasser', 'applicantProfile']);
+
         return DB::transaction(function () use ($user, $validated) {
             $isOverrideAllowed = false;
             $testPasser = $user->testPasser;
@@ -536,6 +539,7 @@ class ConfirmationService
      */
     public function getEligiblePrograms(User $user): array
     {
+        $user->loadMissing(['grades', 'applicantProfile']);
         $grades = $user->grades;
         $profile = $user->applicantProfile;
 
@@ -622,6 +626,8 @@ class ConfirmationService
      */
     public function resubmitApplication(User $user): Application
     {
+        $user->loadMissing('testPasser');
+
         $isOverrideAllowed = false;
         $testPasser = $user->testPasser;
         if ($testPasser) {

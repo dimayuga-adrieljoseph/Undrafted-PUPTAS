@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Cache;
 
 class Grade extends Model
 {
@@ -59,6 +60,28 @@ class Grade extends Model
         'g12_second_sem' => 'decimal:2',
         'dynamic_subjects' => 'array',
     ];
+
+    /**
+     * Cache key for a user's grade record.
+     */
+    public static function cacheKeyForUser(string $userId): string
+    {
+        return "grade:user:{$userId}";
+    }
+
+    /**
+     * Invalidate the cached grade record whenever it changes.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (Grade $grade) {
+            Cache::forget(static::cacheKeyForUser((string) $grade->user_id));
+        });
+
+        static::deleted(function (Grade $grade) {
+            Cache::forget(static::cacheKeyForUser((string) $grade->user_id));
+        });
+    }
 
     /**
      * Get dynamic subjects for a specific category.

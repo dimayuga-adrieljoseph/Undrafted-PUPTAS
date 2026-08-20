@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\UserFile;
 use App\Models\User;
 use App\Models\ApplicationProcess;
+use Illuminate\Support\Facades\Cache;
 
 class Application extends Model
 {
@@ -31,6 +32,32 @@ class Application extends Model
         'submitted_at' => 'datetime',
         'is_waivered' => 'boolean',
     ];
+
+    /**
+     * Cache key for the latest application of a user.
+     */
+    public static function cacheKeyForUser(string $userId): string
+    {
+        return "application:user:{$userId}";
+    }
+
+    /**
+     * Invalidate cached applications whenever one changes.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (Application $application) {
+            $userId = (string) $application->user_id;
+            Cache::forget(static::cacheKeyForUser($userId));
+            Cache::forget(static::cacheKeyForUser($userId) . ':returned_rejected');
+        });
+
+        static::deleted(function (Application $application) {
+            $userId = (string) $application->user_id;
+            Cache::forget(static::cacheKeyForUser($userId));
+            Cache::forget(static::cacheKeyForUser($userId) . ':returned_rejected');
+        });
+    }
 
     public function user()
     {

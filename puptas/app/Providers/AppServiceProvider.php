@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\Eloquent\Model;
 use Laravel\Passport\Passport;
 use App\Models\Application;
 use App\Models\ApplicantProfile;
@@ -80,6 +81,10 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             $url->forceScheme('https');
         }
+
+        // Strictly prevent N+1 lazy loading in non-production environments so
+        // accidental lazy loads surface as exceptions during development/testing.
+        Model::preventLazyLoading(! $this->app->isProduction());
 
         Application::observe(ApplicationObserver::class);
         ApplicantProfile::observe(ApplicantProfileObserver::class);

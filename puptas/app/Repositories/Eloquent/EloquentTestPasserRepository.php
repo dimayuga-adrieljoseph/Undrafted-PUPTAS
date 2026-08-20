@@ -5,12 +5,19 @@ namespace App\Repositories\Eloquent;
 use App\Models\TestPasser;
 use App\Repositories\Contracts\TestPasserRepositoryInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class EloquentTestPasserRepository implements TestPasserRepositoryInterface
 {
     public function firstByUser(string $userId): ?TestPasser
     {
-        return TestPasser::where('user_id', $userId)->first();
+        $userId = (string) $userId;
+
+        return Cache::remember(TestPasser::cacheKeyForUser($userId), 3600, function () use ($userId) {
+            $testPasser = TestPasser::where('user_id', $userId)->first();
+
+            return $testPasser ?: false;
+        }) ?: null;
     }
 
     public function eligibleForCapacity(string $schoolYear): Collection

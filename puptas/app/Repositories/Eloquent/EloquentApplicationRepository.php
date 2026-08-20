@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Models\Application;
 use App\Repositories\Contracts\ApplicationRepositoryInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class EloquentApplicationRepository implements ApplicationRepositoryInterface
 {
@@ -35,16 +36,34 @@ class EloquentApplicationRepository implements ApplicationRepositoryInterface
 
     public function findByUserId(string $userId): Application
     {
-        return Application::where('user_id', (string) $userId)
-            ->latest('id')
-            ->firstOrFail();
+        $userId = (string) $userId;
+
+        $application = Cache::remember(Application::cacheKeyForUser($userId), 3600, function () use ($userId) {
+            $found = Application::where('user_id', $userId)
+                ->latest('id')
+                ->first();
+
+            return $found ?: false;
+        });
+
+        if (! $application) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('No application found for user.');
+        }
+
+        return $application;
     }
 
     public function findReturnedOrRejectedByUserId(string $userId): ?Application
     {
-        return Application::where('user_id', $userId)
-            ->whereIn('status', ['returned', 'rejected'])
-            ->first();
+        $userId = (string) $userId;
+
+        return Cache::remember("application:user:{$userId}:returned_rejected", 3600, function () use ($userId) {
+            $found = Application::where('user_id', $userId)
+                ->whereIn('status', ['returned', 'rejected'])
+                ->first();
+
+            return $found ?: false;
+        }) ?: null;
     }
 
     public function firstOrCreate(array $attributes, array $values): Application
