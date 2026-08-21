@@ -14,6 +14,17 @@ class AuthenticatedSessionController implements LoginResponse
     public function toResponse($request)
     {
         $user = Auth::user();
+
+        if ($user && $user->isDeactivated()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect('/')->withErrors([
+                'email' => 'Your account has been deactivated. Please contact the Admissions Office if you believe this is an error.',
+            ]);
+        }
+
         $roleId = $user->role_id;
 
         // Re-persist local_bypass after login so RefreshIdpToken skips Redis on the next request

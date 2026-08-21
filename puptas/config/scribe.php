@@ -112,7 +112,7 @@ return [
         'default' => true,
 
         // Where is the auth value meant to be sent in a request?
-        'in' => AuthIn::BEARER->value,
+        'in' => class_exists(AuthIn::class) ? AuthIn::BEARER->value : 'bearer',
 
         // The name of the auth parameter (e.g. token, key, apiKey) or header (e.g. Authorization, Api-Key).
         'name' => 'key',
@@ -212,34 +212,34 @@ return [
     // The strategies Scribe will use to extract information about your routes at each stage.
     // Use configureStrategy() to specify settings for a strategy in the list.
     // Use removeStrategies() to remove an included strategy.
-    'strategies' => [
+    'strategies' => class_exists(\Knuckles\Scribe\Config\Defaults::class) ? [
         'metadata' => [
-            ...Defaults::METADATA_STRATEGIES,
+            ...\Knuckles\Scribe\Config\Defaults::METADATA_STRATEGIES,
         ],
         'headers' => [
-            ...Defaults::HEADERS_STRATEGIES,
-            Strategies\StaticData::withSettings(data: [
+            ...\Knuckles\Scribe\Config\Defaults::HEADERS_STRATEGIES,
+            \Knuckles\Scribe\Extracting\Strategies\StaticData::withSettings(data: [
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
             ]),
         ],
         'urlParameters' => [
-            ...Defaults::URL_PARAMETERS_STRATEGIES,
+            ...\Knuckles\Scribe\Config\Defaults::URL_PARAMETERS_STRATEGIES,
         ],
         'queryParameters' => [
-            ...Defaults::QUERY_PARAMETERS_STRATEGIES,
+            ...\Knuckles\Scribe\Config\Defaults::QUERY_PARAMETERS_STRATEGIES,
         ],
         'bodyParameters' => [
-            ...Defaults::BODY_PARAMETERS_STRATEGIES,
+            ...\Knuckles\Scribe\Config\Defaults::BODY_PARAMETERS_STRATEGIES,
         ],
-        'responses' => removeStrategies(
-            Defaults::RESPONSES_STRATEGIES,
-            [Strategies\Responses\ResponseCalls::class]
-        ),
+        'responses' => function_exists('Knuckles\Scribe\Config\removeStrategies') ? \Knuckles\Scribe\Config\removeStrategies(
+            \Knuckles\Scribe\Config\Defaults::RESPONSES_STRATEGIES,
+            [\Knuckles\Scribe\Extracting\Strategies\Responses\ResponseCalls::class]
+        ) : [],
         'responseFields' => [
-            ...Defaults::RESPONSE_FIELDS_STRATEGIES,
+            ...\Knuckles\Scribe\Config\Defaults::RESPONSE_FIELDS_STRATEGIES,
         ],
-    ],
+    ] : [],
 
     // For response calls, API resource responses and transformer responses,
     // Scribe will try to start database transactions, so no changes are persisted to your database.

@@ -8,10 +8,12 @@ use App\Models\ApplicationProcess;
 
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 
 class UserFile extends Model
 {
+    use SoftDeletes;
     /** Status constants — backend is authoritative for upload state */
     public const STATUS_UPLOADING = 'uploading';
     public const STATUS_PENDING = 'pending';
