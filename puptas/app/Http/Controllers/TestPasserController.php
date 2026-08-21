@@ -1460,6 +1460,9 @@ class TestPasserController extends Controller
                     &$results
                 ) {
                     // ── 1. User ───────────────────────────────────────────
+                    // role_id intentionally omitted: new users default to
+                    // Applicant via User's creating hook, and role_id is not
+                    // mass-assignable.
                     $user = \App\Models\User::updateOrCreate(
                         ['email' => $passer->email],
                         [
@@ -1468,7 +1471,6 @@ class TestPasserController extends Controller
                             'lastname'           => $passer->surname,
                             'salutation'         => 'Mr.',
                             'sex'                => 'Male',
-                            'role_id'            => 1,
                             'password'           => \Illuminate\Support\Facades\Hash::make('Password123'),
                             'privacy_consent'    => true,
                             'privacy_consent_at' => now(),

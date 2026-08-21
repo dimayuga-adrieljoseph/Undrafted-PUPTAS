@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use Illuminate\Support\Facades\Log;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,6 +18,7 @@ use App\Services\ApplicationProcessService;
 use App\Services\AuditLogService;
 use App\Services\DashboardService;
 use App\Services\UserService;
+use App\Enums\RoleId;
 
 class InterviewerDashboardController extends Controller
 {
@@ -49,14 +51,14 @@ class InterviewerDashboardController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->dashboardService->verifyRoleAccess($user, [2, 4, 7])) {
+        if (!$this->dashboardService->verifyRoleAccess($user, [RoleId::Admin->value, RoleId::Interviewer->value, RoleId::SuperAdmin->value])) {
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
         $dashboardData = $this->dashboardService->getInterviewerDashboardData();
 
         // Get interviewer's assigned programs
-        if (in_array($user->role_id, [2, 7])) {
+        if (in_array($user->role_id, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
             $assignedPrograms = Program::get(['id', 'code', 'name', 'slots']);
         } else {
             $assignedPrograms = $user->programs()->get(['id', 'code', 'name', 'slots']);
@@ -79,7 +81,7 @@ class InterviewerDashboardController extends Controller
 
     protected function getRoleId(): array
     {
-        return [2, 4, 7];
+        return [RoleId::Admin->value, RoleId::Interviewer->value, RoleId::SuperAdmin->value];
     }
 
     protected function checkPrerequisiteStage($application)
@@ -102,7 +104,7 @@ class InterviewerDashboardController extends Controller
         // Interviewers see ALL applicants at interviewer stage (global access)
         $results = $this->userService->getAllApplicantsByStage('interviewer');
 
-        \Log::info('InterviewerDashboard::getUsers (global)', [
+        Log::info('InterviewerDashboard::getUsers (global)', [
             'user_id' => Auth::user()->id,
             'count' => count($results),
         ]);
@@ -200,7 +202,7 @@ class InterviewerDashboardController extends Controller
         $customNotes = $validated['notes'] ?? '';
 
         // Check if interviewer is assigned to this program
-        if (in_array(Auth::user()->role_id, [2, 7])) {
+        if (in_array(Auth::user()->role_id, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
             $assignedProgramIds = \App\Models\Program::pluck('id')->toArray();
         } else {
             $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
@@ -252,11 +254,11 @@ class InterviewerDashboardController extends Controller
                 $program = Program::lockForUpdate()->findOrFail($programId);
 
                 if ($program->slots <= 0) {
-                    \Log::warning("❌ No slots left in program {$program->id}");
+                    Log::warning("No slots left in program {$program->id}");
                     abort(400, 'No available slots in the selected program.');
                 }
 
-                $isSuperAdmin = Auth::user()->role_id === 7;
+                $isSuperAdmin = Auth::user()->role_id === RoleId::SuperAdmin->value;
 
                 if (
                     !$isSuperAdmin && (
@@ -265,7 +267,7 @@ class InterviewerDashboardController extends Controller
                         $grades->english < $program->english
                     )
                 ) {
-                    \Log::warning("📉 User {$userId} does not meet grade requirements for program {$program->id}");
+                    Log::warning("User {$userId} does not meet grade requirements for program {$program->id}");
                     abort(400, 'User does not meet the grade requirements for this program.');
                 }
 
@@ -303,7 +305,7 @@ class InterviewerDashboardController extends Controller
 
             return response()->json(['message' => 'Application accepted.']);
         } catch (\Throwable $e) {
-            \Log::error("❌ Accept failed: " . $e->getMessage());
+            Log::error("Accept failed: " . $e->getMessage());
             return response()->json(['message' => $e->getMessage()], 400);
         }
     }
@@ -324,7 +326,7 @@ class InterviewerDashboardController extends Controller
         $customNotes = $validated['notes'] ?? '';
 
         // Check if interviewer is assigned to this program
-        if (in_array(Auth::user()->role_id, [2, 7])) {
+        if (in_array(Auth::user()->role_id, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
             $assignedProgramIds = \App\Models\Program::pluck('id')->toArray();
         } else {
             $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
@@ -387,7 +389,7 @@ class InterviewerDashboardController extends Controller
 
             return response()->json(['message' => 'Application rejected for this program. Applicant can still be interviewed for other programs.']);
         } catch (\Throwable $e) {
-            \Log::error("❌ Reject failed: " . $e->getMessage());
+            Log::error("Reject failed: " . $e->getMessage());
             return response()->json(['message' => 'An error occurred while rejecting the application.'], 400);
         }
     }

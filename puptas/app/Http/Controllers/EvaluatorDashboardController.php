@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use Illuminate\Support\Facades\Log;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,6 +17,7 @@ use App\Services\ApplicationProcessService;
 use App\Services\AuditLogService;
 use App\Services\DashboardService;
 use App\Services\UserService;
+use App\Enums\RoleId;
 
 class EvaluatorDashboardController extends Controller
 {
@@ -71,15 +73,20 @@ class EvaluatorDashboardController extends Controller
         if (!$user) {
             return 'grade_evaluator';
         }
-        if (in_array($user->role_id, [2, 7])) {
+        if (in_array($user->role_id, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
             return request('stage', 'grade_evaluator');
         }
-        return $user->role_id == 3 ? 'document_evaluator' : 'grade_evaluator';
+        return $user->role_id == RoleId::DocumentEvaluator->value ? 'document_evaluator' : 'grade_evaluator';
     }
 
     protected function getRoleId(): array
     {
-        return [2, 3, 7, 8];
+        return [
+            RoleId::Admin->value,
+            RoleId::DocumentEvaluator->value,
+            RoleId::SuperAdmin->value,
+            RoleId::GradeEvaluator->value,
+        ];
     }
 
     // returnFiles() method provided by ManagesApplicationFiles trait
@@ -97,11 +104,11 @@ class EvaluatorDashboardController extends Controller
         $programIds = $user->programs()->pluck('programs.id')->toArray();
 
         // Admin bypass: Admins can evaluate all programs
-        if ($user->role_id == 2 || $user->role_id == 7 || $user->role_id == 8) {
+        if ($user->role_id == RoleId::Admin->value || $user->role_id == RoleId::SuperAdmin->value || $user->role_id == RoleId::GradeEvaluator->value) {
             $programIds = \App\Models\Program::pluck('id')->toArray();
         }
 
-        \Log::info('EvaluatorDashboard::getUsers', [
+        Log::info('EvaluatorDashboard::getUsers', [
             'user_id'     => $user->id,
             'program_ids' => $programIds,
         ]);
@@ -113,7 +120,7 @@ class EvaluatorDashboardController extends Controller
 
         $results = $this->userService->getAllApplicantsByStage($this->getCurrentStage(), $programIds);
 
-        \Log::info('EvaluatorDashboard::getUsers results', ['count' => count($results)]);
+        Log::info('EvaluatorDashboard::getUsers results', ['count' => count($results)]);
 
         // Return applicants at evaluator stage, scoped to assigned courses only
         return response()->json($results);
@@ -131,7 +138,7 @@ class EvaluatorDashboardController extends Controller
         $user = Auth::user();
 
         $assignedProgramIds = $user->programs()->pluck('programs.id')->toArray();
-        if ($user->role_id == 2 || $user->role_id == 7 || $user->role_id == 8) {
+        if ($user->role_id == RoleId::Admin->value || $user->role_id == RoleId::SuperAdmin->value || $user->role_id == RoleId::GradeEvaluator->value) {
             $assignedProgramIds = \App\Models\Program::pluck('id')->toArray();
         }
         
@@ -166,7 +173,7 @@ class EvaluatorDashboardController extends Controller
                     ->where('status', 'returned')
                     ->update(['status' => 'approved', 'comment' => null]);
 
-                \Log::info("Updated {$updatedCount} files from 'returned' to 'approved' for user {$userId}");
+                Log::info("Updated {$updatedCount} files from 'returned' to 'approved' for user {$userId}");
 
                 // Clear office flags if passing
                 $application->requires_guidance_office = false;
@@ -177,7 +184,7 @@ class EvaluatorDashboardController extends Controller
                 $application->status = 'submitted';
                 $application->save();
 
-                \Log::info("Updated application status to 'submitted' for application {$application->id}");
+                Log::info("Updated application status to 'submitted' for application {$application->id}");
 
                 // Create next stage process
                 $nextStage = $this->getCurrentStage() === 'document_evaluator' ? 'grade_evaluator' : 'interviewer';
@@ -195,7 +202,7 @@ class EvaluatorDashboardController extends Controller
                 'message' => 'Application successfully passed to the next step.',
             ]);
         } catch (\Throwable $e) {
-            \Log::error("❌ Pass failed: " . $e->getMessage());
+            Log::error("Pass failed: " . $e->getMessage());
             return response()->json([
                 'message' => 'An error occurred while passing the application: ' . $e->getMessage()
             ], 500);
@@ -218,7 +225,7 @@ class EvaluatorDashboardController extends Controller
 
         $user = Auth::user();
         $assignedProgramIds = $user->programs()->pluck('programs.id')->toArray();
-        if ($user->role_id == 2 || $user->role_id == 7 || $user->role_id == 8) {
+        if ($user->role_id == RoleId::Admin->value || $user->role_id == RoleId::SuperAdmin->value || $user->role_id == RoleId::GradeEvaluator->value) {
             $assignedProgramIds = \App\Models\Program::pluck('id')->toArray();
         }
 
@@ -256,7 +263,7 @@ class EvaluatorDashboardController extends Controller
 
             return response()->json(['message' => 'Application successfully rejected.']);
         } catch (\Throwable $e) {
-            \Log::error("❌ Reject failed: " . $e->getMessage());
+            Log::error("Reject failed: " . $e->getMessage());
             return response()->json(['message' => 'An error occurred while rejecting the application.'], 500);
         }
     }
@@ -279,7 +286,7 @@ class EvaluatorDashboardController extends Controller
 
         $user = Auth::user();
         $assignedProgramIds = $user->programs()->pluck('programs.id')->toArray();
-        if ($user->role_id == 2 || $user->role_id == 7 || $user->role_id == 8) {
+        if ($user->role_id == RoleId::Admin->value || $user->role_id == RoleId::SuperAdmin->value || $user->role_id == RoleId::GradeEvaluator->value) {
             $assignedProgramIds = \App\Models\Program::pluck('id')->toArray();
         }
 
@@ -322,7 +329,7 @@ class EvaluatorDashboardController extends Controller
 
             return response()->json(['message' => 'Application successfully flagged.']);
         } catch (\Throwable $e) {
-            \Log::error("❌ Flagging failed: " . $e->getMessage());
+            Log::error("Flagging failed: " . $e->getMessage());
             return response()->json(['message' => 'An error occurred while flagging the application.'], 500);
         }
     }

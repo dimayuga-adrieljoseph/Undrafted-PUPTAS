@@ -4,11 +4,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ExternalStudentApiController;
+use App\Http\Middleware\EnsureAdmin;
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
     Route::put('/programs/update/{id}', [ProgramController::class, 'update'])->name('programs.update');
     Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->name('programs.delete');
 });

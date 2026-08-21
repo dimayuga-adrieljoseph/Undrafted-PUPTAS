@@ -503,9 +503,12 @@ Route::get('/dev-login/{id}', function ($id) {
     return redirect($redirect);
 })->middleware('web');
 
-Route::get('/debug-registration', function (\Illuminate\Http\Request $request) {
+Route::get('/debug-registration', function (Request $request) {
+    if (!config('app.debug')) {
+        abort(404);
+    }
+
     try {
-        // Allow access even in production for debugging
         $email = $request->query('email');
 
         $diagnostics = [

@@ -6,13 +6,10 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use App\Enums\RoleId;
 
 /**
  * Middleware to ensure the authenticated user is an Admin, Registrar, or Superadmin.
- * 
- * Admin role_id = 2
- * Registrar role_id = 6
- * Superadmin role_id = 7
  */
 class EnsureAdminOrRegistrar
 {
@@ -28,11 +25,8 @@ class EnsureAdminOrRegistrar
             return redirect('/login');
         }
 
-        // Check if user has admin (2), registrar (6), or superadmin (7) role
-        $user = Auth::user();
-        
-        // Allow admin (2), registrar (6), or superadmin (7)
-        if (!in_array($user->role_id, [2, 6, 7])) {
+        // Allow admin, registrar, or superadmin
+        if (!in_array((int) Auth::user()->role_id, [RoleId::Admin->value, RoleId::Registrar->value, RoleId::SuperAdmin->value], true)) {
             abort(403, 'Access denied. Admin or Registrar privileges required.');
         }
 

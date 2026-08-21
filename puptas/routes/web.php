@@ -11,7 +11,18 @@ use App\Http\Controllers\GradeVerificationSlipController;
 use App\Http\Controllers\F137RequestLetterController;
 use App\Http\Controllers\TestPasserController;
 use App\Models\Role;
+use App\Models\User;
+use App\Models\ApplicantProfile;
+use App\Models\Program;
+use App\Models\Grade;
+use App\Models\TestPasser;
+use App\Models\SystemSetting;
+use App\Enums\RoleId;
+use App\Services\CutoffSettingsService;
+use App\Services\SarFormService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Controllers\ConfirmationController;
 use App\Http\Controllers\UserFileController;
 use App\Http\Controllers\EvaluatorDashboardController;
@@ -48,11 +59,13 @@ Route::get('/setup-test-applicant', function () {
         abort(404);
     }
     
+    $password = (string) config('services.test_setup.applicant_password');
+
     $user = \App\Models\User::updateOrCreate(
         ['email' => 'testapplicant@gmail.com'], 
         [
-            'password' => bcrypt('password123'), 
-            'role_id' => 1, 
+            'password' => bcrypt($password), 
+            'role_id' => RoleId::Applicant->value, 
             'firstname' => 'Test', 
             'lastname' => 'Applicant', 
             'contactnumber' => '09111111111', 
@@ -73,7 +86,7 @@ Route::get('/setup-test-applicant', function () {
         ]
     );
 
-    return 'Test applicant created successfully! Email: testapplicant@gmail.com | Password: password123. You can now go to /?local=1 and log in.';
+    return 'Test applicant created successfully! Email: testapplicant@gmail.com. You can now go to /?local=1 and log in.';
 });
 
 // Temporary route to create a BRAND NEW applicant without a profile to test the onboarding flow
@@ -82,11 +95,13 @@ Route::get('/setup-new-applicant', function () {
         abort(404);
     }
     
+    $password = (string) config('services.test_setup.applicant_password');
+
     $user = \App\Models\User::updateOrCreate(
         ['email' => 'newapplicant@gmail.com'], 
         [
-            'password' => bcrypt('password123'), 
-            'role_id' => 1, 
+            'password' => bcrypt($password), 
+            'role_id' => RoleId::Applicant->value, 
             'firstname' => 'Fresh', 
             'lastname' => 'Applicant', 
             'contactnumber' => '09999999999', 
@@ -98,7 +113,7 @@ Route::get('/setup-new-applicant', function () {
     // Ensure they have NO profile so they are forced into the onboarding flow
     \App\Models\ApplicantProfile::where('user_id', $user->id)->delete();
 
-    return 'New applicant created successfully! Email: newapplicant@gmail.com | Password: password123. You can now go to /?local=1 and log in to test the registration/onboarding flow.';
+    return 'New applicant created successfully! Email: newapplicant@gmail.com. You can now go to /?local=1 and log in to test the registration/onboarding flow.';
 });
 
 // Temporary route to create staff accounts without CLI access
@@ -107,62 +122,70 @@ Route::get('/setup-staff', function () {
         abort(404);
     }
     
+    $staffPasswords = config('services.test_setup.staff_passwords');
+
     $users = [
         [
             'firstname' => 'System',
             'lastname' => 'Evaluator',
             'contactnumber' => 'N/A',
             'email' => 'evaluator122@gmail.com',
-            'password' => bcrypt('Evaluator4321!'),
-            'role_id' => 3,
+            'password' => bcrypt($staffPasswords['evaluator']),
+            'role_id' => RoleId::DocumentEvaluator->value,
         ],
         [
             'firstname' => 'System',
             'lastname' => 'Interviewer',
             'contactnumber' => 'N/A',
             'email' => 'interviewer133@gmail.com',
-            'password' => bcrypt('Interviewer4321!'),
-            'role_id' => 4,
+            'password' => bcrypt($staffPasswords['interviewer']),
+            'role_id' => RoleId::Interviewer->value,
         ],
         [
             'firstname' => 'Radianne',
             'lastname' => 'Seguro',
             'contactnumber' => 'N/A',
             'email' => 'seguroradianne@example.com',
-            'password' => bcrypt('UGCA4zWe1K7Sfl'),
-            'role_id' => 2,
+            'password' => bcrypt($staffPasswords['admin']),
+            'role_id' => RoleId::Admin->value,
         ],
         [
             'firstname' => 'Mhel',
             'lastname' => 'Garcia',
             'contactnumber' => 'N/A',
             'email' => 'garciamhel@example.com',
-            'password' => bcrypt('rKuFYl4jMmTI8&'),
-            'role_id' => 6,
+            'password' => bcrypt($staffPasswords['registrar']),
+            'role_id' => RoleId::Registrar->value,
         ],
     ];
 
     foreach ($users as $userData) {
-        \App\Models\User::updateOrCreate(
+        $roleId = $userData['role_id'];
+        unset($userData['role_id']);
+
+        $user = \App\Models\User::updateOrCreate(
             ['email' => $userData['email']],
             $userData
         );
+
+        // role_id is not mass-assignable; assign explicitly.
+        $user->assignRole($roleId)->save();
     }
 
     return 'Staff accounts created successfully! You can now go to /?local=1 and log in with their credentials.';
 });
 
-Route::get('/', function (\Illuminate\Http\Request $request) {
+Route::get('/', function (Request $request) {
     // Allow bypassing IDP on local and staging using ?local=1
     if (in_array(config('app.env'), ['local', 'staging']) && $request->has('local')) {
         session(['local_bypass' => true]);
         return redirect('/login?local=1');
     }
-    $emergencySetting = \App\Models\SystemSetting::where('key', 'idp_down_emergency_login_enabled')->first();
+    $emergencySetting = SystemSetting::where('key', 'idp_down_emergency_login_enabled')->first();
     $isManualOverride = $emergencySetting && $emergencySetting->value === '1';
     
     // Check if the scheduled task has flagged the IDP as down
-    $idpStatusDown = \Illuminate\Support\Facades\Cache::get('idp_status_down', false);
+    $idpStatusDown = Cache::get('idp_status_down', false);
     
     $isEmergencyMode = $isManualOverride || $idpStatusDown;
 
@@ -197,8 +220,10 @@ Route::middleware([])->group(function () {
         ->middleware('throttle:10,1')
         ->name('idp.callback.alias');
 
-    // Backward-compatible callback aliases — kept for IDP redirect_uri compatibility.
-    // TODO: Remove these routes once the IDP is updated to use /auth/idp/callback exclusively.
+    // Backward-compatible callback aliases. The IDP still issues redirects to
+    // /callback and /api/callback for older client configurations, so these
+    // routes remain registered until the IDP's registered redirect URIs are
+    // fully migrated to /auth/idp/callback.
     Route::get('/callback', [IdpAuthController::class, 'callback'])
         ->middleware(['guest', 'throttle:10,1'])
         ->name('idp.callback.legacy');
@@ -224,13 +249,13 @@ Route::post('/api/v1/auth/logout', [IdpAuthController::class, 'logout'])
 // View applicant details route - expects user ID, restricted to admin, evaluator, and interviewer
 Route::get('/applications/user/{user}', function ($user) {
     // Verify user exists and is an applicant
-    $applicant = \App\Models\User::where(function($q) use ($user) {
+    $applicant = User::where(function($q) use ($user) {
             $q->where('idp_user_id', $user);
             if (is_numeric($user)) {
                 $q->orWhere('id', $user);
             }
         })
-        ->where('role_id', 1)
+        ->where('role_id', RoleId::Applicant->value)
         ->whereHas('currentApplication')
         ->first();
 
@@ -245,11 +270,11 @@ Route::get('/applications/user/{user}', function ($user) {
 
     // Render the role-appropriate component
     $component = match ((int) $roleId) {
-        3, 8 => 'Applications/Evaluator',
-        4 => 'Applications/Interviewer',
+        RoleId::DocumentEvaluator->value, RoleId::GradeEvaluator->value => 'Applications/Evaluator',
+        RoleId::Interviewer->value => 'Applications/Interviewer',
         default => match($context) {
-            'evaluator' => in_array($roleId, [2, 7]) ? 'Applications/Evaluator' : 'Applications/Index',
-            'interviewer' => in_array($roleId, [2, 7]) ? 'Applications/Interviewer' : 'Applications/Index',
+            'evaluator' => in_array($roleId, [RoleId::Admin->value, RoleId::SuperAdmin->value]) ? 'Applications/Evaluator' : 'Applications/Index',
+            'interviewer' => in_array($roleId, [RoleId::Admin->value, RoleId::SuperAdmin->value]) ? 'Applications/Interviewer' : 'Applications/Index',
             default => 'Applications/Index'
         },
     };
@@ -259,9 +284,9 @@ Route::get('/applications/user/{user}', function ($user) {
         'stage' => request('stage')
     ];
 
-    if (in_array($roleId, [2, 4, 7])) {
-        if (in_array($roleId, [2, 7])) {
-            $props['assignedPrograms'] = \App\Models\Program::get(['id', 'code', 'name']);
+    if (in_array($roleId, [RoleId::Admin->value, RoleId::Interviewer->value, RoleId::SuperAdmin->value])) {
+        if (in_array($roleId, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
+            $props['assignedPrograms'] = Program::get(['id', 'code', 'name']);
         } else {
             $props['assignedPrograms'] = $currentUser->programs()->get(['id', 'code', 'name']);
         }
@@ -270,21 +295,21 @@ Route::get('/applications/user/{user}', function ($user) {
     return Inertia::render($component, $props);
 })->middleware(['auth', 'role:2,3,4,7,8'])->name('applications.show');
 
-Route::post('/check-email', function (\Illuminate\Http\Request $request) {
+Route::post('/check-email', function (Request $request) {
     $request->validate(['email' => 'required|email']);
-    $exists = \App\Models\User::where('email', $request->email)->exists() || 
-              \App\Models\TestPasser::where('email', $request->email)->exists();
+    $exists = User::where('email', $request->email)->exists() || 
+              TestPasser::where('email', $request->email)->exists();
     return response()->json(['taken' => $exists]);
 })->middleware('auth');
 
-Route::post('/check-reference-number', function (\Illuminate\Http\Request $request) {
+Route::post('/check-reference-number', function (Request $request) {
     $request->validate(['reference_number' => 'required|string|max:100']);
     $inputRefNumber = trim($request->reference_number);
     
     $pendingReg = session('pending_registration');
     $email = $pendingReg && !empty($pendingReg['email']) ? strtolower(trim($pendingReg['email'])) : null;
     
-    $cutoffService = app(\App\Services\CutoffSettingsService::class);
+    $cutoffService = app(CutoffSettingsService::class);
     $isEmailAllowedOverride = false;
     
     if ($email && $cutoffService->isEmailAllowed($email)) {
@@ -293,10 +318,10 @@ Route::post('/check-reference-number', function (\Illuminate\Http\Request $reque
 
     $testPasser = null;
     if ($email) {
-        $testPasser = \App\Models\TestPasser::where('email', $email)->first();
+        $testPasser = TestPasser::where('email', $email)->first();
     }
     if (!$testPasser) {
-        $testPasser = \App\Models\TestPasser::where('reference_number', $inputRefNumber)->first();
+        $testPasser = TestPasser::where('reference_number', $inputRefNumber)->first();
     }
     
     if (!$testPasser) {
@@ -348,16 +373,16 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/addindex', function () {
         return Inertia::render('Programs/Create');
-    })->name('programs.addindex');
+    })->middleware(EnsureAdmin::class)->name('programs.addindex');
 
     Route::get('/programs/list', [ProgramController::class, 'index'])->name('programs.list');
     Route::get('/programs/strands', [ProgramController::class, 'getStrands'])->name('programs.strands');
-    Route::post('/programs', [ProgramController::class, 'store'])->name('programs.store');
-    Route::put('/programs/{program}', [ProgramController::class, 'update'])->name('programs.web-update');
-    Route::delete('/programs/{program}', [ProgramController::class, 'destroy'])->name('programs.web-delete');
+    Route::post('/programs', [ProgramController::class, 'store'])->middleware(EnsureAdmin::class)->name('programs.store');
+    Route::put('/programs/{program}', [ProgramController::class, 'update'])->middleware(EnsureAdmin::class)->name('programs.web-update');
+    Route::delete('/programs/{program}', [ProgramController::class, 'destroy'])->middleware(EnsureAdmin::class)->name('programs.web-delete');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'role:applicant'])->group(function () {
     Route::get('/applicant-dashboard', [ApplicantDashboardController::class, 'index'])
         ->name('applicant.dashboard');
     Route::get('/applicant-dashboard/qualified-programs', [ApplicantDashboardController::class, 'getQualifiedPrograms'])
@@ -417,13 +442,13 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/home', function () {
     $roleId = Auth::user()->role_id;
 
-    if ($roleId == 1) {
-        $hasGrades = \App\Models\Grade::where('user_id', Auth::id())->exists();
+    if ($roleId == RoleId::Applicant->value) {
+        $hasGrades = Grade::where('user_id', Auth::id())->exists();
 
         if ($hasGrades) {
             return redirect('/applicant-dashboard');
         } else {
-            $profile = \App\Models\ApplicantProfile::where('user_id', Auth::id())->first();
+            $profile = ApplicantProfile::where('user_id', Auth::id())->first();
             $strand = $profile?->strand;
 
             if (!$strand) {
@@ -452,11 +477,11 @@ Route::get('/home', function () {
         }
     }
 
-    if ($roleId == 2) return redirect('/dashboard');
-    if (in_array($roleId, [3, 8])) return redirect('/evaluator-dashboard');
-    if ($roleId == 4) return redirect('/interviewer-dashboard');
-    if ($roleId == 6) return redirect('/record-dashboard');
-    if ($roleId == 7) return redirect('/dashboard');
+    if ($roleId == RoleId::Admin->value) return redirect('/dashboard');
+    if (in_array($roleId, [RoleId::DocumentEvaluator->value, RoleId::GradeEvaluator->value])) return redirect('/evaluator-dashboard');
+    if ($roleId == RoleId::Interviewer->value) return redirect('/interviewer-dashboard');
+    if ($roleId == RoleId::Registrar->value) return redirect('/record-dashboard');
+    if ($roleId == RoleId::SuperAdmin->value) return redirect('/dashboard');
 
     return redirect('/');
 })->middleware(['auth'])->name('home');
@@ -518,7 +543,7 @@ Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
     Route::post('/test-passers/bulk-enroll', [TestPasserController::class, 'bulkEnroll'])->name('test-passers.bulk-enroll');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'role:applicant'])->group(function () {
     Route::get('/user/application', [ConfirmationController::class, 'show']);
     Route::post('/user/application/submit', [ConfirmationController::class, 'submit']);
     Route::post('/user/application/resubmit', [ConfirmationController::class, 'resubmit']);
@@ -541,7 +566,7 @@ Route::get('/user/eligible-programs', [ConfirmationController::class, 'getEligib
 Route::middleware(['auth', 'role:2,3,7,8'])->group(function () {
     Route::get('/evaluator-dashboard', [EvaluatorDashboardController::class, 'index'])->name('evaluator.dashboard');
     Route::get('/evaluator-applications', function () {
-        $stage = request('stage', Auth::user()->role_id == 3 ? 'document_evaluator' : 'grade_evaluator');
+        $stage = request('stage', Auth::user()->role_id == RoleId::DocumentEvaluator->value ? 'document_evaluator' : 'grade_evaluator');
         return Inertia::render('Applications/Evaluator', ['user' => Auth::user(), 'stage' => $stage]);
     })->name('evaluator.applications');
 
@@ -566,8 +591,8 @@ Route::middleware(['auth', 'role:2,4,7'])->group(function () {
     Route::get('/interviewer-dashboard', [InterviewerDashboardController::class, 'index'])->name('interviewer.dashboard');
     Route::get('/interviewer-applications', function () {
         $user = Auth::user();
-        if (in_array($user->role_id, [2, 7])) {
-            $assignedPrograms = \App\Models\Program::get(['id', 'code', 'name', 'slots']);
+        if (in_array($user->role_id, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
+            $assignedPrograms = Program::get(['id', 'code', 'name', 'slots']);
         } else {
             $assignedPrograms = $user->programs()->get(['programs.id', 'programs.code', 'programs.name', 'programs.slots']);
         }

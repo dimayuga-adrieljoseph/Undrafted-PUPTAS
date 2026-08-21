@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Collection;
 use App\Models\UserFile;
@@ -78,7 +79,7 @@ class FileMapper
 
         // Unknown/unsupported graduate type — return ALL uploaded files instead of empty array
         if ($requiredKeys === null) {
-            \Log::warning('Unknown graduate type, returning all files', [
+            Log::warning('Unknown graduate type, returning all files', [
                 'graduateType' => $graduateType,
                 'fileCount' => $files->count(),
             ]);

@@ -422,17 +422,24 @@ class UserService
      */
     public function createUser(array $data): \App\Models\User
     {
-        return $this->userRepository->create([
-            'idp_user_id' => (string) \Illuminate\Support\Str::uuid(), // Assign standalone IDP uuid format locally as falback
+        $roleId = (int) ($data['role_id'] ?? \App\Enums\RoleId::Applicant->value);
+
+        $user = new \App\Models\User([
+            'idp_user_id' => (string) \Illuminate\Support\Str::uuid(), // Assign standalone IDP uuid format locally as fallback
             'firstname' => $data['firstname'] ?? 'Pending IDP Sync',
             'middlename' => $data['middlename'] ?? null,
             'lastname' => $data['lastname'] ?? 'Pending IDP Sync',
             'email' => $data['email'],
-            'role_id' => $data['role_id'] ?? 1,
             'salutation' => $data['salutation'] ?? null,
             'sex' => $data['sex'] ?? null,
             'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)), // IDP handles real passwords
         ]);
+
+        // role_id is not mass-assignable; assign explicitly via the trusted helper.
+        $user->assignRole($roleId);
+        $user->save();
+
+        return $user;
     }
 
 
@@ -443,16 +450,7 @@ class UserService
      */
     public function getRoleDefinitions(): array
     {
-        return [
-            1 => 'Applicant',
-            2 => 'Admin',
-            3 => 'Document Evaluator',
-            4 => 'Interviewer',
-            5 => 'Medical',
-            6 => 'Registrar',
-            7 => 'Superadmin',
-            8 => 'Grade Evaluator',
-        ];
+        return \App\Enums\RoleId::names();
     }
     /**
      * Search and paginate users (staff + applicants) at the DB level.

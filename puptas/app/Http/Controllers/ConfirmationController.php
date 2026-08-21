@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use Illuminate\Support\Facades\Log;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,7 +48,7 @@ class ConfirmationController extends Controller
     {
         $user = Auth::user();
 
-        \Log::info('📥 Incoming submit data', $request->validated());
+        Log::info('Incoming submit data', $request->validated());
 
         try {
             $application = $this->confirmationService->submitApplication(
@@ -63,7 +64,7 @@ class ConfirmationController extends Controller
                 'submitted_at' => $application->submitted_at,
             ]);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
-            \Log::error('Application submission failed', [
+            Log::error('Application submission failed', [
                 'user_id' => $user->id,
                 'status_code' => $e->getStatusCode(),
                 'exception_class' => get_class($e),
@@ -103,7 +104,7 @@ class ConfirmationController extends Controller
 
             return response()->json($result);
         } catch (\InvalidArgumentException $e) {
-            \Log::warning('File reupload failed — invalid field', [
+            Log::warning('File reupload failed — invalid field', [
                 'user_id'         => $user->id,
                 'field'           => $inputName,
                 'exception_class' => get_class($e),
@@ -114,7 +115,7 @@ class ConfirmationController extends Controller
         } catch (\Throwable $e) {
             // Catch-all: covers RuntimeException, TypeError, Error, etc.
             // Nothing leaks as a raw Laravel 500 — full details go to the log only.
-            \Log::error('File reupload failed', [
+            Log::error('File reupload failed', [
                 'user_id'         => $user->id,
                 'field'           => $inputName,
                 'exception_class' => get_class($e),
@@ -229,7 +230,7 @@ class ConfirmationController extends Controller
 
             return response()->json($result);
         } catch (\Throwable $e) {
-            \Log::error('Failed to generate upload URL', [
+            Log::error('Failed to generate upload URL', [
                 'user_id' => $user->id,
                 'field' => $field,
                 'error' => $e->getMessage(),
@@ -260,7 +261,7 @@ class ConfirmationController extends Controller
                 'status' => $application->status,
             ]);
         } catch (\Throwable $e) {
-            \Log::error('Application resubmit failed', [
+            Log::error('Application resubmit failed', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);
@@ -311,7 +312,7 @@ class ConfirmationController extends Controller
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => 'Invalid file field specified.'], 400);
         } catch (\Throwable $e) {
-            \Log::error('Confirm upload failed', [
+            Log::error('Confirm upload failed', [
                 'user_id' => $user->id,
                 'field' => $field,
                 'path' => $path,

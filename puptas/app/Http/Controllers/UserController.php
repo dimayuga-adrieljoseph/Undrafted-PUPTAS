@@ -18,6 +18,7 @@ use Inertia\Inertia;
 use App\Services\AuditLogService;
 use App\Services\UserService;
 use App\Helpers\FileMapper;
+use App\Enums\RoleId;
 
 class UserController extends Controller
 {
@@ -35,8 +36,8 @@ class UserController extends Controller
      */
     public function create(Request $request)
     {
-        // Only SuperAdmin (role_id 7) can access the Add User form
-        if ($request->user()->role_id !== 7) {
+        // Only SuperAdmin can access the Add User form
+        if ($request->user()->role_id !== RoleId::SuperAdmin->value) {
             return redirect()->route('users.index')->with('error', 'You do not have permission to create users.');
         }
 
@@ -62,7 +63,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         // Only SuperAdmin (role_id 7) can create users
-        if ($request->user()->role_id !== 7) {
+        if ($request->user()->role_id !== RoleId::SuperAdmin->value) {
             return redirect()->route('users.index')->with('error', 'You do not have permission to create users.');
         }
 
@@ -75,7 +76,11 @@ class UserController extends Controller
         $roleId = $user->role_id;
 
         // Assign to multiple programs for staff
-        if (in_array($roleId, [3, 4, 8]) && $request->filled('program') && is_array($request->program)) {
+        if (in_array($roleId, [
+            RoleId::DocumentEvaluator->value,
+            RoleId::Interviewer->value,
+            RoleId::GradeEvaluator->value,
+        ]) && $request->filled('program') && is_array($request->program)) {
             $programs = Program::whereIn('code', $request->program)->get();
             $syncData = [];
             foreach ($programs as $prog) {
@@ -85,7 +90,7 @@ class UserController extends Controller
         }
 
         // For Applicants added manually
-        if ($roleId == 1 && $request->filled('applicant_program')) {
+        if ($roleId == RoleId::Applicant->value && $request->filled('applicant_program')) {
             $program = Program::where('code', $request->applicant_program)->first();
             if ($program) {
                 ApplicantProfile::create([
@@ -146,7 +151,7 @@ class UserController extends Controller
     {
         // SuperAdmin (7) can edit. Admin (2) can view read-only.
         $currentRoleId = $request->user()->role_id;
-        if (!in_array($currentRoleId, [2, 7])) {
+        if (!in_array($currentRoleId, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
             return redirect()->route('users.index')->with('error', 'You do not have permission to view this user.');
         }
 
@@ -232,7 +237,7 @@ class UserController extends Controller
         $programs = Program::all();
         $roles = $this->userService->getRoleDefinitions();
 
-        $isSuperAdmin = $currentRoleId === 7;
+        $isSuperAdmin = $currentRoleId === RoleId::SuperAdmin->value;
 
         return Inertia::render('UserManagement/EditUser', [
             'user'     => $user,
@@ -249,7 +254,7 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         // Only SuperAdmin (role_id 7) can update users
-        if ($request->user()->role_id !== 7) {
+        if ($request->user()->role_id !== RoleId::SuperAdmin->value) {
             return redirect()->route('users.index')->with('error', 'You do not have permission to update users.');
         }
 
@@ -299,8 +304,10 @@ class UserController extends Controller
                     'lastname' => $request->lastname,
                     'extension_name' => $request->extension_name,
                     'email' => $request->email,
-                    'role_id' => $roleId,
                 ]);
+
+                // role_id is not mass-assignable; set explicitly.
+                $user->assignRole((int) $roleId)->save();
 
                 if ($request->filled('password')) {
                     $user->update(['password' => Hash::make($request->password)]);
@@ -398,7 +405,11 @@ class UserController extends Controller
                         . ($secondProgram ? ", 2nd choice to {$secondProgram->code}" : '')
                         . ($thirdProgram  ? ", 3rd choice to {$thirdProgram->code}"  : '');
                 }
-            } elseif (in_array($roleId, [3, 4, 8]) && $request->filled('program') && is_array($request->program) && $user) {
+            } elseif (in_array($roleId, [
+                RoleId::DocumentEvaluator->value,
+                RoleId::Interviewer->value,
+                RoleId::GradeEvaluator->value,
+            ]) && $request->filled('program') && is_array($request->program) && $user) {
                 // For Evaluators (3), Interviewers (4), and Grade Evaluators (8): handle program arrays (using program code)
                 $programs = Program::whereIn('code', $request->program)->get();
                 if ($programs->count() > 0) {
@@ -436,7 +447,7 @@ class UserController extends Controller
     public function updateGrades(Request $request, $id)
     {
         // Only SuperAdmin (role_id 7) can update grades
-        if ($request->user()->role_id !== 7) {
+        if ($request->user()->role_id !== RoleId::SuperAdmin->value) {
             return redirect()->route('users.index')->with('error', 'You do not have permission to update grades.');
         }
 
@@ -527,7 +538,7 @@ class UserController extends Controller
     public function processPullout(Request $request, $id)
     {
         $currentRoleId = $request->user()->role_id;
-        if (!in_array($currentRoleId, [2, 7])) {
+        if (!in_array($currentRoleId, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
             return back()->with('error', 'You do not have permission to process pull-outs.');
         }
 
@@ -631,7 +642,7 @@ class UserController extends Controller
     public function destroy(Request $request, $id)
     {
         // Only SuperAdmin (role_id 7) can delete users
-        if ($request->user()->role_id !== 7) {
+        if ($request->user()->role_id !== RoleId::SuperAdmin->value) {
             return redirect()->route('users.index')->with('error', 'You do not have permission to delete users.');
         }
 

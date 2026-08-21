@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Services;
+use Illuminate\Support\Facades\Log;
 
 use App\Models\User;
 use App\Models\UserFile;
@@ -27,7 +28,7 @@ class GradeExtractionService
      */
     public function extract(User $user): array
     {
-        \Log::info('GradeExtractionService: using Gemini for OCR', ['user_id' => $user->id]);
+        Log::info('GradeExtractionService: using Gemini for OCR', ['user_id' => $user->id]);
 
         $images = $this->loadImages($user);
 
@@ -38,7 +39,7 @@ class GradeExtractionService
         $prompt = $this->buildPrompt();
         $raw    = $this->geminiClient->send($images, $prompt);
 
-        \Log::info('Gemini raw response', ['raw' => $raw]);
+        Log::info('Gemini raw response', ['raw' => $raw]);
 
         $sanitized = $this->sanitize($raw);
         $parsed    = $this->parse($sanitized);
@@ -95,7 +96,7 @@ class GradeExtractionService
                     'data'      => base64_encode($contents),
                 ];
             } catch (\Throwable $e) {
-                \Log::warning('GradeExtractionService: skipping file due to error', [
+                Log::warning('GradeExtractionService: skipping file due to error', [
                     'file_id'   => $file->id,
                     'file_path' => $file->file_path,
                     'error'     => $e->getMessage(),

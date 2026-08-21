@@ -158,10 +158,12 @@ class CreateNewUser implements CreatesNewUsers
             }
 
             // All checks passed — create the local User record
+            // role_id is intentionally omitted here: the User model's creating
+            // hook defaults new users to Applicant (RoleId::Applicant), and
+            // removing it from $fillable prevents self-escalation.
             $user = User::create([
                 'idp_user_id' => $pendingReg['user_id'] ?? (string) \Illuminate\Support\Str::uuid(),
                 'email' => $email,
-                'role_id' => 1,
                 'firstname' => $input['firstname'],
                 'lastname' => $input['lastname'],
                 'middlename' => $input['middlename'] ?? null,
