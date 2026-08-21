@@ -5,12 +5,12 @@
             "key": "baseUrl",
             "type": "string",
             "name": "string",
-            "value": "http:\/\/localhost:8000"
+            "value": "http:\/\/127.0.0.1:8000"
         }
     ],
     "info": {
         "name": "PUPTAS API Documentation",
-        "_postman_id": "c65a6851-d82a-43ec-9534-35a38e9012b8",
+        "_postman_id": "4ce76253-f8c2-48a9-8529-a14716936c19",
         "description": "External integration API for the PUPTAS enrollment system. Provides Student, Program, and Medical endpoints for authorized external partners via Passport client credentials (OAuth2), plus a secure HMAC-signed medical webhook.",
         "schema": "https:\/\/schema.getpostman.com\/json\/collection\/v2.1.0\/collection.json"
     },
@@ -20,13 +20,32 @@
             "description": "",
             "item": [
                 {
-                    "name": "List medical applicants (deprecated)",
+                    "name": "List medical applicants",
                     "request": {
                         "url": {
                             "host": "{{baseUrl}}",
                             "path": "api\/v1\/medical\/applicants",
-                            "query": [],
-                            "raw": "{{baseUrl}}\/api\/v1\/medical\/applicants"
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15",
+                                    "description": "Number of results per page (1\u2013100). Defaults to 15.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Page number. Defaults to 1.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "program",
+                                    "value": "",
+                                    "description": "Filter by program code (e.g. BSIT).",
+                                    "disabled": true
+                                }
+                            ],
+                            "raw": "{{baseUrl}}\/api\/v1\/medical\/applicants?per_page=15&page=1&program="
                         },
                         "method": "GET",
                         "header": [
@@ -40,14 +59,14 @@
                             }
                         ],
                         "body": null,
-                        "description": "This endpoint has been deprecated and always returns `410 Gone`.\nUse a specific lookup endpoint instead:\n`GET \/api\/v1\/medical\/applicants\/{referenceNumber}` or\n`GET \/api\/v1\/medical\/applicants\/idp\/{idpUserId}`.\n\nRequires the `medical-read` OAuth scope."
+                        "description": "Returns a paginated list of applicants who have cleared grade evaluation\nand interviewing and are currently pending medical clearance.\nUse `GET \/api\/v1\/medical\/applicants\/{referenceNumber}` or\n`GET \/api\/v1\/medical\/applicants\/idp\/{idpUserId}` to look up a specific applicant.\n\nRequires the `medical-read` OAuth scope."
                     },
                     "response": [
                         {
                             "header": [],
-                            "code": 410,
-                            "body": "{\n  \"message\": \"This endpoint is deprecated. Use a specific lookup endpoint.\"\n}",
-                            "name": "Deprecated"
+                            "code": 200,
+                            "body": "{\n  \"data\": [\n    {\n      \"id\": 345,\n      \"idp_user_id\": \"8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f\",\n      \"reference_number\": \"T2026-000123\",\n      \"salutation\": null,\n      \"firstname\": \"Juan\",\n      \"middlename\": \"Santos\",\n      \"extension_name\": null,\n      \"lastname\": \"Dela Cruz\",\n      \"sex\": \"Male\",\n      \"email\": \"juan.delacruz@example.com\",\n      \"date_graduated\": \"2025-05-30\",\n      \"strand\": \"STEM\",\n      \"track\": \"Academic\",\n      \"application\": {\n        \"id\": 456,\n        \"status\": \"admitted\",\n        \"created_at\": \"2026-06-01T08:00:00.000000Z\"\n      },\n      \"program\": {\n        \"id\": 7,\n        \"code\": \"BSIT\",\n        \"name\": \"Bachelor of Science in Information Technology\"\n      },\n      \"medical_process_status\": \"in_progress\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 20,\n    \"last_page\": 2\n  }\n}",
+                            "name": ""
                         }
                     ]
                 },
@@ -245,13 +264,32 @@
             "description": "",
             "item": [
                 {
-                    "name": "List enrolled students (deprecated)",
+                    "name": "List enrolled students",
                     "request": {
                         "url": {
                             "host": "{{baseUrl}}",
                             "path": "api\/v1\/students",
-                            "query": [],
-                            "raw": "{{baseUrl}}\/api\/v1\/students"
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15",
+                                    "description": "Number of results per page (1\u2013100). Defaults to 15.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Page number. Defaults to 1.",
+                                    "disabled": false
+                                },
+                                {
+                                    "key": "program",
+                                    "value": "",
+                                    "description": "Filter by program code (e.g. BSIT).",
+                                    "disabled": true
+                                }
+                            ],
+                            "raw": "{{baseUrl}}\/api\/v1\/students?per_page=15&page=1&program="
                         },
                         "method": "GET",
                         "header": [
@@ -265,14 +303,14 @@
                             }
                         ],
                         "body": null,
-                        "description": "This endpoint has been deprecated and always returns `410 Gone`. Use the\nreference-number lookup endpoint instead:\n`GET \/api\/v1\/students\/{referenceNumber}`."
+                        "description": "Returns a paginated list of students whose enrollment status is\n`officially_enrolled`. Results can be filtered by program code.\nUse `GET \/api\/v1\/students\/{referenceNumber}` to look up a specific student.\n\nRequires the `student-read` OAuth scope."
                     },
                     "response": [
                         {
                             "header": [],
-                            "code": 410,
-                            "body": "{\n  \"message\": \"This endpoint is deprecated. Use \/api\/v1\/students\/{referenceNumber}.\"\n}",
-                            "name": "Deprecated"
+                            "code": 200,
+                            "body": "{\n  \"data\": [\n    {\n      \"id\": 123,\n      \"reference_number\": \"T2026-000123\",\n      \"firstname\": \"Juan\",\n      \"middlename\": \"Santos\",\n      \"extension_name\": null,\n      \"lastname\": \"Dela Cruz\",\n      \"email\": \"juan.delacruz@example.com\",\n      \"sex\": \"Male\",\n      \"g12_gwa\": 1.25,\n      \"application\": {\n        \"application_id\": 456,\n        \"status\": \"admitted\",\n        \"enrollment_status\": \"officially_enrolled\",\n        \"enrollment_position\": 10,\n        \"submitted_at\": \"2026-06-01T08:00:00.000000Z\"\n      },\n      \"program\": {\n        \"program_id\": 7,\n        \"program_code\": \"BSIT\",\n        \"program_name\": \"Bachelor of Science in Information Technology\"\n      },\n      \"created_at\": \"2026-05-01T08:00:00.000000Z\",\n      \"updated_at\": \"2026-06-01T08:00:00.000000Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 15,\n    \"total\": 42,\n    \"last_page\": 3\n  }\n}",
+                            "name": ""
                         }
                     ]
                 },

@@ -26,7 +26,7 @@
             </style>
 
     <script>
-        var tryItOutBaseUrl = "http://localhost:8000";
+        var tryItOutBaseUrl = "http://127.0.0.1:8000";
         var useCsrf = Boolean();
         var csrfUrl = "/sanctum/csrf-cookie";
     </script>
@@ -72,7 +72,7 @@
                 </li>
                                     <ul id="tocify-subheader-medical-integration" class="tocify-subheader">
                                                     <li class="tocify-item level-2" data-unique="medical-integration-GETapi-v1-medical-applicants">
-                                <a href="#medical-integration-GETapi-v1-medical-applicants">List medical applicants (deprecated)</a>
+                                <a href="#medical-integration-GETapi-v1-medical-applicants">List medical applicants</a>
                             </li>
                                                                                 <li class="tocify-item level-2" data-unique="medical-integration-GETapi-v1-medical-applicants-idp--idpUserId-">
                                 <a href="#medical-integration-GETapi-v1-medical-applicants-idp--idpUserId-">Look up an eligible medical applicant by IDP User ID</a>
@@ -108,7 +108,7 @@
                 </li>
                                     <ul id="tocify-subheader-student-admission" class="tocify-subheader">
                                                     <li class="tocify-item level-2" data-unique="student-admission-GETapi-v1-students">
-                                <a href="#student-admission-GETapi-v1-students">List enrolled students (deprecated)</a>
+                                <a href="#student-admission-GETapi-v1-students">List enrolled students</a>
                             </li>
                                                                                 <li class="tocify-item level-2" data-unique="student-admission-GETapi-v1-students-email--email-">
                                 <a href="#student-admission-GETapi-v1-students-email--email-">Look up an enrolled student by email address</a>
@@ -127,7 +127,7 @@
     </ul>
 
     <ul class="toc-footer" id="last-updated">
-        <li>Last updated: August 20, 2026</li>
+        <li>Last updated: August 21, 2026</li>
     </ul>
 </div>
 
@@ -137,7 +137,7 @@
         <h1 id="introduction">Introduction</h1>
 <p>External integration API for the PUPTAS enrollment system. Provides Student, Program, and Medical endpoints for authorized external partners via Passport client credentials (OAuth2), plus a secure HMAC-signed medical webhook.</p>
 <aside>
-    <strong>Base URL</strong>: <code>http://localhost:8000</code>
+    <strong>Base URL</strong>: <code>http://127.0.0.1:8000</code>
 </aside>
 <pre><code>This documentation aims to provide all the information you need to work with our API.
 
@@ -153,16 +153,16 @@ You can switch the language used with the tabs at the top right (or from the nav
 
     
 
-                                <h2 id="medical-integration-GETapi-v1-medical-applicants">List medical applicants (deprecated)</h2>
+                                <h2 id="medical-integration-GETapi-v1-medical-applicants">List medical applicants</h2>
 
 <p>
 <small class="badge badge-darkred">requires authentication</small>
 </p>
 
-<p>This endpoint has been deprecated and always returns <code>410 Gone</code>.
-Use a specific lookup endpoint instead:
-<code>GET /api/v1/medical/applicants/{referenceNumber}</code> or
-<code>GET /api/v1/medical/applicants/idp/{idpUserId}</code>.</p>
+<p>Returns a paginated list of applicants who have cleared grade evaluation
+and interviewing and are currently pending medical clearance.
+Use <code>GET /api/v1/medical/applicants/{referenceNumber}</code> or
+<code>GET /api/v1/medical/applicants/idp/{idpUserId}</code> to look up a specific applicant.</p>
 <p>Requires the <code>medical-read</code> OAuth scope.</p>
 
 <span id="example-requests-GETapi-v1-medical-applicants">
@@ -171,7 +171,7 @@ Use a specific lookup endpoint instead:
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request GET \
-    --get "http://localhost:8000/api/v1/medical/applicants" \
+    --get "http://127.0.0.1:8000/api/v1/medical/applicants?per_page=15&amp;page=1&amp;program=" \
     --header "Authorization: Bearer {YOUR_PASSPORT_ACCESS_TOKEN}" \
     --header "Content-Type: application/json" \
     --header "Accept: application/json"</code></pre></div>
@@ -179,8 +179,16 @@ Use a specific lookup endpoint instead:
 
 <div class="javascript-example">
     <pre><code class="language-javascript">const url = new URL(
-    "http://localhost:8000/api/v1/medical/applicants"
+    "http://127.0.0.1:8000/api/v1/medical/applicants"
 );
+
+const params = {
+    "per_page": "15",
+    "page": "1",
+    "program": "",
+};
+Object.keys(params)
+    .forEach(key =&gt; url.searchParams.append(key, params[key]));
 
 const headers = {
     "Authorization": "Bearer {YOUR_PASSPORT_ACCESS_TOKEN}",
@@ -198,12 +206,45 @@ fetch(url, {
 
 <span id="example-responses-GETapi-v1-medical-applicants">
             <blockquote>
-            <p>Example response (410, Deprecated):</p>
+            <p>Example response (200):</p>
         </blockquote>
                 <pre>
 
 <code class="language-json" style="max-height: 300px;">{
-    &quot;message&quot;: &quot;This endpoint is deprecated. Use a specific lookup endpoint.&quot;
+    &quot;data&quot;: [
+        {
+            &quot;id&quot;: 345,
+            &quot;idp_user_id&quot;: &quot;8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f&quot;,
+            &quot;reference_number&quot;: &quot;T2026-000123&quot;,
+            &quot;salutation&quot;: null,
+            &quot;firstname&quot;: &quot;Juan&quot;,
+            &quot;middlename&quot;: &quot;Santos&quot;,
+            &quot;extension_name&quot;: null,
+            &quot;lastname&quot;: &quot;Dela Cruz&quot;,
+            &quot;sex&quot;: &quot;Male&quot;,
+            &quot;email&quot;: &quot;juan.delacruz@example.com&quot;,
+            &quot;date_graduated&quot;: &quot;2025-05-30&quot;,
+            &quot;strand&quot;: &quot;STEM&quot;,
+            &quot;track&quot;: &quot;Academic&quot;,
+            &quot;application&quot;: {
+                &quot;id&quot;: 456,
+                &quot;status&quot;: &quot;admitted&quot;,
+                &quot;created_at&quot;: &quot;2026-06-01T08:00:00.000000Z&quot;
+            },
+            &quot;program&quot;: {
+                &quot;id&quot;: 7,
+                &quot;code&quot;: &quot;BSIT&quot;,
+                &quot;name&quot;: &quot;Bachelor of Science in Information Technology&quot;
+            },
+            &quot;medical_process_status&quot;: &quot;in_progress&quot;
+        }
+    ],
+    &quot;meta&quot;: {
+        &quot;current_page&quot;: 1,
+        &quot;per_page&quot;: 15,
+        &quot;total&quot;: 20,
+        &quot;last_page&quot;: 2
+    }
 }</code>
  </pre>
     </span>
@@ -290,7 +331,44 @@ You can check the Dev Tools console for debugging information.</code></pre>
     <br>
 <p>Example: <code>application/json</code></p>
             </div>
-                        </form>
+                            <h4 class="fancy-heading-panel"><b>Query Parameters</b></h4>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>per_page</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="per_page"                data-endpoint="GETapi-v1-medical-applicants"
+               value="15"
+               data-component="query">
+    <br>
+<p>Number of results per page (1–100). Defaults to 15. Example: <code>15</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>page</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="page"                data-endpoint="GETapi-v1-medical-applicants"
+               value="1"
+               data-component="query">
+    <br>
+<p>Page number. Defaults to 1. Example: <code>1</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>program</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="program"                data-endpoint="GETapi-v1-medical-applicants"
+               value=""
+               data-component="query">
+    <br>
+<p>Filter by program code (e.g. BSIT).</p>
+            </div>
+                </form>
 
                     <h2 id="medical-integration-GETapi-v1-medical-applicants-idp--idpUserId-">Look up an eligible medical applicant by IDP User ID</h2>
 
@@ -309,7 +387,7 @@ currently pending medical.</p>
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request GET \
-    --get "http://localhost:8000/api/v1/medical/applicants/idp/8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f" \
+    --get "http://127.0.0.1:8000/api/v1/medical/applicants/idp/8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f" \
     --header "Authorization: Bearer {YOUR_PASSPORT_ACCESS_TOKEN}" \
     --header "Content-Type: application/json" \
     --header "Accept: application/json"</code></pre></div>
@@ -317,7 +395,7 @@ currently pending medical.</p>
 
 <div class="javascript-example">
     <pre><code class="language-javascript">const url = new URL(
-    "http://localhost:8000/api/v1/medical/applicants/idp/8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f"
+    "http://127.0.0.1:8000/api/v1/medical/applicants/idp/8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f"
 );
 
 const headers = {
@@ -494,7 +572,7 @@ currently pending medical.</p>
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request GET \
-    --get "http://localhost:8000/api/v1/medical/applicants/T2026-000123" \
+    --get "http://127.0.0.1:8000/api/v1/medical/applicants/T2026-000123" \
     --header "Authorization: Bearer {YOUR_PASSPORT_ACCESS_TOKEN}" \
     --header "Content-Type: application/json" \
     --header "Accept: application/json"</code></pre></div>
@@ -502,7 +580,7 @@ currently pending medical.</p>
 
 <div class="javascript-example">
     <pre><code class="language-javascript">const url = new URL(
-    "http://localhost:8000/api/v1/medical/applicants/T2026-000123"
+    "http://127.0.0.1:8000/api/v1/medical/applicants/T2026-000123"
 );
 
 const headers = {
@@ -704,7 +782,7 @@ payload authenticity and integrity.</p>
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request POST \
-    "http://localhost:8000/api/v1/webhooks/medical-result" \
+    "http://127.0.0.1:8000/api/v1/webhooks/medical-result" \
     --header "Authorization: Bearer {YOUR_PASSPORT_ACCESS_TOKEN}" \
     --header "X-Medical-Signature: string required SHA256 HMAC hex digest of the raw JSON body using `services.medical_webhook.secret`. Example: 5f4dcc3b5aa765d61d8327deb882cf99" \
     --header "Content-Type: application/json" \
@@ -721,7 +799,7 @@ payload authenticity and integrity.</p>
 
 <div class="javascript-example">
     <pre><code class="language-javascript">const url = new URL(
-    "http://localhost:8000/api/v1/webhooks/medical-result"
+    "http://127.0.0.1:8000/api/v1/webhooks/medical-result"
 );
 
 const headers = {
@@ -958,7 +1036,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request GET \
-    --get "http://localhost:8000/api/v1/programs" \
+    --get "http://127.0.0.1:8000/api/v1/programs" \
     --header "Authorization: Bearer {YOUR_PASSPORT_ACCESS_TOKEN}" \
     --header "Content-Type: application/json" \
     --header "Accept: application/json"</code></pre></div>
@@ -966,7 +1044,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
 
 <div class="javascript-example">
     <pre><code class="language-javascript">const url = new URL(
-    "http://localhost:8000/api/v1/programs"
+    "http://127.0.0.1:8000/api/v1/programs"
 );
 
 const headers = {
@@ -1094,15 +1172,16 @@ You can check the Dev Tools console for debugging information.</code></pre>
 
     
 
-                                <h2 id="student-admission-GETapi-v1-students">List enrolled students (deprecated)</h2>
+                                <h2 id="student-admission-GETapi-v1-students">List enrolled students</h2>
 
 <p>
 <small class="badge badge-darkred">requires authentication</small>
 </p>
 
-<p>This endpoint has been deprecated and always returns <code>410 Gone</code>. Use the
-reference-number lookup endpoint instead:
-<code>GET /api/v1/students/{referenceNumber}</code>.</p>
+<p>Returns a paginated list of students whose enrollment status is
+<code>officially_enrolled</code>. Results can be filtered by program code.
+Use <code>GET /api/v1/students/{referenceNumber}</code> to look up a specific student.</p>
+<p>Requires the <code>student-read</code> OAuth scope.</p>
 
 <span id="example-requests-GETapi-v1-students">
 <blockquote>Example request:</blockquote>
@@ -1110,7 +1189,7 @@ reference-number lookup endpoint instead:
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request GET \
-    --get "http://localhost:8000/api/v1/students" \
+    --get "http://127.0.0.1:8000/api/v1/students?per_page=15&amp;page=1&amp;program=" \
     --header "Authorization: Bearer {YOUR_PASSPORT_ACCESS_TOKEN}" \
     --header "Content-Type: application/json" \
     --header "Accept: application/json"</code></pre></div>
@@ -1118,8 +1197,16 @@ reference-number lookup endpoint instead:
 
 <div class="javascript-example">
     <pre><code class="language-javascript">const url = new URL(
-    "http://localhost:8000/api/v1/students"
+    "http://127.0.0.1:8000/api/v1/students"
 );
+
+const params = {
+    "per_page": "15",
+    "page": "1",
+    "program": "",
+};
+Object.keys(params)
+    .forEach(key =&gt; url.searchParams.append(key, params[key]));
 
 const headers = {
     "Authorization": "Bearer {YOUR_PASSPORT_ACCESS_TOKEN}",
@@ -1137,12 +1224,44 @@ fetch(url, {
 
 <span id="example-responses-GETapi-v1-students">
             <blockquote>
-            <p>Example response (410, Deprecated):</p>
+            <p>Example response (200):</p>
         </blockquote>
                 <pre>
 
 <code class="language-json" style="max-height: 300px;">{
-    &quot;message&quot;: &quot;This endpoint is deprecated. Use /api/v1/students/{referenceNumber}.&quot;
+    &quot;data&quot;: [
+        {
+            &quot;id&quot;: 123,
+            &quot;reference_number&quot;: &quot;T2026-000123&quot;,
+            &quot;firstname&quot;: &quot;Juan&quot;,
+            &quot;middlename&quot;: &quot;Santos&quot;,
+            &quot;extension_name&quot;: null,
+            &quot;lastname&quot;: &quot;Dela Cruz&quot;,
+            &quot;email&quot;: &quot;juan.delacruz@example.com&quot;,
+            &quot;sex&quot;: &quot;Male&quot;,
+            &quot;g12_gwa&quot;: 1.25,
+            &quot;application&quot;: {
+                &quot;application_id&quot;: 456,
+                &quot;status&quot;: &quot;admitted&quot;,
+                &quot;enrollment_status&quot;: &quot;officially_enrolled&quot;,
+                &quot;enrollment_position&quot;: 10,
+                &quot;submitted_at&quot;: &quot;2026-06-01T08:00:00.000000Z&quot;
+            },
+            &quot;program&quot;: {
+                &quot;program_id&quot;: 7,
+                &quot;program_code&quot;: &quot;BSIT&quot;,
+                &quot;program_name&quot;: &quot;Bachelor of Science in Information Technology&quot;
+            },
+            &quot;created_at&quot;: &quot;2026-05-01T08:00:00.000000Z&quot;,
+            &quot;updated_at&quot;: &quot;2026-06-01T08:00:00.000000Z&quot;
+        }
+    ],
+    &quot;meta&quot;: {
+        &quot;current_page&quot;: 1,
+        &quot;per_page&quot;: 15,
+        &quot;total&quot;: 42,
+        &quot;last_page&quot;: 3
+    }
 }</code>
  </pre>
     </span>
@@ -1229,7 +1348,44 @@ You can check the Dev Tools console for debugging information.</code></pre>
     <br>
 <p>Example: <code>application/json</code></p>
             </div>
-                        </form>
+                            <h4 class="fancy-heading-panel"><b>Query Parameters</b></h4>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>per_page</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="per_page"                data-endpoint="GETapi-v1-students"
+               value="15"
+               data-component="query">
+    <br>
+<p>Number of results per page (1–100). Defaults to 15. Example: <code>15</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>page</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+<i>optional</i> &nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="page"                data-endpoint="GETapi-v1-students"
+               value="1"
+               data-component="query">
+    <br>
+<p>Page number. Defaults to 1. Example: <code>1</code></p>
+            </div>
+                                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>program</code></b>&nbsp;&nbsp;
+<small>string</small>&nbsp;
+<i>optional</i> &nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="program"                data-endpoint="GETapi-v1-students"
+               value=""
+               data-component="query">
+    <br>
+<p>Filter by program code (e.g. BSIT).</p>
+            </div>
+                </form>
 
                     <h2 id="student-admission-GETapi-v1-students-email--email-">Look up an enrolled student by email address</h2>
 
@@ -1247,7 +1403,7 @@ status for a student whose enrollment status is <code>officially_enrolled</code>
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request GET \
-    --get "http://localhost:8000/api/v1/students/email/juan.delacruz@example.com" \
+    --get "http://127.0.0.1:8000/api/v1/students/email/juan.delacruz@example.com" \
     --header "Authorization: Bearer {YOUR_PASSPORT_ACCESS_TOKEN}" \
     --header "Content-Type: application/json" \
     --header "Accept: application/json"</code></pre></div>
@@ -1255,7 +1411,7 @@ status for a student whose enrollment status is <code>officially_enrolled</code>
 
 <div class="javascript-example">
     <pre><code class="language-javascript">const url = new URL(
-    "http://localhost:8000/api/v1/students/email/juan.delacruz@example.com"
+    "http://127.0.0.1:8000/api/v1/students/email/juan.delacruz@example.com"
 );
 
 const headers = {
@@ -1431,7 +1587,7 @@ status for a student whose enrollment status is <code>officially_enrolled</code>
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request GET \
-    --get "http://localhost:8000/api/v1/students/T2026-000123" \
+    --get "http://127.0.0.1:8000/api/v1/students/T2026-000123" \
     --header "Authorization: Bearer {YOUR_PASSPORT_ACCESS_TOKEN}" \
     --header "Content-Type: application/json" \
     --header "Accept: application/json"</code></pre></div>
@@ -1439,7 +1595,7 @@ status for a student whose enrollment status is <code>officially_enrolled</code>
 
 <div class="javascript-example">
     <pre><code class="language-javascript">const url = new URL(
-    "http://localhost:8000/api/v1/students/T2026-000123"
+    "http://127.0.0.1:8000/api/v1/students/T2026-000123"
 );
 
 const headers = {

@@ -15,42 +15,129 @@ class ExternalMedicalApiController extends Controller
     }
 
     /**
-     * List medical applicants (deprecated)
+     * List medical applicants
      *
-     * This endpoint has been deprecated and always returns `410 Gone`.
-     * Use a specific lookup endpoint instead:
-     * `GET /api/v1/medical/applicants/{referenceNumber}` or
-     * `GET /api/v1/medical/applicants/idp/{idpUserId}`.
+     * Returns a paginated list of applicants who have cleared grade evaluation
+     * and interviewing and are currently pending medical clearance.
+     * Use `GET /api/v1/medical/applicants/{referenceNumber}` or
+     * `GET /api/v1/medical/applicants/idp/{idpUserId}` to look up a specific applicant.
      *
      * Requires the `medical-read` OAuth scope.
      *
      * @group Medical Integration
      * @authenticated
      *
-     * @response 410 scenario="Deprecated" {
-     *   "message": "This endpoint is deprecated. Use a specific lookup endpoint."
+     * @queryParam per_page integer Number of results per page (1–100). Defaults to 15. Example: 15
+     * @queryParam page integer Page number. Defaults to 1. Example: 1
+     * @queryParam program string Filter by program code (e.g. BSIT). Example: 
+     *
+     * @response 200 {
+     *   "data": [
+     *     {
+     *       "id": 345,
+     *       "idp_user_id": "8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
+     *       "reference_number": "T2026-000123",
+     *       "salutation": null,
+     *       "firstname": "Juan",
+     *       "middlename": "Santos",
+     *       "extension_name": null,
+     *       "lastname": "Dela Cruz",
+     *       "sex": "Male",
+     *       "email": "juan.delacruz@example.com",
+     *       "date_graduated": "2025-05-30",
+     *       "strand": "STEM",
+     *       "track": "Academic",
+     *       "application": {
+     *         "id": 456,
+     *         "status": "admitted",
+     *         "created_at": "2026-06-01T08:00:00.000000Z"
+     *       },
+     *       "program": {
+     *         "id": 7,
+     *         "code": "BSIT",
+     *         "name": "Bachelor of Science in Information Technology"
+     *       },
+     *       "medical_process_status": "in_progress"
+     *     }
+     *   ],
+     *   "meta": {
+     *     "current_page": 1,
+     *     "per_page": 15,
+     *     "total": 20,
+     *     "last_page": 2
+     *   }
      * }
      */
     public function index(Request $request): JsonResponse
     {
+        $perPage = min((int) $request->query('per_page', 15), 100);
+        $program = $request->query('program');
+
+        $query = $this->getEligibleApplicantQuery();
+
+        if ($program) {
+            $query->whereHas('currentApplication.program', function ($q) use ($program) {
+                $q->where('code', $program);
+            });
+        }
+
+        $paginator = $query->paginate($perPage);
+
+        $data = $paginator->map(function (ApplicantProfile $profile) {
+            $application    = $profile->currentApplication;
+            $processes      = $application?->processes ?? collect();
+            $medicalProcess = $processes->first();
+
+            return [
+                'id'                     => $profile->user_id,
+                'idp_user_id'            => $profile->user?->idp_user_id,
+                'reference_number'       => $profile->reference_number,
+                'salutation'             => $profile->salutation,
+                'firstname'              => $profile->firstname,
+                'middlename'             => $profile->middlename,
+                'extension_name'         => $profile->extension_name,
+                'lastname'               => $profile->lastname,
+                'sex'                    => $profile->sex,
+                'email'                  => $profile->email,
+                'date_graduated'         => $profile->date_graduated,
+                'strand'                 => $profile->strand,
+                'track'                  => $profile->track,
+                'application'            => $application ? [
+                    'id'         => $application->id,
+                    'status'     => $application->status,
+                    'created_at' => $application->created_at,
+                ] : null,
+                'program'                => $application?->program ? [
+                    'id'   => $application->program->id,
+                    'code' => $application->program->code,
+                    'name' => $application->program->name,
+                ] : null,
+                'medical_process_status' => $medicalProcess?->status ?? 'in_progress',
+            ];
+        });
+
         $this->auditLogService->logActivity(
-            'DEPRECATED_ENDPOINT',
+            'READ',
             'External API',
             sprintf(
-                'Deprecated list endpoint /api/v1/medical/applicants called from IP %s.',
-                $request->ip() ?? 'unknown'
+                'External medical applicant list requested from IP %s. Page %d, %d results.',
+                $request->ip() ?? 'unknown',
+                $paginator->currentPage(),
+                $paginator->total()
             ),
             null,
             AuditLog::CATEGORY_ADMISSION_DATA
         );
 
         return response()->json([
-            'message' => 'This endpoint is deprecated. Use a specific lookup endpoint.',
-        ])->withHeaders([
-            'Deprecation' => 'true',
-            'Sunset' => 'Tue, 30 Jun 2026 23:59:59 GMT',
-            'Link' => '</api/v1/medical/applicants/{id}>; rel="successor-version"',
-        ])->setStatusCode(410);
+            'data' => $data,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'last_page'    => $paginator->lastPage(),
+            ],
+        ]);
     }
 
     /**
