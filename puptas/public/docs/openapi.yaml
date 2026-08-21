@@ -4,7 +4,7 @@ info:
   description: 'External integration API for the PUPTAS enrollment system. Provides Student, Program, and Medical endpoints for authorized external partners via Passport client credentials (OAuth2), plus a secure HMAC-signed medical webhook.'
   version: 1.0.0
 servers:
-  - url: 'http://localhost:8000'
+  - url: 'http://127.0.0.1:8000'
 tags:
   - name: 'Medical Integration'
     description: ''
@@ -26,23 +26,191 @@ security:
 paths:
   /api/v1/medical/applicants:
     get:
-      summary: 'List medical applicants (deprecated)'
-      operationId: listMedicalApplicantsdeprecated
-      description: "This endpoint has been deprecated and always returns `410 Gone`.\nUse a specific lookup endpoint instead:\n`GET /api/v1/medical/applicants/{referenceNumber}` or\n`GET /api/v1/medical/applicants/idp/{idpUserId}`.\n\nRequires the `medical-read` OAuth scope."
-      parameters: []
+      summary: 'List medical applicants'
+      operationId: listMedicalApplicants
+      description: "Returns a paginated list of applicants who have cleared grade evaluation\nand interviewing and are currently pending medical clearance.\nUse `GET /api/v1/medical/applicants/{referenceNumber}` or\n`GET /api/v1/medical/applicants/idp/{idpUserId}` to look up a specific applicant.\n\nRequires the `medical-read` OAuth scope."
+      parameters:
+        -
+          in: query
+          name: per_page
+          description: 'Number of results per page (1–100). Defaults to 15.'
+          example: 15
+          required: false
+          schema:
+            type: integer
+            description: 'Number of results per page (1–100). Defaults to 15.'
+            example: 15
+        -
+          in: query
+          name: page
+          description: 'Page number. Defaults to 1.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Page number. Defaults to 1.'
+            example: 1
+        -
+          in: query
+          name: program
+          description: 'Filter by program code (e.g. BSIT).'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Filter by program code (e.g. BSIT).'
+            example: null
+            nullable: true
       responses:
-        410:
-          description: Deprecated
+        200:
+          description: ''
           content:
             application/json:
               schema:
                 type: object
                 example:
-                  message: 'This endpoint is deprecated. Use a specific lookup endpoint.'
+                  data:
+                    -
+                      id: 345
+                      idp_user_id: 8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f
+                      reference_number: T2026-000123
+                      salutation: null
+                      firstname: Juan
+                      middlename: Santos
+                      extension_name: null
+                      lastname: 'Dela Cruz'
+                      sex: Male
+                      email: juan.delacruz@example.com
+                      date_graduated: '2025-05-30'
+                      strand: STEM
+                      track: Academic
+                      application:
+                        id: 456
+                        status: admitted
+                        created_at: '2026-06-01T08:00:00.000000Z'
+                      program:
+                        id: 7
+                        code: BSIT
+                        name: 'Bachelor of Science in Information Technology'
+                      medical_process_status: in_progress
+                  meta:
+                    current_page: 1
+                    per_page: 15
+                    total: 20
+                    last_page: 2
                 properties:
-                  message:
-                    type: string
-                    example: 'This endpoint is deprecated. Use a specific lookup endpoint.'
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 345
+                        idp_user_id: 8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f
+                        reference_number: T2026-000123
+                        salutation: null
+                        firstname: Juan
+                        middlename: Santos
+                        extension_name: null
+                        lastname: 'Dela Cruz'
+                        sex: Male
+                        email: juan.delacruz@example.com
+                        date_graduated: '2025-05-30'
+                        strand: STEM
+                        track: Academic
+                        application:
+                          id: 456
+                          status: admitted
+                          created_at: '2026-06-01T08:00:00.000000Z'
+                        program:
+                          id: 7
+                          code: BSIT
+                          name: 'Bachelor of Science in Information Technology'
+                        medical_process_status: in_progress
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 345
+                        idp_user_id:
+                          type: string
+                          example: 8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f
+                        reference_number:
+                          type: string
+                          example: T2026-000123
+                        salutation:
+                          type: string
+                          example: null
+                          nullable: true
+                        firstname:
+                          type: string
+                          example: Juan
+                        middlename:
+                          type: string
+                          example: Santos
+                        extension_name:
+                          type: string
+                          example: null
+                          nullable: true
+                        lastname:
+                          type: string
+                          example: 'Dela Cruz'
+                        sex:
+                          type: string
+                          example: Male
+                        email:
+                          type: string
+                          example: juan.delacruz@example.com
+                        date_graduated:
+                          type: string
+                          example: '2025-05-30'
+                        strand:
+                          type: string
+                          example: STEM
+                        track:
+                          type: string
+                          example: Academic
+                        application:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 456
+                            status:
+                              type: string
+                              example: admitted
+                            created_at:
+                              type: string
+                              example: '2026-06-01T08:00:00.000000Z'
+                        program:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 7
+                            code:
+                              type: string
+                              example: BSIT
+                            name:
+                              type: string
+                              example: 'Bachelor of Science in Information Technology'
+                        medical_process_status:
+                          type: string
+                          example: in_progress
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      per_page:
+                        type: integer
+                        example: 15
+                      total:
+                        type: integer
+                        example: 20
+                      last_page:
+                        type: integer
+                        example: 2
       tags:
         - 'Medical Integration'
   '/api/v1/medical/applicants/idp/{idpUserId}':
@@ -455,23 +623,185 @@ paths:
         - 'Program Catalog'
   /api/v1/students:
     get:
-      summary: 'List enrolled students (deprecated)'
-      operationId: listEnrolledStudentsdeprecated
-      description: "This endpoint has been deprecated and always returns `410 Gone`. Use the\nreference-number lookup endpoint instead:\n`GET /api/v1/students/{referenceNumber}`."
-      parameters: []
+      summary: 'List enrolled students'
+      operationId: listEnrolledStudents
+      description: "Returns a paginated list of students whose enrollment status is\n`officially_enrolled`. Results can be filtered by program code.\nUse `GET /api/v1/students/{referenceNumber}` to look up a specific student.\n\nRequires the `student-read` OAuth scope."
+      parameters:
+        -
+          in: query
+          name: per_page
+          description: 'Number of results per page (1–100). Defaults to 15.'
+          example: 15
+          required: false
+          schema:
+            type: integer
+            description: 'Number of results per page (1–100). Defaults to 15.'
+            example: 15
+        -
+          in: query
+          name: page
+          description: 'Page number. Defaults to 1.'
+          example: 1
+          required: false
+          schema:
+            type: integer
+            description: 'Page number. Defaults to 1.'
+            example: 1
+        -
+          in: query
+          name: program
+          description: 'Filter by program code (e.g. BSIT).'
+          example: null
+          required: false
+          schema:
+            type: string
+            description: 'Filter by program code (e.g. BSIT).'
+            example: null
+            nullable: true
       responses:
-        410:
-          description: Deprecated
+        200:
+          description: ''
           content:
             application/json:
               schema:
                 type: object
                 example:
-                  message: 'This endpoint is deprecated. Use /api/v1/students/{referenceNumber}.'
+                  data:
+                    -
+                      id: 123
+                      reference_number: T2026-000123
+                      firstname: Juan
+                      middlename: Santos
+                      extension_name: null
+                      lastname: 'Dela Cruz'
+                      email: juan.delacruz@example.com
+                      sex: Male
+                      g12_gwa: 1.25
+                      application:
+                        application_id: 456
+                        status: admitted
+                        enrollment_status: officially_enrolled
+                        enrollment_position: 10
+                        submitted_at: '2026-06-01T08:00:00.000000Z'
+                      program:
+                        program_id: 7
+                        program_code: BSIT
+                        program_name: 'Bachelor of Science in Information Technology'
+                      created_at: '2026-05-01T08:00:00.000000Z'
+                      updated_at: '2026-06-01T08:00:00.000000Z'
+                  meta:
+                    current_page: 1
+                    per_page: 15
+                    total: 42
+                    last_page: 3
                 properties:
-                  message:
-                    type: string
-                    example: 'This endpoint is deprecated. Use /api/v1/students/{referenceNumber}.'
+                  data:
+                    type: array
+                    example:
+                      -
+                        id: 123
+                        reference_number: T2026-000123
+                        firstname: Juan
+                        middlename: Santos
+                        extension_name: null
+                        lastname: 'Dela Cruz'
+                        email: juan.delacruz@example.com
+                        sex: Male
+                        g12_gwa: 1.25
+                        application:
+                          application_id: 456
+                          status: admitted
+                          enrollment_status: officially_enrolled
+                          enrollment_position: 10
+                          submitted_at: '2026-06-01T08:00:00.000000Z'
+                        program:
+                          program_id: 7
+                          program_code: BSIT
+                          program_name: 'Bachelor of Science in Information Technology'
+                        created_at: '2026-05-01T08:00:00.000000Z'
+                        updated_at: '2026-06-01T08:00:00.000000Z'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 123
+                        reference_number:
+                          type: string
+                          example: T2026-000123
+                        firstname:
+                          type: string
+                          example: Juan
+                        middlename:
+                          type: string
+                          example: Santos
+                        extension_name:
+                          type: string
+                          example: null
+                          nullable: true
+                        lastname:
+                          type: string
+                          example: 'Dela Cruz'
+                        email:
+                          type: string
+                          example: juan.delacruz@example.com
+                        sex:
+                          type: string
+                          example: Male
+                        g12_gwa:
+                          type: number
+                          example: 1.25
+                        application:
+                          type: object
+                          properties:
+                            application_id:
+                              type: integer
+                              example: 456
+                            status:
+                              type: string
+                              example: admitted
+                            enrollment_status:
+                              type: string
+                              example: officially_enrolled
+                            enrollment_position:
+                              type: integer
+                              example: 10
+                            submitted_at:
+                              type: string
+                              example: '2026-06-01T08:00:00.000000Z'
+                        program:
+                          type: object
+                          properties:
+                            program_id:
+                              type: integer
+                              example: 7
+                            program_code:
+                              type: string
+                              example: BSIT
+                            program_name:
+                              type: string
+                              example: 'Bachelor of Science in Information Technology'
+                        created_at:
+                          type: string
+                          example: '2026-05-01T08:00:00.000000Z'
+                        updated_at:
+                          type: string
+                          example: '2026-06-01T08:00:00.000000Z'
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      per_page:
+                        type: integer
+                        example: 15
+                      total:
+                        type: integer
+                        example: 42
+                      last_page:
+                        type: integer
+                        example: 3
       tags:
         - 'Student Admission'
   '/api/v1/students/email/{email}':
