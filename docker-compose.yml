@@ -1,0 +1,155 @@
+# =============================================================================
+# PUPTAS — Docker Compose (Local Development)
+# =============================================================================
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose down           # Stop all services
+#   docker compose logs -f app    # Tail app logs
+#
+# Prerequisites:
+#   - Docker Desktop installed and running
+#   - .env file created from .env.example
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Laravel App (Apache + PHP 8.4)
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: ./puptas
+      dockerfile: Dockerfile
+    container_name: puptas_app
+    ports:
+      - "8080:8080"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8080
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: puptas
+      DB_USERNAME: puptas_user
+      DB_PASSWORD: secret
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      FILESYSTEM_DISK: local
+      MAIL_MAILER: log
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - app_storage:/var/www/html/storage
+    networks:
+      - puptas_network
+
+  # ---------------------------------------------------------------------------
+  # Queue Worker
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: ./puptas
+      dockerfile: Dockerfile.worker
+    container_name: puptas_worker
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: puptas
+      DB_USERNAME: puptas_user
+      DB_PASSWORD: secret
+      REDIS_HOST: redis
+      QUEUE_CONNECTION: redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - puptas_network
+
+  # ---------------------------------------------------------------------------
+  # Task Scheduler
+  # ---------------------------------------------------------------------------
+  scheduler:
+    build:
+      context: ./puptas
+      dockerfile: Dockerfile.scheduler
+    container_name: puptas_scheduler
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: puptas
+      DB_USERNAME: puptas_user
+      DB_PASSWORD: secret
+      REDIS_HOST: redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - puptas_network
+
+  # ---------------------------------------------------------------------------
+  # MySQL 8.0
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: puptas_mysql
+    environment:
+      MYSQL_DATABASE: puptas
+      MYSQL_USER: puptas_user
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: rootsecret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-prootsecret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - puptas_network
+
+  # ---------------------------------------------------------------------------
+  # Redis 7
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: puptas_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - puptas_network
+
+# =============================================================================
+# Volumes & Networks
+# =============================================================================
+volumes:
+  mysql_data:
+  redis_data:
+  app_storage:
+
+networks:
+  puptas_network:
+    driver: bridge
