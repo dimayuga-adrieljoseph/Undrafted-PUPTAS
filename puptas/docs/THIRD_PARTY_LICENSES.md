@@ -117,8 +117,3 @@ All dependencies use licenses compatible with the project's MIT license:
 - **OFL** (Fonts) — Permissive for use ✅
 
 > **No GPL-contaminated or proprietary-only dependencies** are included in the production build.
-
----
-
-**Document Author:** Undrafted Capstone Team  
-**Review Status:** Ready for Pre-Oral Defense Panel Audit

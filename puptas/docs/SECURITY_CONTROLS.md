@@ -186,8 +186,3 @@ All third-party dependencies are licensed under permissive open-source licenses:
 | Chart.js | MIT | Data visualization |
 
 Full dependency list available in `composer.json` and `package.json`.
-
----
-
-**Document Author:** Undrafted Capstone Team  
-**Review Status:** Ready for Pre-Oral Defense Panel Audit
