@@ -646,26 +646,67 @@ class UserController extends Controller
             return redirect()->route('users.index')->with('error', 'You do not have permission to delete users.');
         }
 
-        // For IDP, users are not deleted locally, but we might want to drop their profiles locally
-        $staff = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
-        if ($staff) {
-            $staff->delete();
-        }
-        $app = \App\Models\ApplicantProfile::where('user_id', (string) $id)->first();
-        if ($app) {
-            $app->delete();
-        }
+        $reason = $request->input('reason', 'Administrative disposal hold');
+        $this->userService->softDeleteUser($id, $reason, $request->user()->id);
 
-        $this->auditLogService->logActivity(
-            'DELETE',
-            'Users',
-            "Deleted local user profile for {$id}.",
-            null,
-            'USER_MANAGEMENT'
-        );
-
-        return redirect()->route('users.index')->with('success', 'User localized details removed successfully!');
+        return redirect()->route('users.index')->with('success', 'User account soft-deleted (Retention Hold initiated).');
     }
+
+    /**
+     * Deactivate a user account (Revoke access while preserving record).
+     */
+    public function deactivate(Request $request, $id)
+    {
+        if ($request->user()->role_id !== 7) {
+            return redirect()->route('users.index')->with('error', 'You do not have permission to deactivate users.');
+        }
+
+        $reason = $request->input('reason', 'Administrative deactivation');
+        $success = $this->userService->deactivateUser($id, $reason, $request->user()->id);
+
+        if (!$success) {
+            return redirect()->route('users.index')->with('error', 'User not found.');
+        }
+
+        return redirect()->route('users.index')->with('success', 'User account deactivated successfully.');
+    }
+
+    /**
+     * Reactivate a user account.
+     */
+    public function reactivate(Request $request, $id)
+    {
+        if ($request->user()->role_id !== 7) {
+            return redirect()->route('users.index')->with('error', 'You do not have permission to reactivate users.');
+        }
+
+        $success = $this->userService->reactivateUser($id, $request->user()->id);
+
+        if (!$success) {
+            return redirect()->route('users.index')->with('error', 'User not found.');
+        }
+
+        return redirect()->route('users.index')->with('success', 'User account reactivated successfully.');
+    }
+
+    /**
+     * Restore a soft-deleted user account within hold period.
+     */
+    public function restore(Request $request, $id)
+    {
+        if ($request->user()->role_id !== 7) {
+            return redirect()->route('users.index')->with('error', 'You do not have permission to restore users.');
+        }
+
+        $success = $this->userService->restoreUser($id, $request->user()->id);
+
+        if (!$success) {
+            return redirect()->route('users.index')->with('error', 'Soft-deleted user not found.');
+        }
+
+        return redirect()->route('users.index')->with('success', 'User account restored successfully.');
+    }
+
     /**
      * JSON search endpoint for ManageUsers.
      * Called via GET /users/search?q=...&page=N

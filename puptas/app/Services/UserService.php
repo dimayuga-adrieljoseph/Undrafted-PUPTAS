@@ -492,6 +492,7 @@ class UserService
                 'extension_name' => $u->extension_name,
                 'email'          => $u->email,
                 'role_id'        => $u->role_id,
+                'is_active'      => (bool) ($u->is_active ?? true),
                 'created_at'     => $u->created_at,
                 'role'           => (object) ['name' => $u->role ? $u->role->name : 'Staff'],
                 'programs'       => $u->programs,
@@ -512,6 +513,7 @@ class UserService
                 'extension_name' => $a->extension_name,
                 'email'          => $a->email,
                 'role_id'        => 1,
+                'is_active'      => (bool) ($a->user?->is_active ?? true),
                 'created_at'     => $a->created_at,
                 'role'           => (object) ['name' => 'Applicant'],
                 'programs'       => collect(),
@@ -540,5 +542,153 @@ class UserService
             'current_page' => $page,
             'last_page'    => $lastPage,
         ];
+    }
+
+    /**
+     * Deactivate a user account (Revoke access while preserving record).
+     */
+    public function deactivateUser(string|int $userId, ?string $reason = null, ?int $performedBy = null): bool
+    {
+        return DB::transaction(function () use ($userId, $reason, $performedBy) {
+            $user = \App\Models\User::where('idp_user_id', (string) $userId)
+                ->orWhere('id', $userId)
+                ->first();
+
+            if (!$user) {
+                return false;
+            }
+
+            $user->update(['is_active' => false]);
+
+            \App\Models\AuditLog::create([
+                'user_id' => $performedBy ?? $user->id,
+                'username' => auth()->user()?->email ?? 'SYSTEM',
+                'user_role' => auth()->user()?->role?->name ?? 'SYSTEM',
+                'log_type' => \App\Models\AuditLog::TYPE_SECURITY,
+                'log_category' => \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                'action_type' => \App\Models\AuditLog::ACTION_UPDATE,
+                'module_name' => 'User Management',
+                'description' => "Deactivated user account: {$user->email}. Reason: " . ($reason ?? 'Administrative action'),
+                'old_values' => ['is_active' => true],
+                'new_values' => ['is_active' => false, 'reason' => $reason],
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Reactivate a deactivated user account.
+     */
+    public function reactivateUser(string|int $userId, ?int $performedBy = null): bool
+    {
+        return DB::transaction(function () use ($userId, $performedBy) {
+            $user = \App\Models\User::where('idp_user_id', (string) $userId)
+                ->orWhere('id', $userId)
+                ->first();
+
+            if (!$user) {
+                return false;
+            }
+
+            $user->update(['is_active' => true]);
+
+            \App\Models\AuditLog::create([
+                'user_id' => $performedBy ?? $user->id,
+                'username' => auth()->user()?->email ?? 'SYSTEM',
+                'user_role' => auth()->user()?->role?->name ?? 'SYSTEM',
+                'log_type' => \App\Models\AuditLog::TYPE_SECURITY,
+                'log_category' => \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                'action_type' => \App\Models\AuditLog::ACTION_UPDATE,
+                'module_name' => 'User Management',
+                'description' => "Reactivated user account: {$user->email}",
+                'old_values' => ['is_active' => false],
+                'new_values' => ['is_active' => true],
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Soft-delete a user account (Phase 1 Data Retention Hold).
+     */
+    public function softDeleteUser(string|int $userId, ?string $reason = null, ?int $performedBy = null): bool
+    {
+        return DB::transaction(function () use ($userId, $reason, $performedBy) {
+            $user = \App\Models\User::where('idp_user_id', (string) $userId)
+                ->orWhere('id', $userId)
+                ->first();
+
+            if (!$user) {
+                return false;
+            }
+
+            $userEmail = $user->email;
+            $user->update(['is_active' => false]);
+            $user->delete();
+
+            // Soft-delete associated profile if present
+            \App\Models\ApplicantProfile::where('user_id', (string) $userId)
+                ->orWhere('user_id', (string) $user->id)
+                ->delete();
+
+            \App\Models\AuditLog::create([
+                'user_id' => $performedBy ?? $user->id,
+                'username' => auth()->user()?->email ?? 'SYSTEM',
+                'user_role' => auth()->user()?->role?->name ?? 'SYSTEM',
+                'log_type' => \App\Models\AuditLog::TYPE_SECURITY,
+                'log_category' => \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                'action_type' => \App\Models\AuditLog::ACTION_DELETE,
+                'module_name' => 'User Management',
+                'description' => "Soft-deleted user account (Retention Hold): {$userEmail}. Reason: " . ($reason ?? 'Account withdrawal / disposal hold'),
+                'old_values' => ['deleted_at' => null, 'is_active' => true],
+                'new_values' => ['deleted_at' => now()->toDateTimeString(), 'is_active' => false, 'reason' => $reason],
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Restore a soft-deleted user account within retention hold period.
+     */
+    public function restoreUser(string|int $userId, ?int $performedBy = null): bool
+    {
+        return DB::transaction(function () use ($userId, $performedBy) {
+            $user = \App\Models\User::withTrashed()
+                ->where(function ($q) use ($userId) {
+                    $q->where('idp_user_id', (string) $userId)->orWhere('id', $userId);
+                })
+                ->first();
+
+            if (!$user) {
+                return false;
+            }
+
+            $user->restore();
+            $user->update(['is_active' => true]);
+
+            \App\Models\ApplicantProfile::withTrashed()
+                ->where(function ($q) use ($userId, $user) {
+                    $q->where('user_id', (string) $userId)->orWhere('user_id', (string) $user->id);
+                })
+                ->restore();
+
+            \App\Models\AuditLog::create([
+                'user_id' => $performedBy ?? $user->id,
+                'username' => auth()->user()?->email ?? 'SYSTEM',
+                'user_role' => auth()->user()?->role?->name ?? 'SYSTEM',
+                'log_type' => \App\Models\AuditLog::TYPE_SECURITY,
+                'log_category' => \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                'action_type' => \App\Models\AuditLog::ACTION_UPDATE,
+                'module_name' => 'User Management',
+                'description' => "Restored soft-deleted user account: {$user->email}",
+                'old_values' => ['deleted_at' => $user->deleted_at],
+                'new_values' => ['deleted_at' => null, 'is_active' => true],
+            ]);
+
+            return true;
+        });
     }
 }

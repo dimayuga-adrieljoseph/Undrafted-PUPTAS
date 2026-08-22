@@ -16,6 +16,7 @@ use App\Models\Application;
 use App\Models\ApplicationProcess;
 use App\Models\Grade;
 use App\Models\ApplicantProfile;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Enums\RoleId;
 
@@ -30,6 +31,7 @@ class User extends Authenticatable
     use HasTeams;
     use Notifiable;
     use TwoFactorAuthenticatable;
+    use SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -52,6 +54,7 @@ class User extends Authenticatable
         'sex',
         'privacy_consent',
         'privacy_consent_at',
+        'is_active',
     ];
 
     /**
@@ -206,6 +209,32 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'privacy_consent_at' => 'datetime',
+            'is_active' => 'boolean',
+            'deleted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Scope query to only include active users.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
+     * Determine if the user is active.
+     */
+    public function isActive(): bool
+    {
+        return (bool) ($this->is_active ?? true) && is_null($this->deleted_at);
+    }
+
+    /**
+     * Determine if the user is deactivated.
+     */
+    public function isDeactivated(): bool
+    {
+        return !$this->isActive();
     }
 }
