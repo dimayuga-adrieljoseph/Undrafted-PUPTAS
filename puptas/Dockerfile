@@ -4,7 +4,7 @@
 FROM php:8.4-cli AS php-dependencies
 
 RUN apt-get update && apt-get install -y \
-    git curl \
+    git curl unzip \
     libzip-dev libonig-dev libxml2-dev \
     libfreetype6-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -17,9 +17,15 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
+# Copy only composer files first to leverage Docker layer cache.
+# composer install only re-runs when composer.json or composer.lock change.
+COPY composer.json composer.lock ./
+
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+
 COPY . .
 
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+RUN composer run-script post-autoload-dump --no-interaction 2>/dev/null || true
 
 # =============================================================================
 # Stage 2: Frontend Build (Vite)
