@@ -3,7 +3,6 @@
 
 /public/hot
 /public/build
-/public/docs
 
 /storage/*.key
 /storage/pail
