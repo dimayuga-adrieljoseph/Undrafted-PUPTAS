@@ -37,7 +37,9 @@ fi
 # =============================================================================
 APP_PORT="${PORT:-8080}"
 echo "[4b/11] Configuring Apache to listen on port ${APP_PORT}..."
-echo "Listen ${APP_PORT}" > /etc/apache2/ports.conf
+# Listen on both IPv4 and IPv6 to ensure Railway's proxy can reach the container
+echo "Listen 0.0.0.0:${APP_PORT}" > /etc/apache2/ports.conf
+echo "Listen [::]:${APP_PORT}" >> /etc/apache2/ports.conf
 sed -i "s/<VirtualHost \*:[0-9]*>/<VirtualHost *:${APP_PORT}>/g" /etc/apache2/sites-available/000-default.conf
 
 # =============================================================================
@@ -190,6 +192,11 @@ if [ "$1" != "" ]; then
     exec "$@"
 else
     echo "[13/13] Starting Apache..."
+    echo "Apache configured port: ${APP_PORT}"
+    echo "PORT env var: ${PORT:-not set}"
+    # Verify Apache is actually listening on the expected port
+    echo "Apache listen config:"
+    cat /etc/apache2/ports.conf
     echo "=========================================="
     echo "APACHE STARTED SUCCESSFULLY"
     echo "=========================================="
