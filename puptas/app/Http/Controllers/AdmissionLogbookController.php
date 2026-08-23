@@ -130,6 +130,65 @@ class AdmissionLogbookController extends Controller
         ]);
     }
 
+    /**
+     * GET /admin/logbook/service-time-kpi
+     *
+     * Returns average processing time (minutes) per step for a given date,
+     * with a pass/fail verdict against a 30-minute target.
+     */
+    public function serviceTimeKpi(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $target = 30; // target: average ≤ 30 minutes per applicant per step
+
+        $steps = [
+            1 => ['label' => 'Step 1 — Document Check',    'stage' => 'document_evaluator'],
+            2 => ['label' => 'Step 2 — Grade Computation', 'stage' => 'grade_evaluator'],
+            3 => ['label' => 'Step 3 — Interview',         'stage' => 'interviewer'],
+        ];
+
+        $results = [];
+
+        foreach ($steps as $stepNum => $info) {
+            // All-time: no date filter — count total distinct applications that completed this stage
+            $totalCount = ApplicationProcess::where('stage', $info['stage'])
+                ->where('status', 'completed')
+                ->whereIn('action', ['passed', 'accepted', 'course_changed'])
+                ->count();
+
+            $records = ApplicationProcess::where('stage', $info['stage'])
+                ->where('status', 'completed')
+                ->whereIn('action', ['passed', 'accepted', 'course_changed'])
+                ->get(['started_at', 'created_at', 'updated_at']);
+
+            $minutes = $records->map(function ($e) {
+                $from = $e->started_at ?? $e->created_at;
+                if (!$from || !$e->updated_at) return null;
+                $diff = (int) abs($e->updated_at->diffInMinutes($from));
+                // Exclude zero-duration records — these are seeded/batch-inserted rows
+                // where created_at = updated_at, not real timing measurements.
+                return $diff > 0 ? $diff : null;
+            })->filter(fn ($v) => $v !== null);
+
+            $timingCount = $minutes->count(); // records with measurable duration
+            $avg = $timingCount > 0 ? round($minutes->avg(), 1) : null;
+
+            $results[] = [
+                'step'         => $stepNum,
+                'label'        => $info['label'],
+                'count'        => $totalCount,    // total who completed this stage
+                'timing_count' => $timingCount,   // subset with measurable duration
+                'avg_min'      => $avg,
+                'target'       => $target,
+                'met'          => $avg !== null ? ($avg <= $target) : null,
+            ];
+        }
+
+        return response()->json([
+            'target' => $target,
+            'steps'  => $results,
+        ]);
+    }
+
     public function exportPdf(Request $request)
     {
         $step = (int) $request->input('step', 1);
