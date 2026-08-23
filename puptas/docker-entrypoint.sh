@@ -111,8 +111,8 @@ until php -r "
     \$name = getenv('DB_DATABASE') ?: 'railway';
     echo \"[DB-CHECK] host={\$host} port={\$port} user={\$user} db={\$name}\n\";
     try {
-        \$dsn = \"mysql:host={\$host};port={\$port};dbname={\$name};charset=utf8mb4\";
-        new PDO(\$dsn, \$user, \$pass, [PDO::ATTR_TIMEOUT => 2, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        \$dsn = \"mysql:host={\$host};port={\$port};dbname={\$name};charset=utf8mb4;connect_timeout=5\";
+        new PDO(\$dsn, \$user, \$pass, [PDO::ATTR_TIMEOUT => 5, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         echo \"[DB-CHECK] Connection successful!\n\";
         exit(0);
     } catch (Exception \$e) {
