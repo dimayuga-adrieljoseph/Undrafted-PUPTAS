@@ -109,14 +109,17 @@ until php -r "
     \$user = getenv('DB_USERNAME') ?: 'root';
     \$pass = getenv('DB_PASSWORD') ?: '';
     \$name = getenv('DB_DATABASE') ?: 'railway';
+    echo \"[DB-CHECK] host={\$host} port={\$port} user={\$user} db={\$name}\n\";
     try {
         \$dsn = \"mysql:host={\$host};port={\$port};dbname={\$name};charset=utf8mb4\";
         new PDO(\$dsn, \$user, \$pass, [PDO::ATTR_TIMEOUT => 2, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        echo \"[DB-CHECK] Connection successful!\n\";
         exit(0);
     } catch (Exception \$e) {
+        echo \"[DB-CHECK] Failed: \" . \$e->getMessage() . \"\n\";
         exit(1);
     }
-" 2>/dev/null; do
+"; do
     if [ "$DB_ELAPSED" -ge "$DB_WAIT_TIMEOUT" ]; then
         echo "ERROR: MySQL not ready after ${DB_WAIT_TIMEOUT}s. Check DB_HOST/DB_USERNAME/DB_PASSWORD env vars."
         exit 1
