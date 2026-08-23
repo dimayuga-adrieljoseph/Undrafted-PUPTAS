@@ -28,7 +28,7 @@ class ExternalStudentApiController extends Controller
      *
      * @queryParam per_page integer Number of results per page (1–100). Defaults to 15. Example: 15
      * @queryParam page integer Page number. Defaults to 1. Example: 1
-     * @queryParam program string Filter by program code (e.g. BSIT). Example: 
+     * @queryParam program string Filter by program code (e.g. BSIT). No-example
      *
      * @response 200 {
      *   "data": [

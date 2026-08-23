@@ -35,6 +35,13 @@ endpoints:
         The JSON body must also include:
         - `timestamp`: ISO8601 string or UNIX epoch seconds, within 5 minutes of now.
         - `nonce`: a unique value; repeated nonces are rejected for 10 minutes.
+
+        > ⚠️ **The standard "Try it out" form below will not work** for this endpoint — the HMAC
+        > signature must be computed over the exact raw JSON bytes sent, but the form reformats
+        > the body before sending, breaking the signature.
+        >
+        > Use the **Interactive Webhook Tester** widget in the **"Authenticating requests → Medical webhook security"**
+        > section above — it computes the HMAC automatically in the browser and sends the request directly.
       authenticated: true
       deprecated: false
     headers:

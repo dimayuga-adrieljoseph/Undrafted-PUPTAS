@@ -55,7 +55,10 @@ return [
     // - "static" will generate a static HTMl page in the /public/docs folder,
     // - "laravel" will generate the documentation as a Blade view, so you can add routing and authentication.
     // - "external_static" and "external_laravel" do the same as above, but pass the OpenAPI spec as a URL to an external UI template
-    'type' => 'static',
+    //
+    // Using "laravel" so the base URL stays dynamic per request (reads from APP_URL at serve time,
+    // not baked in at generate time). Docs are served at GET /docs by Scribe's own route.
+    'type' => 'laravel',
 
     // See https://scribe.knuckles.wtf/laravel/reference/config#theme for supported options
     'theme' => 'default',
@@ -136,6 +139,8 @@ return [
     'example_languages' => [
         'bash',
         'javascript',
+        'php',
+        'python',
     ],
 
     // Generate a Postman collection (v2.1.0) in addition to HTML docs.
@@ -163,7 +168,7 @@ return [
         'version' => '3.0.3',
 
         'overrides' => [
-            // 'info.version' => '2.0.0',
+            'info.version' => '1.0.0',
         ],
 
         // Additional generators to use when generating the OpenAPI spec.
@@ -175,11 +180,14 @@ return [
         // Endpoints which don't have a @group will be placed in this default group.
         'default' => 'Endpoints',
 
-        // By default, Scribe will sort groups alphabetically, and endpoints in the order their routes are defined.
-        // You can override this by listing the groups, subgroups and endpoints here in the order you want them.
-        // See https://scribe.knuckles.wtf/blog/laravel-v4#easier-sorting and https://scribe.knuckles.wtf/laravel/reference/config#order for details
-        // Note: does not work for `external` docs types
-        'order' => [],
+        // Logical order: Program Catalog first (discovery), then Student Admission, then Medical Integration,
+        // then Medical Webhooks (inbound push from partner).
+        'order' => [
+            'Program Catalog',
+            'Student Admission',
+            'Medical Integration',
+            'Medical Webhooks',
+        ],
     ],
 
     // Custom logo path. This will be used as the value of the src attribute for the <img> tag,

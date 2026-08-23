@@ -47,6 +47,10 @@ Route::prefix('v1')
         Route::post('/webhooks/medical-result', [ExternalMedicalApiController::class, 'webhookResult']);
     });
 
+// Dev/docs helper route removed — HMAC signing requires exact raw bytes,
+// which browser-based "Try it out" cannot provide. Use the Artisan command:
+// php artisan webhook:test-medical --reference=<ref> --cleared=1
+
 use App\Http\Controllers\ChatwootWebhookController;
 use App\Http\Controllers\PublicStatusCheckerController;
 use App\Http\Controllers\ResendWebhookController;
