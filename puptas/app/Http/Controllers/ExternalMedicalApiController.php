@@ -29,7 +29,7 @@ class ExternalMedicalApiController extends Controller
      *
      * @queryParam per_page integer Number of results per page (1–100). Defaults to 15. Example: 15
      * @queryParam page integer Page number. Defaults to 1. Example: 1
-     * @queryParam program string Filter by program code (e.g. BSIT). Example: 
+     * @queryParam program string Filter by program code (e.g. BSIT). No-example
      *
      * @response 200 {
      *   "data": [
@@ -150,9 +150,7 @@ class ExternalMedicalApiController extends Controller
                 $query->select('id', 'idp_user_id');
             },
             'testPasser',
-            'currentApplication' => function ($query) {
-                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
-            },
+            'currentApplication',
             'currentApplication.program' => function ($query) {
                 $query->select('id', 'code', 'name');
             },
@@ -475,6 +473,13 @@ class ExternalMedicalApiController extends Controller
      * The JSON body must also include:
      * - `timestamp`: ISO8601 string or UNIX epoch seconds, within 5 minutes of now.
      * - `nonce`: a unique value; repeated nonces are rejected for 10 minutes.
+     *
+     * > ⚠️ **The standard "Try it out" form below will not work** for this endpoint — the HMAC
+     * > signature must be computed over the exact raw JSON bytes sent, but the form reformats
+     * > the body before sending, breaking the signature.
+     * >
+     * > Use the **Interactive Webhook Tester** widget in the **"Authenticating requests → Medical webhook security"**
+     * > section above — it computes the HMAC automatically in the browser and sends the request directly.
      *
      * @group Medical Webhooks
      * @authenticated

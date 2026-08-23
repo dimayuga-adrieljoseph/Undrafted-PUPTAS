@@ -59,13 +59,12 @@ endpoints:
         example: null
         type: string
         enumValues: []
-        exampleWasSpecified: true
-        nullable: true
+        exampleWasSpecified: false
+        nullable: false
         deprecated: false
     cleanQueryParameters:
       per_page: 15
       page: 1
-      program: consequatur
     bodyParameters: []
     cleanBodyParameters: []
     fileParameters: []

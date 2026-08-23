@@ -75,10 +75,30 @@ if [ -z "${APP_KEY:-}" ]; then
 fi
 echo "[6b/12] APP_KEY: present (from environment)"
 
+# Install Passport OAuth keys from environment variables (Railway / production)
+echo "[7b/13] Installing Passport keys..."
+if [ -n "${PASSPORT_PRIVATE_KEY:-}" ] && [ -n "${PASSPORT_PUBLIC_KEY:-}" ]; then
+    echo "${PASSPORT_PRIVATE_KEY}" > storage/oauth-private.key
+    echo "${PASSPORT_PUBLIC_KEY}" > storage/oauth-public.key
+    chmod 600 storage/oauth-private.key storage/oauth-public.key
+    chown www-data:www-data storage/oauth-private.key storage/oauth-public.key
+    echo "[7b/13] Passport keys installed from environment."
+elif [ -f storage/oauth-private.key ]; then
+    echo "[7b/13] Passport keys already present on disk."
+else
+    echo "[7b/13] WARNING: No Passport keys found. Running passport:keys to generate..."
+    php artisan passport:keys
+fi
+
 # Run database migrations
 echo "[7/13] Running database migrations..."
 php artisan migrate --force
 echo "[7/13] Migrations complete."
+
+# Seed Passport clients (safe to run on every deploy — idempotent)
+echo "[7c/13] Seeding Passport API clients..."
+php artisan db:seed --class=PassportClientSeeder --force 2>/dev/null || \
+    echo "[7c/13] PassportClientSeeder skipped or already seeded."
 
 # Create storage symlink so public disk is accessible
 echo "[8/13] Creating storage symlink..."
@@ -90,8 +110,15 @@ echo "[8/13] Storage link created."
 
 # Generate API documentation (base URL resolves from APP_URL at runtime)
 echo "[8b/13] Generating API documentation..."
+# Publish Scribe's frontend assets (CSS/JS) into public/vendor/scribe/
+# These are not committed to git so they must be published at runtime.
+php artisan vendor:publish --tag=scribe-views --force
 php artisan scribe:generate
-php -r 'require "vendor/autoload.php"; $yaml = Symfony\Component\Yaml\Yaml::parseFile("public/docs/openapi.yaml"); file_put_contents("public/docs/openapi.json", json_encode($yaml, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));'
+# Convert openapi.yaml -> openapi.json for clients that prefer JSON
+# (laravel type outputs to storage/app/scribe/)
+php artisan scribe:openapi-to-json \
+  --input=storage/app/scribe/openapi.yaml \
+  --output=storage/app/scribe/openapi.json
 echo "[8b/13] API documentation generated."
 
 # Verify routes are registered
