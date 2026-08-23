@@ -95,11 +95,37 @@ elif [ -f storage/oauth-private.key ]; then
     echo "[7b/13] Passport keys already present on disk."
 else
     echo "[7b/13] WARNING: No Passport keys found. Running passport:keys to generate..."
-    php artisan passport:keys
+    timeout 30 php artisan passport:keys || echo "[7b/13] WARNING: passport:keys timed out or failed — continuing anyway"
 fi
 
-# Run database migrations
-echo "[7/13] Running database migrations..."
+# Wait for MySQL to be ready to accept real queries (not just TCP-open)
+echo "[7/13] Waiting for MySQL to be ready..."
+DB_WAIT_TIMEOUT=90
+DB_WAIT_INTERVAL=3
+DB_ELAPSED=0
+until php -r "
+    \$host = getenv('DB_HOST') ?: '127.0.0.1';
+    \$port = getenv('DB_PORT') ?: '3306';
+    \$user = getenv('DB_USERNAME') ?: 'root';
+    \$pass = getenv('DB_PASSWORD') ?: '';
+    \$name = getenv('DB_DATABASE') ?: 'railway';
+    try {
+        \$dsn = \"mysql:host={\$host};port={\$port};dbname={\$name};charset=utf8mb4\";
+        new PDO(\$dsn, \$user, \$pass, [PDO::ATTR_TIMEOUT => 2, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        exit(0);
+    } catch (Exception \$e) {
+        exit(1);
+    }
+" 2>/dev/null; do
+    if [ "$DB_ELAPSED" -ge "$DB_WAIT_TIMEOUT" ]; then
+        echo "ERROR: MySQL not ready after ${DB_WAIT_TIMEOUT}s. Check DB_HOST/DB_USERNAME/DB_PASSWORD env vars."
+        exit 1
+    fi
+    echo "  ...waiting for MySQL to accept connections (${DB_ELAPSED}s elapsed)"
+    sleep "$DB_WAIT_INTERVAL"
+    DB_ELAPSED=$((DB_ELAPSED + DB_WAIT_INTERVAL))
+done
+echo "[7/13] MySQL is ready. Running migrations..."
 php artisan migrate --force
 echo "[7/13] Migrations complete."
 
