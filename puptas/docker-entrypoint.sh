@@ -95,11 +95,29 @@ elif [ -f storage/oauth-private.key ]; then
     echo "[7b/13] Passport keys already present on disk."
 else
     echo "[7b/13] WARNING: No Passport keys found. Running passport:keys to generate..."
-    php artisan passport:keys
+    timeout 30 php artisan passport:keys || echo "[7b/13] WARNING: passport:keys timed out or failed — continuing anyway"
 fi
 
-# Run database migrations
-echo "[7/13] Running database migrations..."
+# Wait for database to be reachable before migrating
+echo "[7/13] Waiting for database connection..."
+DB_WAIT_TIMEOUT=60
+DB_WAIT_INTERVAL=3
+DB_ELAPSED=0
+until php -r "
+    \$host = getenv('DB_HOST') ?: '127.0.0.1';
+    \$port = getenv('DB_PORT') ?: 3306;
+    \$conn = @fsockopen(\$host, \$port, \$errno, \$errstr, 2);
+    if (\$conn) { fclose(\$conn); exit(0); } exit(1);
+" 2>/dev/null; do
+    if [ "$DB_ELAPSED" -ge "$DB_WAIT_TIMEOUT" ]; then
+        echo "ERROR: Database not reachable after ${DB_WAIT_TIMEOUT}s. Check DB_HOST/DB_PORT env vars."
+        exit 1
+    fi
+    echo "  ...waiting for DB (${DB_ELAPSED}s elapsed)"
+    sleep "$DB_WAIT_INTERVAL"
+    DB_ELAPSED=$((DB_ELAPSED + DB_WAIT_INTERVAL))
+done
+echo "[7/13] Database is reachable. Running migrations..."
 php artisan migrate --force
 echo "[7/13] Migrations complete."
 
