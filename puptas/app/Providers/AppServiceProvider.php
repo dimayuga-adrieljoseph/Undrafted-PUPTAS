@@ -154,24 +154,7 @@ class AppServiceProvider extends ServiceProvider
         //      30/min is enough for ~30 students on the same school WiFi checking
         //      simultaneously, while still limiting a single attacker meaningfully.
         RateLimiter::for('status-checker', function (Request $request) {
-            $refNumber = (string) $request->input('referenceNumber', '');
-            $refKey    = 'ref:' . hash('sha256', $refNumber);
-            $ipKey     = 'ip:' . $request->ip();
-
-            return [
-                // Layer 1: 10 checks/min per reference number
-                Limit::perMinute(10)
-                    ->by($refKey),
-
-                // Layer 2: 60 checks/day per reference number (slow enumeration prevention)
-                Limit::perDay(60)
-                    ->by($refKey . ':daily'),
-
-                // Layer 3: 60 requests/min per IP (flood backstop, safe for shared WiFi)
-                Limit::perMinute(60)
-                    ->by($ipKey),
-            ];
-            $refNumber = (string) $request->input('referenceNumber', '');
+             $refNumber = (string) $request->input('referenceNumber', '');
             $refKey    = 'ref:' . hash('sha256', $refNumber);
             $ipKey     = 'ip:' . $request->ip();
 
@@ -195,6 +178,18 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Passport::setClientUuids(true);
+
+        // Warn if the cache driver does not support tags or atomic locks.
+        // Both are used in this application (Cache::lock() for stampede prevention,
+        // Cache::tags() in some places) and silently degrade with file/array drivers.
+        // This surfaces misconfigurations early in the application boot log.
+        $cacheDriver = config('cache.default', 'file');
+        if (in_array($cacheDriver, ['array', 'file'], true)) {
+            Log::warning('Cache driver does not support tags or atomic locks.', [
+                'driver'  => $cacheDriver,
+                'impact'  => 'Cache::lock() stampede protection and tag-based invalidation are unavailable. Set CACHE_STORE=redis in production.',
+            ]);
+        }
 
         DB::listen(function (QueryExecuted $query) {
             if ($query->time > 500) {

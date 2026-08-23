@@ -31,8 +31,9 @@ interface UserRepositoryInterface
 
     /**
      * Staff users with programs and role for search pagination.
+     * When $offset and $limit are supplied, applies DB-level LIMIT/OFFSET.
      */
-    public function searchStaff(?int $roleId, ?string $term): Collection;
+    public function searchStaff(?int $roleId, ?string $term, int $offset = 0, int $limit = PHP_INT_MAX): Collection;
 
     /**
      * Number of staff users matching the search.

@@ -210,10 +210,6 @@ const selectUser = async (user) => {
 
         // Ensure uploadedFiles is properly assigned
         selectedUserFiles.value = response.data.uploadedFiles || {};
-        
-        // Debug logging to verify data
-        console.log('Selected user grades:', selectedUser.value.grades);
-        console.log('Selected user files:', selectedUserFiles.value);
     } catch (error) {
         console.error("Failed to fetch user data:", error);
         selectedUserFiles.value = {};

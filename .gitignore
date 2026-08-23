@@ -1,6 +1,10 @@
 .kiro
 VAPT_CHECKLIST.md
 
+# Composer tooling should never be committed
+puptas/composer-setup.php
+puptas/composer.phar
+
 # Jira import files
 .env.jira.example
 JIRA_IMPORT_FILES.txt

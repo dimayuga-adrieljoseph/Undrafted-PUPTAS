@@ -249,7 +249,7 @@ class AuditLogController extends Controller
         }
 
         try {
-            $apiKey = config('services.deepseek.key', env('DEEPSEEK_API_KEY'));
+            $apiKey = config('services.deepseek.key');
             if (empty($apiKey)) {
                 return response()->json(['summary' => 'DeepSeek API Key is not configured in the environment.'], 500);
             }

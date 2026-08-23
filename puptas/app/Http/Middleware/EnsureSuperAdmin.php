@@ -6,11 +6,10 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use App\Enums\RoleId;
 
 /**
  * Middleware to ensure the authenticated user is a Superadmin.
- * 
- * Superadmin role_id = 7
  */
 class EnsureSuperAdmin
 {
@@ -26,10 +25,10 @@ class EnsureSuperAdmin
             return redirect('/login');
         }
 
-        // Check if user has superadmin role (role_id = 7)
+        // Check if user has superadmin role
         $user = Auth::user();
-        
-        if ($user->role_id !== 7) {
+
+        if ((int) $user->role_id !== RoleId::SuperAdmin->value) {
             // JSON/XHR callers (e.g. polling endpoints) expect a proper 403, not a 302 + HTML redirect
             if ($request->expectsJson()) {
                 abort(403, 'Access denied. Superadmin privileges required.');

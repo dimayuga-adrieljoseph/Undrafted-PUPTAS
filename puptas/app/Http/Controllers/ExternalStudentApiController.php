@@ -15,39 +15,133 @@ class ExternalStudentApiController extends Controller
     }
 
     /**
-     * List enrolled students (deprecated)
+     * List enrolled students
      *
-     * This endpoint has been deprecated and always returns `410 Gone`. Use the
-     * reference-number lookup endpoint instead:
-     * `GET /api/v1/students/{referenceNumber}`.
+     * Returns a paginated list of students whose enrollment status is
+     * `officially_enrolled`. Results can be filtered by program code.
+     * Use `GET /api/v1/students/{referenceNumber}` to look up a specific student.
+     *
+     * Requires the `student-read` OAuth scope.
      *
      * @group Student Admission
      * @authenticated
      *
-     * @response 410 scenario="Deprecated" {
-     *   "message": "This endpoint is deprecated. Use /api/v1/students/{referenceNumber}."
+     * @queryParam per_page integer Number of results per page (1–100). Defaults to 15. Example: 15
+     * @queryParam page integer Page number. Defaults to 1. Example: 1
+     * @queryParam program string Filter by program code (e.g. BSIT). No-example
+     *
+     * @response 200 {
+     *   "data": [
+     *     {
+     *       "id": 123,
+     *       "reference_number": "T2026-000123",
+     *       "firstname": "Juan",
+     *       "middlename": "Santos",
+     *       "extension_name": null,
+     *       "lastname": "Dela Cruz",
+     *       "email": "juan.delacruz@example.com",
+     *       "sex": "Male",
+     *       "g12_gwa": 1.25,
+     *       "application": {
+     *         "application_id": 456,
+     *         "status": "admitted",
+     *         "enrollment_status": "officially_enrolled",
+     *         "enrollment_position": 10,
+     *         "submitted_at": "2026-06-01T08:00:00.000000Z"
+     *       },
+     *       "program": {
+     *         "program_id": 7,
+     *         "program_code": "BSIT",
+     *         "program_name": "Bachelor of Science in Information Technology"
+     *       },
+     *       "created_at": "2026-05-01T08:00:00.000000Z",
+     *       "updated_at": "2026-06-01T08:00:00.000000Z"
+     *     }
+     *   ],
+     *   "meta": {
+     *     "current_page": 1,
+     *     "per_page": 15,
+     *     "total": 42,
+     *     "last_page": 3
+     *   }
      * }
      */
     public function index(Request $request): JsonResponse
     {
+        $perPage = min((int) $request->query('per_page', 15), 100);
+        $program = $request->query('program');
+
+        $query = Application::query()
+            ->with(['user.grades', 'program', 'user.testPasser'])
+            ->where('enrollment_status', 'officially_enrolled');
+
+        if ($program) {
+            $query->whereHas('program', function ($q) use ($program) {
+                $q->where('code', $program);
+            });
+        }
+
+        $paginator = $query->paginate($perPage);
+
+        $data = $paginator->map(function (Application $application) {
+            $user    = $application->user;
+            $program = $application->program;
+            $grades  = $user?->grades;
+
+            $g12_gwa = null;
+            if ($grades && $grades->g12_first_sem && $grades->g12_second_sem) {
+                $g12_gwa = round(($grades->g12_first_sem + $grades->g12_second_sem) / 2, 2);
+            }
+
+            return [
+                'id'             => $user?->user_id,
+                'reference_number' => $user?->testPasser?->reference_number,
+                'firstname'      => $user?->firstname,
+                'middlename'     => $user?->middlename,
+                'extension_name' => $user?->extension_name,
+                'lastname'       => $user?->lastname,
+                'email'          => $user?->email,
+                'sex'            => $user?->sex,
+                'g12_gwa'        => $g12_gwa,
+                'application'    => [
+                    'application_id'      => $application->id,
+                    'status'              => $application->status,
+                    'enrollment_status'   => $application->enrollment_status,
+                    'enrollment_position' => $application->enrollment_position,
+                    'submitted_at'        => $application->submitted_at,
+                ],
+                'program' => [
+                    'program_id'   => $program?->id,
+                    'program_code' => $program?->code,
+                    'program_name' => $program?->name,
+                ],
+                'created_at' => $user?->created_at,
+                'updated_at' => $user?->updated_at,
+            ];
+        });
+
         $this->auditLogService->logActivity(
-            'DEPRECATED_ENDPOINT',
+            'READ',
             'External API',
             sprintf(
-                'Deprecated list endpoint /api/v1/students called from IP %s.',
-                $request->ip() ?? 'unknown'
+                'External student list requested from IP %s. Page %d, %d results.',
+                $request->ip() ?? 'unknown',
+                $paginator->currentPage(),
+                $paginator->total()
             ),
             null,
             AuditLog::CATEGORY_ADMISSION_DATA
         );
 
         return response()->json([
-            'message' => 'This endpoint is deprecated. Use /api/v1/students/{referenceNumber}.',
-        ])->withHeaders([
-            'Deprecation' => 'true',
-            'Sunset' => 'Tue, 30 Jun 2026 23:59:59 GMT',
-            'Link' => '</api/v1/students/{referenceNumber}>; rel="successor-version"',
-        ])->setStatusCode(410);
+            'data' => $data,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'last_page'    => $paginator->lastPage(),
+            ],
+        ]);
     }
 
     /**

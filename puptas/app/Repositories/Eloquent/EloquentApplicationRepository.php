@@ -39,8 +39,8 @@ class EloquentApplicationRepository implements ApplicationRepositoryInterface
         $userId = (string) $userId;
 
         $application = Cache::remember(Application::cacheKeyForUser($userId), 3600, function () use ($userId) {
-            $found = Application::where('user_id', $userId)
-                ->latest('id')
+            $found = Application::latestForUser()
+                ->where('user_id', $userId)
                 ->first();
 
             return $found ?: false;
@@ -58,7 +58,8 @@ class EloquentApplicationRepository implements ApplicationRepositoryInterface
         $userId = (string) $userId;
 
         return Cache::remember("application:user:{$userId}:returned_rejected", 3600, function () use ($userId) {
-            $found = Application::where('user_id', $userId)
+            $found = Application::latestForUser()
+                ->where('user_id', $userId)
                 ->whereIn('status', ['returned', 'rejected'])
                 ->first();
 
@@ -73,33 +74,20 @@ class EloquentApplicationRepository implements ApplicationRepositoryInterface
 
     public function userIdsWithCompletedMedical(): array
     {
-        return \Illuminate\Support\Facades\DB::table('applications as a')
-            ->join('application_processes as p', 'p.application_id', '=', 'a.id')
-            ->whereNull('a.deleted_at')
+        // Uses Application::scopeLatestForUser() — no duplicated MAX(id) subquery.
+        return Application::latestForUser()
+            ->join('application_processes as p', 'p.application_id', '=', 'applications.id')
             ->where('p.stage', 'medical')
             ->where('p.status', 'completed')
-            ->whereIn('a.id', function ($q) {
-                $q->selectRaw('MAX(id)')
-                  ->from('applications')
-                  ->whereNull('deleted_at')
-                  ->groupBy('user_id');
-            })
-            ->pluck('a.user_id')
+            ->pluck('applications.user_id')
             ->map(fn ($id) => (string) $id)
             ->toArray();
     }
 
     public function officiallyEnrolledUserIds(): array
     {
-        return \Illuminate\Support\Facades\DB::table('applications')
-            ->whereNull('deleted_at')
+        return Application::latestForUser()
             ->where('enrollment_status', 'officially_enrolled')
-            ->whereIn('id', function ($q) {
-                $q->selectRaw('MAX(id)')
-                  ->from('applications')
-                  ->whereNull('deleted_at')
-                  ->groupBy('user_id');
-            })
             ->pluck('user_id')
             ->map(fn ($id) => (string) $id)
             ->toArray();
@@ -111,14 +99,8 @@ class EloquentApplicationRepository implements ApplicationRepositoryInterface
             return collect();
         }
 
-        return Application::whereIn('user_id', $userIds)
-            ->whereNull('deleted_at')
-            ->whereIn('id', function ($q) {
-                $q->selectRaw('MAX(id)')
-                  ->from('applications')
-                  ->whereNull('deleted_at')
-                  ->groupBy('user_id');
-            })
+        return Application::latestForUser()
+            ->whereIn('user_id', $userIds)
             ->with(['program:id,code,name', 'processes:id,application_id,stage,status,action,created_at'])
             ->get()
             ->keyBy('user_id');

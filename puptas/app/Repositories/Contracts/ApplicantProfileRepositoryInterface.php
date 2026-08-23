@@ -43,6 +43,12 @@ interface ApplicantProfileRepositoryInterface
     public function search(?string $term): Collection;
 
     /**
+     * Applicant profiles matching the search term with DB-level offset/limit.
+     * Uses FULLTEXT when a term is present, falls back to LIKE for empty searches.
+     */
+    public function searchPaginated(?string $term, int $offset = 0, int $limit = PHP_INT_MAX): Collection;
+
+    /**
      * Number of applicant profiles matching the search term.
      */
     public function countSearch(?string $term): int;

@@ -16,7 +16,9 @@ use App\Models\Application;
 use App\Models\ApplicationProcess;
 use App\Models\Grade;
 use App\Models\ApplicantProfile;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Enums\RoleId;
 
 
 class User extends Authenticatable
@@ -29,6 +31,7 @@ class User extends Authenticatable
     use HasTeams;
     use Notifiable;
     use TwoFactorAuthenticatable;
+    use SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -36,11 +39,14 @@ class User extends Authenticatable
      * @var array<int, string>
      */
 
+    // NOTE: `role_id` is intentionally absent from $fillable. Roles are a
+    // security boundary and must never be mass-assignable from a request.
+    // Any code path that legitimately sets a role must use assignRole()
+    // (forceFill), which is reserved for trusted server-side flows.
     protected $fillable = [
         'idp_user_id',
         'email',
         'password',
-        'role_id',
         'firstname',
         'middlename',
         'lastname',
@@ -48,7 +54,35 @@ class User extends Authenticatable
         'sex',
         'privacy_consent',
         'privacy_consent_at',
+        'is_active',
     ];
+
+    /**
+     * Default new users to Applicant when no role is explicitly assigned.
+     * This is a safety net for internal Eloquent creations (seeders, factories,
+     * registration) that do not go through assignRole().
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if ($user->role_id === null) {
+                $user->role_id = RoleId::Applicant->value;
+            }
+        });
+    }
+
+    /**
+     * Assign a role in a way that bypasses mass-assignment protection.
+     * Intended for trusted server-side flows only (e.g. superadmin user admin).
+     *
+     * Does not persist — call save() or set it before create().
+     */
+    public function assignRole(int $roleId): static
+    {
+        $this->forceFill(['role_id' => $roleId]);
+
+        return $this;
+    }
 
     public function role()
     {
@@ -175,6 +209,32 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'privacy_consent_at' => 'datetime',
+            'is_active' => 'boolean',
+            'deleted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Scope query to only include active users.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
+     * Determine if the user is active.
+     */
+    public function isActive(): bool
+    {
+        return (bool) ($this->is_active ?? true) && is_null($this->deleted_at);
+    }
+
+    /**
+     * Determine if the user is deactivated.
+     */
+    public function isDeactivated(): bool
+    {
+        return !$this->isActive();
     }
 }

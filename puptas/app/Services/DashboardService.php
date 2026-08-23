@@ -10,6 +10,7 @@ use App\Repositories\Contracts\ApplicationProcessRepositoryInterface;
 use App\Repositories\Contracts\ProgramRepositoryInterface;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 /**
@@ -120,7 +121,7 @@ class DashboardService
         }
 
         $generateData = function () use ($now, $startDateParam, $endDateParam) {
-            \Log::info('Dashboard dates:', ['start' => $startDateParam, 'end' => $endDateParam]);
+            Log::info('Dashboard dates:', ['start' => $startDateParam, 'end' => $endDateParam]);
 
             if ($startDateParam && $endDateParam) {
                 try {
@@ -193,7 +194,7 @@ class DashboardService
                 });
             }
         } catch (\Throwable $e) {
-            \Log::warning('Dashboard cache failed, bypassing: ' . $e->getMessage());
+            Log::warning('Dashboard cache failed, bypassing: ' . $e->getMessage());
         }
 
         // Fallback: Generate without cache if Redis is down or lock timed out

@@ -35,7 +35,7 @@ class EloquentUserRepository implements UserRepositoryInterface
         return User::create($data);
     }
 
-    public function searchStaff(?int $roleId, ?string $term): Collection
+    public function searchStaff(?int $roleId, ?string $term, int $offset = 0, int $limit = PHP_INT_MAX): Collection
     {
         $query = User::with(['programs:id,name,code', 'role'])
             ->where('role_id', '>', 1);
@@ -46,7 +46,11 @@ class EloquentUserRepository implements UserRepositoryInterface
 
         $this->applyNameEmailTerm($query, $term);
 
-        return $query->orderBy('created_at', 'desc')->get();
+        return $query
+            ->orderBy('created_at', 'desc')
+            ->offset($offset)
+            ->limit($limit)
+            ->get();
     }
 
     public function countSearchStaff(?int $roleId, ?string $term): int

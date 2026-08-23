@@ -14,8 +14,10 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\UserFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use App\Helpers\FileMapper;
 use App\Services\DashboardService;
+use App\Enums\RoleId;
 
 class DashboardController extends Controller
 {
@@ -38,12 +40,12 @@ class DashboardController extends Controller
         }
 
         // Guard: authenticated users with the wrong role get routed correctly
-        if (! in_array($user->role_id, [2, 7])) {
+        if (! in_array($user->role_id, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
             return match ((int) $user->role_id) {
-                1 => redirect('/applicant-dashboard'),
-                3, 8 => redirect('/evaluator-dashboard'),
-                4 => redirect('/interviewer-dashboard'),
-                6 => redirect('/record-dashboard'),
+                RoleId::Applicant->value => redirect('/applicant-dashboard'),
+                RoleId::DocumentEvaluator->value, RoleId::GradeEvaluator->value => redirect('/evaluator-dashboard'),
+                RoleId::Interviewer->value => redirect('/interviewer-dashboard'),
+                RoleId::Registrar->value => redirect('/record-dashboard'),
                 default => redirect()->route('login'),
             };
         }
@@ -98,7 +100,13 @@ class DashboardController extends Controller
     {
         // Defense in depth: Verify authentication and authorized role (admin, evaluator, interviewer)
         $user = Auth::user();
-        if (!$user || !in_array($user->role_id, [2, 3, 4, 7, 8])) {
+        if (!$user || !in_array($user->role_id, [
+            RoleId::Admin->value,
+            RoleId::DocumentEvaluator->value,
+            RoleId::Interviewer->value,
+            RoleId::SuperAdmin->value,
+            RoleId::GradeEvaluator->value,
+        ])) {
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 
@@ -131,7 +139,6 @@ class DashboardController extends Controller
                         'id' => $applicant->user_id,
                         'firstname' => $applicant->firstname,
                         'lastname' => $applicant->lastname,
-                        'course' => $applicant->course, // Note: does ApplicantProfile have this? Make sure.
                         'status' => $application->status ?? null,
                         'stage' => $stage,
                         'email' => $applicant->email,
@@ -144,15 +151,17 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get user files with formatted URLs
-     * TEMPORARY: Returns full data with URLs until frontend is updated for lazy loading
+     * Get user files with formatted URLs.
+     *
+     * URLs are included inline alongside file metadata so the frontend can
+     * render previews without an additional lazy-load round trip.
      */
     public function getUserFiles($id)
     {
         try {
             // Defense in depth: Verify authentication and admin role
             $authUser = Auth::user();
-            if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
+            if (!$authUser || !in_array($authUser->role_id, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
                 return response()->json(['message' => 'Unauthorized access'], 403);
             }
 
@@ -208,17 +217,17 @@ class DashboardController extends Controller
                 'user' => $userData,
                 'uploadedFiles' => $fileList,
                 'graduateType' => $graduateType,
-                'lazyLoad' => false, // Disabled until frontend is updated
+                'lazyLoad' => false,
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            \Log::error('Applicant not found in admin getUserFiles', [
+            Log::error('Applicant not found in admin getUserFiles', [
                 'userId' => $id,
                 'error' => $e->getMessage(),
             ]);
 
             return response()->json(['message' => 'Applicant not found'], 404);
         } catch (\Exception $e) {
-            \Log::error('Failed to load applicant data in admin dashboard', [
+            Log::error('Failed to load applicant data in admin dashboard', [
                 'userId' => $id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -241,7 +250,7 @@ class DashboardController extends Controller
         try {
             // Defense in depth: Verify authentication and admin role
             $authUser = Auth::user();
-            if (!$authUser || !in_array($authUser->role_id, [2, 7])) {
+            if (!$authUser || !in_array($authUser->role_id, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
                 return response()->json(['message' => 'Unauthorized access'], 403);
             }
 
@@ -254,7 +263,7 @@ class DashboardController extends Controller
                 'grades' => $applicant->grades,
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            \Log::error('Applicant not found in admin getUserGrades', [
+            Log::error('Applicant not found in admin getUserGrades', [
                 'userId' => $id,
                 'error' => $e->getMessage(),
             ]);
@@ -264,7 +273,7 @@ class DashboardController extends Controller
                 'grades' => null,
             ], 404);
         } catch (\Exception $e) {
-            \Log::error('Failed to load grades in admin dashboard', [
+            Log::error('Failed to load grades in admin dashboard', [
                 'userId' => $id,
                 'error' => $e->getMessage(),
             ]);

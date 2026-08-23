@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use setasign\Fpdi\Tcpdf\Fpdi;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -33,7 +34,7 @@ class SarFormService
     
     public function __construct()
     {
-        $filename = env('SAR_TEMPLATE_FILENAME', 'SAR-FORM_TEMPLATE-2.pdf');
+        $filename = config('services.sar.template_filename', 'SAR-FORM_TEMPLATE-2.pdf');
         
         // Resolve the best available path for the template, prioritizing the docs/ folder which is immune to storage volume mounts.
         $paths = [
@@ -116,7 +117,7 @@ class SarFormService
             ];
         } catch (\Exception $e) {
             // Do NOT log PII, only log error type and row ID
-            \Log::error('SAR PDF generation failed', [
+            Log::error('SAR PDF generation failed', [
                 'row_id' => $rowData['id'] ?? 'unknown',
                 'error_type' => get_class($e),
                 'message' => $e->getMessage()
@@ -593,7 +594,7 @@ class SarFormService
         $positionsPath = $debugDir . '/last_positions.json';
         file_put_contents($positionsPath, json_encode($this->fieldPositions, JSON_PRETTY_PRINT));
         
-        \Log::info('SAR Debug files saved', [
+        Log::info('SAR Debug files saved', [
             'debug_pdf' => $debugPdfPath,
             'positions_json' => $positionsPath
         ]);
@@ -745,7 +746,7 @@ class SarFormService
             }
         }
         
-        \Log::info("SAR temp cleanup: deleted {$deletedCount} files older than {$olderThanHours} hours");
+        Log::info("SAR temp cleanup: deleted {$deletedCount} files older than {$olderThanHours} hours");
         
         return $deletedCount;
     }
