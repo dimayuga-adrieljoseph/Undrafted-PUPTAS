@@ -99,7 +99,9 @@ RUN sed -ri -e "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" \
     && sed -ri -e "s|AllowOverride None|AllowOverride All|g" \
     /etc/apache2/apache2.conf
 
-# Configure Apache to listen on port 8080
+# Apache port is configured dynamically at runtime via docker-entrypoint.sh
+# based on the $PORT environment variable injected by Railway.
+# We write a placeholder ports.conf here; the entrypoint overwrites it.
 RUN echo "Listen 8080" > /etc/apache2/ports.conf \
     && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/g' /etc/apache2/sites-available/000-default.conf
 
@@ -134,6 +136,6 @@ RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs b
 RUN mkdir -p storage/app/templates && \
     cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/
 
-EXPOSE 8080
+EXPOSE ${PORT:-8080}
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

@@ -33,6 +33,14 @@ if [ ! -f /var/www/html/public/index.php ]; then
 fi
 
 # =============================================================================
+# FIX: Dynamic port — Railway injects $PORT at runtime
+# =============================================================================
+APP_PORT="${PORT:-8080}"
+echo "[4b/11] Configuring Apache to listen on port ${APP_PORT}..."
+echo "Listen ${APP_PORT}" > /etc/apache2/ports.conf
+sed -i "s/<VirtualHost \*:[0-9]*>/<VirtualHost *:${APP_PORT}>/g" /etc/apache2/sites-available/000-default.conf
+
+# =============================================================================
 # FIX: Apache MPM Conflict - Runtime verification and fix
 # =============================================================================
 echo "[5/11] Checking/fixing Apache MPM..."
@@ -109,18 +117,21 @@ chown -h www-data:www-data public/storage 2>/dev/null || true
 echo "[8/13] Storage link created."
 
 # Generate API documentation (base URL resolves from APP_URL at runtime)
-echo "[8b/13] Generating API documentation..."
-# Publish Scribe's frontend assets (CSS/JS) into public/vendor/scribe/
-# These are not committed to git so they must be published at runtime.
-php artisan vendor:publish --tag=scribe-views --force
-php artisan scribe:generate
-# Convert openapi.yaml -> openapi.json for clients that prefer JSON
-# (laravel type outputs to storage/app/private/scribe/)
-php artisan scribe:openapi-to-json \
-  --input=storage/app/private/scribe/openapi.yaml \
-  --output=storage/app/private/scribe/openapi.json \
-  || echo "[8b/13] WARN: openapi-to-json conversion skipped (non-fatal)"
-echo "[8b/13] API documentation generated."
+# Only regenerate docs if explicitly requested (REGENERATE_DOCS=true) to avoid
+# slowing down every deploy with a potentially multi-minute scribe run.
+echo "[8b/13] Checking API documentation..."
+if [ "${REGENERATE_DOCS:-false}" = "true" ]; then
+    echo "[8b/13] Generating API documentation (REGENERATE_DOCS=true)..."
+    php artisan vendor:publish --tag=scribe-views --force
+    php artisan scribe:generate
+    php artisan scribe:openapi-to-json \
+      --input=storage/app/private/scribe/openapi.yaml \
+      --output=storage/app/private/scribe/openapi.json \
+      || echo "[8b/13] WARN: openapi-to-json conversion skipped (non-fatal)"
+    echo "[8b/13] API documentation generated."
+else
+    echo "[8b/13] Skipping scribe:generate (set REGENERATE_DOCS=true to regenerate)."
+fi
 
 # Verify routes are registered
 echo "[9/13] Verifying routes..."
