@@ -115,10 +115,11 @@ echo "[8b/13] Generating API documentation..."
 php artisan vendor:publish --tag=scribe-views --force
 php artisan scribe:generate
 # Convert openapi.yaml -> openapi.json for clients that prefer JSON
-# (laravel type outputs to storage/app/scribe/)
+# (laravel type outputs to storage/app/private/scribe/)
 php artisan scribe:openapi-to-json \
-  --input=storage/app/scribe/openapi.yaml \
-  --output=storage/app/scribe/openapi.json
+  --input=storage/app/private/scribe/openapi.yaml \
+  --output=storage/app/private/scribe/openapi.json \
+  || echo "[8b/13] WARN: openapi-to-json conversion skipped (non-fatal)"
 echo "[8b/13] API documentation generated."
 
 # Verify routes are registered
