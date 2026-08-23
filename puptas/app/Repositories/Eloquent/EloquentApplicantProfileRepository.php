@@ -125,6 +125,29 @@ class EloquentApplicantProfileRepository implements ApplicantProfileRepositoryIn
         return $query->orderBy('created_at', 'desc')->get();
     }
 
+    public function searchPaginated(?string $term, int $offset = 0, int $limit = PHP_INT_MAX): Collection
+    {
+        $query = ApplicantProfile::with([
+            'firstChoiceProgram:id,name,code',
+            'currentApplication' => function ($q) {
+                $q->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
+            },
+            'currentApplication.program:id,name,code',
+            'officiallyEnrolledApplication' => function ($q) {
+                $q->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
+            },
+            'officiallyEnrolledApplication.program:id,name,code',
+        ]);
+
+        $this->applyNameEmailTerm($query, $term);
+
+        return $query
+            ->orderBy('created_at', 'desc')
+            ->offset($offset)
+            ->limit($limit)
+            ->get();
+    }
+
     public function countSearch(?string $term): int
     {
         $query = ApplicantProfile::query();
@@ -135,15 +158,53 @@ class EloquentApplicantProfileRepository implements ApplicantProfileRepositoryIn
 
     private function applyNameEmailTerm($query, ?string $term): void
     {
-        if (!$term) {
+        if (! $term) {
             return;
         }
 
-        $like = '%' . $term . '%';
-        $query->where(function ($q) use ($like) {
-            $q->where('firstname', 'like', $like)
-              ->orWhere('lastname', 'like', $like)
-              ->orWhere('email', 'like', $like);
-        });
+        // FULLTEXT search via MATCH … AGAINST IN BOOLEAN MODE.
+        // This uses the applicant_profiles_name_email_fulltext index and avoids
+        // the leading-wildcard LIKE '%term%' full table scan.
+        //
+        // HOWEVER: MySQL's InnoDB FULLTEXT has a minimum token length
+        // (innodb_ft_min_token_size, default 3).  Tokens shorter than this are
+        // not indexed and will return zero results.  Common Filipino name particles
+        // like "de", "la", "del", "san" are also in MySQL's default stopword list.
+        //
+        // Strategy:
+        //   - term length >= 3 chars AND not a known stopword → use FULLTEXT
+        //   - term length < 3 chars → fall back to LIKE (short tokens, still fast
+        //     on a properly indexed table since we filter post-lookup, not as a
+        //     leading scan)
+        //
+        // The FULLTEXT path uses prefix matching (term*) so "Cruz" matches "Cruzan".
+
+        $mysqlStopwords = [
+            'a', 'about', 'an', 'are', 'as', 'at', 'be', 'by', 'de', 'del',
+            'for', 'from', 'how', 'i', 'in', 'is', 'it', 'la', 'las', 'los',
+            'of', 'on', 'or', 'san', 'so', 'that', 'the', 'this', 'to',
+            'was', 'what', 'when', 'where', 'who', 'will', 'with',
+        ];
+
+        $termLower  = strtolower(trim($term));
+        $useFulltext = strlen($termLower) >= 3
+            && ! in_array($termLower, $mysqlStopwords, true);
+
+        if ($useFulltext) {
+            $query->whereRaw(
+                'MATCH(firstname, lastname, email) AGAINST(? IN BOOLEAN MODE)',
+                [$termLower . '*']
+            );
+        } else {
+            // Fall back to LIKE for short or stopword terms.
+            // Not index-backed, but these queries are rare and the result set
+            // is small enough that it remains acceptable.
+            $like = '%' . $termLower . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('firstname', 'like', $like)
+                  ->orWhere('lastname', 'like', $like)
+                  ->orWhere('email', 'like', $like);
+            });
+        }
     }
 }

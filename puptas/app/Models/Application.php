@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -39,6 +40,38 @@ class Application extends Model
     public static function cacheKeyForUser(string $userId): string
     {
         return "application:user:{$userId}";
+    }
+
+    // ─── Query scopes ────────────────────────────────────────────────────────
+
+    /**
+     * Scope: restrict to the latest application per user_id.
+     *
+     * Replaces the duplicated "WHERE id IN (SELECT MAX(id) FROM applications
+     * WHERE deleted_at IS NULL GROUP BY user_id)" subquery that previously
+     * appeared in four separate repository methods.
+     *
+     * Usage:
+     *   Application::latestForUser()->where('enrollment_status', '...')
+     *
+     * @param  Builder  $query
+     * @return Builder
+     */
+    public function scopeLatestForUser(Builder $query): Builder
+    {
+        // Note: the outer deleted_at filter is intentionally omitted here —
+        // Application uses SoftDeletes, so the global scope already applies
+        // whereNull('applications.deleted_at') to every Eloquent query.
+        // Adding it again would cause column ambiguity errors on joins.
+        // The subquery uses a raw DB builder (no global scope), so it needs
+        // its own explicit whereNull.
+        return $query
+            ->whereIn('id', function ($sub) {
+                $sub->selectRaw('MAX(id)')
+                    ->from('applications')
+                    ->whereNull('deleted_at')
+                    ->groupBy('user_id');
+            });
     }
 
     /**
