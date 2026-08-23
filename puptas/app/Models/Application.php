@@ -66,7 +66,7 @@ class Application extends Model
         // The subquery uses a raw DB builder (no global scope), so it needs
         // its own explicit whereNull.
         return $query
-            ->whereIn('id', function ($sub) {
+            ->whereIn('applications.id', function ($sub) {
                 $sub->selectRaw('MAX(id)')
                     ->from('applications')
                     ->whereNull('deleted_at')
