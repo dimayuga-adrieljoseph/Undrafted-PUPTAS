@@ -50,6 +50,7 @@ use App\Http\Controllers\ControlListController;
 use App\Http\Controllers\SisUploadController;
 use App\Http\Controllers\ConfirmedApplicantsController;
 use App\Http\Controllers\EmailTrackingController;
+use App\Http\Controllers\KpiController;
 
 
 // IDP Authentication Routes - No middleware restrictions so stale sessions don't block the OAuth flow
@@ -718,6 +719,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     // Logbook Reports
     Route::get('/admin/logbook', [AdmissionLogbookController::class, 'index'])->name('reports.logbook.index');
     Route::get('/admin/logbook/export/pdf', [AdmissionLogbookController::class, 'exportPdf'])->name('reports.logbook.export.pdf');
+    Route::get('/admin/logbook/service-time-kpi', [AdmissionLogbookController::class, 'serviceTimeKpi'])->name('reports.logbook.service-time-kpi');
     Route::get('/admin/control-list', [ControlListController::class, 'index'])->name('reports.control-list.index');
     Route::get('/admin/control-list/export', [ControlListController::class, 'export'])->name('reports.control-list.export');
 
@@ -725,6 +727,10 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
     Route::get('/admin/sis-upload/passers', [SisUploadController::class, 'exportPassers'])->name('sis-upload.passers');
     Route::get('/admin/sis-upload/recon', [SisUploadController::class, 'exportRecon'])->name('sis-upload.recon');
     Route::get('/admin/sis-upload/school-years', [SisUploadController::class, 'schoolYears'])->name('sis-upload.school-years');
+
+    // KPI Dashboard Routes
+    Route::get('/dashboard/kpi', [KpiController::class, 'index'])->name('dashboard.kpi');
+    Route::get('/dashboard/kpi/export/pdf', [KpiController::class, 'exportPdf'])->name('dashboard.kpi.export-pdf');
 
     // Waiver Management
     Route::get('/admin/waiver-management', [\App\Http\Controllers\SuperAdmin\WaiverManagementController::class, 'index'])->name('waiver.index');
