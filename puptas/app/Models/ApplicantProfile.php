@@ -54,6 +54,26 @@ class ApplicantProfile extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Permanently scrub applicant profile PII fields.
+     */
+    public function anonymize(): bool
+    {
+        $uniqueSuffix = (string) $this->id . '_' . \Illuminate\Support\Str::uuid()->toString();
+        $anonymizedEmail = "anon_applicant_{$uniqueSuffix}@privacy.local";
+
+        return $this->forceFill([
+            'email'                   => $anonymizedEmail,
+            'firstname'               => 'ANONYMIZED',
+            'lastname'                => 'APPLICANT_' . $this->id,
+            'middlename'              => null,
+            'extension_name'          => null,
+            'student_number'          => null,
+            'former_school_address'   => null,
+            'former_school_principal' => null,
+        ])->save();
+    }
+
     public function applications()
     {
         return $this->hasMany(Application::class, 'user_id', 'user_id');

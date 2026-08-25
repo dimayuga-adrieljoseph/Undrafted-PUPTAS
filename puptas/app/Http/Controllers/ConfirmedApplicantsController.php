@@ -42,12 +42,41 @@ class ConfirmedApplicantsController extends Controller
      * JSON: Get all confirmed applicants across all active evaluation stages.
      * Includes: document_evaluator, grade_evaluator, interviewer, and medical.
      * Joins with test_passers via reference_number to expose grade sync status.
+     * 
+     * Applies dynamic presentation masking by default (Privacy by Default).
      */
-    public function getApplicants()
+    public function getApplicants(Request $request)
     {
         $user = Auth::user();
         if (!$user || !in_array($user->role_id, [2, 7])) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Privacy by Default: masked unless explicitly requested with role authorization
+        $unmaskRequested = $request->boolean('unmask', false);
+
+        if ($unmaskRequested) {
+            if (!\App\Helpers\DataMaskingHelper::canUnmask($user)) {
+                $this->auditLogService->logActivity(
+                    \App\Models\AuditLog::ACTION_UPDATE,
+                    'Security',
+                    "Unauthorized PII unmask attempt blocked for User ID {$user->id} (Role ID: {$user->role_id}).",
+                    $user,
+                    \App\Models\AuditLog::CATEGORY_AUTHENTICATION
+                );
+
+                return response()->json([
+                    'message' => 'Forbidden: You do not have security clearance to unmask sensitive personal information (PII).'
+                ], 403);
+            }
+
+            $this->auditLogService->logActivity(
+                \App\Models\AuditLog::ACTION_READ,
+                'Admission Data',
+                "Staff User ID {$user->id} ({$user->firstname} {$user->lastname}) unmasked PII on Confirmed Applicants view.",
+                $user,
+                \App\Models\AuditLog::CATEGORY_AUDIT_ACCESS
+            );
         }
 
         $applicants = ApplicantProfile::with([
@@ -73,7 +102,7 @@ class ConfirmedApplicantsController extends Controller
             })
             ->orderBy('lastname')
             ->get()
-            ->map(function ($applicant) {
+            ->map(function ($applicant) use ($unmaskRequested) {
                 $testPasser = $applicant->testPasser;
 
                 $hasTestPasser = $testPasser !== null;
@@ -104,18 +133,31 @@ class ConfirmedApplicantsController extends Controller
                     && !$hasMedicalOrRecords
                     && ($interviewerProcess->decision_reason !== null || $interviewerProcess->reviewer_notes !== null); // notes were set during pull-out
 
+                $firstname = $applicant->firstname;
+                $lastname  = $applicant->lastname;
+                $email     = $applicant->email;
+                $refNumber = $testPasser?->reference_number;
+
+                if (!$unmaskRequested) {
+                    $firstname = \App\Helpers\DataMaskingHelper::maskName($firstname);
+                    $lastname  = \App\Helpers\DataMaskingHelper::maskName($lastname);
+                    $email     = \App\Helpers\DataMaskingHelper::maskEmail($email);
+                    $refNumber = \App\Helpers\DataMaskingHelper::maskReferenceNumber($refNumber);
+                }
+
                 return [
                     'id'               => $applicant->user_id,
-                    'firstname'        => $applicant->firstname,
-                    'lastname'         => $applicant->lastname,
-                    'email'            => $applicant->email,
+                    'firstname'        => $firstname,
+                    'lastname'         => $lastname,
+                    'email'            => $email,
+                    'is_masked'        => !$unmaskRequested,
                     'status'           => $applicant->currentApplication?->status,
                     'program'          => $applicant->currentApplication?->program,
                     'grades'           => $applicant->grades ? collect($applicant->grades->toArray())->except(['id', 'user_id', 'created_at', 'updated_at'])->toArray() : null,
                     'has_test_passer'  => $hasTestPasser,
                     'grades_synced'    => $gradesSynced,
                     'test_passer_id'   => $testPasser?->test_passer_id,
-                    'reference_number' => $testPasser?->reference_number,
+                    'reference_number' => $refNumber,
                     'batch_number'     => $testPasser?->batch_number,
                     'passer_status_id'   => $testPasser?->passer_status_id,
                     'passer_status_name' => $testPasser?->passerStatus?->status,
@@ -136,7 +178,6 @@ class ConfirmedApplicantsController extends Controller
                     'pullout_notes'    => $isPulledOut ? ($interviewerProcess->decision_reason ?? $interviewerProcess->reviewer_notes) : null,
                 ];
             });
-
 
         return response()->json($applicants);
     }
