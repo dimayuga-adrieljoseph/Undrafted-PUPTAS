@@ -37,9 +37,9 @@ fi
 # =============================================================================
 APP_PORT="${PORT:-8080}"
 echo "[4b/11] Configuring Apache to listen on port ${APP_PORT}..."
-# Listen on both IPv4 and IPv6 to ensure Railway's proxy can reach the container
+# Listen on IPv4 only — Railway containers do not support IPv6 networking.
+# Binding to [::] causes Apache to crash with "Cannot assign requested address".
 echo "Listen 0.0.0.0:${APP_PORT}" > /etc/apache2/ports.conf
-echo "Listen [::]:${APP_PORT}" >> /etc/apache2/ports.conf
 sed -i "s/<VirtualHost \*:[0-9]*>/<VirtualHost *:${APP_PORT}>/g" /etc/apache2/sites-available/000-default.conf
 
 # =============================================================================
