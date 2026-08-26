@@ -140,6 +140,4 @@ RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs b
 RUN mkdir -p storage/app/templates && \
     cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/
 
-EXPOSE ${PORT:-8080}
-
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
