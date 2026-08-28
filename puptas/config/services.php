@@ -88,4 +88,8 @@ return [
         'website_token' => env('CHATWOOT_WEBSITE_TOKEN'),
         'hmac_token' => env('CHATWOOT_HMAC_TOKEN'),
     ],
+
+    'oauth' => [
+        'token_rate_limit' => (int) env('OAUTH_TOKEN_RATE_LIMIT', 300),
+    ],
 ];

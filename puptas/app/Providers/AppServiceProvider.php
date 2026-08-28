@@ -64,7 +64,10 @@ class AppServiceProvider extends ServiceProvider
             $clientId = $request->input('client_id', '');
             $key = $clientId ?: $request->ip();
 
-            return Limit::perMinute(120)->by('oauth:' . $key);
+            // Configurable via OAUTH_TOKEN_RATE_LIMIT env var (default: 300/min)
+            $limit = config('services.oauth.token_rate_limit', 300);
+            
+            return Limit::perMinute($limit)->by('oauth:' . $key);
         });
 
 
@@ -153,9 +156,18 @@ class AppServiceProvider extends ServiceProvider
         // same IP — exhausting the 60/min bucket globally.
         // We replace it with our named 'oauth-token' limiter (120/min by client_id).
         $this->app->booted(function () {
+            // Override Passport's default route
             Route::post('/oauth/token', [
                 'uses' => '\Laravel\Passport\Http\Controllers\AccessTokenController@issueToken',
                 'as' => 'passport.token',
+                'middleware' => 'throttle:oauth-token',
+            ]);
+
+            // ALIAS ROUTE: To bypass Railway's edge proxy WAF rules that might 
+            // strictly rate-limit standard auth endpoints like /oauth/token
+            Route::post('/medical-auth/token', [
+                'uses' => '\Laravel\Passport\Http\Controllers\AccessTokenController@issueToken',
+                'as' => 'passport.token.medical',
                 'middleware' => 'throttle:oauth-token',
             ]);
         });
