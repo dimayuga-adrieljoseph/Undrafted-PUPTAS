@@ -33,10 +33,16 @@ Route::prefix('v1')
 
 use App\Http\Controllers\ExternalMedicalApiController;
 
+// Deprecated list endpoint — returns 410 immediately WITHOUT consuming rate limits
+Route::prefix('v1')
+    ->middleware(['client:medical-read'])
+    ->group(function () {
+        Route::get('/medical/applicants', [ExternalMedicalApiController::class, 'index']);
+    });
+
 Route::prefix('v1')
     ->middleware(['client:medical-read', 'throttle:external-medical-api-second', 'throttle:external-medical-api-minute', 'throttle:external-medical-api-daily'])
     ->group(function () {
-        Route::get('/medical/applicants', [ExternalMedicalApiController::class, 'index']);
         Route::get('/medical/applicants/idp/{idpUserId}', [ExternalMedicalApiController::class, 'showByIdpUserId']);
         Route::get('/medical/applicants/{referenceNumber}', [ExternalMedicalApiController::class, 'showByReferenceNumber']);
     });
