@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use App\Listeners\LogUserLogin;
 use App\Listeners\LogUserLogout;
@@ -51,6 +52,21 @@ class AppServiceProvider extends ServiceProvider
             'student-read' => 'Fetch enrolled student profiles',
             'program-read' => 'Fetch active programs list',
         ]);
+
+        // Custom rate limiter for the /oauth/token endpoint.
+        // Passport hardcodes 'middleware' => 'throttle' which defaults to
+        // 60 req/min keyed by IP. On Railway, behind the reverse proxy,
+        // ALL external clients can share the same IP — causing legitimate
+        // token requests to be rejected with 429.
+        // We key by client_id from the POST body so each OAuth client
+        // gets its own bucket.
+        RateLimiter::for('oauth-token', function (Request $request) {
+            $clientId = $request->input('client_id', '');
+            $key = $clientId ?: $request->ip();
+
+            return Limit::perMinute(120)->by('oauth:' . $key);
+        });
+
 
         RateLimiter::for('external-api-second', function ($request) {
             return Limit::perSecond((int) config('services.external_api.second_limit', 5))
@@ -123,23 +139,6 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(60)
                     ->by($ipKey),
             ];
-            $refNumber = (string) $request->input('referenceNumber', '');
-            $refKey    = 'ref:' . hash('sha256', $refNumber);
-            $ipKey     = 'ip:' . $request->ip();
-
-            return [
-                // Layer 1: 10 checks/min per reference number
-                Limit::perMinute(10)
-                    ->by($refKey),
-
-                // Layer 2: 60 checks/day per reference number (slow enumeration prevention)
-                Limit::perDay(60)
-                    ->by($refKey . ':daily'),
-
-                // Layer 3: 60 requests/min per IP (flood backstop, safe for shared WiFi)
-                Limit::perMinute(60)
-                    ->by($ipKey),
-            ];
         });
 
         RateLimiter::for('emails', function () {
@@ -147,6 +146,19 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Passport::setClientUuids(true);
+
+        // Override Passport's /oauth/token route AFTER Passport registers it.
+        // Passport hardcodes 'middleware' => 'throttle' (60/min by IP).
+        // On Railway, behind the reverse proxy, all clients can share the
+        // same IP — exhausting the 60/min bucket globally.
+        // We replace it with our named 'oauth-token' limiter (120/min by client_id).
+        $this->app->booted(function () {
+            Route::post('/oauth/token', [
+                'uses' => '\Laravel\Passport\Http\Controllers\AccessTokenController@issueToken',
+                'as' => 'passport.token',
+                'middleware' => 'throttle:oauth-token',
+            ]);
+        });
 
         DB::listen(function (QueryExecuted $query) {
             if ($query->time > 500) {
