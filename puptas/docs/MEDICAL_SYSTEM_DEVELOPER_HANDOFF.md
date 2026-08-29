@@ -7,7 +7,7 @@ Welcome to the PUPTAS Medical API integration guide. This document contains ever
 - **Base URL**: `/api/v1/`
 - **Host**: `puptas.undraftedbsit2027.com`
 - **Required Scopes**: `medical-read` (for fetching data), `medical-write` (for sending webhooks)
-- **Rate Limits**: 5 req/sec, 80 req/min, 100 req/day
+- **Rate Limits**: 10 req/sec, 200 req/min, 1500 req/day
 
 ---
 

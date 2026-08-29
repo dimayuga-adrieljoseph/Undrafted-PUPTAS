@@ -88,6 +88,52 @@ class TestPasserController extends Controller
             throw $e;
         }
 
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $unmaskRequested = $request->boolean('unmask', false);
+        $shouldMask = \App\Helpers\DataMaskingHelper::shouldMask($user, $unmaskRequested);
+
+        if ($unmaskRequested) {
+            if (!\App\Helpers\DataMaskingHelper::canUnmask($user)) {
+                $this->auditLogService->logActivity(
+                    \App\Models\AuditLog::ACTION_UPDATE,
+                    'Security',
+                    "Unauthorized PII unmask attempt blocked on Test Passers for User ID {$user->id} (Role ID: {$user->role_id}).",
+                    $user,
+                    \App\Models\AuditLog::CATEGORY_AUTHENTICATION
+                );
+
+                abort(403, 'Forbidden: You do not have security clearance to unmask personal information.');
+            }
+
+            $this->auditLogService->logActivity(
+                \App\Models\AuditLog::ACTION_READ,
+                'Admission Data',
+                "Staff User ID {$user->id} ({$user->firstname} {$user->lastname}) unmasked PII on Test Passers view.",
+                $user,
+                \App\Models\AuditLog::CATEGORY_AUDIT_ACCESS
+            );
+        }
+
+        // Apply dynamic PII masking to passer records
+        $passers->getCollection()->transform(function ($p) use ($shouldMask) {
+            $p->is_masked = $shouldMask;
+            if ($shouldMask) {
+                $p->first_name = \App\Helpers\DataMaskingHelper::maskName($p->first_name);
+                $p->surname = \App\Helpers\DataMaskingHelper::maskName($p->surname);
+                if ($p->middle_name) {
+                    $p->middle_name = \App\Helpers\DataMaskingHelper::maskName($p->middle_name);
+                }
+                $p->email = \App\Helpers\DataMaskingHelper::maskEmail($p->email);
+                if ($p->contact_number) {
+                    $p->contact_number = \App\Helpers\DataMaskingHelper::maskPhone($p->contact_number);
+                }
+                if ($p->reference_number) {
+                    $p->reference_number = \App\Helpers\DataMaskingHelper::maskReferenceNumber($p->reference_number);
+                }
+            }
+            return $p;
+        });
+
         // Get filter options for dropdowns
         $filterOptions = $this->getFilterOptions($schoolYear);
 
@@ -101,6 +147,7 @@ class TestPasserController extends Controller
             'score' => $request->input('score'),
             'sort_key' => $request->input('sort_key', 'pupcet_total_score'),
             'sort_order' => $request->input('sort_order', 'desc'),
+            'unmask' => $unmaskRequested ? 1 : null,
         ];
 
         $programs = \App\Models\Program::orderBy('name', 'asc')->get(['id', 'name', 'code']);
@@ -110,6 +157,7 @@ class TestPasserController extends Controller
             'filterOptions' => $filterOptions,
             'filters' => $filters,
             'programs' => $programs,
+            'isMasked' => $shouldMask,
             'registrationUrl' => url('/links/register'),
             'admissionCriteriaUrl' => url('/links/admission-criteria'),
             'facebookUrl' => url('/links/facebook'),
@@ -232,6 +280,10 @@ class TestPasserController extends Controller
             return response()->json(['passers' => []]);
         }
 
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $unmaskRequested = $request->boolean('unmask', false);
+        $shouldMask = \App\Helpers\DataMaskingHelper::shouldMask($user, $unmaskRequested);
+
         $passers = TestPasser::whereIn('test_passer_id', $ids)
             ->select([
                 'test_passer_id',
@@ -245,6 +297,18 @@ class TestPasserController extends Controller
                 'waiver_program_offering',
             ])
             ->get();
+
+        if ($shouldMask) {
+            $passers->transform(function ($p) {
+                $p->first_name = \App\Helpers\DataMaskingHelper::maskName($p->first_name);
+                $p->surname = \App\Helpers\DataMaskingHelper::maskName($p->surname);
+                if ($p->middle_name) {
+                    $p->middle_name = \App\Helpers\DataMaskingHelper::maskName($p->middle_name);
+                }
+                $p->email = \App\Helpers\DataMaskingHelper::maskEmail($p->email);
+                return $p;
+            });
+        }
 
         return response()->json(['passers' => $passers]);
     }

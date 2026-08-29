@@ -104,9 +104,29 @@ const fetchStats = async () => {
     }
 };
 
+const recentListContainer = ref(null);
+const dynamicPageSize = ref(2);
+
+const updateDynamicPageSize = () => {
+    if (!recentListContainer.value) return;
+    const availableHeight = recentListContainer.value.clientHeight;
+    // Each applicant card is ~115px (including padding, text, borders) with gap-3 (12px) = ~127px per item
+    const calculated = Math.floor((availableHeight + 12) / 127);
+    dynamicPageSize.value = Math.max(2, calculated);
+};
+
+let resizeObserver = null;
 onMounted(() => {
     fetchUsers();
     fetchStats();
+    if (recentListContainer.value && typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver(() => {
+            updateDynamicPageSize();
+        });
+        resizeObserver.observe(recentListContainer.value);
+    }
+    updateDynamicPageSize();
+
     autoRefreshTimer.value = setInterval(async () => {
         await fetchUsers();
         await fetchStats();
@@ -123,6 +143,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+    }
     if (autoRefreshTimer.value) {
         clearInterval(autoRefreshTimer.value);
         autoRefreshTimer.value = null;
@@ -141,7 +165,6 @@ const filteredUsers = computed(() => {
     });
 });
 
-const PAGE_SIZE = 2;
 const currentPage = ref(1);
 
 const totalRecordPages = computed(() => {
@@ -157,7 +180,7 @@ const totalRecordPages = computed(() => {
                    u.email?.toLowerCase().includes(q);
           })
         : visible;
-    return Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    return Math.max(1, Math.ceil(filtered.length / dynamicPageSize.value));
 });
 
 const displayedUsers = computed(() => {
@@ -173,11 +196,17 @@ const displayedUsers = computed(() => {
             u.lastname?.toLowerCase().includes(q) ||
             u.email?.toLowerCase().includes(q)
         );
-        const start = (currentPage.value - 1) * PAGE_SIZE;
-        return filtered.slice(start, start + PAGE_SIZE);
+        const start = (currentPage.value - 1) * dynamicPageSize.value;
+        return filtered.slice(start, start + dynamicPageSize.value);
     }
-    const start = (currentPage.value - 1) * PAGE_SIZE;
-    return visible.slice(start, start + PAGE_SIZE);
+    const start = (currentPage.value - 1) * dynamicPageSize.value;
+    return visible.slice(start, start + dynamicPageSize.value);
+});
+
+watch([searchQuery, dynamicPageSize], () => {
+    if (currentPage.value > totalRecordPages.value) {
+        currentPage.value = Math.max(1, totalRecordPages.value);
+    }
 });
 
 watch(searchQuery, () => { currentPage.value = 1; });
@@ -304,11 +333,10 @@ const untagApplication = async () => {
     <Head title="Record Staff Dashboard" />
     <RecordStaffLayout>
         <div class="dash-shell">
-        <!-- Header Section -->
-        <div class="px-4 md:px-8 mb-8 shrink-0">
-            <div
-                class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-            >
+        <!-- Header & Stats Section -->
+        <div class="px-4 md:px-8 mb-6 shrink-0 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-6">
+            <!-- Header Left -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-1">
                 <div>
                     <BlurText
                         text="Records Dashboard"
@@ -326,7 +354,7 @@ const untagApplication = async () => {
                         class-name="text-gray-600 dark:text-gray-400 mt-2"
                     />
                 </div>
-                <div class="relative w-full md:w-64">
+                <div class="relative w-full sm:w-64 shrink-0">
                     <input
                         v-model="searchQuery"
                         type="text"
@@ -348,68 +376,27 @@ const untagApplication = async () => {
                     </svg>
                 </div>
             </div>
-        </div>
 
-        <!-- Stats Grid -->
-        <div
-            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-8 mb-8 shrink-0"
-        >
-            <div
-                v-for="(item, index) in summaryItems"
-                :key="index"
-                class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
-            >
-                <div class="flex items-start justify-between">
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0 xl:min-w-[420px]">
+                <div
+                    v-for="(item, index) in summaryItems"
+                    :key="index"
+                    class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4"
+                >
                     <div>
-                        <p
-                            class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2"
-                        >
-                            {{ item.label }}
-                        </p>
-                        <p
-                            class="text-3xl font-bold text-gray-900 dark:text-white"
-                        >
-                            {{ item.value.toLocaleString() }}
-                        </p>
+                        <p class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1">{{ item.label }}</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none">{{ item.value.toLocaleString() }}</p>
                     </div>
-                    <div
-                        :class="[
-                            'p-3 rounded-lg',
-                            item.color === 'blue'
-                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300'
-                                : item.color === 'green'
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300'
-                                : item.color === 'yellow'
-                                ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300'
-                                : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300',
-                        ]"
-                    >
-                        <component :is="item.icon" class="w-6 h-6" />
+                    <div :class="[
+                        'p-2.5 rounded-lg shrink-0',
+                        item.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300' :
+                        item.color === 'green' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300' :
+                        item.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300' :
+                        'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300'
+                    ]">
+                        <component :is="item.icon" class="w-5 h-5" />
                     </div>
-                </div>
-                <div class="mt-4">
-                    <div
-                        class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
-                    >
-                        <div
-                            :class="[
-                                'h-full rounded-full',
-                                item.color === 'blue'
-                                    ? 'bg-blue-500'
-                                    : item.color === 'green'
-                                    ? 'bg-green-500'
-                                    : item.color === 'yellow'
-                                    ? 'bg-yellow-500'
-                                    : 'bg-red-500',
-                            ]"
-                            :style="{ width: item.percentage + '%' }"
-                        ></div>
-                    </div>
-                    <p
-                        class="text-right text-xs text-gray-500 dark:text-gray-400 mt-2"
-                    >
-                        {{ item.percentage }}% of total
-                    </p>
                 </div>
             </div>
         </div>
@@ -419,9 +406,9 @@ const untagApplication = async () => {
             <!-- Left Column: Programs Overview -->
             <div class="lg:col-span-2 flex flex-col min-h-0">
                 <div
-                    class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 flex-1 flex flex-col"
+                    class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col min-h-0"
                 >
-                    <div class="mb-6">
+                    <div class="mb-4 shrink-0">
                         <h3
                             class="text-xl font-semibold text-gray-900 dark:text-white mb-1"
                         >
@@ -433,64 +420,69 @@ const untagApplication = async () => {
                     </div>
 
                     <div
-                        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+                        class="flex-1 min-h-0 overflow-y-auto pr-1"
                     >
                         <div
-                            v-for="program in programs"
-                            :key="program.id"
-                            class="group"
+                            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
                         >
                             <div
-                                class="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-900/30 rounded-xl p-4 text-center border-2 border-pink-200 dark:border-pink-800 transition-all duration-300"
+                                v-for="program in programs"
+                                :key="program.id"
+                                class="group"
                             >
                                 <div
-                                    class="w-12 h-12 mx-auto mb-3 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-bold text-lg dark:bg-gray-900 dark:text-gray-900"
+                                    class="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-900/30 rounded-xl p-3.5 text-center border-2 border-pink-200 dark:border-pink-800 transition-all duration-300 hover:shadow-sm"
                                 >
-                                    {{ program.code ? program.code.charAt(0) : '?' }}
+                                    <div
+                                        class="w-10 h-10 mx-auto mb-2 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-bold text-base dark:bg-gray-900 dark:text-white"
+                                    >
+                                        {{ program.code ? program.code.charAt(0) : '?' }}
+                                    </div>
+                                    <p
+                                        class="font-semibold text-gray-900 dark:text-white text-xs mb-1 truncate"
+                                        :title="program.code || 'N/A'"
+                                    >
+                                        {{ program.code || 'N/A' }}
+                                    </p>
+                                    <p class="text-xl font-bold text-[#9E122C] dark:text-white">
+                                        {{ program.applications_count || 0 }}
+                                    </p>
+                                    <p
+                                        class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5"
+                                    >
+                                        applications
+                                    </p>
                                 </div>
-                                <p
-                                    class="font-semibold text-gray-900 dark:text-white text-sm mb-1"
-                                >
-                                    {{ program.code || 'N/A' }}
-                                </p>
-                                <p class="text-2xl font-bold text-[#9E122C] dark:text-white">
-                                    {{ program.applications_count || 0 }}
-                                </p>
-                                <p
-                                    class="text-xs text-gray-500 dark:text-gray-400 mt-1"
-                                >
-                                    applications
-                                </p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Program Statistics -->
-                    <div class="mt-6 grid grid-cols-2 gap-4">
+                    <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-4 shrink-0">
                         <div
-                            class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                            class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
                         >
                             <p
-                                class="text-sm text-gray-500 dark:text-gray-400 mb-1"
+                                class="text-xs text-gray-500 dark:text-gray-400 mb-1"
                             >
                                 Total Programs
                             </p>
                             <p
-                                class="text-2xl font-bold text-gray-900 dark:text-white"
+                                class="text-xl font-bold text-gray-900 dark:text-white"
                             >
                                 {{ programs.length }}
                             </p>
                         </div>
                         <div
-                            class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                            class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
                         >
                             <p
-                                class="text-sm text-gray-500 dark:text-gray-400 mb-1"
+                                class="text-xs text-gray-500 dark:text-gray-400 mb-1"
                             >
                                 Total Applications
                             </p>
                             <p
-                                class="text-2xl font-bold text-gray-900 dark:text-white"
+                                class="text-xl font-bold text-gray-900 dark:text-white"
                             >
                                 {{ summary?.total || 0 }}
                             </p>
@@ -523,7 +515,7 @@ const untagApplication = async () => {
                         </Link>
                     </div>
 
-                    <div class="space-y-3 flex-1 overflow-y-auto min-h-0">
+                    <div ref="recentListContainer" class="space-y-3 flex-1 overflow-y-auto min-h-0">
                         <div
                             v-for="applicant in displayedUsers"
                             :key="applicant.id"

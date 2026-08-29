@@ -24,6 +24,8 @@ Route::get('/dev-login', function (Request $request) {
         $user = User::where('email', $email)->first();
         if ($user) {
             Auth::login($user);
+            session(['local_bypass' => true]);
+            $request->session()->put('local_bypass', true);
 
             $redirect = match ((int) $user->role_id) {
                 1 => '/applicant-dashboard',
@@ -483,13 +485,15 @@ Route::get('/dev-logout-and-redirect', function (\Illuminate\Http\Request $reque
     return redirect('/');
 })->middleware('web');
 
-Route::get('/dev-login/{id}', function ($id) {
+Route::get('/dev-login/{id}', function (Request $request, $id) {
     if (!config('app.debug')) {
         abort(404);
     }
 
     $user = \App\Models\User::findOrFail($id);
     Auth::login($user);
+    session(['local_bypass' => true]);
+    $request->session()->put('local_bypass', true);
 
     $redirect = match ((int) $user->role_id) {
         1 => '/applicant-dashboard',

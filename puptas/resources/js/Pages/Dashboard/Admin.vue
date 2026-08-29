@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
 import { LineChart } from "vue-chart-3";
 import AppLayout from "@/Layouts/AppLayout.vue";
@@ -238,7 +238,35 @@ const getStatusClass = (status) => {
   return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
 };
 
-const PAGE_SIZE = 2;
+const recentListContainer = ref(null);
+const dynamicPageSize = ref(2);
+
+const updateDynamicPageSize = () => {
+  if (!recentListContainer.value) return;
+  const availableHeight = recentListContainer.value.clientHeight;
+  // Each applicant card is ~115px (including padding, text, borders) with gap-3 (12px) = ~127px per item
+  const calculated = Math.floor((availableHeight + 12) / 127);
+  dynamicPageSize.value = Math.max(2, calculated);
+};
+
+let resizeObserver = null;
+onMounted(() => {
+  if (recentListContainer.value && typeof ResizeObserver !== "undefined") {
+    resizeObserver = new ResizeObserver(() => {
+      updateDynamicPageSize();
+    });
+    resizeObserver.observe(recentListContainer.value);
+  }
+  updateDynamicPageSize();
+});
+
+onBeforeUnmount(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
+});
+
 const currentPage = ref(1);
 
 const filteredUsers = computed(() => {
@@ -251,11 +279,17 @@ const filteredUsers = computed(() => {
   );
 });
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / PAGE_SIZE)));
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / dynamicPageSize.value)));
 
 const displayedUsers = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE;
-  return filteredUsers.value.slice(start, start + PAGE_SIZE);
+  const start = (currentPage.value - 1) * dynamicPageSize.value;
+  return filteredUsers.value.slice(start, start + dynamicPageSize.value);
+});
+
+watch([searchQuery, dynamicPageSize], () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = Math.max(1, totalPages.value);
+  }
 });
 
 watch(searchQuery, () => { currentPage.value = 1; });
@@ -538,7 +572,7 @@ const untagApplication = async () => {
             </Link>
           </div>
           
-          <div class="space-y-3 flex-1 overflow-y-auto min-h-0">
+          <div ref="recentListContainer" class="space-y-3 flex-1 overflow-y-auto min-h-0">
             <div
               v-for="user in displayedUsers"
               :key="user.id"
