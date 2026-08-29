@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { LineChart } from "vue-chart-3";
 import { Head, Link, router } from "@inertiajs/vue3";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
@@ -229,8 +229,34 @@ const getButtonClass = (type) => {
     return classes[type] || classes.secondary;
 };
 
+const recentListContainer = ref(null);
+const dynamicPageSize = ref(2);
+
+const updateDynamicPageSize = () => {
+    if (!recentListContainer.value) return;
+    const availableHeight = recentListContainer.value.clientHeight;
+    // Each applicant card is ~115px (including padding, text, borders) with gap-3 (12px) = ~127px per item
+    const calculated = Math.floor((availableHeight + 12) / 127);
+    dynamicPageSize.value = Math.max(2, calculated);
+};
+
+let resizeObserver = null;
 onMounted(() => {
     fetchPrograms();
+    if (recentListContainer.value && typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver(() => {
+            updateDynamicPageSize();
+        });
+        resizeObserver.observe(recentListContainer.value);
+    }
+    updateDynamicPageSize();
+});
+
+onBeforeUnmount(() => {
+    if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+    }
 });
 
 const filteredUsers = computed(() => {
@@ -246,14 +272,19 @@ const filteredUsers = computed(() => {
     });
 });
 
-const PAGE_SIZE = 2;
 const currentPage = ref(1);
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / PAGE_SIZE)));
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / dynamicPageSize.value)));
 
 const displayedUsers = computed(() => {
-    const start = (currentPage.value - 1) * PAGE_SIZE;
-    return filteredUsers.value.slice(start, start + PAGE_SIZE);
+    const start = (currentPage.value - 1) * dynamicPageSize.value;
+    return filteredUsers.value.slice(start, start + dynamicPageSize.value);
+});
+
+watch([searchQuery, dynamicPageSize], () => {
+    if (currentPage.value > totalPages.value) {
+        currentPage.value = Math.max(1, totalPages.value);
+    }
 });
 
 watch(searchQuery, () => { currentPage.value = 1; });
@@ -586,9 +617,10 @@ const fetchPrograms = async () => {
             </div>
         </transition>
 
-        <!-- Header Section -->
-        <div class="px-4 md:px-8 mb-8 shrink-0">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <!-- Header & Stats Section -->
+        <div class="px-4 md:px-8 mb-6 shrink-0 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-6">
+            <!-- Header Left -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-1">
                 <div>
                     <BlurText
                         text="Interviewer Dashboard"
@@ -606,7 +638,7 @@ const fetchPrograms = async () => {
                         class-name="text-gray-600 dark:text-gray-400 mt-2"
                     />
                 </div>
-                <div class="relative w-full md:w-64">
+                <div class="relative w-full sm:w-64 shrink-0">
                     <input
                         id="searchQuery"
                         name="searchQuery"
@@ -620,44 +652,27 @@ const fetchPrograms = async () => {
                     </svg>
                 </div>
             </div>
-        </div>
 
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-8 mb-8 shrink-0">
-            <div
-                v-for="(item, index) in summaryItems"
-                :key="index"
-                class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
-            >
-                <div class="flex items-start justify-between">
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0 xl:min-w-[420px]">
+                <div
+                    v-for="(item, index) in summaryItems"
+                    :key="index"
+                    class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4"
+                >
                     <div>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">{{ item.label }}</p>
-                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ item.value.toLocaleString() }}</p>
+                        <p class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1">{{ item.label }}</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none">{{ item.value.toLocaleString() }}</p>
                     </div>
                     <div :class="[
-                        'p-3 rounded-lg',
+                        'p-2.5 rounded-lg shrink-0',
                         item.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300' :
                         item.color === 'green' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300' :
                         item.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300' :
                         'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300'
                     ]">
-                        <component :is="item.icon" class="w-6 h-6" />
+                        <component :is="item.icon" class="w-5 h-5" />
                     </div>
-                </div>
-                <div class="mt-4">
-                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div 
-                            :class="[
-                                'h-full rounded-full',
-                                item.color === 'blue' ? 'bg-blue-500' :
-                                item.color === 'green' ? 'bg-green-500' :
-                                item.color === 'yellow' ? 'bg-yellow-500' :
-                                'bg-red-500'
-                            ]"
-                            :style="{ width: item.percentage + '%' }"
-                        ></div>
-                    </div>
-                    <p class="text-right text-xs text-gray-500 dark:text-gray-400 mt-2">{{ item.percentage }}% of total</p>
                 </div>
             </div>
         </div>
@@ -765,7 +780,7 @@ const fetchPrograms = async () => {
                         </Link>
                     </div>
                     
-                    <div class="space-y-3 flex-1 overflow-y-auto min-h-0">
+                    <div ref="recentListContainer" class="space-y-3 flex-1 overflow-y-auto min-h-0">
                         <div
                             v-for="applicant in displayedUsers"
                             :key="applicant.id"
