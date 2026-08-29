@@ -55,6 +55,7 @@ class User extends Authenticatable
         'privacy_consent',
         'privacy_consent_at',
         'is_active',
+        'anonymized_at',
     ];
 
     /**
@@ -210,6 +211,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'privacy_consent_at' => 'datetime',
             'is_active' => 'boolean',
+            'anonymized_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
     }
@@ -236,5 +238,66 @@ class User extends Authenticatable
     public function isDeactivated(): bool
     {
         return !$this->isActive();
+    }
+
+    /**
+     * Permanently anonymize the user's personal identifying information (PII).
+     * This operation is irreversible and audited.
+     *
+     * @return bool
+     */
+    public function anonymize(): bool
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () {
+            $oldValues = $this->only(['email', 'firstname', 'lastname', 'idp_user_id', 'is_active']);
+            
+            // Guaranteed unique email to prevent collision on users.email unique index
+            $uniqueSuffix = (string) $this->id . '_' . \Illuminate\Support\Str::uuid()->toString();
+            $anonymizedEmail = "anon_{$uniqueSuffix}@privacy.local";
+
+            $this->forceFill([
+                'email'                     => $anonymizedEmail,
+                'firstname'                 => 'ANONYMIZED',
+                'lastname'                  => 'USER_' . $this->id,
+                'middlename'                => null,
+                'salutation'                => null,
+                'idp_user_id'               => null,
+                'password'                  => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(32)),
+                'remember_token'            => null,
+                'two_factor_secret'         => null,
+                'two_factor_recovery_codes' => null,
+                'is_active'                 => false,
+                'anonymized_at'             => now(),
+            ])->save();
+
+            // Cascade to associated applicant profile
+            if ($this->applicantProfile) {
+                $this->applicantProfile->anonymize();
+            }
+
+            // Write immutable audit log
+            app(\App\Services\AuditLogService::class)->logActivity(
+                \App\Models\AuditLog::ACTION_UPDATE,
+                'User Management',
+                "User ID {$this->id} permanently anonymized (PII scrubbed).",
+                $this,
+                \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                $oldValues,
+                [
+                    'status'        => 'ANONYMIZED',
+                    'anonymized_at' => $this->anonymized_at->toIso8601String(),
+                ]
+            );
+
+            return true;
+        });
+    }
+
+    /**
+     * Determine if the user has been anonymized.
+     */
+    public function isAnonymized(): bool
+    {
+        return $this->anonymized_at !== null;
     }
 }

@@ -19,6 +19,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        $driver = Schema::getConnection()->getDriverName();
+        if (!in_array($driver, ['mysql', 'mariadb'])) {
+            return;
+        }
+
         // Schema::table fullText() helper is available in Laravel 9+.
         Schema::table('applicant_profiles', function (Blueprint $table) {
             $existing = collect(Schema::getIndexes('applicant_profiles'))
@@ -36,6 +41,11 @@ return new class extends Migration
 
     public function down(): void
     {
+        $driver = Schema::getConnection()->getDriverName();
+        if (!in_array($driver, ['mysql', 'mariadb'])) {
+            return;
+        }
+
         Schema::table('applicant_profiles', function (Blueprint $table) {
             $table->dropFullText('applicant_profiles_name_email_fulltext');
         });

@@ -122,6 +122,14 @@ class Handler extends ExceptionHandler
                 ], 429, $e->getHeaders());
             }
 
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                return response()->json([
+                    'success'   => false,
+                    'message'   => $e->getMessage() ?: 'An HTTP error occurred.',
+                    'errorCode' => 'HTTP_' . $e->getStatusCode(),
+                ], $e->getStatusCode(), ['Content-Type' => 'application/json']);
+            }
+
             return response()->json([
                 'success'   => false,
                 'message'   => 'Something went wrong. Please try again later.',
