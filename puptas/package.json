@@ -6,11 +6,16 @@
         "dev": "vite",
         "dev:all": "concurrently \"php artisan serve\" \"npm run dev\"",
         "test": "vitest",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --ui",
+        "test:e2e:headed": "playwright test --headed",
+        "test:e2e:debug": "playwright test --debug",
         "lint": "eslint \"resources/js/**/*.vue\"",
         "lint:fix": "eslint --fix \"resources/js/**/*.vue\""
     },
     "devDependencies": {
         "@inertiajs/vue3": "^1.0.14",
+        "@playwright/test": "^1.62.1",
         "@tailwindcss/forms": "^0.5.7",
         "@tailwindcss/typography": "^0.5.10",
         "@vitejs/plugin-vue": "^5.0.0",
