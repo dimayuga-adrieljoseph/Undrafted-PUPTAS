@@ -85,8 +85,29 @@ class KpiService
 
         // ── Slot Utilization Rate ─────────────────────────────────────────
         // Use the same enrolled count (includes cleared_for_enrollment and medical completed)
-        // Denominator is the sum of all program slots (dynamic capacity calculation)
-        $totalCapacity = Program::where('slots', '>', 0)->sum('slots');
+        // Denominator needs to account for slots being decremented when students enroll
+        // Calculate total capacity by adding remaining slots + enrolled count per program
+        $programs = Program::all();
+        $totalCapacity = 0;
+        
+        foreach ($programs as $prog) {
+            // Calculate enrolled count for this program
+            $progEnrolled = Application::distinct()
+                ->where('program_id', $prog->id)
+                ->where(function ($q) {
+                    $q->where('enrollment_status', 'officially_enrolled')
+                      ->orWhere('status', 'cleared_for_enrollment')
+                      ->orWhereHas('processes', fn ($p) =>
+                          $p->where('stage', 'medical')
+                            ->where('status', 'completed')
+                            ->where('action', 'passed')
+                      );
+                })->count('applications.id');
+            
+            // Original capacity = remaining slots + enrolled (since slots are decremented on enrollment)
+            $totalCapacity += ($prog->slots + $progEnrolled);
+        }
+        
         $slotUtilizationValue = $this->safeDivide($enrolledCount, (int) $totalCapacity);
 
         $slotUtilizationKpi = $this->buildKpi(
@@ -120,7 +141,7 @@ class KpiService
         );
 
         // ── Per-Program Slot Utilization ──────────────────────────────────
-        $programs = Program::where('slots', '>', 0)->get();
+        $programs = Program::all();
 
         $perProgramBreakdown = [];
         $programValues       = [];
@@ -141,12 +162,15 @@ class KpiService
                 })
                 ->count('applications.id');
 
-            $programValue = $this->safeDivide($programEnrolled, (int) $program->slots);
+            // Original capacity = remaining slots + enrolled (since slots are decremented on enrollment)
+            $originalCapacity = $program->slots + $programEnrolled;
+            
+            $programValue = $this->safeDivide($programEnrolled, $originalCapacity);
 
             $perProgramBreakdown[] = [
                 'code'     => $program->code,
                 'name'     => $program->name,
-                'slots'    => (int) $program->slots,
+                'slots'    => $originalCapacity, // Show original capacity, not remaining
                 'enrolled' => $programEnrolled,
                 'value'    => $programValue,
             ];
@@ -344,3 +368,5 @@ class KpiService
         ];
     }
 }
+
+
