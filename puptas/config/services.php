@@ -109,6 +109,7 @@ return [
             'admin' => env('TEST_SETUP_ADMIN_PASSWORD', 'UGCA4zWe1K7Sfl'),
             'registrar' => env('TEST_SETUP_REGISTRAR_PASSWORD', 'rKuFYl4jMmTI8&'),
         ],
+    ],
     'oauth' => [
         'token_rate_limit' => (int) env('OAUTH_TOKEN_RATE_LIMIT', 300),
     ],
