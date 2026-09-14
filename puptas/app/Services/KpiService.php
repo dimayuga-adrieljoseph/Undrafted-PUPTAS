@@ -54,15 +54,17 @@ class KpiService
         // ── Enrollment Rate ──────────────────────────────────────────────
         // Numerator: applicants with enrollment_status = 'officially_enrolled'
         // OR applicants who completed medical (for record in registrar)
-        $enrolledCount = Application::where(function ($q) {
-            $q->where('enrollment_status', 'officially_enrolled')
-              ->orWhere('status', 'cleared_for_enrollment')
-              ->orWhereHas('processes', fn ($p) =>
-                  $p->where('stage', 'medical')
-                    ->where('status', 'completed')
-                    ->where('action', 'passed')
-              );
-        })->count();
+        // Use distinct() to avoid counting the same application multiple times
+        $enrolledCount = Application::distinct()
+            ->where(function ($q) {
+                $q->where('enrollment_status', 'officially_enrolled')
+                  ->orWhere('status', 'cleared_for_enrollment')
+                  ->orWhereHas('processes', fn ($p) =>
+                      $p->where('stage', 'medical')
+                        ->where('status', 'completed')
+                        ->where('action', 'passed')
+                  );
+            })->count('applications.id');
 
         // Denominator: applicants who passed the interviewer stage
         $interviewPassedCount = Application::whereHas('processes', fn ($q) =>
@@ -125,7 +127,9 @@ class KpiService
 
         foreach ($programs as $program) {
             // Count applicants who are officially enrolled OR completed medical (for record in registrar)
-            $programEnrolled = Application::where('program_id', $program->id)
+            // Use distinct() to avoid counting the same application multiple times
+            $programEnrolled = Application::distinct()
+                ->where('program_id', $program->id)
                 ->where(function ($q) {
                     $q->where('enrollment_status', 'officially_enrolled')
                       ->orWhere('status', 'cleared_for_enrollment')
@@ -135,7 +139,7 @@ class KpiService
                             ->where('action', 'passed')
                       );
                 })
-                ->count();
+                ->count('applications.id');
 
             $programValue = $this->safeDivide($programEnrolled, (int) $program->slots);
 
