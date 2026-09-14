@@ -112,7 +112,16 @@ class RecordStaffDashboardController extends Controller
     {
         $this->ensureRole($this->getRoleId());
 
-        $summary = $this->applicationService->getApplicationSummary();
+        // Applicants currently cleared for enrollment (in queue for records)
+        $inProgress = \App\Models\Application::where('status', 'cleared_for_enrollment')->count();
+
+        // Applicants already officially enrolled (processed by records)
+        $processed = \App\Models\Application::where('enrollment_status', 'officially_enrolled')->count();
+
+        $summary = [
+            'in_progress' => $inProgress,
+            'processed'   => $processed,
+        ];
 
         // Count officially enrolled and accepted per program
         $programs = Program::select('id', 'code', 'name', 'slots')

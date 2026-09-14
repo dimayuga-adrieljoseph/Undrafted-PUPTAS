@@ -29,7 +29,7 @@ class CheckIdpHealth extends Command
     {
         // If IDP Health check is disabled (e.g., in staging), we do not run it
         // and we ensure the cache is set to false (meaning IDP is NOT down).
-        if (!env('IDP_HEALTH_CHECK_ENABLED', true)) {
+        if (!config('services.idp.health_check_enabled', true)) {
             Cache::put('idp_status_down', false);
             $this->info('IDP Health check is disabled in this environment.');
             return Command::SUCCESS;

@@ -33,6 +33,16 @@ if [ ! -f /var/www/html/public/index.php ]; then
 fi
 
 # =============================================================================
+# FIX: Dynamic port — Railway injects $PORT at runtime
+# =============================================================================
+APP_PORT="${PORT:-8080}"
+echo "[4b/11] Configuring Apache to listen on port ${APP_PORT}..."
+# Listen on IPv4 only — Railway containers do not support IPv6 networking.
+# Binding to [::] causes Apache to crash with "Cannot assign requested address".
+echo "Listen 0.0.0.0:${APP_PORT}" > /etc/apache2/ports.conf
+sed -i "s/<VirtualHost \*:[0-9]*>/<VirtualHost *:${APP_PORT}>/g" /etc/apache2/sites-available/000-default.conf
+
+# =============================================================================
 # FIX: Apache MPM Conflict - Runtime verification and fix
 # =============================================================================
 echo "[5/11] Checking/fixing Apache MPM..."
@@ -75,10 +85,59 @@ if [ -z "${APP_KEY:-}" ]; then
 fi
 echo "[6b/12] APP_KEY: present (from environment)"
 
-# Run database migrations
-echo "[7/13] Running database migrations..."
+# Install Passport OAuth keys from environment variables (Railway / production)
+echo "[7b/13] Installing Passport keys..."
+if [ -n "${PASSPORT_PRIVATE_KEY:-}" ] && [ -n "${PASSPORT_PUBLIC_KEY:-}" ]; then
+    echo "${PASSPORT_PRIVATE_KEY}" > storage/oauth-private.key
+    echo "${PASSPORT_PUBLIC_KEY}" > storage/oauth-public.key
+    chmod 600 storage/oauth-private.key storage/oauth-public.key
+    chown www-data:www-data storage/oauth-private.key storage/oauth-public.key
+    echo "[7b/13] Passport keys installed from environment."
+elif [ -f storage/oauth-private.key ]; then
+    echo "[7b/13] Passport keys already present on disk."
+else
+    echo "[7b/13] WARNING: No Passport keys found. Running passport:keys to generate..."
+    timeout 30 php artisan passport:keys || echo "[7b/13] WARNING: passport:keys timed out or failed — continuing anyway"
+fi
+
+# Wait for MySQL to be ready to accept real queries (not just TCP-open)
+echo "[7/13] Waiting for MySQL to be ready..."
+DB_WAIT_TIMEOUT=90
+DB_WAIT_INTERVAL=3
+DB_ELAPSED=0
+until php -r "
+    \$host = getenv('DB_HOST') ?: '127.0.0.1';
+    \$port = getenv('DB_PORT') ?: '3306';
+    \$user = getenv('DB_USERNAME') ?: 'root';
+    \$pass = getenv('DB_PASSWORD') ?: '';
+    \$name = getenv('DB_DATABASE') ?: 'railway';
+    echo \"[DB-CHECK] host={\$host} port={\$port} user={\$user} db={\$name}\n\";
+    try {
+        \$dsn = \"mysql:host={\$host};port={\$port};dbname={\$name};charset=utf8mb4;connect_timeout=5\";
+        new PDO(\$dsn, \$user, \$pass, [PDO::ATTR_TIMEOUT => 5, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        echo \"[DB-CHECK] Connection successful!\n\";
+        exit(0);
+    } catch (Exception \$e) {
+        echo \"[DB-CHECK] Failed: \" . \$e->getMessage() . \"\n\";
+        exit(1);
+    }
+"; do
+    if [ "$DB_ELAPSED" -ge "$DB_WAIT_TIMEOUT" ]; then
+        echo "ERROR: MySQL not ready after ${DB_WAIT_TIMEOUT}s. Check DB_HOST/DB_USERNAME/DB_PASSWORD env vars."
+        exit 1
+    fi
+    echo "  ...waiting for MySQL to accept connections (${DB_ELAPSED}s elapsed)"
+    sleep "$DB_WAIT_INTERVAL"
+    DB_ELAPSED=$((DB_ELAPSED + DB_WAIT_INTERVAL))
+done
+echo "[7/13] MySQL is ready. Running migrations..."
 php artisan migrate --force
 echo "[7/13] Migrations complete."
+
+# Seed Passport clients (safe to run on every deploy — idempotent)
+echo "[7c/13] Seeding Passport API clients..."
+php artisan db:seed --class=PassportClientSeeder --force 2>/dev/null || \
+    echo "[7c/13] PassportClientSeeder skipped or already seeded."
 
 # Create storage symlink so public disk is accessible
 echo "[8/13] Creating storage symlink..."
@@ -87,6 +146,23 @@ chown -R www-data:www-data storage/app/public
 php artisan storage:link --force
 chown -h www-data:www-data public/storage 2>/dev/null || true
 echo "[8/13] Storage link created."
+
+# Generate API documentation (base URL resolves from APP_URL at runtime)
+# Only regenerate docs if explicitly requested (REGENERATE_DOCS=true) to avoid
+# slowing down every deploy with a potentially multi-minute scribe run.
+echo "[8b/13] Checking API documentation..."
+if [ "${REGENERATE_DOCS:-false}" = "true" ]; then
+    echo "[8b/13] Generating API documentation (REGENERATE_DOCS=true)..."
+    php artisan vendor:publish --tag=scribe-views --force
+    php artisan scribe:generate
+    php artisan scribe:openapi-to-json \
+      --input=storage/app/private/scribe/openapi.yaml \
+      --output=storage/app/private/scribe/openapi.json \
+      || echo "[8b/13] WARN: openapi-to-json conversion skipped (non-fatal)"
+    echo "[8b/13] API documentation generated."
+else
+    echo "[8b/13] Skipping scribe:generate (set REGENERATE_DOCS=true to regenerate)."
+fi
 
 # Verify routes are registered
 echo "[9/13] Verifying routes..."
@@ -116,6 +192,11 @@ if [ "$1" != "" ]; then
     exec "$@"
 else
     echo "[13/13] Starting Apache..."
+    echo "Apache configured port: ${APP_PORT}"
+    echo "PORT env var: ${PORT:-not set}"
+    # Verify Apache is actually listening on the expected port
+    echo "Apache listen config:"
+    cat /etc/apache2/ports.conf
     echo "=========================================="
     echo "APACHE STARTED SUCCESSFULLY"
     echo "=========================================="

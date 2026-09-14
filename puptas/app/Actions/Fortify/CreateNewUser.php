@@ -99,6 +99,8 @@ class CreateNewUser implements CreatesNewUsers
             'reference_number' => ['required', 'string', 'max:100'],
             'schoolyear' => ['required', 'string', 'exists:graduate_types,label'],
             'school' => ['required', 'string', 'max:255'],
+            'school_address' => ['required', 'string', 'max:255'],
+            'school_principal' => ['nullable', 'string', 'max:255'],
         ];
 
         Validator::make($input, $rules)->validate();
@@ -156,10 +158,12 @@ class CreateNewUser implements CreatesNewUsers
             }
 
             // All checks passed — create the local User record
+            // role_id is intentionally omitted here: the User model's creating
+            // hook defaults new users to Applicant (RoleId::Applicant), and
+            // removing it from $fillable prevents self-escalation.
             $user = User::create([
                 'idp_user_id' => $pendingReg['user_id'] ?? (string) \Illuminate\Support\Str::uuid(),
                 'email' => $email,
-                'role_id' => 1,
                 'firstname' => $input['firstname'],
                 'lastname' => $input['lastname'],
                 'middlename' => $input['middlename'] ?? null,
@@ -182,6 +186,8 @@ class CreateNewUser implements CreatesNewUsers
                 'school' => $input['school'],
                 'strand' => $input['strand'] ?? null,
                 'track' => $input['track'] ?? null,
+                'former_school_address' => $input['school_address'] ?? null,
+                'former_school_principal' => $input['school_principal'] ?? null,
                 'privacy_consent' => true,
                 'privacy_consent_at' => now(),
             ]);

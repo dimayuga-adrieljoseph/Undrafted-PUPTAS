@@ -39,6 +39,15 @@ return [
         'redirect_uri' => env('IDP_REDIRECT_URI'),
         'scope' => env('IDP_SCOPE', 'openid profile email'),
         'allowed_ips' => env('IDP_ALLOWED_IPS'),
+        'health_check_enabled' => (bool) env('IDP_HEALTH_CHECK_ENABLED', true),
+    ],
+
+    'deepseek' => [
+        'key' => env('DEEPSEEK_API_KEY'),
+    ],
+
+    'sar' => [
+        'template_filename' => env('SAR_TEMPLATE_FILENAME', 'SAR-FORM_TEMPLATE-2.pdf'),
     ],
 
     'external_api' => [
@@ -55,8 +64,8 @@ return [
 
     'external_medical_api' => [
         'token' => env('EXTERNAL_MEDICAL_API_TOKEN'),
-        'second_limit' => (int) env('EXTERNAL_MEDICAL_API_SECOND_LIMIT', 5),
-        'minute_limit' => (int) env('EXTERNAL_MEDICAL_API_MINUTE_LIMIT', 80),
+        'second_limit' => (int) env('EXTERNAL_MEDICAL_API_SECOND_LIMIT', 10),
+        'minute_limit' => (int) env('EXTERNAL_MEDICAL_API_MINUTE_LIMIT', 200),
         'daily_limit' => (int) env('EXTERNAL_MEDICAL_API_DAILY_LIMIT', 1500),
     ],
 
@@ -89,6 +98,17 @@ return [
         'hmac_token' => env('CHATWOOT_HMAC_TOKEN'),
     ],
 
+    // Credentials used by the local/staging-only setup routes in routes/web.php.
+    // These exist solely to seed disposable test accounts and must never be
+    // echoed back in an HTTP response body.
+    'test_setup' => [
+        'applicant_password' => env('TEST_SETUP_APPLICANT_PASSWORD', 'password123'),
+        'staff_passwords' => [
+            'evaluator' => env('TEST_SETUP_EVALUATOR_PASSWORD', 'Evaluator4321!'),
+            'interviewer' => env('TEST_SETUP_INTERVIEWER_PASSWORD', 'Interviewer4321!'),
+            'admin' => env('TEST_SETUP_ADMIN_PASSWORD', 'UGCA4zWe1K7Sfl'),
+            'registrar' => env('TEST_SETUP_REGISTRAR_PASSWORD', 'rKuFYl4jMmTI8&'),
+        ],
     'oauth' => [
         'token_rate_limit' => (int) env('OAUTH_TOKEN_RATE_LIMIT', 300),
     ],

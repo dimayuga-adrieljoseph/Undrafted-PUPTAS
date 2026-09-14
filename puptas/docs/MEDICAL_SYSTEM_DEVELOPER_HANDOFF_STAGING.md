@@ -11,7 +11,7 @@ Welcome to the PUPTAS Medical API integration guide for the **Staging Environmen
 - **Base URL**: `/api/v1/`
 - **Host**: `pup-admission-system-staging.up.railway.app`
 - **Required Scopes**: `medical-read` (for fetching data), `medical-write` (for sending webhooks)
-- **Rate Limits**: 5 req/sec, 80 req/min, 100 req/day
+- **Rate Limits**: 10 req/sec, 200 req/min, 1500 req/day
 
 ---
 

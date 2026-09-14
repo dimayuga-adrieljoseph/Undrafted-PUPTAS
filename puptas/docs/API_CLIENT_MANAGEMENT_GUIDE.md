@@ -69,7 +69,7 @@ While generating an API Client grants OAuth access, the **Medical System** requi
 
 ### 2. API Rate Limits by Scope
 The API Clients are strictly bound to system-level rate limits to protect PUPTAS from brute-force or runaway-script attacks:
-*   **Medical System (`medical-read` / `medical-write`)**: 5 req/second, 80 req/minute, 100 req/day.
+*   **Medical System (`medical-read` / `medical-write`)**: 10 req/second, 200 req/minute, 1500 req/day.
 *   **Guidance System (`student-read`)**: 5 req/second, 1000 req/minute, 2000 req/day.
 *   **Program System (`program-read`)**: 5 req/second, 50 req/day (Highly cached).
 

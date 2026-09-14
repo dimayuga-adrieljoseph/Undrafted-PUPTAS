@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\Eloquent\Model;
 use Laravel\Passport\Passport;
 use App\Models\Application;
 use App\Models\ApplicantProfile;
@@ -25,9 +26,52 @@ use App\Observers\ApplicationObserver;
 use App\Observers\ApplicantProfileObserver;
 use App\Observers\ApplicationProcessObserver;
 
+use App\Repositories\Contracts\ApplicationRepositoryInterface;
+use App\Repositories\Contracts\ApplicationProcessRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Repositories\Contracts\ApplicantProfileRepositoryInterface;
+use App\Repositories\Contracts\ProgramRepositoryInterface;
+use App\Repositories\Contracts\GradeRepositoryInterface;
+use App\Repositories\Contracts\UserFileRepositoryInterface;
+use App\Repositories\Contracts\TestPasserRepositoryInterface;
+use App\Repositories\Contracts\CutoffSettingsRepositoryInterface;
+use App\Repositories\Contracts\SystemSettingRepositoryInterface;
+use App\Repositories\Contracts\AuditLogRepositoryInterface;
+use App\Repositories\Contracts\EmailLogRepositoryInterface;
+use App\Repositories\Contracts\BulkEmailOperationRepositoryInterface;
+
+use App\Repositories\Eloquent\EloquentApplicationRepository;
+use App\Repositories\Eloquent\EloquentApplicationProcessRepository;
+use App\Repositories\Eloquent\EloquentUserRepository;
+use App\Repositories\Eloquent\EloquentApplicantProfileRepository;
+use App\Repositories\Eloquent\EloquentProgramRepository;
+use App\Repositories\Eloquent\EloquentGradeRepository;
+use App\Repositories\Eloquent\EloquentUserFileRepository;
+use App\Repositories\Eloquent\EloquentTestPasserRepository;
+use App\Repositories\Eloquent\EloquentCutoffSettingsRepository;
+use App\Repositories\Eloquent\EloquentSystemSettingRepository;
+use App\Repositories\Eloquent\EloquentAuditLogRepository;
+use App\Repositories\Eloquent\EloquentEmailLogRepository;
+use App\Repositories\Eloquent\EloquentBulkEmailOperationRepository;
+
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        $this->app->bind(ApplicationRepositoryInterface::class, EloquentApplicationRepository::class);
+        $this->app->bind(ApplicationProcessRepositoryInterface::class, EloquentApplicationProcessRepository::class);
+        $this->app->bind(UserRepositoryInterface::class, EloquentUserRepository::class);
+        $this->app->bind(ApplicantProfileRepositoryInterface::class, EloquentApplicantProfileRepository::class);
+        $this->app->bind(ProgramRepositoryInterface::class, EloquentProgramRepository::class);
+        $this->app->bind(GradeRepositoryInterface::class, EloquentGradeRepository::class);
+        $this->app->bind(UserFileRepositoryInterface::class, EloquentUserFileRepository::class);
+        $this->app->bind(TestPasserRepositoryInterface::class, EloquentTestPasserRepository::class);
+        $this->app->bind(CutoffSettingsRepositoryInterface::class, EloquentCutoffSettingsRepository::class);
+        $this->app->bind(SystemSettingRepositoryInterface::class, EloquentSystemSettingRepository::class);
+        $this->app->bind(AuditLogRepositoryInterface::class, EloquentAuditLogRepository::class);
+        $this->app->bind(EmailLogRepositoryInterface::class, EloquentEmailLogRepository::class);
+        $this->app->bind(BulkEmailOperationRepositoryInterface::class, EloquentBulkEmailOperationRepository::class);
+    }
 
     public function boot(UrlGenerator $url): void
     {
@@ -38,6 +82,10 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             $url->forceScheme('https');
         }
+
+        // Strictly prevent N+1 lazy loading in non-production environments so
+        // accidental lazy loads surface as exceptions during development/testing.
+        Model::preventLazyLoading(! $this->app->isProduction());
 
         Application::observe(ApplicationObserver::class);
         ApplicantProfile::observe(ApplicantProfileObserver::class);
@@ -98,12 +146,13 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('external-medical-api-minute', function ($request) {
             return Limit::perMinute((int) config('services.external_medical_api.minute_limit', 200))
+                ->by('medical:' . ($request->user()?->getKey() ?? $request->ip()));
                 ->by('medical:' . ($request->bearerToken() ?: $request->ip()));
         });
 
         RateLimiter::for('external-medical-api-daily', function ($request) {
             return Limit::perDay((int) config('services.external_medical_api.daily_limit', 1500))
-                ->by('medical:' . ($request->bearerToken() ?: $request->ip()));
+                ->by('medical:' . ($request->user()?->getKey() ?? $request->ip()));
         });
 
         RateLimiter::for('grade-extraction', function (Request $request) {
@@ -150,6 +199,17 @@ class AppServiceProvider extends ServiceProvider
 
         Passport::setClientUuids(true);
 
+        // Warn if the cache driver does not support tags or atomic locks.
+        // Both are used in this application (Cache::lock() for stampede prevention,
+        // Cache::tags() in some places) and silently degrade with file/array drivers.
+        // This surfaces misconfigurations early in the application boot log.
+        $cacheDriver = config('cache.default', 'file');
+        if (in_array($cacheDriver, ['array', 'file'], true)) {
+            Log::warning('Cache driver does not support tags or atomic locks.', [
+                'driver'  => $cacheDriver,
+                'impact'  => 'Cache::lock() stampede protection and tag-based invalidation are unavailable. Set CACHE_STORE=redis in production.',
+            ]);
+        }
         // Override Passport's /oauth/token route AFTER Passport registers it.
         // Passport hardcodes 'middleware' => 'throttle' (60/min by IP).
         // On Railway, behind the reverse proxy, all clients can share the

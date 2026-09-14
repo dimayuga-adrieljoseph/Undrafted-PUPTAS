@@ -5,8 +5,12 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Program;
 use App\Models\Application;
+use App\Repositories\Contracts\ApplicationRepositoryInterface;
+use App\Repositories\Contracts\ApplicationProcessRepositoryInterface;
+use App\Repositories\Contracts\ProgramRepositoryInterface;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 /**
@@ -20,8 +24,13 @@ class DashboardService
     protected ApplicationService $applicationService;
     protected UserService $userService;
 
-    public function __construct(ApplicationService $applicationService, UserService $userService)
-    {
+    public function __construct(
+        ApplicationService $applicationService,
+        UserService $userService,
+        protected ApplicationRepositoryInterface $applicationRepository,
+        protected ApplicationProcessRepositoryInterface $applicationProcessRepository,
+        protected ProgramRepositoryInterface $programRepository,
+    ) {
         $this->applicationService = $applicationService;
         $this->userService = $userService;
     }
@@ -43,6 +52,16 @@ class DashboardService
     }
 
     /**
+     * Get per-stage summary counts for the admin dashboard pipeline cards.
+     *
+     * @return array
+     */
+    public function getStageSummary(): array
+    {
+        return $this->applicationService->getStageSummary();
+    }
+
+    /**
      * Get dashboard data with programs
      *
      * @return array
@@ -52,7 +71,7 @@ class DashboardService
         $commonData = $this->getCommonDashboardData();
 
         return array_merge($commonData, [
-            'programs' => Program::withCount('applications')->get(),
+            'programs' => $this->programRepository->allWithApplicationsCount(),
         ]);
     }
 
@@ -102,7 +121,7 @@ class DashboardService
         }
 
         $generateData = function () use ($now, $startDateParam, $endDateParam) {
-            \Log::info('Dashboard dates:', ['start' => $startDateParam, 'end' => $endDateParam]);
+            Log::info('Dashboard dates:', ['start' => $startDateParam, 'end' => $endDateParam]);
 
             if ($startDateParam && $endDateParam) {
                 try {
@@ -129,42 +148,7 @@ class DashboardService
                 $startDate = $endDate->copy()->subDays(365)->startOfDay();
             }
 
-            $submittedQuery = DB::table('applications')
-                ->select(
-                    DB::raw('DATE(created_at) as date'),
-                    'status',
-                    DB::raw('COUNT(*) as count')
-                )
-                ->where('status', 'submitted')
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->groupBy(DB::raw('DATE(created_at)'), 'status');
-
-            $acceptedQuery = DB::table('application_processes')
-                ->select(
-                    DB::raw('DATE(updated_at) as date'),
-                    DB::raw("'accepted' as status"),
-                    DB::raw('COUNT(DISTINCT application_id) as count')
-                )
-                ->where('stage', 'interviewer')
-                ->where('status', 'completed')
-                ->where('action', 'passed')
-                ->whereBetween('updated_at', [$startDate, $endDate])
-                ->groupBy(DB::raw('DATE(updated_at)'));
-
-            $returnedQuery = DB::table('applications')
-                ->select(
-                    DB::raw('DATE(updated_at) as date'),
-                    'status',
-                    DB::raw('COUNT(*) as count')
-                )
-                ->where('status', 'returned')
-                ->whereBetween('updated_at', [$startDate, $endDate])
-                ->groupBy(DB::raw('DATE(updated_at)'), 'status');
-
-            $applications = $submittedQuery
-                ->unionAll($acceptedQuery)
-                ->unionAll($returnedQuery)
-                ->get();
+            $applications = $this->applicationRepository->chartDataRaw($startDate, $endDate);
 
             // Build a list of dates
             $dates = [];
@@ -210,7 +194,7 @@ class DashboardService
                 });
             }
         } catch (\Throwable $e) {
-            \Log::warning('Dashboard cache failed, bypassing: ' . $e->getMessage());
+            Log::warning('Dashboard cache failed, bypassing: ' . $e->getMessage());
         }
 
         // Fallback: Generate without cache if Redis is down or lock timed out
@@ -260,14 +244,7 @@ class DashboardService
      */
     public function getApplicantsPendingForStage(string $stage)
     {
-        return User::with('currentApplication.program')
-            ->whereHas('currentApplication', function ($query) use ($stage) {
-                $query->whereHas('processes', function ($q) use ($stage) {
-                    $q->where('stage', $stage)
-                        ->where('status', 'in_progress');
-                });
-            })
-            ->get();
+        return $this->userService->getApplicantsByStage($stage);
     }
 
     /**
@@ -284,7 +261,7 @@ class DashboardService
 
         // Admin bypass: Admins and SuperAdmins can evaluate all programs
         if ($user->role_id == 2 || $user->role_id == 7 || $user->role_id == 8) {
-            $programIds = \App\Models\Program::pluck('id')->toArray();
+            $programIds = $this->programRepository->allIds();
         }
 
         // If the evaluator has no assigned programs, pendingUsers is empty.
@@ -293,9 +270,18 @@ class DashboardService
             ? collect()
             : $this->userService->getApplicantsByStage($stage, $programIds);
 
+        // Count applicants currently in queue for this stage (in_progress)
+        $inProgress = $this->applicationProcessRepository->countDistinctApplications($stage, 'in_progress');
+
+        // Count applicants already processed (completed) at this stage
+        $processed = $this->applicationProcessRepository->countDistinctApplications($stage, 'completed');
+
         return [
             'pendingUsers' => $pendingUsers,
-            'summary'      => $this->applicationService->getApplicationSummary(),
+            'summary'      => [
+                'in_progress' => $inProgress,
+                'processed'   => $processed,
+            ],
             'chartData'    => $this->getApplicationChartData(),
         ];
     }
@@ -311,9 +297,18 @@ class DashboardService
         // Interviewers see all applicants (global access)
         $pendingUsers = $this->userService->getApplicantsByStage('interviewer');
 
+        // Count applicants currently in queue for interview stage
+        $inProgress = $this->applicationProcessRepository->countDistinctApplications('interviewer', 'in_progress');
+
+        // Count applicants already processed (completed) at interview stage
+        $processed = $this->applicationProcessRepository->countDistinctApplications('interviewer', 'completed');
+
         return [
             'pendingUsers' => $pendingUsers,
-            'summary'      => $this->applicationService->getApplicationSummary(),
+            'summary'      => [
+                'in_progress' => $inProgress,
+                'processed'   => $processed,
+            ],
             'chartData'    => $this->getDailyApplicationChartData(),
         ];
     }
@@ -346,9 +341,7 @@ class DashboardService
     public function getRecordsDashboardData(): array
     {
         // Use map to create plain arrays and avoid triggering accessors
-        $programs = Program::withCount('applications')
-            ->select('id', 'code', 'name', 'slots')
-            ->get()
+        $programs = $this->programRepository->allWithApplicationsCount()
             ->map(function ($program) {
                 return [
                     'id' => $program->id,
@@ -359,10 +352,19 @@ class DashboardService
                 ];
             });
 
+        // Applicants currently cleared for enrollment (in queue for records)
+        $inProgress = $this->applicationRepository->countClearedForEnrollment();
+
+        // Applicants already officially enrolled (processed by records)
+        $processed = $this->applicationRepository->countOfficiallyEnrolled();
+
         return [
             'allUsers' => $this->userService->getApplicantsForRecordStaff(),
             'programs' => $programs,
-            'summary' => $this->applicationService->getApplicationSummary(),
+            'summary'  => [
+                'in_progress' => $inProgress,
+                'processed'   => $processed,
+            ],
         ];
     }
 }

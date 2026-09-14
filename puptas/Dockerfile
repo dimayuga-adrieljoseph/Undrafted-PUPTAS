@@ -4,7 +4,7 @@
 FROM php:8.4-cli AS php-dependencies
 
 RUN apt-get update && apt-get install -y \
-    git curl \
+    git curl unzip \
     libzip-dev libonig-dev libxml2-dev \
     libfreetype6-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -17,9 +17,15 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
+# Copy only composer files first to leverage Docker layer cache.
+# composer install only re-runs when composer.json or composer.lock change.
+COPY composer.json composer.lock ./
+
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+
 COPY . .
 
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+RUN composer run-script post-autoload-dump --no-interaction 2>/dev/null || true
 
 # =============================================================================
 # Stage 2: Frontend Build (Vite)
@@ -67,6 +73,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
 
 RUN echo "memory_limit=256M" > /usr/local/etc/php/conf.d/memory.ini
 
+# Log PHP errors to stderr so they appear in Railway deploy logs
+RUN echo "log_errors=On\nerror_log=/dev/stderr\ndisplay_errors=Off" > /usr/local/etc/php/conf.d/errors.ini
+
 # Optimize PHP for file uploads
 RUN echo "upload_max_filesize=10M\n\
 post_max_size=12M\n\
@@ -93,12 +102,15 @@ RUN sed -ri -e "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" \
     && sed -ri -e "s|AllowOverride None|AllowOverride All|g" \
     /etc/apache2/apache2.conf
 
-# Configure Apache to listen on port 8080
+# Apache port is configured dynamically at runtime via docker-entrypoint.sh
+# based on the $PORT environment variable injected by Railway.
+# We write a placeholder ports.conf here; the entrypoint overwrites it.
 RUN echo "Listen 8080" > /etc/apache2/ports.conf \
     && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/g' /etc/apache2/sites-available/000-default.conf
 
 # Increase Apache timeout for file uploads (server→S3 relay can be slow)
-RUN echo "Timeout 300" >> /etc/apache2/apache2.conf
+RUN echo "Timeout 300" >> /etc/apache2/apache2.conf \
+    && echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 WORKDIR /var/www/html
 
@@ -127,7 +139,5 @@ RUN mkdir -p storage/framework/{sessions,views,cache,maintenance} storage/logs b
 
 RUN mkdir -p storage/app/templates && \
     cp docs/SAR-FORM_TEMPLATE-2.pdf storage/app/templates/
-
-EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

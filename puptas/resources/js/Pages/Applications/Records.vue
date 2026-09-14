@@ -105,7 +105,7 @@ const getStatusText = (user) => {
         case 'medical_cleared':      return 'Medical Cleared';
         case 'medical_rejected':     return 'Medical Rejected';
         case 'for_records':          return 'For Records';
-        case 'officially_enrolled':  return 'Officially Enrolled';
+        case 'officially_enrolled':  return 'Enrolled';
         case 'rejected':             return 'Rejected';
         default:                     return 'Unknown';
     }
@@ -358,7 +358,7 @@ const formatStage = (stage) => {
 const acceptApplication = async () => {
     try {
         const response = await axios.post(`${props.baseUrl}/tag/${selectedUser.value.id}`);
-        showSnackbar("Tagged as officially enrolled.");
+        showSnackbar("Tagged as Enrolled.");
 
         // Update the selected user's enrollment status immediately in the UI
         if (selectedUser.value?.application) {
@@ -538,7 +538,7 @@ const clearFilters = () => {
                         </button>
                         <button class="block px-4 py-2 w-full text-left hover:bg-gray-100 dark:hover:bg-gray-700"
                             @click="statusFilter = 'officially_enrolled'; showStatusDropdown = false;">
-                            Officially Enrolled
+                            Enrolled
                         </button>
                     </div>
                 </div>
@@ -736,10 +736,6 @@ const clearFilters = () => {
                                     <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Personal Information</h4>
                                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Sex</p>
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white capitalize">{{ selectedUser.sex || '—' }}</p>
-                                        </div>
-                                        <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                             <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School</p>
                                             <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ selectedUser.school || '—' }}</p>
                                         </div>
@@ -763,7 +759,7 @@ const clearFilters = () => {
                                     <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Program</h4>
                                     <div class="p-3 rounded-xl border border-[#9E122C]/30 bg-[#9E122C]/5 dark:bg-[#9E122C]/10">
                                         <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                                            {{ selectedUser?.application?.enrollment_status === 'officially_enrolled' ? 'Officially Enrolled In' : 'Temporarily Enrolled In' }}
+                                            {{ selectedUser?.application?.enrollment_status === 'officially_enrolled' ? 'Enrolled In' : 'Temporarily Enrolled In' }}
                                         </h4>
                                         <p class="text-base font-semibold text-gray-900 dark:text-white">
                                             {{ selectedUser?.application?.program?.code }} – {{ selectedUser?.application?.program?.name }}
@@ -831,7 +827,7 @@ const clearFilters = () => {
                                             @click="acceptApplication"
                                             class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                            Tag: Officially Enrolled
+                                            Tag: Enrolled
                                         </button>
                                         <button
                                             @click="untagApplication"

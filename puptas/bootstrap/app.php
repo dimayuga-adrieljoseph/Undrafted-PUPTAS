@@ -74,6 +74,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Prune models (e.g. AuditLog) daily
         $schedule->command('model:prune')->daily();
 
+        // Automated Data Retention & Disposal Policy enforcement (scheduled daily at off-peak 02:00 AM when enabled)
+        if (config('data_retention.enabled', false)) {
+            $schedule->command('data-retention:purge --force')->dailyAt('02:00');
+        }
+
         // Check IDP Health every minute for the emergency fallback
         $schedule->command('idp:check-health')->everyMinute();
     })->create();

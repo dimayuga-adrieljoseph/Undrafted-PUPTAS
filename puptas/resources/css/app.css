@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Scale overall UI to 90% */
+html {
+    font-size: 100%;
+}
+
 /* Prevent horizontal overflow / zoom on mobile */
 html, body {
     overflow-x: hidden;
@@ -22,4 +27,17 @@ input[type='number']::-webkit-outer-spin-button {
 input[type='number'] {
     -moz-appearance: textfield;
     appearance: textfield;
+}
+
+/* Non-scrollable dashboard shell (used by all role dashboards except applicant) */
+.dash-shell {
+    display: flex;
+    flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+    .dash-shell {
+        height: calc(100vh - 14rem);
+        overflow: hidden;
+    }
 }

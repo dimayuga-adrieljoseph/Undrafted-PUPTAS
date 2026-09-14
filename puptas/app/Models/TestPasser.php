@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class TestPasser extends Model
 {
@@ -40,6 +41,28 @@ class TestPasser extends Model
     ];
 
     public $timestamps = true;
+
+    /**
+     * Cache key for a user's test passer record.
+     */
+    public static function cacheKeyForUser(string $userId): string
+    {
+        return "test_passer:user:{$userId}";
+    }
+
+    /**
+     * Invalidate cached test passer records whenever one changes.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (TestPasser $testPasser) {
+            Cache::forget(static::cacheKeyForUser((string) $testPasser->user_id));
+        });
+
+        static::deleted(function (TestPasser $testPasser) {
+            Cache::forget(static::cacheKeyForUser((string) $testPasser->user_id));
+        });
+    }
 
     public function user()
     {

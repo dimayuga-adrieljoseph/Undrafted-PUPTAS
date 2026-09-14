@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Application;
 use App\Models\ApplicationProcess;
+use App\Repositories\Contracts\ApplicationProcessRepositoryInterface;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -14,6 +16,11 @@ use Illuminate\Support\Facades\DB;
  */
 class ApplicationProcessService
 {
+    public function __construct(
+        protected ApplicationProcessRepositoryInterface $applicationProcessRepository,
+        protected AuditLogService $auditLogService,
+    ) {}
+
     /**
      * Pass application to next stage
      *
@@ -34,10 +41,7 @@ class ApplicationProcessService
     ): ApplicationProcess {
         return DB::transaction(function () use ($application, $currentStage, $nextStage, $processedBy, $note) {
             // Get the current stage process
-            $currentProcess = ApplicationProcess::where('application_id', $application->id)
-                ->where('stage', $currentStage)
-                ->whereIn('status', ['in_progress', 'returned'])
-                ->first();
+            $currentProcess = $this->applicationProcessRepository->firstByApplicationStageStatuses($application->id, $currentStage, ['in_progress', 'returned']);
 
             if (!$currentProcess) {
                 throw new \Exception('This action has already been completed or is not available.');
@@ -59,7 +63,7 @@ class ApplicationProcessService
 
             // Create next stage if provided
             if ($nextStage) {
-                ApplicationProcess::create([
+                $this->applicationProcessRepository->create([
                     'application_id' => $application->id,
                     'stage' => $nextStage,
                     'status' => 'in_progress',
@@ -77,7 +81,7 @@ class ApplicationProcessService
 
             // Audit log for stage progression
             try {
-                app(\App\Services\AuditLogService::class)->logActivity(
+                $this->auditLogService->logActivity(
                     'UPDATE',
                     'Applications',
                     "Application #{$application->id} passed stage '{$currentStage}'" .
@@ -122,10 +126,7 @@ class ApplicationProcessService
             ];
 
             // Update the application process for this stage
-            $process = ApplicationProcess::where('application_id', $application->id)
-                ->where('stage', $stage)
-                ->whereIn('status', ['in_progress', 'completed'])
-                ->first();
+            $process = $this->applicationProcessRepository->firstByApplicationStageStatuses($application->id, $stage, ['in_progress', 'completed']);
 
             if (!$process) {
                 throw new \Exception("Cannot return application - no process record found for stage '{$stage}'.");
@@ -155,7 +156,7 @@ class ApplicationProcessService
 
             // Audit log for application return
             try {
-                app(\App\Services\AuditLogService::class)->logActivity(
+                $this->auditLogService->logActivity(
                     'UPDATE',
                     'Applications',
                     "Application #{$application->id} returned at stage '{$stage}'. Reason: {$reason}",
@@ -185,9 +186,7 @@ class ApplicationProcessService
      */
     public function getProcess(int $applicationId, string $stage): ?ApplicationProcess
     {
-        return ApplicationProcess::where('application_id', $applicationId)
-            ->where('stage', $stage)
-            ->first();
+        return $this->applicationProcessRepository->firstByApplicationStage($applicationId, $stage);
     }
 
     /**
@@ -199,10 +198,7 @@ class ApplicationProcessService
      */
     public function isStageInProgress(int $applicationId, string $stage): bool
     {
-        return ApplicationProcess::where('application_id', $applicationId)
-            ->where('stage', $stage)
-            ->where('status', 'in_progress')
-            ->exists();
+        return $this->applicationProcessRepository->existsByApplicationStageStatus($applicationId, $stage, 'in_progress');
     }
 
     /**
@@ -214,10 +210,7 @@ class ApplicationProcessService
      */
     public function isStageCompleted(int $applicationId, string $stage): bool
     {
-        return ApplicationProcess::where('application_id', $applicationId)
-            ->where('stage', $stage)
-            ->where('status', 'completed')
-            ->exists();
+        return $this->applicationProcessRepository->existsByApplicationStageStatus($applicationId, $stage, 'completed');
     }
 
     /**
@@ -228,9 +221,7 @@ class ApplicationProcessService
      */
     public function getApplicationProcesses(int $applicationId)
     {
-        return ApplicationProcess::where('application_id', $applicationId)
-            ->orderBy('created_at')
-            ->get();
+        return $this->applicationProcessRepository->allByApplication($applicationId);
     }
 
     /**
@@ -243,7 +234,7 @@ class ApplicationProcessService
      */
     public function createInitialStage(int $applicationId, string $stage, string $status = 'in_progress'): ApplicationProcess
     {
-        return ApplicationProcess::create([
+        return $this->applicationProcessRepository->create([
             'application_id' => $applicationId,
             'stage' => $stage,
             'status' => $status,

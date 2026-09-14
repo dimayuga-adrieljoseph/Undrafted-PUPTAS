@@ -60,7 +60,7 @@ const appStatusLabel = computed(() => {
   return map[props.application?.status] ?? props.application?.status ?? 'N/A';
 });
 const enrollmentLabel = computed(() => {
-  const map = { not_enrolled:'Not Enrolled', officially_enrolled:'Officially Enrolled', waitlisted:'Waitlisted' };
+  const map = { not_enrolled:'Not Enrolled', officially_enrolled:'Enrolled', waitlisted:'Waitlisted' };
   return map[props.application?.enrollment_status] ?? props.application?.enrollment_status ?? 'N/A';
 });
 
@@ -172,7 +172,9 @@ const cancelAcademic = () => {
 <template>
   <Head title="My Profile" />
   <ApplicantLayout title="My Profile">
-    <template #title>My Profile</template>
+    <template #title>
+      <h1 class="text-lg md:text-xl font-semibold text-gray-800 dark:text-gray-100">My Profile</h1>
+    </template>
 
     <div class="py-8">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-5">

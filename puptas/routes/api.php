@@ -4,11 +4,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\ExternalStudentApiController;
+use App\Http\Middleware\EnsureAdmin;
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', EnsureAdmin::class])->group(function () {
     Route::put('/programs/update/{id}', [ProgramController::class, 'update'])->name('programs.update');
     Route::delete('/programs/delete/{id}', [ProgramController::class, 'destroy'])->name('programs.delete');
 });
@@ -31,10 +33,16 @@ Route::prefix('v1')
 
 use App\Http\Controllers\ExternalMedicalApiController;
 
+// Deprecated list endpoint — returns 410 immediately WITHOUT consuming rate limits
+Route::prefix('v1')
+    ->middleware(['client:medical-read'])
+    ->group(function () {
+        Route::get('/medical/applicants', [ExternalMedicalApiController::class, 'index']);
+    });
+
 Route::prefix('v1')
     ->middleware(['client:medical-read', 'throttle:external-medical-api-second', 'throttle:external-medical-api-minute', 'throttle:external-medical-api-daily'])
     ->group(function () {
-        Route::get('/medical/applicants', [ExternalMedicalApiController::class, 'index']);
         Route::get('/medical/applicants/idp/{idpUserId}', [ExternalMedicalApiController::class, 'showByIdpUserId']);
         Route::get('/medical/applicants/{referenceNumber}', [ExternalMedicalApiController::class, 'showByReferenceNumber']);
     });
@@ -44,6 +52,10 @@ Route::prefix('v1')
     ->group(function () {
         Route::post('/webhooks/medical-result', [ExternalMedicalApiController::class, 'webhookResult']);
     });
+
+// Dev/docs helper route removed — HMAC signing requires exact raw bytes,
+// which browser-based "Try it out" cannot provide. Use the Artisan command:
+// php artisan webhook:test-medical --reference=<ref> --cleared=1
 
 use App\Http\Controllers\ChatwootWebhookController;
 use App\Http\Controllers\PublicStatusCheckerController;

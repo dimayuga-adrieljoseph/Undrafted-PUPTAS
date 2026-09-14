@@ -33,14 +33,15 @@ class VerifyMedicalWebhookSignature
         
         $timestampValue = $payloadData['timestamp'];
         
-        // Convert to UNIX timestamp if it's an ISO8601 string
-        if (is_string($timestampValue)) {
+        // Convert to UNIX timestamp.
+        // Accept: integer epoch, numeric string epoch (e.g. "1785240000"), or ISO8601 string.
+        if (is_numeric($timestampValue)) {
+            $timestamp = (int) $timestampValue;
+        } elseif (is_string($timestampValue)) {
             $timestamp = strtotime($timestampValue);
             if ($timestamp === false) {
                 return response()->json(['message' => 'Invalid timestamp format'], 400);
             }
-        } elseif (is_numeric($timestampValue)) {
-            $timestamp = (int) $timestampValue;
         } else {
             return response()->json(['message' => 'Invalid timestamp format'], 400);
         }

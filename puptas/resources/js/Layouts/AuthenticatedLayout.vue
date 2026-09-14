@@ -211,7 +211,13 @@ const showBackLink = computed(
                     </button>
 
                     <!-- User pill -->
-                    <div class="flex items-center gap-3 px-3 py-1.5 rounded-full bg-white border border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-700">
+                    <component
+                        :is="variant === 'applicant' ? Link : 'div'"
+                        v-bind="variant === 'applicant' ? { href: route('applicant.profile') } : {}"
+                        class="flex items-center gap-3 px-3 py-1.5 rounded-full bg-white border border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-700 transition-colors"
+                        :class="variant === 'applicant' ? 'hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer' : ''"
+                        :aria-label="variant === 'applicant' ? 'View your profile' : undefined"
+                    >
                         <div
                             class="w-9 h-9 rounded-full flex items-center justify-center bg-[#9E122C]/10 text-[#9E122C] font-semibold dark:text-white"
                             aria-hidden="true"
@@ -224,7 +230,7 @@ const showBackLink = computed(
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">{{ roleLabel }}</p>
                         </div>
-                    </div>
+                    </component>
                 </div>
             </header>
 

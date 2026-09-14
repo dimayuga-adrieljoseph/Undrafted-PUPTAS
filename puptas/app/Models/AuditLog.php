@@ -14,6 +14,7 @@ class AuditLog extends Model
     const ACTION_LOGIN    = 'LOGIN';
     const ACTION_LOGOUT   = 'LOGOUT';
     const ACTION_CREATE   = 'CREATE';
+    const ACTION_READ     = 'READ';
     const ACTION_UPDATE   = 'UPDATE';
     const ACTION_DELETE   = 'DELETE';
     const ACTION_DOWNLOAD = 'DOWNLOAD';

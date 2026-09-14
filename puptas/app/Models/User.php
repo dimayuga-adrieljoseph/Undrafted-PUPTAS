@@ -16,7 +16,9 @@ use App\Models\Application;
 use App\Models\ApplicationProcess;
 use App\Models\Grade;
 use App\Models\ApplicantProfile;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Enums\RoleId;
 
 
 class User extends Authenticatable
@@ -29,6 +31,7 @@ class User extends Authenticatable
     use HasTeams;
     use Notifiable;
     use TwoFactorAuthenticatable;
+    use SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -36,11 +39,14 @@ class User extends Authenticatable
      * @var array<int, string>
      */
 
+    // NOTE: `role_id` is intentionally absent from $fillable. Roles are a
+    // security boundary and must never be mass-assignable from a request.
+    // Any code path that legitimately sets a role must use assignRole()
+    // (forceFill), which is reserved for trusted server-side flows.
     protected $fillable = [
         'idp_user_id',
         'email',
         'password',
-        'role_id',
         'firstname',
         'middlename',
         'lastname',
@@ -48,7 +54,36 @@ class User extends Authenticatable
         'sex',
         'privacy_consent',
         'privacy_consent_at',
+        'is_active',
+        'anonymized_at',
     ];
+
+    /**
+     * Default new users to Applicant when no role is explicitly assigned.
+     * This is a safety net for internal Eloquent creations (seeders, factories,
+     * registration) that do not go through assignRole().
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if ($user->role_id === null) {
+                $user->role_id = RoleId::Applicant->value;
+            }
+        });
+    }
+
+    /**
+     * Assign a role in a way that bypasses mass-assignment protection.
+     * Intended for trusted server-side flows only (e.g. superadmin user admin).
+     *
+     * Does not persist — call save() or set it before create().
+     */
+    public function assignRole(int $roleId): static
+    {
+        $this->forceFill(['role_id' => $roleId]);
+
+        return $this;
+    }
 
     public function role()
     {
@@ -175,6 +210,94 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'privacy_consent_at' => 'datetime',
+            'is_active' => 'boolean',
+            'anonymized_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Scope query to only include active users.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
+     * Determine if the user is active.
+     */
+    public function isActive(): bool
+    {
+        return (bool) ($this->is_active ?? true) && is_null($this->deleted_at);
+    }
+
+    /**
+     * Determine if the user is deactivated.
+     */
+    public function isDeactivated(): bool
+    {
+        return !$this->isActive();
+    }
+
+    /**
+     * Permanently anonymize the user's personal identifying information (PII).
+     * This operation is irreversible and audited.
+     *
+     * @return bool
+     */
+    public function anonymize(): bool
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () {
+            $oldValues = $this->only(['email', 'firstname', 'lastname', 'idp_user_id', 'is_active']);
+            
+            // Guaranteed unique email to prevent collision on users.email unique index
+            $uniqueSuffix = (string) $this->id . '_' . \Illuminate\Support\Str::uuid()->toString();
+            $anonymizedEmail = "anon_{$uniqueSuffix}@privacy.local";
+
+            $this->forceFill([
+                'email'                     => $anonymizedEmail,
+                'firstname'                 => 'ANONYMIZED',
+                'lastname'                  => 'USER_' . $this->id,
+                'middlename'                => null,
+                'salutation'                => null,
+                'idp_user_id'               => null,
+                'password'                  => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(32)),
+                'remember_token'            => null,
+                'two_factor_secret'         => null,
+                'two_factor_recovery_codes' => null,
+                'is_active'                 => false,
+                'anonymized_at'             => now(),
+            ])->save();
+
+            // Cascade to associated applicant profile
+            if ($this->applicantProfile) {
+                $this->applicantProfile->anonymize();
+            }
+
+            // Write immutable audit log
+            app(\App\Services\AuditLogService::class)->logActivity(
+                \App\Models\AuditLog::ACTION_UPDATE,
+                'User Management',
+                "User ID {$this->id} permanently anonymized (PII scrubbed).",
+                $this,
+                \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                $oldValues,
+                [
+                    'status'        => 'ANONYMIZED',
+                    'anonymized_at' => $this->anonymized_at->toIso8601String(),
+                ]
+            );
+
+            return true;
+        });
+    }
+
+    /**
+     * Determine if the user has been anonymized.
+     */
+    public function isAnonymized(): bool
+    {
+        return $this->anonymized_at !== null;
     }
 }

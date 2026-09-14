@@ -21,8 +21,8 @@ class RefreshIdpToken
             return $next($request);
         }
 
-        // Skip IDP checks completely if we are logged in via local bypass or emergency login
-        if (session('local_bypass') || session('emergency_logged_in')) {
+        // Skip IDP checks completely if we are logged in via local bypass or emergency login, or running in local dev
+        if (session('local_bypass') || session('emergency_logged_in') || in_array(config('app.env'), ['local', 'testing'])) {
             return $next($request);
         }
 

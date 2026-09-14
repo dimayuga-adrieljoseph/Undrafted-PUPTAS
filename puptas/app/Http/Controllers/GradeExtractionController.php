@@ -8,8 +8,6 @@ use Illuminate\Support\Facades\Log;
 
 class GradeExtractionController extends Controller
 {
-    public function __construct() {}
-
     /**
      * Extract grades from uploaded images and store the result in the session,
      * then return a JSON response with the grade page URL so the frontend can

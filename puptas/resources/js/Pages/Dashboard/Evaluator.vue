@@ -1,10 +1,11 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { LineChart } from "vue-chart-3";
 import { Head, Link, router } from "@inertiajs/vue3";
 import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
 import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
 import BlurText from "@/Components/BlurText.vue";
+import UserDetailsModal from "@/Pages/Applications/UserDetailsModal.vue";
 import { 
     Chart as ChartJS, 
     LineController, 
@@ -34,10 +35,8 @@ const props = defineProps({
     summary: {
         type: Object,
         default: () => ({
-            total: 0,
-            accepted: 0,
-            pending: 0,
-            returned: 0,
+            in_progress: 0,
+            processed: 0,
         }),
     },
     chartData: {
@@ -103,35 +102,21 @@ onBeforeUnmount(() => {
     }
 });
 
-// Summary items with icons and percentages
+// Summary items — 2 cards: in-queue for this stage + already processed
 const summaryItems = computed(() => [
-    { 
-        label: "Total Applications", 
-        value: props.summary?.total ?? 0, 
+    {
+        label: "In Queue",
+        value: props.summary?.in_progress ?? 0,
         icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>' },
-        percentage: 100,
+        percentage: null,
         color: 'blue'
     },
-    { 
-        label: "Accepted", 
-        value: props.summary?.accepted ?? 0, 
+    {
+        label: "Processed",
+        value: props.summary?.processed ?? 0,
         icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
-        percentage: props.summary?.total > 0 ? Math.round((props.summary.accepted / props.summary.total) * 100) : 0,
+        percentage: null,
         color: 'green'
-    },
-    { 
-        label: "Pending", 
-        value: props.summary?.pending ?? 0, 
-        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
-        percentage: props.summary?.total > 0 ? Math.round((props.summary.pending / props.summary.total) * 100) : 0,
-        color: 'yellow'
-    },
-    { 
-        label: "Returned", 
-        value: props.summary?.returned ?? 0, 
-        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>' },
-        percentage: props.summary?.total > 0 ? Math.round((props.summary.returned / props.summary.total) * 100) : 0,
-        color: 'red'
     },
 ]);
 
@@ -211,17 +196,62 @@ const chartDataset = computed(() => ({
 }));
 
 // Display only pending applicants in the recent applications section
-const displayedApplicants = computed(() => {
+const recentListContainer = ref(null);
+const dynamicPageSize = ref(2);
+
+const updateDynamicPageSize = () => {
+    if (!recentListContainer.value) return;
+    const availableHeight = recentListContainer.value.clientHeight;
+    // Each applicant card is ~115px (including padding, text, borders) with gap-3 (12px) = ~127px per item
+    // Calculate how many full items can comfortably fit without overflowing or clipping
+    const calculated = Math.floor((availableHeight + 12) / 127);
+    dynamicPageSize.value = Math.max(2, calculated);
+};
+
+let resizeObserver = null;
+onMounted(() => {
+    if (recentListContainer.value && typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver(() => {
+            updateDynamicPageSize();
+        });
+        resizeObserver.observe(recentListContainer.value);
+    }
+    updateDynamicPageSize();
+});
+
+onBeforeUnmount(() => {
+    if (resizeObserver) {
+        resizeObserver.disconnect();
+        resizeObserver = null;
+    }
+});
+
+const currentPage = ref(1);
+
+const filteredApplicants = computed(() => {
     const applicants = props.pendingUsers || [];
     const query = searchQuery.value.trim().toLowerCase();
-    
-    if (!query) return applicants.slice(0, 5);
-    
-    return applicants.filter(applicant => 
+    if (!query) return applicants;
+    return applicants.filter(applicant =>
         `${applicant.firstname} ${applicant.lastname}`.toLowerCase().includes(query) ||
         applicant.email?.toLowerCase().includes(query)
     );
 });
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredApplicants.value.length / dynamicPageSize.value)));
+
+const displayedApplicants = computed(() => {
+    const start = (currentPage.value - 1) * dynamicPageSize.value;
+    return filteredApplicants.value.slice(start, start + dynamicPageSize.value);
+});
+
+watch([searchQuery, dynamicPageSize], () => {
+    if (currentPage.value > totalPages.value) {
+        currentPage.value = Math.max(1, totalPages.value);
+    }
+});
+
+watch(searchQuery, () => { currentPage.value = 1; });
 
 // Methods
 const getStatusClass = (status) => {
@@ -246,7 +276,7 @@ const getEvaluationStatusText = (pipelineStatus) => {
         case 'medical_cleared': return 'Medical Cleared';
         case 'medical_rejected': return 'Medical Rejected';
         case 'for_records': return 'For Records';
-        case 'officially_enrolled': return 'Officially Enrolled';
+        case 'officially_enrolled': return 'Enrolled';
         case 'rejected': return 'Rejected';
         case 'submitted': return 'Submitted';
         case 'returned': return 'Returned';
@@ -647,9 +677,11 @@ const showToast = (message, type = 'success') => {
             </div>
         </transition>
 
-        <!-- Header Section -->
-        <div class="px-4 md:px-8 mb-8">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="dash-shell">
+        <!-- Header & Stats Section -->
+        <div class="px-4 md:px-8 mb-6 shrink-0 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-6">
+            <!-- Header Left -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-1">
                 <div>
                     <BlurText
                         :text="currentStage === 'document_evaluator' ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'"
@@ -667,69 +699,50 @@ const showToast = (message, type = 'success') => {
                         class-name="text-gray-600 dark:text-gray-400 mt-2"
                     />
                 </div>
-                <div class="flex items-center space-x-3">
-                    <div class="relative w-full md:w-64">
-                        <input
-                            id="searchQuery"
-                            name="searchQuery"
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Search applicants..."
-                            class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                        />
-                        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </div>
+                <div class="relative w-full sm:w-64 shrink-0">
+                    <input
+                        id="searchQuery"
+                        name="searchQuery"
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Search applicants..."
+                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
+                    />
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                 </div>
             </div>
-        </div>
 
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-8 mb-8">
-            <div
-                v-for="(item, index) in summaryItems"
-                :key="index"
-                class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
-            >
-                <div class="flex items-start justify-between">
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0 xl:min-w-[420px]">
+                <div
+                    v-for="(item, index) in summaryItems"
+                    :key="index"
+                    class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4"
+                >
                     <div>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">{{ item.label }}</p>
-                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ item.value.toLocaleString() }}</p>
+                        <p class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1">{{ item.label }}</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none">{{ item.value.toLocaleString() }}</p>
                     </div>
                     <div :class="[
-                        'p-3 rounded-lg',
+                        'p-2.5 rounded-lg shrink-0',
                         item.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300' :
                         item.color === 'green' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300' :
                         item.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300' :
                         'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300'
                     ]">
-                        <component :is="item.icon" class="w-6 h-6" />
+                        <component :is="item.icon" class="w-5 h-5" />
                     </div>
-                </div>
-                <div class="mt-4">
-                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div 
-                            :class="[
-                                'h-full rounded-full',
-                                item.color === 'blue' ? 'bg-blue-500' :
-                                item.color === 'green' ? 'bg-green-500' :
-                                item.color === 'yellow' ? 'bg-yellow-500' :
-                                'bg-red-500'
-                            ]"
-                            :style="{ width: item.percentage + '%' }"
-                        ></div>
-                    </div>
-                    <p class="text-right text-xs text-gray-500 dark:text-gray-400 mt-2">{{ item.percentage }}% of total</p>
                 </div>
             </div>
         </div>
 
         <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-8">
+        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-8">
             <!-- Left Column: Chart -->
-            <div class="lg:col-span-2">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div class="lg:col-span-2 flex flex-col min-h-0">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col">
                     <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
@@ -808,15 +821,15 @@ const showToast = (message, type = 'success') => {
                         </div>
                     </div>
                     
-                    <div class="h-64 md:h-80 w-full">
+                    <div class="flex-1 min-h-0 w-full">
                         <LineChart :chart-data="chartDataset" :options="chartOptions" class="w-full h-full" />
                     </div>
                 </div>
             </div>
 
             <!-- Right Column: Recent Applications -->
-            <div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div class="h-full min-h-0">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col">
                     <div class="flex justify-between items-center mb-6">
                         <div>
                             <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Pending Review</h3>
@@ -828,7 +841,7 @@ const showToast = (message, type = 'success') => {
                         </Link>
                     </div>
                     
-                    <div class="space-y-3">
+                    <div ref="recentListContainer" class="space-y-3 flex-1 overflow-y-auto min-h-0">
                         <div
                             v-for="applicant in displayedApplicants"
                             :key="applicant.id"
@@ -873,330 +886,163 @@ const showToast = (message, type = 'success') => {
                             <p class="text-gray-500 dark:text-gray-400">No pending applications</p>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- User Detail Modal -->
-        <transition name="fade">
-            <div v-if="selectedUser" class="fixed inset-0 z-50">
-                <div class="fixed inset-0 bg-black/50" @click="closeUserCard"></div>
-                
-                <div class="relative min-h-screen flex items-center justify-center p-4">
-                    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-                        <!-- Modal Header -->
-                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Application Review</h3>
-                                    <p class="text-gray-600 dark:text-gray-400 text-sm">Application ID: {{ selectedUser.application?.id || 'N/A' }}</p>
-                                </div>
-                                <button @click="closeUserCard" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition min-h-[44px] min-w-[44px]">
-                                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Modal Content -->
-                        <div class="p-6 overflow-y-auto flex-1">
-                            <!-- Applicant Info Grid -->
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                                <!-- Personal Info -->
-                                <div class="lg:col-span-2">
-                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Applicant Information</h4>
-
-                                    <!-- Basic info row -->
-                                    <div class="grid grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Full Name</p>
-                                            <p class="text-gray-900 dark:text-white font-medium">{{ selectedUser.firstname }} {{ selectedUser.lastname }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Email Address</p>
-                                            <p class="text-gray-900 dark:text-white">{{ selectedUser.email }}</p>
-                                        </div>
-                                        <div class="col-span-2">
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Status</p>
-                                            <span :class="getEvaluationStatusClass(selectedUser.pipeline_status || selectedUser.application?.status)"
-                                                  class="px-3 py-1 rounded-full text-sm font-semibold inline-block">
-                                                {{ getEvaluationStatusText(selectedUser.pipeline_status || selectedUser.application?.status) }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Program choices row -->
-                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <!-- 1st Choice -->
-                                        <div class="p-3 rounded-lg border border-[#9E122C]/30 bg-[#9E122C]/5 dark:bg-[#9E122C]/10">
-                                            <div class="flex items-center gap-2 mb-2">
-                                                <span class="w-5 h-5 rounded-full bg-[#9E122C] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
-                                                <p class="text-xs font-semibold text-[#9E122C] dark:text-red-400 uppercase tracking-wide">1st Choice</p>
-                                            </div>
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug">{{ selectedUser.application?.program?.name || "—" }}</p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ selectedUser.application?.program?.code || "" }}</p>
-                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ selectedUser.application?.program?.slots || 0 }} slots remaining</p>
-                                        </div>
-
-                                        <!-- 2nd Choice -->
-                                        <div class="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" :class="{ 'opacity-40': !selectedUser.application?.second_choice }">
-                                            <div class="flex items-center gap-2 mb-2">
-                                                <span class="w-5 h-5 rounded-full bg-gray-400 dark:bg-gray-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
-                                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">2nd Choice</p>
-                                            </div>
-                                            <template v-if="selectedUser.application?.second_choice">
-                                                <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug">{{ selectedUser.application.second_choice.name }}</p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ selectedUser.application.second_choice.code }}</p>
-                                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ selectedUser.application.second_choice.slots || 0 }} slots remaining</p>
-                                            </template>
-                                            <p v-else class="text-sm text-gray-400 dark:text-gray-500">Not specified</p>
-                                        </div>
-
-                                        <!-- 3rd Choice -->
-                                        <div class="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50" :class="{ 'opacity-40': !selectedUser.application?.third_choice }">
-                                            <div class="flex items-center gap-2 mb-2">
-                                                <span class="w-5 h-5 rounded-full bg-gray-400 dark:bg-gray-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
-                                                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">3rd Choice</p>
-                                            </div>
-                                            <template v-if="selectedUser.application?.third_choice">
-                                                <p class="text-sm font-medium text-gray-900 dark:text-white leading-snug">{{ selectedUser.application.third_choice.name }}</p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ selectedUser.application.third_choice.code }}</p>
-                                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ selectedUser.application.third_choice.slots || 0 }} slots remaining</p>
-                                            </template>
-                                            <p v-else class="text-sm text-gray-400 dark:text-gray-500">Not specified</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Quick Actions -->
-                                <div v-if="!isEvaluationCompleted">
-                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h4>
-                                    
-                                    <div v-if="!hasStartedReview" class="mb-4">
-                                        <div class="space-y-3">
-                                            <button
-                                                @click="startReview"
-                                                :disabled="isStartingReview"
-                                                class="w-full px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white rounded-lg transition font-medium min-h-[44px] flex justify-center items-center disabled:opacity-50"
-                                            >
-                                                <svg v-if="isStartingReview" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                <span>{{ isStartingReview ? 'Starting...' : 'Begin Review' }}</span>
-                                            </button>
-                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator&stage=${currentStage}`"
-                                                  :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
-                                                View Full Details
-                                            </Link>
-                                        </div>
-                                    </div>
-                                    
-                                    <div v-else>
-                                        <div class="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center justify-between border border-blue-200 dark:border-blue-800">
-                                            <div class="flex items-center gap-2">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                                Review in progress since {{ new Date(reviewStartTime).toLocaleTimeString() }}
-                                            </div>
-                                            <button @click="cancelReview" :disabled="isCancellingReview" class="text-xs font-semibold hover:underline text-red-600 dark:text-red-400 disabled:opacity-50">
-                                                {{ isCancellingReview ? 'Cancelling...' : 'Cancel' }}
-                                            </button>
-                                        </div>
-                                        <div class="space-y-3">
-                                            <button
-                                                v-if="!isEvaluating"
-                                                @click="startEvaluation"
-                                                :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                            >
-                                                {{ user?.role_id === 3 ? 'Go to Guidance Office' : 'Go to Admissions Office' }}
-                                            </button>
-                                            <button
-                                                v-if="!isEvaluating"
-                                                @click="showPassModal = true"
-                                                :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                            >
-                                                Pass Application
-                                            </button>
-                                            <Link :href="`/applications/user/${selectedUser.id}?context=evaluator&stage=${currentStage}`"
-                                                  :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block']">
-                                                View Full Details
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Promissory Note Badge -->
-                            <div v-if="selectedUser?.application?.requires_promissory_note"
-                                class="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl mb-5">
-                                <svg class="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    <!-- Pagination -->
+                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Page {{ currentPage }} of {{ totalPages }}
+                        </p>
+                        <div class="flex items-center gap-2">
+                            <button
+                                @click="currentPage--"
+                                :disabled="currentPage === 1"
+                                class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                aria-label="Previous page"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                                 </svg>
-                                <div>
-                                    <p class="text-sm font-semibold text-orange-700 dark:text-orange-300">Requires Promissory Note</p>
-                                    <p class="text-xs text-orange-600 dark:text-orange-400 mt-0.5">This applicant has been tagged to require a Promissory Note.</p>
-                                </div>
-                            </div>
-
-                            <!-- Evaluation Completed Badge -->
-                            <div v-if="isEvaluationCompleted"
-                                class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl mb-5">
-                                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </button>
+                            <button
+                                @click="currentPage++"
+                                :disabled="currentPage === totalPages"
+                                class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                aria-label="Next page"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                 </svg>
-                                <div>
-                                    <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Evaluation Completed</p>
-                                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">You have already evaluated this application. Actions are no longer available.</p>
-                                </div>
-                            </div>
-
-                            <!-- Evaluation Section -->
-                            <div v-if="isEvaluating" class="mb-8 p-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">{{ user?.role_id === 3 ? 'Guidance Office Referral' : 'Admissions Office Referral' }}</h4>
-                                <p class="text-sm text-amber-700 dark:text-amber-400 mb-4">{{ user?.role_id === 3 ? 'Provide a reason for sending this applicant to the Guidance Office.' : 'Provide a reason for sending this applicant to the Admissions Office.' }}</p>
-                                
-                                <div v-if="evaluationError" class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded relative" role="alert">
-                                    <span class="block sm:inline">{{ evaluationError }}</span>
-                                </div>
-                                
-                                <!-- Return Note -->
-                                <div class="mb-4">
-                                    <label for="returnNote" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Reason <span class="text-red-500 dark:text-red-300">*</span>
-                                    </label>
-                                    <textarea
-                                        id="returnNote"
-                                        name="returnNote"
-                                        v-model="returnNote"
-                                        rows="3"
-                                        maxlength="400"
-                                        :class="[
-                                            'w-full border rounded-lg p-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent',
-                                            returnNoteCharCount > 400 ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]'
-                                        ]"
-                                        placeholder="Explain what the applicant needs to do..."
-                                    ></textarea>
-                                    <div class="text-right mt-1 mb-2">
-                                        <span :class="{'text-red-500': returnNoteCharCount > 400, 'text-gray-500': returnNoteCharCount <= 400}" class="text-xs">
-                                            {{ returnNoteCharCount }} / 400 characters
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center gap-2 mb-3 px-1">
-                                        <input type="checkbox" id="promissoryNoteDashboard" v-model="requiresPromissoryNote" 
-                                            class="w-4 h-4 text-[#9E122C] bg-white border-gray-300 rounded focus:ring-[#9E122C] dark:focus:ring-[#9E122C] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" />
-                                        <label for="promissoryNoteDashboard" class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Require Promissory Note
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Action Buttons -->
-                                <div class="flex space-x-3">
-                                    <button 
-                                        @click="promptReturn"
-                                        class="flex-1 px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white text-sm font-semibold rounded-lg transition"
-                                    >
-                                        Confirm
-                                    </button>
-                                    <button
-                                        @click="cancelEvaluation"
-                                        :class="[getButtonClass('secondary'), 'px-4 py-2 rounded-lg transition font-medium min-h-[44px]']"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Uploaded Documents -->
-                            <div class="mb-8">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Required Documents</h4>
-                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                                    <div
-                                        v-for="(file, key) in selectedUserFiles"
-                                        :key="key"
-                                        class="group relative"
-                                    >
-                                        <!-- Document Card -->
-                                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-                                            <div class="relative">
-                                                <img
-                                                    v-if="hasImagePreview(file)"
-                                                    :src="getFileUrl(file)"
-                                                    :alt="formatFileKey(key)"
-                                                    class="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition"
-                                                    @click="openImageModal(file)"
-                                                />
-                                                <div
-                                                    v-else
-                                                    class="w-full h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-800"
-                                                >
-                                                    <svg class="w-8 h-8 text-gray-400 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                                    </svg>
-                                                </div>
-                                                
-                                            </div>
-                                            
-                                            <!-- Document Label -->
-                                            <div class="bg-gray-50 dark:bg-gray-800 p-3 border-t border-gray-200 dark:border-gray-700">
-                                                <span class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">
-                                                    {{ formatFileKey(key) }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Application History -->
-                            <div v-if="selectedUser?.application?.processes?.length">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Timeline</h4>
-                                <div class="space-y-3">
-                                    <div
-                                        v-for="(process, index) in selectedUser.application.processes"
-                                        :key="index"
-                                        class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-                                    >
-                                        <div :class="[
-                                            'w-3 h-3 rounded-full mt-1.5 flex-shrink-0',
-                                            process.action === 'rejected' ? 'bg-red-500' :
-                                            process.status === 'completed' ? 'bg-green-500' :
-                                            process.status === 'in_progress' ? 'bg-yellow-500' :
-                                            'bg-red-500'
-                                        ]"></div>
-                                        <div class="flex-1">
-                                            <div class="flex justify-between items-start">
-                                                <div>
-                                                    <p class="font-semibold text-gray-900 dark:text-white">
-                                                        {{ formatStage(process.stage) }}
-                                                    </p>
-                                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                        {{ process.reviewer_notes || 'No notes provided' }}
-                                                    </p>
-                                                </div>
-                                                <span :class="[
-                                                    'px-2 py-1 rounded-full text-xs font-semibold',
-                                                    process.action === 'rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
-                                                    process.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
-                                                    process.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                                                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                                ]">
-                                                    {{ process.action === 'rejected' ? 'Rejected' : capitalize(process.status) }}
-                                                </span>
-                                            </div>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                                {{ formatDate(process.created_at) }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </transition>
+        </div>
+
+        </div>
+
+        <!-- User Detail Modal -->
+        <UserDetailsModal
+            :selected-user="selectedUser"
+            :selected-user-files="selectedUserFiles"
+            :current-user="null"
+            :available-programs="[]"
+            :is-changing-course="false"
+            :course-change-message="''"
+            :change-course-selected-id="''"
+            @close="closeUserCard"
+            @open-image="openImageModal"
+        >
+            <template #top-actions>
+                <!-- Evaluator Actions -->
+                <div v-if="!isEvaluationCompleted" class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl space-y-3">
+                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Actions</h4>
+
+                    <!-- Before review starts -->
+                    <div v-if="!hasStartedReview" class="space-y-3">
+                        <button
+                            @click="startReview"
+                            :disabled="isStartingReview"
+                            class="w-full px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white rounded-lg transition font-medium min-h-[44px] flex justify-center items-center disabled:opacity-50"
+                        >
+                            <svg v-if="isStartingReview" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>{{ isStartingReview ? 'Starting...' : 'Begin Review' }}</span>
+                        </button>
+                        <Link :href="`/applications/user/${selectedUser?.id}?context=evaluator&stage=${currentStage}`"
+                              :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block text-sm']">
+                            View Full Details
+                        </Link>
+                    </div>
+
+                    <!-- During active review -->
+                    <div v-else class="space-y-3">
+                        <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center justify-between border border-blue-200 dark:border-blue-800">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Review in progress since {{ new Date(reviewStartTime).toLocaleTimeString() }}
+                            </div>
+                            <button @click="cancelReview" :disabled="isCancellingReview" class="text-xs font-semibold hover:underline text-red-600 dark:text-red-400 disabled:opacity-50">
+                                {{ isCancellingReview ? 'Cancelling...' : 'Cancel' }}
+                            </button>
+                        </div>
+                        <button
+                            v-if="!isEvaluating"
+                            @click="startEvaluation"
+                            :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px] text-sm']"
+                        >
+                            {{ user?.role_id === 3 ? 'Go to Guidance Office' : 'Go to Admissions Office' }}
+                        </button>
+                        <button
+                            v-if="!isEvaluating"
+                            @click="showPassModal = true"
+                            :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px] text-sm']"
+                        >
+                            Pass Application
+                        </button>
+                        <Link :href="`/applications/user/${selectedUser?.id}?context=evaluator&stage=${currentStage}`"
+                              :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block text-sm']">
+                            View Full Details
+                        </Link>
+                    </div>
+                </div>
+
+                <!-- Evaluation completed badge -->
+                <div v-if="isEvaluationCompleted"
+                    class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl">
+                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Evaluation Completed</p>
+                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">You have already evaluated this application.</p>
+                    </div>
+                </div>
+
+                <!-- Promissory Note badge -->
+                <div v-if="selectedUser?.application?.requires_promissory_note"
+                    class="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl">
+                    <svg class="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div>
+                        <p class="text-sm font-semibold text-orange-700 dark:text-orange-300">Requires Promissory Note</p>
+                        <p class="text-xs text-orange-600 dark:text-orange-400 mt-0.5">This applicant has been tagged to require a Promissory Note.</p>
+                    </div>
+                </div>
+
+                <!-- Evaluation (return/referral) form -->
+                <div v-if="isEvaluating" class="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl space-y-3">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">{{ user?.role_id === 3 ? 'Guidance Office Referral' : 'Admissions Office Referral' }}</h4>
+                    <p class="text-xs text-amber-700 dark:text-amber-400">{{ user?.role_id === 3 ? 'Provide a reason for sending this applicant to the Guidance Office.' : 'Provide a reason for sending this applicant to the Admissions Office.' }}</p>
+                    <div v-if="evaluationError" class="p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">{{ evaluationError }}</div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Reason <span class="text-red-500">*</span></label>
+                        <textarea
+                            v-model="returnNote"
+                            rows="3"
+                            maxlength="400"
+                            :class="['w-full border rounded-lg p-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', returnNoteCharCount > 400 ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                            placeholder="Explain what the applicant needs to do..."
+                        ></textarea>
+                        <div class="text-right mt-1">
+                            <span :class="{'text-red-500': returnNoteCharCount > 400, 'text-gray-500': returnNoteCharCount <= 400}" class="text-xs">{{ returnNoteCharCount }} / 400</span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2 px-1">
+                            <input type="checkbox" id="promissoryNoteDashboard" v-model="requiresPromissoryNote"
+                                class="w-4 h-4 text-[#9E122C] bg-white border-gray-300 rounded focus:ring-[#9E122C]" />
+                            <label for="promissoryNoteDashboard" class="text-xs font-medium text-gray-700 dark:text-gray-300">Require Promissory Note</label>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="promptReturn" class="flex-1 px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white text-sm font-semibold rounded-lg transition">Confirm</button>
+                        <button @click="cancelEvaluation" :class="[getButtonClass('secondary'), 'px-4 py-2 rounded-lg transition font-medium text-sm']">Cancel</button>
+                    </div>
+                </div>
+            </template>
+        </UserDetailsModal>
 
         <!-- Image Preview Modal -->
         <transition name="fade">

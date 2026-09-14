@@ -3,14 +3,22 @@
 namespace App\Rules;
 
 use Illuminate\Validation\Rule;
+use App\Enums\RoleId;
 
 /**
  * Validation Rules for PUPTAS
- * 
+ *
  * Centralized validation rules for all models to ensure consistency
  */
 class ValidationRules
 {
+    /**
+     * Allowed role IDs as a comma-separated validation string.
+     */
+    private static function roleInRule(): string
+    {
+        return 'in:' . implode(',', RoleId::values());
+    }
     /**
      * User validation rules
      */
@@ -30,7 +38,7 @@ class ValidationRules
                 'unique:test_passers,email'
             ], // Temp removed Gmail validation
             'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/',
-            'role_id' => 'required|integer|in:1,2,3,4,5,6,7,8', // Changed from exists:roles,id
+            'role_id' => 'required|integer|' . self::roleInRule(),
             'program' => 'nullable|array', // Allow multiple programs assigned to staff
             'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants
@@ -55,7 +63,7 @@ class ValidationRules
                 'regex:/^[a-z0-9._%+\-]+@gmail\.com$/'
             ], // Added Gmail validation with proper Rule syntax
             'password' => 'nullable|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/',
-            'role_id' => 'required|integer|in:1,2,3,4,5,6,7,8', // Changed from exists:roles,id
+            'role_id' => 'required|integer|' . self::roleInRule(),
             'program' => 'nullable|array', // Allow multiple programs assigned to staff
             'program.*' => 'exists:programs,code', // Validate each program code
             'applicant_program' => 'nullable|string|exists:programs,code', // Added for applicants

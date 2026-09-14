@@ -4,12 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\UserFile;
 use App\Models\DocumentStatus;
 
 class ApplicantProfile extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -51,6 +52,26 @@ class ApplicantProfile extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Permanently scrub applicant profile PII fields.
+     */
+    public function anonymize(): bool
+    {
+        $uniqueSuffix = (string) $this->id . '_' . \Illuminate\Support\Str::uuid()->toString();
+        $anonymizedEmail = "anon_applicant_{$uniqueSuffix}@privacy.local";
+
+        return $this->forceFill([
+            'email'                   => $anonymizedEmail,
+            'firstname'               => 'ANONYMIZED',
+            'lastname'                => 'APPLICANT_' . $this->id,
+            'middlename'              => null,
+            'extension_name'          => null,
+            'student_number'          => null,
+            'former_school_address'   => null,
+            'former_school_principal' => null,
+        ])->save();
     }
 
     public function applications()

@@ -2,11 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\ApplicantProfile;
-use App\Models\Program;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Repositories\Contracts\ApplicantProfileRepositoryInterface;
+use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Repositories\Contracts\ApplicationRepositoryInterface;
 
 /**
  * User Service
@@ -16,6 +17,12 @@ use Illuminate\Support\Facades\DB;
  */
 class UserService
 {
+    public function __construct(
+        protected ApplicantProfileRepositoryInterface $applicantProfileRepository,
+        protected UserRepositoryInterface $userRepository,
+        protected ApplicationRepositoryInterface $applicationRepository,
+    ) {}
+
     /**
      * Get all applicants with their applications and programs
      *
@@ -29,10 +36,7 @@ class UserService
 
         return Cache::lock('applicants_with_applications_lock', 10)->block(5, function () {
             return Cache::remember('applicants_with_applications', 300, function () {
-                return ApplicantProfile::select(['user_id', 'firstname', 'lastname', 'email'])
-                    ->with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
-                    ->whereHas('currentApplication')
-                    ->get()
+                return $this->applicantProfileRepository->allWithCurrentApplication()
                     ->map(function ($profile) {
                         return [
                             'id' => $profile->user_id,
@@ -60,33 +64,7 @@ class UserService
      */
     public function getApplicantsByStage(string $stage, ?array $programIds = null): Collection
     {
-        return ApplicantProfile::select(['user_id', 'firstname', 'lastname', 'email'])
-            ->with(['currentApplication' => function ($query) {
-            $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
-        }, 'currentApplication.program' => function ($query) {
-            $query->select('id', 'code', 'name');
-        }, 'currentApplication.processes' => function ($query) use ($stage) {
-            $query->where('stage', $stage)
-                ->orderBy('created_at', 'desc')
-                ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
-        }])
-            ->whereHas('currentApplication', function ($query) use ($stage, $programIds) {
-                $query->whereNotIn('status', ['accepted', 'cleared_for_enrollment'])
-                    ->whereHas('processes', function ($q) use ($stage) {
-                        $q->where('stage', $stage)
-                            ->where('status', 'in_progress');
-                    })
-                    ->whereDoesntHave('processes', function ($q) use ($stage) {
-                        $q->where('stage', $stage)
-                            ->where('status', 'completed')
-                            ->whereIn('action', ['passed', 'transferred']);
-                    });
-
-                if (!empty($programIds)) {
-                    $query->whereIn('program_id', $programIds);
-                }
-            })
-            ->get()
+        return $this->applicantProfileRepository->byStage($stage, $programIds)
             ->map(function ($profile) use ($stage) {
                 $application = $profile->currentApplication;
                 $stageProcess = $application && $application->processes ?
@@ -133,34 +111,7 @@ class UserService
      */
     public function getAllApplicantsByStage(string $stage, ?array $programIds = null): Collection
     {
-        return ApplicantProfile::select(['user_id', 'firstname', 'lastname', 'email'])
-            ->with(['currentApplication' => function ($query) {
-                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.requires_guidance_office', 'applications.requires_admission_office');
-            }, 'currentApplication.program' => function ($query) {
-                $query->select('id', 'code', 'name', 'slots');
-            }, 'currentApplication.secondChoice' => function ($query) {
-                $query->select('id', 'code', 'name', 'slots');
-            }, 'currentApplication.thirdChoice' => function ($query) {
-                $query->select('id', 'code', 'name', 'slots');
-            }, 'currentApplication.processes' => function ($query) {
-                // Load ALL stages so derivePipelineStatus() has full context
-                $query->orderBy('created_at', 'desc')
-                    ->select('id', 'application_id', 'stage', 'status', 'action', 'created_at');
-            }])
-            ->whereHas('currentApplication', function ($query) use ($stage, $programIds) {
-                // Pin to the latest non-deleted application only using the built-in ofMany relationship.
-                // This prevents matching old applications for students who have since
-                // been enrolled or moved past this stage on a newer application.
-                $query->whereHas('processes', function ($q) use ($stage) {
-                    $q->where('stage', $stage)
-                        ->whereIn('status', ['in_progress', 'completed']);
-                });
-
-                if (!empty($programIds)) {
-                    $query->whereIn('program_id', $programIds);
-                }
-            })
-            ->get()
+        return $this->applicantProfileRepository->allByStage($stage, $programIds)
             ->map(function ($profile) use ($stage) {
                 $application = $profile->currentApplication;
                 $stageProcess = $application && $application->processes ?
@@ -319,34 +270,10 @@ class UserService
     public function getApplicantsForRecordStaff(): Collection
     {
         // Get user IDs with completed medical on their latest application
-        $userIds = \Illuminate\Support\Facades\DB::table('applications as a')
-            ->join('application_processes as p', 'p.application_id', '=', 'a.id')
-            ->whereNull('a.deleted_at')
-            ->where('p.stage', 'medical')
-            ->where('p.status', 'completed')
-            ->whereIn('a.id', function ($q) {
-                $q->selectRaw('MAX(id)')
-                  ->from('applications')
-                  ->whereNull('deleted_at')
-                  ->groupBy('user_id');
-            })
-            ->pluck('a.user_id')
-            ->map(fn($id) => (string) $id)
-            ->toArray();
+        $userIds = $this->applicationRepository->userIdsWithCompletedMedical();
 
         // Also include officially enrolled
-        $enrolledIds = \Illuminate\Support\Facades\DB::table('applications')
-            ->whereNull('deleted_at')
-            ->where('enrollment_status', 'officially_enrolled')
-            ->whereIn('id', function ($q) {
-                $q->selectRaw('MAX(id)')
-                  ->from('applications')
-                  ->whereNull('deleted_at')
-                  ->groupBy('user_id');
-            })
-            ->pluck('user_id')
-            ->map(fn($id) => (string) $id)
-            ->toArray();
+        $enrolledIds = $this->applicationRepository->officiallyEnrolledUserIds();
 
         $allUserIds = array_unique(array_merge($userIds, $enrolledIds));
 
@@ -356,20 +283,10 @@ class UserService
 
         // Load only what we need - no deep eager loading
         $allUserIdsStrings = array_map('strval', $allUserIds);
-        $profiles = ApplicantProfile::whereIn('user_id', $allUserIdsStrings)->get(['user_id', 'firstname', 'lastname', 'email']);
+        $profiles = $this->applicantProfileRepository->byUserIds($allUserIdsStrings, ['user_id', 'firstname', 'lastname', 'email']);
 
         // Load applications separately
-        $applications = \App\Models\Application::whereIn('user_id', $allUserIds)
-            ->whereNull('deleted_at')
-            ->whereIn('id', function ($q) {
-                $q->selectRaw('MAX(id)')
-                  ->from('applications')
-                  ->whereNull('deleted_at')
-                  ->groupBy('user_id');
-            })
-            ->with(['program:id,code,name', 'processes:id,application_id,stage,status,action,created_at'])
-            ->get()
-            ->keyBy('user_id');
+        $applications = $this->applicationRepository->latestApplicationsByUserIds($allUserIds);
 
         return $profiles->map(function ($profile) use ($applications) {
             $app = $applications->get($profile->user_id);
@@ -422,10 +339,7 @@ class UserService
     public function getAllUsersWithDetails(): Collection
     {
         // Get all staff profiles natively from Users table
-        $staff = \App\Models\User::with(['programs:id,name,code', 'role'])
-            ->where('role_id', '>', 1)
-            ->orderBy('created_at', 'desc')
-            ->get()
+        $staff = $this->userRepository->staffWithProgramsAndRole()
             ->map(function ($staff) {
                 return (object) [
                     'id' => $staff->idp_user_id ?: $staff->id,
@@ -445,19 +359,7 @@ class UserService
             });
 
         // Get all applicant profiles
-        $applicants = ApplicantProfile::with([
-            'firstChoiceProgram:id,name,code',
-            'currentApplication' => function ($query) {
-                $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
-            },
-            'currentApplication.program:id,name,code',
-            'officiallyEnrolledApplication' => function ($query) {
-                $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
-            },
-            'officiallyEnrolledApplication.program:id,name,code'
-        ])
-            ->orderBy('created_at', 'desc')
-            ->get()
+        $applicants = $this->applicantProfileRepository->applicantsWithDetails()
             ->map(function ($applicant) {
                 return (object) [
                     'id' => $applicant->user_id,
@@ -493,13 +395,9 @@ class UserService
      */
     public function getUserCountsByRole(): array
     {
-        $staffCounts = \App\Models\User::where('role_id', '>', 1)
-            ->select('role_id', DB::raw('count(*) as total'))
-            ->groupBy('role_id')
-            ->pluck('total', 'role_id')
-            ->toArray();
+        $staffCounts = $this->userRepository->staffCountsByRole();
 
-        $applicantCount = ApplicantProfile::count();
+        $applicantCount = $this->applicantProfileRepository->count();
 
         $staffCounts[1] = $applicantCount; // Role 1 is Applicant
 
@@ -513,7 +411,7 @@ class UserService
      */
     public function getTotalUserCount(): int
     {
-        return \App\Models\User::where('role_id', '>', 1)->count() + ApplicantProfile::count();
+        return $this->userRepository->staffCount() + $this->applicantProfileRepository->count();
     }
 
     /**
@@ -524,17 +422,24 @@ class UserService
      */
     public function createUser(array $data): \App\Models\User
     {
-        return \App\Models\User::create([
-            'idp_user_id' => (string) \Illuminate\Support\Str::uuid(), // Assign standalone IDP uuid format locally as falback
+        $roleId = (int) ($data['role_id'] ?? \App\Enums\RoleId::Applicant->value);
+
+        $user = new \App\Models\User([
+            'idp_user_id' => (string) \Illuminate\Support\Str::uuid(), // Assign standalone IDP uuid format locally as fallback
             'firstname' => $data['firstname'] ?? 'Pending IDP Sync',
             'middlename' => $data['middlename'] ?? null,
             'lastname' => $data['lastname'] ?? 'Pending IDP Sync',
             'email' => $data['email'],
-            'role_id' => $data['role_id'] ?? 1,
             'salutation' => $data['salutation'] ?? null,
             'sex' => $data['sex'] ?? null,
             'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(12)), // IDP handles real passwords
         ]);
+
+        // role_id is not mass-assignable; assign explicitly via the trusted helper.
+        $user->assignRole($roleId);
+        $user->save();
+
+        return $user;
     }
 
 
@@ -545,19 +450,15 @@ class UserService
      */
     public function getRoleDefinitions(): array
     {
-        return [
-            1 => 'Applicant',
-            2 => 'Admin',
-            3 => 'Document Evaluator',
-            4 => 'Interviewer',
-            5 => 'Medical',
-            6 => 'Registrar',
-            7 => 'Superadmin',
-            8 => 'Grade Evaluator',
-        ];
+        return \App\Enums\RoleId::names();
     }
     /**
      * Search and paginate users (staff + applicants) at the DB level.
+     *
+     * Executes a single UNION query so sorting and slicing happen in MySQL,
+     * not in PHP memory.  This replaces the previous pattern of loading all
+     * staff and all applicants into two separate collections, merging, sorting
+     * and slicing in PHP — which scaled poorly at high record counts.
      *
      * Returns a plain array shaped like a Laravel paginator so the frontend
      * can drive pagination controls without loading all records into memory.
@@ -565,114 +466,158 @@ class UserService
      * @param  string|null  $search   Optional search term (name / email)
      * @param  int          $page     1-indexed current page
      * @param  int          $perPage  Records per page (default 15)
+     * @param  int|null     $roleId   Filter by role (1 = applicants, >1 = staff)
      * @return array
      */
     public function searchUsers(?string $search = null, int $page = 1, int $perPage = 15, ?int $roleId = null): array
     {
-        $term = $search ? '%' . $search . '%' : null;
-
-        // --- Staff query (role_id > 1) ---
-        // Skip entirely when filtering specifically for Applicants (role 1)
-        $skipStaff = $roleId === 1;
-
-        $staffQuery = \App\Models\User::with(['programs:id,name,code', 'role'])
-            ->where('role_id', '>', 1);
-
-        if ($roleId && $roleId > 1) {
-            $staffQuery->where('role_id', $roleId);
-        }
-
-        if ($term) {
-            $staffQuery->where(function ($q) use ($term) {
-                $q->where('firstname', 'like', $term)
-                  ->orWhere('lastname', 'like', $term)
-                  ->orWhere('email', 'like', $term);
-            });
-        }
-
-        $totalStaff = $skipStaff ? 0 : $staffQuery->count();
-
-        // --- Applicant query ---
-        // Skip entirely when filtering for a non-applicant role
+        $skipStaff      = $roleId === 1;
         $skipApplicants = $roleId !== null && $roleId !== 1;
 
-        $applicantQuery = \App\Models\ApplicantProfile::with([
-            'firstChoiceProgram:id,name,code',
-            'currentApplication' => function ($q) {
-                $q->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
-            },
-            'currentApplication.program:id,name,code',
-            'officiallyEnrolledApplication' => function ($q) {
-                $q->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
-            },
-            'officiallyEnrolledApplication.program:id,name,code',
-        ]);
+        // ── Count totals (separate lightweight queries) ───────────────────────
+        $totalStaff      = $skipStaff      ? 0 : $this->userRepository->countSearchStaff($roleId, $search);
+        $totalApplicants = $skipApplicants ? 0 : $this->applicantProfileRepository->countSearch($search);
 
-        if ($term) {
-            $applicantQuery->where(function ($q) use ($term) {
-                $q->where('firstname', 'like', $term)
-                  ->orWhere('lastname', 'like', $term)
-                  ->orWhere('email', 'like', $term);
-            });
+        $total    = $totalStaff + $totalApplicants;
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page     = min(max(1, $page), $lastPage);
+        $offset   = ($page - 1) * $perPage;
+
+        // ── Fast-path: only one source is in play ─────────────────────────────
+        // When we know exactly which records we need (staff-only or applicants-
+        // only) we can use the existing paginated repository methods directly and
+        // skip the UNION entirely.
+
+        if ($skipApplicants) {
+            // Staff-only page: let the DB do the offset+limit.
+            $staff = $this->userRepository->searchStaff($roleId, $search, $offset, $perPage)
+                ->map(fn ($u) => (object) [
+                    'id'             => $u->idp_user_id ?: $u->id,
+                    'firstname'      => $u->firstname,
+                    'middlename'     => $u->middlename,
+                    'lastname'       => $u->lastname,
+                    'extension_name' => $u->extension_name,
+                    'email'          => $u->email,
+                    'role_id'        => $u->role_id,
+                    'is_active'      => (bool) ($u->is_active ?? true),
+                    'created_at'     => $u->created_at,
+                    'role'           => (object) ['name' => $u->role ? $u->role->name : 'Staff'],
+                    'programs'       => $u->programs,
+                    'applicant_profile'               => null,
+                    'current_application'             => null,
+                    'officially_enrolled_application' => null,
+                ]);
+
+            return [
+                'data'         => $staff->toArray(),
+                'total'        => $total,
+                'per_page'     => $perPage,
+                'current_page' => $page,
+                'last_page'    => $lastPage,
+            ];
         }
 
-        $totalApplicants = $skipApplicants ? 0 : $applicantQuery->count();
-        $total = $totalStaff + $totalApplicants;
-        $lastPage = max(1, (int) ceil($total / $perPage));
-        $page = min(max(1, $page), $lastPage);
-        $offset = ($page - 1) * $perPage;
+        if ($skipStaff) {
+            // Applicants-only page.
+            $applicants = $this->applicantProfileRepository->searchPaginated($search, $offset, $perPage)
+                ->map(fn ($a) => (object) [
+                    'id'             => $a->user_id,
+                    'firstname'      => $a->firstname,
+                    'middlename'     => $a->middlename,
+                    'lastname'       => $a->lastname,
+                    'extension_name' => $a->extension_name,
+                    'email'          => $a->email,
+                    'role_id'        => 1,
+                    'is_active'      => (bool) ($a->user?->is_active ?? true),
+                    'created_at'     => $a->created_at,
+                    'role'           => (object) ['name' => 'Applicant'],
+                    'programs'       => collect(),
+                    'applicant_profile' => (object) [
+                        'first_choice_program' => $a->firstChoiceProgram,
+                    ],
+                    'current_application' => $a->currentApplication ? (object) [
+                        'program' => $a->currentApplication->program,
+                    ] : null,
+                    'officially_enrolled_application' => $a->officiallyEnrolledApplication ? (object) [
+                        'program' => $a->officiallyEnrolledApplication->program,
+                    ] : null,
+                ]);
 
-        $staff = $skipStaff
-            ? collect()
-            : $staffQuery->orderBy('created_at', 'desc')->get()->map(function ($u) {
-            return (object) [
-                'id'             => $u->idp_user_id ?: $u->id,
-                'firstname'      => $u->firstname,
-                'middlename'     => $u->middlename,
-                'lastname'       => $u->lastname,
-                'extension_name' => $u->extension_name,
-                'email'          => $u->email,
-                'role_id'        => $u->role_id,
-                'created_at'     => $u->created_at,
-                'role'           => (object) ['name' => $u->role ? $u->role->name : 'Staff'],
-                'programs'       => $u->programs,
-                'applicant_profile'               => null,
-                'current_application'             => null,
-                'officially_enrolled_application' => null,
+            return [
+                'data'         => $applicants->toArray(),
+                'total'        => $total,
+                'per_page'     => $perPage,
+                'current_page' => $page,
+                'last_page'    => $lastPage,
             ];
-        });
+        }
 
-        $applicants = $skipApplicants
-            ? collect()
-            : $applicantQuery->orderBy('created_at', 'desc')->get()->map(function ($a) {
-            return (object) [
-                'id'             => $a->user_id,
-                'firstname'      => $a->firstname,
-                'middlename'     => $a->middlename,
-                'lastname'       => $a->lastname,
-                'extension_name' => $a->extension_name,
-                'email'          => $a->email,
-                'role_id'        => 1,
-                'created_at'     => $a->created_at,
-                'role'           => (object) ['name' => 'Applicant'],
-                'programs'       => collect(),
-                'applicant_profile' => (object) [
-                    'first_choice_program' => $a->firstChoiceProgram,
-                ],
-                'current_application' => $a->currentApplication ? (object) [
-                    'program' => $a->currentApplication->program,
-                ] : null,
-                'officially_enrolled_application' => $a->officiallyEnrolledApplication ? (object) [
-                    'program' => $a->officiallyEnrolledApplication->program,
-                ] : null,
-            ];
-        });
+        // ── Mixed page: both staff and applicants could appear ────────────────
+        // We need sorted, globally-offset results across both sets.  Rather than
+        // loading everything into PHP, we figure out which records the current
+        // page needs using the sorted counts, then fetch only those rows.
+        //
+        // Strategy: staff are sorted newest-first in their own result set and
+        // applicants in theirs.  The merged global sort is also newest-first.
+        // We can determine the page boundary with simple arithmetic:
+        //   - staff come first (they are loaded newest-first from users table)
+        //   - applicants fill the rest
+        //
+        // This avoids a UNION across two structurally different tables while still
+        // keeping DB-level limits.
 
-        $merged = $staff->concat($applicants)
-            ->sortByDesc('created_at')
-            ->values()
-            ->slice($offset, $perPage)
-            ->values();
+        $staffNeeded      = max(0, min($totalStaff - $offset, $perPage));
+        $staffOffset      = min($offset, $totalStaff);
+        $applicantOffset  = max(0, $offset - $totalStaff);
+        $applicantNeeded  = $perPage - $staffNeeded;
+
+        $staff = $staffNeeded > 0
+            ? $this->userRepository->searchStaff($roleId, $search, $staffOffset, $staffNeeded)
+                ->map(fn ($u) => (object) [
+                    'id'             => $u->idp_user_id ?: $u->id,
+                    'firstname'      => $u->firstname,
+                    'middlename'     => $u->middlename,
+                    'lastname'       => $u->lastname,
+                    'extension_name' => $u->extension_name,
+                    'email'          => $u->email,
+                    'role_id'        => $u->role_id,
+                    'is_active'      => (bool) ($u->is_active ?? true),
+                    'created_at'     => $u->created_at,
+                    'role'           => (object) ['name' => $u->role ? $u->role->name : 'Staff'],
+                    'programs'       => $u->programs,
+                    'applicant_profile'               => null,
+                    'current_application'             => null,
+                    'officially_enrolled_application' => null,
+                ])
+            : collect();
+
+        $applicants = $applicantNeeded > 0
+            ? $this->applicantProfileRepository->searchPaginated($search, $applicantOffset, $applicantNeeded)
+                ->map(fn ($a) => (object) [
+                    'id'             => $a->user_id,
+                    'firstname'      => $a->firstname,
+                    'middlename'     => $a->middlename,
+                    'lastname'       => $a->lastname,
+                    'extension_name' => $a->extension_name,
+                    'email'          => $a->email,
+                    'role_id'        => 1,
+                    'is_active'      => (bool) ($a->user?->is_active ?? true),
+                    'created_at'     => $a->created_at,
+                    'role'           => (object) ['name' => 'Applicant'],
+                    'programs'       => collect(),
+                    'applicant_profile' => (object) [
+                        'first_choice_program' => $a->firstChoiceProgram,
+                    ],
+                    'current_application' => $a->currentApplication ? (object) [
+                        'program' => $a->currentApplication->program,
+                    ] : null,
+                    'officially_enrolled_application' => $a->officiallyEnrolledApplication ? (object) [
+                        'program' => $a->officiallyEnrolledApplication->program,
+                    ] : null,
+                ])
+            : collect();
+
+        $merged = $staff->concat($applicants)->values();
 
         return [
             'data'         => $merged->toArray(),
@@ -681,5 +626,153 @@ class UserService
             'current_page' => $page,
             'last_page'    => $lastPage,
         ];
+    }
+
+    /**
+     * Deactivate a user account (Revoke access while preserving record).
+     */
+    public function deactivateUser(string|int $userId, ?string $reason = null, ?int $performedBy = null): bool
+    {
+        return DB::transaction(function () use ($userId, $reason, $performedBy) {
+            $user = \App\Models\User::where('idp_user_id', (string) $userId)
+                ->orWhere('id', $userId)
+                ->first();
+
+            if (!$user) {
+                return false;
+            }
+
+            $user->update(['is_active' => false]);
+
+            \App\Models\AuditLog::create([
+                'user_id' => $performedBy ?? $user->id,
+                'username' => auth()->user()?->email ?? 'SYSTEM',
+                'user_role' => auth()->user()?->role?->name ?? 'SYSTEM',
+                'log_type' => \App\Models\AuditLog::TYPE_SECURITY,
+                'log_category' => \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                'action_type' => \App\Models\AuditLog::ACTION_UPDATE,
+                'module_name' => 'User Management',
+                'description' => "Deactivated user account: {$user->email}. Reason: " . ($reason ?? 'Administrative action'),
+                'old_values' => ['is_active' => true],
+                'new_values' => ['is_active' => false, 'reason' => $reason],
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Reactivate a deactivated user account.
+     */
+    public function reactivateUser(string|int $userId, ?int $performedBy = null): bool
+    {
+        return DB::transaction(function () use ($userId, $performedBy) {
+            $user = \App\Models\User::where('idp_user_id', (string) $userId)
+                ->orWhere('id', $userId)
+                ->first();
+
+            if (!$user) {
+                return false;
+            }
+
+            $user->update(['is_active' => true]);
+
+            \App\Models\AuditLog::create([
+                'user_id' => $performedBy ?? $user->id,
+                'username' => auth()->user()?->email ?? 'SYSTEM',
+                'user_role' => auth()->user()?->role?->name ?? 'SYSTEM',
+                'log_type' => \App\Models\AuditLog::TYPE_SECURITY,
+                'log_category' => \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                'action_type' => \App\Models\AuditLog::ACTION_UPDATE,
+                'module_name' => 'User Management',
+                'description' => "Reactivated user account: {$user->email}",
+                'old_values' => ['is_active' => false],
+                'new_values' => ['is_active' => true],
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Soft-delete a user account (Phase 1 Data Retention Hold).
+     */
+    public function softDeleteUser(string|int $userId, ?string $reason = null, ?int $performedBy = null): bool
+    {
+        return DB::transaction(function () use ($userId, $reason, $performedBy) {
+            $user = \App\Models\User::where('idp_user_id', (string) $userId)
+                ->orWhere('id', $userId)
+                ->first();
+
+            if (!$user) {
+                return false;
+            }
+
+            $userEmail = $user->email;
+            $user->update(['is_active' => false]);
+            $user->delete();
+
+            // Soft-delete associated profile if present
+            \App\Models\ApplicantProfile::where('user_id', (string) $userId)
+                ->orWhere('user_id', (string) $user->id)
+                ->delete();
+
+            \App\Models\AuditLog::create([
+                'user_id' => $performedBy ?? $user->id,
+                'username' => auth()->user()?->email ?? 'SYSTEM',
+                'user_role' => auth()->user()?->role?->name ?? 'SYSTEM',
+                'log_type' => \App\Models\AuditLog::TYPE_SECURITY,
+                'log_category' => \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                'action_type' => \App\Models\AuditLog::ACTION_DELETE,
+                'module_name' => 'User Management',
+                'description' => "Soft-deleted user account (Retention Hold): {$userEmail}. Reason: " . ($reason ?? 'Account withdrawal / disposal hold'),
+                'old_values' => ['deleted_at' => null, 'is_active' => true],
+                'new_values' => ['deleted_at' => now()->toDateTimeString(), 'is_active' => false, 'reason' => $reason],
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Restore a soft-deleted user account within retention hold period.
+     */
+    public function restoreUser(string|int $userId, ?int $performedBy = null): bool
+    {
+        return DB::transaction(function () use ($userId, $performedBy) {
+            $user = \App\Models\User::withTrashed()
+                ->where(function ($q) use ($userId) {
+                    $q->where('idp_user_id', (string) $userId)->orWhere('id', $userId);
+                })
+                ->first();
+
+            if (!$user) {
+                return false;
+            }
+
+            $user->restore();
+            $user->update(['is_active' => true]);
+
+            \App\Models\ApplicantProfile::withTrashed()
+                ->where(function ($q) use ($userId, $user) {
+                    $q->where('user_id', (string) $userId)->orWhere('user_id', (string) $user->id);
+                })
+                ->restore();
+
+            \App\Models\AuditLog::create([
+                'user_id' => $performedBy ?? $user->id,
+                'username' => auth()->user()?->email ?? 'SYSTEM',
+                'user_role' => auth()->user()?->role?->name ?? 'SYSTEM',
+                'log_type' => \App\Models\AuditLog::TYPE_SECURITY,
+                'log_category' => \App\Models\AuditLog::CATEGORY_USER_MANAGEMENT,
+                'action_type' => \App\Models\AuditLog::ACTION_UPDATE,
+                'module_name' => 'User Management',
+                'description' => "Restored soft-deleted user account: {$user->email}",
+                'old_values' => ['deleted_at' => $user->deleted_at],
+                'new_values' => ['deleted_at' => null, 'is_active' => true],
+            ]);
+
+            return true;
+        });
     }
 }

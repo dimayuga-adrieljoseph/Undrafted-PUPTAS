@@ -4,6 +4,20 @@ import { Head, Link, useForm, usePage, router } from "@inertiajs/vue3";
 import { computed } from "vue";
 import TermsandConditionsModal from "@/Pages/Modal/TermsandConditionsModal.vue";
 
+// Dark mode toggle
+const isDark = ref(false);
+
+const toggleDarkMode = () => {
+    isDark.value = !isDark.value;
+    if (isDark.value) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+    }
+};
+
 const page = usePage();
 const flashError = computed(() => page.props.flash?.error);
 
@@ -13,6 +27,16 @@ const idpEmail = computed(() => pendingReg.value?.email ?? null);
 
 // Redirect away if there's no pending IDP session
 onMounted(() => {
+    // Restore saved theme preference
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        isDark.value = true;
+        document.documentElement.classList.add('dark');
+    } else {
+        isDark.value = false;
+        document.documentElement.classList.remove('dark');
+    }
+
     if (!pendingReg.value) {
         router.visit('/auth/idp/redirect');
         return;
@@ -51,6 +75,8 @@ const form = useForm({
     sex: "",
     reference_number: "",
     school: "",
+    school_address: "",
+    school_principal: "",
     schoolyear: "",
     dateGrad: "",
     strand: "",
@@ -122,7 +148,7 @@ const handleTermsCancel = () => {
     <Head title="Register - PUPT Admission Portal" />
 
     <div
-        class="min-h-screen bg-white-500 flex flex-col items-center justify-center p-4"
+        class="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center justify-center p-4"
     >
         <!-- Main Container -->
         <div
@@ -138,15 +164,13 @@ const handleTermsCancel = () => {
                             class="flex items-center justify-center md:justify-start space-x-3"
                         >
                             <div
-                                class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg dark:bg-gray-800"
+                                class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg"
                             >
-                                <span class="text-2xl font-bold text-red-800 dark:text-red-300"
-                                    >P</span
-                                >
+                                <img src="/assets/images/pup_logo.png" alt="PUP Logo" class="w-14 h-14 object-contain" />
                             </div>
                             <div>
                                 <h1
-                                    class="text-3xl md:text-4xl font-bold text-white tracking-tight dark:text-gray-900"
+                                    class="text-3xl md:text-4xl font-bold text-white tracking-tight"
                                 >
                                     PUP-T Admission
                                 </h1>
@@ -157,7 +181,7 @@ const handleTermsCancel = () => {
                             </div>
                         </div>
                     </div>
-                    <div class="mt-4 md:mt-0">
+                    <div class="mt-4 md:mt-0 flex items-center gap-3">
                         <div
                             class="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 text-center dark:bg-gray-900/10"
                         >
@@ -165,6 +189,24 @@ const handleTermsCancel = () => {
                                 Registration
                             </p>
                         </div>
+
+                        <!-- Dark mode toggle -->
+                        <button
+                            type="button"
+                            @click="toggleDarkMode"
+                            :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+                            class="w-10 h-10 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 dark:bg-gray-900/20 dark:hover:bg-gray-900/40 backdrop-blur-sm transition-colors duration-200 text-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                            :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+                        >
+                            <!-- Sun icon (shown in dark mode) -->
+                            <svg v-if="isDark" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                            </svg>
+                            <!-- Moon icon (shown in light mode) -->
+                            <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -457,6 +499,62 @@ const handleTermsCancel = () => {
                                         />
                                     </div>
 
+                                    <div class="md:col-span-2 space-y-2">
+                                        <label
+                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
+                                        >
+                                            School Address
+                                            <span class="text-red-500 dark:text-red-300">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.school_address"
+                                            type="text"
+                                            required
+                                            autocomplete="off"
+                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            placeholder="e.g., 123 Rizal St., Poblacion, Taguig City"
+                                        />
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                                            Full address of your Senior High School. This will be used to generate your F137 Request Letter.
+                                        </p>
+                                        <div
+                                            v-if="form.errors.school_address"
+                                            class="text-red-500 text-sm mt-1 flex items-center dark:text-red-300"
+                                        >
+                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                            </svg>
+                                            {{ form.errors.school_address }}
+                                        </div>
+                                    </div>
+
+                                    <div class="md:col-span-2 space-y-2">
+                                        <label
+                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
+                                        >
+                                            Principal / Registrar Name
+                                        </label>
+                                        <input
+                                            v-model="form.school_principal"
+                                            type="text"
+                                            autocomplete="off"
+                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            placeholder="e.g., Juan dela Cruz (optional)"
+                                        />
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                                            Name of your school's Principal or Registrar. If left blank, the letter will be addressed to "The Principal/Registrar".
+                                        </p>
+                                        <div
+                                            v-if="form.errors.school_principal"
+                                            class="text-red-500 text-sm mt-1 flex items-center dark:text-red-300"
+                                        >
+                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                            </svg>
+                                            {{ form.errors.school_principal }}
+                                        </div>
+                                    </div>
+
                                     <div class="space-y-2">
                                         <label
                                             class="block text-sm font-semibold text-gray-700 dark:text-gray-300"
@@ -467,11 +565,11 @@ const handleTermsCancel = () => {
                                         <select
                                             v-model="form.schoolyear"
                                             required
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         >
-                                            <option value="" disabled>Select an option</option>
-                                            <option value="Senior High School of A.Y. 2025-2026">Senior High School A.Y. 2025-2026</option>
-                                            <option value="Senior High School of Past School Years">Senior High School of Past School Years</option>
+                                            <option value="" disabled class="dark:bg-gray-800">Select an option</option>
+                                            <option value="Senior High School of A.Y. 2025-2026" class="dark:bg-gray-800">Senior High School A.Y. 2025-2026</option>
+                                            <option value="Senior High School of Past School Years" class="dark:bg-gray-800">Senior High School of Past School Years</option>
                                         </select>
                                     </div>
 
@@ -487,7 +585,7 @@ const handleTermsCancel = () => {
                                             type="date"
                                             required
                                             autocomplete="off"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         />
                                     </div>
 
@@ -502,32 +600,32 @@ const handleTermsCancel = () => {
                                             v-model="form.strand"
                                             required
                                             autocomplete="off"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                         >
-                                            <option value="" disabled>
+                                            <option value="" disabled class="dark:bg-gray-800">
                                                 Select Strand
                                             </option>
-                                            <option value="STEM">
+                                            <option value="STEM" class="dark:bg-gray-800">
                                                 STEM (Science, Technology,
                                                 Engineering & Mathematics)
                                             </option>
-                                            <option value="HUMSS">
+                                            <option value="HUMSS" class="dark:bg-gray-800">
                                                 HUMSS (Humanities & Social
                                                 Sciences)
                                             </option>
-                                            <option value="ABM">
+                                            <option value="ABM" class="dark:bg-gray-800">
                                                 ABM (Accountancy, Business &
                                                 Management)
                                             </option>
-                                            <option value="TVL">
+                                            <option value="TVL" class="dark:bg-gray-800">
                                                 TVL
                                                 (Technical-Vocational-Livelihood)
                                             </option>
-                                            <option value="ICT">
+                                            <option value="ICT" class="dark:bg-gray-800">
                                                 ICT (Information and
                                                 Communications Technology)
                                             </option>
-                                            <option value="GAS">
+                                            <option value="GAS" class="dark:bg-gray-800">
                                                 GAS (General Academic Strand)
                                             </option>
                                         </select>
@@ -542,7 +640,7 @@ const handleTermsCancel = () => {
                                             v-model="form.track"
                                             type="text"
                                             autocomplete="off"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
+                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-400 dark:focus:border-red-400 transition-all duration-200"
                                             placeholder="e.g., ICT Programming, Cookery, Animation"
                                         />
                                     </div>
@@ -579,14 +677,14 @@ const handleTermsCancel = () => {
                                 <button
                                     type="submit"
                                     :disabled="form.processing || $page.props.cutoff?.is_passed"
-                                    class="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-red-700 via-red-600 to-yellow-600 hover:from-red-800 hover:via-red-700 hover:to-yellow-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none dark:text-gray-900"
+                                    class="w-full sm:w-auto px-8 py-3.5 bg-red-800 hover:bg-red-900 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                                 >
                                     <div
                                         class="flex items-center justify-center"
                                     >
                                         <svg
                                             v-if="form.processing"
-                                            class="animate-spin -ml-1 mr-3 h-5 w-5 text-white dark:text-gray-900"
+                                            class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
                                             xmlns="http://www.w3.org/2000/svg"
                                             fill="none"
                                             viewBox="0 0 24 24"
@@ -622,14 +720,14 @@ const handleTermsCancel = () => {
 
                             <!-- Welcome Card -->
                             <div
-                                class="bg-white rounded-xl p-6 border border-blue-200 shadow-sm"
+                                class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-blue-200 dark:border-blue-800 shadow-sm"
                             >
                                 <div class="flex items-start gap-4">
                                     <div
-                                        class="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0"
+                                        class="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 flex items-center justify-center shrink-0"
                                     >
                                         <svg
-                                            class="w-6 h-6 text-blue-600"
+                                            class="w-6 h-6 text-blue-600 dark:text-blue-400"
                                             fill="none"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
@@ -644,11 +742,11 @@ const handleTermsCancel = () => {
                                     </div>
                                     <div>
                                         <h3
-                                            class="text-xl font-bold text-slate-800"
+                                            class="text-xl font-bold text-slate-800 dark:text-white"
                                         >
                                             Welcome to PUP Taguig Admissions!
                                         </h3>
-                                        <p class="mt-2 text-sm text-slate-600">
+                                        <p class="mt-2 text-sm text-slate-600 dark:text-gray-400">
                                             Start your journey with the
                                             Polytechnic University of the
                                             Philippines - Taguig. Complete your
@@ -661,14 +759,14 @@ const handleTermsCancel = () => {
 
                             <!-- Important Reminders -->
                             <div
-                                class="bg-white rounded-xl p-6 border border-red-200 shadow-sm"
+                                class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-red-200 dark:border-red-800 shadow-sm"
                             >
                                 <div class="flex items-center mb-4">
                                     <div
-                                        class="w-10 h-10 bg-red-50 rounded-lg border border-red-100 flex items-center justify-center mr-3"
+                                        class="w-10 h-10 bg-red-50 dark:bg-red-900/30 rounded-lg border border-red-100 dark:border-red-800 flex items-center justify-center mr-3"
                                     >
                                         <svg
-                                            class="w-5 h-5 text-red-600"
+                                            class="w-5 h-5 text-red-600 dark:text-red-400"
                                             fill="none"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
@@ -681,41 +779,49 @@ const handleTermsCancel = () => {
                                             ></path>
                                         </svg>
                                     </div>
-                                    <h4 class="text-lg font-bold text-slate-800">
+                                    <h4 class="text-lg font-bold text-slate-800 dark:text-white">
                                         Important Reminders
                                     </h4>
                                 </div>
 
-                                <ul class="space-y-3 text-sm text-slate-600">
+                                <ul class="space-y-4 text-sm text-slate-600 dark:text-gray-400">
                                     <li class="flex items-start gap-3">
-                                        <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 text-xs font-bold text-red-600">1</span>
-                                        <span>Ensure all details match your official documents</span>
+                                        <div class="flex-shrink-0 w-8 h-8 bg-white dark:bg-gray-700 rounded-full border-2 border-red-200 dark:border-red-700 flex items-center justify-center">
+                                            <span class="text-sm font-bold text-red-600 dark:text-red-400">1</span>
+                                        </div>
+                                        <span class="mt-1">Ensure all details match your official documents</span>
                                     </li>
                                     <li class="flex items-start gap-3">
-                                        <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 text-xs font-bold text-red-600">2</span>
-                                        <span>Review your information carefully before submitting</span>
+                                        <div class="flex-shrink-0 w-8 h-8 bg-white dark:bg-gray-700 rounded-full border-2 border-red-200 dark:border-red-700 flex items-center justify-center">
+                                            <span class="text-sm font-bold text-red-600 dark:text-red-400">2</span>
+                                        </div>
+                                        <span class="mt-1">Review your information carefully before submitting</span>
                                     </li>
                                     <li class="flex items-start gap-3">
-                                        <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 text-xs font-bold text-red-600">3</span>
-                                        <span>Double-check for typographical errors (name, birthday, email, etc.)</span>
+                                        <div class="flex-shrink-0 w-8 h-8 bg-white dark:bg-gray-700 rounded-full border-2 border-red-200 dark:border-red-700 flex items-center justify-center">
+                                            <span class="text-sm font-bold text-red-600 dark:text-red-400">3</span>
+                                        </div>
+                                        <span class="mt-1">Double-check for typographical errors (name, birthday, email, etc.)</span>
                                     </li>
                                     <li class="flex items-start gap-3">
-                                        <span class="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 text-xs font-bold text-red-600">4</span>
-                                        <span>Incomplete or incorrect information may delay your application</span>
+                                        <div class="flex-shrink-0 w-8 h-8 bg-white dark:bg-gray-700 rounded-full border-2 border-red-200 dark:border-red-700 flex items-center justify-center">
+                                            <span class="text-sm font-bold text-red-600 dark:text-red-400">4</span>
+                                        </div>
+                                        <span class="mt-1">Incomplete or incorrect information may delay your application</span>
                                     </li>
                                 </ul>
                             </div>
 
                             <!-- After Registration -->
                             <div
-                                class="bg-white rounded-xl p-6 border border-yellow-200 shadow-sm"
+                                class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-yellow-200 dark:border-yellow-800 shadow-sm"
                             >
                                 <div class="flex items-center mb-4">
                                     <div
-                                        class="w-10 h-10 bg-yellow-50 rounded-lg border border-yellow-100 flex items-center justify-center mr-3"
+                                        class="w-10 h-10 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-100 dark:border-yellow-800 flex items-center justify-center mr-3"
                                     >
                                         <svg
-                                            class="w-5 h-5 text-yellow-600"
+                                            class="w-5 h-5 text-yellow-600 dark:text-yellow-400"
                                             fill="none"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
@@ -728,7 +834,7 @@ const handleTermsCancel = () => {
                                             ></path>
                                         </svg>
                                     </div>
-                                    <h4 class="text-lg font-bold text-slate-800">
+                                    <h4 class="text-lg font-bold text-slate-800 dark:text-white">
                                         After Registration
                                     </h4>
                                 </div>
@@ -736,45 +842,45 @@ const handleTermsCancel = () => {
                                 <div class="space-y-4">
                                     <div class="flex items-start">
                                         <div
-                                            class="flex-shrink-0 w-8 h-8 bg-white rounded-full border-2 border-yellow-200 flex items-center justify-center mr-3"
+                                            class="flex-shrink-0 w-8 h-8 bg-white dark:bg-gray-700 rounded-full border-2 border-yellow-200 dark:border-yellow-700 flex items-center justify-center mr-3"
                                         >
-                                            <span class="text-sm font-bold text-yellow-600">1</span>
+                                            <span class="text-sm font-bold text-yellow-600 dark:text-yellow-400">1</span>
                                         </div>
                                         <div>
-                                            <h5 class="font-semibold text-slate-800 text-sm">
+                                            <h5 class="font-semibold text-slate-800 dark:text-white text-sm">
                                                 Complete Profile
                                             </h5>
-                                            <p class="text-xs text-slate-600 mt-1">
+                                            <p class="text-xs text-slate-600 dark:text-gray-400 mt-1">
                                                 Upload required documents in your dashboard
                                             </p>
                                         </div>
                                     </div>
                                     <div class="flex items-start">
                                         <div
-                                            class="flex-shrink-0 w-8 h-8 bg-white rounded-full border-2 border-yellow-200 flex items-center justify-center mr-3"
+                                            class="flex-shrink-0 w-8 h-8 bg-white dark:bg-gray-700 rounded-full border-2 border-yellow-200 dark:border-yellow-700 flex items-center justify-center mr-3"
                                         >
-                                            <span class="text-sm font-bold text-yellow-600">2</span>
+                                            <span class="text-sm font-bold text-yellow-600 dark:text-yellow-400">2</span>
                                         </div>
                                         <div>
-                                            <h5 class="font-semibold text-slate-800 text-sm">
+                                            <h5 class="font-semibold text-slate-800 dark:text-white text-sm">
                                                 Follow Application Process
                                             </h5>
-                                            <p class="text-xs text-slate-600 mt-1">
+                                            <p class="text-xs text-slate-600 dark:text-gray-400 mt-1">
                                                 The admission system will guide you as to what you need to do
                                             </p>
                                         </div>
                                     </div>
                                     <div class="flex items-start">
                                         <div
-                                            class="flex-shrink-0 w-8 h-8 bg-white rounded-full border-2 border-yellow-200 flex items-center justify-center mr-3"
+                                            class="flex-shrink-0 w-8 h-8 bg-white dark:bg-gray-700 rounded-full border-2 border-yellow-200 dark:border-yellow-700 flex items-center justify-center mr-3"
                                         >
-                                            <span class="text-sm font-bold text-yellow-600">3</span>
+                                            <span class="text-sm font-bold text-yellow-600 dark:text-yellow-400">3</span>
                                         </div>
                                         <div>
-                                            <h5 class="font-semibold text-slate-800 text-sm">
+                                            <h5 class="font-semibold text-slate-800 dark:text-white text-sm">
                                                 Track Application
                                             </h5>
-                                            <p class="text-xs text-slate-600 mt-1">
+                                            <p class="text-xs text-slate-600 dark:text-gray-400 mt-1">
                                                 Monitor your admission status online
                                             </p>
                                         </div>

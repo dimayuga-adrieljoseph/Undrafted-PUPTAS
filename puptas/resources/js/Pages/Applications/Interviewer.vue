@@ -184,7 +184,7 @@ const getEvaluationStatusText = (user) => {
         case 'medical_cleared': return 'Medical Cleared';
         case 'medical_rejected': return 'Medical Rejected';
         case 'for_records': return 'For Records';
-        case 'officially_enrolled': return 'Officially Enrolled';
+        case 'officially_enrolled': return 'Enrolled';
         case 'rejected': return 'Rejected';
         default: return 'Unknown';
     }
@@ -720,7 +720,7 @@ const clearFilters = () => {
                             <button class="block px-4 py-2 w-full text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                 @click="evaluationStatusFilter = 'for_medical'; showStatusDropdown = false;">For Medical</button>
                             <button class="block px-4 py-2 w-full text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                @click="evaluationStatusFilter = 'officially_enrolled'; showStatusDropdown = false;">Officially Enrolled</button>
+                                @click="evaluationStatusFilter = 'officially_enrolled'; showStatusDropdown = false;">Enrolled</button>
                         </div>
                     </div>
 
@@ -926,10 +926,6 @@ const clearFilters = () => {
                                     <div>
                                         <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Personal Information</h4>
                                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                            <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Sex</p>
-                                                <p class="text-sm font-medium text-gray-900 dark:text-white capitalize">{{ selectedUser.sex || '—' }}</p>
-                                            </div>
                                             <div class="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">School</p>
                                                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ selectedUser.school || '—' }}</p>

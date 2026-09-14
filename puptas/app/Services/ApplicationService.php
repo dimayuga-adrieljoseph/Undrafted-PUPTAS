@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Application;
 use App\Models\ApplicationProcess;
 use App\Models\User;
+use App\Repositories\Contracts\ApplicationRepositoryInterface;
+use App\Repositories\Contracts\ApplicationProcessRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -15,6 +17,11 @@ use Illuminate\Support\Facades\DB;
  */
 class ApplicationService
 {
+    public function __construct(
+        protected ApplicationRepositoryInterface $applicationRepository,
+        protected ApplicationProcessRepositoryInterface $applicationProcessRepository,
+    ) {}
+
     /**
      * Get application summary statistics
      *
@@ -23,15 +30,39 @@ class ApplicationService
     public function getApplicationSummary(): array
     {
         return [
-            'total' => Application::count(),
-            'accepted' => DB::table('application_processes')
-                ->where('stage', 'interviewer')
-                ->where('status', 'completed')
-                ->where('action', 'passed')
-                ->distinct('application_id')
-                ->count('application_id'),
-            'pending' => Application::where('status', 'submitted')->count(),
-            'returned' => Application::where('status', 'returned')->count(),
+            'total' => $this->applicationRepository->count(),
+            'accepted' => $this->applicationProcessRepository->countDistinctApplications('interviewer', 'completed', 'passed'),
+            'pending' => $this->applicationRepository->countByStatus('submitted'),
+            'returned' => $this->applicationRepository->countByStatus('returned'),
+        ];
+    }
+
+    /**
+     * Get per-stage summary counts for the admin dashboard pipeline cards.
+     *
+     * Counts the number of applicants currently "in progress" at each stage,
+     * plus the two terminal-ish buckets (records and enrollment).
+     *
+     * @return array
+     */
+    public function getStageSummary(): array
+    {
+        $stages = ['document_evaluator', 'grade_evaluator', 'interviewer', 'medical'];
+
+        // Distinct applications currently in-progress at each evaluation stage.
+        // Excludes soft-deleted applications and those already officially enrolled,
+        // so stale processes that were superseded by a later enrollment don't inflate counts.
+        $inProgress = $this->applicationProcessRepository->stageInProgressSummary($stages);
+
+        return [
+            'document_evaluator' => (int) ($inProgress['document_evaluator'] ?? 0),
+            'grade_evaluator'    => (int) ($inProgress['grade_evaluator'] ?? 0),
+            'interviewer'        => (int) ($inProgress['interviewer'] ?? 0),
+            'medical'            => (int) ($inProgress['medical'] ?? 0),
+            // Cleared for enrollment = medical completed, awaiting records processing.
+            'records'            => $this->applicationRepository->countClearedForEnrollment(),
+            // Officially enrolled is the terminal stage.
+            'enrollment'         => $this->applicationRepository->countOfficiallyEnrolled(),
         ];
     }
 
@@ -43,9 +74,7 @@ class ApplicationService
      */
     public function getApplicationByUserId(string $userId): Application
     {
-        return Application::where('user_id', (string) $userId)
-            ->latest('id')
-            ->firstOrFail();
+        return $this->applicationRepository->findByUserId($userId);
     }
 
     /**
@@ -58,7 +87,7 @@ class ApplicationService
      */
     public function updateApplicationStatus(int $applicationId, string $status, array $additionalData = []): Application
     {
-        $application = Application::findOrFail($applicationId);
+        $application = $this->applicationRepository->find($applicationId);
         
         $updateData = array_merge(['status' => $status], $additionalData);
         $application->update($updateData);
@@ -128,10 +157,7 @@ class ApplicationService
     public function completeStage(int $applicationId, string $stage, int $processedBy, ?string $note = null): ApplicationProcess
     {
         return DB::transaction(function () use ($applicationId, $stage, $processedBy, $note) {
-            $process = ApplicationProcess::where('application_id', $applicationId)
-                ->where('stage', $stage)
-                ->whereIn('status', ['in_progress', 'returned'])
-                ->firstOrFail();
+            $process = $this->applicationProcessRepository->firstOrFailByApplicationStageStatuses($applicationId, $stage, ['in_progress', 'returned']);
 
             $process->update([
                 'status' => 'completed',
@@ -173,7 +199,7 @@ class ApplicationService
                 $data['reviewer_notes'] = $note;
             }
 
-            return ApplicationProcess::updateOrCreate(
+            return $this->applicationProcessRepository->updateOrCreate(
                 [
                     'application_id' => $applicationId,
                     'stage' => $stage,

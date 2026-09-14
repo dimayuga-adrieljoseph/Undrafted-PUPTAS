@@ -15,28 +15,129 @@ class ExternalMedicalApiController extends Controller
     }
 
     /**
-     * Deprecated list endpoint matching the student API's design.
+     * List medical applicants
+     *
+     * Returns a paginated list of applicants who have cleared grade evaluation
+     * and interviewing and are currently pending medical clearance.
+     * Use `GET /api/v1/medical/applicants/{referenceNumber}` or
+     * `GET /api/v1/medical/applicants/idp/{idpUserId}` to look up a specific applicant.
+     *
+     * Requires the `medical-read` OAuth scope.
+     *
+     * @group Medical Integration
+     * @authenticated
+     *
+     * @queryParam per_page integer Number of results per page (1–100). Defaults to 15. Example: 15
+     * @queryParam page integer Page number. Defaults to 1. Example: 1
+     * @queryParam program string Filter by program code (e.g. BSIT). No-example
+     *
+     * @response 200 {
+     *   "data": [
+     *     {
+     *       "id": 345,
+     *       "idp_user_id": "8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
+     *       "reference_number": "T2026-000123",
+     *       "salutation": null,
+     *       "firstname": "Juan",
+     *       "middlename": "Santos",
+     *       "extension_name": null,
+     *       "lastname": "Dela Cruz",
+     *       "sex": "Male",
+     *       "email": "juan.delacruz@example.com",
+     *       "date_graduated": "2025-05-30",
+     *       "strand": "STEM",
+     *       "track": "Academic",
+     *       "application": {
+     *         "id": 456,
+     *         "status": "admitted",
+     *         "created_at": "2026-06-01T08:00:00.000000Z"
+     *       },
+     *       "program": {
+     *         "id": 7,
+     *         "code": "BSIT",
+     *         "name": "Bachelor of Science in Information Technology"
+     *       },
+     *       "medical_process_status": "in_progress"
+     *     }
+     *   ],
+     *   "meta": {
+     *     "current_page": 1,
+     *     "per_page": 15,
+     *     "total": 20,
+     *     "last_page": 2
+     *   }
+     * }
      */
     public function index(Request $request): JsonResponse
     {
+        $perPage = min((int) $request->query('per_page', 15), 100);
+        $program = $request->query('program');
+
+        $query = $this->getEligibleApplicantQuery();
+
+        if ($program) {
+            $query->whereHas('currentApplication.program', function ($q) use ($program) {
+                $q->where('code', $program);
+            });
+        }
+
+        $paginator = $query->paginate($perPage);
+
+        $data = $paginator->map(function (ApplicantProfile $profile) {
+            $application    = $profile->currentApplication;
+            $processes      = $application?->processes ?? collect();
+            $medicalProcess = $processes->first();
+
+            return [
+                'id'                     => $profile->user_id,
+                'idp_user_id'            => $profile->user?->idp_user_id,
+                'reference_number'       => $profile->reference_number,
+                'salutation'             => $profile->salutation,
+                'firstname'              => $profile->firstname,
+                'middlename'             => $profile->middlename,
+                'extension_name'         => $profile->extension_name,
+                'lastname'               => $profile->lastname,
+                'sex'                    => $profile->sex,
+                'email'                  => $profile->email,
+                'date_graduated'         => $profile->date_graduated,
+                'strand'                 => $profile->strand,
+                'track'                  => $profile->track,
+                'application'            => $application ? [
+                    'id'         => $application->id,
+                    'status'     => $application->status,
+                    'created_at' => $application->created_at,
+                ] : null,
+                'program'                => $application?->program ? [
+                    'id'   => $application->program->id,
+                    'code' => $application->program->code,
+                    'name' => $application->program->name,
+                ] : null,
+                'medical_process_status' => $medicalProcess?->status ?? 'in_progress',
+            ];
+        });
+
         $this->auditLogService->logActivity(
-            'DEPRECATED_ENDPOINT',
+            'READ',
             'External API',
             sprintf(
-                'Deprecated list endpoint /api/v1/medical/applicants called from IP %s.',
-                $request->ip() ?? 'unknown'
+                'External medical applicant list requested from IP %s. Page %d, %d results.',
+                $request->ip() ?? 'unknown',
+                $paginator->currentPage(),
+                $paginator->total()
             ),
             null,
             AuditLog::CATEGORY_ADMISSION_DATA
         );
 
         return response()->json([
-            'message' => 'This endpoint is deprecated. Use a specific lookup endpoint.',
-        ])->withHeaders([
-            'Deprecation' => 'true',
-            'Sunset' => 'Tue, 30 Jun 2026 23:59:59 GMT',
-            'Link' => '</api/v1/medical/applicants/{id}>; rel="successor-version"',
-        ])->setStatusCode(410);
+            'data' => $data,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'last_page'    => $paginator->lastPage(),
+            ],
+        ]);
     }
 
     /**
@@ -49,9 +150,7 @@ class ExternalMedicalApiController extends Controller
                 $query->select('id', 'idp_user_id');
             },
             'testPasser',
-            'currentApplication' => function ($query) {
-                $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.created_at', 'applications.program_id');
-            },
+            'currentApplication',
             'currentApplication.program' => function ($query) {
                 $query->select('id', 'code', 'name');
             },
@@ -175,7 +274,51 @@ class ExternalMedicalApiController extends Controller
     }
 
     /**
-     * Look up applicant by IDP User ID.
+     * Look up an eligible medical applicant by IDP User ID
+     *
+     * Returns identity, contact, education, program, and medical-process status
+     * for an applicant who has cleared grade evaluation and interviewing and is
+     * currently pending medical.
+     *
+     * Requires the `medical-read` OAuth scope.
+     *
+     * @group Medical Integration
+     * @authenticated
+     *
+     * @urlParam idpUserId string required The applicant's IDP user UUID. Example: 8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f
+     *
+     * @response 200 {
+     *   "data": {
+     *     "id": 345,
+     *     "idp_user_id": "8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
+     *     "reference_number": "T2026-000123",
+     *     "salutation": null,
+     *     "firstname": "Juan",
+     *     "middlename": "Santos",
+     *     "extension_name": null,
+     *     "lastname": "Dela Cruz",
+     *     "sex": "Male",
+     *     "email": "juan.delacruz@example.com",
+     *     "date_graduated": "2025-05-30",
+     *     "strand": "STEM",
+     *     "track": "Academic",
+     *     "application": {
+     *       "id": 456,
+     *       "status": "admitted",
+     *       "created_at": "2026-06-01T08:00:00.000000Z"
+     *     },
+     *     "program": {
+     *       "id": 7,
+     *       "code": "BSIT",
+     *       "name": "Bachelor of Science in Information Technology"
+     *     },
+     *     "medical_process_status": "in_progress"
+     *   }
+     * }
+     *
+     * @response 404 scenario="Applicant not found" {
+     *   "message": "Applicant not found or not eligible for medical yet."
+     * }
      */
     public function showByIdpUserId(Request $request, string $idpUserId): JsonResponse
     {
@@ -219,7 +362,51 @@ class ExternalMedicalApiController extends Controller
     }
 
     /**
-     * Look up applicant by Reference Number.
+     * Look up an eligible medical applicant by reference number
+     *
+     * Returns identity, contact, education, program, and medical-process status
+     * for an applicant who has cleared grade evaluation and interviewing and is
+     * currently pending medical.
+     *
+     * Requires the `medical-read` OAuth scope.
+     *
+     * @group Medical Integration
+     * @authenticated
+     *
+     * @urlParam referenceNumber string required The applicant's application reference number. Example: T2026-000123
+     *
+     * @response 200 {
+     *   "data": {
+     *     "id": 345,
+     *     "idp_user_id": "8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f",
+     *     "reference_number": "T2026-000123",
+     *     "salutation": null,
+     *     "firstname": "Juan",
+     *     "middlename": "Santos",
+     *     "extension_name": null,
+     *     "lastname": "Dela Cruz",
+     *     "sex": "Male",
+     *     "email": "juan.delacruz@example.com",
+     *     "date_graduated": "2025-05-30",
+     *     "strand": "STEM",
+     *     "track": "Academic",
+     *     "application": {
+     *       "id": 456,
+     *       "status": "admitted",
+     *       "created_at": "2026-06-01T08:00:00.000000Z"
+     *     },
+     *     "program": {
+     *       "id": 7,
+     *       "code": "BSIT",
+     *       "name": "Bachelor of Science in Information Technology"
+     *     },
+     *     "medical_process_status": "in_progress"
+     *   }
+     * }
+     *
+     * @response 404 scenario="Applicant not found" {
+     *   "message": "Applicant not found or not eligible for medical yet."
+     * }
      */
     public function showByReferenceNumber(Request $request, string $referenceNumber): JsonResponse
     {
@@ -263,7 +450,62 @@ class ExternalMedicalApiController extends Controller
     }
 
     /**
-     * Process medical webhook.
+     * Receive a medical result webhook
+     *
+     * Secure webhook for external medical partners to push a student's medical
+     * clearance result into PUPTAS. The payload is queued and processed
+     * asynchronously.
+     *
+     * ## Security requirements
+     * This endpoint enforces **two** layers of security:
+     *
+     * 1. **OAuth client credentials scope** — `client:medical-write`
+     *    The caller must present a Passport client-credentials access token
+     *    granted the `medical-write` scope via the `Authorization: Bearer` header.
+     *
+     * 2. **Custom SHA256 HMAC signature** — `X-Medical-Signature` header
+     *    The caller computes `hash_hmac('sha256', <raw JSON body>, <shared secret>)`
+     *    using the secret configured at `services.medical_webhook.secret`, and
+     *    sends the hex digest in the `X-Medical-Signature` header. This verifies
+     *    payload authenticity and integrity.
+     *
+     * ### Replay protection
+     * The JSON body must also include:
+     * - `timestamp`: ISO8601 string or UNIX epoch seconds, within 5 minutes of now.
+     * - `nonce`: a unique value; repeated nonces are rejected for 10 minutes.
+     *
+     * > ⚠️ **The standard "Try it out" form below will not work** for this endpoint — the HMAC
+     * > signature must be computed over the exact raw JSON bytes sent, but the form reformats
+     * > the body before sending, breaking the signature.
+     * >
+     * > Use the **Interactive Webhook Tester** widget in the **"Authenticating requests → Medical webhook security"**
+     * > section above — it computes the HMAC automatically in the browser and sends the request directly.
+     *
+     * @group Medical Webhooks
+     * @authenticated
+     *
+     * @header X-Medical-Signature string required SHA256 HMAC hex digest of the raw JSON body using `services.medical_webhook.secret`. Example: 5f4dcc3b5aa765d61d8327deb882cf99
+     *
+     * @bodyParam reference_number string The student's application reference number. Required if `idp_user_id` is absent. Example: T2026-000123
+     * @bodyParam idp_user_id string The student's IDP user UUID (also accepted as `student_id`). Required if `reference_number` is absent. Example: 8f9c6a9b-1a2b-3c4d-5e6f-7a8b9c0d1e2f
+     * @bodyParam is_health_profile_completed integer required Whether the student completed their health profile (1 = cleared). Example: 1
+     * @bodyParam timestamp string required ISO8601 timestamp or UNIX epoch seconds within the last 5 minutes. Example: 1785240000
+     * @bodyParam nonce string required Unique request nonce for replay protection. Example: 7c9e6679-7425-40de-944b-e07f6e7e1c3b
+     *
+     * @response 200 {
+     *   "message": "Medical webhook received and queued for processing"
+     * }
+     *
+     * @response 422 scenario="Validation failed" {
+     *   "message": "Validation failed",
+     *   "errors": {
+     *     "is_health_profile_completed": ["The is health profile completed field is required."]
+     *   }
+     * }
+     *
+     * @response 403 scenario="Invalid signature" {
+     *   "message": "Invalid Signature"
+     * }
      */
     public function webhookResult(Request $request): JsonResponse
     {

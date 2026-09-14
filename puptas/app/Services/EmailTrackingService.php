@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\BulkEmailOperation;
 use App\Models\EmailLog;
+use App\Repositories\Contracts\EmailLogRepositoryInterface;
+use App\Repositories\Contracts\BulkEmailOperationRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -15,6 +17,11 @@ use Illuminate\Support\Facades\DB;
  */
 class EmailTrackingService
 {
+    public function __construct(
+        protected EmailLogRepositoryInterface $emailLogRepository,
+        protected BulkEmailOperationRepositoryInterface $bulkEmailOperationRepository,
+    ) {}
+
     /**
      * Create a new bulk email operation record.
      *
@@ -27,7 +34,7 @@ class EmailTrackingService
     public function createBulkOperation(string $emailType, int $totalCount, ?int $initiatedBy, array $meta = []): BulkEmailOperation
     {
         try {
-            return BulkEmailOperation::create([
+            return $this->bulkEmailOperationRepository->create([
                 'email_type'    => $emailType,
                 'total_count'   => $totalCount,
                 'pending_count' => $totalCount,
@@ -63,7 +70,7 @@ class EmailTrackingService
     public function createEmailLog(int $bulkOperationId, string $email, ?string $name, ?int $recipientId, string $emailType, ?string $content = null): EmailLog
     {
         try {
-            return EmailLog::create([
+            return $this->emailLogRepository->create([
                 'bulk_operation_id' => $bulkOperationId,
                 'recipient_email'   => $email,
                 'recipient_name'    => $name,
@@ -99,7 +106,7 @@ class EmailTrackingService
     public function markSent(int $emailLogId, ?string $resendMessageId = null): void
     {
         try {
-            $emailLog = EmailLog::findOrFail($emailLogId);
+            $emailLog = $this->emailLogRepository->find($emailLogId);
 
             $updateData = [
                 'status'  => 'sent',
@@ -134,18 +141,14 @@ class EmailTrackingService
     {
         try {
             // Primary lookup: by stored Resend message ID
-            $emailLog = EmailLog::where('resend_message_id', $resendMessageId)->first();
+            $emailLog = $this->emailLogRepository->firstByResendMessageId($resendMessageId);
 
             // Fallback: match by recipient email if message ID not stored yet
             if (!$emailLog) {
                 $recipientEmail = $eventData['to'][0] ?? ($eventData['email'] ?? null);
 
                 if ($recipientEmail) {
-                    $emailLog = EmailLog::where('recipient_email', $recipientEmail)
-                        ->whereNull('resend_message_id')
-                        ->whereIn('status', ['sent', 'pending'])
-                        ->orderBy('created_at', 'desc')
-                        ->first();
+                    $emailLog = $this->emailLogRepository->firstPendingByRecipientEmail($recipientEmail);
 
                     // Store the message ID for future webhook events on this email
                     if ($emailLog) {
@@ -257,7 +260,7 @@ class EmailTrackingService
     public function markFailed(int $emailLogId, string $errorMessage): void
     {
         try {
-            $emailLog = EmailLog::findOrFail($emailLogId);
+            $emailLog = $this->emailLogRepository->find($emailLogId);
             $emailLog->update([
                 'status'        => 'failed',
                 'failed_at'     => now(),
@@ -289,17 +292,11 @@ class EmailTrackingService
     {
         try {
             DB::transaction(function () use ($bulkOperationId) {
-                $sentCount = EmailLog::where('bulk_operation_id', $bulkOperationId)
-                    ->where('status', 'sent')
-                    ->count();
+                $sentCount = $this->emailLogRepository->countByBulkOperationStatus($bulkOperationId, 'sent');
 
-                $failedCount = EmailLog::where('bulk_operation_id', $bulkOperationId)
-                    ->where('status', 'failed')
-                    ->count();
+                $failedCount = $this->emailLogRepository->countByBulkOperationStatus($bulkOperationId, 'failed');
 
-                $pendingCount = EmailLog::where('bulk_operation_id', $bulkOperationId)
-                    ->where('status', 'pending')
-                    ->count();
+                $pendingCount = $this->emailLogRepository->countByBulkOperationStatus($bulkOperationId, 'pending');
 
                 $updateData = [
                     'sent_count'   => $sentCount,
@@ -314,7 +311,7 @@ class EmailTrackingService
                     $updateData['completed_at'] = now();
                 }
 
-                BulkEmailOperation::where('id', $bulkOperationId)->update($updateData);
+                $this->bulkEmailOperationRepository->update($bulkOperationId, $updateData);
             });
         } catch (\Throwable $e) {
             logger()->error('[EmailTrackingService] Failed to update bulk progress', [
@@ -337,7 +334,7 @@ class EmailTrackingService
     public function getBulkOperationProgress(int $bulkOperationId): array
     {
         try {
-            $operation = BulkEmailOperation::findOrFail($bulkOperationId);
+            $operation = $this->bulkEmailOperationRepository->find($bulkOperationId);
 
             return [
                 'id'            => $operation->id,
@@ -375,10 +372,7 @@ class EmailTrackingService
         try {
             $maxRetryCount = config('email-tracking.max_retry_count', 3);
 
-            $eligibleLogs = EmailLog::whereIn('id', $emailLogIds)
-                ->where('status', 'failed')
-                ->where('retry_count', '<', $maxRetryCount)
-                ->get();
+            $eligibleLogs = $this->emailLogRepository->eligibleForRetry($emailLogIds, $maxRetryCount);
 
             if ($eligibleLogs->isEmpty()) {
                 return 0;
@@ -406,12 +400,13 @@ class EmailTrackingService
 
                 // Transition parent BulkEmailOperations back to 'in_progress' if in terminal state
                 if (!empty($bulkOperationIds)) {
-                    BulkEmailOperation::whereIn('id', array_keys($bulkOperationIds))
-                        ->whereIn('status', ['completed', 'completed_with_failures'])
-                        ->update([
+                    $this->bulkEmailOperationRepository->updateWhereIn(
+                        array_keys($bulkOperationIds),
+                        [
                             'status'       => 'in_progress',
                             'completed_at' => null,
-                        ]);
+                        ]
+                    );
                 }
             });
 
@@ -438,10 +433,7 @@ class EmailTrackingService
     public function retryAllFailed(int $bulkOperationId): int
     {
         try {
-            $failedLogIds = EmailLog::where('bulk_operation_id', $bulkOperationId)
-                ->where('status', 'failed')
-                ->pluck('id')
-                ->toArray();
+            $failedLogIds = $this->emailLogRepository->failedIdsByBulkOperation($bulkOperationId);
 
             if (empty($failedLogIds)) {
                 return 0;

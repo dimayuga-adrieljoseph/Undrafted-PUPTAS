@@ -7,6 +7,8 @@ use App\Models\Grade;
 use App\Models\Program;
 use App\Models\User;
 use App\Services\GradeComputationService;
+use App\Repositories\Contracts\GradeRepositoryInterface;
+use App\Repositories\Contracts\ProgramRepositoryInterface;
 
 /**
  * Grade Verification Slip Service — FPDI Overlay on Template
@@ -39,8 +41,11 @@ class GradeVerificationSlipService
     /** Resolved DB codes, keyed by canonical slot name */
     protected array $resolvedCodes = [];
 
-    public function __construct(GradeComputationService $gradeComputation)
-    {
+    public function __construct(
+        GradeComputationService $gradeComputation,
+        protected GradeRepositoryInterface $gradeRepository,
+        protected ProgramRepositoryInterface $programRepository,
+    ) {
         $this->gradeComputation = $gradeComputation;
 
         $filename = 'GRADE VERIFICATION SLIP TEMPLATE.pdf';
@@ -109,7 +114,7 @@ class GradeVerificationSlipService
     protected function buildData(User $user): array
     {
         $profile  = $user->applicantProfile;
-        $grades   = Grade::where('user_id', (string) $user->id)->first();
+        $grades   = $this->gradeRepository->firstByUser((string) $user->id);
         $testPasser = $user->testPasser;
 
         if (!$grades) {
@@ -152,7 +157,7 @@ class GradeVerificationSlipService
         $scienceSubjects  = $this->collectSubjects($grades, 'science');
 
         // --- Program qualifications ---
-        $programs = Program::with('strands')->get();
+        $programs = $this->programRepository->allWithStrands();
 
         // Resolve environment-specific codes once (handles BSPSYCH vs BSPSY, DOMT vs DOMT-LOM)
         $this->resolveProgramCodes($programs);
