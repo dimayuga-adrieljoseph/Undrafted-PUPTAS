@@ -146,13 +146,12 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('external-medical-api-minute', function ($request) {
             return Limit::perMinute((int) config('services.external_medical_api.minute_limit', 200))
-                ->by('medical:' . ($request->user()?->getKey() ?? $request->ip()));
                 ->by('medical:' . ($request->bearerToken() ?: $request->ip()));
         });
 
         RateLimiter::for('external-medical-api-daily', function ($request) {
             return Limit::perDay((int) config('services.external_medical_api.daily_limit', 1500))
-                ->by('medical:' . ($request->user()?->getKey() ?? $request->ip()));
+                ->by('medical:' . ($request->bearerToken() ?: $request->ip()));
         });
 
         RateLimiter::for('grade-extraction', function (Request $request) {
