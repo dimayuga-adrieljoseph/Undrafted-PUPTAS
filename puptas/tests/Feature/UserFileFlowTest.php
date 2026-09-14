@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use App\Models\UserFile;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -55,6 +56,14 @@ test('preview uses trusted stored mime metadata and blocks non owners', function
     $owner = new IdpUser(['id' => '1234', 'role_id' => 1]);
     $intruder = new IdpUser(['id' => '5678', 'role_id' => 1]);
 
+    User::forceCreate([
+        'id' => 1234,
+        'email' => 'owner@example.com',
+        'firstname' => 'Owner',
+        'lastname' => 'Test',
+        'password' => 'secret',
+    ]);
+
     $storedFile = fakePngUpload('actual-image.png');
     $path = $storedFile->store('uploads/files', 'public');
 
@@ -77,6 +86,24 @@ test('preview uses trusted stored mime metadata and blocks non owners', function
         ->assertForbidden();
 
     $this->actingAs($owner)
+        ->get($signedUrl)
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png');
+
+    $registrar = new IdpUser(['id' => '9999', 'role_id' => 6]);
+    $this->actingAs($registrar)
+        ->get($signedUrl)
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png');
+
+    $gradeEvaluator = new IdpUser(['id' => '9998', 'role_id' => 8]);
+    $this->actingAs($gradeEvaluator)
+        ->get($signedUrl)
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/png');
+
+    $admin = new IdpUser(['id' => '9997', 'role_id' => 2]);
+    $this->actingAs($admin)
         ->get($signedUrl)
         ->assertOk()
         ->assertHeader('Content-Type', 'image/png');

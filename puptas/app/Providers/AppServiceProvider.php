@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use App\Listeners\LogUserLogin;
 use App\Listeners\LogUserLogout;
@@ -100,6 +101,24 @@ class AppServiceProvider extends ServiceProvider
             'program-read' => 'Fetch active programs list',
         ]);
 
+        // Custom rate limiter for the /oauth/token endpoint.
+        // Passport hardcodes 'middleware' => 'throttle' which defaults to
+        // 60 req/min keyed by IP. On Railway, behind the reverse proxy,
+        // ALL external clients can share the same IP — causing legitimate
+        // token requests to be rejected with 429.
+        // We key by client_id from the POST body so each OAuth client
+        // gets its own bucket.
+        RateLimiter::for('oauth-token', function (Request $request) {
+            $clientId = $request->input('client_id', '');
+            $key = $clientId ?: $request->ip();
+
+            // Configurable via OAUTH_TOKEN_RATE_LIMIT env var (default: 300/min)
+            $limit = config('services.oauth.token_rate_limit', 300);
+            
+            return Limit::perMinute($limit)->by('oauth:' . $key);
+        });
+
+
         RateLimiter::for('external-api-second', function ($request) {
             return Limit::perSecond((int) config('services.external_api.second_limit', 5))
                 ->by((string) $request->ip());
@@ -122,17 +141,17 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('external-medical-api-second', function ($request) {
             return Limit::perSecond((int) config('services.external_medical_api.second_limit', 10))
-                ->by('medical:' . ($request->user()?->getKey() ?? $request->ip()));
+                ->by('medical:' . ($request->bearerToken() ?: $request->ip()));
         });
 
         RateLimiter::for('external-medical-api-minute', function ($request) {
             return Limit::perMinute((int) config('services.external_medical_api.minute_limit', 200))
-                ->by('medical:' . ($request->user()?->getKey() ?? $request->ip()));
+                ->by('medical:' . ($request->bearerToken() ?: $request->ip()));
         });
 
         RateLimiter::for('external-medical-api-daily', function ($request) {
             return Limit::perDay((int) config('services.external_medical_api.daily_limit', 1500))
-                ->by('medical:' . ($request->user()?->getKey() ?? $request->ip()));
+                ->by('medical:' . ($request->bearerToken() ?: $request->ip()));
         });
 
         RateLimiter::for('grade-extraction', function (Request $request) {
@@ -154,7 +173,7 @@ class AppServiceProvider extends ServiceProvider
         //      30/min is enough for ~30 students on the same school WiFi checking
         //      simultaneously, while still limiting a single attacker meaningfully.
         RateLimiter::for('status-checker', function (Request $request) {
-             $refNumber = (string) $request->input('referenceNumber', '');
+            $refNumber = (string) $request->input('referenceNumber', '');
             $refKey    = 'ref:' . hash('sha256', $refNumber);
             $ipKey     = 'ip:' . $request->ip();
 
@@ -190,6 +209,27 @@ class AppServiceProvider extends ServiceProvider
                 'impact'  => 'Cache::lock() stampede protection and tag-based invalidation are unavailable. Set CACHE_STORE=redis in production.',
             ]);
         }
+        // Override Passport's /oauth/token route AFTER Passport registers it.
+        // Passport hardcodes 'middleware' => 'throttle' (60/min by IP).
+        // On Railway, behind the reverse proxy, all clients can share the
+        // same IP — exhausting the 60/min bucket globally.
+        // We replace it with our named 'oauth-token' limiter (120/min by client_id).
+        $this->app->booted(function () {
+            // Override Passport's default route
+            Route::post('/oauth/token', [
+                'uses' => '\Laravel\Passport\Http\Controllers\AccessTokenController@issueToken',
+                'as' => 'passport.token',
+                'middleware' => 'throttle:oauth-token',
+            ]);
+
+            // ALIAS ROUTE: To bypass Railway's edge proxy WAF rules that might 
+            // strictly rate-limit standard auth endpoints like /oauth/token
+            Route::post('/medical-auth/token', [
+                'uses' => '\Laravel\Passport\Http\Controllers\AccessTokenController@issueToken',
+                'as' => 'passport.token.medical',
+                'middleware' => 'throttle:oauth-token',
+            ]);
+        });
 
         DB::listen(function (QueryExecuted $query) {
             if ($query->time > 500) {

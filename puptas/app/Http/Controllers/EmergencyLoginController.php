@@ -67,8 +67,10 @@ class EmergencyLoginController extends Controller
                         return back()->withErrors(['email' => $message]);
                     }
                 }
+
             }
         }
+
 
         $cooldownKey = 'emergency_otp_cooldown_' . $request->email;
         if (Cache::has($cooldownKey)) {
