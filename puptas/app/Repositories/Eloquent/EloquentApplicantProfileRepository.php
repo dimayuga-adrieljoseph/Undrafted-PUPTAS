@@ -128,6 +128,7 @@ class EloquentApplicantProfileRepository implements ApplicantProfileRepositoryIn
     public function searchPaginated(?string $term, int $offset = 0, int $limit = PHP_INT_MAX): Collection
     {
         $query = ApplicantProfile::with([
+            'user:id,is_active',
             'firstChoiceProgram:id,name,code',
             'currentApplication' => function ($q) {
                 $q->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');

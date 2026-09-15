@@ -10,54 +10,64 @@ import { useSnackbar } from "@/Composables/useSnackbar";
 import EmailProgressBar from "@/Components/EmailProgressBar.vue";
 import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
 
-// Scroll functionality (unchanged)
-const scrollWrapper = ref(null);
-const scrollAmount = 200;
-const showScrollUp = ref(false);
-const showScrollDown = ref(true);
-
 // Email progress tracking
 const activeBulkOperationId = ref(null);
 
-const scrollUp = () => {
-    if (scrollWrapper.value) {
-        scrollWrapper.value.scrollBy({
-            top: -scrollAmount,
-            behavior: "smooth",
-        });
-    }
-};
-
-const scrollDown = () => {
-    if (scrollWrapper.value) {
-        scrollWrapper.value.scrollBy({
-            top: scrollAmount,
-            behavior: "smooth"
-        });
-    }
-};
-
-const handleScroll = () => {
-    if (!scrollWrapper.value) return;
-    
-    const scrollTop = scrollWrapper.value.scrollTop;
-    const scrollHeight = scrollWrapper.value.scrollHeight;
-    const clientHeight = scrollWrapper.value.clientHeight;
-
-    showScrollUp.value = scrollTop > 10;
-    showScrollDown.value = scrollTop < 10;
-
-    if (scrollHeight <= clientHeight) {
-        showScrollUp.value = false;
-        showScrollDown.value = false;
-    }
-};
-
 import { onMounted, onUnmounted } from "vue";
 
+// ── Dark mode detection ────────────────────────────────────────────────────
+// The app uses Tailwind's `class` strategy, so we watch <html class="dark">.
+const isDark = ref(false);
+
+let darkObserver = null;
+
 onMounted(() => {
-    handleScroll();
+    const html = document.documentElement;
+    isDark.value = html.classList.contains('dark');
+    darkObserver = new MutationObserver(() => {
+        isDark.value = html.classList.contains('dark');
+    });
+    darkObserver.observe(html, { attributes: true, attributeFilter: ['class'] });
 });
+
+onUnmounted(() => {
+    darkObserver?.disconnect();
+});
+
+/**
+ * Wraps an email HTML string in a full document for use as an iframe srcdoc.
+ * Injects a dark-mode override block that activates when the host UI is in
+ * dark mode, so the preview mirrors the admin interface theme.
+ */
+const wrapForPreview = (html, dark) => {
+    const colorSchemeOverride = dark
+        ? `<style>
+html,body{background:#1e1e1e!important;color:#e0e0e0!important}
+/* outer wrapper */
+div[style*="background:#f3f4f6"],div[style*="background: #f3f4f6"],
+div[style*="background-color:#f3f4f6"],div[style*="background:#f7f7f7"],
+div[style*="background-color:#f4f4f4"]{background:#111111!important}
+/* card */
+div[style*="background:#fff"],div[style*="background: #fff"],
+div[style*="background:#ffffff"],div[style*="background-color:#fff"],
+div[style*="background-color:#ffffff"],div[style*="background-color: white"]{background:#1e1e1e!important;color:#e0e0e0!important}
+/* body text */
+p[style*="color:#222"],p[style*="color: #222"],
+p[style*="color:#333"],p[style*="color: #333"],
+p[style*="color:#555"],p[style*="color: #555"],
+span[style*="color:#222"],li{color:#e0e0e0!important}
+/* links */
+a[style*="color:#1155cc"]{color:#7ab8f5!important}
+/* buttons — keep maroon bg, force white text */
+a[style*="background:#9E122C"],a[style*="background-color:#9E122C"],
+a[style*="background:#cc0000"],a[style*="background-color:#cc0000"],
+a[style*="background:#800000"],a[style*="background-color:#800000"]{color:#ffffff!important}
+/* box-shadow on card */
+div[style*="box-shadow"]{box-shadow:0 4px 16px rgba(0,0,0,0.6)!important}
+</style>`
+        : '';
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">${colorSchemeOverride}</head><body style="margin:0;padding:0;">${html}</body></html>`;
+};
 
 const templateTypes = [
     { label: 'Default', value: 'default' },
@@ -439,6 +449,23 @@ const formattedOnProbationAdmissionTemplatePreview = computed(() => {
         .replace(/\{\{firstname\}\}/g, 'John')
         .replace(/\{\{surname\}\}/g, 'Doe');
 });
+
+// ── srcdoc wrappers for iframe previews (dark-mode aware) ─────────────────
+const previewSrcdocDefault = computed(() =>
+    wrapForPreview(formattedDefaultTemplatePreview.value, isDark.value)
+);
+const previewSrcdocWaitlistedCutoff = computed(() =>
+    wrapForPreview(formattedWaitlistedCutoffTemplatePreview.value, isDark.value)
+);
+const previewSrcdocWaitlistedLimited = computed(() =>
+    wrapForPreview(formattedWaitlistedLimitedTemplatePreview.value, isDark.value)
+);
+const previewSrcdocOnProbation = computed(() =>
+    wrapForPreview(formattedOnProbationTemplatePreview.value, isDark.value)
+);
+const previewSrcdocOnProbationAdmission = computed(() =>
+    wrapForPreview(formattedOnProbationAdmissionTemplatePreview.value, isDark.value)
+);
 
 const flatPassers = ref([]);
 
@@ -1299,10 +1326,8 @@ const runBulkEnroll = async () => {
 <template>
     <Head title="PUPCET Passers Email" />
     <div
-        ref="scrollWrapper"
         class="scroll-wrapper"
         tabindex="0"
-        @scroll="handleScroll"
     >
         <AppLayout>
             <!-- Header -->
@@ -1535,7 +1560,7 @@ const runBulkEnroll = async () => {
                                      <tr 
                                          v-for="(passer, pageIndex) in paginatedPassers" 
                                          :key="passer.test_passer_id"
-                                         class="hover:bg-gray-50 transition dark:hover:bg-gray-900"
+                                         class="group hover:bg-gray-50 transition dark:hover:bg-gray-900"
                                          v-else
                                      >
                                          <td class="px-3 py-3 whitespace-nowrap">
@@ -1554,9 +1579,6 @@ const runBulkEnroll = async () => {
                                              <div class="truncate">
                                                  <div class="flex items-center gap-1.5 font-medium text-sm text-gray-900 dark:text-gray-200 truncate">
                                                      <span>{{ passer.surname }}, {{ passer.first_name }}</span>
-                                                     <span v-if="passer.is_masked" class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300">
-                                                         MASKED
-                                                     </span>
                                                  </div>
                                                  <div v-if="passer.middle_name" class="text-xs text-gray-500 dark:text-gray-300 truncate">
                                                      {{ passer.middle_name }}
@@ -1609,7 +1631,7 @@ const runBulkEnroll = async () => {
                                                  Pending
                                              </span>
                                          </td>
-                                         <td class="px-3 py-3 whitespace-nowrap sticky right-0 bg-white dark:bg-gray-800">
+                                         <td class="px-3 py-3 whitespace-nowrap sticky right-0 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-900 transition">
                                              <div class="flex items-center gap-1">
                                                  <button
                                                      @click.prevent="openEditModal(passer)"
@@ -1710,7 +1732,7 @@ const runBulkEnroll = async () => {
                                         'py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200',
                                         templateType === type.value
                                             ? 'bg-[#9E122C] text-white shadow-md'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
                                     ]"
                                 >
                                     {{ type.label }}
@@ -1738,8 +1760,8 @@ const runBulkEnroll = async () => {
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 Waitlisted (Below Cut-off) Template Preview
                             </label>
-                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
-                                <div v-html="formattedWaitlistedCutoffTemplatePreview"></div>
+                            <div class="border border-gray-200 rounded-xl overflow-hidden dark:border-gray-700" style="height:300px;">
+                                <iframe :srcdoc="previewSrcdocWaitlistedCutoff" sandbox="allow-same-origin" class="w-full h-full border-0"></iframe>
                             </div>
                         </div>
 
@@ -1782,8 +1804,8 @@ const runBulkEnroll = async () => {
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 Waitlisted (Limited Slots) Template Preview
                             </label>
-                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
-                                <div v-html="formattedWaitlistedLimitedTemplatePreview"></div>
+                            <div class="border border-gray-200 rounded-xl overflow-hidden dark:border-gray-700" style="height:300px;">
+                                <iframe :srcdoc="previewSrcdocWaitlistedLimited" sandbox="allow-same-origin" class="w-full h-full border-0"></iframe>
                             </div>
                         </div>
 
@@ -1815,8 +1837,8 @@ const runBulkEnroll = async () => {
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 On Probation Template Preview
                             </label>
-                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
-                                <div v-html="formattedOnProbationTemplatePreview"></div>
+                            <div class="border border-gray-200 rounded-xl overflow-hidden dark:border-gray-700" style="height:300px;">
+                                <iframe :srcdoc="previewSrcdocOnProbation" sandbox="allow-same-origin" class="w-full h-full border-0"></iframe>
                             </div>
                         </div>
 
@@ -1880,8 +1902,8 @@ const runBulkEnroll = async () => {
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 On Probation (Admission) Template Preview
                             </label>
-                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
-                                <div v-html="formattedOnProbationAdmissionTemplatePreview"></div>
+                            <div class="border border-gray-200 rounded-xl overflow-hidden dark:border-gray-700" style="height:300px;">
+                                <iframe :srcdoc="previewSrcdocOnProbationAdmission" sandbox="allow-same-origin" class="w-full h-full border-0"></iframe>
                             </div>
                         </div>
 
@@ -1890,8 +1912,8 @@ const runBulkEnroll = async () => {
                             <label class="block text-sm font-medium text-gray-700 mb-3 dark:text-gray-400">
                                 Default Template Preview
                             </label>
-                            <div class="border border-gray-200 rounded-xl p-4 bg-gray-50 max-h-[300px] overflow-y-auto dark:border-gray-700 dark:bg-gray-900">
-                                <div v-html="formattedDefaultTemplatePreview"></div>
+                            <div class="border border-gray-200 rounded-xl overflow-hidden dark:border-gray-700" style="height:300px;">
+                                <iframe :srcdoc="previewSrcdocDefault" sandbox="allow-same-origin" class="w-full h-full border-0"></iframe>
                             </div>
                         </div>
 
@@ -2047,7 +2069,7 @@ const runBulkEnroll = async () => {
             <!-- Waitlisted Email Template Preview Modal -->
             <div
                 v-if="showWaitlistedEmailPreview"
-                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50 dark:bg-white"
+                class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center p-4 z-50"
                 @click.self="closeWaitlistedEmailPreview"
             >
                 <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl dark:bg-gray-800">
@@ -2710,29 +2732,6 @@ const runBulkEnroll = async () => {
         </AppLayout>
     </div>
 
-    <!-- Scroll Navigation -->
-    <div class="fixed right-4 top-1/2 -translate-y-1/2 space-y-2 z-30">
-        <button
-            v-show="showScrollUp"
-            @click="scrollUp"
-            class="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center dark:bg-gray-800 dark:hover:bg-gray-900 dark:text-gray-400"
-            aria-label="Scroll Up"
-        >
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-            </svg>
-        </button>
-        <button
-            v-show="showScrollDown"
-            @click="scrollDown"
-            class="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center dark:bg-gray-800 dark:hover:bg-gray-900 dark:text-gray-400"
-            aria-label="Scroll Down"
-        >
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-        </button>
-    </div>
 </template>
 
 <style scoped>
