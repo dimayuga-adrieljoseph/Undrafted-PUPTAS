@@ -787,6 +787,7 @@ const promptSendEmails = async () => {
     try {
         const response = await axios.post('/test-passers/get-by-ids', {
             ids: selectedPassers.value,
+            unmask: !isMasked.value ? 1 : undefined,
         });
         selectedPassersForModal.value = response.data.passers;
     } catch (error) {
@@ -895,6 +896,7 @@ const statusLabels = { '1': 'Qualified', '2': 'Waitlisted', '3': 'Unqualified', 
 const showEditModal = ref(false);
 const editingPasser = ref(null);
 const saving = ref(false);
+const loadingEditModal = ref(false);
 
 // Delete state
 const showDeleteConfirm = ref(false);
@@ -941,10 +943,27 @@ async function executeDelete() {
     }
 }
 
-function openEditModal(passer) {
+async function openEditModal(passer) {
+    loadingEditModal.value = true;
+    showEditModal.value = true;
+
+    let fresh;
+    try {
+        const response = await axios.get(`/test-passers/${passer.test_passer_id}/edit-data`);
+        fresh = response.data.passer;
+    } catch (error) {
+        console.error('Failed to load passer data for editing:', error);
+        show('Failed to load passer details. Please try again.', 'error');
+        showEditModal.value = false;
+        loadingEditModal.value = false;
+        return;
+    } finally {
+        loadingEditModal.value = false;
+    }
+
     let yearGradVal = '';
-    if (passer.year_graduated != null) {
-        const yearInt = parseInt(passer.year_graduated, 10);
+    if (fresh.year_graduated != null) {
+        const yearInt = parseInt(fresh.year_graduated, 10);
         if (yearInt >= 2026) {
             yearGradVal = 'Senior High School of A.Y. 2025-2026';
         } else {
@@ -953,28 +972,26 @@ function openEditModal(passer) {
     }
 
     editingPasser.value = { 
-        ...passer,
+        ...fresh,
         // Ensure passer_status_id is a string for the <select> v-model binding
-        passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
-        pupcet_total_score: passer.pupcet_total_score != null ? passer.pupcet_total_score : '',
+        passer_status_id: fresh.passer_status_id != null ? String(fresh.passer_status_id) : '',
+        pupcet_total_score: fresh.pupcet_total_score != null ? fresh.pupcet_total_score : '',
         year_graduated: yearGradVal,
-        shs_school: passer.shs_school || '',
+        shs_school: fresh.shs_school || '',
     };
 
     // Snapshot original data for comparison
     originalPasserData.value = {
-        surname: passer.surname ?? '',
-        first_name: passer.first_name ?? '',
-        middle_name: passer.middle_name ?? '',
-        email: passer.email ?? '',
-        shs_school: passer.shs_school ?? '',
-        strand: passer.strand ?? '',
-        school_year: passer.school_year ?? '',
-        batch_number: passer.batch_number ?? '',
-        passer_status_id: passer.passer_status_id != null ? String(passer.passer_status_id) : '',
+        surname: fresh.surname ?? '',
+        first_name: fresh.first_name ?? '',
+        middle_name: fresh.middle_name ?? '',
+        email: fresh.email ?? '',
+        shs_school: fresh.shs_school ?? '',
+        strand: fresh.strand ?? '',
+        school_year: fresh.school_year ?? '',
+        batch_number: fresh.batch_number ?? '',
+        passer_status_id: fresh.passer_status_id != null ? String(fresh.passer_status_id) : '',
     };
-
-    showEditModal.value = true;
 }
 
 function closeEditModal() {
@@ -1353,15 +1370,58 @@ const runBulkEnroll = async () => {
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Filters card -->
                     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
                             <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filters &amp; Controls</span>
-                            <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full">
-                                {{ passers?.total || 0 }} passers
-                            </span>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <!-- Privacy masking toggle -->
+                                <span
+                                    v-if="isMasked"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                                >
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                    </svg>
+                                    Masked
+                                </span>
+                                <span
+                                    v-else
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700"
+                                >
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                    </svg>
+                                    Unmasked (Audited)
+                                </span>
+                                <button
+                                    type="button"
+                                    @click="toggleMasking"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg transition border"
+                                    :class="isMasked
+                                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 dark:border-gray-600'
+                                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-700'"
+                                >
+                                    <template v-if="isMasked">
+                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Reveal
+                                    </template>
+                                    <template v-else>
+                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                                        </svg>
+                                        Re-mask
+                                    </template>
+                                </button>
+                                <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full">
+                                    {{ passers?.total || 0 }} passers
+                                </span>
+                            </div>
                         </div>
 
                         <!-- Search and Score Filter -->
-                        <div class="flex gap-3 mb-3">
+                        <div class="flex flex-col sm:flex-row gap-3 mb-3">
                             <div class="relative flex-1">
                                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -1374,7 +1434,7 @@ const runBulkEnroll = async () => {
                                     class="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
                                 />
                             </div>
-                            <div class="w-1/3 min-w-[150px]">
+                            <div class="w-full sm:w-1/3">
                                 <input
                                     type="number"
                                     step="0.01"
@@ -1423,10 +1483,10 @@ const runBulkEnroll = async () => {
                         </div>
 
                         <!-- Select All & Actions -->
-                        <div class="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <div class="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                             <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
                                 <input type="checkbox" :checked="areAllSelected" @change="toggleSelectAll($event.target.checked)"
-                                    class="h-4 w-4 rounded text-[#9E122C] border-gray-300 focus:ring-[#9E122C]" />
+                                    class="h-4 w-4 rounded accent-[#9E122C] border-gray-300 focus:ring-[#9E122C]" />
                                 Select All ({{ selectedPassers.length }}/{{ totalFilteredCount }})
                             </label>
                             <button
@@ -1447,55 +1507,9 @@ const runBulkEnroll = async () => {
                     <div class="bg-white rounded-2xl shadow-lg overflow-hidden dark:bg-gray-800">
                         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                             <div class="flex flex-wrap items-center justify-between gap-3">
-                                <div class="flex items-center gap-3">
-                                    <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
-                                        Selected Passers
-                                    </h2>
-                                    <!-- Privacy Masking Badge & Gated Action -->
-                                    <div class="flex items-center gap-2.5">
-                                        <span
-                                            v-if="isMasked"
-                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
-                                        >
-                                            <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                                            </svg>
-                                            Personal Info Masked (Default)
-                                        </span>
-                                        <span
-                                            v-else
-                                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700"
-                                        >
-                                            <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                            </svg>
-                                            Unmasked View (Audited)
-                                        </span>
-
-                                        <button
-                                            type="button"
-                                            @click="toggleMasking"
-                                            class="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition border shadow-xs"
-                                            :class="isMasked 
-                                                ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 dark:border-gray-600'
-                                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-700'"
-                                        >
-                                            <template v-if="isMasked">
-                                                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
-                                                <span>Reveal Personal Info</span>
-                                            </template>
-                                            <template v-else>
-                                                <svg class="w-4 h-4 text-emerald-700 dark:text-emerald-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
-                                                </svg>
-                                                <span>Re-mask Personal Info</span>
-                                            </template>
-                                        </button>
-                                    </div>
-                                </div>
+                                <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
+                                    Selected Passers
+                                </h2>
                                 <div class="text-sm text-gray-600 dark:text-gray-400">
                                     Page {{ currentPage }} of {{ totalPages }}
                                     &bull; Showing {{ paginatedPassers.length }} of {{ passers?.total || 0 }} items
@@ -1505,7 +1519,7 @@ const runBulkEnroll = async () => {
 
                         <!-- Table -->
                         <div class="overflow-x-auto">
-                            <table class="w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
+                            <table class="min-w-[700px] w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-900">
                                      <tr>
                                          <th class="px-3 py-3 text-left w-10">
@@ -1513,7 +1527,7 @@ const runBulkEnroll = async () => {
                                                  type="checkbox"
                                                  :checked="areAllSelected"
                                                  @change="toggleSelectAll($event.target.checked)"
-                                                 class="h-4 w-4 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
+                                                 class="h-4 w-4 accent-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:border-gray-600"
                                              />
                                          </th>
                                          <th class="px-2 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-12">
@@ -1568,7 +1582,7 @@ const runBulkEnroll = async () => {
                                                  type="checkbox"
                                                  :value="passer.test_passer_id"
                                                  v-model="selectedPassers"
-                                                 class="h-4 w-4 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
+                                                 class="h-4 w-4 accent-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:border-gray-600"
                                              />
                                          </td>
                                          <!-- Rank cell: global rank across all filtered passers -->
@@ -1660,7 +1674,7 @@ const runBulkEnroll = async () => {
 
                         <!-- Pagination -->
                         <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-                            <div class="flex items-center justify-between">
+                            <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
                                 <div class="text-sm text-gray-700 dark:text-gray-400">
                                     <span v-if="!passers || passers.total === 0">
                                         Showing 0 to 0 of 0 results
@@ -1772,7 +1786,7 @@ const runBulkEnroll = async () => {
                             </label>
                             <div class="grid grid-cols-1 gap-2 mb-6 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900">
                                 <label v-for="program in programs" :key="program.id" class="flex items-start space-x-3 cursor-pointer">
-                                    <input type="checkbox" :value="program.id" v-model="selectedPrograms" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:bg-gray-800">
+                                    <input type="checkbox" :value="program.id" v-model="selectedPrograms" class="mt-0.5 h-4 w-4 rounded border-gray-300 accent-[#9E122C] focus:ring-[#9E122C] dark:border-gray-600 dark:bg-gray-800">
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ program.name }}</span>
                                 </label>
                                 <div v-if="!programs || programs.length === 0" class="text-sm text-gray-500 italic">No programs available.</div>
@@ -2105,13 +2119,24 @@ const runBulkEnroll = async () => {
 
             <!-- Modals (Remain the same) -->
             <!-- Edit Modal -->
+            <transition name="modal-fade">
             <div
                 v-if="showEditModal"
-                class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 overflow-auto z-50 dark:bg-white"
+                class="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center p-4 overflow-auto z-50"
             >
                 <div
-                    class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] p-6 relative shadow-2xl overflow-y-auto dark:bg-gray-800"
+                    class="modal-panel bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] p-6 relative shadow-2xl overflow-y-auto dark:bg-gray-800 transition-[transform,opacity] duration-[250ms] ease-[ease]"
                 >
+                    <!-- Loading state while fetching fresh passer data -->
+                    <div v-if="loadingEditModal" class="flex flex-col items-center justify-center py-20 gap-4">
+                        <svg class="animate-spin h-8 w-8 text-[#9E122C]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">Loading passer details…</span>
+                    </div>
+
+                    <template v-else>
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-200">
                             Edit Passer Details
@@ -2138,7 +2163,7 @@ const runBulkEnroll = async () => {
                                     type="text"
                                     v-model="editingPasser.surname"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 />
                             </div>
                             <div>
@@ -2147,7 +2172,7 @@ const runBulkEnroll = async () => {
                                     type="text"
                                     v-model="editingPasser.first_name"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 />
                             </div>
                             <div>
@@ -2155,7 +2180,7 @@ const runBulkEnroll = async () => {
                                 <input
                                     type="text"
                                     v-model="editingPasser.middle_name"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 />
                             </div>
                         </div>
@@ -2197,7 +2222,7 @@ const runBulkEnroll = async () => {
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
                                 <select
                                     v-model="editingPasser.strand"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 >
                                     <option value="" disabled>Select Strand</option>
                                     <option value="STEM">STEM</option>
@@ -2226,7 +2251,7 @@ const runBulkEnroll = async () => {
                                 <select
                                     v-model="editingPasser.school_year"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 >
                                     <option value="" disabled>Select School Year</option>
                                     <option v-for="sy in academicYearOptions" :key="sy" :value="sy">{{ sy }}</option>
@@ -2239,7 +2264,7 @@ const runBulkEnroll = async () => {
                                 <select
                                     v-model="editingPasser.batch_number"
                                     :required="editingPasser.passer_status_id !== '3' && editingPasser.passer_status_id !== '4' && editingPasser.passer_status_id !== 3 && editingPasser.passer_status_id !== 4"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 >
                                     <option value="">Select Batch</option>
                                     <option value="Batch 1">Batch 1</option>
@@ -2271,7 +2296,7 @@ const runBulkEnroll = async () => {
                                 <select
                                     v-model="editingPasser.passer_status_id"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 >
                                     <option value="">Select Status</option>
                                     <option value="1">Qualified</option>
@@ -2295,23 +2320,26 @@ const runBulkEnroll = async () => {
                             <button
                                 type="submit"
                                 :disabled="saving"
-                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-900 dark:text-gray-900"
+                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <span v-if="saving">Saving...</span>
                                 <span v-else>Save Changes</span>
                             </button>
                         </div>
                     </form>
+                    </template><!-- end v-else (not loading) -->
                 </div>
             </div>
+            </transition><!-- end edit modal -->
 
             <!-- Add Modal -->
+            <transition name="modal-fade">
             <div
                 v-if="showAddModal"
-                class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 overflow-auto z-50 dark:bg-white"
+                class="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center p-4 overflow-auto z-50"
             >
                 <div
-                    class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] p-6 relative shadow-2xl overflow-y-auto dark:bg-gray-800"
+                    class="modal-panel bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] p-6 relative shadow-2xl overflow-y-auto dark:bg-gray-800 transition-[transform,opacity] duration-[250ms] ease-[ease]"
                 >
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-200">
@@ -2339,7 +2367,7 @@ const runBulkEnroll = async () => {
                                     type="text"
                                     v-model="newPasserData.surname"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 />
                             </div>
                             <div>
@@ -2348,7 +2376,7 @@ const runBulkEnroll = async () => {
                                     type="text"
                                     v-model="newPasserData.first_name"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 />
                             </div>
                             <div>
@@ -2356,7 +2384,7 @@ const runBulkEnroll = async () => {
                                 <input
                                     type="text"
                                     v-model="newPasserData.middle_name"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 />
                             </div>
                         </div>
@@ -2369,7 +2397,7 @@ const runBulkEnroll = async () => {
                                     type="email"
                                     v-model="newPasserData.email"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 />
                             </div>
                         </div>
@@ -2392,7 +2420,7 @@ const runBulkEnroll = async () => {
                                 <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Strand</label>
                                 <select
                                     v-model="newPasserData.strand"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 >
                                     <option value="" disabled>Select Strand</option>
                                     <option value="STEM">STEM</option>
@@ -2408,7 +2436,7 @@ const runBulkEnroll = async () => {
                                 <input
                                     type="text"
                                     v-model="newPasserData.reference_number"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 />
                             </div>
                         </div>
@@ -2420,7 +2448,7 @@ const runBulkEnroll = async () => {
                                 <select
                                     v-model="newPasserData.school_year"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 >
                                     <option value="" disabled>Select School Year</option>
                                     <option v-for="sy in academicYearOptions" :key="sy" :value="sy">{{ sy }}</option>
@@ -2433,7 +2461,7 @@ const runBulkEnroll = async () => {
                                 <select
                                     v-model="newPasserData.batch_number"
                                     :required="newPasserData.passer_status_id !== '3' && newPasserData.passer_status_id !== '4' && newPasserData.passer_status_id !== 3 && newPasserData.passer_status_id !== 4"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 >
                                     <option value="">Select Batch</option>
                                     <option value="Batch 1">Batch 1</option>
@@ -2455,7 +2483,7 @@ const runBulkEnroll = async () => {
                                     max="999.99"
                                     v-model="newPasserData.pupcet_total_score"
                                     placeholder="e.g., 75.50"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 />
                                 <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">Used to rank applicants from highest to lowest score.</p>
                             </div>
@@ -2464,7 +2492,7 @@ const runBulkEnroll = async () => {
                                 <select
                                     v-model="newPasserData.passer_status_id"
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] transition dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                                 >
                                     <option value="">Select Status</option>
                                     <option value="1">Qualified</option>
@@ -2488,7 +2516,7 @@ const runBulkEnroll = async () => {
                             <button
                                 type="submit"
                                 :disabled="saving"
-                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-900 dark:text-gray-900"
+                                class="px-6 py-3 bg-[#9E122C] text-white rounded-xl hover:bg-[#800918] focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <span v-if="saving">Saving...</span>
                                 <span v-else>Add Passer</span>
@@ -2497,6 +2525,7 @@ const runBulkEnroll = async () => {
                     </form>
                 </div>
             </div>
+            </transition><!-- end add modal -->
 
             <!-- Delete Confirmation Modal -->
             <div
@@ -2735,6 +2764,26 @@ const runBulkEnroll = async () => {
 </template>
 
 <style scoped>
+/* Modal fade + scale animation */
+.modal-fade-enter-active {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.modal-fade-leave-active {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+/* Panel slides up slightly on enter */
+.modal-fade-enter-from .modal-panel,
+.modal-fade-leave-to .modal-panel {
+    transform: scale(0.97) translateY(12px);
+}
+.modal-fade-enter-to .modal-panel,
+.modal-fade-leave-from .modal-panel {
+    transform: scale(1) translateY(0);
+}
 .scroll-wrapper {
     height: 100vh;
     overflow-y: auto;

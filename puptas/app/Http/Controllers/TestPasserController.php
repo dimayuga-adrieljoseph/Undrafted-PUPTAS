@@ -879,6 +879,19 @@ class TestPasserController extends Controller
         ]);
     }
 
+    /**
+     * Return a single passer's full (unmasked) data for the edit modal.
+     * Always returns real values — masking is intentionally bypassed here
+     * because this endpoint is exclusively used to populate the edit form.
+     * Access is already gated by the EnsureAdminOrRegistrar middleware.
+     */
+    public function show(TestPasser $test_passer): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'passer' => $test_passer->load(['passerStatus']),
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         // Find the passer or fail
@@ -1399,22 +1412,30 @@ class TestPasserController extends Controller
             $result = $sarService->generateSarPdf($sarData);
 
             if ($result['success']) {
-                // Use sar_tmp disk for consistent file access
-                $disk = Storage::disk('sar_tmp');
+                // Use in-memory PDF content when available (avoids S3 metadata issues on re-read).
+                // Fall back to disk read if pdf_content is not present (e.g. older callers).
+                if (!empty($result['pdf_content'])) {
+                    $pdfContent = $result['pdf_content'];
 
-                if ($disk->exists($result['filename'])) {
-                    // Read PDF content before deletion
+                    // Clean up the temp file asynchronously — non-fatal if it fails
+                    try {
+                        Storage::disk('sar_tmp')->delete($result['filename']);
+                    } catch (\Throwable $e) {
+                        // Intentionally swallowed — preview already has the content
+                    }
+                } else {
+                    $disk = Storage::disk('sar_tmp');
+                    if (!$disk->exists($result['filename'])) {
+                        return response()->json(['error' => 'Failed to generate preview'], 500);
+                    }
                     $pdfContent = $disk->get($result['filename']);
-
-                    // Delete temporary preview file
                     $disk->delete($result['filename']);
-
-                    // Return PDF for inline preview
-                    return response($pdfContent, 200, [
-                        'Content-Type' => 'application/pdf',
-                        'Content-Disposition' => 'inline; filename="PREVIEW_' . $result['filename'] . '"',
-                    ]);
                 }
+
+                return response($pdfContent, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="PREVIEW_' . $result['filename'] . '"',
+                ]);
             }
 
             return response()->json(['error' => 'Failed to generate preview'], 500);

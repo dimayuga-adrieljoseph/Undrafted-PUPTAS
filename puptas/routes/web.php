@@ -537,6 +537,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
 });
 
 Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
+    Route::get('/test-passers/{test_passer}/edit-data', [TestPasserController::class, 'show'])->name('test-passers.show');
     Route::put('/test-passers/{test_passer}', [TestPasserController::class, 'update'])->name('test-passers.update');
     Route::post('/test-passers-store', [TestPasserController::class, 'store']);
     Route::delete('/test-passers/{test_passer}', [TestPasserController::class, 'destroy'])->name('test-passers.destroy');

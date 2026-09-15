@@ -87,8 +87,13 @@ class SarFormService
             $disk = Storage::disk($this->disk);
             $disk->put($filename, $pdfContent);
             
-            // Get file size
-            $fileSize = $disk->size($filename);
+            // Get file size — non-fatal: S3-backed disks may throw UnableToRetrieveMetadata
+            // after a write if metadata propagation is delayed. Fall back to in-memory length.
+            try {
+                $fileSize = $disk->size($filename);
+            } catch (\Throwable $e) {
+                $fileSize = strlen($pdfContent);
+            }
             
             // Generate download URL (public download route)
             $downloadUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
@@ -107,6 +112,7 @@ class SarFormService
                 'pdf_url' => $downloadUrl,
                 'filename' => $filename,
                 'size_bytes' => $fileSize,
+                'pdf_content' => $pdfContent,
             ];
             
         } catch (ValidationException $e) {
