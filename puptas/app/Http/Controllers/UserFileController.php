@@ -13,10 +13,19 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Rules\ValidationRules;
+use App\Enums\RoleId;
 
 class UserFileController extends Controller
 {
-    private const STAFF_ROLE_IDS = [2, 3, 4, 5, 6, 7];
+    private const STAFF_ROLE_IDS = [
+        RoleId::Admin->value,
+        RoleId::DocumentEvaluator->value,
+        RoleId::Interviewer->value,
+        RoleId::Medical->value,
+        RoleId::Registrar->value,
+        RoleId::SuperAdmin->value,
+        RoleId::GradeEvaluator->value,
+    ];
 
     /**
      * @var ImageCompressionService
@@ -240,7 +249,7 @@ class UserFileController extends Controller
 
     public function preview(Request $request, UserFile $file)
     {
-        if (false && !$request->hasValidSignature()) {
+        if (!$request->hasValidSignature()) {
             abort(Response::HTTP_FORBIDDEN);
         }
 
@@ -248,7 +257,7 @@ class UserFileController extends Controller
         $isOwner = $authUser && (string) $authUser->id === (string) $file->user_id;
         $isStaff = $authUser && in_array((int) $authUser->role_id, self::STAFF_ROLE_IDS, true);
 
-        if (false && !$isOwner && !$isStaff) {
+        if (!$isOwner && !$isStaff) {
             abort(Response::HTTP_FORBIDDEN);
         }
 

@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Models\ApplicantProfile;
 use App\Repositories\Contracts\ApplicantProfileRepositoryInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class EloquentApplicantProfileRepository implements ApplicantProfileRepositoryInterface
 {
@@ -92,6 +93,7 @@ class EloquentApplicantProfileRepository implements ApplicantProfileRepositoryIn
     public function applicantsWithDetails(): Collection
     {
         return ApplicantProfile::with([
+            'user:id,is_active',
             'firstChoiceProgram:id,name,code',
             'currentApplication' => function ($query) {
                 $query->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
@@ -109,6 +111,7 @@ class EloquentApplicantProfileRepository implements ApplicantProfileRepositoryIn
     public function search(?string $term): Collection
     {
         $query = ApplicantProfile::with([
+            'user:id,is_active',
             'firstChoiceProgram:id,name,code',
             'currentApplication' => function ($q) {
                 $q->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
@@ -128,6 +131,7 @@ class EloquentApplicantProfileRepository implements ApplicantProfileRepositoryIn
     public function searchPaginated(?string $term, int $offset = 0, int $limit = PHP_INT_MAX): Collection
     {
         $query = ApplicantProfile::with([
+            'user:id,is_active',
             'firstChoiceProgram:id,name,code',
             'currentApplication' => function ($q) {
                 $q->select('applications.id', 'applications.user_id', 'applications.program_id', 'applications.enrollment_status');
@@ -188,7 +192,8 @@ class EloquentApplicantProfileRepository implements ApplicantProfileRepositoryIn
 
         $termLower  = strtolower(trim($term));
         $useFulltext = strlen($termLower) >= 3
-            && ! in_array($termLower, $mysqlStopwords, true);
+            && ! in_array($termLower, $mysqlStopwords, true)
+            && DB::connection()->getDriverName() !== 'sqlite';
 
         if ($useFulltext) {
             $query->whereRaw(

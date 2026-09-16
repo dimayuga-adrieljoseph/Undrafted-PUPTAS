@@ -12,6 +12,7 @@ use App\Models\Program;
 use App\Models\Grade;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\FileMapper;
+use App\Helpers\DataMaskingHelper;
 use App\Http\Traits\ManagesApplicationFiles;
 use App\Services\ApplicationService;
 use App\Services\ApplicationProcessService;
@@ -47,7 +48,7 @@ class InterviewerDashboardController extends Controller
         $this->logbookService = $logbookService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
@@ -55,7 +56,8 @@ class InterviewerDashboardController extends Controller
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $dashboardData = $this->dashboardService->getInterviewerDashboardData();
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Interviewer Queue');
+        $dashboardData = $this->dashboardService->getInterviewerDashboardData($shouldMask);
 
         // Get interviewer's assigned programs
         if (in_array($user->role_id, [RoleId::Admin->value, RoleId::SuperAdmin->value])) {
@@ -96,16 +98,19 @@ class InterviewerDashboardController extends Controller
 
     // getUserFiles() method provided by ManagesApplicationFiles trait
 
-    public function getUsers()
+    public function getUsers(Request $request)
     {
         // Ensure user has interviewer role
         $this->ensureRole($this->getRoleId());
 
+        $user = Auth::user();
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Interviewer Queue');
+
         // Interviewers see ALL applicants at interviewer stage (global access)
-        $results = $this->userService->getAllApplicantsByStage('interviewer');
+        $results = $this->userService->getAllApplicantsByStage('interviewer', null, $shouldMask);
 
         Log::info('InterviewerDashboard::getUsers (global)', [
-            'user_id' => Auth::user()->id,
+            'user_id' => $user->id,
             'count' => count($results),
         ]);
 

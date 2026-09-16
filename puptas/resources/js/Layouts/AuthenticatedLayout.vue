@@ -30,15 +30,16 @@ import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
+import { faMoon, faSun, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 
 import Sidebar from '@/Components/Sidebar.vue'
 import Footer from '@/Components/Footer.vue'
 import ApplicantHelpButtons from '@/Components/ApplicantHelpButtons.vue'
 import TermsandConditionsModal from '@/Pages/Modal/TermsandConditionsModal.vue'
 import { useLayout } from '@/Composables/useLayout'
+import { useMaskingState } from '@/Composables/useMaskingState'
 
-library.add(faMoon, faSun)
+library.add(faMoon, faSun, faEye, faEyeSlash)
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 const props = defineProps({
@@ -65,6 +66,20 @@ const {
     handlePrivacyCancel,
     sidebarOpen,
 } = useLayout()
+
+const {
+    isUnmasked,
+    showComplianceModal,
+    closeComplianceModal,
+    confirmUnmask,
+    toggleMasking,
+} = useMaskingState()
+
+// Roles that may unmask PII: admins + all operational staff who look up applicants by name
+const UNMASK_ALLOWED_ROLES = [2, 3, 4, 5, 6, 7, 8] // Admin, DocEval, Interviewer, Medical, Registrar, SuperAdmin, GradeEval
+const canToggleMasking = computed(
+    () => UNMASK_ALLOWED_ROLES.includes(user.value?.role_id),
+)
 
 // ─── Variant config map ───────────────────────────────────────────────────────
 /**
@@ -197,6 +212,25 @@ const showBackLink = computed(
                     <!-- Per-page injected actions -->
                     <slot name="header-actions" />
 
+                    <!-- Universal PII Masking Toggle (Admin/Superadmin only) -->
+                    <button
+                        v-if="canToggleMasking"
+                        type="button"
+                        @click="toggleMasking"
+                        class="w-9 h-9 rounded-lg flex items-center justify-center transition min-h-[44px] min-w-[44px] cursor-pointer"
+                        :class="isUnmasked
+                            ? 'bg-[#9E122C]/10 hover:bg-[#9E122C]/20 text-[#9E122C] dark:bg-[#9E122C]/20 dark:hover:bg-[#9E122C]/30 dark:text-[#ff6b81]'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200'"
+                        :title="isUnmasked ? 'PII Unmasked (Click to mask)' : 'PII Masked (Click to reveal)'"
+                        :aria-label="isUnmasked ? 'PII Unmasked (Click to mask)' : 'PII Masked (Click to reveal)'"
+                    >
+                        <FontAwesomeIcon
+                            :icon="['fas', isUnmasked ? 'eye' : 'eye-slash']"
+                            class="text-sm"
+                            aria-hidden="true"
+                        />
+                    </button>
+
                     <!-- Dark mode toggle -->
                     <button
                         class="w-9 h-9 rounded-lg flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition min-h-[44px] min-w-[44px]"
@@ -267,5 +301,72 @@ const showBackLink = computed(
             @accept="handlePrivacyAccept"
             @cancel="handlePrivacyCancel"
         />
+
+        <!-- ── Universal PII Unmasking Compliance Modal (RA 10173) ──────────── -->
+        <Teleport to="body">
+            <div
+                v-if="showComplianceModal"
+                class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="pii-unmask-title"
+                @click.self="closeComplianceModal"
+            >
+                <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-[#9E122C]/10 text-[#9E122C] flex items-center justify-center flex-shrink-0">
+                                <FontAwesomeIcon :icon="['fas', 'eye']" class="text-sm" />
+                            </div>
+                            <div>
+                                <h2 id="pii-unmask-title" class="text-base font-bold text-gray-900 dark:text-gray-100">
+                                    Reveal Personal Information
+                                </h2>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    Compliance Authorization (RA 10173)
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            @click="closeComplianceModal"
+                            class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition text-gray-500 dark:text-gray-400 cursor-pointer"
+                        >
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-5 space-y-4 text-sm text-gray-600 dark:text-gray-300">
+                        <p class="leading-relaxed">
+                            You are about to unmask applicant and user personal information across administrative pages for this active session.
+                        </p>
+                        <div class="bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 rounded-xl p-3.5 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                            <strong class="text-gray-900 dark:text-gray-200">Compliance Notice:</strong> This action will be permanently logged in the Security Audit Trail with your account and timestamp. This toggle will automatically reset to masked when you refresh or close your session.
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center justify-end gap-3 p-5 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
+                        <button
+                            type="button"
+                            @click="closeComplianceModal"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl border border-gray-300 dark:border-gray-600 transition cursor-pointer"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            @click="confirmUnmask"
+                            class="px-4 py-2 text-sm font-medium text-white bg-[#9E122C] hover:bg-[#800918] rounded-xl shadow-xs transition cursor-pointer"
+                        >
+                            Confirm &amp; Reveal
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>

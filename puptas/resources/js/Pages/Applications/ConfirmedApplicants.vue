@@ -578,63 +578,60 @@ onMounted(() => {
                 <div
                     class="bg-white rounded-2xl shadow-lg p-6 mb-6 dark:bg-gray-800"
                 >
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="flex items-center gap-3">
-                            <h2
-                                class="text-xl font-semibold text-gray-900 dark:text-gray-200"
-                            >
-                                Filters &amp; Controls
-                            </h2>
-                            <!-- Privacy Masking Badge & Gated Action -->
-                            <div class="flex items-center gap-2.5">
-                                <span
-                                    v-if="isMasked"
-                                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
-                                >
-                                    <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                                    </svg>
-                                    Personal Info Masked (Default)
-                                </span>
-                                <span
-                                    v-else
-                                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700"
-                                >
-                                    <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                    </svg>
-                                    Unmasked View (Audited)
-                                </span>
-
-                                <button
-                                    type="button"
-                                    @click="toggleMasking"
-                                    class="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition border shadow-xs"
-                                    :class="isMasked 
-                                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 dark:border-gray-600'
-                                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-700'"
-                                >
-                                    <template v-if="isMasked">
-                                        <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
-                                        <span>Reveal Personal Info</span>
-                                    </template>
-                                    <template v-else>
-                                        <svg class="w-4 h-4 text-emerald-700 dark:text-emerald-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
-                                        </svg>
-                                        <span>Re-mask Personal Info</span>
-                                    </template>
-                                </button>
-                            </div>
-                        </div>
-                        <span
-                            class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium dark:bg-gray-700 dark:text-gray-300"
+                    <div class="flex flex-wrap items-center justify-between gap-y-2 mb-6">
+                        <h2
+                            class="text-xl font-semibold text-gray-900 dark:text-gray-200"
                         >
-                            {{ filtered.length }} applicants
-                        </span>
+                            Filters &amp; Controls
+                        </h2>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <!-- Privacy masking toggle -->
+                            <span
+                                v-if="isMasked"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                            >
+                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                                Masked
+                            </span>
+                            <span
+                                v-else
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700"
+                            >
+                                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                Unmasked (Audited)
+                            </span>
+                            <button
+                                type="button"
+                                @click="toggleMasking"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg transition border"
+                                :class="isMasked
+                                    ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 dark:border-gray-600'
+                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-700'"
+                            >
+                                <template v-if="isMasked">
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    Reveal
+                                </template>
+                                <template v-else>
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                                    </svg>
+                                    Re-mask
+                                </template>
+                            </button>
+                            <span
+                                class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium dark:bg-gray-700 dark:text-gray-300"
+                            >
+                                {{ filtered.length }} applicants
+                            </span>
+                        </div>
                     </div>
 
                     <!-- Search -->
@@ -663,17 +660,17 @@ onMounted(() => {
                     </div>
 
                     <!-- Filter row -->
-                    <div class="flex gap-2 flex-nowrap">
+                    <div class="flex flex-wrap gap-2">
                         <select
                             v-model="filterProgram"
-                            class="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="flex-1 min-w-[140px] w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Programs</option>
                             <option v-for="p in programs" :key="p" :value="p">
                                 {{ p }}
                             </option>
                         </select>
-                        <div class="relative flex-1 min-w-[140px]">
+                        <div class="relative flex-1 min-w-[140px] w-full sm:w-auto">
                             <button @click="showStatusDropdown = !showStatusDropdown" type="button"
                                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C] text-left flex items-center justify-between truncate">
                                 <span>{{ filterPasserStatus.length === 0 ? 'All Statuses' : filterPasserStatus.length + ' selected' }}</span>
@@ -681,18 +678,18 @@ onMounted(() => {
                             </button>
                             <div v-if="showStatusDropdown" class="absolute z-50 mt-1 min-w-full w-max bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg py-1">
                                 <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
-                                    <input type="checkbox" :checked="filterPasserStatus.length === 0" @change="filterPasserStatus = []" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                    <input type="checkbox" :checked="filterPasserStatus.length === 0" @change="filterPasserStatus = []" class="mr-2 rounded border-gray-300 accent-[#9E122C] focus:ring-[#9E122C]" />
                                     All Statuses
                                 </label>
                                 <label v-for="s in passerStatuses" :key="s" class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
-                                    <input type="checkbox" :value="s" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                    <input type="checkbox" :value="s" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 accent-[#9E122C] focus:ring-[#9E122C]" />
                                     {{ s.replace(/_/g, ' ') }}
                                 </label>
                             </div>
                         </div>
                         <select
                             v-model="filterSarStatus"
-                            class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="flex-1 min-w-[140px] w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All SAR STATUS</option>
                             <option value="sent">SAR Sent</option>
@@ -700,7 +697,7 @@ onMounted(() => {
                         </select>
                         <select
                             v-model="filterGraduateType"
-                            class="flex-1 min-w-[175px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="flex-1 min-w-[140px] w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Graduate Types</option>
                             <option v-for="gt in graduateTypes" :key="gt" :value="gt">
@@ -709,7 +706,7 @@ onMounted(() => {
                         </select>
                         <select
                             v-model="filterStage"
-                            class="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="flex-1 min-w-[140px] w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Stages</option>
                             <option value="document_evaluator">For Document Evaluator</option>
@@ -731,7 +728,7 @@ onMounted(() => {
                                 type="checkbox"
                                 :checked="allSelected"
                                 @change="toggleAll"
-                                class="h-4 w-4 rounded text-[#9E122C] border-gray-300 focus:ring-[#9E122C]"
+                                class="h-4 w-4 rounded accent-[#9E122C] border-gray-300 focus:ring-[#9E122C]"
                             />
                             Select All ({{ filtered.length }})
                         </label>
@@ -784,11 +781,21 @@ onMounted(() => {
                     <!-- Table -->
                     <div class="overflow-x-auto">
                         <table
-                            class="w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed"
+                            class="min-w-[800px] w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed"
                         >
+                            <colgroup>
+                                <col class="w-10" />       <!-- checkbox -->
+                                <col class="w-12" />       <!-- rank -->
+                                <col class="w-[22%]" />    <!-- name -->
+                                <col class="w-[22%]" />    <!-- contact -->
+                                <col class="w-[12%]" />    <!-- program -->
+                                <col class="w-[16%]" />    <!-- passer status -->
+                                <col class="w-[14%]" />    <!-- graduate type -->
+                                <col class="w-[10%]" />    <!-- sar status -->
+                            </colgroup>
                             <thead class="bg-gray-50 dark:bg-gray-900">
                                 <tr>
-                                    <th class="px-3 py-3 text-left w-10">
+                                    <th class="px-3 py-3 text-left">
                                         <input
                                             type="checkbox"
                                             :checked="
@@ -799,43 +806,43 @@ onMounted(() => {
                                                     $event.target.checked,
                                                 )
                                             "
-                                            class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
+                                            class="h-5 w-5 accent-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:border-gray-600"
                                         />
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-12"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Rank
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[20%]"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Name
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[20%]"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Contact
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Program
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Passer Status
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Graduate Type
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-24 sticky right-0 bg-gray-50 dark:bg-gray-900"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 sticky right-0 bg-gray-50 dark:bg-gray-900"
                                     >
-                                        SAR STATUS
+                                        SAR Status
                                     </th>
                                 </tr>
                             </thead>
@@ -892,7 +899,7 @@ onMounted(() => {
                                             :checked="
                                                 selectedIds.includes(a.id)
                                             "
-                                            class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600 pointer-events-none"
+                                            class="h-5 w-5 accent-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:border-gray-600 pointer-events-none"
                                         />
                                     </td>
                                     <td
@@ -985,7 +992,7 @@ onMounted(() => {
                     <div
                         class="px-6 py-4 border-t border-gray-200 dark:border-gray-700"
                     >
-                        <div class="flex items-center justify-between">
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
                             <div
                                 class="text-sm text-gray-700 dark:text-gray-400"
                             >

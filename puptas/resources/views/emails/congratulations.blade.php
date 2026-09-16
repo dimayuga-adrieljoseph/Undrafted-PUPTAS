@@ -8,6 +8,7 @@
             font-family: Arial, sans-serif;
             line-height: 1.6;
             color: #333;
+            background-color: #ffffff;
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
@@ -33,6 +34,7 @@
             padding: 30px;
             border: 1px solid #ddd;
             border-top: none;
+            color: #333;
         }
         .greeting {
             font-size: 18px;
@@ -76,6 +78,45 @@
             font-size: 12px;
             color: #666;
             border-top: 1px solid #ddd;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1a1a1a;
+                color: #e0e0e0;
+            }
+            .content {
+                background: #2a2a2a;
+                border-color: #444;
+                color: #e0e0e0;
+            }
+            .greeting {
+                color: #e05a6e;
+            }
+            .congratulations-box {
+                background: #1a3a25;
+                border-color: #2d6a3f;
+                border-left-color: #2d8a4e;
+            }
+            .congratulations-box h3,
+            .congratulations-box p {
+                color: #7ecf98;
+            }
+            .info-box {
+                background: #333;
+                border-left-color: #c0392b;
+                color: #e0e0e0;
+            }
+            .info-box strong {
+                color: #e05a6e;
+            }
+            .footer {
+                color: #999;
+                border-top-color: #444;
+            }
+            a {
+                color: #7ab8f5;
+            }
         }
     </style>
 </head>

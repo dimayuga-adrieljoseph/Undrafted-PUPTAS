@@ -537,6 +537,7 @@ Route::middleware(['auth', EnsureAdmin::class])->group(function () {
 });
 
 Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
+    Route::get('/test-passers/{test_passer}/edit-data', [TestPasserController::class, 'show'])->name('test-passers.show');
     Route::put('/test-passers/{test_passer}', [TestPasserController::class, 'update'])->name('test-passers.update');
     Route::post('/test-passers-store', [TestPasserController::class, 'store']);
     Route::delete('/test-passers/{test_passer}', [TestPasserController::class, 'destroy'])->name('test-passers.destroy');
@@ -552,12 +553,13 @@ Route::middleware(['auth', 'role:applicant'])->group(function () {
     Route::post('/user/application/upload-url', [ConfirmationController::class, 'getUploadUrl']);
     Route::post('/user/application/confirm-upload', [ConfirmationController::class, 'confirmUpload']);
     Route::get('/user/application/file-status', [ConfirmationController::class, 'fileStatus']);
-    Route::get('/files/{file}/preview', [UserFileController::class, 'preview'])
-        ->middleware('signed')
-        ->name('files.preview');
     Route::post('/upload-files', [UserFileController::class, 'uploadFiles']);
     Route::post('/get-files', [UserFileController::class, 'getUserApplication']);
 });
+
+Route::get('/files/{file}/preview', [UserFileController::class, 'preview'])
+    ->middleware(['auth', 'signed'])
+    ->name('files.preview');
 
 // Eligible programs - requires authentication
 Route::get('/user/eligible-programs', [ConfirmationController::class, 'getEligiblePrograms'])
