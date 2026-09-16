@@ -569,7 +569,10 @@ const getStatusBadgeClass = (statusId) => {
                                 <tbody>
                                     <tr v-for="applicant in rangeApplicants" :key="applicant.test_passer_id" class="bg-white dark:bg-gray-800 border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td class="px-4 py-2.5 font-medium text-gray-900 dark:text-white">{{ applicant.reference_number }}</td>
-                                        <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">{{ applicant.surname }}, {{ applicant.first_name }} {{ applicant.middle_name }}</td>
+                                        <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">
+                                            <span>{{ applicant.surname }}, {{ applicant.first_name }} {{ applicant.middle_name }}</span>
+                                            <span v-if="applicant.is_masked" class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-normal bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">MASKED</span>
+                                        </td>
                                         <td class="px-4 py-2.5 font-semibold text-[#9E122C]">{{ applicant.pupcet_total_score }}</td>
                                         <td class="px-4 py-2.5">
                                             <span class="px-2.5 py-1 rounded-full text-xs font-medium capitalize" :class="getStatusBadgeClass(applicant.passer_status_id)">
@@ -765,7 +768,10 @@ const getStatusBadgeClass = (statusId) => {
                                             <tr v-for="applicant in probationApplicants" :key="applicant.test_passer_id" class="bg-white dark:bg-gray-800 border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                                 <td class="px-4 py-2">
                                                     <div class="font-medium text-gray-900 dark:text-white text-xs">{{ applicant.email }}</div>
-                                                    <div class="text-xs text-gray-500">{{ applicant.surname }}, {{ applicant.first_name }}</div>
+                                                    <div class="text-xs text-gray-500 flex items-center gap-1.5">
+                                                        <span>{{ applicant.surname }}, {{ applicant.first_name }}</span>
+                                                        <span v-if="applicant.is_masked" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-normal bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">MASKED</span>
+                                                    </div>
                                                 </td>
                                                 <td class="px-4 py-2 text-right">
                                                     <button v-if="!selectedEmails.find(e => e.email === applicant.email)" @click="addToSelection(applicant)" class="px-2.5 py-1 bg-[#9E122C]/10 text-[#9E122C] hover:bg-[#9E122C]/20 rounded text-xs font-semibold transition">Add</button>
@@ -820,7 +826,10 @@ const getStatusBadgeClass = (statusId) => {
                                 <tbody>
                                     <tr v-for="applicant in applicantsEmail" :key="applicant.test_passer_id" class="bg-white dark:bg-gray-800 border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td class="px-4 py-2.5 font-medium text-gray-900 dark:text-white text-xs">{{ applicant.email }}</td>
-                                        <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">{{ applicant.surname }}, {{ applicant.first_name }}</td>
+                                        <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">
+                                            <span>{{ applicant.surname }}, {{ applicant.first_name }}</span>
+                                            <span v-if="applicant.is_masked" class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-normal bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">MASKED</span>
+                                        </td>
                                         <td class="px-4 py-2.5">
                                             <span class="px-2 py-0.5 rounded-full text-xs font-medium capitalize" :class="getStatusBadgeClass(applicant.passer_status_id)">
                                                 {{ applicant.passer_status?.status || 'Unknown' }}

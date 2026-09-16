@@ -29,6 +29,7 @@ import { usePage } from "@inertiajs/vue3";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
 import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
+import { useMaskingState } from "@/Composables/useMaskingState";
 
 const currentPage = ref(1);
 const itemsPerPage = 10;
@@ -42,6 +43,7 @@ const POLL_INTERVAL_MS = 10000;
 
 const page = usePage();
 const users = ref(page.props.users || []);
+const { isUnmasked } = useMaskingState();
 
 const props = defineProps({
     user: Object,
@@ -133,7 +135,9 @@ const getStatusClass = (user) => {
 
 const fetchUsers = async () => {
     try {
-        const response = await fetch(`${props.baseUrl}/applicants`, {
+        const sep = props.baseUrl.includes('?') ? '&' : '?';
+        const unmaskParam = isUnmasked.value ? `${sep}unmask=1` : '';
+        const response = await fetch(`${props.baseUrl}/applicants${unmaskParam}`, {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",

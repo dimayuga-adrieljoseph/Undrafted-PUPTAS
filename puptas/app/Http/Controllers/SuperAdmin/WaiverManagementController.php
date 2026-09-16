@@ -8,6 +8,7 @@ use App\Models\TestPasser;
 use App\Models\Application;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Helpers\DataMaskingHelper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +50,19 @@ class WaiverManagementController extends Controller
 
         $taggedApplicants = $query->paginate(15)->withQueryString();
 
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Waiver Management');
+        $taggedApplicants->through(function ($app) use ($shouldMask) {
+            $app->is_masked = $shouldMask;
+            if ($shouldMask) {
+                $app->first_name = DataMaskingHelper::maskName($app->first_name);
+                $app->surname = DataMaskingHelper::maskName($app->surname);
+                if ($app->reference_number) {
+                    $app->reference_number = DataMaskingHelper::maskReferenceNumber($app->reference_number);
+                }
+            }
+            return $app;
+        });
+
         return Inertia::render('SuperAdmin/WaiverManagement', [
             'tagged_applicants' => $taggedApplicants,
             'filters' => $request->only('search')
@@ -85,6 +99,19 @@ class WaiverManagementController extends Controller
             })
             ->limit(20)
             ->get();
+
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Waiver Management Eligible Search');
+        $applicants->transform(function ($app) use ($shouldMask) {
+            $app->is_masked = $shouldMask;
+            if ($shouldMask) {
+                $app->first_name = DataMaskingHelper::maskName($app->first_name);
+                $app->surname = DataMaskingHelper::maskName($app->surname);
+                if ($app->reference_number) {
+                    $app->reference_number = DataMaskingHelper::maskReferenceNumber($app->reference_number);
+                }
+            }
+            return $app;
+        });
 
         return response()->json([
             'applicants' => $applicants
@@ -348,7 +375,25 @@ class WaiverManagementController extends Controller
             });
         }
 
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Waiver Report Export');
         $taggedApplicants = $query->get();
+
+        if ($shouldMask) {
+            $taggedApplicants->transform(function ($app) {
+                $app->first_name = DataMaskingHelper::maskName($app->first_name);
+                $app->surname = DataMaskingHelper::maskName($app->surname);
+                if ($app->reference_number) {
+                    $app->reference_number = DataMaskingHelper::maskReferenceNumber($app->reference_number);
+                }
+                if ($app->email) {
+                    $app->email = DataMaskingHelper::maskEmail($app->email);
+                }
+                if ($app->user && $app->user->email) {
+                    $app->user->email = DataMaskingHelper::maskEmail($app->user->email);
+                }
+                return $app;
+            });
+        }
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.waiver_report', ['applicants' => $taggedApplicants]);
         $pdf->setPaper('A4', 'landscape');
@@ -379,7 +424,25 @@ class WaiverManagementController extends Controller
             });
         }
 
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Waiver Report Export');
         $taggedApplicants = $query->get();
+
+        if ($shouldMask) {
+            $taggedApplicants->transform(function ($app) {
+                $app->first_name = DataMaskingHelper::maskName($app->first_name);
+                $app->surname = DataMaskingHelper::maskName($app->surname);
+                if ($app->reference_number) {
+                    $app->reference_number = DataMaskingHelper::maskReferenceNumber($app->reference_number);
+                }
+                if ($app->email) {
+                    $app->email = DataMaskingHelper::maskEmail($app->email);
+                }
+                if ($app->user && $app->user->email) {
+                    $app->user->email = DataMaskingHelper::maskEmail($app->user->email);
+                }
+                return $app;
+            });
+        }
 
         $headers = [
             "Content-type"        => "text/csv",

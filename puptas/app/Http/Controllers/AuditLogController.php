@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\AuditLog;
+use App\Models\User;
 use App\Models\AiAnalyticsHistory;
+use App\Helpers\DataMaskingHelper;
 use Inertia\Inertia;
 
 /**
@@ -61,17 +63,27 @@ class AuditLogController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        // Extract users from the logs themselves since User model is gone
+        // Fetch real user names where available to populate the filter dropdown
+        $userIds = AuditLog::query()
+            ->whereNotNull('user_id')
+            ->distinct()
+            ->pluck('user_id');
+
+        $usersById = User::whereIn('id', $userIds)
+            ->get(['id', 'firstname', 'lastname', 'email'])
+            ->keyBy(fn ($u) => (string) $u->id);
+
         $users = AuditLog::query()
             ->select('user_id as id', 'username as email')
             ->whereNotNull('user_id')
             ->groupBy('user_id', 'username')
             ->get()
-            ->map(function ($log) {
+            ->map(function ($log) use ($usersById) {
+                $userModel = $usersById->get((string) $log->id);
                 return [
                     'id' => $log->id,
-                    'firstname' => $log->email, // fallback
-                    'lastname' => '',
+                    'firstname' => $userModel?->firstname ?? 'User',
+                    'lastname' => $userModel?->lastname ?? "#{$log->id}",
                     'email' => $log->email,
                 ];
             });
@@ -85,6 +97,31 @@ class AuditLogController extends Controller
                 'lastname' => '',
                 'email' => 'system',
             ]);
+        }
+
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Audit Logs');
+        if ($shouldMask) {
+            $logs->through(function ($log) {
+                if ($log->username && $log->username !== 'system') {
+                    $log->username = DataMaskingHelper::maskEmail($log->username);
+                }
+                return $log;
+            });
+
+            $users->transform(function ($user) {
+                if ($user['id'] !== 'system') {
+                    if (!empty($user['firstname'])) {
+                        $user['firstname'] = DataMaskingHelper::maskName($user['firstname']);
+                    }
+                    if (!empty($user['lastname']) && !str_starts_with($user['lastname'], '#')) {
+                        $user['lastname'] = DataMaskingHelper::maskName($user['lastname']);
+                    }
+                    if (!empty($user['email'])) {
+                        $user['email'] = DataMaskingHelper::maskEmail($user['email']);
+                    }
+                }
+                return $user;
+            });
         }
 
         return Inertia::render('SuperAdmin/Logs', [

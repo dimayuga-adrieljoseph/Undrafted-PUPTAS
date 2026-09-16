@@ -274,11 +274,14 @@ const confirmDelete = (userId) => {
                       {{ getInitials(user.firstname, user.lastname) }}
                     </div>
                     <div>
-                      <p class="font-semibold text-gray-900 dark:text-white">
-                        {{ user.firstname }}
-                        <span v-if="user.middlename">{{ user.middlename[0] }}.</span>
-                        {{ user.lastname }}
-                        <span v-if="user.extension_name">{{ user.extension_name }}</span>
+                      <p class="font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <span>
+                          {{ user.firstname }}
+                          <span v-if="user.middlename">{{ user.middlename[0] }}.</span>
+                          {{ user.lastname }}
+                          <span v-if="user.extension_name">{{ user.extension_name }}</span>
+                        </span>
+                        <span v-if="user.is_masked" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-normal bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">MASKED</span>
                       </p>
                     </div>
                   </div>
@@ -348,10 +351,13 @@ const confirmDelete = (userId) => {
                   {{ getInitials(user.firstname, user.lastname) }}
                 </div>
                 <div class="min-w-0">
-                  <p class="font-semibold text-gray-900 dark:text-white truncate">
-                    {{ user.firstname }}
-                    <span v-if="user.middlename">{{ user.middlename[0] }}.</span>
-                    {{ user.lastname }}
+                  <p class="font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1.5">
+                    <span>
+                      {{ user.firstname }}
+                      <span v-if="user.middlename">{{ user.middlename[0] }}.</span>
+                      {{ user.lastname }}
+                    </span>
+                    <span v-if="user.is_masked" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-normal bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">MASKED</span>
                   </p>
                   <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ user.email }}</p>
                 </div>

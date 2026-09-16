@@ -4,6 +4,7 @@ import { Head, Link } from "@inertiajs/vue3";
 import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
 import BlurText from "@/Components/BlurText.vue";
 import UserDetailsModal from "@/Pages/Applications/UserDetailsModal.vue";
+import { useMaskingState } from "@/Composables/useMaskingState";
 
 import { usePage } from "@inertiajs/vue3";
 
@@ -13,6 +14,7 @@ const programs = ref(page.props.programs || []);
 const summary = ref(
     page.props.summary || { total: 0, accepted: 0, pending: 0, returned: 0 }
 );
+const { isUnmasked } = useMaskingState();
 
 const props = defineProps({
     user: Object,
@@ -79,7 +81,9 @@ const getStatusClass = (status) => {
 
 const fetchUsers = async () => {
     try {
-        const response = await fetch(`${props.baseUrl}/applicants`, {
+        const sep = props.baseUrl.includes('?') ? '&' : '?';
+        const unmaskParam = isUnmasked.value ? `${sep}unmask=1` : '';
+        const response = await fetch(`${props.baseUrl}/applicants${unmaskParam}`, {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",

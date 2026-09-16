@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
 import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue';
+import { useMaskingState } from "@/Composables/useMaskingState";
 
 import {
     Chart as ChartJS,
@@ -70,6 +71,7 @@ const decrementLocalSlot = (programId) => {
 
 const page = usePage();
 const users = ref(page.props.users || []);
+const { isUnmasked } = useMaskingState();
 
 const selectedUser = ref(null);
 const isLoading = ref(true);
@@ -211,7 +213,8 @@ const getEvaluationStatusClass = (user) => {
 
 const fetchUsers = async () => {
     try {
-        const response = await fetch("/interviewer-dashboard/applicants", {
+        const unmaskParam = isUnmasked.value ? '?unmask=1' : '';
+        const response = await fetch(`/interviewer-dashboard/applicants${unmaskParam}`, {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
