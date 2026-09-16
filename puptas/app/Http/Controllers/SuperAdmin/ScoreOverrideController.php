@@ -9,6 +9,7 @@ use App\Services\CutoffSettingsService;
 use App\Services\AuditLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Helpers\DataMaskingHelper;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -47,6 +48,19 @@ class ScoreOverrideController extends Controller
         $applicants = TestPasser::whereBetween('pupcet_total_score', [$from, $to])
             ->with(['passerStatus'])
             ->get(['test_passer_id', 'reference_number', 'first_name', 'surname', 'middle_name', 'status', 'passer_status_id', 'pupcet_total_score']);
+
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Score Override Search');
+        $applicants->transform(function ($app) use ($shouldMask) {
+            $app->is_masked = $shouldMask;
+            if ($shouldMask) {
+                $app->first_name = DataMaskingHelper::maskName($app->first_name);
+                $app->surname = DataMaskingHelper::maskName($app->surname);
+                if ($app->middle_name) {
+                    $app->middle_name = DataMaskingHelper::maskName($app->middle_name);
+                }
+            }
+            return $app;
+        });
 
         return response()->json([
             'applicants' => $applicants
@@ -179,6 +193,19 @@ class ScoreOverrideController extends Controller
             ->limit(50)
             ->get(['test_passer_id', 'reference_number', 'email', 'first_name', 'surname', 'middle_name', 'status', 'passer_status_id']);
 
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Score Override Email Search');
+        $applicants->transform(function ($app) use ($shouldMask) {
+            $app->is_masked = $shouldMask;
+            if ($shouldMask) {
+                $app->first_name = DataMaskingHelper::maskName($app->first_name);
+                $app->surname = DataMaskingHelper::maskName($app->surname);
+                if ($app->middle_name) {
+                    $app->middle_name = DataMaskingHelper::maskName($app->middle_name);
+                }
+            }
+            return $app;
+        });
+
         return response()->json([
             'applicants' => $applicants
         ]);
@@ -295,13 +322,29 @@ class ScoreOverrideController extends Controller
     /**
      * Fetch all applicants with on_probation status.
      */
-    public function getProbationApplicants()
+    public function getProbationApplicants(Request $request)
     {
         $applicants = TestPasser::whereHas('passerStatus', function ($query) {
             $query->where('status', 'on_probation');
         })
         ->with(['passerStatus'])
         ->get(['test_passer_id', 'reference_number', 'email', 'first_name', 'surname', 'middle_name', 'status', 'passer_status_id']);
+
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Probation Applicants');
+        $applicants->transform(function ($app) use ($shouldMask) {
+            $app->is_masked = $shouldMask;
+            if ($shouldMask) {
+                $app->first_name = DataMaskingHelper::maskName($app->first_name);
+                $app->surname = DataMaskingHelper::maskName($app->surname);
+                if ($app->middle_name) {
+                    $app->middle_name = DataMaskingHelper::maskName($app->middle_name);
+                }
+                if ($app->email) {
+                    $app->email = DataMaskingHelper::maskEmail($app->email);
+                }
+            }
+            return $app;
+        });
 
         return response()->json([
             'applicants' => $applicants

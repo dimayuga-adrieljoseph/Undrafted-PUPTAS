@@ -889,7 +889,10 @@ const paginationEnd = computed(() => (currentPage.value - 1) * perPage.value + a
 							<td class="px-5 sm:px-6 py-4 font-mono text-xs font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
 								<span class="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md">{{ app.reference_number }}</span>
 							</td>
-							<td class="px-5 sm:px-6 py-4 font-semibold text-gray-900 dark:text-white">{{ app.name }}</td>
+							<td class="px-5 sm:px-6 py-4 font-semibold text-gray-900 dark:text-white">
+								<span>{{ app.name }}</span>
+								<span v-if="app.is_masked" class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-normal bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">MASKED</span>
+							</td>
 							<td class="px-5 sm:px-6 py-4 text-gray-600 dark:text-gray-300 text-xs">{{ app.program }}</td>
 							<td class="px-5 sm:px-6 py-4">
 								<span :class="getStatusBadge(app.status)" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap">

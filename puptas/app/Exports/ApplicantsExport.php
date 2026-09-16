@@ -7,18 +7,21 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Illuminate\Database\Eloquent\Builder;
 use App\Services\ApplicationStatusService;
+use App\Helpers\DataMaskingHelper;
 
 class ApplicantsExport implements FromQuery, WithMapping, WithHeadings
 {
     protected $query;
     protected ApplicationStatusService $statusService;
     protected $reportType;
+    protected bool $shouldMask;
 
-    public function __construct(Builder $query, ApplicationStatusService $statusService, $reportType = null)
+    public function __construct(Builder $query, ApplicationStatusService $statusService, $reportType = null, bool $shouldMask = true)
     {
         $this->query = $query;
         $this->statusService = $statusService;
         $this->reportType = $reportType;
+        $this->shouldMask = $shouldMask;
     }
 
     public function query()
@@ -54,9 +57,21 @@ class ApplicantsExport implements FromQuery, WithMapping, WithHeadings
             && !$hasMedicalOrRecords
             && ($interviewerProcess->decision_reason !== null || $interviewerProcess->reviewer_notes !== null);
             
+        $refNumber = $app->user->testPasser->reference_number ?? 'N/A';
+        $fullName  = trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? ''));
+
+        if ($this->shouldMask) {
+            if ($refNumber !== 'N/A') {
+                $refNumber = DataMaskingHelper::maskReferenceNumber($refNumber);
+            }
+            if (!empty($fullName)) {
+                $fullName = DataMaskingHelper::maskName($fullName);
+            }
+        }
+
         $data = [
-            $this->sanitizeExcelValue($app->user->testPasser->reference_number ?? 'N/A'),
-            $this->sanitizeExcelValue(trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? ''))),
+            $this->sanitizeExcelValue($refNumber),
+            $this->sanitizeExcelValue($fullName),
             $this->sanitizeExcelValue($app->program->code ?? 'N/A'),
             $this->sanitizeExcelValue($isPulledOut ? 'Pulled Out' : $this->statusService->determineStatus($app))
         ];

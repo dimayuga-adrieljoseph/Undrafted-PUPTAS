@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
 import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
+import { useMaskingState } from "@/Composables/useMaskingState";
 import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
 
 import {
@@ -49,6 +50,7 @@ const POLL_INTERVAL_MS = 10000;
 const page = usePage();
 const users = ref(page.props.users || []);
 const hasAutoSelected = ref(false);
+const { isUnmasked } = useMaskingState();
 
 const selectedUser = ref(null);
 const isLoading = ref(true);
@@ -160,7 +162,8 @@ const getEvaluationStatusClass = (user) => {
 const fetchUsers = async () => {
     try {
         const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-        const response = await fetch(`/evaluator-dashboard/applicants?stage=${targetStageForApi}`, {
+        const unmaskParam = isUnmasked.value ? '&unmask=1' : '';
+        const response = await fetch(`/evaluator-dashboard/applicants?stage=${targetStageForApi}${unmaskParam}`, {
             headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
         });
         if (!response.ok) throw new Error("Failed to fetch users");

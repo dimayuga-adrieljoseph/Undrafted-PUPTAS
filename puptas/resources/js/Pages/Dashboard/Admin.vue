@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
+import { useMaskingState } from "@/Composables/useMaskingState";
 import { LineChart } from "vue-chart-3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import BlurText from "@/Components/BlurText.vue";
@@ -58,6 +59,9 @@ const props = defineProps({
 const startDateFilter = ref(props.filters?.start_date || '');
 const endDateFilter = ref(props.filters?.end_date || '');
 const showDateFilter = ref(false);
+
+// Universal masking state — reads isUnmasked to show MASKED badge
+const { isUnmasked } = useMaskingState();
 
 const applyFilters = () => {
   router.get(window.location.pathname, {
@@ -585,8 +589,12 @@ const untagApplication = async () => {
                     {{ user.firstname?.charAt(0) || '' }}{{ user.lastname?.charAt(0) || '' }}
                   </div>
                   <div class="min-w-0">
-                    <h4 class="font-semibold text-gray-900 dark:text-white truncate">
+                    <h4 class="font-semibold text-gray-900 dark:text-white truncate flex items-center gap-1.5 flex-wrap">
                       {{ user.firstname || user.email || '—' }} {{ user.lastname || '' }}
+                      <span
+                        v-if="user.is_masked"
+                        class="px-1.5 py-0.5 rounded text-[10px] font-mono font-normal bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 shrink-0"
+                      >MASKED</span>
                     </h4>
                     <p class="text-gray-600 dark:text-gray-400 text-sm truncate">{{ user.email }}</p>
                   </div>

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Repositories\Contracts\ApplicantProfileRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Contracts\ApplicationRepositoryInterface;
+use App\Helpers\DataMaskingHelper;
 
 /**
  * User Service
@@ -28,27 +29,41 @@ class UserService
      *
      * @return Collection
      */
-    public function getApplicantsWithApplications(): Collection
+    public function getApplicantsWithApplications(bool $shouldMask = true): Collection
     {
         if ($cachedData = Cache::get('applicants_with_applications')) {
-            return collect($cachedData);
+            return collect($cachedData)->map(function ($item) use ($shouldMask) {
+                if ($shouldMask) {
+                    $item['firstname'] = DataMaskingHelper::maskName($item['firstname'] ?? '');
+                    $item['lastname']  = DataMaskingHelper::maskName($item['lastname'] ?? '');
+                    $item['email']     = DataMaskingHelper::maskEmail($item['email'] ?? '');
+                    $item['username']  = DataMaskingHelper::maskEmail($item['username'] ?? '');
+                }
+                $item['is_masked'] = $shouldMask;
+                return $item;
+            });
         }
 
-        return Cache::lock('applicants_with_applications_lock', 10)->block(5, function () {
-            return Cache::remember('applicants_with_applications', 300, function () {
+        return Cache::lock('applicants_with_applications_lock', 10)->block(5, function () use ($shouldMask) {
+            return Cache::remember('applicants_with_applications', 300, function () use ($shouldMask) {
                 return $this->applicantProfileRepository->allWithCurrentApplication()
-                    ->map(function ($profile) {
+                    ->map(function ($profile) use ($shouldMask) {
+                        $firstname = $shouldMask ? DataMaskingHelper::maskName($profile->firstname) : $profile->firstname;
+                        $lastname  = $shouldMask ? DataMaskingHelper::maskName($profile->lastname) : $profile->lastname;
+                        $email     = $shouldMask ? DataMaskingHelper::maskEmail($profile->email) : $profile->email;
+
                         return [
                             'id' => $profile->user_id,
-                            'firstname' => $profile->firstname,
-                            'lastname' => $profile->lastname,
+                            'firstname' => $firstname,
+                            'lastname' => $lastname,
                             'course' => $profile->course ?? null,
                             'status' => $profile->currentApplication->status ?? null,
-                            'email' => $profile->email,
-                            'username' => $profile->email,
+                            'email' => $email,
+                            'username' => $email,
                             'company' => $profile->company ?? null,
                             'program' => $profile->currentApplication->program ?? null,
                             'processes' => $profile->currentApplication->processes ?? [],
+                            'is_masked' => $shouldMask,
                         ];
                     });
             });
@@ -60,25 +75,31 @@ class UserService
      *
      * @param string $stage The application stage (evaluator, interviewer, medical)
      * @param array|null $programIds Optional list of program IDs to filter by (e.g. for interviewers)
+     * @param bool $shouldMask Whether to mask PII
      * @return Collection
      */
-    public function getApplicantsByStage(string $stage, ?array $programIds = null): Collection
+    public function getApplicantsByStage(string $stage, ?array $programIds = null, bool $shouldMask = true): Collection
     {
         return $this->applicantProfileRepository->byStage($stage, $programIds)
-            ->map(function ($profile) use ($stage) {
+            ->map(function ($profile) use ($stage, $shouldMask) {
                 $application = $profile->currentApplication;
                 $stageProcess = $application && $application->processes ?
                     $application->processes->where('stage', $stage)->first() : null;
 
+                $firstname = $shouldMask ? DataMaskingHelper::maskName($profile->firstname) : $profile->firstname;
+                $lastname  = $shouldMask ? DataMaskingHelper::maskName($profile->lastname) : $profile->lastname;
+                $email     = $shouldMask ? DataMaskingHelper::maskEmail($profile->email) : $profile->email;
+
                 return [
                     'id' => $profile->user_id,
-                    'firstname' => $profile->firstname,
-                    'lastname' => $profile->lastname,
+                    'firstname' => $firstname,
+                    'lastname' => $lastname,
                     'course' => $profile->course ?? null,
                     'status' => $application->status ?? null,
-                    'email' => $profile->email,
-                    'username' => $profile->email,
+                    'email' => $email,
+                    'username' => $email,
                     'company' => $profile->company ?? null,
+                    'is_masked' => $shouldMask,
                     'program' => $application && $application->program ? [
                         'id' => $application->program->id,
                         'code' => $application->program->code,
@@ -107,25 +128,31 @@ class UserService
      *
      * @param string $stage The application stage (evaluator, interviewer, medical, records)
      * @param array|null $programIds Optional list of program IDs to filter by (e.g. for scoped evaluators/interviewers)
+     * @param bool $shouldMask Whether to mask PII
      * @return Collection
      */
-    public function getAllApplicantsByStage(string $stage, ?array $programIds = null): Collection
+    public function getAllApplicantsByStage(string $stage, ?array $programIds = null, bool $shouldMask = true): Collection
     {
         return $this->applicantProfileRepository->allByStage($stage, $programIds)
-            ->map(function ($profile) use ($stage) {
+            ->map(function ($profile) use ($stage, $shouldMask) {
                 $application = $profile->currentApplication;
                 $stageProcess = $application && $application->processes ?
                     $application->processes->where('stage', $stage)->first() : null;
 
+                $firstname = $shouldMask ? DataMaskingHelper::maskName($profile->firstname) : $profile->firstname;
+                $lastname  = $shouldMask ? DataMaskingHelper::maskName($profile->lastname) : $profile->lastname;
+                $email     = $shouldMask ? DataMaskingHelper::maskEmail($profile->email) : $profile->email;
+
                 return [
                     'id' => $profile->user_id,
-                    'firstname' => $profile->firstname,
-                    'lastname' => $profile->lastname,
+                    'firstname' => $firstname,
+                    'lastname' => $lastname,
                     'course' => $profile->course ?? null,
                     'status' => $application->status ?? null,
-                    'email' => $profile->email,
-                    'username' => $profile->email,
+                    'email' => $email,
+                    'username' => $email,
                     'company' => $profile->company ?? null,
+                    'is_masked' => $shouldMask,
                     'pipeline_status' => $this->derivePipelineStatus($application),
                     'program' => $application && $application->program ? [
                         'id' => $application->program->id,
@@ -265,9 +292,10 @@ class UserService
      * Get applicants for record staff
      * Returns applicants who have completed medical stage OR are officially enrolled
      *
+     * @param bool $shouldMask Whether to mask PII
      * @return Collection
      */
-    public function getApplicantsForRecordStaff(): Collection
+    public function getApplicantsForRecordStaff(bool $shouldMask = true): Collection
     {
         // Get user IDs with completed medical on their latest application
         $userIds = $this->applicationRepository->userIdsWithCompletedMedical();
@@ -288,19 +316,24 @@ class UserService
         // Load applications separately
         $applications = $this->applicationRepository->latestApplicationsByUserIds($allUserIds);
 
-        return $profiles->map(function ($profile) use ($applications) {
+        return $profiles->map(function ($profile) use ($applications, $shouldMask) {
             $app = $applications->get($profile->user_id);
             $program = $app?->program;
             $pipelineStatus = $this->derivePipelineStatus($app);
 
+            $firstname = $shouldMask ? DataMaskingHelper::maskName($profile->firstname) : $profile->firstname;
+            $lastname  = $shouldMask ? DataMaskingHelper::maskName($profile->lastname) : $profile->lastname;
+            $email     = $shouldMask ? DataMaskingHelper::maskEmail($profile->email) : $profile->email;
+
             return [
                 'id'                => $profile->user_id,
-                'firstname'         => $profile->firstname,
-                'lastname'          => $profile->lastname,
+                'firstname'         => $firstname,
+                'lastname'          => $lastname,
                 'course'            => null,
-                'email'             => $profile->email,
-                'username'          => $profile->email,
+                'email'             => $email,
+                'username'          => $email,
                 'company'           => null,
+                'is_masked'         => $shouldMask,
                 'status'            => $app?->status ?? null,
                 'enrollment_status' => $app?->enrollment_status ?? null,
                 'pipeline_status'   => $pipelineStatus,
@@ -467,9 +500,10 @@ class UserService
      * @param  int          $page     1-indexed current page
      * @param  int          $perPage  Records per page (default 15)
      * @param  int|null     $roleId   Filter by role (1 = applicants, >1 = staff)
+     * @param  bool         $shouldMask Whether to mask PII
      * @return array
      */
-    public function searchUsers(?string $search = null, int $page = 1, int $perPage = 15, ?int $roleId = null): array
+    public function searchUsers(?string $search = null, int $page = 1, int $perPage = 15, ?int $roleId = null, bool $shouldMask = true): array
     {
         $skipStaff      = $roleId === 1;
         $skipApplicants = $roleId !== null && $roleId !== 1;
@@ -484,22 +518,19 @@ class UserService
         $offset   = ($page - 1) * $perPage;
 
         // ── Fast-path: only one source is in play ─────────────────────────────
-        // When we know exactly which records we need (staff-only or applicants-
-        // only) we can use the existing paginated repository methods directly and
-        // skip the UNION entirely.
-
         if ($skipApplicants) {
             // Staff-only page: let the DB do the offset+limit.
             $staff = $this->userRepository->searchStaff($roleId, $search, $offset, $perPage)
                 ->map(fn ($u) => (object) [
                     'id'             => $u->idp_user_id ?: $u->id,
-                    'firstname'      => $u->firstname,
-                    'middlename'     => $u->middlename,
-                    'lastname'       => $u->lastname,
+                    'firstname'      => $shouldMask ? DataMaskingHelper::maskName($u->firstname) : $u->firstname,
+                    'middlename'     => ($shouldMask && $u->middlename) ? DataMaskingHelper::maskName($u->middlename) : $u->middlename,
+                    'lastname'       => $shouldMask ? DataMaskingHelper::maskName($u->lastname) : $u->lastname,
                     'extension_name' => $u->extension_name,
-                    'email'          => $u->email,
+                    'email'          => $shouldMask ? DataMaskingHelper::maskEmail($u->email) : $u->email,
                     'role_id'        => $u->role_id,
                     'is_active'      => (bool) ($u->is_active ?? true),
+                    'is_masked'      => $shouldMask,
                     'created_at'     => $u->created_at,
                     'role'           => (object) ['name' => $u->role ? $u->role->name : 'Staff'],
                     'programs'       => $u->programs,
@@ -522,13 +553,14 @@ class UserService
             $applicants = $this->applicantProfileRepository->searchPaginated($search, $offset, $perPage)
                 ->map(fn ($a) => (object) [
                     'id'             => $a->user_id,
-                    'firstname'      => $a->firstname,
-                    'middlename'     => $a->middlename,
-                    'lastname'       => $a->lastname,
+                    'firstname'      => $shouldMask ? DataMaskingHelper::maskName($a->firstname) : $a->firstname,
+                    'middlename'     => ($shouldMask && $a->middlename) ? DataMaskingHelper::maskName($a->middlename) : $a->middlename,
+                    'lastname'       => $shouldMask ? DataMaskingHelper::maskName($a->lastname) : $a->lastname,
                     'extension_name' => $a->extension_name,
-                    'email'          => $a->email,
+                    'email'          => $shouldMask ? DataMaskingHelper::maskEmail($a->email) : $a->email,
                     'role_id'        => 1,
                     'is_active'      => (bool) ($a->user?->is_active ?? true),
+                    'is_masked'      => $shouldMask,
                     'created_at'     => $a->created_at,
                     'role'           => (object) ['name' => 'Applicant'],
                     'programs'       => collect(),
@@ -552,20 +584,6 @@ class UserService
             ];
         }
 
-        // ── Mixed page: both staff and applicants could appear ────────────────
-        // We need sorted, globally-offset results across both sets.  Rather than
-        // loading everything into PHP, we figure out which records the current
-        // page needs using the sorted counts, then fetch only those rows.
-        //
-        // Strategy: staff are sorted newest-first in their own result set and
-        // applicants in theirs.  The merged global sort is also newest-first.
-        // We can determine the page boundary with simple arithmetic:
-        //   - staff come first (they are loaded newest-first from users table)
-        //   - applicants fill the rest
-        //
-        // This avoids a UNION across two structurally different tables while still
-        // keeping DB-level limits.
-
         $staffNeeded      = max(0, min($totalStaff - $offset, $perPage));
         $staffOffset      = min($offset, $totalStaff);
         $applicantOffset  = max(0, $offset - $totalStaff);
@@ -575,13 +593,14 @@ class UserService
             ? $this->userRepository->searchStaff($roleId, $search, $staffOffset, $staffNeeded)
                 ->map(fn ($u) => (object) [
                     'id'             => $u->idp_user_id ?: $u->id,
-                    'firstname'      => $u->firstname,
-                    'middlename'     => $u->middlename,
-                    'lastname'       => $u->lastname,
+                    'firstname'      => $shouldMask ? DataMaskingHelper::maskName($u->firstname) : $u->firstname,
+                    'middlename'     => ($shouldMask && $u->middlename) ? DataMaskingHelper::maskName($u->middlename) : $u->middlename,
+                    'lastname'       => $shouldMask ? DataMaskingHelper::maskName($u->lastname) : $u->lastname,
                     'extension_name' => $u->extension_name,
-                    'email'          => $u->email,
+                    'email'          => $shouldMask ? DataMaskingHelper::maskEmail($u->email) : $u->email,
                     'role_id'        => $u->role_id,
                     'is_active'      => (bool) ($u->is_active ?? true),
+                    'is_masked'      => $shouldMask,
                     'created_at'     => $u->created_at,
                     'role'           => (object) ['name' => $u->role ? $u->role->name : 'Staff'],
                     'programs'       => $u->programs,
@@ -595,13 +614,14 @@ class UserService
             ? $this->applicantProfileRepository->searchPaginated($search, $applicantOffset, $applicantNeeded)
                 ->map(fn ($a) => (object) [
                     'id'             => $a->user_id,
-                    'firstname'      => $a->firstname,
-                    'middlename'     => $a->middlename,
-                    'lastname'       => $a->lastname,
+                    'firstname'      => $shouldMask ? DataMaskingHelper::maskName($a->firstname) : $a->firstname,
+                    'middlename'     => ($shouldMask && $a->middlename) ? DataMaskingHelper::maskName($a->middlename) : $a->middlename,
+                    'lastname'       => $shouldMask ? DataMaskingHelper::maskName($a->lastname) : $a->lastname,
                     'extension_name' => $a->extension_name,
-                    'email'          => $a->email,
+                    'email'          => $shouldMask ? DataMaskingHelper::maskEmail($a->email) : $a->email,
                     'role_id'        => 1,
                     'is_active'      => (bool) ($a->user?->is_active ?? true),
+                    'is_masked'      => $shouldMask,
                     'created_at'     => $a->created_at,
                     'role'           => (object) ['name' => 'Applicant'],
                     'programs'       => collect(),

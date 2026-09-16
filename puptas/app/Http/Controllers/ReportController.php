@@ -11,6 +11,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ApplicantsExport;
 use App\Services\ApplicationStatusService;
+use App\Helpers\DataMaskingHelper;
 use App\Http\Controllers\AdmissionLogbookController;
 use App\Http\Controllers\ControlListController;
 
@@ -65,10 +66,12 @@ class ReportController extends Controller
 
     public function getReportData(Request $request)
     {
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Applicant Reports');
+
         $query = $this->buildReportQuery($request);
         $paginator = $query->with(['user.testPasser', 'program', 'processes'])->paginate(15);
 
-        $paginator->getCollection()->transform(function ($app) {
+        $paginator->getCollection()->transform(function ($app) use ($shouldMask) {
             $interviewerProcess = $app->processes->where('stage', 'interviewer')->first();
             $hasMedicalOrRecords = $app->processes->whereIn('stage', ['medical', 'records'])->isNotEmpty();
             $isPulledOut = $interviewerProcess
@@ -76,16 +79,34 @@ class ReportController extends Controller
                 && $interviewerProcess->action === null
                 && !$hasMedicalOrRecords
                 && ($interviewerProcess->decision_reason !== null || $interviewerProcess->reviewer_notes !== null);
+
+            $refNumber = $app->user->testPasser->reference_number ?? 'N/A';
+            $name      = trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? ''));
+            $email     = $app->user->email ?? 'N/A';
+
+            if ($shouldMask) {
+                if ($refNumber !== 'N/A') {
+                    $refNumber = DataMaskingHelper::maskReferenceNumber($refNumber);
+                }
+                if (!empty($name)) {
+                    $name = DataMaskingHelper::maskName($name);
+                }
+                if ($email !== 'N/A') {
+                    $email = DataMaskingHelper::maskEmail($email);
+                }
+            }
+
             return [
-                'id'             => $app->id,
-                'user_id'        => $app->user_id,
-                'reference_number' => $app->user->testPasser->reference_number ?? 'N/A',
-                'name'           => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
-                'email'          => $app->user->email ?? 'N/A',
-                'program'        => $app->program->code ?? 'N/A',
-                'status'         => $isPulledOut ? 'Pulled Out' : $this->statusService->determineStatus($app),
-                'pullout_notes'  => $isPulledOut ? ($interviewerProcess->decision_reason ?? $interviewerProcess->reviewer_notes ?? '—') : null,
-                'date'           => $app->updated_at->format('Y-m-d')
+                'id'               => $app->id,
+                'user_id'          => $app->user_id,
+                'reference_number' => $refNumber,
+                'name'             => $name,
+                'email'            => $email,
+                'is_masked'        => $shouldMask,
+                'program'          => $app->program->code ?? 'N/A',
+                'status'           => $isPulledOut ? 'Pulled Out' : $this->statusService->determineStatus($app),
+                'pullout_notes'    => $isPulledOut ? ($interviewerProcess->decision_reason ?? $interviewerProcess->reviewer_notes ?? '—') : null,
+                'date'             => $app->updated_at->format('Y-m-d')
             ];
         });
 
@@ -94,11 +115,13 @@ class ReportController extends Controller
 
     public function exportPdf(Request $request)
     {
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Applicant Reports Export');
+
         $query = $this->buildReportQuery($request);
         // Limit PDF export to prevent memory exhaustion and extremely slow generation
         $applicants = $query->with(['user.testPasser', 'program', 'processes'])->limit(1000)->get();
 
-        $data = $applicants->map(function ($app) {
+        $data = $applicants->map(function ($app) use ($shouldMask) {
             $interviewerProcess = $app->processes->where('stage', 'interviewer')->first();
             $hasMedicalOrRecords = $app->processes->whereIn('stage', ['medical', 'records'])->isNotEmpty();
             $isPulledOut = $interviewerProcess
@@ -107,9 +130,21 @@ class ReportController extends Controller
                 && !$hasMedicalOrRecords
                 && ($interviewerProcess->decision_reason !== null || $interviewerProcess->reviewer_notes !== null);
                 
+            $refNumber = $app->user->testPasser->reference_number ?? 'N/A';
+            $name      = trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? ''));
+
+            if ($shouldMask) {
+                if ($refNumber !== 'N/A') {
+                    $refNumber = DataMaskingHelper::maskReferenceNumber($refNumber);
+                }
+                if (!empty($name)) {
+                    $name = DataMaskingHelper::maskName($name);
+                }
+            }
+
             return [
-                'reference_number' => $app->user->testPasser->reference_number ?? 'N/A',
-                'name' => trim(($app->user->firstname ?? '') . ' ' . ($app->user->lastname ?? '')),
+                'reference_number' => $refNumber,
+                'name' => $name,
                 'program' => $app->program->code ?? 'N/A',
                 'status' => $isPulledOut ? 'Pulled Out' : $this->statusService->determineStatus($app),
                 'pullout_notes'  => $isPulledOut ? ($interviewerProcess->decision_reason ?? $interviewerProcess->reviewer_notes ?? '—') : null,
@@ -123,11 +158,13 @@ class ReportController extends Controller
 
     public function exportExcel(Request $request)
     {
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'Applicant Reports Export');
+
         $query = $this->buildReportQuery($request);
         // Pass the builder instance to the export class for chunked query execution
         $query->with(['user.testPasser', 'program', 'processes']);
 
-        return Excel::download(new ApplicantsExport($query, $this->statusService, $request->type), 'applicant_report.xlsx');
+        return Excel::download(new ApplicantsExport($query, $this->statusService, $request->type, $shouldMask), 'applicant_report.xlsx');
     }
 
     private function sanitizeExcelValue($value)

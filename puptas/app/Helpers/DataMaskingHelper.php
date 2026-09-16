@@ -3,10 +3,66 @@
 namespace App\Helpers;
 
 use App\Models\User;
+use App\Models\AuditLog;
+use App\Services\AuditLogService;
 use App\Enums\RoleId;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class DataMaskingHelper
 {
+    /**
+     * Centralized request resolver for PII masking.
+     * Evaluates the unmask flag, validates role permissions, writes audit logs,
+     * or blocks unauthorized attempts with a 403 response.
+     *
+     * @param Request $request
+     * @param User|null $user
+     * @param string $moduleName
+     * @return bool True if data should be masked, false if unmasked.
+     */
+    public static function resolveForRequest(
+        Request $request,
+        ?User $user = null,
+        string $moduleName = 'Admission Data'
+    ): bool {
+        $user = $user ?? Auth::user();
+        $unmaskRequested = $request->boolean('unmask', false);
+
+        if (!$unmaskRequested) {
+            return true;
+        }
+
+        $auditLogService = app(AuditLogService::class);
+
+        if (!static::canUnmask($user)) {
+            $userId = $user?->id ?? 'Unknown';
+            $roleId = $user?->role_id ?? 'None';
+
+            $auditLogService->logActivity(
+                AuditLog::ACTION_READ,
+                'Security',
+                "Unauthorized PII unmask attempt blocked on {$moduleName} for User ID {$userId} (Role ID: {$roleId}).",
+                $user,
+                AuditLog::CATEGORY_AUTHENTICATION
+            );
+
+            abort(403, 'Forbidden: You do not have security clearance to unmask personal information.');
+        }
+
+        $userId = $user->id;
+        $name = trim(($user->firstname ?? '') . ' ' . ($user->lastname ?? ''));
+        $auditLogService->logActivity(
+            AuditLog::ACTION_READ,
+            $moduleName,
+            "Staff User ID {$userId} ({$name}) unmasked PII on {$moduleName} view.",
+            $user,
+            AuditLog::CATEGORY_AUDIT_ACCESS
+        );
+
+        return false;
+    }
+
     /**
      * Determine if presentation data should be masked for the given user.
      * Default is TRUE (Privacy by Default).
@@ -22,7 +78,12 @@ class DataMaskingHelper
 
     /**
      * Determine if the given user has role clearance to unmask sensitive personal data.
-     * Enforces strict server-side RBAC: Only SuperAdmin (7) and Admin (2) are permitted.
+     *
+     * Operational staff (Evaluators, Interviewer, Medical, Registrar) are permitted
+     * because their core admission-day workflow is: ask applicant's name → search by name
+     * → evaluate and pass/return. Masking names makes their queue unsearchable.
+     *
+     * SuperAdmin and Admin retain full toggle access for investigative / oversight use.
      */
     public static function canUnmask(?User $user = null): bool
     {
@@ -33,6 +94,11 @@ class DataMaskingHelper
         return in_array((int) $user->role_id, [
             RoleId::SuperAdmin->value,
             RoleId::Admin->value,
+            RoleId::DocumentEvaluator->value,
+            RoleId::GradeEvaluator->value,
+            RoleId::Interviewer->value,
+            RoleId::Medical->value,
+            RoleId::Registrar->value,
         ], true);
     }
 
