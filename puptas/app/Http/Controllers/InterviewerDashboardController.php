@@ -105,9 +105,10 @@ class InterviewerDashboardController extends Controller
 
         $user = Auth::user();
         $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Interviewer Queue');
+        $search = trim((string) ($request->input('search') ?? $request->input('q') ?? ''));
 
         // Interviewers see ALL applicants at interviewer stage (global access)
-        $results = $this->userService->getAllApplicantsByStage('interviewer', null, $shouldMask);
+        $results = $this->userService->getAllApplicantsByStage('interviewer', null, $shouldMask, $search !== '' ? $search : null);
 
         Log::info('InterviewerDashboard::getUsers (global)', [
             'user_id' => $user->id,

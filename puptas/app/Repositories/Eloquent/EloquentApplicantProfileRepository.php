@@ -48,9 +48,9 @@ class EloquentApplicantProfileRepository implements ApplicantProfileRepositoryIn
             ->get();
     }
 
-    public function allByStage(string $stage, ?array $programIds = null): Collection
+    public function allByStage(string $stage, ?array $programIds = null, ?string $search = null): Collection
     {
-        return ApplicantProfile::select(['user_id', 'firstname', 'lastname', 'email'])
+        $query = ApplicantProfile::select(['user_id', 'firstname', 'lastname', 'email'])
             ->with(['currentApplication' => function ($query) {
                 $query->select('applications.id', 'applications.user_id', 'applications.status', 'applications.enrollment_status', 'applications.created_at', 'applications.program_id', 'applications.second_choice_id', 'applications.third_choice_id', 'applications.requires_guidance_office', 'applications.requires_admission_office');
             }, 'currentApplication.program' => function ($query) {
@@ -72,17 +72,40 @@ class EloquentApplicantProfileRepository implements ApplicantProfileRepositoryIn
                 if (!empty($programIds)) {
                     $query->whereIn('program_id', $programIds);
                 }
-            })
-            ->get();
+            });
+
+        if (!empty($search)) {
+            $search = trim($search);
+            $query->where(function ($q) use ($search) {
+                $q->where('firstname', 'LIKE', "%{$search}%")
+                  ->orWhere('lastname', 'LIKE', "%{$search}%")
+                  ->orWhere('email', 'LIKE', "%{$search}%")
+                  ->orWhere(DB::raw("CONCAT(firstname, ' ', lastname)"), 'LIKE', "%{$search}%");
+            });
+        }
+
+        return $query->get();
     }
 
-    public function byUserIds(array $userIds, array $columns = ['*']): Collection
+    public function byUserIds(array $userIds, array $columns = ['*'], ?string $search = null): Collection
     {
         if (empty($userIds)) {
             return collect();
         }
 
-        return ApplicantProfile::whereIn('user_id', $userIds)->get($columns);
+        $query = ApplicantProfile::whereIn('user_id', $userIds);
+
+        if (!empty($search)) {
+            $search = trim($search);
+            $query->where(function ($q) use ($search) {
+                $q->where('firstname', 'LIKE', "%{$search}%")
+                  ->orWhere('lastname', 'LIKE', "%{$search}%")
+                  ->orWhere('email', 'LIKE', "%{$search}%")
+                  ->orWhere(DB::raw("CONCAT(firstname, ' ', lastname)"), 'LIKE', "%{$search}%");
+            });
+        }
+
+        return $query->get($columns);
     }
 
     public function count(): int
