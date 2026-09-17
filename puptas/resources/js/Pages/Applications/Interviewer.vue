@@ -213,8 +213,11 @@ const getEvaluationStatusClass = (user) => {
 
 const fetchUsers = async () => {
     try {
-        const unmaskParam = isUnmasked.value ? '?unmask=1' : '';
-        const response = await fetch(`/interviewer-dashboard/applicants${unmaskParam}`, {
+        const unmaskParam = isUnmasked.value ? 'unmask=1' : '';
+        const searchParam = searchQuery.value.trim() ? `search=${encodeURIComponent(searchQuery.value.trim())}` : '';
+        const queryParams = [unmaskParam, searchParam].filter(Boolean).join('&');
+        const url = `/interviewer-dashboard/applicants${queryParams ? '?' + queryParams : ''}`;
+        const response = await fetch(url, {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
@@ -237,6 +240,18 @@ const fetchUsers = async () => {
     }
 };
 
+let searchDebounce = null;
+watch(searchQuery, () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+        fetchUsers();
+    }, 300);
+});
+
+watch(isUnmasked, () => {
+    fetchUsers();
+});
+
 const handleOutsideClick = (e) => {
     if (filterDropdownRef.value && !filterDropdownRef.value.contains(e.target)) {
         showStatusDropdown.value = false;
@@ -257,8 +272,11 @@ const filteredUsers = computed(() => {
     const q = searchQuery.value.trim().toLowerCase();
     return users.value
         .filter((u) => {
-            const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
-            const matchesSearch = fullName.includes(q);
+            let matchesSearch = true;
+            if (q && isUnmasked.value) {
+                const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
+                matchesSearch = fullName.includes(q) || (u.email || "").toLowerCase().includes(q);
+            }
             const matchesEvaluationStatus = evaluationStatusFilter.value
                 ? u.pipeline_status === evaluationStatusFilter.value
                 : true;

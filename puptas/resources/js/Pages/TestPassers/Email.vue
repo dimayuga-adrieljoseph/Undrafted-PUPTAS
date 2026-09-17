@@ -521,32 +521,6 @@ const itemsPerPage = computed(() => props.passers?.per_page || 15);
 
 // Privacy Masking State
 const isMasked = computed(() => props.isMasked ?? true);
-const showRevealModal = ref(false);
-
-const toggleMasking = () => {
-    if (isMasked.value) {
-        showRevealModal.value = true;
-    } else {
-        router.get('/test-passers', buildServerParams({ unmask: undefined, page: currentPage.value }), {
-            preserveState: true,
-            preserveScroll: true,
-            onSuccess: () => {
-                show('Personal info masked.', 'info');
-            },
-        });
-    }
-};
-
-const confirmRevealPersonal = () => {
-    showRevealModal.value = false;
-    router.get('/test-passers', buildServerParams({ unmask: 1, page: currentPage.value }), {
-        preserveState: true,
-        preserveScroll: true,
-        onSuccess: () => {
-            show('Personal info revealed.', 'success');
-        },
-    });
-};
 
 // Central function to make server requests with all current params
 function buildServerParams(overrides = {}) {
@@ -1507,9 +1481,11 @@ const runBulkEnroll = async () => {
                     <div class="bg-white rounded-2xl shadow-lg overflow-hidden dark:bg-gray-800">
                         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                             <div class="flex flex-wrap items-center justify-between gap-3">
-                                <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
-                                    Selected Passers
-                                </h2>
+                                <div class="flex items-center gap-3">
+                                    <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-200">
+                                        Selected Passers
+                                    </h2>
+                                </div>
                                 <div class="text-sm text-gray-600 dark:text-gray-400">
                                     Page {{ currentPage }} of {{ totalPages }}
                                     &bull; Showing {{ paginatedPassers.length }} of {{ passers?.total || 0 }} items
@@ -2704,60 +2680,7 @@ const runBulkEnroll = async () => {
                 </div>
             </div>
 
-            <!-- Reveal Personal Info Confirmation Modal -->
-            <Teleport to="body">
-                <div
-                    v-if="showRevealModal"
-                    class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-                    @click.self="showRevealModal = false"
-                >
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col space-y-4">
-                        <!-- Header -->
-                        <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
-                            <h3 class="text-base font-bold text-gray-900 dark:text-white">
-                                Reveal Personal Information
-                            </h3>
-                            <button
-                                type="button"
-                                @click="showRevealModal = false"
-                                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg transition"
-                            >
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
 
-                        <!-- Body -->
-                        <div class="text-sm text-gray-600 dark:text-gray-300 space-y-3 leading-relaxed">
-                            <p>
-                                You are about to view unmasked test passer names, emails, and contact numbers.
-                            </p>
-                            <div class="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/60 p-3 rounded-xl border border-gray-200 dark:border-gray-700 leading-relaxed">
-                                <strong class="text-gray-900 dark:text-gray-200">Compliance Notice (RA 10173):</strong> This access action will be permanently recorded in the Security Audit Trail with your account and timestamp.
-                            </div>
-                        </div>
-
-                        <!-- Footer Buttons -->
-                        <div class="flex justify-end gap-2.5 pt-2">
-                            <button
-                                type="button"
-                                @click="showRevealModal = false"
-                                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl transition"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                @click="confirmRevealPersonal"
-                                class="px-4 py-2 text-sm font-medium text-white bg-[#9E122C] hover:bg-[#800918] rounded-xl shadow-xs transition"
-                            >
-                                Confirm &amp; Reveal Personal Info
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </Teleport>
         </AppLayout>
     </div>
 

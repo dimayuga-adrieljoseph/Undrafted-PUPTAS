@@ -123,10 +123,22 @@ class DashboardController extends Controller
 
         $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Admin Dashboard Users');
 
+        $search = trim((string) ($request->input('search') ?? $request->input('q') ?? ''));
+
+        $query = ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
+            ->whereHas('currentApplication');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('firstname', 'LIKE', "%{$search}%")
+                  ->orWhere('lastname', 'LIKE', "%{$search}%")
+                  ->orWhere('email', 'LIKE', "%{$search}%")
+                  ->orWhere(\Illuminate\Support\Facades\DB::raw("CONCAT(firstname, ' ', lastname)"), 'LIKE', "%{$search}%");
+            });
+        }
+
         return response()->json(
-            ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
-                ->whereHas('currentApplication')
-                ->get()
+            $query->get()
                 ->map(function ($applicant) use ($shouldMask) {
                     $application = $applicant->currentApplication;
                     $stage = null;

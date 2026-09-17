@@ -121,7 +121,14 @@ class EvaluatorDashboardController extends Controller
             return response()->json([]);
         }
 
-        $results = $this->userService->getAllApplicantsByStage($this->getCurrentStage(), $programIds, $shouldMask);
+        $search = trim((string) ($request->input('search') ?? $request->input('q') ?? ''));
+
+        $results = $this->userService->getAllApplicantsByStage(
+            $this->getCurrentStage(),
+            $programIds,
+            $shouldMask,
+            $search !== '' ? $search : null
+        );
 
         Log::info('EvaluatorDashboard::getUsers results', ['count' => count($results)]);
 
