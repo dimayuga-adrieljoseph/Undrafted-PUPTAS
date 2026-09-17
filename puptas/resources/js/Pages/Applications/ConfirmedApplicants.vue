@@ -618,17 +618,17 @@ onMounted(() => {
                     </div>
 
                     <!-- Filter row -->
-                    <div class="flex gap-2 flex-nowrap">
+                    <div class="flex flex-wrap gap-2">
                         <select
                             v-model="filterProgram"
-                            class="flex-1 min-w-[160px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="flex-1 min-w-[140px] w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Programs</option>
                             <option v-for="p in programs" :key="p" :value="p">
                                 {{ p }}
                             </option>
                         </select>
-                        <div class="relative flex-1 min-w-[140px]">
+                        <div class="relative flex-1 min-w-[140px] w-full sm:w-auto">
                             <button @click="showStatusDropdown = !showStatusDropdown" type="button"
                                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C] text-left flex items-center justify-between truncate">
                                 <span>{{ filterPasserStatus.length === 0 ? 'All Statuses' : filterPasserStatus.length + ' selected' }}</span>
@@ -636,18 +636,18 @@ onMounted(() => {
                             </button>
                             <div v-if="showStatusDropdown" class="absolute z-50 mt-1 min-w-full w-max bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-lg py-1">
                                 <label class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
-                                    <input type="checkbox" :checked="filterPasserStatus.length === 0" @change="filterPasserStatus = []" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                    <input type="checkbox" :checked="filterPasserStatus.length === 0" @change="filterPasserStatus = []" class="mr-2 rounded border-gray-300 accent-[#9E122C] focus:ring-[#9E122C]" />
                                     All Statuses
                                 </label>
                                 <label v-for="s in passerStatuses" :key="s" class="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
-                                    <input type="checkbox" :value="s" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 text-[#9E122C] focus:ring-[#9E122C]" />
+                                    <input type="checkbox" :value="s" v-model="filterPasserStatus" class="mr-2 rounded border-gray-300 accent-[#9E122C] focus:ring-[#9E122C]" />
                                     {{ s.replace(/_/g, ' ') }}
                                 </label>
                             </div>
                         </div>
                         <select
                             v-model="filterSarStatus"
-                            class="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="flex-1 min-w-[140px] w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All SAR STATUS</option>
                             <option value="sent">SAR Sent</option>
@@ -655,7 +655,7 @@ onMounted(() => {
                         </select>
                         <select
                             v-model="filterGraduateType"
-                            class="flex-1 min-w-[175px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="flex-1 min-w-[140px] w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Graduate Types</option>
                             <option v-for="gt in graduateTypes" :key="gt" :value="gt">
@@ -664,7 +664,7 @@ onMounted(() => {
                         </select>
                         <select
                             v-model="filterStage"
-                            class="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
+                            class="flex-1 min-w-[140px] w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#9E122C]"
                         >
                             <option value="">All Stages</option>
                             <option value="document_evaluator">For Document Evaluator</option>
@@ -686,7 +686,7 @@ onMounted(() => {
                                 type="checkbox"
                                 :checked="allSelected"
                                 @change="toggleAll"
-                                class="h-4 w-4 rounded text-[#9E122C] border-gray-300 focus:ring-[#9E122C]"
+                                class="h-4 w-4 rounded accent-[#9E122C] border-gray-300 focus:ring-[#9E122C]"
                             />
                             Select All ({{ filtered.length }})
                         </label>
@@ -739,11 +739,21 @@ onMounted(() => {
                     <!-- Table -->
                     <div class="overflow-x-auto">
                         <table
-                            class="w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed"
+                            class="min-w-[800px] w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed"
                         >
+                            <colgroup>
+                                <col class="w-10" />       <!-- checkbox -->
+                                <col class="w-12" />       <!-- rank -->
+                                <col class="w-[22%]" />    <!-- name -->
+                                <col class="w-[22%]" />    <!-- contact -->
+                                <col class="w-[12%]" />    <!-- program -->
+                                <col class="w-[16%]" />    <!-- passer status -->
+                                <col class="w-[14%]" />    <!-- graduate type -->
+                                <col class="w-[10%]" />    <!-- sar status -->
+                            </colgroup>
                             <thead class="bg-gray-50 dark:bg-gray-900">
                                 <tr>
-                                    <th class="px-3 py-3 text-left w-10">
+                                    <th class="px-3 py-3 text-left">
                                         <input
                                             type="checkbox"
                                             :checked="
@@ -754,43 +764,43 @@ onMounted(() => {
                                                     $event.target.checked,
                                                 )
                                             "
-                                            class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600"
+                                            class="h-5 w-5 accent-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:border-gray-600"
                                         />
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-12"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Rank
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[20%]"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Name
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[20%]"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Contact
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Program
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Passer Status
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-[15%]"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400"
                                     >
                                         Graduate Type
                                     </th>
                                     <th
-                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 w-24 sticky right-0 bg-gray-50 dark:bg-gray-900"
+                                        class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider dark:text-gray-400 sticky right-0 bg-gray-50 dark:bg-gray-900"
                                     >
-                                        SAR STATUS
+                                        SAR Status
                                     </th>
                                 </tr>
                             </thead>
@@ -847,7 +857,7 @@ onMounted(() => {
                                             :checked="
                                                 selectedIds.includes(a.id)
                                             "
-                                            class="h-5 w-5 text-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:text-white dark:border-gray-600 pointer-events-none"
+                                            class="h-5 w-5 accent-[#9E122C] border-gray-300 rounded focus:ring-[#9E122C] dark:border-gray-600 pointer-events-none"
                                         />
                                     </td>
                                     <td
@@ -940,7 +950,7 @@ onMounted(() => {
                     <div
                         class="px-6 py-4 border-t border-gray-200 dark:border-gray-700"
                     >
-                        <div class="flex items-center justify-between">
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
                             <div
                                 class="text-sm text-gray-700 dark:text-gray-400"
                             >

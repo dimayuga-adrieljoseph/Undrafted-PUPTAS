@@ -8,6 +8,7 @@
             font-family: Arial, sans-serif;
             line-height: 1.6;
             color: #333;
+            background-color: #ffffff;
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
@@ -33,6 +34,7 @@
             padding: 30px;
             border: 1px solid #ddd;
             border-top: none;
+            color: #333;
         }
         .greeting {
             font-size: 18px;
@@ -77,6 +79,49 @@
             padding: 20px;
             border-radius: 5px;
             margin: 20px 0;
+            color: #333;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1a1a1a;
+                color: #e0e0e0;
+            }
+            .content {
+                background: #2a2a2a;
+                border-color: #444;
+                color: #e0e0e0;
+            }
+            .greeting {
+                color: #e05a6e;
+            }
+            .info-box {
+                background: #333;
+                border-left-color: #c0392b;
+                color: #e0e0e0;
+            }
+            .info-box strong {
+                color: #e05a6e;
+            }
+            .status-notice {
+                background: #3a3200;
+                border-color: #b8860b;
+                color: #f0d080;
+            }
+            .status-notice h3 {
+                color: #f0d080;
+            }
+            .custom-content {
+                background: #333;
+                color: #e0e0e0;
+            }
+            .footer {
+                color: #999;
+                border-top-color: #444;
+            }
+            a {
+                color: #7ab8f5;
+            }
         }
     </style>
 </head>

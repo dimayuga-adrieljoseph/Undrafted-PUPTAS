@@ -14,7 +14,8 @@ use App\Models\Program;
 class KpiService
 {
     /**
-     * Total system-wide capacity (slots) used as the Slot Utilization denominator.
+     * @deprecated No longer used. Slot utilization now calculates dynamically from program slots.
+     * Total system-wide capacity (slots) - kept for backwards compatibility.
      */
     public const CAPACITY_LIMIT = 550;
 
@@ -39,13 +40,31 @@ class KpiService
      *   - 'kpis'        => array of four KPI result objects
      *   - 'per_program' => array of per-program breakdown entries
      *
+     * Note: Enrollment counts include:
+     *   - Applicants with enrollment_status = 'officially_enrolled'
+     *   - Applicants with status = 'cleared_for_enrollment' (completed medical, pending records)
+     *   - Applicants who completed medical stage (for record in registrar)
+     * This ensures all applicants who have cleared medical are counted as they are
+     * ready for enrollment processing by the registrar.
+     *
      * @return array{kpis: array, per_program: array}
      */
     public function compute(): array
     {
         // ── Enrollment Rate ──────────────────────────────────────────────
         // Numerator: applicants with enrollment_status = 'officially_enrolled'
-        $enrolledCount = Application::where('enrollment_status', 'officially_enrolled')->count();
+        // OR applicants who completed medical (for record in registrar)
+        // Use distinct() to avoid counting the same application multiple times
+        $enrolledCount = Application::distinct()
+            ->where(function ($q) {
+                $q->where('enrollment_status', 'officially_enrolled')
+                  ->orWhere('status', 'cleared_for_enrollment')
+                  ->orWhereHas('processes', fn ($p) =>
+                      $p->where('stage', 'medical')
+                        ->where('status', 'completed')
+                        ->where('action', 'passed')
+                  );
+            })->count('applications.id');
 
         // Denominator: applicants who passed the interviewer stage
         $interviewPassedCount = Application::whereHas('processes', fn ($q) =>
@@ -65,8 +84,31 @@ class KpiService
         );
 
         // ── Slot Utilization Rate ─────────────────────────────────────────
-        // Denominator is the constant CAPACITY_LIMIT (550)
-        $slotUtilizationValue = $this->safeDivide($enrolledCount, self::CAPACITY_LIMIT);
+        // Use the same enrolled count (includes cleared_for_enrollment and medical completed)
+        // Denominator needs to account for slots being decremented when students enroll
+        // Calculate total capacity by adding remaining slots + enrolled count per program
+        $programs = Program::all();
+        $totalCapacity = 0;
+        
+        foreach ($programs as $prog) {
+            // Calculate enrolled count for this program
+            $progEnrolled = Application::distinct()
+                ->where('program_id', $prog->id)
+                ->where(function ($q) {
+                    $q->where('enrollment_status', 'officially_enrolled')
+                      ->orWhere('status', 'cleared_for_enrollment')
+                      ->orWhereHas('processes', fn ($p) =>
+                          $p->where('stage', 'medical')
+                            ->where('status', 'completed')
+                            ->where('action', 'passed')
+                      );
+                })->count('applications.id');
+            
+            // Original capacity = remaining slots + enrolled (since slots are decremented on enrollment)
+            $totalCapacity += ($prog->slots + $progEnrolled);
+        }
+        
+        $slotUtilizationValue = $this->safeDivide($enrolledCount, (int) $totalCapacity);
 
         $slotUtilizationKpi = $this->buildKpi(
             'slot_utilization',
@@ -99,22 +141,36 @@ class KpiService
         );
 
         // ── Per-Program Slot Utilization ──────────────────────────────────
-        $programs = Program::where('slots', '>', 0)->get();
+        $programs = Program::all();
 
         $perProgramBreakdown = [];
         $programValues       = [];
 
         foreach ($programs as $program) {
-            $programEnrolled = Application::where('program_id', $program->id)
-                ->where('enrollment_status', 'officially_enrolled')
-                ->count();
+            // Count applicants who are officially enrolled OR completed medical (for record in registrar)
+            // Use distinct() to avoid counting the same application multiple times
+            $programEnrolled = Application::distinct()
+                ->where('program_id', $program->id)
+                ->where(function ($q) {
+                    $q->where('enrollment_status', 'officially_enrolled')
+                      ->orWhere('status', 'cleared_for_enrollment')
+                      ->orWhereHas('processes', fn ($p) =>
+                          $p->where('stage', 'medical')
+                            ->where('status', 'completed')
+                            ->where('action', 'passed')
+                      );
+                })
+                ->count('applications.id');
 
-            $programValue = $this->safeDivide($programEnrolled, (int) $program->slots);
+            // Original capacity = remaining slots + enrolled (since slots are decremented on enrollment)
+            $originalCapacity = $program->slots + $programEnrolled;
+            
+            $programValue = $this->safeDivide($programEnrolled, $originalCapacity);
 
             $perProgramBreakdown[] = [
                 'code'     => $program->code,
                 'name'     => $program->name,
-                'slots'    => (int) $program->slots,
+                'slots'    => $originalCapacity, // Show original capacity, not remaining
                 'enrolled' => $programEnrolled,
                 'value'    => $programValue,
             ];
@@ -312,3 +368,5 @@ class KpiService
         ];
     }
 }
+
+
