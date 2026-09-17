@@ -6,6 +6,9 @@ import AppLayout from "@/Layouts/AppLayout.vue";
 import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
 import InterviewerLayout from "@/Layouts/InterviewerLayout.vue";
 import UserDetailsModal from "@/Pages/Applications/UserDetailsModal.vue";
+import { useMaskingState } from "@/Composables/useMaskingState";
+
+const { isUnmasked } = useMaskingState();
 
 const page = usePage();
 const currentUser = computed(() => page.props.auth?.user);
@@ -65,7 +68,14 @@ const fetchUsers = async () => {
     loading.value = true;
     fetchError.value = null;
     try {
-        const response = await axios.get("/dashboard/users");
+        const params = {};
+        if (isUnmasked.value) {
+            params.unmask = 1;
+        }
+        if (searchQuery.value.trim()) {
+            params.search = searchQuery.value.trim();
+        }
+        const response = await axios.get("/dashboard/users", { params });
         if (!Array.isArray(response.data)) {
             fetchError.value = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
             users.value = [];
@@ -89,6 +99,18 @@ const fetchUsers = async () => {
     }
 };
 
+let searchDebounce = null;
+watch(searchQuery, () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+        fetchUsers();
+    }, 300);
+});
+
+watch(isUnmasked, () => {
+    fetchUsers();
+});
+
 onMounted(() => {
     fetchUsers();
     if (currentUser.value?.role_id === 2 || currentUser.value?.role_id === 4 || currentUser.value?.role_id === 7) {
@@ -101,8 +123,11 @@ const filteredUsers = computed(() => {
     const q = searchQuery.value.trim().toLowerCase();
     return users.value
         .filter((u) => {
-            const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
-            const matchesSearch = fullName.includes(q);
+            let matchesSearch = true;
+            if (q && isUnmasked.value) {
+                const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
+                matchesSearch = fullName.includes(q) || (u.email || "").toLowerCase().includes(q);
+            }
             const matchesStatus = statusFilter.value
                 ? u.stage?.toLowerCase() === statusFilter.value
                 : true;

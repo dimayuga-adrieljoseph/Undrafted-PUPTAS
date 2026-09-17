@@ -135,9 +135,15 @@ const getStatusClass = (user) => {
 
 const fetchUsers = async () => {
     try {
-        const sep = props.baseUrl.includes('?') ? '&' : '?';
-        const unmaskParam = isUnmasked.value ? `${sep}unmask=1` : '';
-        const response = await fetch(`${props.baseUrl}/applicants${unmaskParam}`, {
+        const queryParts = [];
+        if (isUnmasked.value) {
+            queryParts.push('unmask=1');
+        }
+        if (searchQuery.value.trim()) {
+            queryParts.push(`search=${encodeURIComponent(searchQuery.value.trim())}`);
+        }
+        const queryStr = queryParts.length ? (props.baseUrl.includes('?') ? '&' : '?') + queryParts.join('&') : '';
+        const response = await fetch(`${props.baseUrl}/applicants${queryStr}`, {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
@@ -151,6 +157,18 @@ const fetchUsers = async () => {
         isLoading.value = false;
     }
 };
+
+let searchDebounce = null;
+watch(searchQuery, () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+        fetchUsers();
+    }, 300);
+});
+
+watch(isUnmasked, () => {
+    fetchUsers();
+});
 
 const handleOutsideClick = (e) => {
     if (filterDropdownRef.value && !filterDropdownRef.value.contains(e.target)) {
@@ -190,8 +208,11 @@ const filteredUsers = computed(() => {
     const q = searchQuery.value.trim().toLowerCase();
     return users.value
         .filter((u) => {
-            const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
-            const matchesSearch = !q || fullName.includes(q);
+            let matchesSearch = true;
+            if (q && isUnmasked.value) {
+                const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
+                matchesSearch = fullName.includes(q) || (u.email || "").toLowerCase().includes(q);
+            }
             // Default: only show for_records and officially_enrolled
             // When a specific status filter is selected, honour it (must still be one of the two)
             const allowedStatuses = ['for_records', 'officially_enrolled'];

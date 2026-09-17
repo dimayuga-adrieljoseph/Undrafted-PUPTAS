@@ -163,7 +163,8 @@ const fetchUsers = async () => {
     try {
         const targetStageForApi = page.props.stage || (page.props.auth?.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
         const unmaskParam = isUnmasked.value ? '&unmask=1' : '';
-        const response = await fetch(`/evaluator-dashboard/applicants?stage=${targetStageForApi}${unmaskParam}`, {
+        const searchParam = searchQuery.value.trim() ? `&search=${encodeURIComponent(searchQuery.value.trim())}` : '';
+        const response = await fetch(`/evaluator-dashboard/applicants?stage=${targetStageForApi}${unmaskParam}${searchParam}`, {
             headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
         });
         if (!response.ok) throw new Error("Failed to fetch users");
@@ -184,6 +185,18 @@ const fetchUsers = async () => {
     }
 };
 
+let searchDebounce = null;
+watch(searchQuery, () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+        fetchUsers();
+    }, 300);
+});
+
+watch(isUnmasked, () => {
+    fetchUsers();
+});
+
 const handleOutsideClick = (e) => {
     if (filterDropdownRef.value && !filterDropdownRef.value.contains(e.target)) {
         showStatusDropdown.value = false;
@@ -200,7 +213,6 @@ const refreshApplicants = async () => {
 onMounted(() => {
     fetchUsers();
     document.addEventListener('click', handleOutsideClick);
-    document.addEventListener('click', handleOutsideClick);
     autoRefreshTimer.value = setInterval(refreshApplicants, POLL_INTERVAL_MS);
 });
 
@@ -213,8 +225,11 @@ const filteredUsers = computed(() => {
     const q = searchQuery.value.trim().toLowerCase();
     return users.value
         .filter((u) => {
-            const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
-            const matchesSearch = fullName.includes(q);
+            let matchesSearch = true;
+            if (q && isUnmasked.value) {
+                const fullName = `${u.firstname} ${u.lastname}`.toLowerCase();
+                matchesSearch = fullName.includes(q) || (u.email || "").toLowerCase().includes(q);
+            }
             const matchesEvaluationStatus = evaluationStatusFilter.value ? u.pipeline_status === evaluationStatusFilter.value : true;
             return matchesSearch && matchesEvaluationStatus;
         })

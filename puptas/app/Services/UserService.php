@@ -129,11 +129,12 @@ class UserService
      * @param string $stage The application stage (evaluator, interviewer, medical, records)
      * @param array|null $programIds Optional list of program IDs to filter by (e.g. for scoped evaluators/interviewers)
      * @param bool $shouldMask Whether to mask PII
+     * @param string|null $search Optional search query
      * @return Collection
      */
-    public function getAllApplicantsByStage(string $stage, ?array $programIds = null, bool $shouldMask = true): Collection
+    public function getAllApplicantsByStage(string $stage, ?array $programIds = null, bool $shouldMask = true, ?string $search = null): Collection
     {
-        return $this->applicantProfileRepository->allByStage($stage, $programIds)
+        return $this->applicantProfileRepository->allByStage($stage, $programIds, $search)
             ->map(function ($profile) use ($stage, $shouldMask) {
                 $application = $profile->currentApplication;
                 $stageProcess = $application && $application->processes ?
@@ -293,9 +294,10 @@ class UserService
      * Returns applicants who have completed medical stage OR are officially enrolled
      *
      * @param bool $shouldMask Whether to mask PII
+     * @param string|null $search Optional search query
      * @return Collection
      */
-    public function getApplicantsForRecordStaff(bool $shouldMask = true): Collection
+    public function getApplicantsForRecordStaff(bool $shouldMask = true, ?string $search = null): Collection
     {
         // Get user IDs with completed medical on their latest application
         $userIds = $this->applicationRepository->userIdsWithCompletedMedical();
@@ -311,7 +313,7 @@ class UserService
 
         // Load only what we need - no deep eager loading
         $allUserIdsStrings = array_map('strval', $allUserIds);
-        $profiles = $this->applicantProfileRepository->byUserIds($allUserIdsStrings, ['user_id', 'firstname', 'lastname', 'email']);
+        $profiles = $this->applicantProfileRepository->byUserIds($allUserIdsStrings, ['user_id', 'firstname', 'lastname', 'email'], $search);
 
         // Load applications separately
         $applications = $this->applicationRepository->latestApplicationsByUserIds($allUserIds);

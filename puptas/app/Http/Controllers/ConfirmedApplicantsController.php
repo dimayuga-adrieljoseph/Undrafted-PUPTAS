@@ -79,7 +79,9 @@ class ConfirmedApplicantsController extends Controller
             );
         }
 
-        $applicants = ApplicantProfile::with([
+        $search = trim((string) ($request->input('search') ?? $request->input('q') ?? ''));
+
+        $query = ApplicantProfile::with([
             'currentApplication.program:id,code,name',
             'currentApplication.processes',
             'grades',
@@ -99,7 +101,21 @@ class ConfirmedApplicantsController extends Controller
                         ])->whereIn('status', ['in_progress', 'returned']);
                     })->orWhere('status', 'cleared_for_enrollment');
                 });
-            })
+            });
+
+        if ($search !== '') {
+            $query->where(function ($sub) use ($search) {
+                $sub->where('firstname', 'LIKE', "%{$search}%")
+                    ->orWhere('lastname', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhere(\Illuminate\Support\Facades\DB::raw("CONCAT(firstname, ' ', lastname)"), 'LIKE', "%{$search}%")
+                    ->orWhereHas('testPasser', function ($tpQ) use ($search) {
+                        $tpQ->where('reference_number', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        $applicants = $query
             ->orderBy('lastname')
             ->get()
             ->map(function ($applicant) use ($unmaskRequested) {

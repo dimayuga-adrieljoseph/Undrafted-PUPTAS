@@ -103,10 +103,11 @@ class RecordStaffDashboardController extends Controller
 
         $user = Auth::user();
         $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Records Queue');
+        $search = trim((string) ($request->input('search') ?? $request->input('q') ?? ''));
 
         // Return applicants who have completed medical OR are officially enrolled
         return response()->json(
-            $this->userService->getApplicantsForRecordStaff($shouldMask)
+            $this->userService->getApplicantsForRecordStaff($shouldMask, $search !== '' ? $search : null)
         );
     }
 
