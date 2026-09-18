@@ -8,6 +8,7 @@
             font-family: Arial, sans-serif;
             line-height: 1.6;
             color: #333;
+            background-color: #ffffff;
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
@@ -75,11 +76,50 @@
         .button {
             display: inline-block;
             background: #9E122C;
-            color: white;
+            color: #ffffff !important;
             padding: 12px 24px;
             text-decoration: none;
             border-radius: 5px;
             margin: 10px 0;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1a1a1a;
+                color: #e0e0e0;
+            }
+            .content {
+                background: #2a2a2a;
+                border-color: #444;
+                color: #e0e0e0;
+            }
+            .info-box {
+                background: #333;
+                border-left-color: #c0392b;
+                color: #e0e0e0;
+            }
+            .info-box strong {
+                color: #e05a6e;
+            }
+            .attachment-notice {
+                background: #3a3200;
+                border-color: #b8860b;
+                color: #f0d080;
+            }
+            .attachment-notice h3 {
+                color: #f0d080;
+            }
+            .footer {
+                color: #999;
+                border-top-color: #444;
+            }
+            .button {
+                background: #c0392b;
+                color: #ffffff !important;
+            }
+            a {
+                color: #7ab8f5;
+            }
         }
     </style>
 </head>
@@ -107,7 +147,7 @@
         </div>
         
         <div style="text-align: center; margin: 30px 0;">
-            <a href="{{ $downloadUrl }}" class="button" style="color: white; font-weight: bold; font-size: 16px;">
+            <a href="{{ $downloadUrl }}" class="button" style="color: #ffffff; font-weight: bold; font-size: 16px;">
                 📄 Download Your SAR Form
             </a>
             <p style="margin-top: 10px; font-size: 13px; color: #666;">

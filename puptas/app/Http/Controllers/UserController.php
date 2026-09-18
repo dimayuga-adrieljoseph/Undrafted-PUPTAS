@@ -18,6 +18,7 @@ use Inertia\Inertia;
 use App\Services\AuditLogService;
 use App\Services\UserService;
 use App\Helpers\FileMapper;
+use App\Helpers\DataMaskingHelper;
 use App\Enums\RoleId;
 
 class UserController extends Controller
@@ -123,7 +124,8 @@ class UserController extends Controller
     {
         // Only load the first page here (15 records).
         // Subsequent pages and search results are fetched via GET /users/search (JSON).
-        $page1 = $this->userService->searchUsers(null, 1, 15);
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'User Management');
+        $page1 = $this->userService->searchUsers(null, 1, 15, null, $shouldMask);
         $userCountsByRole = $this->userService->getUserCountsByRole();
         $roles = $this->userService->getRoleDefinitions();
         $totalUsers = $this->userService->getTotalUserCount();
@@ -720,7 +722,8 @@ class UserController extends Controller
         $perPage = 15;
         $roleId  = $request->filled('role') ? (int) $request->input('role') : null;
 
-        $result = $this->userService->searchUsers($search, $page, $perPage, $roleId);
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $request->user(), 'User Management');
+        $result = $this->userService->searchUsers($search, $page, $perPage, $roleId, $shouldMask);
 
         return response()->json($result);
     }

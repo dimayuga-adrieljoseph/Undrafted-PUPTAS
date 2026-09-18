@@ -16,19 +16,25 @@ use App\Models\UserFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use App\Helpers\FileMapper;
+use App\Helpers\DataMaskingHelper;
 use App\Services\DashboardService;
+use App\Services\ApplicationService;
 use App\Enums\RoleId;
 
 class DashboardController extends Controller
 {
     protected DashboardService $dashboardService;
+    protected ApplicationService $applicationService;
 
-    public function __construct(DashboardService $dashboardService)
-    {
+    public function __construct(
+        DashboardService $dashboardService,
+        ApplicationService $applicationService
+    ) {
         $this->dashboardService = $dashboardService;
+        $this->applicationService = $applicationService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
@@ -50,10 +56,14 @@ class DashboardController extends Controller
             };
         }
 
-        $commonData = $this->dashboardService->getCommonDashboardData();
-        $summary = $commonData['summary'];
+        $summary = $this->applicationService->getApplicationSummary();
 
         $chartData = $this->dashboardService->getApplicationChartData();
+
+        // Resolve masking for the SSR-rendered Recent Applications panel.
+        // This ensures the universal ?unmask=1 toggle works on page visit/reload,
+        // consistent with all other admin pages that use resolveForRequest().
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Admin Dashboard Recent Applications');
 
         return Inertia::render('Dashboard/Admin', [
             'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
@@ -66,12 +76,13 @@ class DashboardController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->limit(10)
                 ->get()
-                ->map(function ($applicant) {
+                ->map(function ($applicant) use ($shouldMask) {
                     return [
                         'id' => $applicant->user_id,
-                        'firstname' => $applicant->firstname,
-                        'lastname' => $applicant->lastname,
-                        'email' => $applicant->email,
+                        'firstname' => $shouldMask ? DataMaskingHelper::maskName($applicant->firstname) : $applicant->firstname,
+                        'lastname'  => $shouldMask ? DataMaskingHelper::maskName($applicant->lastname)  : $applicant->lastname,
+                        'email'     => $shouldMask ? DataMaskingHelper::maskEmail($applicant->email)    : $applicant->email,
+                        'is_masked' => $shouldMask,
                         'role' => ['name' => 'Applicant'], // Mock role as it was removed
                         'created_at' => $applicant->created_at,
                         // Map currentApplication to application for frontend compatibility
@@ -96,7 +107,7 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function getUsers()
+    public function getUsers(Request $request)
     {
         // Defense in depth: Verify authentication and authorized role (admin, evaluator, interviewer)
         $user = Auth::user();
@@ -110,11 +121,25 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Unauthorized access'], 403);
         }
 
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Admin Dashboard Users');
+
+        $search = trim((string) ($request->input('search') ?? $request->input('q') ?? ''));
+
+        $query = ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
+            ->whereHas('currentApplication');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('firstname', 'LIKE', "%{$search}%")
+                  ->orWhere('lastname', 'LIKE', "%{$search}%")
+                  ->orWhere('email', 'LIKE', "%{$search}%")
+                  ->orWhere(\Illuminate\Support\Facades\DB::raw("CONCAT(firstname, ' ', lastname)"), 'LIKE', "%{$search}%");
+            });
+        }
+
         return response()->json(
-            ApplicantProfile::with(['currentApplication.program', 'currentApplication.processes:id,application_id,stage,status,action,created_at'])
-                ->whereHas('currentApplication')
-                ->get()
-                ->map(function ($applicant) {
+            $query->get()
+                ->map(function ($applicant) use ($shouldMask) {
                     $application = $applicant->currentApplication;
                     $stage = null;
 
@@ -135,15 +160,20 @@ class DashboardController extends Controller
                         }
                     }
 
+                    $firstname = $shouldMask ? DataMaskingHelper::maskName($applicant->firstname) : $applicant->firstname;
+                    $lastname  = $shouldMask ? DataMaskingHelper::maskName($applicant->lastname) : $applicant->lastname;
+                    $email     = $shouldMask ? DataMaskingHelper::maskEmail($applicant->email) : $applicant->email;
+
                     return [
                         'id' => $applicant->user_id,
-                        'firstname' => $applicant->firstname,
-                        'lastname' => $applicant->lastname,
+                        'firstname' => $firstname,
+                        'lastname' => $lastname,
                         'status' => $application->status ?? null,
                         'stage' => $stage,
-                        'email' => $applicant->email,
-                        'username' => $applicant->email,
+                        'email' => $email,
+                        'username' => $email,
                         'company' => null,
+                        'is_masked' => $shouldMask,
                         'program' => $application->program ?? null,
                     ];
                 })

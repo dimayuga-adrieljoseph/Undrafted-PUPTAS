@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use League\Csv\Writer;
 use App\Helpers\FileMapper;
+use App\Helpers\DataMaskingHelper;
 use App\Services\DashboardService;
 use App\Services\UserService;
 use App\Services\ApplicationService;
@@ -75,11 +76,12 @@ class RecordStaffDashboardController extends Controller
     /**
      * Display the Record Staff dashboard
      */
-    public function index()
+    public function index(Request $request)
     {
-        $dashboardData = $this->dashboardService->getRecordsDashboardData();
-
         $user = Auth::user();
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Records Queue');
+        $dashboardData = $this->dashboardService->getRecordsDashboardData($shouldMask);
+
         $isAdmin = $user && in_array($user->role_id, [2, 7]);
 
         return Inertia::render('Dashboard/Records', [
@@ -94,14 +96,18 @@ class RecordStaffDashboardController extends Controller
      * Get users for the applications page
      * This is the method called by /record-dashboard/applicants
      */
-    public function getUsers()
+    public function getUsers(Request $request)
     {
         // Ensure user has records staff role
         $this->ensureRole($this->getRoleId());
 
+        $user = Auth::user();
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Records Queue');
+        $search = trim((string) ($request->input('search') ?? $request->input('q') ?? ''));
+
         // Return applicants who have completed medical OR are officially enrolled
         return response()->json(
-            $this->userService->getApplicantsForRecordStaff()
+            $this->userService->getApplicantsForRecordStaff($shouldMask, $search !== '' ? $search : null)
         );
     }
 
@@ -189,8 +195,11 @@ class RecordStaffDashboardController extends Controller
      * Get applicants that are eligible for records processing
      * Medical completed OR recently enrolled
      */
-    public function getApplicants()
+    public function getApplicants(Request $request)
     {
+        $user = Auth::user();
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Records Queue');
+
         // For performance, let's select just what we need
         $applicants = ApplicantProfile::with([
             'currentApplication.program',
@@ -211,12 +220,13 @@ class RecordStaffDashboardController extends Controller
             ->get();
 
         return response()->json(
-            $applicants->map(function ($applicant) {
+            $applicants->map(function ($applicant) use ($shouldMask) {
                 return [
                     'id' => $applicant->user_id,
-                    'firstname' => $applicant->firstname,
-                    'lastname' => $applicant->lastname,
-                    'email' => $applicant->email,
+                    'firstname' => $shouldMask ? DataMaskingHelper::maskName($applicant->firstname) : $applicant->firstname,
+                    'lastname' => $shouldMask ? DataMaskingHelper::maskName($applicant->lastname) : $applicant->lastname,
+                    'email' => $shouldMask ? DataMaskingHelper::maskEmail($applicant->email) : $applicant->email,
+                    'is_masked' => $shouldMask,
                     'application' => $applicant->currentApplication,
                     'program' => $applicant->currentApplication->program ?? null,
                 ];

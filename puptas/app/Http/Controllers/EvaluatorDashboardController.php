@@ -11,6 +11,7 @@ use App\Models\Application;
 use App\Models\UserFile;
 use App\Models\ApplicationProcess;
 use App\Helpers\FileMapper;
+use App\Helpers\DataMaskingHelper;
 use App\Http\Traits\ManagesApplicationFiles;
 use App\Services\ApplicationService;
 use App\Services\ApplicationProcessService;
@@ -43,7 +44,7 @@ class EvaluatorDashboardController extends Controller
         $this->auditLogService = $auditLogService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
@@ -51,7 +52,8 @@ class EvaluatorDashboardController extends Controller
             return redirect()->back()->with('error', 'Unauthorized access.');
         }
 
-        $dashboardData = $this->dashboardService->getEvaluatorDashboardData($this->getCurrentStage());
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Evaluator Queue');
+        $dashboardData = $this->dashboardService->getEvaluatorDashboardData($this->getCurrentStage(), $shouldMask);
 
         return Inertia::render('Dashboard/Evaluator', [
             'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
@@ -93,12 +95,13 @@ class EvaluatorDashboardController extends Controller
 
     // returnApplication() method provided by ManagesApplicationFiles trait
 
-    public function getUsers()
+    public function getUsers(Request $request)
     {
         // Ensure user has evaluator role
         $this->ensureRole($this->getRoleId());
 
         $user = Auth::user();
+        $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Evaluator Queue');
         
         // Resolve this evaluator's assigned program IDs from the pivot table
         $programIds = $user->programs()->pluck('programs.id')->toArray();
@@ -118,7 +121,14 @@ class EvaluatorDashboardController extends Controller
             return response()->json([]);
         }
 
-        $results = $this->userService->getAllApplicantsByStage($this->getCurrentStage(), $programIds);
+        $search = trim((string) ($request->input('search') ?? $request->input('q') ?? ''));
+
+        $results = $this->userService->getAllApplicantsByStage(
+            $this->getCurrentStage(),
+            $programIds,
+            $shouldMask,
+            $search !== '' ? $search : null
+        );
 
         Log::info('EvaluatorDashboard::getUsers results', ['count' => count($results)]);
 

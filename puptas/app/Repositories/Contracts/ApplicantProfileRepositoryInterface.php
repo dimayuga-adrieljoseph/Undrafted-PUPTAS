@@ -18,14 +18,14 @@ interface ApplicantProfileRepositoryInterface
     public function byStage(string $stage, ?array $programIds = null): Collection;
 
     /**
-     * All applicants who reached a stage (any status), optionally scoped to program IDs.
+     * All applicants who reached a stage (any status), optionally scoped to program IDs and search query.
      */
-    public function allByStage(string $stage, ?array $programIds = null): Collection;
+    public function allByStage(string $stage, ?array $programIds = null, ?string $search = null): Collection;
 
     /**
-     * Applicant profiles for the given user IDs.
+     * Applicant profiles for the given user IDs, optionally filtered by search query.
      */
-    public function byUserIds(array $userIds, array $columns = ['*']): Collection;
+    public function byUserIds(array $userIds, array $columns = ['*'], ?string $search = null): Collection;
 
     /**
      * Total number of applicant profiles.

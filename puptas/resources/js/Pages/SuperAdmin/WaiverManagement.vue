@@ -378,7 +378,10 @@ const confirmImport = () => {
                                     <tr v-for="applicant in eligibleApplicants" :key="applicant.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex flex-col">
-                                                <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.surname }}, {{ applicant.first_name }} {{ applicant.middle_name }}</span>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.surname }}, {{ applicant.first_name }} {{ applicant.middle_name }}</span>
+                                                    <span v-if="applicant.is_masked" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-normal bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">MASKED</span>
+                                                </div>
                                                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ applicant.reference_number }}</span>
                                             </div>
                                         </td>
@@ -463,7 +466,10 @@ const confirmImport = () => {
                             <tr v-for="applicant in tagged_applicants.data" :key="applicant.test_passer_id" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex flex-col">
-                                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.surname }}, {{ applicant.first_name }} {{ applicant.middle_name }}</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ applicant.surname }}, {{ applicant.first_name }} {{ applicant.middle_name }}</span>
+                                            <span v-if="applicant.is_masked" class="px-1.5 py-0.2 rounded text-[10px] font-mono font-normal bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">MASKED</span>
+                                        </div>
                                         <span class="text-xs text-gray-500 dark:text-gray-400">{{ applicant.reference_number }}</span>
                                     </div>
                                 </td>

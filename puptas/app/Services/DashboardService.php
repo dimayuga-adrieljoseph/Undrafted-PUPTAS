@@ -254,7 +254,7 @@ class DashboardService
      *
      * @return array
      */
-    public function getEvaluatorDashboardData(string $stage = 'document_evaluator'): array
+    public function getEvaluatorDashboardData(string $stage = 'document_evaluator', bool $shouldMask = true): array
     {
         $user = Auth::user();
         $programIds = $user->programs()->pluck('programs.id')->toArray();
@@ -268,7 +268,7 @@ class DashboardService
         // Evaluators must be explicitly assigned to programs to see applicants.
         $pendingUsers = empty($programIds)
             ? collect()
-            : $this->userService->getApplicantsByStage($stage, $programIds);
+            : $this->userService->getApplicantsByStage($stage, $programIds, $shouldMask);
 
         // Count applicants currently in queue for this stage (in_progress)
         $inProgress = $this->applicationProcessRepository->countDistinctApplications($stage, 'in_progress');
@@ -292,10 +292,10 @@ class DashboardService
      *
      * @return array
      */
-    public function getInterviewerDashboardData(): array
+    public function getInterviewerDashboardData(bool $shouldMask = true): array
     {
         // Interviewers see all applicants (global access)
-        $pendingUsers = $this->userService->getApplicantsByStage('interviewer');
+        $pendingUsers = $this->userService->getApplicantsByStage('interviewer', [], $shouldMask);
 
         // Count applicants currently in queue for interview stage
         $inProgress = $this->applicationProcessRepository->countDistinctApplications('interviewer', 'in_progress');
@@ -321,10 +321,10 @@ class DashboardService
      *
      * @return array
      */
-    public function getMedicalDashboardData(): array
+    public function getMedicalDashboardData(bool $shouldMask = true): array
     {
         return [
-            'pendingUsers' => $this->userService->getApplicantsByStage('medical'),
+            'pendingUsers' => $this->userService->getApplicantsByStage('medical', [], $shouldMask),
             'summary' => $this->applicationService->getApplicationSummary(),
             'chartData' => $this->getApplicationChartData(),
         ];
@@ -338,7 +338,7 @@ class DashboardService
      *
      * @return array
      */
-    public function getRecordsDashboardData(): array
+    public function getRecordsDashboardData(bool $shouldMask = true): array
     {
         // Use map to create plain arrays and avoid triggering accessors
         $programs = $this->programRepository->allWithApplicationsCount()
@@ -359,7 +359,6 @@ class DashboardService
         $processed = $this->applicationRepository->countOfficiallyEnrolled();
 
         return [
-            'allUsers' => $this->userService->getApplicantsForRecordStaff(),
             'programs' => $programs,
             'summary'  => [
                 'in_progress' => $inProgress,
