@@ -9,6 +9,7 @@ import { useGlobalLoading } from "@/Composables/useGlobalLoading";
 import { useSnackbar } from "@/Composables/useSnackbar";
 import EmailProgressBar from "@/Components/EmailProgressBar.vue";
 import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
+import { useMaskingState } from "@/Composables/useMaskingState";
 
 // Email progress tracking
 const activeBulkOperationId = ref(null);
@@ -520,7 +521,8 @@ const totalPages = computed(() => props.passers?.last_page || 1);
 const itemsPerPage = computed(() => props.passers?.per_page || 15);
 
 // Privacy Masking State
-const isMasked = computed(() => props.isMasked ?? true);
+const { isUnmasked } = useMaskingState();
+const isMasked = computed(() => !isUnmasked.value && (props.isMasked ?? true));
 
 // Central function to make server requests with all current params
 function buildServerParams(overrides = {}) {
@@ -1347,47 +1349,6 @@ const runBulkEnroll = async () => {
                         <div class="flex flex-wrap items-center justify-between gap-y-2 mb-3">
                             <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filters &amp; Controls</span>
                             <div class="flex items-center gap-2 flex-wrap">
-                                <!-- Privacy masking toggle -->
-                                <span
-                                    v-if="isMasked"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
-                                >
-                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                                    </svg>
-                                    Masked
-                                </span>
-                                <span
-                                    v-else
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700"
-                                >
-                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                    </svg>
-                                    Unmasked (Audited)
-                                </span>
-                                <button
-                                    type="button"
-                                    @click="toggleMasking"
-                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg transition border"
-                                    :class="isMasked
-                                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 dark:border-gray-600'
-                                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-700'"
-                                >
-                                    <template v-if="isMasked">
-                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
-                                        Reveal
-                                    </template>
-                                    <template v-else>
-                                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
-                                        </svg>
-                                        Re-mask
-                                    </template>
-                                </button>
                                 <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full">
                                     {{ passers?.total || 0 }} passers
                                 </span>
