@@ -113,4 +113,14 @@ return [
     'oauth' => [
         'token_rate_limit' => (int) env('OAUTH_TOKEN_RATE_LIMIT', 300),
     ],
+    'status_checker' => [
+        'ref_minute_limit' => (int) env('STATUS_CHECKER_REF_MINUTE_LIMIT', 10),
+        'ref_daily_limit'  => (int) env('STATUS_CHECKER_REF_DAILY_LIMIT', 60),
+        'ip_minute_limit'   => (int) env('STATUS_CHECKER_IP_MINUTE_LIMIT', 60),
+        'disable_throttling' => (bool) env('STATUS_CHECKER_DISABLE_THROTTLING', false),
+    ],
+    'auth' => [
+        'login_rate_limit' => (int) env('LOGIN_RATE_LIMIT', 5),
+        'disable_login_throttling' => (bool) env('LOGIN_DISABLE_THROTTLING', false),
+    ],
 ];
