@@ -11,7 +11,13 @@
         "test:e2e:headed": "playwright test --headed",
         "test:e2e:debug": "playwright test --debug",
         "lint": "eslint \"resources/js/**/*.vue\"",
-        "lint:fix": "eslint --fix \"resources/js/**/*.vue\""
+        "lint:fix": "eslint --fix \"resources/js/**/*.vue\"",
+        "test:load:status": "k6 run tests/load/status-check.js",
+        "test:load:login": "k6 run tests/load/auth-login.js",
+        "test:load:upload": "k6 run tests/load/document-upload.js",
+        "test:load:submit": "k6 run tests/load/application-submission.js",
+        "test:load:workflow": "k6 run tests/load/applicant-workflow.js",
+        "test:load:quick": "k6 run --vus 5 --duration 30s tests/load/status-check.js"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^1.0.14",

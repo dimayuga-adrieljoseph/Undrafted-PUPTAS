@@ -122,9 +122,14 @@ class FortifyServiceProvider extends ServiceProvider
         $this->app->singleton(\Laravel\Fortify\Contracts\RegisterResponse::class, \App\Http\Responses\RegisterResponse::class);
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())) . '|' . $request->ip());
+            if (!app()->isProduction() && config('services.auth.disable_login_throttling', false)) {
+                return Limit::none();
+            }
 
-            return Limit::perMinute(5)->by($throttleKey);
+            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())) . '|' . $request->ip());
+            $limit = config('services.auth.login_rate_limit', 5);
+
+            return Limit::perMinute($limit)->by($throttleKey);
         });
 
         RateLimiter::for('two-factor', function (Request $request) {
