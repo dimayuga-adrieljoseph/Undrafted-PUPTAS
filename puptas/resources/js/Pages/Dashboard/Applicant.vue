@@ -420,7 +420,7 @@ const hasSidebarContent = computed(() =>
   showF137Button.value
 );
 
-// (grades extraction removed) documents are simply uploaded
+// Documents are simply uploaded — the portal tracks each file's status
 
 // File statuses come directly from the backend
 const stepKeys = computed(() => Object.keys(fileStatuses.value));
@@ -920,7 +920,6 @@ const closeImageModal = () => {
 
 const closeModal = () => (showModal.value = false);
 
-// grades extraction removed — documents are uploaded and stored as usual
 const goToGrades = () => {
   router.visit(props.gradeUrl || '/grades/abm');
 };

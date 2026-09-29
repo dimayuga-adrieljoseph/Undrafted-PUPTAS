@@ -92,7 +92,6 @@ class UserFileController extends Controller
                                 'original_name' => $stored['original_name'],
                                 'application_id' => $request->application_id ?: null,
                                 'status' => 'pending',
-                                'docling_json' => null,
                             ]
                         );
                     } catch (\Throwable $e) {
@@ -105,8 +104,6 @@ class UserFileController extends Controller
                         }
                         throw $e;
                     }
-
-                    // OCR processing removed – no background job dispatched
                 } catch (\InvalidArgumentException $e) {
                     return response()->json([
                         'message' => 'Image processing failed: ' . $e->getMessage(),

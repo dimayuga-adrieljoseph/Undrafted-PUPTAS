@@ -12,7 +12,7 @@ use App\Helpers\FileMapper;
  */
 class ReuploadFileRequest extends FormRequest
 {
-    /** Grade card fields are image-only (they go through compression + OCR). */
+    /** Grade card fields are image-only (they go through compression). */
     private const IMAGE_ONLY_FIELDS = [
         'file10', 'file10Front',
         'file11', 'file11Front',

@@ -154,10 +154,6 @@ class AppServiceProvider extends ServiceProvider
                 ->by('medical:' . ($request->bearerToken() ?: $request->ip()));
         });
 
-        RateLimiter::for('grade-extraction', function (Request $request) {
-            return Limit::perMinute(30)->by($request->user()?->id);
-        });
-
         // Public: status check — three stacked limits for abuse/security protection:
         //
         //   1. Per reference number, per minute (5/min)

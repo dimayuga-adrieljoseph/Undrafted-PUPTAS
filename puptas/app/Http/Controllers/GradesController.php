@@ -222,10 +222,6 @@ class GradesController extends Controller
         $programs = Program::with('strands')->get();
         $this->attachProgramMetadata($programs, $user->id);
 
-        // Only pass extraction result if grades haven't been saved yet
-        // This prevents overwriting user's manual edits with extraction data
-        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
-
         $application = Application::where('user_id', (string) $user->id)->first();
 
         return inertia('Grades/ABMGradeInput', [
@@ -234,7 +230,6 @@ class GradesController extends Controller
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile, // Pass full profile for program choices
-            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
             'showQualifiedProgramsNav' => $application && $application->status !== 'draft',
@@ -255,17 +250,12 @@ class GradesController extends Controller
         $programs = Program::with('strands')->get();
         $this->attachProgramMetadata($programs, $user->id);
 
-        // Only pass extraction result if grades haven't been saved yet
-        // This prevents overwriting user's manual edits with extraction data
-        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
-
         return inertia('Grades/ICTGradeInput', [
             'grade' => $grade,
             'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
-            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
             'showQualifiedProgramsNav' => Application::where('user_id', (string) $user->id)->whereNotIn('status', ['draft'])->exists(),
@@ -359,17 +349,12 @@ class GradesController extends Controller
         $programs = Program::with('strands')->get();
         $this->attachProgramMetadata($programs, $user->id);
 
-        // Only pass extraction result if grades haven't been saved yet
-        // This prevents overwriting user's manual edits with extraction data
-        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
-
         return inertia('Grades/HUMSSGradeInput', [
             'grade' => $grade,
             'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
-            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
             'showQualifiedProgramsNav' => Application::where('user_id', (string) $user->id)->whereNotIn('status', ['draft'])->exists(),
@@ -390,17 +375,12 @@ class GradesController extends Controller
         $programs = Program::with('strands')->get();
         $this->attachProgramMetadata($programs, $user->id);
 
-        // Only pass extraction result if grades haven't been saved yet
-        // This prevents overwriting user's manual edits with extraction data
-        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
-
         return inertia('Grades/GASGradeInput', [
             'grade' => $grade,
             'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
-            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
             'showQualifiedProgramsNav' => Application::where('user_id', (string) $user->id)->whereNotIn('status', ['draft'])->exists(),
@@ -421,17 +401,12 @@ class GradesController extends Controller
         $programs = Program::with('strands')->get();
         $this->attachProgramMetadata($programs, $user->id);
 
-        // Only pass extraction result if grades haven't been saved yet
-        // This prevents overwriting user's manual edits with extraction data
-        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
-
         return inertia('Grades/STEMGradeInput', [
             'grade' => $grade,
             'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
-            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
             'showQualifiedProgramsNav' => Application::where('user_id', (string) $user->id)->whereNotIn('status', ['draft'])->exists(),
@@ -452,17 +427,12 @@ class GradesController extends Controller
         $programs = Program::with('strands')->get();
         $this->attachProgramMetadata($programs, $user->id);
 
-        // Only pass extraction result if grades haven't been saved yet
-        // This prevents overwriting user's manual edits with extraction data
-        $extractionResult = $grade->exists ? null : session()->get('extraction_result');
-
         return inertia('Grades/TVLGradeInput', [
             'grade' => $grade,
             'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
             'programs' => $programs,
             'strand' => $profile?->strand,
             'profile' => $profile,
-            'extractionResult' => $extractionResult,
             'isLocked' => $this->isEvaluatorLocked($user),
             'dynamic_subjects' => $grade->dynamic_subjects ?? [],
             'showQualifiedProgramsNav' => Application::where('user_id', (string) $user->id)->whereNotIn('status', ['draft'])->exists(),
