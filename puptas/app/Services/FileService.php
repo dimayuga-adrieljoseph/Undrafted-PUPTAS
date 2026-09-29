@@ -109,8 +109,7 @@ class FileService
      * Compress and store an uploaded file on the active disk.
      *
      * Note: this method stores a compressed image and returns storage path
-     * and original filename. It does not populate OCR data; callers should
-     * dispatch OCR jobs (see ProcessGradeOcr) when needed.
+     * and original filename.
      *
      * @return array{path: string, original_name: string}
      * @throws \RuntimeException If the storage put() fails

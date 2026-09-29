@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import { Head } from "@inertiajs/vue3";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
@@ -15,7 +15,6 @@ const props = defineProps({
     programs: Array,
     strand: String,
     profile: Object,
-    extractionResult: { type: Object, default: null },
     isLocked: { type: Boolean, default: false },
 });
 
@@ -78,8 +77,6 @@ const {
 });
 
 const successMessage = ref("");
-const confidenceMap = ref({});
-const bannerDismissed = ref(false);
 const showReviewModal = ref(false);
 
 // Helper function to get selected program name
@@ -87,67 +84,6 @@ const getSelectedProgramName = (programId) => {
     const program = props.programs?.find((p) => p.id === programId);
     return program ? `${program.code} - ${program.name}` : "";
 };
-
-const getConfidence = (fieldKey) => {
-    const normalizedKey = fieldKey.toLowerCase().trim();
-    return confidenceMap.value[normalizedKey] ?? null;
-};
-
-const isLowConfidence = (fieldKey) => {
-    const c = getConfidence(fieldKey);
-    return c !== null && c < 0.80;
-};
-
-const G11_MAP = {
-    'general mathematics': 'g11_general_mathematics',
-    'statistics and probability': 'g11_statistics_probability',
-    'oral communication': 'g11_oral_communication',
-    'oral communication in context': 'g11_oral_communication',
-    '21st century literature': 'g11_21st_century_lit',
-    '21st century literature from the philippines and the world': 'g11_21st_century_lit',
-    'english for academic and professional purposes': 'g11_academic_professional',
-    'english for academic purposes': 'g11_academic_professional',
-    'eapp': 'g11_academic_professional',
-    'reading and writing': 'g11_reading_writing',
-    'reading and writing skills': 'g11_reading_writing',
-    'earth and life science': 'g11_earth_life_science',
-};
-
-const applyAutofill = (result) => {
-    if (!result || !result.subjects) return;
-    const newConfidenceMap = {};
-    
-    for (const group of ['math', 'science', 'english', 'others']) {
-        if (!result.subjects[group]) continue;
-        for (const [subjectKey, gradeVal] of Object.entries(result.subjects[group])) {
-            const normalizedKey = subjectKey.toLowerCase().trim();
-            newConfidenceMap[normalizedKey] = 1.0; 
-            const numericGrade = parseFloat(gradeVal);
-            if (isNaN(numericGrade)) continue;
-
-            const g11FormKey = G11_MAP[normalizedKey];
-            if (g11FormKey && g11FormKey in form) {
-                form[g11FormKey] = numericGrade;
-            } else if (group === 'math' || group === 'english' || group === 'science') {
-                if (canAddSubject(group)) {
-                    dynamicSubjects.value[group].push({
-                        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
-                        name: subjectKey,
-                        grade: numericGrade,
-                    });
-                }
-            }
-        }
-    }
-    confidenceMap.value = newConfidenceMap;
-};
-
-onMounted(() => {
-    // Apply autofill from extraction if available (takes precedence over saved grades)
-    if (props.extractionResult) {
-        applyAutofill(props.extractionResult);
-    }
-});
 
 // Computed property for review data
 const reviewData = computed(() => ({
@@ -369,16 +305,6 @@ const confirmSaveGrades = () => {
                 </div>
             </Transition>
 
-                <!-- Docling Autofill Banner -->
-                <div v-if="extractionResult && !bannerDismissed" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-4">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-file-alt text-blue-600 dark:text-blue-400"></i>
-                        <p class="text-sm text-blue-700 dark:text-blue-300">
-                            Grades have been autofilled from your uploaded documents using Docling. Please review and verify before submitting.
-                        </p>
-                    </div>
-                    <button @click="bannerDismissed = true" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-xl leading-none flex-shrink-0">&times;</button>
-                </div>
                 <!-- Core Subjects Card -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
@@ -405,10 +331,9 @@ const confirmSaveGrades = () => {
                                        
                                        
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('general mathematics') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('general mathematics')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Statistics and Probability</label>
@@ -420,10 +345,9 @@ const confirmSaveGrades = () => {
                                        
                                        
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('statistics and probability') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('statistics and probability')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                             </div>
 
@@ -488,10 +412,9 @@ const confirmSaveGrades = () => {
                                        
                                        
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('oral communication in context') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('oral communication in context')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">21st Century Literature</label>
@@ -503,10 +426,9 @@ const confirmSaveGrades = () => {
                                        
                                        
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('21st century literature') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('21st century literature')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">English for Academic Purposes</label>
@@ -518,10 +440,9 @@ const confirmSaveGrades = () => {
                                        
                                        
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('english for academic purposes') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('english for academic purposes')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reading and Writing Skills</label>
@@ -533,10 +454,9 @@ const confirmSaveGrades = () => {
                                        
                                        
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('reading and writing skills') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('reading and writing skills')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                             </div>
 
@@ -601,10 +521,9 @@ const confirmSaveGrades = () => {
                                        
                                        
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('earth and life science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('earth and life science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                             </div>
 
@@ -624,10 +543,9 @@ const confirmSaveGrades = () => {
                                        
                                        
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('physical science') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="Enter grade (0-100)"
                                     />
-                                    <p v-if="isLowConfidence('physical science')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                             </div>
 
@@ -690,10 +608,9 @@ const confirmSaveGrades = () => {
                                        
                                        
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('1st semester') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('1st semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">2nd Semester</label>
@@ -705,10 +622,9 @@ const confirmSaveGrades = () => {
                                        
                                        
                                         :disabled="isLocked"
-                                        :class="['w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', isLowConfidence('2nd semester') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
+                                        class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]"
                                         placeholder="0-100"
                                     />
-                                    <p v-if="isLowConfidence('2nd semester')" class="text-xs text-red-500 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Low confidence result. Please verify.</p>
                                 </div>
                             </div>
                         </div>
