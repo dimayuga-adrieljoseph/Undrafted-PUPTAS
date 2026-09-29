@@ -31,13 +31,12 @@ Tests cover:
 - ✅ Accessibility (ARIA attributes)
 - ✅ Slot confirmation flow
 
-#### 2. ABMGradeInput Component (19 tests)
+#### 2. ABMGradeInput Component (17 tests)
 **File:** `tests/Frontend/Components/ABMGradeInput.spec.js`
 
 Tests cover:
 - ✅ Component rendering with all grade fields
 - ✅ Locked/unlocked state behavior
-- ✅ Docling autofill banner
 - ✅ Dynamic subject management
 - ✅ Average computation display
 - ✅ Form actions and validation
@@ -137,7 +136,6 @@ Tests cover:
 **Location:** `resources/js/__tests__/`
 
 Discovered comprehensive test suite covering:
-- ✅ AI grade extraction (1 file)
 - ✅ Application grades display (2 files)
 - ✅ Error handling utilities (1 file)
 - ✅ List passer status filter (5 files with property-based tests)
@@ -191,7 +189,7 @@ tests/Frontend/
 ├── setup.js                                    # Global test configuration
 ├── Components/                                 # Core component tests
 │   ├── CheckStatus.spec.js                    # (26 tests)
-│   ├── ABMGradeInput.spec.js                  # (19 tests)
+│   ├── ABMGradeInput.spec.js                  # (17 tests)
 │   └── Sidebar.spec.js                        # (29 tests)
 ├── components/
 │   └── dashboards/                            # Dashboard tests
@@ -202,7 +200,6 @@ tests/Frontend/
 └── README.md                                   # This file
 
 resources/js/__tests__/                         # Additional tests
-├── AI_Grade_Extraction/                       # (1 file)
 ├── Application_Grades_Display/                # (2 files)
 ├── Error_Handling/                            # (1 file)
 ├── List_Passer_Status_Filter/                 # (5 files)

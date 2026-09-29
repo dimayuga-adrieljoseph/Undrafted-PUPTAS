@@ -245,5 +245,4 @@ Here are the modern technologies we used to build PUPTAS:
   <img src="https://img.shields.io/badge/Hostinger-5333ED?style=for-the-badge&logo=hostinger&logoColor=white" alt="Hostinger">
   <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/Tesseract-5DAB44?style=for-the-badge&logo=tesseract&logoColor=white" alt="Tesseract OCR">
 </p>

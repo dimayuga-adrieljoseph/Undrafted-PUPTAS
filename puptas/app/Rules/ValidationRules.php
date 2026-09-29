@@ -182,7 +182,7 @@ class ValidationRules
      * UserFile validation rules
      *
      * Grade card files (file10–12) and the 2x2 photo are image-only because they
-     * go through ImageCompressionService and OCR processing.
+     * go through ImageCompressionService before being stored.
      *
      * Document fields (PSA, Good Moral, Non-enrollment cert, Under Oath, School ID)
      * accept images OR PDFs up to 10 MB — applicants commonly scan these to PDF.
@@ -192,7 +192,7 @@ class ValidationRules
         return [
             'application_id'  => 'nullable|exists:applications,id',
 
-            // Grade cards — image-only, compressed + OCR processed
+            // Grade cards — image-only, compressed before storage
             'file10'      => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
             'file10Front' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
             'file11'      => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',

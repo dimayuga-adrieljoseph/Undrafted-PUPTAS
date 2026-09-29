@@ -43,7 +43,6 @@ use App\Http\Controllers\IdpAuthController;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureAdminOrRegistrar;
-use App\Http\Controllers\GradeExtractionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AdmissionLogbookController;
 use App\Http\Controllers\ControlListController;
@@ -410,9 +409,6 @@ Route::middleware(['auth', 'role:applicant'])->group(function () {
     // Update former school information from the applicant profile page
     Route::post('/applicant-profile/former-school', [F137RequestLetterController::class, 'updateFormerSchool'])
         ->name('applicant.profile.update-former-school');
-
-    Route::middleware(['throttle:grade-extraction'])
-        ->post('/api/grades/extract', [GradeExtractionController::class, 'extract']);
 
     // Grade Input Routes - IMPORTANT: Each strand MUST use its own store method
     // ABM uses storeAbmGrades, ICT uses storeIctGrades, etc.

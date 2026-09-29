@@ -23,7 +23,7 @@ class FileMapper
      * Format: 'apiKey' => 'databaseType'
      */
     public const MAPPING = [
-        // Grade cards (image-only — compressed + OCR)
+        // Grade cards (image-only — compressed)
         'file10Front' => 'file10_front',
         'file10'      => 'file10_back',
         'file11Front' => 'file11_front',
