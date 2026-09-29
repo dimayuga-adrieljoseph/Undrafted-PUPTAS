@@ -156,8 +156,8 @@ describe('Sidebar Component', () => {
                 },
             })
 
-            expect(wrapper.text()).toContain('PUP Portal')
-            expect(wrapper.text()).toContain('Management System')
+            expect(wrapper.text()).toContain('PUP-T')
+            expect(wrapper.text()).toContain('Admission System')
         })
 
         it('renders logout button in footer', () => {
@@ -174,6 +174,85 @@ describe('Sidebar Component', () => {
 
             expect(wrapper.text()).toContain('Logout')
             expect(wrapper.find('button[type="submit"]').exists()).toBe(true)
+        })
+    })
+
+    describe('Logo Visibility', () => {
+        // The full PUPTAS logo must stay visible in BOTH sidebar states — it
+        // must never collapse down to an initial/letter badge or be removed.
+        const logoStubs = {
+            NavLink: { template: '<a><slot /></a>', props: ['href', 'active'] },
+            ApplicationMark: {
+                template: '<img data-test="puptas-logo" src="/assets/images/pup_logo.png" alt="Logo" />',
+            },
+            FontAwesomeIcon: { template: '<i />', props: ['icon'] },
+        }
+
+        beforeEach(() => {
+            // Ensure desktop viewport
+            Object.defineProperty(window, 'innerWidth', {
+                writable: true,
+                configurable: true,
+                value: 1024,
+            })
+        })
+
+        it('renders the full logo (no letter badge) when collapsed', () => {
+            wrapper = mount(Sidebar, {
+                props: { variant: 'default', collapsible: 'icon', open: false },
+                global: { stubs: logoStubs },
+            })
+
+            expect(wrapper.find('aside').attributes('data-state')).toBe('collapsed')
+
+            // Full logo still rendered, inside the logo box
+            expect(wrapper.findAll('[data-test="puptas-logo"]')).toHaveLength(1)
+            expect(wrapper.find('.sidebar-logo-container [data-test="puptas-logo"]').exists()).toBe(true)
+            expect(wrapper.find('[data-test="puptas-logo"]').classes()).toContain('sidebar-logo')
+
+            // No initial/letter badge is rendered in its place
+            expect(wrapper.find('.sidebar-header .rounded-full').exists()).toBe(false)
+            expect(wrapper.find('.sidebar-header').text()).not.toContain('PUP')
+        })
+
+        it('renders the same full logo element when expanded and when collapsed', async () => {
+            wrapper = mount(Sidebar, {
+                props: { variant: 'default', collapsible: 'icon', open: false },
+                global: { stubs: logoStubs },
+            })
+
+            const collapsedLogo = wrapper.find('[data-test="puptas-logo"]')
+            expect(collapsedLogo.exists()).toBe(true)
+            const collapsedMarkup = collapsedLogo.element.outerHTML
+
+            await wrapper.setProps({ open: true })
+            await wrapper.vm.$nextTick()
+
+            expect(wrapper.find('aside').attributes('data-state')).toBe('expanded')
+
+            const expandedLogo = wrapper.find('[data-test="puptas-logo"]')
+            expect(expandedLogo.exists()).toBe(true)
+            expect(wrapper.findAll('[data-test="puptas-logo"]')).toHaveLength(1)
+            expect(expandedLogo.element.outerHTML).toBe(collapsedMarkup)
+            expect(wrapper.find('.sidebar-header .rounded-full').exists()).toBe(false)
+        })
+
+        it('keeps the full logo visible after toggling expand/collapse repeatedly', async () => {
+            wrapper = mount(Sidebar, {
+                props: { variant: 'default', collapsible: 'icon', open: false },
+                global: { stubs: logoStubs },
+            })
+
+            const sidebar = wrapper.find('aside')
+
+            for (const expected of ['expanded', 'collapsed', 'expanded', 'collapsed']) {
+                await sidebar.trigger('click')
+                await wrapper.vm.$nextTick()
+
+                expect(sidebar.attributes('data-state')).toBe(expected)
+                expect(wrapper.findAll('[data-test="puptas-logo"]')).toHaveLength(1)
+                expect(wrapper.find('.sidebar-header .rounded-full').exists()).toBe(false)
+            }
         })
     })
 

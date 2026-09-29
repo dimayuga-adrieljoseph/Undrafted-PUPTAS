@@ -2,6 +2,8 @@
 import { ref, computed, watch } from 'vue';
 import { useForm, router, Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import ImageViewer from '@/Components/ImageViewer.vue';
+
 import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue';
 
 const props = defineProps({
@@ -293,22 +295,23 @@ const docTypeLabels = { file10_front: 'Grade 10 Report Card (Front)', file10_bac
 // ── Document Preview ─────────────────────────────────────────
 const showImageModal = ref(false);
 const previewSrc = ref("");
+const previewAlt = ref("Document preview");
 
 const getFileUrl = (file) => file?.url || "";
 const hasImagePreview = (file) => Boolean(getFileUrl(file)) && file?.isImage !== false;
 
-const openImageModal = (file) => {
+const openImageModal = (file, label = "") => {
     const src = getFileUrl(file);
     if (!src || !hasImagePreview(file)) return;
     previewSrc.value = src;
+    previewAlt.value = label || docTypeLabels[file?.type] || file?.original_name || "Document preview";
     showImageModal.value = true;
-    document.body.style.overflow = 'hidden';
 };
 
 const closeImageModal = () => {
     showImageModal.value = false;
     previewSrc.value = "";
-    document.body.style.overflow = '';
+    previewAlt.value = "Document preview";
 };
 
 const docStatusBadge = (status) => {
@@ -986,7 +989,7 @@ const submitPullout = () => {
                     <template v-if="user.files?.length">
                         <div class="doc-grid">
                             <div v-for="file in user.files" :key="file.id" class="doc-card">
-                                <div class="doc-preview-area" @click="openImageModal(file)">
+                                <div class="doc-preview-area" @click="openImageModal(file, docTypeLabels[file.type] ?? file.type?.replace(/_/g, ' ') ?? 'Document')">
                                     <img v-if="hasImagePreview(file)" :src="getFileUrl(file)" alt="Document preview" class="doc-preview-img" />
                                     <div v-else class="doc-preview-placeholder">
                                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
@@ -1005,17 +1008,13 @@ const submitPullout = () => {
                     <div v-else class="empty-card"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg><p class="empty-card-title">No documents uploaded yet</p><p class="empty-card-sub">Documents will appear here once the applicant uploads their requirements.</p></div>
                 </div>
 
-                <!-- ── Image Preview Modal ────────────────────────── -->
-                <Teleport to="body">
-                    <div v-if="showImageModal" class="doc-preview-overlay" @click.self="closeImageModal">
-                        <div class="doc-preview-modal">
-                            <button class="doc-preview-close" @click="closeImageModal" title="Close">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                            </button>
-                            <img :src="previewSrc" alt="Document Preview" class="doc-preview-full" />
-                        </div>
-                    </div>
-                </Teleport>
+                <!-- ── Image Viewer ──────────────────────────────── -->
+                <ImageViewer
+                    :show="showImageModal"
+                    :src="previewSrc"
+                    :alt="previewAlt"
+                    @close="closeImageModal"
+                />
             </template>
 
             <!-- ══════════════════════════════════════════════════════ -->
@@ -1267,13 +1266,7 @@ const submitPullout = () => {
 .doc-preview-placeholder svg { width:28px; height:28px; fill:#d1d5db; }
 .doc-preview-placeholder span { font-size:.72rem; font-weight:500; }
 
-/* Image Preview Modal */
-.doc-preview-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); backdrop-filter:blur(3px); z-index:9999; display:flex; align-items:center; justify-content:center; padding:2rem; }
-.doc-preview-modal { position:relative; max-width:90vw; max-height:90vh; border-radius:12px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.4); }
-.doc-preview-close { position:absolute; top:.75rem; right:.75rem; width:36px; height:36px; border-radius:50%; background:rgba(0,0,0,.5); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#fff; transition:background .15s; z-index:1; }
-.doc-preview-close:hover { background:rgba(0,0,0,.7); }
-.doc-preview-close svg { width:18px; height:18px; }
-.doc-preview-full { display:block; max-width:90vw; max-height:85vh; object-fit:contain; }
+/* Image preview is handled by the shared ImageViewer component. */
 .dark .doc-preview-area { background:#1e2130; border-color:#2a2d3a; }
 .dark .doc-preview-placeholder svg { fill:#3a3d4a; }
 .dark .doc-preview-placeholder span { color:#64748b; }

@@ -5,6 +5,8 @@ import { useMaskingState } from "@/Composables/useMaskingState";
 import { LineChart } from "vue-chart-3";
 import AppLayout from "@/Layouts/AppLayout.vue";
 import BlurText from "@/Components/BlurText.vue";
+import ImageViewer from "@/Components/ImageViewer.vue";
+
 import UserDetailsModal from "@/Pages/Applications/UserDetailsModal.vue";
 import { 
   Chart as ChartJS, 
@@ -78,6 +80,7 @@ const selectedUser = ref(null);
 const selectedUserFiles = ref({});
 const showImageModal = ref(false);
 const previewImage = ref("");
+const previewAlt = ref("Document preview");
 const searchQuery = ref("");
 
 // Simplified summary items: Total + one card per active pipeline stage
@@ -340,16 +343,18 @@ const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "")
 const hasImagePreview = (file) =>
   Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
 
-const openImageModal = (file) => {
+const openImageModal = (file, label = "") => {
   const src = getFileUrl(file);
   if (!src || !hasImagePreview(file)) return;
   previewImage.value = src;
+  previewAlt.value = label || file?.original_name || "Document preview";
   showImageModal.value = true;
 };
 
 const closeImageModal = () => {
   showImageModal.value = false;
   previewImage.value = "";
+  previewAlt.value = "Document preview";
 };
 
 const selectUser = async (user) => {
@@ -698,20 +703,13 @@ const untagApplication = async () => {
       </template>
     </UserDetailsModal>
 
-    <!-- Image Preview Modal -->
-    <div v-if="showImageModal"
-      class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] p-4"
-      @click.self="closeImageModal">
-      <div class="relative max-w-4xl w-full">
-        <img :src="previewImage" alt="Preview" class="w-full h-auto rounded-lg shadow-2xl" />
-        <button @click="closeImageModal"
-          class="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    </div>
+    <!-- Document Image Viewer (zoom / pan / fit-to-viewport) -->
+    <ImageViewer
+      :show="showImageModal"
+      :src="previewImage"
+      :alt="previewAlt"
+      @close="closeImageModal"
+    />
 
     <!-- Snackbar -->
     <transition name="snackbar">

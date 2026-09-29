@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { Head, usePage, router } from "@inertiajs/vue3";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
+import PageContainer from "@/Components/PageContainer.vue";
 
 const page = usePage();
 const isEnabled = computed(() => page.props.system_settings?.qualified_programs_enabled !== false);
@@ -97,7 +98,7 @@ onUnmounted(() => {
     </div>
 
     <div class="py-8">
-      <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+      <PageContainer :vertical-padding="false" class="space-y-6">
 
         <!-- Stats Bar -->
         <div v-if="!loading && hasData" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
@@ -378,7 +379,7 @@ onUnmounted(() => {
           </div>
         </template>
 
-      </div>
+      </PageContainer>
     </div>
   </ApplicantLayout>
 </template>
