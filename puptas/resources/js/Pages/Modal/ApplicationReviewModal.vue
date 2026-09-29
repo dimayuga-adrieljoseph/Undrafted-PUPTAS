@@ -1,4 +1,6 @@
 <script setup>
+import ImageViewer from "@/Components/ImageViewer.vue";
+
 import { ref, watch, onMounted, computed } from "vue";
 
 const props = defineProps({
@@ -15,6 +17,7 @@ const error = ref("");
 const applicationData = ref(null);
 const eligiblePrograms = ref([]);
 const previewImage = ref(null);
+const previewAlt = ref("Document preview");
 const showImageModal = ref(false);
 const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
 const hasImagePreview = (file) => Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
@@ -310,16 +313,18 @@ const closeModal = () => {
     emit("close");
 };
 
-const openImageModal = (fileObj) => {
+const openImageModal = (fileObj, label = "") => {
     const src = getFileUrl(fileObj);
     if (!src || !hasImagePreview(fileObj)) return;
     previewImage.value = src;
+    previewAlt.value = label || fileObj?.original_name || "Document preview";
     showImageModal.value = true;
 };
 
 const closeImageModal = () => {
     showImageModal.value = false;
     previewImage.value = null;
+    previewAlt.value = "Document preview";
 };
 
 // Make sure modal opens when prop is true on mount
@@ -570,7 +575,7 @@ onMounted(() => {
                                     :src="getFileUrl(file)"
                                     :alt="formatFileName(key)"
                                     class="w-full h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition mb-2"
-                                    @click="openImageModal(file)"
+                                    @click="openImageModal(file, formatFileName(key))"
                                 />
                                 <div
                                     v-else
@@ -696,30 +701,13 @@ onMounted(() => {
         </div>
     </div>
 
-    <!-- Image Preview Modal -->
-    <div
-        v-if="showImageModal"
-        class="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
-        @click="closeImageModal"
-    >
-        <div class="relative max-w-3xl w-full">
-            <img
-                :src="previewImage"
-                alt="Preview"
-                class="w-full h-auto max-h-[85vh] object-contain rounded-xl shadow-2xl"
-                @click.stop
-            />
-            <button
-                @click.stop="closeImageModal"
-                class="absolute top-3 right-3 p-2 bg-black/50 hover:bg-black/70 text-white rounded-full transition"
-                aria-label="Close preview"
-            >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
-    </div>
+    <!-- Document Image Viewer (zoom / pan / fit-to-viewport) -->
+    <ImageViewer
+        :show="showImageModal"
+        :src="previewImage"
+        :alt="previewAlt"
+        @close="closeImageModal"
+    />
 
     <!-- Submit Confirmation Modal -->
     <div

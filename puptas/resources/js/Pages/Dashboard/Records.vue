@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head, Link } from "@inertiajs/vue3";
 import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
 import BlurText from "@/Components/BlurText.vue";
+import ImageViewer from "@/Components/ImageViewer.vue";
+
 import UserDetailsModal from "@/Pages/Applications/UserDetailsModal.vue";
 import { useMaskingState } from "@/Composables/useMaskingState";
 
@@ -267,20 +269,24 @@ const hasImagePreview = (file) =>
     Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
 
 const previewImage = ref(null);
+const previewAlt = ref("Document preview");
 const showImageModal = ref(false);
 
-const openImageModal = (file) => {
+const openImageModal = (file, label = "") => {
     const src = getFileUrl(file);
     if (!src || !hasImagePreview(file)) {
         return;
     }
 
     previewImage.value = src;
+    previewAlt.value = label || file?.original_name || "Document preview";
     showImageModal.value = true;
 };
 
 const closeImageModal = () => {
     showImageModal.value = false;
+    previewImage.value = null;
+    previewAlt.value = "Document preview";
 };
 
 const capitalize = (str) =>
@@ -687,43 +693,13 @@ const untagApplication = async () => {
             </template>
         </UserDetailsModal>
 
-        <!-- Image Preview Modal -->
-        <transition name="fade">
-            <div
-                v-if="showImageModal"
-                class="fixed inset-0 z-[100] flex items-center justify-center p-4"
-            >
-                <div
-                    class="fixed inset-0 bg-black/80"
-                    @click="closeImageModal"
-                ></div>
-                <div class="relative z-10 max-w-4xl max-h-[90vh]">
-                    <img
-                        :src="previewImage"
-                        alt="Document Preview"
-                        class="max-w-full max-h-[80vh] rounded-lg shadow-2xl"
-                    />
-                    <button
-                        @click="closeImageModal"
-                        class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition dark:bg-gray-900/10 dark:hover:bg-gray-900/20 min-h-[44px] min-w-[44px]"
-                    >
-                        <svg
-                            class="w-6 h-6 text-white dark:text-gray-900"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </transition>
+        <!-- Document Image Viewer (zoom / pan / fit-to-viewport) -->
+        <ImageViewer
+            :show="showImageModal"
+            :src="previewImage"
+            :alt="previewAlt"
+            @close="closeImageModal"
+        />
 
         <!-- Snackbar Notification -->
         <transition name="fade">

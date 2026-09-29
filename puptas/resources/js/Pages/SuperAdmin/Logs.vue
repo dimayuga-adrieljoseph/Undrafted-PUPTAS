@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import { Head } from "@inertiajs/vue3";
 import SuperAdminLayout from "@/Layouts/SuperAdminLayout.vue";
+import PageContainer from "@/Components/PageContainer.vue";
 import AuditLogDetailsModal from "@/Pages/Modal/AuditLogDetailsModal.vue";
 import AuditLogAiModal from "@/Pages/Modal/AuditLogAiModal.vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -262,7 +263,7 @@ const getPageUrl = (pageNum) => {
 <template>
     <Head title="Audit Logs" />
     <SuperAdminLayout title="Audit Logs">
-        <div class="px-4 md:px-8 py-8 w-full">
+        <PageContainer>
             <!-- Header Section -->
             <div class="mb-8">
                 <div class="flex items-center justify-between">
@@ -562,7 +563,7 @@ const getPageUrl = (pageNum) => {
             </div>
         </div>
     </div>
-        </div>
+        </PageContainer>
 
         <!-- Details Modal -->
         <AuditLogDetailsModal
