@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
 import { Head } from '@inertiajs/vue3'
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout.vue'
+import PageContainer from '@/Components/PageContainer.vue'
 import CreateClientModal from '@/Pages/SuperAdmin/Partials/CreateClientModal.vue'
 import SecretRevealModal from '@/Pages/SuperAdmin/Partials/SecretRevealModal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -88,7 +89,7 @@ const totalScopes = computed(() => {
 <template>
     <Head title="API Client Management" />
     <SuperAdminLayout title="API Client Management">
-        <div class="px-4 md:px-8 py-8 w-full">
+        <PageContainer>
 
             <!-- Header -->
             <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -256,7 +257,7 @@ const totalScopes = computed(() => {
             </div>
 
 
-        </div>
+        </PageContainer>
 
         <!-- Modals -->
         <CreateClientModal

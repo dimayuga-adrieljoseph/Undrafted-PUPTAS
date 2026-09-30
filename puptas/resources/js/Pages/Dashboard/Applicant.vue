@@ -6,6 +6,8 @@ import Compressor from "compressorjs";
 const axios = window.axios;
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
 import ApplicationReviewModal from "@/Pages/Modal/ApplicationReviewModal.vue";
+import ImageViewer from "@/Components/ImageViewer.vue";
+
 import BlurText from "@/Components/BlurText.vue";
 
 const props = defineProps({ user: Object, gradeUrl: String, canDownloadSlip: Boolean, canDownloadF137: Boolean });
@@ -369,6 +371,7 @@ const canEditGrades = computed(() => {
 
 const showImageModal = ref(false);
 const previewSrc = ref("");
+const previewAlt = ref("Document preview");
 const showMedicalRedirect = ref(false);
 const showF137Button = ref(false);
 const activeUploadKey = ref("");
@@ -904,18 +907,18 @@ const uploadInlineFile = async () => {
   });
 };
 
-const openImageModal = (file) => { 
+const openImageModal = (file, label = "") => {
   const src = getFileUrl(file);
-  if(!src || !hasImagePreview(file)) return; 
-  previewSrc.value = src; 
-  showImageModal.value = true; 
-  document.body.style.overflow = 'hidden';
+  if (!src || !hasImagePreview(file)) return;
+  previewSrc.value = src;
+  previewAlt.value = label || file?.original_name || "Document preview";
+  showImageModal.value = true;
 };
 
-const closeImageModal = () => { 
-  showImageModal.value = false; 
-  previewSrc.value = ""; 
-  document.body.style.overflow = '';
+const closeImageModal = () => {
+  showImageModal.value = false;
+  previewSrc.value = "";
+  previewAlt.value = "Document preview";
 };
 
 const closeModal = () => (showModal.value = false);
@@ -2078,27 +2081,13 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Image Preview Modal -->
-    <div
-      v-if="showImageModal"
-      class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4 dark:bg-white"
-      @click="closeImageModal"
-    >
-      <div class="relative max-w-[90vw] max-h-[90vh]">
-        <img
-          :src="previewSrc"
-          alt="Preview"
-          class="max-w-full max-h-full rounded-lg shadow-2xl"
-          @click.stop
-        />
-        <button
-          class="absolute top-2 right-2 text-white text-4xl hover:text-gray-300 transition-colors w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 dark:text-gray-900 min-h-[44px] min-w-[44px]"
-          @click.stop="closeImageModal"
-        >
-          &times;
-        </button>
-      </div>
-    </div>
+    <!-- Document Image Viewer (zoom / pan / fit-to-viewport) -->
+    <ImageViewer
+      :show="showImageModal"
+      :src="previewSrc"
+      :alt="previewAlt"
+      @close="closeImageModal"
+    />
 
   </ApplicantLayout>
 </template>

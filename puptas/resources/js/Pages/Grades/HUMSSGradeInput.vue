@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import { Head } from "@inertiajs/vue3";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
+import PageContainer from "@/Components/PageContainer.vue";
 import GradesReviewModal from "@/Components/GradesReviewModal.vue";
 import DynamicSubjectRow from "@/Components/DynamicSubjectRow.vue";
 import FieldError from "@/Components/FieldError.vue";
@@ -192,7 +193,7 @@ const confirmSaveGrades = () => {
 <template>
     <Head title="HUMSS Grade Input" />
     <ApplicantLayout>
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PageContainer>
             <!-- Header Section -->
             <div class="mb-8">
                 <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">HUMSS Strand Grade Input</h1>
@@ -928,7 +929,7 @@ const confirmSaveGrades = () => {
                 @close="closeReviewModal"
                 @confirm="confirmSaveGrades"
             />
-        </div>
+        </PageContainer>
     </ApplicantLayout>
 </template>
 

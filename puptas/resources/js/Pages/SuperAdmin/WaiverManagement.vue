@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useForm, usePage, router } from '@inertiajs/vue3'
 import { Head, Link } from '@inertiajs/vue3'
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout.vue'
+import PageContainer from '@/Components/PageContainer.vue'
 import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue'
 import Pagination from '@/Components/Pagination.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -279,7 +280,7 @@ const confirmImport = () => {
 <template>
     <Head title="Waiver Management" />
     <SuperAdminLayout>
-        <div class="px-4 md:px-8 py-8 w-full max-w-7xl mx-auto">
+        <PageContainer>
             <!-- Header -->
             <div class="mb-8 flex items-center justify-between flex-wrap gap-4">
                 <div class="flex items-center gap-4">
@@ -513,7 +514,7 @@ const confirmImport = () => {
                     <Pagination :links="tagged_applicants.links" />
                 </div>
             </div>
-        </div>
+        </PageContainer>
 
         <!-- Confirmation Modals -->
         <ChangesConfirmationModal

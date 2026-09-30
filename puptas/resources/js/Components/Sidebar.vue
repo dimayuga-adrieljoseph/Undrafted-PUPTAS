@@ -12,6 +12,9 @@
 
   Behavior preserved:
     - Desktop: icon-only collapsed (w-20) → hover/click to expand (w-72)
+    - Logo: the full PUPTAS emblem (ApplicationMark) is rendered in BOTH
+      states — it is never swapped for an initial badge. It only scales down
+      to fit the collapsed rail (see .sidebar-logo-container)
     - Desktop: pin toggle on click keeps expanded
     - Mobile: off-canvas drawer with backdrop, close on item click / Escape / outside click
     - Body scroll lock managed by parent layouts
@@ -325,21 +328,21 @@ const resolveChildren = (item) => {
             <slot name="header">
                 <!-- Default header: logo + title -->
                 <div class="flex items-center gap-3 min-w-0">
-                    <div class="sidebar-logo-container flex-shrink-0">
-                        <NavLink :href="route('dashboard')" class="block" @click="onNavItemClick">
-                            <ApplicationMark v-if="isExpanded" class="h-8" />
-                            <div
-                                v-else
-                                class="w-8 h-8 rounded-full bg-gradient-to-br from-[#FFD700] to-[#FBCB77] flex items-center justify-center"
-                            >
-                                <span class="text-[#9E122C] font-bold text-sm dark:text-white">PUP</span>
-                            </div>
+                    <!--
+                        Logo: the full PUPTAS emblem is rendered in both the
+                        expanded and collapsed states. The surrounding box
+                        scales down with the rail so the whole logo always
+                        stays visible (never replaced, cropped or hidden).
+                    -->
+                    <div class="sidebar-logo-container">
+                        <NavLink :href="route('dashboard')" class="sidebar-logo-link" @click="onNavItemClick">
+                            <ApplicationMark class="sidebar-logo" />
                         </NavLink>
                     </div>
                     <Transition name="sidebar-label">
                         <div v-if="isExpanded" class="flex-1 min-w-0">
-                            <h1 class="text-lg font-bold text-white">PUP Portal</h1>
-                            <p class="text-xs text-gray-300 mt-0.5">Management System</p>
+                            <h1 class="text-lg font-bold text-white">PUP-Taguig</h1>
+                            <p class="text-xs text-gray-300 mt-0.5">Admission System</p>
                         </div>
                     </Transition>
                 </div>
@@ -490,6 +493,50 @@ const resolveChildren = (item) => {
     transition-property: width, padding;
     transition-duration: 300ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Logo ─────────────────────────────────────────────────────────────────── */
+/*
+    The full PUPTAS emblem is rendered in every state — it is never replaced by
+    an initial badge, hidden, or cropped. Only the box around it scales down so
+    the whole logo still fits the narrower collapsed rail:
+    w-20 − px-4 = 3rem of usable width.
+    (ApplicationMark carries an inline 100×100 size, so the image is clamped
+    with max-width/max-height instead of width/height.)
+*/
+.sidebar-logo-container {
+    --sidebar-logo-size: 6.25rem; /* 100px — the emblem's existing box */
+    width: var(--sidebar-logo-size);
+    height: var(--sidebar-logo-size);
+    @apply flex items-center justify-center flex-shrink-0;
+    transition-property: width, height;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapsed rail: shrink the box to the rail's usable width (never crop) */
+.sidebar:not(.w-72) .sidebar-logo-container {
+    --sidebar-logo-size: 3rem;
+}
+
+/* Icon-only rail: keep the logo centered like the nav icons */
+.sidebar:not(.w-72) .sidebar-header {
+    justify-content: center;
+}
+
+/* The logo link fills the box, dropping NavLink's inline-link padding/border */
+.sidebar-logo-link {
+    @apply flex items-center justify-center w-full h-full p-0;
+    border: 0;
+}
+
+.sidebar-logo {
+    @apply block;
+    max-width: 100%;
+    max-height: 100%;
+    min-width: 0;
+    min-height: 0;
+    object-fit: contain;
 }
 
 /* ── Navigation items ─────────────────────────────────────────────────────── */

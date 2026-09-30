@@ -2,6 +2,7 @@
 import { ref, watch } from "vue";
 import { Head, router, Link } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import PageContainer from "@/Components/PageContainer.vue";
 
 const props = defineProps({
     programs: { type: Array, default: () => [] },
@@ -67,7 +68,7 @@ const downloadControlList = () => {
 <template>
     <Head title="Control List Export" />
     <AppLayout>
-        <div class="max-w-9xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8">
+        <PageContainer>
             <h1 class="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-6">Control List Export</h1>
 
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700 mb-6">
@@ -197,6 +198,6 @@ const downloadControlList = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

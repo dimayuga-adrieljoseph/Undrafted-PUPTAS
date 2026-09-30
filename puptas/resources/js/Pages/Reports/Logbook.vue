@@ -2,6 +2,7 @@
 import { ref, watch } from "vue";
 import { Head, router } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import PageContainer from "@/Components/PageContainer.vue";
 
 const props = defineProps({
     entries:     { type: Object, default: () => ({ data: [], total: 0, links: [] }) },
@@ -42,7 +43,7 @@ const downloadPdf = () => {
 <template>
     <Head title="Admission Logbook" />
     <AppLayout>
-        <div class="max-w-9xl mx-auto p-6 px-2 sm:px-4 md:px-6 lg:px-8">
+        <PageContainer>
             <h1 class="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-6">Admission Logbook</h1>
 
             <!-- Filters -->
@@ -168,6 +169,6 @@ const downloadPdf = () => {
                     <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Try selecting a different date or process step.</p>
                 </div>
             </div>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>
