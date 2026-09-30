@@ -67,21 +67,21 @@ return response()->json(['error' => 'Failed to generate preview'], 500);
 ---
 
 ### 3. ✅ Missing Authorization Checks
-**Issue:** SAR admin routes only used `auth:sanctum` middleware without role verification.
+**Issue:** SAR admin routes only used `auth` middleware without role verification.
 
 **Risk:** Any authenticated user (including applicants) could access PII by viewing/downloading SAR PDFs.
 
 **Fix:**
-- Applied `role:2,6` middleware to all `/admin/sar*` routes
-- Only Admin (role_id = 2) and Registrar (role_id = 6) can access
-- Unauthorized access returns 403 Forbidden with "Unauthorized action" message
+- Applied `EnsureAdminOrRegistrar` middleware to all `/admin/sar*` routes
+- Only Admin (role_id = 2), Registrar (role_id = 6), and SuperAdmin (role_id = 7) can access
+- Unauthorized access returns 403 Forbidden with "Access denied. Admin or Registrar privileges required." message
 
 **Files Changed:**
 - `routes/web.php`
 
 **Protected Routes:**
 ```php
-Route::middleware(['role:2,6'])->group(function () {
+Route::middleware(['auth', EnsureAdminOrRegistrar::class])->group(function () {
     Route::get('/admin/sar-generations', ...);
     Route::get('/admin/sar/{id}/download', ...);
     Route::get('/admin/sar/{id}/preview', ...);
@@ -229,6 +229,6 @@ php artisan route:list --name=admin.sar
 
 ---
 
-**Last Updated:** February 17, 2026  
-**Reviewed By:** GitHub Copilot  
+**Last Updated:** September 30, 2026  
+**Reviewed By:** Team Undrafted  
 **Status:** All fixes implemented and deployed
