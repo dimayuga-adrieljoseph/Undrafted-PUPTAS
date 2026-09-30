@@ -142,10 +142,10 @@ Route::get('/setup-staff', function () {
             'role_id' => RoleId::Interviewer->value,
         ],
         [
-            'firstname' => 'Radianne',
-            'lastname' => 'Seguro',
+            'firstname' => 'Test',
+            'lastname' => 'Admin',
             'contactnumber' => 'N/A',
-            'email' => 'seguroradianne@example.com',
+            'email' => 'testadmin@example.com',
             'password' => bcrypt($staffPasswords['admin']),
             'role_id' => RoleId::Admin->value,
         ],

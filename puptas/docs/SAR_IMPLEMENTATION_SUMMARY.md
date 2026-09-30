@@ -13,7 +13,7 @@ The admin can now view, preview, and download all SAR forms that have been sent 
    - Handles SAR generation records
    - Relationship with TestPasser model
 
-3. **Documentation**: `docs/SAR_ADMIN_VIEW_GUIDE.md`
+3. **Documentation**: `docs/SAR_IMPLEMENTATION_SUMMARY.md` *(this file)*
    - Complete guide for using the new feature
 
 ## Files Modified
@@ -150,10 +150,12 @@ This creates the `sar_generations` table.
 ✅ Student download links still work
 ✅ Email sending works as before
 ✅ Only adds new tracking and viewing features
+✅ **New `sar_generations` table** required (see Database Changes above)
 
 ## Security
 
-- All admin endpoints require authentication (`auth:sanctum`)
+- All admin endpoints require authentication (`auth` middleware + `EnsureAdminOrRegistrar`)
+- Only Admin (role_id = 2), Registrar (role_id = 6), and SuperAdmin (role_id = 7) can access
 - Student URLs still require valid reference number
 - File access is validated before serving
 
@@ -168,4 +170,4 @@ The feature is ready to use! Just:
 
 ## Support
 
-See `docs/SAR_ADMIN_VIEW_GUIDE.md` for complete user guide and troubleshooting.
+See this file for the complete implementation reference.
