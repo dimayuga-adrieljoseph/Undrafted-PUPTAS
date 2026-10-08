@@ -291,6 +291,9 @@ class ConfirmationService
         $user->loadMissing(['testPasser', 'applicantProfile']);
 
         return DB::transaction(function () use ($user, $validated) {
+            // Lock the user row to serialize concurrent submissions from the same user
+            User::lockForUpdate()->find($user->id);
+
             $isOverrideAllowed = false;
             $testPasser = $user->testPasser;
             if ($testPasser) {
