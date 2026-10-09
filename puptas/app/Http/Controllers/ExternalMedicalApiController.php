@@ -411,12 +411,13 @@ class ExternalMedicalApiController extends Controller
     public function showByReferenceNumber(Request $request, string $referenceNumber): JsonResponse
     {
         // Log the API call FIRST, before any potential errors
+        // Authenticated staff/API audit trail: keep the full reference number so actions stay traceable.
         $this->auditLogService->logActivity(
             'READ',
             'External Medical API',
             sprintf(
                 'API call to retrieve applicant by Reference Number: %s from IP %s.',
-                \App\Helpers\DataMaskingHelper::maskReferenceForLog($referenceNumber),
+                $referenceNumber,
                 $request->ip() ?? 'unknown'
             ),
             null,
@@ -433,12 +434,13 @@ class ExternalMedicalApiController extends Controller
             return $this->formatResponse($profile, "Reference Number: $referenceNumber", $request);
         } catch (\Throwable $e) {
             // Log the error but still throw it
+            // Authenticated staff/API audit trail: keep the full reference number so actions stay traceable.
             $this->auditLogService->logActivity(
                 'READ_ERROR',
                 'External Medical API',
                 sprintf(
                     'API call failed for Reference Number: %s from IP %s. Error: %s',
-                    \App\Helpers\DataMaskingHelper::maskReferenceForLog($referenceNumber),
+                    $referenceNumber,
                     $request->ip() ?? 'unknown',
                     $e->getMessage()
                 ),

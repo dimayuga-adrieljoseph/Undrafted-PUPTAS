@@ -200,12 +200,13 @@ class ExternalStudentApiController extends Controller
             ->first();
 
         if (! $application || ! $application->user) {
+            // Authenticated staff/API audit trail: keep the full reference number so actions stay traceable.
             $this->auditLogService->logActivity(
                 'READ_MISS',
                 'External API',
                 sprintf(
                     'External student lookup miss for reference_number %s from IP %s.',
-                    \App\Helpers\DataMaskingHelper::maskReferenceForLog($referenceNumber),
+                    $referenceNumber,
                     $request->ip() ?? 'unknown'
                 ),
                 null,
@@ -253,12 +254,13 @@ class ExternalStudentApiController extends Controller
             'updated_at' => $user->updated_at,
         ];
 
+        // Authenticated staff/API audit trail: keep the full reference number so actions stay traceable.
         $this->auditLogService->logActivity(
             'READ',
             'External API',
             sprintf(
                 'External student lookup success for reference_number %s from IP %s.',
-                \App\Helpers\DataMaskingHelper::maskReferenceForLog($referenceNumber),
+                $referenceNumber,
                 $request->ip() ?? 'unknown'
             ),
             null,

@@ -57,15 +57,14 @@ class ProcessMedicalWebhookJob implements ShouldQueue
             }
 
             if (!$profile) {
-                $maskedLookup = $referenceNumber ? \App\Helpers\DataMaskingHelper::maskReferenceForLog($lookupIdentifier) : $lookupIdentifier;
-                $maskedRef = $referenceNumber ? \App\Helpers\DataMaskingHelper::maskReferenceForLog($referenceNumber) : 'not provided';
+                // Authenticated staff/API audit trail: keep the full reference number so actions stay traceable.
                 $auditLogService->logActivity(
                     'WEBHOOK_MISS',
                     'External Medical API Worker',
                     sprintf(
                         'Webhook received for ineligible or unknown student: %s (reference_number: %s, idp_user_id: %s) from IP %s.',
-                        $maskedLookup,
-                        $maskedRef,
+                        $lookupIdentifier,
+                        $referenceNumber ?: 'not provided',
                         $idpUserId ?: 'not provided',
                         $this->ipAddress
                     ),
