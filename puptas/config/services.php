@@ -106,6 +106,10 @@ return [
         'ref_daily_limit'  => (int) env('STATUS_CHECKER_REF_DAILY_LIMIT', 60),
         'ip_minute_limit'   => (int) env('STATUS_CHECKER_IP_MINUTE_LIMIT', 60),
         'disable_throttling' => (bool) env('STATUS_CHECKER_DISABLE_THROTTLING', false),
+        'name_fail_limit'  => (int) env('STATUS_CHECKER_NAME_FAIL_LIMIT', 30),
+        'name_fail_decay'  => (int) env('STATUS_CHECKER_NAME_FAIL_DECAY', 3600),
+        'ip_fail_limit'    => (int) env('STATUS_CHECKER_IP_FAIL_LIMIT', 100),
+        'ip_fail_decay'    => (int) env('STATUS_CHECKER_IP_FAIL_DECAY', 600),
     ],
     'auth' => [
         'login_rate_limit' => (int) env('LOGIN_RATE_LIMIT', 5),

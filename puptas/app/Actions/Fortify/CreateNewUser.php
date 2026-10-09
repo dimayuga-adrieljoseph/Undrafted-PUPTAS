@@ -145,7 +145,7 @@ class CreateNewUser implements CreatesNewUsers
 
                 \Log::info('Email override: allowing registration without a TestPasser record.', [
                     'email' => $email,
-                    'reference_number' => $inputRefNumber,
+                    'reference_number' => \App\Helpers\DataMaskingHelper::maskReferenceForLog($inputRefNumber),
                 ]);
             }
 

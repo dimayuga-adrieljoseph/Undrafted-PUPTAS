@@ -37,7 +37,7 @@ test('endpoint works with only reference number, first name, and last name', fun
 
     // Verify audit log was created
     $auditLog = AuditLog::where('module_name', 'Public Status Checker')
-        ->where('description', 'like', '%2026-000001%')
+        ->where('description', 'like', '%2026-***-***%')
         ->latest()
         ->first();
 
@@ -65,7 +65,7 @@ test('endpoint returns not found for non-existent record', function () {
 
     // Verify audit log was created
     $auditLog = AuditLog::where('module_name', 'Public Status Checker')
-        ->where('description', 'like', '%2026-999999%')
+        ->where('description', 'like', '%2026-***-***%')
         ->latest()
         ->first();
 

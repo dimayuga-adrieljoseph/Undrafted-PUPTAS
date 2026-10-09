@@ -416,7 +416,7 @@ class ExternalMedicalApiController extends Controller
             'External Medical API',
             sprintf(
                 'API call to retrieve applicant by Reference Number: %s from IP %s.',
-                $referenceNumber,
+                \App\Helpers\DataMaskingHelper::maskReferenceForLog($referenceNumber),
                 $request->ip() ?? 'unknown'
             ),
             null,
@@ -438,7 +438,7 @@ class ExternalMedicalApiController extends Controller
                 'External Medical API',
                 sprintf(
                     'API call failed for Reference Number: %s from IP %s. Error: %s',
-                    $referenceNumber,
+                    \App\Helpers\DataMaskingHelper::maskReferenceForLog($referenceNumber),
                     $request->ip() ?? 'unknown',
                     $e->getMessage()
                 ),

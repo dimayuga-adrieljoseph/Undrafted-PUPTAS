@@ -205,7 +205,7 @@ class ExternalStudentApiController extends Controller
                 'External API',
                 sprintf(
                     'External student lookup miss for reference_number %s from IP %s.',
-                    $referenceNumber,
+                    \App\Helpers\DataMaskingHelper::maskReferenceForLog($referenceNumber),
                     $request->ip() ?? 'unknown'
                 ),
                 null,
@@ -258,7 +258,7 @@ class ExternalStudentApiController extends Controller
             'External API',
             sprintf(
                 'External student lookup success for reference_number %s from IP %s.',
-                $referenceNumber,
+                \App\Helpers\DataMaskingHelper::maskReferenceForLog($referenceNumber),
                 $request->ip() ?? 'unknown'
             ),
             null,

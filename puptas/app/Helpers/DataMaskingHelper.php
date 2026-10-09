@@ -200,4 +200,20 @@ class DataMaskingHelper
 
         return substr($ref, 0, 3) . '****' . substr($ref, -4);
     }
+
+    /**
+     * Mask a reference number for system logs and audit descriptions (e.g. "2026-123-456" -> "2026-***-***").
+     * Preserves only the first 4 characters followed by "-***-***".
+     */
+    public static function maskReferenceForLog(?string $ref): string
+    {
+        if ($ref === null || trim($ref) === '') {
+            return '';
+        }
+
+        $ref = trim($ref);
+        $prefix = strlen($ref) >= 4 ? substr($ref, 0, 4) : $ref;
+
+        return $prefix . '-***-***';
+    }
 }

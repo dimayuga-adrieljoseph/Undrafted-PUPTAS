@@ -146,10 +146,11 @@ class WaiverManagementController extends Controller
             });
 
             $name = $testPasser->first_name . ' ' . $testPasser->surname;
+            $maskedRef = \App\Helpers\DataMaskingHelper::maskReferenceForLog($testPasser->reference_number);
             $this->auditLogService->logActivity(
                 AuditLog::ACTION_UPDATE,
                 'Waiver Management',
-                "Tagged applicant $name (Ref: {$testPasser->reference_number}) as Waiver Applicant (On Probation)."
+                "Tagged applicant $name (Ref: {$maskedRef}) as Waiver Applicant (On Probation)."
             );
 
             return redirect()->back()->with('success', "Applicant $name has been tagged as Waiver Applicant and placed On Probation.");
@@ -189,10 +190,11 @@ class WaiverManagementController extends Controller
 
             $name = $testPasser->first_name . ' ' . $testPasser->surname;
             $reason = $request->input('reason');
+            $maskedRef = \App\Helpers\DataMaskingHelper::maskReferenceForLog($testPasser->reference_number);
             $this->auditLogService->logActivity(
                 AuditLog::ACTION_UPDATE,
                 'Waiver Management',
-                "Untagged applicant $name (Ref: {$testPasser->reference_number}) from Waiver Program. Reason: $reason"
+                "Untagged applicant $name (Ref: {$maskedRef}) from Waiver Program. Reason: $reason"
             );
 
             return redirect()->back()->with('success', "Applicant $name has been removed from the Waiver Program.");
