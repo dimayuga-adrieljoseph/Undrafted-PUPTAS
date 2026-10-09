@@ -57,6 +57,7 @@ class ProcessMedicalWebhookJob implements ShouldQueue
             }
 
             if (!$profile) {
+                // Authenticated staff/API audit trail: keep the full reference number so actions stay traceable.
                 $auditLogService->logActivity(
                     'WEBHOOK_MISS',
                     'External Medical API Worker',

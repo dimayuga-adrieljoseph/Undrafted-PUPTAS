@@ -146,6 +146,7 @@ class WaiverManagementController extends Controller
             });
 
             $name = $testPasser->first_name . ' ' . $testPasser->surname;
+            // Authenticated staff/API audit trail: keep the full reference number so actions stay traceable.
             $this->auditLogService->logActivity(
                 AuditLog::ACTION_UPDATE,
                 'Waiver Management',
@@ -189,6 +190,7 @@ class WaiverManagementController extends Controller
 
             $name = $testPasser->first_name . ' ' . $testPasser->surname;
             $reason = $request->input('reason');
+            // Authenticated staff/API audit trail: keep the full reference number so actions stay traceable.
             $this->auditLogService->logActivity(
                 AuditLog::ACTION_UPDATE,
                 'Waiver Management',

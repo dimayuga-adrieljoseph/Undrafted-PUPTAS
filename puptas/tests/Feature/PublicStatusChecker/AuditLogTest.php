@@ -37,9 +37,10 @@ test('successful status check creates audit log entry', function () {
         'user_id' => null, // Public endpoint, no authenticated user
     ]);
 
-    // Verify the description contains the reference number and outcome
+    // Verify the description contains the masked reference number and outcome
     $log = AuditLog::where('module_name', 'Public Status Checker')->latest()->first();
-    expect($log->description)->toContain('2026-900001');
+    expect($log->description)->toContain('2026-***-***');
+    expect($log->description)->not->toContain('2026-900001');
     expect($log->description)->toContain('matched');
 });
 
@@ -63,9 +64,10 @@ test('failed status check creates audit log entry', function () {
         'user_id' => null,
     ]);
 
-    // Verify the description contains the reference number and outcome
+    // Verify the description contains the masked reference number and outcome
     $log = AuditLog::where('module_name', 'Public Status Checker')->latest()->first();
-    expect($log->description)->toContain('2026-999999');
+    expect($log->description)->toContain('2026-***-***');
+    expect($log->description)->not->toContain('2026-999999');
     expect($log->description)->toContain('not_matched');
 });
 
@@ -138,6 +140,7 @@ test('audit log does not store plaintext names', function () {
     expect($log->description)->not->toContain('Sensitive');
     expect($log->description)->not->toContain('Name');
     
-    // But reference number should be present
-    expect($log->description)->toContain('2026-900004');
+    // Reference number should be masked (first 4 chars + -***-***)
+    expect($log->description)->toContain('2026-***-***');
+    expect($log->description)->not->toContain('2026-900004');
 });

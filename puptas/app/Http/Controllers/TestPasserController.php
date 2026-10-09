@@ -1053,7 +1053,7 @@ class TestPasserController extends Controller
         if (strpos($filename, '..') !== false) {
             \Log::warning('SAR download blocked: path traversal attempt detected', [
                 'filename' => $filename,
-                'reference' => $reference,
+                'reference' => \App\Helpers\DataMaskingHelper::maskReferenceForLog($reference),
             ]);
             abort(400, 'Invalid filename');
         }
@@ -1083,7 +1083,7 @@ class TestPasserController extends Controller
         if (!$disk->exists($filename)) {
             \Log::warning('SAR file not found, attempting to regenerate', [
                 'filename' => $filename,
-                'reference' => $reference,
+                'reference' => \App\Helpers\DataMaskingHelper::maskReferenceForLog($reference),
             ]);
 
             // Try to regenerate the SAR file
@@ -1095,7 +1095,7 @@ class TestPasserController extends Controller
                 if (!$sarGeneration) {
                     \Log::error('SAR generation record not found', [
                         'filename' => $filename,
-                        'reference' => $reference,
+                        'reference' => \App\Helpers\DataMaskingHelper::maskReferenceForLog($reference),
                     ]);
                     abort(404, 'File not found or expired. Please contact the admission office.');
                 }
@@ -1134,12 +1134,12 @@ class TestPasserController extends Controller
 
                 \Log::info('SAR file regenerated successfully', [
                     'filename' => $filename,
-                    'reference' => $reference,
+                    'reference' => \App\Helpers\DataMaskingHelper::maskReferenceForLog($reference),
                 ]);
             } catch (\Exception $e) {
                 \Log::error('SAR regeneration exception', [
                     'filename' => $filename,
-                    'reference' => $reference,
+                    'reference' => \App\Helpers\DataMaskingHelper::maskReferenceForLog($reference),
                     'error' => $e->getMessage(),
                 ]);
                 abort(500, 'Unable to regenerate file. Please contact the admission office.');

@@ -200,6 +200,7 @@ class ExternalStudentApiController extends Controller
             ->first();
 
         if (! $application || ! $application->user) {
+            // Authenticated staff/API audit trail: keep the full reference number so actions stay traceable.
             $this->auditLogService->logActivity(
                 'READ_MISS',
                 'External API',
@@ -253,6 +254,7 @@ class ExternalStudentApiController extends Controller
             'updated_at' => $user->updated_at,
         ];
 
+        // Authenticated staff/API audit trail: keep the full reference number so actions stay traceable.
         $this->auditLogService->logActivity(
             'READ',
             'External API',

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\DataMaskingHelper;
 use App\Models\AuditLog;
 use App\Repositories\Contracts\AuditLogRepositoryInterface;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -222,9 +223,11 @@ class AuditLogService
         $firstNameHash = hash('sha256', strtolower(trim($firstName)));
         $lastNameHash = hash('sha256', strtolower(trim($lastName)));
         
+        $maskedRef = DataMaskingHelper::maskReferenceForLog($referenceNumber);
+
         $description = sprintf(
             "Public status check: Reference=%s, Outcome=%s (IP: %s)",
-            $referenceNumber,
+            $maskedRef,
             $outcome,
             $ipAddress ?? 'unknown'
         );
