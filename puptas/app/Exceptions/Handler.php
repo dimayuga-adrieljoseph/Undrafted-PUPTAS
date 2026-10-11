@@ -30,6 +30,11 @@ class Handler extends ExceptionHandler
         'secret',
         'api_key',
         'authorization',
+        'access_token',
+        'refresh_token',
+        'mfa_code',
+        'otp',
+        'totp',
     ];
 
     /**

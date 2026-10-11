@@ -79,6 +79,9 @@ return Application::configure(basePath: dirname(__DIR__))
             $schedule->command('data-retention:purge --force')->dailyAt('02:00');
         }
 
+        // Purge old audit logs monthly (retain 1 year of logs for compliance)
+        $schedule->command('audit:purge --days=365')->monthly()->at('03:00');
+
         // Check IDP Health every minute for the emergency fallback
         $schedule->command('idp:check-health')->everyMinute();
     })->create();

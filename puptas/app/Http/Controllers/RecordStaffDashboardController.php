@@ -19,6 +19,7 @@ use App\Services\DashboardService;
 use App\Services\UserService;
 use App\Services\ApplicationService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Http\Requests\ChangeCourseRequest;
 
 class RecordStaffDashboardController extends Controller
@@ -29,17 +30,20 @@ class RecordStaffDashboardController extends Controller
     protected UserService $userService;
     protected ApplicationService $applicationService;
     protected \App\Services\AuditLogService $auditLogService;
+    protected \App\Services\IdpService $idpService;
 
     public function __construct(
         DashboardService $dashboardService,
         UserService $userService,
         ApplicationService $applicationService,
-        \App\Services\AuditLogService $auditLogService
+        \App\Services\AuditLogService $auditLogService,
+        \App\Services\IdpService $idpService
     ) {
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
         $this->applicationService = $applicationService;
         $this->auditLogService = $auditLogService;
+        $this->idpService = $idpService;
     }
 
     /**
@@ -381,10 +385,17 @@ class RecordStaffDashboardController extends Controller
             // Automatically set to officially enrolled if records are completed 
             // and application was cleared for enrollment or accepted
             if (in_array($application->status, ['cleared_for_enrollment', 'accepted'])) {
+                $wasAlreadyEnrolled = $application->enrollment_status === 'officially_enrolled';
+                
                 $application->update([
                     'status'            => 'accepted',
                     'enrollment_status' => 'officially_enrolled',
                 ]);
+
+                // Update IDP account type only if this is the first time being enrolled
+                if (!$wasAlreadyEnrolled) {
+                    $this->dispatchIdpUpdate((string) $application->user_id, $request->input('mfa_code'));
+                }
             }
 
             DB::commit();
@@ -543,8 +554,9 @@ class RecordStaffDashboardController extends Controller
 
     /**
      * Tag an applicant as officially enrolled
+     * Also updates the applicant's role in IDP from "applicant" to "student"
      */
-    public function tag($id)
+    public function tag(Request $request, $id)
     {
         $this->ensureRole($this->getRoleId());
 
@@ -594,6 +606,9 @@ class RecordStaffDashboardController extends Controller
 
             DB::commit();
 
+            // Update the applicant's role in IDP from "applicant" to "student" via queue
+            $this->dispatchIdpUpdate($id, $request->input('mfa_code'));
+
             // Return updated application data so frontend can update without full reload
             $application->refresh();
 
@@ -605,6 +620,103 @@ class RecordStaffDashboardController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Failed to tag: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Dispatch IDP account type update to queue
+     * This queues a job to update the applicant's account type in IDP from "applicant" to "student"
+     * 
+     * SECURITY: This method should only be called after proper authorization checks
+     * 
+     * @param string $userId The local user ID
+     * @param string|null $mfaCode Optional MFA code if required by IDP
+     * @return void
+     */
+    private function dispatchIdpUpdate(string $userId, ?string $mfaCode = null): void
+    {
+        try {
+            // SECURITY: Verify the current user is authorized to perform this action
+            $currentUser = auth()->user();
+            if (!$currentUser || !in_array($currentUser->role_id, [2, 6, 7])) {
+                Log::warning('Unauthorized attempt to update IDP account type', [
+                    'user_id' => $userId,
+                    'attempted_by' => $currentUser?->id ?? 'unauthenticated',
+                ]);
+                return;
+            }
+
+            // Get the applicant's IDP user ID from the User model
+            $user = \App\Models\User::where('id', $userId)->first();
+
+            if (!$user) {
+                Log::warning('User not found when attempting IDP account type update', [
+                    'user_id' => $userId,
+                ]);
+                return;
+            }
+
+            // SECURITY: Only update IDP for users who have IDP accounts
+            // This prevents attempting to modify non-IDP users
+            $idpUserId = $user->idp_user_id;
+
+            if (empty($idpUserId)) {
+                Log::warning('User does not have an IDP user ID, skipping IDP account type update', [
+                    'user_id' => $userId,
+                ]);
+                return;
+            }
+
+            // SECURITY: Get the admin's access token from session (not exposed to client)
+            $accessToken = $this->idpService->getAdminAccessToken();
+
+            if (empty($accessToken)) {
+                Log::error('Admin access token not available for IDP account type update', [
+                    'user_id' => $userId,
+                    'idp_user_id' => $idpUserId,
+                    'attempted_by' => $currentUser->id ?? 'unknown',
+                ]);
+                return;
+            }
+
+            // SECURITY: Validate MFA code format if provided
+            if ($mfaCode !== null && !preg_match('/^\d{6}$/', $mfaCode)) {
+                Log::warning('Invalid MFA code format provided', [
+                    'user_id' => $userId,
+                    'attempted_by' => $currentUser->id ?? 'unknown',
+                ]);
+                // Continue without MFA code rather than failing
+                $mfaCode = null;
+            }
+
+            // Get user email for job logging
+            $userEmail = $user->email ?? 'N/A';
+
+            // Dispatch the UpdateIdpAccountType job to the queue
+            \App\Jobs\UpdateIdpAccountType::dispatch(
+                $userId,
+                $idpUserId,
+                $userEmail,
+                $accessToken,
+                $mfaCode,
+                $currentUser->id ?? null,
+                false // not from sync command
+            );
+
+            Log::info('Dispatched IDP account type update job', [
+                'user_id' => $userId,
+                'idp_user_id' => $idpUserId,
+                'performed_by' => $currentUser->id ?? 'unknown',
+            ]);
+        } catch (\Exception $e) {
+            // SECURITY: Catch any exceptions to prevent blocking the enrollment process
+            // and prevent information leakage about internal systems
+            Log::error('Exception during IDP account type update', [
+                'user_id' => $userId,
+                'exception' => $e->getMessage(),
+                'attempted_by' => auth()->user()?->id ?? 'unknown',
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
     }
 
