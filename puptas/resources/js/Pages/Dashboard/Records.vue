@@ -4,6 +4,7 @@ import { Head, Link } from "@inertiajs/vue3";
 import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
 import BlurText from "@/Components/BlurText.vue";
 import ImageViewer from "@/Components/ImageViewer.vue";
+import EnrollmentReasonModal from "@/Components/EnrollmentReasonModal.vue";
 
 import UserDetailsModal from "@/Pages/Applications/UserDetailsModal.vue";
 import { useMaskingState } from "@/Composables/useMaskingState";
@@ -305,36 +306,70 @@ const formatDate = (date) => {
     });
 };
 
-const acceptApplication = async () => {
-    try {
-        const taggedId = selectedUser.value.id;
-        await axios.post(`${props.baseUrl}/tag/${taggedId}`);
-        showSnackbar("Tagged as Enrolled");
+// Reason Modal for Tag / Untag
+const showReasonModal = ref(false);
+const reasonModalAction = ref('tag');
+const isReasonSubmitting = ref(false);
+const reasonErrorMessage = ref('');
 
-        // Immediately remove from the list so UI updates without waiting for refetch
-        users.value = users.value.filter(u => u.id !== taggedId);
-        selectedUser.value = null;
-
-        await fetchUsers();
-        await fetchStats();
-    } catch (e) {
-        console.error("Tag failed:", e);
-        const msg = e.response?.data?.message || "Failed to tag application";
-        showSnackbar(msg);
-    }
+const openTagModal = () => {
+    reasonModalAction.value = 'tag';
+    reasonErrorMessage.value = '';
+    showReasonModal.value = true;
 };
 
-const untagApplication = async () => {
-    try {
-        await axios.post(`${props.baseUrl}/untag/${selectedUser.value.id}`);
-        showSnackbar("Reverted to temporary enrolled");
-        selectedUser.value = null;
-        await fetchUsers();
-        await fetchStats();
-    } catch (e) {
-        console.error("Untag failed:", e);
-        const msg = e.response?.data?.message || "Failed to untag application";
-        showSnackbar(msg);
+const openUntagModal = () => {
+    reasonModalAction.value = 'untag';
+    reasonErrorMessage.value = '';
+    showReasonModal.value = true;
+};
+
+const handleReasonConfirm = async (reason) => {
+    if (!selectedUser.value?.id) return;
+    isReasonSubmitting.value = true;
+    reasonErrorMessage.value = '';
+
+    if (reasonModalAction.value === 'tag') {
+        try {
+            const taggedId = selectedUser.value.id;
+            await axios.post(`${props.baseUrl}/tag/${taggedId}`, { reason });
+            showSnackbar("Tagged as Enrolled");
+            showReasonModal.value = false;
+
+            // Immediately remove from the list so UI updates without waiting for refetch
+            users.value = users.value.filter(u => u.id !== taggedId);
+            selectedUser.value = null;
+
+            await fetchUsers();
+            await fetchStats();
+        } catch (e) {
+            console.error("Tag failed:", e);
+            const msg = e.response?.data?.errors?.reason?.[0] ||
+                e.response?.data?.message ||
+                "Failed to tag application";
+            reasonErrorMessage.value = msg;
+            showSnackbar(msg);
+        } finally {
+            isReasonSubmitting.value = false;
+        }
+    } else {
+        try {
+            await axios.post(`${props.baseUrl}/untag/${selectedUser.value.id}`, { reason });
+            showSnackbar("Reverted to temporary enrolled");
+            showReasonModal.value = false;
+            selectedUser.value = null;
+            await fetchUsers();
+            await fetchStats();
+        } catch (e) {
+            console.error("Untag failed:", e);
+            const msg = e.response?.data?.errors?.reason?.[0] ||
+                e.response?.data?.message ||
+                "Failed to untag application";
+            reasonErrorMessage.value = msg;
+            showSnackbar(msg);
+        } finally {
+            isReasonSubmitting.value = false;
+        }
     }
 };
 </script>
@@ -671,7 +706,7 @@ const untagApplication = async () => {
                     <div class="space-y-3">
                         <button
                             v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
-                            @click="acceptApplication"
+                            @click="openTagModal"
                             class="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center justify-center gap-2 text-sm min-h-[44px]"
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -680,7 +715,7 @@ const untagApplication = async () => {
                             Tag: Enrolled
                         </button>
                         <button
-                            @click="untagApplication"
+                            @click="openUntagModal"
                             class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center gap-2 text-sm min-h-[44px]"
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -699,6 +734,17 @@ const untagApplication = async () => {
             :src="previewImage"
             :alt="previewAlt"
             @close="closeImageModal"
+        />
+
+        <!-- Reason Modal for Tag / Untag Enrollment -->
+        <EnrollmentReasonModal
+            :show="showReasonModal"
+            :action-type="reasonModalAction"
+            :applicant-name="selectedUser ? `${selectedUser.firstname || ''} ${selectedUser.lastname || ''}`.trim() : 'Applicant'"
+            :loading="isReasonSubmitting"
+            :error-message="reasonErrorMessage"
+            @close="showReasonModal = false"
+            @confirm="handleReasonConfirm"
         />
 
         <!-- Snackbar Notification -->
