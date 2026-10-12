@@ -198,6 +198,13 @@ export function useSidebarNavigation() {
                         route: 'score-overrides.index',
                         activeRoutes: ['score-overrides.index'],
                     },
+                    {
+                        key: 'idp-sync-monitor',
+                        label: 'IDP Sync Monitor',
+                        icon: 'user-shield',
+                        route: 'idp-sync-monitor.index',
+                        activeRoutes: ['idp-sync-monitor.index'],
+                    },
                 ]),
             },
         ] : []),
