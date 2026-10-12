@@ -150,12 +150,10 @@ test('valid tag writes exactly one audit row with reason, previous and new statu
     expect($audit->action_type)->toBe('UPDATE');
     expect($audit->module_name)->toBe('Applications');
     expect((int) $audit->user_id)->toBe((int) $registrar->id);
-    expect($audit->description)->toContain((string) $applicant->id);
-    expect($audit->description)->toContain('interview_passed');
-    expect($audit->description)->toContain('accepted');
-    expect($audit->description)->toContain('temporary');
-    expect($audit->description)->toContain('officially_enrolled');
-    expect($audit->description)->toContain('All enrollment credentials verified and valid.');
+    expect($audit->description)->toContain("Tagged applicant (user_id: {$applicant->id}, application_id: {$application->id})");
+    expect($audit->description)->toContain("status: 'interview_passed' -> 'accepted'");
+    expect($audit->description)->toContain("enrollment_status: 'temporary' -> 'officially_enrolled'");
+    expect($audit->description)->toContain('Reason: All enrollment credentials verified and valid.');
 });
 
 // ─── 3. Audit Trail & Status Transition on Valid Untag ───────────
@@ -181,10 +179,10 @@ test('valid untag writes exactly one audit row with reason, previous and new sta
     expect($audit->action_type)->toBe('UPDATE');
     expect($audit->module_name)->toBe('Applications');
     expect((int) $audit->user_id)->toBe((int) $registrar->id);
-    expect($audit->description)->toContain((string) $applicant->id);
-    expect($audit->description)->toContain('officially_enrolled');
-    expect($audit->description)->toContain('temporary');
-    expect($audit->description)->toContain('Applicant requested cancellation of enrollment registration.');
+    expect($audit->description)->toContain("Untagged applicant (user_id: {$applicant->id}, application_id: {$application->id})");
+    expect($audit->description)->toContain("status: 'accepted' -> 'cleared_for_enrollment'");
+    expect($audit->description)->toContain("enrollment_status: 'officially_enrolled' -> 'temporary'");
+    expect($audit->description)->toContain('Reason: Applicant requested cancellation of enrollment registration.');
 });
 
 // ─── 4. Guard Failures Write No Audit Row ────────────────────────
@@ -234,6 +232,69 @@ test('failed guard on untag writes no audit row and changes no status', function
 
     $application->refresh();
     expect($application->enrollment_status)->toBe('temporary');
+    expect(AuditLog::count())->toBe(0);
+});
+
+// ─── 4b. Synchronous Audit Failure Triggers DB Rollback ───────────
+
+test('audit write failure during tag triggers rollback: status unchanged and no partial row', function () {
+    $registrar = User::factory()->create(['role_id' => RoleId::Registrar->value]);
+    $applicant = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+    $application = createEligibleApplicationForTag((string) $applicant->id);
+
+    // Mock AuditLogRepositoryInterface to simulate DB/audit failure
+    $mockRepo = Mockery::mock(\App\Repositories\Contracts\AuditLogRepositoryInterface::class);
+    $mockRepo->shouldReceive('create')->andThrow(new \Exception('Audit storage disk full'));
+    app()->instance(\App\Repositories\Contracts\AuditLogRepositoryInterface::class, $mockRepo);
+
+    $this->actingAs($registrar)
+        ->postJson("/record-dashboard/tag/{$applicant->id}", [
+            'reason' => 'Valid reason for tagging',
+        ])
+        ->assertStatus(500)
+        ->assertJson([
+            'message' => 'Failed to tag: Audit storage disk full',
+        ]);
+
+    // Verify database transaction rolled back status and records process
+    $application->refresh();
+    expect($application->enrollment_status)->toBe('temporary');
+    expect($application->status)->toBe('interview_passed');
+
+    // No partial records process
+    expect(ApplicationProcess::where('application_id', $application->id)->where('stage', 'records')->exists())->toBeFalse();
+    // No audit log
+    expect(AuditLog::count())->toBe(0);
+});
+
+test('audit write failure during untag triggers rollback: status unchanged and no partial row', function () {
+    $registrar = User::factory()->create(['role_id' => RoleId::Registrar->value]);
+    $applicant = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+    $application = createOfficiallyEnrolledApplication((string) $applicant->id);
+
+    // Mock AuditLogRepositoryInterface to simulate DB/audit failure
+    $mockRepo = Mockery::mock(\App\Repositories\Contracts\AuditLogRepositoryInterface::class);
+    $mockRepo->shouldReceive('create')->andThrow(new \Exception('Audit storage disk full'));
+    app()->instance(\App\Repositories\Contracts\AuditLogRepositoryInterface::class, $mockRepo);
+
+    $this->actingAs($registrar)
+        ->postJson("/record-dashboard/untag/{$applicant->id}", [
+            'reason' => 'Valid reason for untagging',
+        ])
+        ->assertStatus(500)
+        ->assertJson([
+            'message' => 'Failed to untag: Audit storage disk full',
+        ]);
+
+    // Verify database transaction rolled back status
+    $application->refresh();
+    expect($application->enrollment_status)->toBe('officially_enrolled');
+    expect($application->status)->toBe('accepted');
+
+    // Records process remained completed
+    $process = ApplicationProcess::where('application_id', $application->id)->where('stage', 'records')->first();
+    expect($process->status)->toBe('completed');
+    // No audit log
     expect(AuditLog::count())->toBe(0);
 });
 

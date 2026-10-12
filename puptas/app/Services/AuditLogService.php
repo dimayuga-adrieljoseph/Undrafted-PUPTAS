@@ -160,6 +160,82 @@ class AuditLogService
     }
 
     /**
+     * Log an activity synchronously within the current database transaction.
+     * Used specifically where audit trail writes must be atomic with the database transaction.
+     * Unlike logActivity(), this writes immediately via the repository and DOES NOT
+     * swallow exceptions, allowing callers (like DB transactions) to catch errors and roll back.
+     *
+     * @throws \Throwable
+     */
+    public function logActivitySync(
+        string $actionType,
+        string $moduleName,
+        string $description,
+        ?Authenticatable $actor = null,
+        ?string $logCategory = null,
+        ?array $oldValues = null,
+        ?array $newValues = null
+    ): AuditLog {
+        $actor = $actor ?? Auth::user();
+        $actorId = $actor ? ($actor->id ?? $actor->idp_user_id) : 'null';
+
+        if ($oldValues !== null && $newValues !== null && strtoupper($actionType) === AuditLog::ACTION_UPDATE) {
+            $changes = [];
+            foreach ($newValues as $key => $newValue) {
+                if (in_array($key, ['updated_at', 'created_at', 'id'])) {
+                    continue;
+                }
+                
+                $oldValue = $oldValues[$key] ?? null;
+                if ($oldValue !== $newValue) {
+                    $oldStr = is_array($oldValue) ? json_encode($oldValue) : (string)$oldValue;
+                    $newStr = is_array($newValue) ? json_encode($newValue) : (string)$newValue;
+                    $changes[] = "{$key}: '{$oldStr}' -> '{$newStr}'";
+                }
+            }
+            if (!empty($changes)) {
+                $description .= " [Changes: " . implode(', ', $changes) . "]";
+            }
+        }
+
+        logger()->info('[AuditLogSync] ' . strtoupper($actionType) . ' | ' . $moduleName . ' | user=' . $actorId . ' | ' . $description);
+
+        $request = request();
+        $sessionId = null;
+        if ($request && method_exists($request, 'hasSession') && $request->hasSession()) {
+            $sessionId = $request->session()->getId();
+        }
+
+        $id = $actor ? ($actor->id ?? $actor->idp_user_id) : null;
+        $isNumericId = $id !== null && is_numeric($id);
+
+        $logData = [
+            'user_id'      => $isNumericId ? $id : null,
+            'username'     => $actor?->email ?? 'system',
+            'user_role'    => $this->resolveRole($actor),
+            'log_type'     => $this->resolveLogType(
+                (string) $actionType,
+                $logCategory,
+                (string) $moduleName
+            ),
+            'log_category' => $logCategory ?? AuditLog::CATEGORY_SYSTEM_OPERATION,
+            'action_type'  => strtoupper($actionType),
+            'module_name'  => $moduleName,
+            'description'  => $description,
+            'login_time'   => null,
+            'logout_time'  => null,
+            'ip_address'   => $request?->ip(),
+            'user_agent'   => $this->truncate((string) ($request?->userAgent() ?? ''), 512),
+            'request_url'  => $this->truncate((string) ($request?->url() ?? ''), 512),
+            'session_id'   => $sessionId,
+            'old_values'   => $oldValues,
+            'new_values'   => $newValues,
+        ];
+
+        return $this->auditLogRepository->create($logData);
+    }
+
+    /**
      * Log a course change operation.
      * Records both successful and denied course change attempts for audit trail.
      *

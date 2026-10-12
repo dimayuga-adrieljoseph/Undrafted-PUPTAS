@@ -586,7 +586,7 @@ class RecordStaffDashboardController extends Controller
             ], 403);
         }
 
-        $reason = $request->input('reason');
+        $reason = $request->validated('reason');
         $oldStatus = $application->status;
         $oldEnrollmentStatus = $application->enrollment_status;
         $newStatus = 'accepted';
@@ -612,11 +612,11 @@ class RecordStaffDashboardController extends Controller
                 ]
             );
 
-            // Audit log write within the same transaction
-            $this->auditLogService->logActivity(
+            // Synchronous audit log write within the same transaction — failure will rollback status change
+            $this->auditLogService->logActivitySync(
                 AuditLog::ACTION_UPDATE,
                 'Applications',
-                "Tagged applicant {$id} as officially enrolled (status: '{$oldStatus}' -> '{$newStatus}', enrollment_status: '{$oldEnrollmentStatus}' -> '{$newEnrollmentStatus}'). Reason: {$reason}",
+                "Tagged applicant (user_id: {$id}, application_id: {$application->id}) as officially enrolled (status: '{$oldStatus}' -> '{$newStatus}', enrollment_status: '{$oldEnrollmentStatus}' -> '{$newEnrollmentStatus}'). Reason: {$reason}",
                 auth()->user(),
                 AuditLog::CATEGORY_ADMISSION_DATA
             );
@@ -652,7 +652,7 @@ class RecordStaffDashboardController extends Controller
             ], 400);
         }
 
-        $reason = $request->input('reason');
+        $reason = $request->validated('reason');
         $oldStatus = $application->status;
         $oldEnrollmentStatus = $application->enrollment_status;
         $newStatus = 'cleared_for_enrollment';
@@ -679,11 +679,11 @@ class RecordStaffDashboardController extends Controller
                 ]);
             }
 
-            // Audit log write within the same transaction
-            $this->auditLogService->logActivity(
+            // Synchronous audit log write within the same transaction — failure will rollback status change
+            $this->auditLogService->logActivitySync(
                 AuditLog::ACTION_UPDATE,
                 'Applications',
-                "Untagged applicant {$id} from officially enrolled to temporary (status: '{$oldStatus}' -> '{$newStatus}', enrollment_status: '{$oldEnrollmentStatus}' -> '{$newEnrollmentStatus}'). Reason: {$reason}",
+                "Untagged applicant (user_id: {$id}, application_id: {$application->id}) from officially enrolled to temporary (status: '{$oldStatus}' -> '{$newStatus}', enrollment_status: '{$oldEnrollmentStatus}' -> '{$newEnrollmentStatus}'). Reason: {$reason}",
                 auth()->user(),
                 AuditLog::CATEGORY_ADMISSION_DATA
             );
