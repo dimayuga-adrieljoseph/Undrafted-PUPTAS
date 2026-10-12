@@ -392,6 +392,25 @@ class RecordStaffDashboardController extends Controller
                     'enrollment_status' => 'officially_enrolled',
                 ]);
 
+                // Log enrollment to audit logs (only if newly enrolled)
+                if (!$wasAlreadyEnrolled) {
+                    try {
+                        $user = $application->user;
+                        $this->auditLogService->logActivity(
+                            'UPDATE',
+                            'Enrollment Status',
+                            "Automatically tagged student {$user->firstname} {$user->lastname} (User ID: {$user->id}) as officially enrolled after records completion by " . (auth()->user()->username ?? 'system'),
+                            $user,
+                            \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                        );
+                    } catch (\Exception $auditException) {
+                        Log::error('Failed to log automatic enrollment to audit', [
+                            'application_id' => $application->id,
+                            'error' => $auditException->getMessage(),
+                        ]);
+                    }
+                }
+
                 // Update IDP account type only if this is the first time being enrolled
                 if (!$wasAlreadyEnrolled) {
                     $this->dispatchIdpUpdate((string) $application->user_id, $request->input('mfa_code'));
@@ -561,6 +580,7 @@ class RecordStaffDashboardController extends Controller
         $this->ensureRole($this->getRoleId());
 
         $application = Application::where('user_id', (string) $id)->firstOrFail();
+        $user = $application->user;
 
         // Check if medical is completed
         $medicalCompleted = $application->processes()
@@ -604,6 +624,15 @@ class RecordStaffDashboardController extends Controller
                 ]
             );
 
+            // Log enrollment to audit logs
+            $this->auditLogService->logActivity(
+                'UPDATE',
+                'Enrollment Status',
+                "Manually tagged student {$user->firstname} {$user->lastname} (User ID: {$user->id}) as officially enrolled by " . auth()->user()->username,
+                $user,
+                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+            );
+
             DB::commit();
 
             // Update the applicant's role in IDP from "applicant" to "student" via queue
@@ -619,6 +648,22 @@ class RecordStaffDashboardController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // Log failed enrollment attempt
+            try {
+                $this->auditLogService->logActivity(
+                    'FAILED',
+                    'Enrollment Status',
+                    "Failed to tag student (User ID: {$id}) as officially enrolled: " . $e->getMessage(),
+                    $user ?? null,
+                    \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                );
+            } catch (\Exception $auditException) {
+                Log::error('Failed to log enrollment failure to audit', [
+                    'error' => $auditException->getMessage(),
+                ]);
+            }
+            
             return response()->json(['message' => 'Failed to tag: ' . $e->getMessage()], 500);
         }
     }
@@ -694,7 +739,7 @@ class RecordStaffDashboardController extends Controller
 
             // Dispatch the UpdateIdpAccountType job to the queue
             \App\Jobs\UpdateIdpAccountType::dispatch(
-                $userId,
+                (int) $userId,  // Cast to int to match job constructor
                 $idpUserId,
                 $userEmail,
                 $accessToken,
@@ -728,6 +773,7 @@ class RecordStaffDashboardController extends Controller
         $this->ensureRole($this->getRoleId());
 
         $application = Application::where('user_id', (string) $id)->firstOrFail();
+        $user = $application->user;
 
         if ($application->enrollment_status !== 'officially_enrolled') {
             return response()->json([
@@ -756,10 +802,35 @@ class RecordStaffDashboardController extends Controller
                 ]);
             }
 
+            // Log untag to audit logs
+            $this->auditLogService->logActivity(
+                'UPDATE',
+                'Enrollment Status',
+                "Reverted student {$user->firstname} {$user->lastname} (User ID: {$user->id}) from officially enrolled to temporary by " . auth()->user()->username,
+                $user,
+                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+            );
+
             DB::commit();
             return response()->json(['message' => 'Reverted to temporary enrolled successfully']);
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // Log failed untag attempt
+            try {
+                $this->auditLogService->logActivity(
+                    'FAILED',
+                    'Enrollment Status',
+                    "Failed to untag student (User ID: {$id}) from officially enrolled: " . $e->getMessage(),
+                    $user ?? null,
+                    \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                );
+            } catch (\Exception $auditException) {
+                Log::error('Failed to log untag failure to audit', [
+                    'error' => $auditException->getMessage(),
+                ]);
+            }
+            
             return response()->json(['message' => 'Failed to untag: ' . $e->getMessage()], 500);
         }
     }
