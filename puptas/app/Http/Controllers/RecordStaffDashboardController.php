@@ -564,15 +564,15 @@ class RecordStaffDashboardController extends Controller
             ], 403);
         }
 
-        // Separation of Duties check: cannot tag if the actor performed document evaluation or interview
+        // Separation of Duties check: cannot tag if the actor performed document evaluation, grade evaluation, or interview
         $evaluatedByActor = $application->processes()
-            ->whereIn('stage', ['document_evaluator', 'interviewer', 'evaluator'])
+            ->whereIn('stage', ApplicationProcess::EVALUATION_STAGES)
             ->where('performed_by', auth()->id())
             ->exists();
 
         if ($evaluatedByActor) {
             return response()->json([
-                'message' => 'Separation of duties violation: You cannot tag an applicant whose document evaluation or interview you personally performed.'
+                'message' => 'Separation of duties violation: You cannot tag an applicant whose evaluation or interview you personally performed.'
             ], 403);
         }
 

@@ -358,12 +358,12 @@ test('registrar (6), admin (2), and superadmin (7) are permitted on tag and unta
 
 // ─── 6. Separation of Duties (SoD) Tests ──────────────────────────
 
-test('same user who performed document evaluation or interview gets 403 on tag', function (string $stage) {
+test('actor who performed document_evaluator, grade_evaluator, or interviewer gets 403 on tag', function (string $stage) {
     $admin = User::factory()->create(['role_id' => RoleId::Admin->value]);
     $applicant = User::factory()->create(['role_id' => RoleId::Applicant->value]);
     $application = createEligibleApplicationForTag((string) $applicant->id);
 
-    // Mark process as performed by this admin
+    // Mark evaluation/interview process as performed by this admin
     ApplicationProcess::create([
         'application_id' => $application->id,
         'stage'          => $stage,
@@ -373,22 +373,48 @@ test('same user who performed document evaluation or interview gets 403 on tag',
 
     $this->actingAs($admin)
         ->postJson("/admin-dashboard/tag/{$applicant->id}", [
-            'reason' => 'Attempting self-tag after evaluation',
+            'reason' => 'Attempting self-tag after evaluation or interview',
         ])
         ->assertForbidden()
         ->assertJson([
-            'message' => 'Separation of duties violation: You cannot tag an applicant whose document evaluation or interview you personally performed.',
+            'message' => 'Separation of duties violation: You cannot tag an applicant whose evaluation or interview you personally performed.',
         ]);
 
     // Ensure status unchanged
     $application->refresh();
     expect($application->enrollment_status)->toBe('temporary');
 })->with([
-    'document_evaluator stage' => 'document_evaluator',
-    'interviewer stage'        => 'interviewer',
+    'document_evaluator stage' => ApplicationProcess::STAGE_DOCUMENT_EVALUATOR,
+    'grade_evaluator stage'    => ApplicationProcess::STAGE_GRADE_EVALUATOR,
+    'interviewer stage'        => ApplicationProcess::STAGE_INTERVIEWER,
 ]);
 
-test('different user who did not perform evaluation or interview can tag successfully', function () {
+test('actor who only has a records row from previous tag/untag can re-tag successfully', function () {
+    $registrar = User::factory()->create(['role_id' => RoleId::Registrar->value]);
+    $applicant = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+    $application = createEligibleApplicationForTag((string) $applicant->id);
+
+    // Prior cycle: registrar had performed a records stage row (tagged then untagged)
+    ApplicationProcess::create([
+        'application_id' => $application->id,
+        'stage'          => ApplicationProcess::STAGE_RECORDS,
+        'status'         => 'in_progress',
+        'performed_by'   => $registrar->id,
+    ]);
+
+    // Re-tagging by the same registrar is allowed because 'records' is not an evaluation stage
+    $this->actingAs($registrar)
+        ->postJson("/record-dashboard/tag/{$applicant->id}", [
+            'reason' => 'Re-tagging after previous untag and verification.',
+        ])
+        ->assertOk()
+        ->assertJson(['enrollment_status' => 'officially_enrolled']);
+
+    $application->refresh();
+    expect($application->enrollment_status)->toBe('officially_enrolled');
+});
+
+test('different actor who did not perform evaluation or interview can tag successfully', function () {
     $evaluator = User::factory()->create(['role_id' => RoleId::DocumentEvaluator->value]);
     $registrar = User::factory()->create(['role_id' => RoleId::Registrar->value]);
     $applicant = User::factory()->create(['role_id' => RoleId::Applicant->value]);
@@ -397,7 +423,7 @@ test('different user who did not perform evaluation or interview can tag success
     // Document evaluator evaluated the applicant
     ApplicationProcess::create([
         'application_id' => $application->id,
-        'stage'          => 'document_evaluator',
+        'stage'          => ApplicationProcess::STAGE_DOCUMENT_EVALUATOR,
         'status'         => 'completed',
         'performed_by'   => $evaluator->id,
     ]);
@@ -422,7 +448,7 @@ test('resubmit cycle still works: different evaluator resubmission allows indepe
     // 1st cycle: returned by originalEvaluator
     ApplicationProcess::create([
         'application_id' => $application->id,
-        'stage'          => 'document_evaluator',
+        'stage'          => ApplicationProcess::STAGE_DOCUMENT_EVALUATOR,
         'status'         => 'returned',
         'performed_by'   => $originalEvaluator->id,
     ]);
@@ -430,7 +456,7 @@ test('resubmit cycle still works: different evaluator resubmission allows indepe
     // 2nd cycle (resubmit): secondEvaluator passed
     ApplicationProcess::create([
         'application_id' => $application->id,
-        'stage'          => 'document_evaluator',
+        'stage'          => ApplicationProcess::STAGE_DOCUMENT_EVALUATOR,
         'status'         => 'completed',
         'performed_by'   => $secondEvaluator->id,
     ]);
@@ -452,7 +478,7 @@ test('untag is unchanged: user who evaluated can still untag', function () {
     // Admin evaluated this applicant earlier
     ApplicationProcess::create([
         'application_id' => $application->id,
-        'stage'          => 'document_evaluator',
+        'stage'          => ApplicationProcess::STAGE_DOCUMENT_EVALUATOR,
         'status'         => 'completed',
         'performed_by'   => $admin->id,
     ]);

@@ -14,6 +14,18 @@ class ApplicationProcess extends Model
 {
     use HasFactory, MassPrunable;
 
+    public const STAGE_DOCUMENT_EVALUATOR = 'document_evaluator';
+    public const STAGE_GRADE_EVALUATOR    = 'grade_evaluator';
+    public const STAGE_INTERVIEWER        = 'interviewer';
+    public const STAGE_MEDICAL            = 'medical';
+    public const STAGE_RECORDS            = 'records';
+
+    public const EVALUATION_STAGES = [
+        self::STAGE_DOCUMENT_EVALUATOR,
+        self::STAGE_GRADE_EVALUATOR,
+        self::STAGE_INTERVIEWER,
+    ];
+
     protected $fillable = [
         'application_id',
         'stage',
