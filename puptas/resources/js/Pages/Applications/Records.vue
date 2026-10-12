@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
+import EnrollmentReasonModal from "@/Components/EnrollmentReasonModal.vue";
 
 import {
     Chart as ChartJS,
@@ -386,52 +387,82 @@ const formatStage = (stage) => {
     return stage.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
-const acceptApplication = async () => {
-    try {
-        const response = await axios.post(`${props.baseUrl}/tag/${selectedUser.value.id}`);
-        showSnackbar("Tagged as Enrolled.");
+// Reason Modal for Tag / Untag
+const showReasonModal = ref(false);
+const reasonModalAction = ref('tag');
+const isReasonSubmitting = ref(false);
+const reasonErrorMessage = ref('');
 
-        // Update the selected user's enrollment status immediately in the UI
-        if (selectedUser.value?.application) {
-            selectedUser.value.application.enrollment_status = response.data.enrollment_status || 'officially_enrolled';
-            selectedUser.value.enrollment_status = response.data.enrollment_status || 'officially_enrolled';
-        }
-
-        // Also update in the users list
-        const idx = users.value.findIndex(u => u.id === selectedUser.value.id);
-        if (idx !== -1) {
-            users.value[idx] = {
-                ...users.value[idx],
-                enrollment_status: response.data.enrollment_status || 'officially_enrolled',
-                application: {
-                    ...users.value[idx].application,
-                    enrollment_status: response.data.enrollment_status || 'officially_enrolled',
-                }
-            };
-        }
-
-        await fetchUsers();
-    } catch (e) {
-        console.error("Accept failed:", e);
-        const msg =
-            e.response?.data?.message ||
-            "Failed to accept application due to an unexpected error.";
-        showSnackbar(msg);
-    }
+const openTagModal = () => {
+    reasonModalAction.value = 'tag';
+    reasonErrorMessage.value = '';
+    showReasonModal.value = true;
 };
 
-const untagApplication = async () => {
-    try {
-        await axios.post(`${props.baseUrl}/untag/${selectedUser.value.id}`);
-        showSnackbar("Reverted to temporary enrolled.");
-        selectedUser.value = null;
-        await fetchUsers();
-    } catch (e) {
-        console.error("Revert failed:", e);
-        const msg =
-            e.response?.data?.message ||
-            "Failed to revert application due to an unexpected error.";
-        showSnackbar(msg);
+const openUntagModal = () => {
+    reasonModalAction.value = 'untag';
+    reasonErrorMessage.value = '';
+    showReasonModal.value = true;
+};
+
+const handleReasonConfirm = async (reason) => {
+    if (!selectedUser.value?.id) return;
+    isReasonSubmitting.value = true;
+    reasonErrorMessage.value = '';
+
+    if (reasonModalAction.value === 'tag') {
+        try {
+            const response = await axios.post(`${props.baseUrl}/tag/${selectedUser.value.id}`, { reason });
+            showSnackbar("Tagged as Enrolled.");
+            showReasonModal.value = false;
+
+            // Update the selected user's enrollment status immediately in the UI
+            if (selectedUser.value?.application) {
+                selectedUser.value.application.enrollment_status = response.data.enrollment_status || 'officially_enrolled';
+                selectedUser.value.enrollment_status = response.data.enrollment_status || 'officially_enrolled';
+            }
+
+            // Also update in the users list
+            const idx = users.value.findIndex(u => u.id === selectedUser.value.id);
+            if (idx !== -1) {
+                users.value[idx] = {
+                    ...users.value[idx],
+                    enrollment_status: response.data.enrollment_status || 'officially_enrolled',
+                    application: {
+                        ...users.value[idx].application,
+                        enrollment_status: response.data.enrollment_status || 'officially_enrolled',
+                    }
+                };
+            }
+
+            await fetchUsers();
+        } catch (e) {
+            console.error("Accept failed:", e);
+            const msg = e.response?.data?.errors?.reason?.[0] ||
+                e.response?.data?.message ||
+                "Failed to accept application due to an unexpected error.";
+            reasonErrorMessage.value = msg;
+            showSnackbar(msg);
+        } finally {
+            isReasonSubmitting.value = false;
+        }
+    } else {
+        try {
+            await axios.post(`${props.baseUrl}/untag/${selectedUser.value.id}`, { reason });
+            showSnackbar("Reverted to temporary enrolled.");
+            showReasonModal.value = false;
+            selectedUser.value = null;
+            await fetchUsers();
+        } catch (e) {
+            console.error("Revert failed:", e);
+            const msg = e.response?.data?.errors?.reason?.[0] ||
+                e.response?.data?.message ||
+                "Failed to revert application due to an unexpected error.";
+            reasonErrorMessage.value = msg;
+            showSnackbar(msg);
+        } finally {
+            isReasonSubmitting.value = false;
+        }
     }
 };
 
@@ -867,13 +898,13 @@ const clearFilters = () => {
                                     <div class="flex gap-2">
                                         <button
                                             v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
-                                            @click="acceptApplication"
+                                            @click="openTagModal"
                                             class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
                                             Tag: Enrolled
                                         </button>
                                         <button
-                                            @click="untagApplication"
+                                            @click="openUntagModal"
                                             class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                             Untag
@@ -924,6 +955,17 @@ const clearFilters = () => {
             :src="previewImage"
             :alt="previewAlt"
             @close="closeImageModal"
+        />
+
+        <!-- Reason Modal for Tag / Untag Enrollment -->
+        <EnrollmentReasonModal
+            :show="showReasonModal"
+            :action-type="reasonModalAction"
+            :applicant-name="selectedUser ? `${selectedUser.firstname || ''} ${selectedUser.lastname || ''}`.trim() : 'Applicant'"
+            :loading="isReasonSubmitting"
+            :error-message="reasonErrorMessage"
+            @close="showReasonModal = false"
+            @confirm="handleReasonConfirm"
         />
     </RecordStaffLayout>
 </template>

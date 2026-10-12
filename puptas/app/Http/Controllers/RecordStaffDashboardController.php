@@ -20,6 +20,8 @@ use App\Services\UserService;
 use App\Services\ApplicationService;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\ChangeCourseRequest;
+use App\Http\Requests\EnrollmentTagRequest;
+use App\Models\AuditLog;
 
 class RecordStaffDashboardController extends Controller
 {
@@ -544,7 +546,7 @@ class RecordStaffDashboardController extends Controller
     /**
      * Tag an applicant as officially enrolled
      */
-    public function tag($id)
+    public function tag(EnrollmentTagRequest $request, $id)
     {
         $this->ensureRole($this->getRoleId());
 
@@ -562,6 +564,18 @@ class RecordStaffDashboardController extends Controller
             ], 403);
         }
 
+        // Separation of Duties check: cannot tag if the actor performed document evaluation, grade evaluation, or interview
+        $evaluatedByActor = $application->processes()
+            ->whereIn('stage', ApplicationProcess::EVALUATION_STAGES)
+            ->where('performed_by', auth()->id())
+            ->exists();
+
+        if ($evaluatedByActor) {
+            return response()->json([
+                'message' => 'Separation of duties violation: You cannot tag an applicant whose evaluation or interview you personally performed.'
+            ], 403);
+        }
+
         // Check if COR is uploaded
         $corFront = \App\Models\UserFile::where('user_id', (string) $id)->where('type', 'cor_front')->first();
         $corBack = \App\Models\UserFile::where('user_id', (string) $id)->where('type', 'cor_back')->first();
@@ -572,11 +586,17 @@ class RecordStaffDashboardController extends Controller
             ], 403);
         }
 
+        $reason = $request->validated('reason');
+        $oldStatus = $application->status;
+        $oldEnrollmentStatus = $application->enrollment_status;
+        $newStatus = 'accepted';
+        $newEnrollmentStatus = 'officially_enrolled';
+
         DB::beginTransaction();
         try {
             $application->update([
-                'status'            => 'accepted',
-                'enrollment_status' => 'officially_enrolled',
+                'status'            => $newStatus,
+                'enrollment_status' => $newEnrollmentStatus,
             ]);
 
             ApplicationProcess::updateOrCreate(
@@ -590,6 +610,15 @@ class RecordStaffDashboardController extends Controller
                     'performed_by'   => auth()->id(),
                     'ip_address'     => request()->ip()
                 ]
+            );
+
+            // Synchronous audit log write within the same transaction — failure will rollback status change
+            $this->auditLogService->logActivitySync(
+                AuditLog::ACTION_UPDATE,
+                'Applications',
+                "Tagged applicant (user_id: {$id}, application_id: {$application->id}) as officially enrolled (status: '{$oldStatus}' -> '{$newStatus}', enrollment_status: '{$oldEnrollmentStatus}' -> '{$newEnrollmentStatus}'). Reason: {$reason}",
+                auth()->user(),
+                AuditLog::CATEGORY_ADMISSION_DATA
             );
 
             DB::commit();
@@ -611,7 +640,7 @@ class RecordStaffDashboardController extends Controller
     /**
      * Untag an applicant from officially enrolled (revert to temporary)
      */
-    public function untag($id)
+    public function untag(EnrollmentTagRequest $request, $id)
     {
         $this->ensureRole($this->getRoleId());
 
@@ -623,11 +652,17 @@ class RecordStaffDashboardController extends Controller
             ], 400);
         }
 
+        $reason = $request->validated('reason');
+        $oldStatus = $application->status;
+        $oldEnrollmentStatus = $application->enrollment_status;
+        $newStatus = 'cleared_for_enrollment';
+        $newEnrollmentStatus = 'temporary';
+
         DB::beginTransaction();
         try {
             $application->update([
-                'status'            => 'cleared_for_enrollment',
-                'enrollment_status' => 'temporary',
+                'status'            => $newStatus,
+                'enrollment_status' => $newEnrollmentStatus,
             ]);
 
             // Update records process
@@ -643,6 +678,15 @@ class RecordStaffDashboardController extends Controller
                     'ip_address'     => request()->ip()
                 ]);
             }
+
+            // Synchronous audit log write within the same transaction — failure will rollback status change
+            $this->auditLogService->logActivitySync(
+                AuditLog::ACTION_UPDATE,
+                'Applications',
+                "Untagged applicant (user_id: {$id}, application_id: {$application->id}) from officially enrolled to temporary (status: '{$oldStatus}' -> '{$newStatus}', enrollment_status: '{$oldEnrollmentStatus}' -> '{$newEnrollmentStatus}'). Reason: {$reason}",
+                auth()->user(),
+                AuditLog::CATEGORY_ADMISSION_DATA
+            );
 
             DB::commit();
             return response()->json(['message' => 'Reverted to temporary enrolled successfully']);

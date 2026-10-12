@@ -300,7 +300,7 @@ Route::post('/check-email', function (Request $request) {
     $exists = User::where('email', $request->email)->exists() || 
               TestPasser::where('email', $request->email)->exists();
     return response()->json(['taken' => $exists]);
-})->middleware('auth');
+})->middleware(['auth', 'role:7', 'throttle:30,1']);
 
 Route::post('/check-reference-number', function (Request $request) {
     $request->validate(['reference_number' => 'required|string|max:100']);
