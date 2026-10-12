@@ -564,6 +564,18 @@ class RecordStaffDashboardController extends Controller
             ], 403);
         }
 
+        // Separation of Duties check: cannot tag if the actor performed document evaluation or interview
+        $evaluatedByActor = $application->processes()
+            ->whereIn('stage', ['document_evaluator', 'interviewer', 'evaluator'])
+            ->where('performed_by', auth()->id())
+            ->exists();
+
+        if ($evaluatedByActor) {
+            return response()->json([
+                'message' => 'Separation of duties violation: You cannot tag an applicant whose document evaluation or interview you personally performed.'
+            ], 403);
+        }
+
         // Check if COR is uploaded
         $corFront = \App\Models\UserFile::where('user_id', (string) $id)->where('type', 'cor_front')->first();
         $corBack = \App\Models\UserFile::where('user_id', (string) $id)->where('type', 'cor_back')->first();

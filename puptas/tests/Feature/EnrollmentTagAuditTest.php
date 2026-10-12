@@ -294,3 +294,116 @@ test('registrar (6), admin (2), and superadmin (7) are permitted on tag and unta
     'admin on /admin/records'        => [RoleId::Admin->value, '/admin/records'],
     'superadmin on /admin/records'   => [RoleId::SuperAdmin->value, '/admin/records'],
 ]);
+
+// ─── 6. Separation of Duties (SoD) Tests ──────────────────────────
+
+test('same user who performed document evaluation or interview gets 403 on tag', function (string $stage) {
+    $admin = User::factory()->create(['role_id' => RoleId::Admin->value]);
+    $applicant = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+    $application = createEligibleApplicationForTag((string) $applicant->id);
+
+    // Mark process as performed by this admin
+    ApplicationProcess::create([
+        'application_id' => $application->id,
+        'stage'          => $stage,
+        'status'         => 'completed',
+        'performed_by'   => $admin->id,
+    ]);
+
+    $this->actingAs($admin)
+        ->postJson("/admin-dashboard/tag/{$applicant->id}", [
+            'reason' => 'Attempting self-tag after evaluation',
+        ])
+        ->assertForbidden()
+        ->assertJson([
+            'message' => 'Separation of duties violation: You cannot tag an applicant whose document evaluation or interview you personally performed.',
+        ]);
+
+    // Ensure status unchanged
+    $application->refresh();
+    expect($application->enrollment_status)->toBe('temporary');
+})->with([
+    'document_evaluator stage' => 'document_evaluator',
+    'interviewer stage'        => 'interviewer',
+]);
+
+test('different user who did not perform evaluation or interview can tag successfully', function () {
+    $evaluator = User::factory()->create(['role_id' => RoleId::DocumentEvaluator->value]);
+    $registrar = User::factory()->create(['role_id' => RoleId::Registrar->value]);
+    $applicant = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+    $application = createEligibleApplicationForTag((string) $applicant->id);
+
+    // Document evaluator evaluated the applicant
+    ApplicationProcess::create([
+        'application_id' => $application->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'completed',
+        'performed_by'   => $evaluator->id,
+    ]);
+
+    // Registrar tags applicant
+    $this->actingAs($registrar)
+        ->postJson("/record-dashboard/tag/{$applicant->id}", [
+            'reason' => 'Approved by independent records officer.',
+        ])
+        ->assertOk()
+        ->assertJson(['enrollment_status' => 'officially_enrolled']);
+});
+
+test('resubmit cycle still works: different evaluator resubmission allows independent tag', function () {
+    $originalEvaluator = User::factory()->create(['role_id' => RoleId::DocumentEvaluator->value]);
+    $secondEvaluator = User::factory()->create(['role_id' => RoleId::DocumentEvaluator->value]);
+    $registrar = User::factory()->create(['role_id' => RoleId::Registrar->value]);
+
+    $applicant = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+    $application = createEligibleApplicationForTag((string) $applicant->id);
+
+    // 1st cycle: returned by originalEvaluator
+    ApplicationProcess::create([
+        'application_id' => $application->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'returned',
+        'performed_by'   => $originalEvaluator->id,
+    ]);
+
+    // 2nd cycle (resubmit): secondEvaluator passed
+    ApplicationProcess::create([
+        'application_id' => $application->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'completed',
+        'performed_by'   => $secondEvaluator->id,
+    ]);
+
+    // Registrar (independent) tags
+    $this->actingAs($registrar)
+        ->postJson("/record-dashboard/tag/{$applicant->id}", [
+            'reason' => 'Resubmitted files verified and approved.',
+        ])
+        ->assertOk()
+        ->assertJson(['enrollment_status' => 'officially_enrolled']);
+});
+
+test('untag is unchanged: user who evaluated can still untag', function () {
+    $admin = User::factory()->create(['role_id' => RoleId::Admin->value]);
+    $applicant = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+    $application = createOfficiallyEnrolledApplication((string) $applicant->id);
+
+    // Admin evaluated this applicant earlier
+    ApplicationProcess::create([
+        'application_id' => $application->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'completed',
+        'performed_by'   => $admin->id,
+    ]);
+
+    // Untag works without SoD restriction
+    $this->actingAs($admin)
+        ->postJson("/admin-dashboard/untag/{$applicant->id}", [
+            'reason' => 'Administrative reversion of enrollment.',
+        ])
+        ->assertOk()
+        ->assertJson(['message' => 'Reverted to temporary enrolled successfully']);
+
+    $application->refresh();
+    expect($application->enrollment_status)->toBe('temporary');
+});
