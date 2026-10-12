@@ -396,13 +396,15 @@ class RecordStaffDashboardController extends Controller
                 if (!$wasAlreadyEnrolled) {
                     try {
                         $user = $application->user;
-                        $this->auditLogService->logActivity(
-                            'UPDATE',
-                            'Enrollment Status',
-                            "Automatically tagged student {$user->firstname} {$user->lastname} (User ID: {$user->id}) as officially enrolled after records completion by " . (auth()->user()->username ?? 'system'),
-                            $user,
-                            \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-                        );
+                        if ($user) {
+                            $this->auditLogService->logActivity(
+                                'UPDATE',
+                                'Enrollment Status',
+                                "Automatically tagged student {$user->firstname} {$user->lastname} (User ID: {$user->id}) as officially enrolled after records completion by " . (auth()->user()->username ?? 'system'),
+                                $user,
+                                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                            );
+                        }
                     } catch (\Exception $auditException) {
                         Log::error('Failed to log automatic enrollment to audit', [
                             'application_id' => $application->id,
@@ -625,13 +627,20 @@ class RecordStaffDashboardController extends Controller
             );
 
             // Log enrollment to audit logs
-            $this->auditLogService->logActivity(
-                'UPDATE',
-                'Enrollment Status',
-                "Manually tagged student {$user->firstname} {$user->lastname} (User ID: {$user->id}) as officially enrolled by " . auth()->user()->username,
-                $user,
-                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-            );
+            try {
+                $this->auditLogService->logActivity(
+                    'UPDATE',
+                    'Enrollment Status',
+                    "Manually tagged student {$user->firstname} {$user->lastname} (User ID: {$user->id}) as officially enrolled by " . (auth()->user()->username ?? 'unknown'),
+                    $user,
+                    \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                );
+            } catch (\Exception $auditException) {
+                Log::error('Failed to log enrollment to audit', [
+                    'user_id' => $user->id ?? null,
+                    'error' => $auditException->getMessage(),
+                ]);
+            }
 
             DB::commit();
 
@@ -649,20 +658,11 @@ class RecordStaffDashboardController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
-            // Log failed enrollment attempt
-            try {
-                $this->auditLogService->logActivity(
-                    'FAILED',
-                    'Enrollment Status',
-                    "Failed to tag student (User ID: {$id}) as officially enrolled: " . $e->getMessage(),
-                    $user ?? null,
-                    \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-                );
-            } catch (\Exception $auditException) {
-                Log::error('Failed to log enrollment failure to audit', [
-                    'error' => $auditException->getMessage(),
-                ]);
-            }
+            Log::error('Failed to tag student as officially enrolled', [
+                'user_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             
             return response()->json(['message' => 'Failed to tag: ' . $e->getMessage()], 500);
         }
@@ -803,33 +803,31 @@ class RecordStaffDashboardController extends Controller
             }
 
             // Log untag to audit logs
-            $this->auditLogService->logActivity(
-                'UPDATE',
-                'Enrollment Status',
-                "Reverted student {$user->firstname} {$user->lastname} (User ID: {$user->id}) from officially enrolled to temporary by " . auth()->user()->username,
-                $user,
-                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-            );
+            try {
+                $this->auditLogService->logActivity(
+                    'UPDATE',
+                    'Enrollment Status',
+                    "Reverted student {$user->firstname} {$user->lastname} (User ID: {$user->id}) from officially enrolled to temporary by " . (auth()->user()->username ?? 'unknown'),
+                    $user,
+                    \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                );
+            } catch (\Exception $auditException) {
+                Log::error('Failed to log untag to audit', [
+                    'user_id' => $user->id ?? null,
+                    'error' => $auditException->getMessage(),
+                ]);
+            }
 
             DB::commit();
             return response()->json(['message' => 'Reverted to temporary enrolled successfully']);
         } catch (\Exception $e) {
             DB::rollBack();
             
-            // Log failed untag attempt
-            try {
-                $this->auditLogService->logActivity(
-                    'FAILED',
-                    'Enrollment Status',
-                    "Failed to untag student (User ID: {$id}) from officially enrolled: " . $e->getMessage(),
-                    $user ?? null,
-                    \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-                );
-            } catch (\Exception $auditException) {
-                Log::error('Failed to log untag failure to audit', [
-                    'error' => $auditException->getMessage(),
-                ]);
-            }
+            Log::error('Failed to untag student from officially enrolled', [
+                'user_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             
             return response()->json(['message' => 'Failed to untag: ' . $e->getMessage()], 500);
         }
