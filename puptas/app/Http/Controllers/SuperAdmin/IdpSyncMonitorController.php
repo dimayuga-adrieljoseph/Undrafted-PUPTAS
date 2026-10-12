@@ -179,8 +179,8 @@ class IdpSyncMonitorController extends Controller
             ->orderBy('hour')
             ->get();
 
-        // Count enrolled students not yet synced
-        $unsyncedCount = DB::table('applications')
+        // Count enrolled students with IDP IDs
+        $totalEnrolledWithIdp = DB::table('applications')
             ->join('users', 'applications.user_id', '=', 'users.id')
             ->where('applications.enrollment_status', 'officially_enrolled')
             ->whereNotNull('users.idp_user_id')
@@ -188,19 +188,27 @@ class IdpSyncMonitorController extends Controller
             ->count();
 
         // Get count of students who have successful sync audit logs
-        // Using proper join on user_id instead of parsing from description
-        $syncedCount = DB::table('applications')
-            ->join('users', 'applications.user_id', '=', 'users.id')
-            ->join('audit_logs', function ($join) {
-                $join->on('users.id', '=', 'audit_logs.user_id')
-                     ->where('audit_logs.module_name', '=', 'IDP Account Type')
-                     ->where('audit_logs.action_type', '=', 'UPDATE');
-            })
-            ->where('applications.enrollment_status', 'officially_enrolled')
-            ->whereNotNull('users.idp_user_id')
-            ->whereNull('applications.deleted_at')
+        // Get distinct user IDs from successful sync audit logs
+        $syncedUserIds = DB::table('audit_logs')
+            ->where('module_name', 'IDP Account Type')
+            ->where('action_type', 'UPDATE')
+            ->whereNotNull('user_id')
             ->distinct()
-            ->count('applications.id');
+            ->pluck('user_id')
+            ->toArray();
+
+        // Count how many of those synced users are in officially enrolled applications
+        $syncedCount = 0;
+        if (!empty($syncedUserIds)) {
+            $syncedCount = DB::table('applications')
+                ->join('users', 'applications.user_id', '=', 'users.id')
+                ->where('applications.enrollment_status', 'officially_enrolled')
+                ->whereNotNull('users.idp_user_id')
+                ->whereNull('applications.deleted_at')
+                ->whereIn('applications.user_id', $syncedUserIds)
+                ->distinct()
+                ->count('applications.id');
+        }
 
         return [
             'total_syncs' => $total,
@@ -209,8 +217,8 @@ class IdpSyncMonitorController extends Controller
             'mfa_required' => $totalAttempted,
             'success_rate' => $successRate,
             'synced_students' => $syncedCount,
-            'unsynced_students' => max(0, $unsyncedCount - $syncedCount),
-            'hourly_activity' => $hourlyActivity,
+            'unsynced_students' => max(0, $totalEnrolledWithIdp - $syncedCount),
+            'hourly_activity' => $hourlyActivity->toArray(),
         ];
     }
 

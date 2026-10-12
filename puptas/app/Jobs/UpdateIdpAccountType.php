@@ -32,7 +32,7 @@ class UpdateIdpAccountType implements ShouldQueue
     /**
      * The user ID to update
      *
-     * @var string
+     * @var int
      */
     protected $userId;
 
@@ -82,7 +82,7 @@ class UpdateIdpAccountType implements ShouldQueue
      * Create a new job instance.
      */
     public function __construct(
-        string $userId,
+        int $userId,
         string $idpUserId,
         string $userEmail,
         string $accessToken,

@@ -294,7 +294,7 @@ class SyncEnrolledStudentsToIdp extends Command
             $this->info('1. Jobs are now processing in the background via queue workers');
             $this->info('2. Monitor progress: php artisan queue:listen --verbose');
             $this->info('3. Check audit logs for results:');
-            $this->info('   SELECT * FROM audit_logs WHERE subject = "IDP Account Type" ORDER BY created_at DESC;');
+            $this->info('   SELECT * FROM audit_logs WHERE module_name = "IDP Account Type" ORDER BY created_at DESC;');
             $this->info('4. Failed jobs will be retried automatically (3 attempts with 60s backoff)');
             $this->newLine();
         }
@@ -307,6 +307,7 @@ class SyncEnrolledStudentsToIdp extends Command
             $this->info('  php artisan idp:sync-enrolled-students');
             $this->newLine();
         } else {
+            $statusEmoji = $results['failed'] > 0 ? '⚠️' : '✅';
             $this->info("{$statusEmoji} Sync complete!");
             $this->newLine();
         }

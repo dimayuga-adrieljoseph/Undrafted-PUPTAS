@@ -8,7 +8,16 @@ import axios from 'axios';
 const loading = ref(true);
 const error = ref(null);
 const metrics = ref({
-  stats: {},
+  stats: {
+    total_syncs: 0,
+    successful: 0,
+    failed: 0,
+    mfa_required: 0,
+    success_rate: 0,
+    synced_students: 0,
+    unsynced_students: 0,
+    hourly_activity: []
+  },
   recent_activity: [],
   failure_breakdown: {},
   queue_status: {},
