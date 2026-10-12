@@ -296,3 +296,21 @@ test('lazy-load allows access if applicant has several applications and ANY matc
         ->getJson("/api/lazy-load/grades/{$applicant->id}")
         ->assertOk();
 });
+
+test('lazy-load returns 403 for roles 3 and 4 when applicant has zero applications', function () {
+    $progA = getScopingProgram('BSCS');
+    $applicantWithoutApp = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+
+    $evaluator = User::factory()->create(['role_id' => RoleId::DocumentEvaluator->value]);
+    $evaluator->programs()->attach($progA->id, ['role_id' => RoleId::DocumentEvaluator->value]);
+
+    $this->actingAs($evaluator)
+        ->getJson("/api/lazy-load/document/{$applicantWithoutApp->id}/grade_11_card")
+        ->assertForbidden()
+        ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
+
+    $this->actingAs($evaluator)
+        ->getJson("/api/lazy-load/grades/{$applicantWithoutApp->id}")
+        ->assertForbidden()
+        ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
+});

@@ -399,18 +399,19 @@ When executed via Pest enabling the local SQLite extension (`php -d extension_di
 
 ### Gap 1: Lack of Separation of Duties (Admin & SuperAdmin Multi-Stage Actions)
 - **Severity:** High
-- **Description:** No check exists in any controller or service to prevent the same individual user from acting at multiple stages of the same application. A single Admin or SuperAdmin user can evaluate, interview, change courses, and tag enrollment for the same applicant without oversight.
-- **Proposed Fix:** Add a validator rule or domain guard: `abort_if($application->processes()->where('performed_by', auth()->id())->exists(), 403, 'Separation of duties violation: cannot act on an application you previously processed.');`.
+- **Description:** Previously, no check existed in any controller or service to prevent the same individual user from acting at multiple stages of the same application. A single Admin or SuperAdmin user could evaluate, interview, change courses, and tag enrollment for the same applicant without oversight.
+- **Implemented Fix (Commit B):** Narrow Separation of Duties (SoD) is now enforced in `RecordStaffDashboardController::tag()`. Any staff member whose ID matches `performed_by` on that application's `document_evaluator`, `interviewer`, or legacy `evaluator` stages is blocked with HTTP 403 (`Separation of duties violation: You cannot tag an applicant whose document evaluation or interview you personally performed.`).
+- **Deliberate Policy Consequence:** On a small admissions team operating with a single Admin account, an Admin who personally evaluates a document or conducts an interview can **no longer tag that applicant as officially enrolled**. This is a deliberate design rule enforcing the four-eyes principle: final enrollment tagging for that applicant must be executed by another authorized user (e.g., a Registrar or SuperAdmin). Untagging remains available without SoD restrictions to avoid administrative deadlocks during emergency reversions.
 
 ### Gap 2: Program Scoping Missing on Review Locks, Grades, Files, and Course Transfers
 - **Severity:** Medium
 - **Description:** While `passApplication`, `rejectApplication`, `accept`, and `reject` verify `$user->programs()`, peripheral endpoints (`startReview`, `interviewer start`, `getUserFiles`, `getUserGrades`, `LazyLoadController`, and `changeCourse`) do not verify that the target applicant belongs to the caller's assigned academic programs.
-- **Proposed Fix:** Create a reusable authorization policy method `$this->authorize('manageProgram', $application->program_id)` and apply it across all staff file, grade, review-lock, and transfer routes.
+- **Implemented Fix (Commit A):** Program scoping is now enforced for roles 3 (Document Evaluator) and 4 (Interviewer) on `user-grades` (`ManagesApplicationFiles`), `start-review` (`EvaluatorDashboardController`), and `lazy-load` document/batch/grade endpoints (`LazyLoadController`). Roles 2 (Admin), 5 (Medical), 6 (Registrar), 7 (SuperAdmin), and 8 (Grade Evaluator) remain deliberately exempt. For lazy-load, access is granted if ANY of the applicant's applications belongs to the evaluator's assigned programs; applicants with zero applications are rejected with HTTP 403.
 
 ### Gap 3: Information Disclosure on `/check-email` Route
 - **Severity:** Medium
-- **Description:** `POST /check-email` (`puptas/routes/web.php:298-303`) is protected only by `middleware('auth')`. Any authenticated user, including applicants, can submit arbitrary email addresses to check whether an account or test passer record exists in the system.
-- **Proposed Fix:** Restrict the route to administrative roles (`EnsureAdmin::class`) or throttle heavily and restrict to unauthenticated registration contexts.
+- **Description:** `POST /check-email` (`puptas/routes/web.php:298-303`) was previously protected only by `middleware('auth')`. Any authenticated user, including applicants, could submit arbitrary email addresses to check whether an account or test passer record existed in the system.
+- **Implemented Fix (Step 2):** Restricted route exclusively to SuperAdmin (role 7) and applied a per-user rate limit of 30 requests/minute (`throttle:30,1`).
 
 ### Gap 4: Missing Role Guard on Legacy Upload Form View
 - **Severity:** Low
@@ -430,6 +431,7 @@ When executed via Pest enabling the local SQLite extension (`php -d extension_di
 ### Gap 7: Asynchronous Audit Logging Everywhere Except Enrollment Tag and Untag
 - **Severity:** Medium
 - **Description:** Across the application, `AuditLogService::logActivity()` dispatches audit log writes asynchronously via queued job `ProcessAuditLog::dispatch()->afterCommit()` and swallows exceptions. If a queue worker is delayed, halted, or encounters database constraints, audit log writes can fail silently after the HTTP transaction has already committed. Following Commit C, only `RecordStaffDashboardController::tag()` and `untag()` write audit records synchronously inside the active database transaction (`AuditLogService::logActivitySync()`), guaranteeing that an audit write failure immediately rolls back the enrollment status change (`DB::rollBack()`). All other system operations (admissions review, grade changes, authentication events, user role edits) remain asynchronous and vulnerable to silent audit row omissions if workers fail.
+- **Architectural Tradeoff (Fail-Closed Enrollment Audit):** Unlike the asynchronous best-effort audit queue used elsewhere, enrollment `tag()` and `untag()` are now strictly **fail-closed**. If the synchronous audit log write fails for any reason (e.g., database constraint violation, disk exhaustion, or connection drop), the entire database transaction rolls back and the tag request is rejected with HTTP 500. This deliberate tradeoff prioritizes absolute regulatory audit integrity over operation availability: no applicant can transition to officially enrolled without an atomic, permanent audit record.
 - **Proposed Fix:** For other high-compliance operations (such as grade modifications, applicant rejection, and user role grants), migrate from asynchronous queue dispatch to transactional synchronous writes (`logActivitySync()`).
 
 ---
