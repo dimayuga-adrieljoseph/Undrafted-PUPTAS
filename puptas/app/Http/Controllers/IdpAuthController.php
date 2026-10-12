@@ -365,6 +365,10 @@ class IdpAuthController extends Controller
                 ]);
             }
 
+            // Store access token in session for admin operations (e.g., updating user account types)
+            // This token is used by IdpService for administrative API calls
+            session(['idp_access_token' => $accessToken]);
+
             $roleId = (int) $localDbUser->role_id;
 
             \Log::info('User logged in seamlessly via Local DB Match', ['local_user_id' => $localDbUser->id, 'role_id' => $roleId]);
@@ -441,6 +445,9 @@ class IdpAuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+        
+        // Clear IDP access token from session
+        session()->forget('idp_access_token');
 
         // Queue clearing of application cookies (Safety cleanup)
         \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('access_token'));

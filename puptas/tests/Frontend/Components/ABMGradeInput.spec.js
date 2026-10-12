@@ -96,7 +96,6 @@ describe('ABMGradeInput Component', () => {
         ],
         strand: 'ABM',
         profile: null,
-        extractionResult: null,
         isLocked: false,
     }
 
@@ -232,44 +231,6 @@ describe('ABMGradeInput Component', () => {
             })
 
             expect(wrapper.text()).not.toContain('Grade submission is closed')
-        })
-    })
-
-    describe('Docling Autofill Banner', () => {
-        it('displays autofill banner when extractionResult is provided', () => {
-            wrapper = mount(ABMGradeInput, {
-                props: {
-                    ...defaultProps,
-                    extractionResult: { success: true, grades: {} },
-                },
-                global: {
-                    stubs: {
-                        ApplicantLayout: { template: '<div><slot /></div>' },
-                        GradesReviewModal: true,
-                        DynamicSubjectRow: true,
-                        FieldError: true,
-                    },
-                },
-            })
-
-            expect(wrapper.text()).toContain('Grades have been autofilled')
-            expect(wrapper.text()).toContain('Docling')
-        })
-
-        it('does not display autofill banner when no extractionResult', () => {
-            wrapper = mount(ABMGradeInput, {
-                props: { ...defaultProps, extractionResult: null },
-                global: {
-                    stubs: {
-                        ApplicantLayout: { template: '<div><slot /></div>' },
-                        GradesReviewModal: true,
-                        DynamicSubjectRow: true,
-                        FieldError: true,
-                    },
-                },
-            })
-
-            expect(wrapper.text()).not.toContain('Grades have been autofilled')
         })
     })
 

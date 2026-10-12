@@ -29,6 +29,8 @@ import { usePage } from "@inertiajs/vue3";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
 import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
+import ImageViewer from "@/Components/ImageViewer.vue";
+
 import { useMaskingState } from "@/Composables/useMaskingState";
 
 const currentPage = ref(1);
@@ -301,20 +303,24 @@ const hasImagePreview = (file) =>
     Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
 
 const previewImage = ref(null);
+const previewAlt = ref("Document preview");
 const showImageModal = ref(false);
 
-const openImageModal = (file) => {
+const openImageModal = (file, label = "") => {
     const src = getFileUrl(file);
     if (!src || !hasImagePreview(file)) {
         return;
     }
 
     previewImage.value = src;
+    previewAlt.value = label || file?.original_name || "Document preview";
     showImageModal.value = true;
 };
 
 const closeImageModal = () => {
     showImageModal.value = false;
+    previewImage.value = null;
+    previewAlt.value = "Document preview";
 };
 
 const isEvaluating = ref(false);
@@ -886,7 +892,7 @@ const clearFilters = () => {
                                             </div>
                                             <img v-if="hasImagePreview(file)" :src="getFileUrl(file)" alt="Uploaded Document"
                                                 class="w-full aspect-[4/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
-                                                @click="openImageModal(file)" />
+                                                @click="openImageModal(file, formatFileKey(key))" />
                                             <div v-else class="w-full aspect-[4/3] flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg">
                                                 No file
                                             </div>
@@ -912,25 +918,13 @@ const clearFilters = () => {
             </div>
         </transition>
 
-        <!-- Image Preview Modal -->
-        <div
-            v-if="showImageModal"
-            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 dark:bg-white"
-            @click.self="closeImageModal"
-        >
-            <img
-                :src="previewImage"
-                alt="Preview"
-                class="max-w-full max-h-full rounded shadow-lg"
-            />
-            <button
-                @click="closeImageModal"
-                class="absolute top-5 right-5 text-white text-4xl font-bold hover:text-gray-300 dark:text-gray-900"
-                aria-label="Close preview"
-            >
-                &times;
-            </button>
-        </div>
+        <!-- Document Image Viewer (zoom / pan / fit-to-viewport) -->
+        <ImageViewer
+            :show="showImageModal"
+            :src="previewImage"
+            :alt="previewAlt"
+            @close="closeImageModal"
+        />
     </RecordStaffLayout>
 </template>
 

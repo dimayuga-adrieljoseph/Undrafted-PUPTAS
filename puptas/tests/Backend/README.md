@@ -6,10 +6,10 @@ Comprehensive backend test suite for the PUPTAS (PUP Test and Admission System).
 
 | Test Type | Test Files | Description | Status |
 |-----------|------------|-------------|--------|
-| **Unit Tests** | 14 | Isolated component testing | ✅ Complete |
-| **Feature Tests** | 40 | Integration and workflow testing | ✅ Complete |
-| **Property Tests** | 24 | Edge case and invariant testing | ✅ Advanced |
-| **TOTAL** | **78** | **Comprehensive backend coverage** | **✅ Excellent** |
+| **Unit Tests** | 10 | Isolated component testing | ✅ Complete |
+| **Feature Tests** | 53 | Integration and workflow testing | ✅ Complete |
+| **Property Tests** | 17 | Edge case and invariant testing | ✅ Advanced |
+| **TOTAL** | **63** | **Comprehensive backend coverage** | **✅ Excellent** |
 
 ---
 
@@ -32,36 +32,6 @@ Comprehensive backend test suite for the PUPTAS (PUP Test and Admission System).
 - `Feature/IdpStatelessLoginTest.php`
 - `Feature/RoleSecurityTest.php`
 - `Feature/ScheduleRouteAuthenticationTest.php`
-
----
-
-### ✅ Grade Extraction & OCR Processing
-**Files:** 12 test files
-
-**Coverage:**
-- ✅ AI-powered grade extraction (OpenRouter/Docling integration)
-- ✅ Image upload and processing
-- ✅ JSON conversion and storage
-- ✅ Error handling and retry logic
-- ✅ Property-based invariant testing
-- ✅ Bug condition preservation
-
-**Test Files:**
-- `Unit/GradeExtractionServiceTest.php`
-- `Unit/GradeExtractionBugCondition1Test.php`
-- `Unit/GradeExtractionBugCondition2Test.php`
-- `Unit/GradeExtractionPreservationTest.php`
-- `Unit/Jobs/ProcessGradeOcrTest.php`
-- `Feature/GradeExtractionBugConditionTest.php`
-- `Feature/GradeExtractionControllerTest.php`
-- `Feature/GradeExtractionIntegrationTest.php`
-- `Feature/GradeExtractionLoadImagesTest.php`
-- `Feature/GradeExtractionPreservationTest.php`
-- `Feature/GradeExtractionPropertyTest.php`
-- `Unit/OpenRouterClientTest.php`
-- `Unit/OpenRouterClientPropertyTest.php`
-- `Unit/OpenRouterApiExceptionTest.php`
-- `Unit/OpenRouterMigrationSmokeTest.php`
 
 ---
 
@@ -232,7 +202,7 @@ php artisan test --testsuite=Unit
 php artisan test --testsuite=Feature
 
 # Specific test file
-php artisan test tests/Unit/GradeExtractionServiceTest.php
+php artisan test tests/Unit/StudentNumberServiceTest.php
 ```
 
 ### Run Tests with Coverage
@@ -251,22 +221,17 @@ php artisan test --parallel
 
 ```
 tests/
-├── Unit/                                   # Unit tests (14 files)
+├── Unit/                                   # Unit tests (10 files)
 │   ├── ErrorHandling/                     # Error handling tests
-│   ├── Jobs/                              # Job-specific tests
-│   │   └── ProcessGradeOcrTest.php       # Grade OCR processing
 │   ├── Services/                          # Service layer tests
-│   ├── GradeExtractionServiceTest.php
 │   ├── StudentNumberServiceTest.php
-│   ├── OpenRouterClientTest.php
 │   └── ...
-├── Feature/                               # Feature tests (40 files)
+├── Feature/                               # Feature tests (53 files)
 │   ├── ErrorHandling/                    # Error handling integration
 │   ├── ListOptimization/                 # List performance tests
 │   ├── PublicStatusChecker/              # Status checker workflow
 │   ├── AnonymizationAndMaskingTest.php
 │   ├── BulkEmailTrackingVerificationTest.php
-│   ├── GradeExtractionIntegrationTest.php
 │   ├── ExternalMedicalApiTest.php
 │   └── ...
 ├── Frontend/                              # Frontend tests (from Session 1)
@@ -311,14 +276,12 @@ Tests that verify properties/invariants across many random inputs:
 
 ### 2. **Bug Condition Preservation**
 Tests that ensure previously fixed bugs don't regress:
-- Grade extraction bugs
 - IDP login bugs
 - Capacity enforcement bugs
 - API audit log visibility bugs
 
 ### 3. **Smoke Tests**
 Quick tests to verify system health:
-- OpenRouter API migration
 - Database connectivity
 - External API availability
 

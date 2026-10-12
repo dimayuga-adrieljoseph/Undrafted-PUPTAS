@@ -26,7 +26,7 @@ function buildLeakyMessages(): array
         '#0 /app/Handler.php(42): App\\Exceptions\\Handler->render()',
         'Stack trace:',
         'thrown in /var/www/html/app/Http/Controllers/UserController.php on line 55',
-        'Exception in /home/ubuntu/puptas/app/Services/GradeExtractionService.php:123',
+        'Exception in /home/ubuntu/puptas/app/Services/FileService.php:123',
     ];
     $classNames = [
         'App\\Exceptions\\Handler',

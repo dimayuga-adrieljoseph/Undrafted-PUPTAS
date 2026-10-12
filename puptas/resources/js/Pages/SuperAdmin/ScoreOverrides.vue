@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useForm, usePage, router } from '@inertiajs/vue3'
 import { Head } from '@inertiajs/vue3'
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout.vue'
+import PageContainer from '@/Components/PageContainer.vue'
 import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -416,7 +417,7 @@ const getStatusBadgeClass = (statusId) => {
 <template>
     <Head title="Registration Overrides" />
     <SuperAdminLayout>
-        <div class="px-4 md:px-8 py-8 w-full max-w-7xl mx-auto">
+        <PageContainer>
 
             <!-- Header -->
             <div class="mb-8 flex items-center gap-4">
@@ -998,7 +999,7 @@ const getStatusBadgeClass = (statusId) => {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageContainer>
 
         <ChangesConfirmationModal
             :show="confirmingAction !== null"

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useForm, usePage, router } from '@inertiajs/vue3'
 import { Head } from '@inertiajs/vue3'
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout.vue'
+import PageContainer from '@/Components/PageContainer.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import {
@@ -72,7 +73,7 @@ const saveSystemSettings = () => {
 <template>
     <Head title="Cutoff Settings" />
     <SuperAdminLayout>
-        <div class="px-4 md:px-8 py-8 w-full">
+        <PageContainer>
 
             <!-- Header -->
             <div class="mb-8 flex items-center gap-4">
@@ -215,6 +216,6 @@ const saveSystemSettings = () => {
                 </form>
             </div>
 
-        </div>
+        </PageContainer>
     </SuperAdminLayout>
 </template>

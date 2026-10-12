@@ -23,7 +23,7 @@ PUPTAS Test Suite (91 files, ~625 tests)
 ├── Frontend Tests (7 files, 151 tests) ✅
 │   ├── Core Components (3 files, 74 tests)
 │   │   ├── CheckStatus (26 tests)
-│   │   ├── ABMGradeInput (19 tests)
+│   │   ├── ABMGradeInput (17 tests)
 │   │   └── Sidebar (29 tests)
 │   │
 │   └── Dashboard Tests (4 files, 77 tests)
@@ -32,17 +32,15 @@ PUPTAS Test Suite (91 files, ~625 tests)
 │       ├── Evaluator Dashboard (20 tests)
 │       └── Interviewer Dashboard (17 tests)
 │
-├── Backend Tests (78 files, ~430 tests) ✅
-│   ├── Unit Tests (14 files, ~80 tests)
-│   │   ├── Grade Extraction Service
+├── Backend Tests (63 files) ✅
+│   ├── Unit Tests (10 files)
 │   │   ├── Student Number Service
-│   │   ├── OpenRouter Client
-│   │   ├── Email Jobs
+│   │   ├── File Service
+│   │   ├── Image Compression Service
 │   │   └── Error Handling
 │   │
-│   ├── Feature Tests (40 files, ~200 tests)
+│   ├── Feature Tests (53 files)
 │   │   ├── Authentication & IDP
-│   │   ├── Grade Extraction Integration
 │   │   ├── Bulk Email Tracking
 │   │   ├── Data Privacy & Security
 │   │   ├── Public Status Checker

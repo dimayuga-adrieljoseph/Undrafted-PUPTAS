@@ -90,15 +90,15 @@ This policy is backed by active, working code implementation across the reposito
 
 | Requirement | Code Implementation & Artifact Evidence |
 |---|---|
-| **Soft-Delete Capability** | `deleted_at` timestamp columns + `SoftDeletes` trait on [User.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/app/Models/User.php), [ApplicantProfile.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/app/Models/ApplicantProfile.php), and [UserFile.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/app/Models/UserFile.php) |
-| **Account Deactivation (Independent of Deletion)** | `is_active` boolean column on `users`; blocked in [AuthenticatedSessionController.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/app/Http/Controllers/AuthenticatedSessionController.php) |
-| **Reversibility within Hold Period** | `UserService::restoreUser()` and `UserService::reactivateUser()` in [UserService.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/app/Services/UserService.php) |
-| **Configurable Retention Periods** | [data_retention.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/config/data_retention.php), overridable via `.env` |
-| **Disposal Orchestration Service** | [DataRetentionService.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/app/Services/DataRetentionService.php) — handles chunked database deletion and physical file disk unlinking (`Storage::disk()->delete()`) |
+| **Soft-Delete Capability** | `deleted_at` timestamp columns + `SoftDeletes` trait on `User.php`, `ApplicantProfile.php`, and `UserFile.php` (in `app/Models/`) |
+| **Account Deactivation (Independent of Deletion)** | `is_active` boolean column on `users`; blocked in `AuthenticatedSessionController.php` (in `app/Http/Controllers/`) |
+| **Reversibility within Hold Period** | `UserService::restoreUser()` and `UserService::reactivateUser()` in `app/Services/UserService.php` |
+| **Configurable Retention Periods** | `config/data_retention.php`, overridable via `.env` |
+| **Disposal Orchestration Service** | `app/Services/DataRetentionService.php` — handles chunked database deletion and physical file disk unlinking (`Storage::disk()->delete()`) |
 | **Safe Inspection Before Destruction** | `php artisan data-retention:purge --dry-run` — calculates and renders purge statistics without mutating state |
-| **Manual & Scheduled Execution** | [PurgeExpiredData.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/app/Console/Commands/PurgeExpiredData.php) via `php artisan data-retention:purge`; automated in [bootstrap/app.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/bootstrap/app.php) (`dailyAt('02:00')`) |
-| **Audit Trail of Disposal Actions** | Each purge run writes a structured [AuditLog.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/app/Models/AuditLog.php) entry with record counts and freed storage bytes |
-| **Automated Verification Suite** | [DataRetentionTest.php](file:///c:/Users/Myla/OneDrive/Desktop/Undrafted-PUPTAS/puptas/tests/Feature/DataRetentionTest.php) verifying deactivation, dry-run safety, and hard-purge execution |
+| **Manual & Scheduled Execution** | `app/Console/Commands/PurgeExpiredData.php` via `php artisan data-retention:purge`; automated in `bootstrap/app.php` (`dailyAt('02:00')`) |
+| **Audit Trail of Disposal Actions** | Each purge run writes a structured `AuditLog` entry (in `app/Models/AuditLog.php`) with record counts and freed storage bytes |
+| **Automated Verification Suite** | `tests/Feature/DataRetentionTest.php` verifying deactivation, dry-run safety, and hard-purge execution |
 
 ---
 

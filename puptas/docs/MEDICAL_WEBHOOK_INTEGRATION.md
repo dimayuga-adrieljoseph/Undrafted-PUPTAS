@@ -1,5 +1,8 @@
 # Medical System Webhook Integration Guide
 
+> [!WARNING]
+> **This is a simplified quick-reference guide.** For the complete, authoritative integration documentation including full authentication setup, see [MEDICAL_SYSTEM_DEVELOPER_HANDOFF.md](MEDICAL_SYSTEM_DEVELOPER_HANDOFF.md).
+
 ## Overview
 This document describes how the medical system should send webhook notifications to PUPTAS when a student completes their medical examination.
 
@@ -9,9 +12,11 @@ This document describes how the medical system should send webhook notifications
 
 **URL**: `POST /api/v1/webhooks/medical-result`
 
-**Authentication**: Bearer token (medical-write client credentials)
+**Authentication**: Bearer token (OAuth 2.0 Client Credentials with `medical-write` scope)
 
 **Content-Type**: `application/json`
+
+**Required Header**: `X-Medical-Signature` — HMAC-SHA256 signature of the raw request body (see Security section below)
 
 ---
 
@@ -25,7 +30,9 @@ The webhook accepts the following payload:
 {
   "student_id": "ade67dc4-50f0-4e32-bd80-84308c0f4e10",
   "reference_number": "2024-12345",
-  "is_health_profile_completed": 1
+  "is_health_profile_completed": 1,
+  "timestamp": 1718464200,
+  "nonce": "a1b2c3d4e5f6g7h8"
 }
 ```
 
@@ -33,11 +40,16 @@ The webhook accepts the following payload:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `student_id` | string (UUID) | Yes* | The student's IDP user ID (UUID format) |
-| `reference_number` | string | Yes* | The student's official reference number |
-| `is_health_profile_completed` | integer | Yes | Medical clearance status: `1` = cleared/passed, `0` = failed |
+| `student_id` | string (UUID) | Conditional* | The student's IDP user ID (UUID format). Can also be sent as `idp_user_id`. |
+| `reference_number` | string | Conditional* | The student's official reference number |
+| `is_health_profile_completed` | integer | **Required** | Medical clearance status: `1` = cleared/passed, `0` = failed |
+| `timestamp` | integer | **Required** | Unix timestamp in seconds. Must be within **5 minutes** of the server's current time. |
+| `nonce` | string | **Required** | A unique, cryptographically random string to prevent replay attacks. |
 
 **Note**: At least ONE of `student_id` or `reference_number` must be provided. Providing both is recommended for better matching.
+
+> [!IMPORTANT]
+> **Anti-Replay Protection:** The `timestamp` must be within 5 minutes of the server time (rejected with `403 Request expired` otherwise). The `nonce` must be unique per request — duplicate nonces within the 10-minute cache window are rejected with `403 Duplicate request`.
 
 ---
 
@@ -122,64 +134,75 @@ The webhook accepts the following payload:
 
 ## Example Webhook Calls
 
-### Example 1: Using Both Identifiers (Recommended)
+### Example (Node.js — Recommended)
 
-```bash
-curl -X POST https://puptas.example.com/api/v1/webhooks/medical-result \
-  -H "Authorization: Bearer YOUR_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "student_id": "ade67dc4-50f0-4e32-bd80-84308c0f4e10",
-    "reference_number": "2024-12345",
-    "is_health_profile_completed": 1
-  }'
+```javascript
+const crypto = require('crypto');
+const axios = require('axios');
+
+const payload = JSON.stringify({
+    student_id: "ade67dc4-50f0-4e32-bd80-84308c0f4e10",
+    reference_number: "2024-12345",
+    is_health_profile_completed: 1,
+    timestamp: Math.floor(Date.now() / 1000),
+    nonce: crypto.randomBytes(16).toString('hex')
+});
+
+const secret = "YOUR_WEBHOOK_SECRET";
+const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+
+await axios.post('https://puptas.undraftedbsit2027.com/api/v1/webhooks/medical-result', payload, {
+    headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer YOUR_OAUTH_TOKEN',
+        'X-Medical-Signature': signature
+    }
+});
 ```
 
-### Example 2: Using Only student_id
+### Example (cURL)
 
 ```bash
-curl -X POST https://puptas.example.com/api/v1/webhooks/medical-result \
+# 1. Prepare the JSON payload (must include timestamp and nonce)
+PAYLOAD='{"student_id":"ade67dc4-50f0-4e32-bd80-84308c0f4e10","reference_number":"2024-12345","is_health_profile_completed":1,"timestamp":'$(date +%s)',"nonce":"'$(openssl rand -hex 16)'"}'
+
+# 2. Compute the HMAC-SHA256 signature
+SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "YOUR_WEBHOOK_SECRET" | awk '{print $2}')
+
+# 3. Send the request
+curl -X POST https://puptas.undraftedbsit2027.com/api/v1/webhooks/medical-result \
   -H "Authorization: Bearer YOUR_API_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-    "student_id": "ade67dc4-50f0-4e32-bd80-84308c0f4e10",
-    "is_health_profile_completed": 1
-  }'
-```
-
-### Example 3: Using Only reference_number
-
-```bash
-curl -X POST https://puptas.example.com/api/v1/webhooks/medical-result \
-  -H "Authorization: Bearer YOUR_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "reference_number": "2024-12345",
-    "is_health_profile_completed": 1
-  }'
+  -H "X-Medical-Signature: $SIGNATURE" \
+  -d "$PAYLOAD"
 ```
 
 ---
 
 ## Important Notes
 
-### 1. Idempotency
-- Sending the same webhook multiple times is safe
-- If medical is already completed, PUPTAS returns success without changes
-- No duplicate processing will occur
+### 1. Security — HMAC Signature (Mandatory)
+- You **must** compute an HMAC-SHA256 hash of the raw request body using the shared webhook secret
+- Send the hash in the `X-Medical-Signature` header
+- The webhook secret is provided by the PUPTAS Admin (separate from OAuth credentials)
+- Requests without a valid signature are rejected with `403 Invalid Signature`
+- The HMAC must be computed on the **exact raw bytes** sent in the request body
 
-### 2. Timing
-- Send webhook immediately after medical examination is completed
-- PUPTAS processes webhooks in real-time
+### 2. Anti-Replay Protection (Mandatory)
+- Every request **must** include a `timestamp` (Unix seconds, within 5 minutes of server time)
+- Every request **must** include a unique `nonce` string
+- Expired timestamps → `403 Request expired`
+- Duplicate nonces within the 10-minute window → `403 Duplicate request`
 
 ### 3. Retry Logic
 - If webhook fails (network error, timeout), retry with exponential backoff
-- Safe to retry the same request multiple times
+- **Generate a new `nonce` and `timestamp` for each retry** — reusing the same values will be rejected as a duplicate
 
-### 4. Security
+### 4. General
 - Always use HTTPS
-- Include valid Bearer token in Authorization header
-- Webhook signature verification is enabled (check with PUPTAS admin)
+- Include valid Bearer token (OAuth 2.0 with `medical-write` scope) in Authorization header
+- PUPTAS processes webhooks in real-time
 
 ---
 
@@ -188,23 +211,29 @@ curl -X POST https://puptas.example.com/api/v1/webhooks/medical-result \
 ### Test Endpoint
 Use the same endpoint for testing: `/api/v1/webhooks/medical-result`
 
+For the staging environment, see [MEDICAL_SYSTEM_DEVELOPER_HANDOFF_STAGING.md](MEDICAL_SYSTEM_DEVELOPER_HANDOFF_STAGING.md).
+
 ### Test Payload
 ```json
 {
   "student_id": "test-uuid-12345",
   "reference_number": "TEST-2024-001",
-  "is_health_profile_completed": 1
+  "is_health_profile_completed": 1,
+  "timestamp": 1718464200,
+  "nonce": "unique-test-string-001"
 }
 ```
+
+> [!WARNING]
+> Remember: the test payload still requires a valid `X-Medical-Signature` HMAC header and the `timestamp` must be within 5 minutes of the server time.
 
 ---
 
 ## Support
 
-For integration issues or questions, contact:
-- **Technical Support**: [support email]
-- **API Documentation**: [link to full API docs]
-- **Status Page**: [link to status page]
+For integration issues or questions, contact the PUPTAS Core Development team.
+
+**Full Integration Guide:** [MEDICAL_SYSTEM_DEVELOPER_HANDOFF.md](MEDICAL_SYSTEM_DEVELOPER_HANDOFF.md)
 
 ---
 
@@ -212,4 +241,5 @@ For integration issues or questions, contact:
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-09-30 | 1.1 | Added mandatory `timestamp`, `nonce`, HMAC-SHA256 signature requirements. Added anti-replay protection docs. Updated examples with proper security headers. |
 | 2026-04-16 | 1.0 | Initial webhook integration with `is_health_profile_completed` field |

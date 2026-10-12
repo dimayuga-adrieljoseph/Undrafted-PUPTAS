@@ -11,8 +11,8 @@ The implementation has three goals:
 ## Upload Flow
 1. User uploads a document from the UI.
 2. Backend validates type and size:
-   - Allowed formats: JPG, JPEG, PNG
-   - Max size: 2MB
+   - Image uploads: JPG, JPEG, PNG, WebP, GIF — Max size: 5MB
+   - Document uploads (ID, PSA, etc.): JPG, JPEG, PNG, WebP, GIF, PDF — Max size: 10MB
 3. File is stored in `uploads/files` on the configured storage disk.
 4. A `user_files` record is created/updated with:
    - `user_id`
@@ -102,7 +102,7 @@ Important behavior:
   - Grade 11 Report Back
   - Grade 12 Report Front
   - Grade 12 Report Back
-- Upload input accepts only `.jpg,.jpeg,.png`.
+- Upload input accepts `.jpg,.jpeg,.png,.webp,.gif` for images and additionally `.pdf` for document uploads.
 - User messaging clearly states allowed formats and size limits.
 
 ## File Mapping

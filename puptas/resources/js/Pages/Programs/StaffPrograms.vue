@@ -5,6 +5,7 @@ import EvaluatorLayout from '@/Layouts/EvaluatorLayout.vue';
 import InterviewerLayout from '@/Layouts/InterviewerLayout.vue';
 import RecordStaffLayout from '@/Layouts/RecordStaffLayout.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import PageContainer from '@/Components/PageContainer.vue';
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user ?? null);
@@ -88,7 +89,7 @@ onUnmounted(() => {
         </template>
 
         <div class="py-8">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <PageContainer :vertical-padding="false" class="space-y-6">
                 <!-- Stats Bar -->
                 <div v-if="!loading && hasData" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                     <div class="flex items-center justify-between flex-wrap gap-4">
@@ -223,7 +224,7 @@ onUnmounted(() => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </PageContainer>
         </div>
     </component>
 </template>

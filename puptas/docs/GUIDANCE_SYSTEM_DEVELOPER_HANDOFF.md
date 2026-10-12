@@ -74,10 +74,10 @@ The Guidance System requires granular read-access to student profiles. Currently
    - **Path:** `/api/v1/students/{referenceNumber}`
    - **Example:** `/api/v1/students/2026-GUI-5678`
 
-3. **List All Students** *(Deprecated)*
+3. **List All Students** *(Paginated)*
    - **Method:** `GET`
    - **Path:** `/api/v1/students`
-   - *Note: This endpoint is heavily paginated and will soon be removed. Please use the specific lookup endpoints above instead.*
+   - *Note: This endpoint returns a paginated list of all officially enrolled students. For faster lookups, use the specific email or reference number endpoints above instead.*
 
 ---
 

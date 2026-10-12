@@ -49,7 +49,7 @@ const steps = ref([
   { title: 'Receive Your PUPCET Result', description: 'After the PUP College Entrance Test, qualified applicants receive an email with their result and a Student Admission Receipt (SAR) form. Check your inbox — including spam.', icon: 'mail' },
   { title: 'Register via PUP Identity Provider', description: 'Create your PUP account using the registration link in your results email. This single account is your key to the PUPTAS admission portal.', icon: 'key' },
   { title: 'Complete Your Profile', description: 'On first login, fill in your personal information: full name, sex, SHS strand, school attended, date graduated, and your top three program choices.', icon: 'user' },
-  { title: 'Enter Your SHS Grades', description: 'Input your Grade 11 and 12 subject grades using the form for your strand (ABM, ICT, HUMSS, GAS, STEM, or TVL). Upload your report card for AI-assisted extraction.', icon: 'chart' },
+  { title: 'Enter Your SHS Grades', description: 'Input your Grade 11 and 12 subject grades using the form for your strand (ABM, ICT, HUMSS, GAS, STEM, or TVL).', icon: 'chart' },
   { title: 'Upload Required Documents', description: 'Upload your report cards and supporting documents directly to secure cloud storage. The system tells you exactly which files are needed based on your graduate type.', icon: 'folder' },
   { title: 'Submit Your Application', description: 'Review the programs you qualify for based on your grades and strand, confirm your choices, and officially submit your application.', icon: 'check-circle' },
   { title: 'Evaluation & Interview', description: "Staff will verify your documents and grades. Once cleared, you'll be scheduled for an interview. You'll receive email updates at every step.", icon: 'chat' },
@@ -58,7 +58,7 @@ const steps = ref([
 
 const capabilities = ref([
   { icon: 'user',     title: 'Complete Your Profile',          desc: 'Set up your applicant profile with personal info, SHS strand, school details, and program choices on your first login.' },
-  { icon: 'chart',    title: 'Submit Your Grades',             desc: 'Enter your Grade 11 and 12 subject grades. Upload your report card and let AI extract grades automatically.' },
+  { icon: 'chart',    title: 'Submit Your Grades',             desc: 'Enter your Grade 11 and 12 subject grades. The portal computes your GWA and eligible programs instantly.' },
   { icon: 'folder',   title: 'Upload Documents',               desc: "Directly upload your report cards and supporting documents. The portal shows exactly what's needed." },
   { icon: 'target',   title: 'See Your Eligible Programs',     desc: 'Know which college programs you qualify for based on your strand, GWA, and subject grades — instantly.' },
   { icon: 'signal',   title: 'Track Application Status',       desc: 'Monitor your application in real time as it moves through evaluation, interview, medical, and enrollment.' },

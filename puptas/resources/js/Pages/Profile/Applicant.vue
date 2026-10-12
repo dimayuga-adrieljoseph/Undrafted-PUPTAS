@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import ApplicantLayout from '@/Layouts/ApplicantLayout.vue';
+import PageContainer from '@/Components/PageContainer.vue';
 
 const props = defineProps({
   user: Object,
@@ -177,7 +178,7 @@ const cancelAcademic = () => {
     </template>
 
     <div class="py-8">
-      <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-5">
+      <PageContainer :vertical-padding="false" class="space-y-5">
 
         <!-- ── Hero Card (crimson gradient) ── -->
         <div class="hero-card rounded-2xl overflow-hidden shadow-[0_4px_24px_rgba(158,18,44,.32)]">
@@ -522,7 +523,7 @@ const cancelAcademic = () => {
           </div>
         </div>
 
-      </div>
+      </PageContainer>
     </div>
   </ApplicantLayout>
 </template>

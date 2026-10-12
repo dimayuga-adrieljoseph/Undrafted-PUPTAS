@@ -346,7 +346,7 @@ const formatGrade = (value) => {
                                             :src="getFileUrl(file)"
                                             alt="Document"
                                             class="w-full aspect-[4/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition"
-                                            @click="emit('open-image', file)"
+                                            @click="emit('open-image', file, formatFileKey(key))"
                                         />
                                         <div v-else class="w-full aspect-[4/3] flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-gray-700 rounded-lg">
                                             No file

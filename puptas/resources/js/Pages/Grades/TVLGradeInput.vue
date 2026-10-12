@@ -2,6 +2,7 @@
 import { ref, computed } from "vue";
 import { Head } from "@inertiajs/vue3";
 import ApplicantLayout from "@/Layouts/ApplicantLayout.vue";
+import PageContainer from "@/Components/PageContainer.vue";
 import GradesReviewModal from "@/Components/GradesReviewModal.vue";
 import DynamicSubjectRow from "@/Components/DynamicSubjectRow.vue";
 import FieldError from "@/Components/FieldError.vue";
@@ -13,7 +14,6 @@ const props = defineProps({
     programs: Array,
     strand: String,
     profile: Object,
-    extractionResult: { type: Object, default: null },
     isLocked: { type: Boolean, default: false },
 });
 
@@ -75,7 +75,6 @@ const {
 });
 
 const successMessage = ref("");
-const bannerDismissed = ref(false);
 const showReviewModal = ref(false);
 
 // Helper function to get selected program name
@@ -157,7 +156,7 @@ const confirmSaveGrades = () => {
 <template>
     <Head title="TVL Grade Input" />
     <ApplicantLayout>
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PageContainer>
             <!-- Header Section -->
             <div class="mb-8">
                 <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">TVL Strand Grade Input</h1>
@@ -270,17 +269,6 @@ const confirmSaveGrades = () => {
             </Transition>
 
             <form @submit.prevent="openReviewModal">
-                <!-- Docling Autofill Banner -->
-                <div v-if="extractionResult && !bannerDismissed" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-4">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-file-alt text-blue-600 dark:text-blue-400"></i>
-                        <p class="text-sm text-blue-700 dark:text-blue-300">
-                            Grades have been autofilled from your uploaded documents using Docling. Please review and verify before submitting.
-                        </p>
-                    </div>
-                    <button @click="bannerDismissed = true" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-xl leading-none flex-shrink-0">&times;</button>
-                </div>
-
                 <!-- Core Subjects Card -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
@@ -867,7 +855,7 @@ const confirmSaveGrades = () => {
                 @close="closeReviewModal"
                 @confirm="confirmSaveGrades"
             />
-        </div>
+        </PageContainer>
     </ApplicantLayout>
 </template>
 

@@ -198,7 +198,7 @@ To recalibrate after a template update, adjust the x/y values in `GradeVerificat
 
 ✅ Existing application submission flow unchanged  
 ✅ Existing SAR Form workflow unchanged  
-✅ No new database tables or migrations  
+✅ New `gvs_generations` table required — run `php artisan migrate` before deploying (see Database Changes above)  
 ✅ Only adds new read-only PDF generation on top of existing data  
 
 ---

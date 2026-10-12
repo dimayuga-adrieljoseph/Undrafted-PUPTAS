@@ -19,15 +19,15 @@ Implement secure stage-based visibility for applications, ensuring staff members
 **Modified Files:**
 - `app/Http/Controllers/EvaluatorDashboardController.php`
 - `app/Http/Controllers/InterviewerDashboardController.php`
-- `app/Http/Controllers/MedicalDashboardController.php`
 - `app/Http/Controllers/RecordStaffDashboardController.php`
 
 **Changes:**
 - Updated `getUsers()` method in each controller to use `getApplicantsByStage()` with appropriate stage parameter
 - Evaluator: filters for 'evaluator' stage
 - Interviewer: filters for 'interviewer' stage  
-- Medical: filters for 'medical' stage
 - Record Staff: filters for 'records' stage
+
+> **Note:** Medical clearance is **not** handled by an in-system dashboard controller. It is handled by the external Medical System via OAuth API and HMAC webhook integration (see `MEDICAL_SYSTEM_DEVELOPER_HANDOFF.md`).
 
 ### 3. Individual Application Access Security
 
@@ -75,9 +75,9 @@ Implement secure stage-based visibility for applications, ensuring staff members
 |------|---------|---------------|--------------|
 | Evaluator | 3 | evaluator | /evaluator-dashboard/applicants |
 | Interviewer | 4 | interviewer | /interviewer-dashboard/applicants |
-| Medical | 5 | medical | /medical-dashboard/applicants |
 | Record Staff | 6 | records | /record-dashboard/applicants |
 | Admin | 2 | ALL | /dashboard/users |
+| SuperAdmin | 7 | ALL | /dashboard/users |
 
 ## Validation Status
 
@@ -103,9 +103,9 @@ Implement secure stage-based visibility for applications, ensuring staff members
 ### Manual Testing Checklist
 - [ ] Evaluator sees only evaluator-stage apps
 - [ ] Interviewer sees only interviewer-stage apps
-- [ ] Medical sees only medical-stage apps
 - [ ] Record staff sees only records-stage apps
 - [ ] Admin sees all applications
+- [ ] SuperAdmin sees all applications
 - [ ] Cross-stage access is blocked (403 error)
 - [ ] Applications move correctly between stages
 - [ ] Returned applications stay at current stage
