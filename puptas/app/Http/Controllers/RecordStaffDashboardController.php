@@ -626,7 +626,9 @@ class RecordStaffDashboardController extends Controller
                 ]
             );
 
-            // Log enrollment to audit logs
+            DB::commit();
+
+            // Log enrollment to audit logs (after commit)
             try {
                 $this->auditLogService->logActivity(
                     'UPDATE',
@@ -641,8 +643,6 @@ class RecordStaffDashboardController extends Controller
                     'error' => $auditException->getMessage(),
                 ]);
             }
-
-            DB::commit();
 
             // Update the applicant's role in IDP from "applicant" to "student" via queue
             $this->dispatchIdpUpdate($id, $request->input('mfa_code'));
@@ -802,7 +802,9 @@ class RecordStaffDashboardController extends Controller
                 ]);
             }
 
-            // Log untag to audit logs
+            DB::commit();
+
+            // Log untag to audit logs (after commit)
             try {
                 $this->auditLogService->logActivity(
                     'UPDATE',
@@ -818,7 +820,6 @@ class RecordStaffDashboardController extends Controller
                 ]);
             }
 
-            DB::commit();
             return response()->json(['message' => 'Reverted to temporary enrolled successfully']);
         } catch (\Exception $e) {
             DB::rollBack();

@@ -543,28 +543,11 @@ class IdpSyncMonitorController extends Controller
                     'user_id' => auth()->id(),
                 ]);
                 
-                $this->auditLogService->logActivity(
-                    'ATTEMPTED',
-                    'IDP Sync Monitor',
-                    'Unauthorized attempt to retry failed jobs',
-                    auth()->user(),
-                    \App\Models\AuditLog::CATEGORY_AUTHENTICATION
-                );
-                
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
 
             // Count failed jobs before retry
             $failedJobsCount = DB::table('failed_jobs')->count();
-
-            // Log the retry attempt
-            $this->auditLogService->logActivity(
-                'COMMAND',
-                'IDP Sync Monitor',
-                "Retrying {$failedJobsCount} failed IDP sync job(s)",
-                auth()->user(),
-                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-            );
 
             Log::info('Super admin retrying failed jobs', [
                 'user_id' => auth()->id(),
@@ -582,14 +565,20 @@ class IdpSyncMonitorController extends Controller
                 'output' => $output,
             ]);
 
-            // Log successful retry
-            $this->auditLogService->logActivity(
-                'UPDATE',
-                'IDP Sync Monitor',
-                "Successfully queued {$failedJobsCount} failed job(s) for retry",
-                auth()->user(),
-                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-            );
+            // Log after operation completes
+            try {
+                $this->auditLogService->logActivity(
+                    'UPDATE',
+                    'IDP Sync Monitor',
+                    "Successfully queued {$failedJobsCount} failed job(s) for retry",
+                    auth()->user(),
+                    \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                );
+            } catch (\Exception $auditEx) {
+                Log::error('Failed to log retry success to audit', [
+                    'error' => $auditEx->getMessage(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -602,15 +591,6 @@ class IdpSyncMonitorController extends Controller
                 'user_id' => auth()->id(),
             ]);
 
-            // Log database error
-            $this->auditLogService->logActivity(
-                'FAILED',
-                'IDP Sync Monitor',
-                'Database error while retrying failed jobs',
-                auth()->user(),
-                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-            );
-
             return response()->json([
                 'success' => false,
                 'message' => 'Database error occurred. Please try again.',
@@ -621,15 +601,6 @@ class IdpSyncMonitorController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'user_id' => auth()->id(),
             ]);
-
-            // Log general error
-            $this->auditLogService->logActivity(
-                'FAILED',
-                'IDP Sync Monitor',
-                'Exception while retrying failed jobs: ' . $e->getMessage(),
-                auth()->user(),
-                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-            );
 
             return response()->json([
                 'success' => false,
