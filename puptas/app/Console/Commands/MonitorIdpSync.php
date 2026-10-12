@@ -274,10 +274,10 @@ class MonitorIdpSync extends Command
     {
         return Application::where('enrollment_status', 'officially_enrolled')
             ->whereNull('deleted_at')
-            ->whereHas('user', function ($q) {
+            ->whereHas('userAccount', function ($q) {
                 $q->whereNotNull('idp_user_id');
             })
-            ->whereDoesntHave('user', function ($q) {
+            ->whereDoesntHave('userAccount', function ($q) {
                 $q->whereExists(function ($query) {
                     $query->select(\DB::raw(1))
                         ->from('audit_logs')

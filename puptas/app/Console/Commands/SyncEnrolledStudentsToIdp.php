@@ -69,7 +69,7 @@ class SyncEnrolledStudentsToIdp extends Command
         // Find all officially enrolled students
         $applications = Application::where('enrollment_status', 'officially_enrolled')
             ->whereNull('deleted_at')
-            ->with('user')
+            ->with('userAccount')
             ->get();
 
         $total = $applications->count();
@@ -82,8 +82,8 @@ class SyncEnrolledStudentsToIdp extends Command
         $this->info("📊 Found {$total} officially enrolled student(s)");
         $this->newLine();
 
-        // Count students with and without IDP IDs
-        $withIdpId = $applications->filter(fn($app) => !empty($app->user?->idp_user_id))->count();
+        // Count students with and without IDP IDs (check userAccount on User model)
+        $withIdpId = $applications->filter(fn($app) => !empty($app->userAccount?->idp_user_id))->count();
         $withoutIdpId = $total - $withIdpId;
 
         $this->table(
@@ -143,15 +143,15 @@ class SyncEnrolledStudentsToIdp extends Command
         ];
 
         foreach ($applications as $application) {
-            $user = $application->user;
+            $user = $application->userAccount;
 
             // Skip users without IDP ID
-            if (empty($user->idp_user_id)) {
+            if (!$user || empty($user->idp_user_id)) {
                 $results['skipped']++;
                 continue;
             }
 
-            $userId = $user->id;
+            $userId = (int) $user->id;
             $idpUserId = $user->idp_user_id;
             $userEmail = $user->email ?? 'N/A';
 

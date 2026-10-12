@@ -97,6 +97,11 @@ class Application extends Model
         return $this->belongsTo(ApplicantProfile::class, 'user_id', 'user_id');
     }
 
+    public function userAccount()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
     // app/Models/Application.php
     public function files()
     {
