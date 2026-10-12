@@ -555,6 +555,14 @@ class IdpSyncMonitorController extends Controller
                 'failed_jobs_count' => $failedJobsCount,
             ]);
 
+            if ($failedJobsCount === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No failed jobs found to retry.',
+                    'count' => 0,
+                ]);
+            }
+
             // Retry all failed jobs
             \Illuminate\Support\Facades\Artisan::call('queue:retry', ['id' => ['all']]);
 
@@ -593,7 +601,7 @@ class IdpSyncMonitorController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Database error occurred. Please try again.',
+                'message' => 'Database error occurred: ' . $e->getMessage(),
             ], 500);
         } catch (\Exception $e) {
             Log::error('Failed to retry failed jobs', [
@@ -604,7 +612,7 @@ class IdpSyncMonitorController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retry jobs. Please contact support.',
+                'message' => 'Failed to retry jobs: ' . $e->getMessage(),
             ], 500);
         }
     }
