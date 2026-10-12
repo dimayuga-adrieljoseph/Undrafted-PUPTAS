@@ -348,6 +348,21 @@ class EvaluatorDashboardController extends Controller
     {
         $this->ensureRole($this->getRoleId());
 
+        // Program scoping for roles 3 (Document Evaluator) and 4 (Interviewer) only.
+        // Roles 2 (Admin), 7 (SuperAdmin), 8 (Grade Evaluator) are exempt.
+        $authUser = auth()->user();
+        if ($authUser && in_array($authUser->role_id, [RoleId::DocumentEvaluator->value, RoleId::Interviewer->value])) {
+            $applicationProcess->loadMissing('application');
+            $application = $applicationProcess->application;
+            $assignedProgramIds = $authUser->programs()->pluck('programs.id')->toArray();
+
+            if (!$application || !in_array($application->program_id, $assignedProgramIds)) {
+                return response()->json([
+                    'message' => 'You are not authorized to evaluate applicants for this program.',
+                ], 403);
+            }
+        }
+
         if ($applicationProcess->started_at !== null) {
             return response()->json(['message' => 'Review already started.'], 409);
         }

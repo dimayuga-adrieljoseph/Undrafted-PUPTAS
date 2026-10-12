@@ -16,7 +16,34 @@ use Illuminate\Http\JsonResponse;
  */
 class LazyLoadController extends Controller
 {
-    private const STAFF_ROLE_IDS = [2, 3, 4, 5, 6, 7];
+    private const STAFF_ROLE_IDS = [2, 3, 4, 5, 6, 7, 8];
+
+    /**
+     * Enforce program scoping for roles 3 (Document Evaluator) and 4 (Interviewer) only.
+     * Roles 2 (Admin), 7 (SuperAdmin), 8 (Grade Evaluator), 5 (Medical), 6 (Registrar) are exempt.
+     * If the applicant has several applications, access is allowed if ANY program is in the user's assigned programs.
+     */
+    private function checkProgramScoping(int $userId): ?JsonResponse
+    {
+        $user = auth()->user();
+        if (!$user || !in_array($user->role_id, [\App\Enums\RoleId::DocumentEvaluator->value, \App\Enums\RoleId::Interviewer->value])) {
+            return null;
+        }
+
+        $assignedProgramIds = $user->programs()->pluck('programs.id')->toArray();
+        $applicantProgramIds = \App\Models\Application::where('user_id', (string) $userId)
+            ->whereNotNull('program_id')
+            ->pluck('program_id')
+            ->toArray();
+
+        if (empty(array_intersect($applicantProgramIds, $assignedProgramIds))) {
+            return response()->json([
+                'message' => 'You are not authorized to evaluate applicants for this program.',
+            ], 403);
+        }
+
+        return null;
+    }
 
     /**
      * Load a single document file URL
@@ -31,6 +58,10 @@ class LazyLoadController extends Controller
             // Verify staff access
             if (!auth()->check() || !in_array(auth()->user()->role_id, self::STAFF_ROLE_IDS)) {
                 return response()->json(['message' => 'Unauthorized access'], 403);
+            }
+
+            if ($scopingError = $this->checkProgramScoping($userId)) {
+                return $scopingError;
             }
 
             // Find the file
@@ -89,6 +120,10 @@ class LazyLoadController extends Controller
             // Verify staff access
             if (!auth()->check() || !in_array(auth()->user()->role_id, self::STAFF_ROLE_IDS)) {
                 return response()->json(['message' => 'Unauthorized access'], 403);
+            }
+
+            if ($scopingError = $this->checkProgramScoping($userId)) {
+                return $scopingError;
             }
 
             $fileTypes = $request->input('fileTypes', []);
@@ -177,6 +212,10 @@ class LazyLoadController extends Controller
             // Verify staff access
             if (!auth()->check() || !in_array(auth()->user()->role_id, self::STAFF_ROLE_IDS)) {
                 return response()->json(['message' => 'Unauthorized access'], 403);
+            }
+
+            if ($scopingError = $this->checkProgramScoping($userId)) {
+                return $scopingError;
             }
 
             $user = User::with('grades')->find($userId);

@@ -273,6 +273,23 @@ trait ManagesApplicationFiles
                 })
                 ->firstOrFail();
 
+            // Program scoping for roles 3 (Document Evaluator) and 4 (Interviewer) only.
+            // Roles 2 (Admin), 7 (SuperAdmin), 8 (Grade Evaluator), 5 (Medical), 6 (Registrar) are exempt.
+            $authUser = auth()->user();
+            if ($authUser && in_array($authUser->role_id, [\App\Enums\RoleId::DocumentEvaluator->value, \App\Enums\RoleId::Interviewer->value])) {
+                $assignedProgramIds = $authUser->programs()->pluck('programs.id')->toArray();
+                $applicantProgramIds = \App\Models\Application::where('user_id', (string) $user->id)
+                    ->whereNotNull('program_id')
+                    ->pluck('program_id')
+                    ->toArray();
+
+                if (empty(array_intersect($applicantProgramIds, $assignedProgramIds))) {
+                    return response()->json([
+                        'message' => 'You are not authorized to evaluate applicants for this program.',
+                    ], 403);
+                }
+            }
+
             return response()->json([
                 'grades' => $user->grades,
             ]);
