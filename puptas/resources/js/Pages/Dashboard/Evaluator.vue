@@ -86,6 +86,12 @@ const POLL_INTERVAL_MS = 10000;
 
 const currentStage = computed(() => props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator'));
 
+const viewAllLink = computed(() => {
+    return currentStage.value === 'document_evaluator'
+        ? '/document-evaluator-applications'
+        : `/evaluator-applications?stage=${currentStage.value}`;
+});
+
 const refreshDashboard = () => {
     router.reload({
         only: ["pendingUsers", "summary", "chartData"],
@@ -841,7 +847,7 @@ const showToast = (message, type = 'success') => {
                             <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Pending Review</h3>
                             <p class="text-gray-600 dark:text-gray-400 text-sm">Applications awaiting evaluation</p>
                         </div>
-                        <Link href="/evaluator-applications" 
+                        <Link :href="viewAllLink"
                               class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition dark:text-white dark:hover:text-white">
                             View All
                         </Link>
