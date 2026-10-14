@@ -50,8 +50,9 @@ class SyncEnrolledStudentsToIdp extends Command
         $this->info('================================');
         $this->newLine();
 
-        // Get admin access token
-        $accessToken = $this->idpService->getAdminAccessToken();
+        // Get admin access token. With a fresh MFA code, prefer the session token
+        // so the IDP establishes a new sudo session on it.
+        $accessToken = $this->idpService->getAdminAccessToken(!empty($mfaCode));
         
         if (empty($accessToken)) {
             $this->error('❌ Admin access token not found!');

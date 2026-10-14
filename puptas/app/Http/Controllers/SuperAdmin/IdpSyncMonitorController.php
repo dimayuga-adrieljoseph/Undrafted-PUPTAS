@@ -280,10 +280,12 @@ class IdpSyncMonitorController extends Controller
         foreach ($failures as $failure) {
             $details = $failure->description;
             
-            if (str_contains($details, 'MFA')) {
-                $breakdown['MFA_REQUIRED']++;
-            } elseif (str_contains($details, 'UNAUTHORIZED')) {
+            // Match exact error codes. Check UNAUTHORIZED first: its message text
+            // contains "Invalid MFA code", which previously got miscounted as MFA.
+            if (str_contains($details, 'UNAUTHORIZED')) {
                 $breakdown['UNAUTHORIZED']++;
+            } elseif (str_contains($details, 'MFA_REQUIRED')) {
+                $breakdown['MFA_REQUIRED']++;
             } elseif (str_contains($details, 'USER_NOT_FOUND')) {
                 $breakdown['USER_NOT_FOUND']++;
             } elseif (str_contains($details, 'RATE_LIMIT_EXCEEDED')) {
@@ -335,6 +337,7 @@ class IdpSyncMonitorController extends Controller
                 'failed_jobs' => $failedJobsCount,
                 'queue_connection' => $queueDriver,
                 'is_running' => $this->isQueueRunning(),
+                'sudo_active' => app(\App\Services\IdpService::class)->hasSudoToken(),
             ];
         } catch (\Exception $e) {
             Log::error('Failed to get queue status', ['error' => $e->getMessage()]);

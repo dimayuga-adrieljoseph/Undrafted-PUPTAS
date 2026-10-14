@@ -125,6 +125,10 @@ class UpdateIdpAccountType implements ShouldQueue
                 'idp_user_id' => $this->idpUserId,
             ]);
 
+            // The IDP has accepted this token, so it is now in sudo mode.
+            // Cache it so later enrollments can reuse it without MFA.
+            $idpService->cacheSudoToken($this->accessToken);
+
             // Log audit trail
             try {
                 $message = $this->isFromSync
@@ -180,8 +184,14 @@ class UpdateIdpAccountType implements ShouldQueue
                 ]);
             }
 
-            // If MFA required or user not found, don't retry
-            if (in_array($error, ['MFA_REQUIRED', 'USER_NOT_FOUND', 'INVALID_ACCOUNT_TYPE'])) {
+            // Sudo window expired or token rejected: drop the cached token (only if it's
+            // the one that failed) so the next attempt falls back to a fresh token.
+            if (in_array($error, ['MFA_REQUIRED', 'UNAUTHORIZED'])) {
+                $idpService->clearSudoToken($this->accessToken);
+            }
+
+            // These errors won't fix themselves on retry with the same token
+            if (in_array($error, ['MFA_REQUIRED', 'UNAUTHORIZED', 'USER_NOT_FOUND', 'INVALID_ACCOUNT_TYPE', 'INVALID_MFA_FORMAT'])) {
                 Log::info('Not retrying job due to error type', [
                     'error' => $error,
                     'user_id' => $this->userId,

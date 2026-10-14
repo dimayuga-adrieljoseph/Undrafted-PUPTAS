@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -244,9 +246,21 @@ class IdpService
      *
      * @return string|null The access token or null if not available
      */
-    public function getAdminAccessToken(): ?string
+    public function getAdminAccessToken(bool $preferSession = false): ?string
     {
-        // First, check if the token is in the session
+        // Prefer the cached sudo-verified admin token (set after one MFA-verified
+        // request). The IDP keeps that token in sudo mode, so it can be reused
+        // without MFA — including for enrollments triggered by non-admin staff.
+        // When a fresh MFA code is supplied, the caller prefers the session token
+        // instead so a new sudo session can be established.
+        if (!$preferSession) {
+            $sudoToken = $this->getSudoToken();
+            if ($sudoToken) {
+                return $sudoToken;
+            }
+        }
+
+        // Next, check if the token is in the session
         $token = session('idp_access_token');
 
         if ($token) {
@@ -279,6 +293,77 @@ class IdpService
 
         Log::warning('Admin IDP access token not found in session or config');
         return null;
+    }
+
+    /**
+     * Cache key for the sudo-verified admin token.
+     */
+    private const SUDO_TOKEN_CACHE_KEY = 'idp:sudo_admin_token';
+
+    /**
+     * Store an admin access token that the IDP has accepted (sudo mode active).
+     * Stored encrypted; expires after config('services.idp.sudo_ttl_minutes').
+     */
+    public function cacheSudoToken(string $accessToken): void
+    {
+        if (!$this->isValidJwtFormat($accessToken)) {
+            return;
+        }
+
+        $ttlMinutes = (int) config('services.idp.sudo_ttl_minutes', 60);
+
+        try {
+            Cache::put(self::SUDO_TOKEN_CACHE_KEY, Crypt::encryptString($accessToken), now()->addMinutes($ttlMinutes));
+            Log::info('Cached sudo-verified IDP admin token', ['ttl_minutes' => $ttlMinutes]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to cache sudo IDP admin token', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Retrieve the cached sudo-verified admin token, if any.
+     */
+    public function getSudoToken(): ?string
+    {
+        try {
+            $encrypted = Cache::get(self::SUDO_TOKEN_CACHE_KEY);
+            if (!$encrypted) {
+                return null;
+            }
+
+            $token = Crypt::decryptString($encrypted);
+            return $this->isValidJwtFormat($token) ? $token : null;
+        } catch (\Throwable $e) {
+            Log::warning('Failed to read cached sudo IDP admin token', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
+     * Clear the cached sudo token (e.g. after the IDP rejects it).
+     * If $onlyIfMatches is given, the cache is cleared only when it holds that token,
+     * so a rejected non-admin token never wipes a valid admin token.
+     */
+    public function clearSudoToken(?string $onlyIfMatches = null): void
+    {
+        try {
+            if ($onlyIfMatches !== null && $this->getSudoToken() !== $onlyIfMatches) {
+                return;
+            }
+
+            Cache::forget(self::SUDO_TOKEN_CACHE_KEY);
+            Log::warning('Cleared cached sudo IDP admin token (expired or rejected by IDP)');
+        } catch (\Throwable $e) {
+            Log::warning('Failed to clear cached sudo IDP admin token', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Whether a sudo-verified admin token is currently cached.
+     */
+    public function hasSudoToken(): bool
+    {
+        return $this->getSudoToken() !== null;
     }
 
     /**

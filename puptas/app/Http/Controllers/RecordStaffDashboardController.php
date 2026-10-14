@@ -712,8 +712,10 @@ class RecordStaffDashboardController extends Controller
                 return;
             }
 
-            // SECURITY: Get the admin's access token from session (not exposed to client)
-            $accessToken = $this->idpService->getAdminAccessToken();
+            // SECURITY: Token is resolved server-side (never exposed to client).
+            // Uses the cached sudo-verified admin token when available, so Record Staff
+            // enrollments sync automatically without needing IDP admin rights or MFA.
+            $accessToken = $this->idpService->getAdminAccessToken(!empty($mfaCode));
 
             if (empty($accessToken)) {
                 Log::error('Admin access token not available for IDP account type update', [

@@ -338,6 +338,25 @@ onMounted(() => {
               <p class="mt-1 text-lg font-medium text-red-600 dark:text-red-400">{{ metrics.queue_status.failed_jobs || 0 }}</p>
             </div>
           </div>
+          <div
+            id="idp-sudo-status"
+            :class="[
+              'mt-6 rounded-xl px-4 py-3 text-sm flex items-start gap-2',
+              metrics.queue_status.sudo_active
+                ? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                : 'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
+            ]"
+          >
+            <span class="font-semibold whitespace-nowrap">
+              {{ metrics.queue_status.sudo_active ? '🟢 Auto-sync active' : '🟡 Auto-sync paused' }}
+            </span>
+            <span v-if="metrics.queue_status.sudo_active">
+              An MFA-verified admin session is cached. Enrollments tagged by Record Staff will sync to the IDP automatically.
+            </span>
+            <span v-else>
+              No MFA-verified admin session. Click "Trigger Manual Sync" and enter your MFA code once to enable automatic syncing.
+            </span>
+          </div>
         </div>
 
         <!-- Failure Breakdown -->
