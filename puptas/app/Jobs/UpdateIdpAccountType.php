@@ -111,11 +111,14 @@ class UpdateIdpAccountType implements ShouldQueue
             'attempt' => $this->attempts(),
         ]);
 
+        // Prefer the active/sudo admin token if available, falling back to constructor token
+        $effectiveToken = $idpService->getAdminAccessToken() ?? $this->accessToken;
+
         // Account type ID 3 = student
         $result = $idpService->updateUserAccountType(
             $this->idpUserId,
             3,
-            $this->accessToken,
+            $effectiveToken,
             $this->mfaCode
         );
 
@@ -127,7 +130,7 @@ class UpdateIdpAccountType implements ShouldQueue
 
             // The IDP has accepted this token, so it is now in sudo mode.
             // Cache it so later enrollments can reuse it without MFA.
-            $idpService->cacheSudoToken($this->accessToken);
+            $idpService->cacheSudoToken($effectiveToken);
 
             // Log audit trail
             try {

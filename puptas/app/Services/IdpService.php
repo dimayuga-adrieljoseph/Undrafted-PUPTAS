@@ -84,14 +84,16 @@ class IdpService
         $baseUrl = rtrim($idpConfig['base_url'], '/');
         $url = "{$baseUrl}/api/v1/admin/users/{$idpUserId}";
 
-        // Prepare payload
+        // Prepare payload matching Identity Provider specification
+        // (see updateUserDetails in IDP source: account_type_id, role_id, mfa_code)
         $payload = [
-            'account_type_id' => $accountTypeId,
+            'account_type_id' => (int) $accountTypeId,
+            'role_id' => 0,
         ];
 
         // Include MFA code if provided
-        if ($mfaCode !== null) {
-            $payload['mfa_code'] = $mfaCode;
+        if ($mfaCode !== null && trim((string) $mfaCode) !== '') {
+            $payload['mfa_code'] = trim((string) $mfaCode);
         }
 
         // Inspect token expiration before sending
@@ -123,18 +125,15 @@ class IdpService
         }
 
         try {
+            $host = parse_url($baseUrl, PHP_URL_HOST);
             $httpRequest = Http::withToken($accessToken)
+                ->withHeaders([
+                    'Cookie' => "access_token={$accessToken}",
+                ])
+                ->withCookies(['access_token' => $accessToken], $host ?: 'identity-provider.isaxbsit2027.com')
                 ->acceptJson()
+                ->asJson()
                 ->timeout(30);
-
-            // Support both body payload and custom headers for MFA code
-            if ($mfaCode !== null) {
-                $payload['mfa_code'] = $mfaCode;
-                $httpRequest = $httpRequest->withHeaders([
-                    'X-MFA-Code' => $mfaCode,
-                    'X-OTP' => $mfaCode,
-                ]);
-            }
 
             $response = $httpRequest->patch($url, $payload);
 
@@ -149,9 +148,17 @@ class IdpService
                 $returnedSudo = $response->json('sudo_token')
                     ?? $response->json('token')
                     ?? $response->json('sudo_session_token')
-                    ?? $response->header('X-Sudo-Token');
+                    ?? $response->header('X-Sudo-Token')
+                    ?? $response->header('X-Sudo-Session');
 
-                if ($returnedSudo && is_string($returnedSudo)) {
+                if (!$returnedSudo) {
+                    $setCookie = $response->header('Set-Cookie');
+                    if ($setCookie && preg_match('/(?:sudo_token|access_token)=([^;]+)/', $setCookie, $cookieMatch)) {
+                        $returnedSudo = $cookieMatch[1];
+                    }
+                }
+
+                if ($returnedSudo && is_string($returnedSudo) && $this->isValidJwtFormat($returnedSudo)) {
                     $this->cacheSudoToken($returnedSudo);
                 }
 
@@ -211,21 +218,26 @@ class IdpService
                     $response->json('title'),
                 ])->first(fn ($v) => is_string($v) && trim($v) !== '');
 
-                // Always surface the raw response so the real cause is visible
-                $details = [];
-                if ($error) {
-                    $details[] = $error;
-                }
-                $details[] = 'body=' . ($rawBody !== '' ? substr($rawBody, 0, 300) : '(empty)');
-                if ($wwwAuth) {
-                    $details[] = 'www-authenticate=' . substr($wwwAuth, 0, 200);
-                }
-
-                // Identify token owner to verify if an admin vs student token was used
+                // Always surface actionable details so the real cause is clear
                 $tokenSub = $tokenPayload['sub'] ?? 'unknown';
                 $tokenEmail = $tokenPayload['email'] ?? ($tokenPayload['username'] ?? null);
                 $tokenRole = $tokenPayload['role'] ?? ($tokenPayload['role_name'] ?? ($tokenPayload['account_type'] ?? null));
                 $tokenOwner = $tokenEmail ?: $tokenSub;
+
+                $details = [];
+                if ($error) {
+                    $details[] = $error;
+                } elseif ($rawBody === '') {
+                    $details[] = "IDP Authentication Failed: The Identity Provider (identity-provider.isaxbsit2027.com) rejected the admin access token for {$tokenOwner} (HTTP 401). Please re-login to PUPTAS via IDP SSO to refresh your session credentials, or check IDP_ADMIN_ACCESS_TOKEN in .env.";
+                } else {
+                    $details[] = 'body=' . substr($rawBody, 0, 300);
+                }
+
+                if ($wwwAuth) {
+                    $details[] = 'www-authenticate=' . substr($wwwAuth, 0, 200);
+                }
+
+                // Identify token owner to verify if an admin vs applicant token was used
                 $details[] = 'token_owner=' . $tokenOwner . ($tokenRole ? "(role:{$tokenRole})" : '');
 
                 $error = implode(' | ', $details);

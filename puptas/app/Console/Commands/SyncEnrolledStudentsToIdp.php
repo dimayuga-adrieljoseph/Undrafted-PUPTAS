@@ -130,108 +130,175 @@ class SyncEnrolledStudentsToIdp extends Command
         $this->info('🚀 Starting sync process...');
         $this->newLine();
 
-        $progressBar = $this->output->createProgressBar($withIdpId);
-        $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% %message%');
-        $progressBar->setMessage('Initializing...');
-        $progressBar->start();
-
         $results = [
-            'success' => 0,
+            'synced_direct' => 0,
             'queued' => 0,
-            'skipped' => 0,
+            'skipped' => $withoutIdpId,
             'failed' => 0,
             'errors' => [],
         ];
 
-        foreach ($applications as $application) {
-            $user = $application->userAccount;
+        // Filter eligible applications that have a user with idp_user_id
+        $eligibleApplications = $applications->filter(fn($app) => !empty($app->userAccount?->idp_user_id))->values();
 
-            // Skip users without IDP ID
-            if (!$user || empty($user->idp_user_id)) {
-                $results['skipped']++;
-                continue;
-            }
-
-            $userId = (int) $user->id;
-            $idpUserId = $user->idp_user_id;
-            $userEmail = $user->email ?? 'N/A';
-
-            $progressBar->setMessage("Processing: {$userEmail}");
-
-            if ($dryRun) {
-                $this->newLine();
-                $this->info("  [DRY RUN] Would queue job for user: {$userEmail} (IDP ID: {$idpUserId})");
-                $results['success']++;
-                $progressBar->advance();
-                continue;
-            }
-
-            try {
-                // Dispatch the job to queue
-                \App\Jobs\UpdateIdpAccountType::dispatch(
-                    $userId,
-                    $idpUserId,
-                    $userEmail,
-                    $accessToken,
-                    $mfaCode,
-                    null, // No performed_by for console commands
-                    true // isFromSync = true
-                );
-
-                $results['queued']++;
-                $results['success']++;
-
-                Log::info('Queued IDP sync job for enrolled student', [
-                    'user_id' => $userId,
-                    'idp_user_id' => $idpUserId,
-                    'email' => $userEmail,
-                ]);
-            } catch (\Exception $e) {
-                $results['failed']++;
-                $results['errors'][] = [
-                    'user_id' => $userId,
-                    'email' => $userEmail,
-                    'idp_user_id' => $idpUserId,
-                    'error' => 'QUEUE_FAILED',
-                    'message' => $e->getMessage(),
-                ];
-
-                Log::error('Failed to queue IDP sync job', [
-                    'user_id' => $userId,
-                    'idp_user_id' => $idpUserId,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-
-            $progressBar->advance();
-
-            // Small delay to avoid overwhelming the queue
-            usleep(50000); // 0.05 second
+        if ($eligibleApplications->isEmpty()) {
+            $this->info('ℹ️  No enrolled students with IDP account IDs found to sync.');
+            return Command::SUCCESS;
         }
 
-        $progressBar->setMessage('Complete!');
-        $progressBar->finish();
-        $this->newLine(2);
+        if ($dryRun) {
+            foreach ($eligibleApplications as $app) {
+                $user = $app->userAccount;
+                $this->info("  [DRY RUN] Would sync student: {$user->email} (IDP ID: {$user->idp_user_id})");
+                $results['queued']++;
+            }
+            $this->displayResults($results, true);
+            return Command::SUCCESS;
+        }
 
-        // Log command completion summary (if not dry run)
-        if (!$dryRun) {
+        // STEP 1: Synchronously update the first student to verify MFA & IDP sudo authorization.
+        // A single-use TOTP MFA code cannot be dispatched across multiple asynchronous queue jobs.
+        // Once verified on the first request, the IDP activates the sudo session.
+        $firstApp = $eligibleApplications->first();
+        $firstUser = $firstApp->userAccount;
+        $firstUserId = (int) $firstUser->id;
+        $firstIdpUserId = $firstUser->idp_user_id;
+        $firstUserEmail = $firstUser->email ?? 'N/A';
+
+        $this->info("🔐 Verifying IDP authentication and syncing first student ({$firstUserEmail})...");
+
+        $firstResult = $this->idpService->updateUserAccountType(
+            $firstIdpUserId,
+            3,
+            $accessToken,
+            $mfaCode
+        );
+
+        if (!$firstResult['success']) {
+            $errorType = $firstResult['error'] ?? 'UNKNOWN';
+            $errorMessage = $firstResult['message'] ?? 'Unknown error occurred while contacting IDP.';
+
+            $this->error("❌ IDP Sync Failed: {$errorMessage}");
+
+            Log::error('IDP enrollment sync failed during verification step', [
+                'error' => $errorType,
+                'message' => $errorMessage,
+                'user_id' => $firstUserId,
+                'idp_user_id' => $firstIdpUserId,
+            ]);
+
+            // Log failure in audit log
             try {
+                $targetUser = \App\Models\User::find($firstUserId);
                 $this->auditLogService->logActivity(
-                    'COMMAND',
-                    'IDP Sync Command',
-                    "Queued {$results['queued']} IDP sync jobs for enrolled students ({$results['failed']} queue failures, {$results['skipped']} skipped)",
-                    null,
+                    $errorType === 'MFA_REQUIRED' ? 'ATTEMPTED' : 'FAILED',
+                    'IDP Account Type',
+                    "IDP sync failed for user {$firstUserId} (Email: {$firstUserEmail}): {$errorType} - {$errorMessage}",
+                    $targetUser,
                     \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
                 );
             } catch (\Exception $e) {
-                Log::warning('Failed to create audit log for command completion', [
-                    'error' => $e->getMessage(),
-                ]);
+                Log::warning('Failed to log audit activity for sync failure', ['error' => $e->getMessage()]);
             }
+
+            return Command::FAILURE;
+        }
+
+        // First student succeeded! IDP sudo mode is now established on this token/session.
+        $this->idpService->cacheSudoToken($accessToken);
+        $results['synced_direct']++;
+
+        $this->info("✅ Verified with IDP! First student ({$firstUserEmail}) synced successfully.");
+
+        // Log audit trail for first student
+        try {
+            $targetUser = \App\Models\User::find($firstUserId);
+            $this->auditLogService->logActivity(
+                'UPDATE',
+                'IDP Account Type',
+                "Backfilled IDP account type to student for user {$firstUserId} (Email: {$firstUserEmail}, IDP ID: {$firstIdpUserId}) via manual sync",
+                $targetUser,
+                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+            );
+        } catch (\Exception $e) {
+            Log::warning('Failed to log audit activity for first student', ['error' => $e->getMessage()]);
+        }
+
+        // STEP 2: Process remaining students via queue under the active sudo session
+        $remainingApplications = $eligibleApplications->slice(1);
+        $remainingCount = $remainingApplications->count();
+
+        if ($remainingCount > 0) {
+            $this->info("🚀 Queueing remaining {$remainingCount} student(s) under active IDP sudo session...");
+
+            $progressBar = $this->output->createProgressBar($remainingCount);
+            $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% %message%');
+            $progressBar->start();
+
+            foreach ($remainingApplications as $application) {
+                $user = $application->userAccount;
+                $userId = (int) $user->id;
+                $idpUserId = $user->idp_user_id;
+                $userEmail = $user->email ?? 'N/A';
+
+                $progressBar->setMessage("Queueing: {$userEmail}");
+
+                try {
+                    // Sudo session is established on IDP; pass mfaCode = null so single-use TOTP is not replayed
+                    \App\Jobs\UpdateIdpAccountType::dispatch(
+                        $userId,
+                        $idpUserId,
+                        $userEmail,
+                        $accessToken,
+                        null,
+                        null,
+                        true
+                    );
+
+                    $results['queued']++;
+                } catch (\Exception $e) {
+                    $results['failed']++;
+                    $results['errors'][] = [
+                        'user_id' => $userId,
+                        'email' => $userEmail,
+                        'idp_user_id' => $idpUserId,
+                        'error' => 'QUEUE_FAILED',
+                        'message' => $e->getMessage(),
+                    ];
+
+                    Log::error('Failed to queue IDP sync job', [
+                        'user_id' => $userId,
+                        'idp_user_id' => $idpUserId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                $progressBar->advance();
+                usleep(30000); // 0.03 second
+            }
+
+            $progressBar->setMessage('Complete!');
+            $progressBar->finish();
+            $this->newLine(2);
+        }
+
+        // Log command completion summary
+        try {
+            $this->auditLogService->logActivity(
+                'COMMAND',
+                'IDP Sync Command',
+                "IDP enrollment sync: 1 student synced directly, {$results['queued']} queued, {$results['failed']} failed to queue, {$results['skipped']} skipped",
+                null,
+                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+            );
+        } catch (\Exception $e) {
+            Log::warning('Failed to create audit log for command completion', [
+                'error' => $e->getMessage(),
+            ]);
         }
 
         // Display results summary
-        $this->displayResults($results, $dryRun);
+        $this->displayResults($results, false);
 
         // Return appropriate exit code
         if ($results['failed'] > 0) {
@@ -250,14 +317,15 @@ class SyncEnrolledStudentsToIdp extends Command
         $this->info('================');
         $this->newLine();
 
-        $this->table(
-            ['Result', 'Count'],
-            [
-                ['✅ Jobs queued successfully', $results['queued']],
-                ['⏭️  Skipped (no IDP ID)', $results['skipped']],
-                ['❌ Failed to queue', $results['failed']],
-            ]
-        );
+        $tableRows = [];
+        if (!empty($results['synced_direct'])) {
+            $tableRows[] = ['✅ Verified and synced with MFA', $results['synced_direct']];
+        }
+        $tableRows[] = ['📋 Remaining jobs queued', $results['queued']];
+        $tableRows[] = ['⏭️  Skipped (no IDP ID)', $results['skipped']];
+        $tableRows[] = ['❌ Failed', $results['failed']];
+
+        $this->table(['Result', 'Count'], $tableRows);
 
         $this->newLine();
 

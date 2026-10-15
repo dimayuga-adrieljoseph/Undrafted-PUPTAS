@@ -476,18 +476,34 @@ class IdpSyncMonitorController extends Controller
                 );
             }
 
-            // Provide specific error messages
-            $message = match(true) {
-                $exitCode === 0 => 'Sync jobs have been queued successfully',
-                $isTokenMissing => 'Cannot sync: No IDP admin access token available. Please ensure an admin is logged in via IDP or set IDP_ADMIN_ACCESS_TOKEN in .env',
-                default => 'Sync command completed with errors. Check logs for details.'
-            };
+            if ($exitCode === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Sync verified and jobs queued successfully',
+                    'output' => $output,
+                ]);
+            }
+
+            // Extract specific error message from the artisan output
+            $extractedError = null;
+            $lines = explode("\n", (string) $output);
+            foreach ($lines as $line) {
+                $trimmed = trim(strip_tags($line));
+                if (str_contains($trimmed, '❌')) {
+                    $extractedError = trim(str_replace(['❌', 'IDP Sync Failed:', 'IDP Authorization Failed:'], '', $trimmed));
+                    break;
+                }
+            }
+
+            $message = $extractedError ?: ($isTokenMissing
+                ? 'Cannot sync: No IDP admin access token available. Please ensure an admin is logged in via IDP or set IDP_ADMIN_ACCESS_TOKEN in .env'
+                : 'Sync command completed with errors. Check logs for details.');
 
             return response()->json([
-                'success' => $exitCode === 0,
+                'success' => false,
                 'message' => $message,
-                'output' => $exitCode !== 0 ? $output : null,
-            ]);
+                'output' => $output,
+            ], 422);
         } catch (QueryException $e) {
             Log::error('Database error triggering IDP sync', [
                 'error' => $e->getMessage(),

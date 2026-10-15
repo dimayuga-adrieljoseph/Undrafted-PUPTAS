@@ -24,10 +24,17 @@ const metrics = ref({
 });
 const selectedRange = ref('24h');
 const showSyncModal = ref(false);
+const syncModalError = ref(null);
 const mfaCode = ref('');
 const syncing = ref(false);
 const retrying = ref(false);
 const successMessage = ref('');
+
+const openSyncModal = () => {
+  mfaCode.value = '';
+  syncModalError.value = null;
+  showSyncModal.value = true;
+};
 
 const timeRanges = [
   { value: '24h', label: 'Last 24 Hours' },
@@ -71,6 +78,7 @@ const refreshData = () => {
 
 const triggerSync = async () => {
   syncing.value = true;
+  syncModalError.value = null;
   error.value = null;
   
   try {
@@ -79,15 +87,16 @@ const triggerSync = async () => {
     });
     
     if (response.data.success) {
-      showSuccessMessage('Sync jobs have been queued successfully!');
+      showSuccessMessage('Sync verified and jobs queued successfully!');
       showSyncModal.value = false;
       mfaCode.value = '';
+      syncModalError.value = null;
       setTimeout(() => fetchMetrics(), 2000);
     } else {
-      error.value = response.data.message || 'Failed to trigger sync';
+      syncModalError.value = response.data.message || 'Failed to trigger sync';
     }
   } catch (err) {
-    error.value = err.response?.data?.message || 'An error occurred while triggering sync';
+    syncModalError.value = err.response?.data?.message || 'An error occurred while triggering sync';
     console.error('Error triggering sync:', err);
   } finally {
     syncing.value = false;
@@ -294,7 +303,7 @@ onMounted(() => {
         <!-- Action Buttons -->
         <div class="mb-8 flex space-x-4">
           <button
-            @click="showSyncModal = true"
+            @click="openSyncModal"
             class="px-6 py-3 bg-[#9E122C] hover:bg-red-900 text-white rounded-xl font-medium shadow-lg transition-all transform hover:scale-105 flex items-center"
           >
             <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -421,6 +430,18 @@ onMounted(() => {
   <div v-if="showSyncModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Trigger Manual Sync</h3>
+
+      <!-- Error Banner inside modal -->
+      <div v-if="syncModalError" class="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+        <div class="flex">
+          <svg class="h-5 w-5 text-red-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+          <div class="text-xs text-red-700 dark:text-red-300 leading-relaxed break-words">
+            <strong>Sync Failed:</strong> {{ syncModalError }}
+          </div>
+        </div>
+      </div>
       
       <!-- Info Banner -->
       <div class="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
@@ -483,6 +504,7 @@ onMounted(() => {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
