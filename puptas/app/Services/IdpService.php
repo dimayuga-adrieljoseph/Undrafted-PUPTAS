@@ -188,18 +188,39 @@ class IdpService
 
             // Handle 401 Unauthorized - Capture actual IDP response message
             if ($response->status() === 401) {
-                $error = $response->json('message')
-                    ?? $response->json('error')
-                    ?? $response->json('detail')
-                    ?? $response->json('error_description')
-                    ?? (is_string($response->body()) && strlen($response->body()) < 300 ? $response->body() : null)
-                    ?? 'Unauthorized: Access token or MFA code was rejected by IDP.';
+                $rawBody = trim((string) $response->body());
+                $wwwAuth = $response->header('WWW-Authenticate');
+
+                // `??` only skips null, so pick the first NON-EMPTY candidate
+                $error = collect([
+                    $response->json('message'),
+                    $response->json('error'),
+                    $response->json('detail'),
+                    $response->json('error_description'),
+                    $response->json('title'),
+                ])->first(fn ($v) => is_string($v) && trim($v) !== '');
+
+                // Always surface the raw response so the real cause is visible
+                $details = [];
+                if ($error) {
+                    $details[] = $error;
+                }
+                $details[] = 'body=' . ($rawBody !== '' ? substr($rawBody, 0, 300) : '(empty)');
+                if ($wwwAuth) {
+                    $details[] = 'www-authenticate=' . substr($wwwAuth, 0, 200);
+                }
+                $error = implode(' | ', $details);
 
                 Log::warning('IDP authorization failed for account type update', [
                     'idp_user_id' => $idpUserId,
                     'status' => 401,
                     'error' => $error,
-                    'response_body' => substr($response->body(), 0, 500),
+                    'response_body' => substr($rawBody, 0, 1000),
+                    'www_authenticate' => $wwwAuth,
+                    'had_mfa_code' => $mfaCode !== null,
+                    'token_sub' => $tokenPayload['sub'] ?? null,
+                    'token_aud' => $tokenPayload['aud'] ?? null,
+                    'token_scope' => $tokenPayload['scope'] ?? ($tokenPayload['scopes'] ?? null),
                 ]);
 
                 return [
