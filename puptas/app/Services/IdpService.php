@@ -145,10 +145,21 @@ class IdpService
                     'account_type_id' => $accountTypeId,
                 ]);
 
+                // If the IDP returns a sudo token upon successful MFA verification, capture it
+                $returnedSudo = $response->json('sudo_token')
+                    ?? $response->json('token')
+                    ?? $response->json('sudo_session_token')
+                    ?? $response->header('X-Sudo-Token');
+
+                if ($returnedSudo && is_string($returnedSudo)) {
+                    $this->cacheSudoToken($returnedSudo);
+                }
+
                 return [
                     'success' => true,
                     'message' => $response->json('message') ?? 'User account type updated successfully',
                     'data' => $response->json(),
+                    'sudo_token' => $returnedSudo,
                 ];
             }
 
@@ -209,6 +220,14 @@ class IdpService
                 if ($wwwAuth) {
                     $details[] = 'www-authenticate=' . substr($wwwAuth, 0, 200);
                 }
+
+                // Identify token owner to verify if an admin vs student token was used
+                $tokenSub = $tokenPayload['sub'] ?? 'unknown';
+                $tokenEmail = $tokenPayload['email'] ?? ($tokenPayload['username'] ?? null);
+                $tokenRole = $tokenPayload['role'] ?? ($tokenPayload['role_name'] ?? ($tokenPayload['account_type'] ?? null));
+                $tokenOwner = $tokenEmail ?: $tokenSub;
+                $details[] = 'token_owner=' . $tokenOwner . ($tokenRole ? "(role:{$tokenRole})" : '');
+
                 $error = implode(' | ', $details);
 
                 Log::warning('IDP authorization failed for account type update', [
