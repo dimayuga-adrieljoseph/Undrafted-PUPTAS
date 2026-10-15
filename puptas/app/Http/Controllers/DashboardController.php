@@ -20,6 +20,8 @@ use App\Helpers\DataMaskingHelper;
 use App\Services\DashboardService;
 use App\Services\ApplicationService;
 use App\Enums\RoleId;
+use App\Models\AuditLog;
+use App\Models\User;
 
 class DashboardController extends Controller
 {
@@ -57,54 +59,105 @@ class DashboardController extends Controller
         }
 
         $summary = $this->applicationService->getApplicationSummary();
-
         $chartData = $this->dashboardService->getApplicationChartData();
+        $stageSummary = $this->dashboardService->getStageSummary();
 
         // Resolve masking for the SSR-rendered Recent Applications panel.
-        // This ensures the universal ?unmask=1 toggle works on page visit/reload,
-        // consistent with all other admin pages that use resolveForRequest().
         $shouldMask = DataMaskingHelper::resolveForRequest($request, $user, 'Admin Dashboard Recent Applications');
 
-        return Inertia::render('Dashboard/Admin', [
-            'user' => $user ? $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']) : null,
-            // SECURITY/PERFORMANCE: Limit to 10 records intentionally.
-            // Loading the full table here causes massive HTML payload bloat and leaks PII into DevTools.
-            // The full list is fetched asynchronously via /dashboard/users.
-            'allUsers' => ApplicantProfile::select('user_id', 'firstname', 'lastname', 'email')
-                ->with(['currentApplication.program'])
-                ->whereHas('currentApplication')
-                ->orderBy('created_at', 'desc')
-                ->limit(10)
-                ->get()
-                ->map(function ($applicant) use ($shouldMask) {
-                    return [
-                        'id' => $applicant->user_id,
-                        'firstname' => $shouldMask ? DataMaskingHelper::maskName($applicant->firstname) : $applicant->firstname,
-                        'lastname'  => $shouldMask ? DataMaskingHelper::maskName($applicant->lastname)  : $applicant->lastname,
-                        'email'     => $shouldMask ? DataMaskingHelper::maskEmail($applicant->email)    : $applicant->email,
-                        'is_masked' => $shouldMask,
-                        'role' => ['name' => 'Applicant'], // Mock role as it was removed
-                        'created_at' => $applicant->created_at,
-                        // Map currentApplication to application for frontend compatibility
-                        'application' => $applicant->currentApplication ? [
-                            'id' => $applicant->currentApplication->id,
-                            'status' => $applicant->currentApplication->status,
-                            'created_at' => $applicant->currentApplication->created_at,
-                            'program' => $applicant->currentApplication->program,
-                        ] : null,
-                    ];
-                }),
-             'summary' => $summary,
-            'stageSummary' => $this->dashboardService->getStageSummary(),
+        $recentUsers = ApplicantProfile::select('user_id', 'firstname', 'lastname', 'email')
+            ->with(['currentApplication.program'])
+            ->whereHas('currentApplication')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($applicant) use ($shouldMask) {
+                return [
+                    'id'         => $applicant->user_id,
+                    'firstname'  => $shouldMask ? DataMaskingHelper::maskName($applicant->firstname) : $applicant->firstname,
+                    'lastname'   => $shouldMask ? DataMaskingHelper::maskName($applicant->lastname)  : $applicant->lastname,
+                    'email'      => $shouldMask ? DataMaskingHelper::maskEmail($applicant->email)    : $applicant->email,
+                    'is_masked'  => $shouldMask,
+                    'role'       => ['name' => 'Applicant'],
+                    'created_at' => $applicant->created_at,
+                    'application' => $applicant->currentApplication ? [
+                        'id'         => $applicant->currentApplication->id,
+                        'status'     => $applicant->currentApplication->status,
+                        'created_at' => $applicant->currentApplication->created_at,
+                        'program'    => $applicant->currentApplication->program,
+                    ] : null,
+                ];
+            });
+
+        $baseProps = [
+            'user'            => $user->only(['id', 'firstname', 'lastname', 'email', 'role_id']),
+            // Keep allUsers key for backward compatibility with existing modal logic
+            'allUsers'        => $recentUsers,
+            'summary'         => $summary,
+            'stageSummary'    => $stageSummary,
             'registrationUrl' => url('/register'),
-            'chartData' => [
-                'labels' => $chartData['labels'],
+            'chartData'       => [
+                'labels'    => $chartData['labels'],
                 'submitted' => $chartData['submitted'],
-                'accepted' => $chartData['accepted'],
-                'returned' => $chartData['returned'],
+                'accepted'  => $chartData['accepted'],
+                'returned'  => $chartData['returned'],
             ],
-            'filters' => $chartData['filters']
-        ]);
+            'filters'         => $chartData['filters'],
+        ];
+
+        // SuperAdmin gets the system overview dashboard with additional data
+        if ($user->role_id === RoleId::SuperAdmin->value) {
+            $recentAuditLogs = AuditLog::query()
+                ->latestFirst()
+                ->limit(8)
+                ->get()
+                ->map(fn ($log) => [
+                    'id'          => $log->id,
+                    'username'    => $shouldMask ? DataMaskingHelper::maskEmail($log->username ?? '') : ($log->username ?? 'System'),
+                    'user_role'   => $log->user_role,
+                    'action_type' => $log->action_type,
+                    'log_type'    => $log->log_type,
+                    'log_category'=> $log->log_category,
+                    'module_name' => $log->module_name,
+                    'description' => $log->description,
+                    'ip_address'  => $log->ip_address,
+                    'created_at'  => $log->created_at,
+                ]);
+
+            // System health: failed jobs from the jobs/failed_jobs tables
+            $failedJobCount = 0;
+            try {
+                $failedJobCount = DB::table('failed_jobs')->count();
+            } catch (\Exception $e) {
+                // failed_jobs table may not exist in all environments
+                Log::debug('Failed to count failed_jobs: ' . $e->getMessage());
+            }
+
+            // Staff user counts by role
+            $staffCounts = User::whereIn('role_id', [
+                    RoleId::Admin->value,
+                    RoleId::DocumentEvaluator->value,
+                    RoleId::GradeEvaluator->value,
+                    RoleId::Interviewer->value,
+                    RoleId::Medical->value,
+                    RoleId::Registrar->value,
+                ])
+                ->where('is_active', true)
+                ->selectRaw('role_id, count(*) as count')
+                ->groupBy('role_id')
+                ->pluck('count', 'role_id')
+                ->toArray();
+
+            return Inertia::render('Dashboard/SuperAdmin', array_merge($baseProps, [
+                'recentAuditLogs' => $recentAuditLogs,
+                'failedJobCount'  => $failedJobCount,
+                'staffCounts'     => $staffCounts,
+                'isMasked'        => $shouldMask,
+            ]));
+        }
+
+        // Admin gets the operational admissions dashboard
+        return Inertia::render('Dashboard/Admin', $baseProps);
     }
 
     public function getUsers(Request $request)
