@@ -94,20 +94,49 @@ class IdpService
             $payload['mfa_code'] = $mfaCode;
         }
 
+        // Inspect token expiration before sending
+        $tokenPayload = $this->getJwtPayload($accessToken);
+        $tokenExpired = $this->isTokenExpired($accessToken);
+
         // SECURITY: Log operation without sensitive data
         Log::info('Attempting to update IDP user account type', [
             'idp_user_id' => $idpUserId,
             'account_type_id' => $accountTypeId,
             'has_mfa_code' => $mfaCode !== null,
             'url' => $url,
-            // NOTE: Never log the actual token or MFA code
+            'token_sub' => $tokenPayload['sub'] ?? null,
+            'token_exp' => isset($tokenPayload['exp']) ? date('Y-m-d H:i:s', $tokenPayload['exp']) : 'unknown',
+            'token_is_expired' => $tokenExpired,
         ]);
 
+        if ($tokenExpired) {
+            Log::error('Cannot update IDP account type: Admin access token is EXPIRED', [
+                'idp_user_id' => $idpUserId,
+                'token_sub' => $tokenPayload['sub'] ?? null,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'TOKEN_EXPIRED',
+                'message' => 'Admin IDP token is expired. Please log in via IDP again to renew.',
+            ];
+        }
+
         try {
-            $response = Http::withToken($accessToken)
+            $httpRequest = Http::withToken($accessToken)
                 ->acceptJson()
-                ->timeout(30)
-                ->patch($url, $payload);
+                ->timeout(30);
+
+            // Support both body payload and custom headers for MFA code
+            if ($mfaCode !== null) {
+                $payload['mfa_code'] = $mfaCode;
+                $httpRequest = $httpRequest->withHeaders([
+                    'X-MFA-Code' => $mfaCode,
+                    'X-OTP' => $mfaCode,
+                ]);
+            }
+
+            $response = $httpRequest->patch($url, $payload);
 
             // Success - account type updated
             if ($response->successful()) {
@@ -157,20 +186,26 @@ class IdpService
                 ];
             }
 
-            // Handle 401 Unauthorized - Invalid MFA code or insufficient permissions
+            // Handle 401 Unauthorized - Capture actual IDP response message
             if ($response->status() === 401) {
-                $error = $response->json('error') ?? '';
+                $error = $response->json('message')
+                    ?? $response->json('error')
+                    ?? $response->json('detail')
+                    ?? $response->json('error_description')
+                    ?? (is_string($response->body()) && strlen($response->body()) < 300 ? $response->body() : null)
+                    ?? 'Unauthorized: Access token or MFA code was rejected by IDP.';
 
                 Log::warning('IDP authorization failed for account type update', [
                     'idp_user_id' => $idpUserId,
                     'status' => 401,
                     'error' => $error,
+                    'response_body' => substr($response->body(), 0, 500),
                 ]);
 
                 return [
                     'success' => false,
                     'error' => 'UNAUTHORIZED',
-                    'message' => $error ?: 'Unauthorized. Invalid MFA code or insufficient permissions.',
+                    'message' => $error,
                 ];
             }
 
@@ -248,50 +283,54 @@ class IdpService
      */
     public function getAdminAccessToken(bool $preferSession = false): ?string
     {
-        // Prefer the cached sudo-verified admin token (set after one MFA-verified
-        // request). The IDP keeps that token in sudo mode, so it can be reused
-        // without MFA — including for enrollments triggered by non-admin staff.
-        // When a fresh MFA code is supplied, the caller prefers the session token
-        // instead so a new sudo session can be established.
+        // 1. Prefer the cached sudo-verified admin token if available and not expired
         if (!$preferSession) {
             $sudoToken = $this->getSudoToken();
             if ($sudoToken) {
-                return $sudoToken;
+                if (!$this->isTokenExpired($sudoToken)) {
+                    return $sudoToken;
+                }
+                $this->clearSudoToken($sudoToken);
             }
         }
 
-        // Next, check if the token is in the session
+        // 2. Check token in session
         $token = session('idp_access_token');
-
-        if ($token) {
-            // SECURITY: Validate token format (JWT should have 3 parts separated by dots)
-            if ($this->isValidJwtFormat($token)) {
+        if ($token && $this->isValidJwtFormat($token)) {
+            if (!$this->isTokenExpired($token)) {
                 return $token;
             }
-            
-            Log::warning('Invalid JWT token format in session, ignoring', [
-                'token_preview' => substr($token, 0, 20) . '...',
-            ]);
-            // Clear invalid token from session
+            Log::warning('Session IDP access token is expired, clearing from session');
             session()->forget('idp_access_token');
         }
 
-        // Fallback: check if admin token is configured in environment
-        $configToken = config('services.idp.admin_access_token');
-        
-        if (!empty($configToken)) {
-            // SECURITY: Validate token format
-            if ($this->isValidJwtFormat($configToken)) {
-                return $configToken;
+        // 3. Fallback: check logged-in user's token stored in Redis
+        if (auth()->check()) {
+            try {
+                $tokenData = Cache::store('redis')->get("idp_tokens:user_" . auth()->id());
+                if (!empty($tokenData['access_token']) && $this->isValidJwtFormat($tokenData['access_token'])) {
+                    if (!$this->isTokenExpired($tokenData['access_token'])) {
+                        // Resync to session
+                        session(['idp_access_token' => $tokenData['access_token']]);
+                        return $tokenData['access_token'];
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::debug('Could not retrieve user IDP token from Redis', ['error' => $e->getMessage()]);
             }
-            
-            Log::warning('Invalid JWT token format in config');
         }
 
-        // Alternative: retrieve from database or cache if stored there
-        // This implementation depends on how your app stores admin tokens
+        // 4. Fallback: check if admin token is configured in environment
+        $configToken = config('services.idp.admin_access_token');
+        if (!empty($configToken) && $this->isValidJwtFormat($configToken)) {
+            if ($this->isTokenExpired($configToken)) {
+                Log::error('IDP_ADMIN_ACCESS_TOKEN in environment is EXPIRED! Please refresh it or log in via IDP.');
+            } else {
+                return $configToken;
+            }
+        }
 
-        Log::warning('Admin IDP access token not found in session or config');
+        Log::warning('No valid unexpired Admin IDP access token found in sudo cache, session, Redis, or config');
         return null;
     }
 
@@ -392,5 +431,43 @@ class IdpService
         }
 
         return true;
+    }
+
+    /**
+     * Decode JWT payload without verifying signature (for claims inspection like exp).
+     *
+     * @param string $token
+     * @return array|null
+     */
+    public function getJwtPayload(string $token): ?array
+    {
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) {
+            return null;
+        }
+
+        $decoded = base64_decode(strtr($parts[1], '-_', '+/'));
+        if (!$decoded) {
+            return null;
+        }
+
+        $payload = json_decode($decoded, true);
+        return is_array($payload) ? $payload : null;
+    }
+
+    /**
+     * Check if a JWT token is expired based on its exp claim.
+     *
+     * @param string $token
+     * @return bool
+     */
+    public function isTokenExpired(string $token): bool
+    {
+        $payload = $this->getJwtPayload($token);
+        if (!$payload || !isset($payload['exp'])) {
+            return false;
+        }
+
+        return (int) $payload['exp'] <= time();
     }
 }
