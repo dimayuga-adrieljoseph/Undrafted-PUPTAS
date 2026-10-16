@@ -332,12 +332,22 @@ class IdpSyncMonitorController extends Controller
                 }
             }
 
+            $idpService = app(\App\Services\IdpService::class);
+            $hasSudo = $idpService->hasSudoToken();
+            $sudoExpiresAt = $idpService->getSudoExpiresAt();
+            $remainingMinutes = ($hasSudo && $sudoExpiresAt) 
+                ? max(0, (int) ceil(($sudoExpiresAt - now()->timestamp) / 60)) 
+                : null;
+
             return [
                 'pending_jobs' => $pendingJobs,
                 'failed_jobs' => $failedJobsCount,
                 'queue_connection' => $queueDriver,
                 'is_running' => $this->isQueueRunning(),
-                'sudo_active' => app(\App\Services\IdpService::class)->hasSudoToken(),
+                'sudo_active' => $hasSudo,
+                'sudo_expires_at' => $sudoExpiresAt,
+                'sudo_remaining_minutes' => $remainingMinutes,
+                'sudo_ttl_minutes' => (int) config('services.idp.sudo_ttl_minutes', 60),
             ];
         } catch (\Exception $e) {
             Log::error('Failed to get queue status', ['error' => $e->getMessage()]);

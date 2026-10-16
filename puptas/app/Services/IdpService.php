@@ -405,6 +405,7 @@ class IdpService
 
         try {
             Cache::put(self::SUDO_TOKEN_CACHE_KEY, Crypt::encryptString($accessToken), now()->addMinutes($ttlMinutes));
+            Cache::put(self::SUDO_TOKEN_CACHE_KEY . '_expires_at', now()->addMinutes($ttlMinutes)->timestamp, now()->addMinutes($ttlMinutes));
             Log::info('Cached sudo-verified IDP admin token', ['ttl_minutes' => $ttlMinutes]);
         } catch (\Throwable $e) {
             Log::warning('Failed to cache sudo IDP admin token', ['error' => $e->getMessage()]);
@@ -443,6 +444,7 @@ class IdpService
             }
 
             Cache::forget(self::SUDO_TOKEN_CACHE_KEY);
+            Cache::forget(self::SUDO_TOKEN_CACHE_KEY . '_expires_at');
             Log::warning('Cleared cached sudo IDP admin token (expired or rejected by IDP)');
         } catch (\Throwable $e) {
             Log::warning('Failed to clear cached sudo IDP admin token', ['error' => $e->getMessage()]);
@@ -455,6 +457,18 @@ class IdpService
     public function hasSudoToken(): bool
     {
         return $this->getSudoToken() !== null;
+    }
+
+    /**
+     * Get the UNIX timestamp when the active sudo session expires, or null if none.
+     */
+    public function getSudoExpiresAt(): ?int
+    {
+        if (!$this->hasSudoToken()) {
+            return null;
+        }
+
+        return Cache::get(self::SUDO_TOKEN_CACHE_KEY . '_expires_at');
     }
 
     /**
