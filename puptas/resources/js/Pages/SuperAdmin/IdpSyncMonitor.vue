@@ -37,15 +37,6 @@ const openSyncModal = () => {
   showSyncModal.value = true;
 };
 
-const formatRemainingTime = (minutes) => {
-  if (minutes === null || minutes === undefined) return '';
-  if (minutes <= 0) return 'Expiring soon';
-  if (minutes < 60) return `~${minutes}m remaining`;
-  const hrs = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hrs}h ${mins}m remaining`;
-};
-
 const timeRanges = [
   { value: '24h', label: 'Last 24 Hours' },
   { value: '7d', label: 'Last 7 Days' },
@@ -103,7 +94,7 @@ const triggerSync = async () => {
     });
     
     if (response.data.success) {
-      showSuccessMessage('MFA verified & sync jobs queued successfully! 60-minute auto-sync window is active.');
+      showSuccessMessage('MFA verified & sync jobs queued successfully! IDP session is active for background auto-sync.');
       showSyncModal.value = false;
       mfaCode.value = '';
       syncModalError.value = null;
@@ -371,7 +362,7 @@ onMounted(() => {
               </div>
             </div>
             <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-[#9E122C] dark:bg-red-900/40 dark:text-red-300">
-              Session Duration: 60 Minutes
+              Validity: Active Session
             </span>
           </div>
 
@@ -384,7 +375,7 @@ onMounted(() => {
                   <h4 class="text-sm font-bold text-gray-900 dark:text-white">Provide MFA (Required)</h4>
                 </div>
                 <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                  Click <strong>Trigger Manual Sync</strong> and enter your 6-digit Authenticator code for <strong>puptadmission@gmail.com</strong>. The IDP requires 2-factor authentication for administrative changes.
+                  Open the Authenticator app (e.g. Google Authenticator) on your phone linked to your SuperAdmin account, click <strong>Trigger Manual Sync</strong>, and enter the 6-digit code displayed in the app. The IDP requires 2-factor authentication for administrative changes.
                 </p>
               </div>
             </div>
@@ -393,10 +384,10 @@ onMounted(() => {
               <div>
                 <div class="flex items-center gap-2 mb-2">
                   <span class="w-6 h-6 rounded-full bg-[#9E122C] text-white text-xs font-bold flex items-center justify-center">2</span>
-                  <h4 class="text-sm font-bold text-gray-900 dark:text-white">60-Min Sudo Mode Active</h4>
+                  <h4 class="text-sm font-bold text-gray-900 dark:text-white">Active Sudo Session</h4>
                 </div>
                 <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                  Upon verification, the IDP activates a secure <strong>60-minute Sudo session</strong>. All currently enrolled students awaiting sync are backfilled immediately.
+                  Upon verification, the IDP activates <strong>Sudo mode for the active session</strong>. All currently enrolled students awaiting sync are backfilled immediately.
                 </p>
               </div>
             </div>
@@ -408,7 +399,7 @@ onMounted(() => {
                   <h4 class="text-sm font-bold text-gray-900 dark:text-white">Automatic Enrollment Sync</h4>
                 </div>
                 <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                  As long as Auto-sync is <strong>Active (🟢)</strong>, any applicant officially enrolled by Record Staff will automatically sync to Student in the IDP with zero manual intervention.
+                  As long as the indicator displays <strong>Auto-Sync Active</strong>, any applicant officially enrolled by Record Staff will automatically sync to Student in the IDP with zero manual intervention for the duration of the session.
                 </p>
               </div>
             </div>
@@ -420,26 +411,32 @@ onMounted(() => {
               <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
             </svg>
             <div>
-              <strong>When should I trigger manual sync?</strong> Trigger a sync whenever you see <strong>Unsynced Students &gt; 0</strong>, or when the status below shows <strong>🟡 Auto-sync paused</strong> and Record Staff are about to process enrollments. Once triggered, the session protects seamless syncing for <strong>1 full hour (60 minutes)</strong>.
+              <strong>When should I trigger manual sync?</strong> Trigger a sync whenever you see <strong>Unsynced Students &gt; 0</strong>, or when the indicator below shows <strong>Auto-Sync Paused</strong> and Record Staff are about to process enrollments. Once verified with MFA, Sudo mode remains active for the entire session, protecting seamless background syncing without prompting for MFA again until the session ends.
             </div>
           </div>
         </div>
 
         <!-- Queue Status -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Queue &amp; Auto-Sync Status</h2>
-            <span
-              :class="[
-                'text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5',
-                metrics.queue_status?.sudo_active
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                  : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-              ]"
-            >
-              <span class="w-2 h-2 rounded-full" :class="metrics.queue_status?.sudo_active ? 'bg-green-500 animate-pulse' : 'bg-amber-500'"></span>
-              {{ metrics.queue_status?.sudo_active ? 'Auto-Sync Active' : 'Auto-Sync Paused' }}
-            </span>
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Queue &amp; Auto-Sync Status</h2>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Current automation state for Identity Provider background student synchronization</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Automation State:</span>
+              <span
+                :class="[
+                  'text-xs font-bold px-3 py-1 rounded-full flex items-center gap-2 shadow-sm',
+                  metrics.queue_status?.sudo_active
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-800'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                ]"
+              >
+                <span class="w-2.5 h-2.5 rounded-full" :class="metrics.queue_status?.sudo_active ? 'bg-green-600 animate-pulse' : 'bg-amber-500'"></span>
+                {{ metrics.queue_status?.sudo_active ? 'Auto-Sync Active (Automated)' : 'Auto-Sync Paused (MFA Needed)' }}
+              </span>
+            </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -483,18 +480,21 @@ onMounted(() => {
             <div class="flex-1">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-bold text-sm">
-                  {{ metrics.queue_status?.sudo_active ? '🟢 Auto-sync Active (60-Minute Sudo Session)' : '🟡 Auto-sync Paused (MFA Authentication Required)' }}
+                  {{ metrics.queue_status?.sudo_active ? 'Auto-Sync Status: Automated' : 'Auto-Sync Status: Authentication Required' }}
                 </span>
-                <span v-if="metrics.queue_status?.sudo_active && metrics.queue_status?.sudo_remaining_minutes !== null" class="text-xs px-2.5 py-0.5 rounded-full bg-green-200 dark:bg-green-800 text-green-900 dark:text-green-100 font-bold">
-                  {{ formatRemainingTime(metrics.queue_status.sudo_remaining_minutes) }}
+                <span v-if="metrics.queue_status?.sudo_active" class="text-xs px-2.5 py-0.5 rounded-full bg-green-200 dark:bg-green-800 text-green-900 dark:text-green-100 font-bold">
+                  Session Active
+                </span>
+                <span v-else class="text-xs px-2.5 py-0.5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 font-bold">
+                  MFA Required to Automate
                 </span>
               </div>
               <p class="mt-1 text-xs sm:text-sm opacity-90 leading-relaxed">
                 <template v-if="metrics.queue_status?.sudo_active">
-                  An MFA-verified admin session is cached and active (valid for 60 minutes). New student enrollments tagged by Record Staff will sync to the Identity Provider automatically in the background without prompting for MFA.
+                  An MFA-verified admin session is cached and active. New student enrollments tagged by Record Staff will sync to the Identity Provider automatically in the background without prompting for MFA as long as the IDP session remains active.
                 </template>
                 <template v-else>
-                  No active 60-minute IDP session. Click <strong>"Trigger Manual Sync"</strong> above and enter your 6-digit Authenticator code to sync any pending students and activate a new 60-minute automatic sync session.
+                  No active IDP sudo session. Click <strong>"Trigger Manual Sync"</strong> above and enter your 6-digit Authenticator code to sync any pending students and activate automatic background syncing for this session.
                 </template>
               </p>
             </div>
@@ -571,7 +571,7 @@ onMounted(() => {
           </div>
           <div>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white">Trigger Manual IDP Sync</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Verify MFA to synchronize students and activate a 60-minute session</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Verify MFA to synchronize students and activate Sudo mode for the active session</p>
           </div>
         </div>
         <button @click="showSyncModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -593,7 +593,7 @@ onMounted(() => {
         </div>
       </div>
       
-      <!-- Instructions & Duration Notice -->
+      <!-- Instructions & Session Notice -->
       <div class="mb-5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
         <div class="flex items-start gap-3">
           <svg class="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -604,7 +604,7 @@ onMounted(() => {
               <strong>MFA is Required:</strong> The Identity Provider strictly requires 2-factor authentication for administrative account type updates.
             </p>
             <p>
-              <strong>60-Minute Sudo Session:</strong> Verifying your MFA code establishes a <strong>60-minute active Sudo session</strong>. Any unsynced students will be updated now, and subsequent student enrollments will sync automatically in the background without prompting for MFA.
+              <strong>Session-Based Sudo Mode:</strong> Verifying your MFA code establishes an active <strong>Sudo session</strong> with the IDP. Any unsynced students will be updated immediately, and subsequent student enrollments will sync automatically in the background without prompting for MFA for the remainder of this session.
             </p>
           </div>
         </div>
@@ -633,8 +633,8 @@ onMounted(() => {
           class="w-full text-center tracking-[0.35em] font-mono text-2xl py-3 px-4 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-[#9E122C] focus:border-[#9E122C] shadow-inner transition-all placeholder:text-gray-300 dark:placeholder:text-gray-500"
         />
         
-        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
-          Open your Authenticator app on your phone and enter the current 6-digit code for <strong>puptadmission@gmail.com</strong>
+        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center leading-relaxed">
+          Open the Authenticator app (e.g. Google Authenticator) on your phone and enter the 6-digit verification code currently generated for your <strong>SuperAdmin account</strong>.
         </p>
       </div>
 

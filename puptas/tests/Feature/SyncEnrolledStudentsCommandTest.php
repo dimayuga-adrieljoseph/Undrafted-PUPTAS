@@ -184,4 +184,47 @@ class SyncEnrolledStudentsCommandTest extends TestCase
 
         $this->assertStringContainsString('IDP Authentication Failed', $response->json('message'));
     }
+
+    /** @test */
+    public function it_returns_session_based_sudo_status_in_metrics()
+    {
+        $superAdmin = User::factory()->create([
+            'role_id' => 7,
+            'email' => 'superadmin@example.com',
+        ]);
+
+        $idpService = app(IdpService::class);
+        $idpService->clearSudoToken();
+
+        $response = $this->actingAs($superAdmin)
+            ->getJson('/api/super-admin/idp-sync-monitor/metrics');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'queue_status' => [
+                        'sudo_active' => false,
+                        'sudo_session_based' => true,
+                    ],
+                ],
+            ]);
+
+        // Cache a valid session sudo token
+        $idpService->cacheSudoToken($this->adminJwt);
+
+        $responseActive = $this->actingAs($superAdmin)
+            ->getJson('/api/super-admin/idp-sync-monitor/metrics');
+
+        $responseActive->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'queue_status' => [
+                        'sudo_active' => true,
+                        'sudo_session_based' => true,
+                    ],
+                ],
+            ]);
+    }
 }
