@@ -179,8 +179,8 @@ class IdpSyncMonitorController extends Controller
             ->orderBy('hour')
             ->get();
 
-        // Count enrolled students not yet synced
-        $unsyncedCount = DB::table('applications')
+        // Count enrolled students with IDP IDs
+        $totalEnrolledWithIdp = DB::table('applications')
             ->join('users', 'applications.user_id', '=', 'users.id')
             ->where('applications.enrollment_status', 'officially_enrolled')
             ->whereNotNull('users.idp_user_id')
@@ -188,19 +188,27 @@ class IdpSyncMonitorController extends Controller
             ->count();
 
         // Get count of students who have successful sync audit logs
-        // Using proper join on user_id instead of parsing from description
-        $syncedCount = DB::table('applications')
-            ->join('users', 'applications.user_id', '=', 'users.id')
-            ->join('audit_logs', function ($join) {
-                $join->on('users.id', '=', 'audit_logs.user_id')
-                     ->where('audit_logs.module_name', '=', 'IDP Account Type')
-                     ->where('audit_logs.action_type', '=', 'UPDATE');
-            })
-            ->where('applications.enrollment_status', 'officially_enrolled')
-            ->whereNotNull('users.idp_user_id')
-            ->whereNull('applications.deleted_at')
+        // Get distinct user IDs from successful sync audit logs
+        $syncedUserIds = DB::table('audit_logs')
+            ->where('module_name', 'IDP Account Type')
+            ->where('action_type', 'UPDATE')
+            ->whereNotNull('user_id')
             ->distinct()
-            ->count('applications.id');
+            ->pluck('user_id')
+            ->toArray();
+
+        // Count how many of those synced users are in officially enrolled applications
+        $syncedCount = 0;
+        if (!empty($syncedUserIds)) {
+            $syncedCount = DB::table('applications')
+                ->join('users', 'applications.user_id', '=', 'users.id')
+                ->where('applications.enrollment_status', 'officially_enrolled')
+                ->whereNotNull('users.idp_user_id')
+                ->whereNull('applications.deleted_at')
+                ->whereIn('applications.user_id', $syncedUserIds)
+                ->distinct()
+                ->count('applications.id');
+        }
 
         return [
             'total_syncs' => $total,
@@ -209,8 +217,8 @@ class IdpSyncMonitorController extends Controller
             'mfa_required' => $totalAttempted,
             'success_rate' => $successRate,
             'synced_students' => $syncedCount,
-            'unsynced_students' => max(0, $unsyncedCount - $syncedCount),
-            'hourly_activity' => $hourlyActivity,
+            'unsynced_students' => max(0, $totalEnrolledWithIdp - $syncedCount),
+            'hourly_activity' => $hourlyActivity->toArray(),
         ];
     }
 
@@ -272,10 +280,12 @@ class IdpSyncMonitorController extends Controller
         foreach ($failures as $failure) {
             $details = $failure->description;
             
-            if (str_contains($details, 'MFA')) {
-                $breakdown['MFA_REQUIRED']++;
-            } elseif (str_contains($details, 'UNAUTHORIZED')) {
+            // Match exact error codes. Check UNAUTHORIZED first: its message text
+            // contains "Invalid MFA code", which previously got miscounted as MFA.
+            if (str_contains($details, 'UNAUTHORIZED')) {
                 $breakdown['UNAUTHORIZED']++;
+            } elseif (str_contains($details, 'MFA_REQUIRED')) {
+                $breakdown['MFA_REQUIRED']++;
             } elseif (str_contains($details, 'USER_NOT_FOUND')) {
                 $breakdown['USER_NOT_FOUND']++;
             } elseif (str_contains($details, 'RATE_LIMIT_EXCEEDED')) {
@@ -327,6 +337,7 @@ class IdpSyncMonitorController extends Controller
                 'failed_jobs' => $failedJobsCount,
                 'queue_connection' => $queueDriver,
                 'is_running' => $this->isQueueRunning(),
+                'sudo_active' => app(\App\Services\IdpService::class)->hasSudoToken(),
             ];
         } catch (\Exception $e) {
             Log::error('Failed to get queue status', ['error' => $e->getMessage()]);
@@ -465,18 +476,34 @@ class IdpSyncMonitorController extends Controller
                 );
             }
 
-            // Provide specific error messages
-            $message = match(true) {
-                $exitCode === 0 => 'Sync jobs have been queued successfully',
-                $isTokenMissing => 'Cannot sync: No IDP admin access token available. Please ensure an admin is logged in via IDP or set IDP_ADMIN_ACCESS_TOKEN in .env',
-                default => 'Sync command completed with errors. Check logs for details.'
-            };
+            if ($exitCode === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Sync verified and jobs queued successfully',
+                    'output' => $output,
+                ]);
+            }
+
+            // Extract specific error message from the artisan output
+            $extractedError = null;
+            $lines = explode("\n", (string) $output);
+            foreach ($lines as $line) {
+                $trimmed = trim(strip_tags($line));
+                if (str_contains($trimmed, '❌')) {
+                    $extractedError = trim(str_replace(['❌', 'IDP Sync Failed:', 'IDP Authorization Failed:'], '', $trimmed));
+                    break;
+                }
+            }
+
+            $message = $extractedError ?: ($isTokenMissing
+                ? 'Cannot sync: No IDP admin access token available. Please ensure an admin is logged in via IDP or set IDP_ADMIN_ACCESS_TOKEN in .env'
+                : 'Sync command completed with errors. Check logs for details.');
 
             return response()->json([
-                'success' => $exitCode === 0,
+                'success' => false,
                 'message' => $message,
-                'output' => $exitCode !== 0 ? $output : null,
-            ]);
+                'output' => $output,
+            ], 422);
         } catch (QueryException $e) {
             Log::error('Database error triggering IDP sync', [
                 'error' => $e->getMessage(),
@@ -535,34 +562,25 @@ class IdpSyncMonitorController extends Controller
                     'user_id' => auth()->id(),
                 ]);
                 
-                $this->auditLogService->logActivity(
-                    'ATTEMPTED',
-                    'IDP Sync Monitor',
-                    'Unauthorized attempt to retry failed jobs',
-                    auth()->user(),
-                    \App\Models\AuditLog::CATEGORY_AUTHENTICATION
-                );
-                
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
 
             // Count failed jobs before retry
             $failedJobsCount = DB::table('failed_jobs')->count();
 
-            // Log the retry attempt
-            $this->auditLogService->logActivity(
-                'COMMAND',
-                'IDP Sync Monitor',
-                "Retrying {$failedJobsCount} failed IDP sync job(s)",
-                auth()->user(),
-                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-            );
-
             Log::info('Super admin retrying failed jobs', [
                 'user_id' => auth()->id(),
                 'username' => auth()->user()->username,
                 'failed_jobs_count' => $failedJobsCount,
             ]);
+
+            if ($failedJobsCount === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No failed jobs found to retry.',
+                    'count' => 0,
+                ]);
+            }
 
             // Retry all failed jobs
             \Illuminate\Support\Facades\Artisan::call('queue:retry', ['id' => ['all']]);
@@ -574,14 +592,20 @@ class IdpSyncMonitorController extends Controller
                 'output' => $output,
             ]);
 
-            // Log successful retry
-            $this->auditLogService->logActivity(
-                'UPDATE',
-                'IDP Sync Monitor',
-                "Successfully queued {$failedJobsCount} failed job(s) for retry",
-                auth()->user(),
-                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-            );
+            // Log after operation completes
+            try {
+                $this->auditLogService->logActivity(
+                    'UPDATE',
+                    'IDP Sync Monitor',
+                    "Successfully queued {$failedJobsCount} failed job(s) for retry",
+                    auth()->user(),
+                    \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                );
+            } catch (\Exception $auditEx) {
+                Log::error('Failed to log retry success to audit', [
+                    'error' => $auditEx->getMessage(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -594,18 +618,9 @@ class IdpSyncMonitorController extends Controller
                 'user_id' => auth()->id(),
             ]);
 
-            // Log database error
-            $this->auditLogService->logActivity(
-                'FAILED',
-                'IDP Sync Monitor',
-                'Database error while retrying failed jobs',
-                auth()->user(),
-                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-            );
-
             return response()->json([
                 'success' => false,
-                'message' => 'Database error occurred. Please try again.',
+                'message' => 'Database error occurred: ' . $e->getMessage(),
             ], 500);
         } catch (\Exception $e) {
             Log::error('Failed to retry failed jobs', [
@@ -614,18 +629,9 @@ class IdpSyncMonitorController extends Controller
                 'user_id' => auth()->id(),
             ]);
 
-            // Log general error
-            $this->auditLogService->logActivity(
-                'FAILED',
-                'IDP Sync Monitor',
-                'Exception while retrying failed jobs: ' . $e->getMessage(),
-                auth()->user(),
-                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
-            );
-
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retry jobs. Please contact support.',
+                'message' => 'Failed to retry jobs: ' . $e->getMessage(),
             ], 500);
         }
     }

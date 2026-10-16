@@ -236,4 +236,56 @@ class IdpServiceTest extends TestCase
         $this->assertFalse($result['success']);
         $this->assertEquals('INVALID_MFA_FORMAT', $result['error']);
     }
+
+    /** @test */
+    public function it_handles_unauthorized_empty_body_response_with_clear_admin_permission_message()
+    {
+        Http::fake([
+            'https://test-idp.example.com/api/v1/admin/users/test-user-123' => Http::response('', 401),
+        ]);
+
+        $testJwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NDQyNzY2ZC0yNjMyLTQ4ODAtOTc0Yy01ODUxOWQ3ZmVjMzMiLCJlbWFpbCI6InB1cHRhZG1pc3Npb25AZ21haWwuY29tIiwicm9sZSI6InN1cGVyYWRtaW4iLCJpYXQiOjE1MTYyMzkwMjJ9.dummy';
+
+        $result = $this->idpService->updateUserAccountType(
+            'test-user-123',
+            3,
+            $testJwt
+        );
+
+        $this->assertFalse($result['success']);
+        $this->assertEquals('UNAUTHORIZED', $result['error']);
+        $this->assertStringContainsString('IDP Authentication Failed', $result['message']);
+        $this->assertStringContainsString('puptadmission@gmail.com', $result['message']);
+    }
+
+    /** @test */
+    public function it_sends_role_id_zero_and_no_extraneous_headers()
+    {
+        Http::fake([
+            'https://test-idp.example.com/api/v1/admin/users/test-user-123' => Http::response([
+                'message' => 'User details updated successfully',
+            ], 200),
+        ]);
+
+        $this->idpService->updateUserAccountType(
+            'test-user-123',
+            3,
+            'fake-token',
+            '654321'
+        );
+
+        Http::assertSent(function ($request) {
+            return $request['account_type_id'] === 3 &&
+                   $request['role_id'] === 0 &&
+                   $request['mfa_code'] === '654321' &&
+                   !isset($request['otp']) &&
+                   !isset($request['code']) &&
+                   !$request->hasHeader('X-MFA-Code') &&
+                   !$request->hasHeader('X-OTP') &&
+                   $request->hasHeader('Cookie') &&
+                   str_contains($request->header('Cookie')[0], 'access_token=fake-token') &&
+                   $request->hasHeader('Authorization') &&
+                   $request->header('Authorization')[0] === 'Bearer fake-token';
+        });
+    }
 }

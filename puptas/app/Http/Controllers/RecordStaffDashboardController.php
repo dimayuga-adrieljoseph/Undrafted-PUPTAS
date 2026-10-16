@@ -392,6 +392,27 @@ class RecordStaffDashboardController extends Controller
                     'enrollment_status' => 'officially_enrolled',
                 ]);
 
+                // Log enrollment to audit logs (only if newly enrolled)
+                if (!$wasAlreadyEnrolled) {
+                    try {
+                        $user = $application->user;
+                        if ($user) {
+                            $this->auditLogService->logActivity(
+                                'UPDATE',
+                                'Enrollment Status',
+                                "Automatically tagged student {$user->firstname} {$user->lastname} (User ID: {$user->id}) as officially enrolled after records completion by " . (auth()->user()->username ?? 'system'),
+                                $user,
+                                \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                            );
+                        }
+                    } catch (\Exception $auditException) {
+                        Log::error('Failed to log automatic enrollment to audit', [
+                            'application_id' => $application->id,
+                            'error' => $auditException->getMessage(),
+                        ]);
+                    }
+                }
+
                 // Update IDP account type only if this is the first time being enrolled
                 if (!$wasAlreadyEnrolled) {
                     $this->dispatchIdpUpdate((string) $application->user_id, $request->input('mfa_code'));
@@ -561,6 +582,7 @@ class RecordStaffDashboardController extends Controller
         $this->ensureRole($this->getRoleId());
 
         $application = Application::where('user_id', (string) $id)->firstOrFail();
+        $user = $application->user;
 
         // Check if medical is completed
         $medicalCompleted = $application->processes()
@@ -606,6 +628,22 @@ class RecordStaffDashboardController extends Controller
 
             DB::commit();
 
+            // Log enrollment to audit logs (after commit)
+            try {
+                $this->auditLogService->logActivity(
+                    'UPDATE',
+                    'Enrollment Status',
+                    "Manually tagged student {$user->firstname} {$user->lastname} (User ID: {$user->id}) as officially enrolled by " . (auth()->user()->username ?? 'unknown'),
+                    $user,
+                    \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                );
+            } catch (\Exception $auditException) {
+                Log::error('Failed to log enrollment to audit', [
+                    'user_id' => $user->id ?? null,
+                    'error' => $auditException->getMessage(),
+                ]);
+            }
+
             // Update the applicant's role in IDP from "applicant" to "student" via queue
             $this->dispatchIdpUpdate($id, $request->input('mfa_code'));
 
@@ -619,6 +657,13 @@ class RecordStaffDashboardController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            Log::error('Failed to tag student as officially enrolled', [
+                'user_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             return response()->json(['message' => 'Failed to tag: ' . $e->getMessage()], 500);
         }
     }
@@ -667,8 +712,10 @@ class RecordStaffDashboardController extends Controller
                 return;
             }
 
-            // SECURITY: Get the admin's access token from session (not exposed to client)
-            $accessToken = $this->idpService->getAdminAccessToken();
+            // SECURITY: Token is resolved server-side (never exposed to client).
+            // Uses the cached sudo-verified admin token when available, so Record Staff
+            // enrollments sync automatically without needing IDP admin rights or MFA.
+            $accessToken = $this->idpService->getAdminAccessToken(!empty($mfaCode));
 
             if (empty($accessToken)) {
                 Log::error('Admin access token not available for IDP account type update', [
@@ -694,7 +741,7 @@ class RecordStaffDashboardController extends Controller
 
             // Dispatch the UpdateIdpAccountType job to the queue
             \App\Jobs\UpdateIdpAccountType::dispatch(
-                $userId,
+                (int) $userId,  // Cast to int to match job constructor
                 $idpUserId,
                 $userEmail,
                 $accessToken,
@@ -728,6 +775,7 @@ class RecordStaffDashboardController extends Controller
         $this->ensureRole($this->getRoleId());
 
         $application = Application::where('user_id', (string) $id)->firstOrFail();
+        $user = $application->user;
 
         if ($application->enrollment_status !== 'officially_enrolled') {
             return response()->json([
@@ -757,9 +805,33 @@ class RecordStaffDashboardController extends Controller
             }
 
             DB::commit();
+
+            // Log untag to audit logs (after commit)
+            try {
+                $this->auditLogService->logActivity(
+                    'UPDATE',
+                    'Enrollment Status',
+                    "Reverted student {$user->firstname} {$user->lastname} (User ID: {$user->id}) from officially enrolled to temporary by " . (auth()->user()->username ?? 'unknown'),
+                    $user,
+                    \App\Models\AuditLog::CATEGORY_SYSTEM_CHANGE
+                );
+            } catch (\Exception $auditException) {
+                Log::error('Failed to log untag to audit', [
+                    'user_id' => $user->id ?? null,
+                    'error' => $auditException->getMessage(),
+                ]);
+            }
+
             return response()->json(['message' => 'Reverted to temporary enrolled successfully']);
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            Log::error('Failed to untag student from officially enrolled', [
+                'user_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             return response()->json(['message' => 'Failed to untag: ' . $e->getMessage()], 500);
         }
     }

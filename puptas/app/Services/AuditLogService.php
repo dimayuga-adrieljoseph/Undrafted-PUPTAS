@@ -334,7 +334,8 @@ class AuditLogService
             return AuditLog::TYPE_SECURITY;
         }
 
-        if ($category === AuditLog::CATEGORY_SYSTEM_OPERATION || $category === 'SYSTEM_OPERATION') {
+        if ($category === AuditLog::CATEGORY_SYSTEM_OPERATION || $category === 'SYSTEM_OPERATION'
+            || $category === AuditLog::CATEGORY_SYSTEM_CHANGE || $category === 'SYSTEM_CHANGE') {
             return AuditLog::TYPE_SYSTEM;
         }
 
