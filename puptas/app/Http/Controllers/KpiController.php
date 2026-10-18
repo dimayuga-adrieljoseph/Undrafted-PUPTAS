@@ -35,6 +35,20 @@ class KpiController extends Controller
             $kpisMet    = count(array_filter($kpis, fn (array $kpi) => $kpi['met'] === true));
             $kpisFailed = count($kpis) - $kpisMet;
 
+            // Fetch PUPTAS live lead time to embed alongside the manual baseline
+            $serviceTimeData = app(AdmissionLogbookController::class)
+                ->serviceTimeKpi(request())
+                ->getData(true);
+
+            $manualBaselines = $result['manual_baselines'];
+
+            // Total applicants processed through the full pipeline in PUPTAS
+            // = count of applicants who completed the interviewer stage (Step 3),
+            // which is the equivalent of the manual logbook's 503 processed students.
+            $interviewerStep = collect($serviceTimeData['steps'] ?? [])
+                ->firstWhere('step', 3);
+            $manualBaselines['puptas_processed_count'] = $interviewerStep['count'] ?? null;
+
             return response()->json([
                 'generated_at' => now()->toIso8601String(),
                 'summary'      => [
@@ -42,7 +56,8 @@ class KpiController extends Controller
                     'kpis_met'    => $kpisMet,
                     'kpis_failed' => $kpisFailed,
                 ],
-                'kpis' => $kpis,
+                'kpis'             => $kpis,
+                'manual_baselines' => $manualBaselines,
             ], 200);
         } catch (\Throwable $e) {
             Log::error('KpiController: computation failed', ['error' => $e->getMessage()]);
@@ -81,14 +96,20 @@ class KpiController extends Controller
                 ->serviceTimeKpi(request())
                 ->getData(true); // decode JSON to array
 
+            // Attach puptas_processed_count to manual baselines for PDF
+            $manualBaselines = $result['manual_baselines'];
+            $interviewerStep = collect($serviceTimeKpi['steps'] ?? [])->firstWhere('step', 3);
+            $manualBaselines['puptas_processed_count'] = $interviewerStep['count'] ?? null;
+
             $generatedAt = now();
 
             $pdf = Pdf::loadView('kpi.report', [
-                'kpis'           => $kpis,
-                'perProgram'     => $perProgram,
-                'summary'        => $summary,
-                'serviceTimeKpi' => $serviceTimeKpi['steps'] ?? [],
-                'generatedAt'    => $generatedAt,
+                'kpis'            => $kpis,
+                'perProgram'      => $perProgram,
+                'summary'         => $summary,
+                'serviceTimeKpi'  => $serviceTimeKpi['steps'] ?? [],
+                'manualBaselines' => $manualBaselines,
+                'generatedAt'     => $generatedAt,
             ]);
 
             $filename = 'puptas_kpi_report_' . now()->format('Y-m-d') . '.pdf';

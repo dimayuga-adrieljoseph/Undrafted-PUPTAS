@@ -173,5 +173,70 @@ const downloadPdf = () => {
         Generated {{ new Date(kpiData.generated_at).toLocaleString() }}
       </span>
     </div>
+
+    <!-- Manual Baselines Reference Panel -->
+    <div
+      v-if="!loading && !error && kpiData && kpiData.manual_baselines"
+      class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl"
+    >
+      <p class="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">
+        Manual Baselines (Pre-PUPTAS Reference)
+      </p>
+      <p class="text-xs text-blue-700 dark:text-blue-300 mb-3">
+        {{ kpiData.manual_baselines.source_note }}
+      </p>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <!-- Applicant population -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-100 dark:border-blue-800/40">
+          <p class="text-gray-500 dark:text-gray-400 mb-1">Students Processed (Manual)</p>
+          <p class="text-lg font-bold text-gray-900 dark:text-white">{{ kpiData.manual_baselines.applicant_population.toLocaleString() }}</p>
+        </div>
+        <!-- Overall lead time -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-100 dark:border-blue-800/40">
+          <p class="text-gray-500 dark:text-gray-400 mb-1">Avg. Admission Lead Time (Manual)</p>
+          <p class="text-sm font-bold text-gray-900 dark:text-white">{{ kpiData.manual_baselines.overall_lead_time.display }}</p>
+        </div>
+        <!-- Step averages -->
+        <div
+          v-for="(stepData, stepKey) in kpiData.manual_baselines.step_averages"
+          :key="stepKey"
+          class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-100 dark:border-blue-800/40"
+        >
+          <p class="text-gray-500 dark:text-gray-400 mb-1 capitalize">{{ stepKey.replace(/_/g, ' ') }} (Manual Avg.)</p>
+          <p class="text-lg font-bold text-gray-900 dark:text-white">{{ stepData.avg_min }} min</p>
+        </div>
+      </div>
+
+      <!-- PUPTAS live lead time comparison (loaded separately from the logbook KPI endpoint) -->
+      <div
+        v-if="kpiData.manual_baselines.puptas_lead_time"
+        class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs"
+      >
+        <div class="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+          <p class="text-gray-500 dark:text-gray-400 mb-1">Manual Process Lead Time</p>
+          <p class="text-sm font-bold text-gray-900 dark:text-white">{{ kpiData.manual_baselines.overall_lead_time.display }}</p>
+          <p class="text-[11px] text-gray-400 mt-0.5">{{ kpiData.manual_baselines.source_note }}</p>
+        </div>
+        <div
+          class="rounded-lg p-3 border"
+          :class="kpiData.manual_baselines.puptas_lead_time.avg_min !== null
+            ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+            : 'bg-gray-50 border-gray-200 dark:bg-gray-700/40 dark:border-gray-700'"
+        >
+          <p class="text-gray-500 dark:text-gray-400 mb-1">PUPTAS End-to-End Lead Time</p>
+          <template v-if="kpiData.manual_baselines.puptas_lead_time.avg_min !== null">
+            <p class="text-sm font-bold text-green-700 dark:text-green-300">{{ kpiData.manual_baselines.puptas_lead_time.avg_display }}</p>
+            <p class="text-[11px] text-gray-400 mt-0.5">avg. from {{ kpiData.manual_baselines.puptas_lead_time.count.toLocaleString() }} applicants</p>
+          </template>
+          <p v-else class="text-[11px] text-gray-400">No data yet</p>
+          <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1 italic">{{ kpiData.manual_baselines.puptas_lead_time.caveat }}</p>
+        </div>
+      </div>
+
+      <p class="text-[11px] text-blue-500 dark:text-blue-400 mt-3">
+        Percentage-based KPI baselines (enrollment rate, slot utilization, etc.) are not yet established.
+        Contact the Admission Office for historical slot counts and enrollment tallies to complete those baselines.
+      </p>
+    </div>
   </div>
 </template>
