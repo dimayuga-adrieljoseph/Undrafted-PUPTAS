@@ -288,4 +288,45 @@ class IdpServiceTest extends TestCase
                    $request->header('Authorization')[0] === 'Bearer fake-token';
         });
     }
+
+    /** @test */
+    public function it_caches_and_retrieves_sudo_token_for_session()
+    {
+        $testJwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTYiLCJlbWFpbCI6InB1cHRhZG1pc3Npb25AZ21haWwuY29tIiwiZXhwIjo5OTk5OTk5OTk5fQ.signature';
+
+        $this->assertFalse($this->idpService->hasSudoToken());
+        $this->idpService->cacheSudoToken($testJwt);
+
+        $this->assertTrue($this->idpService->hasSudoToken());
+        $this->assertEquals($testJwt, $this->idpService->getSudoToken());
+        $this->assertEquals($testJwt, $this->idpService->getAdminAccessToken());
+
+        $this->idpService->clearSudoToken();
+        $this->assertFalse($this->idpService->hasSudoToken());
+        $this->assertNull($this->idpService->getSudoToken());
+    }
+
+    /** @test */
+    public function it_automatically_clears_sudo_token_when_idp_returns_unauthorized()
+    {
+        $testJwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTYiLCJlbWFpbCI6InB1cHRhZG1pc3Npb25AZ21haWwuY29tIiwiZXhwIjo5OTk5OTk5OTk5fQ.signature';
+        $this->idpService->cacheSudoToken($testJwt);
+        $this->assertTrue($this->idpService->hasSudoToken());
+
+        Http::fake([
+            'https://test-idp.example.com/api/v1/admin/users/test-user-123' => Http::response([
+                'message' => 'Unauthorized session',
+            ], 401),
+        ]);
+
+        $result = $this->idpService->updateUserAccountType(
+            'test-user-123',
+            3,
+            $testJwt
+        );
+
+        $this->assertFalse($result['success']);
+        $this->assertEquals('UNAUTHORIZED', $result['error']);
+        $this->assertFalse($this->idpService->hasSudoToken());
+    }
 }

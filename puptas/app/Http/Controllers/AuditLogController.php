@@ -138,7 +138,15 @@ class AuditLogController extends Controller
                 'date' => $filters['date'] ?? null,
                 'log_type' => $filters['log_type'] ?? null,
                 'search' => $filters['search'] ?? null,
-            ]
+            ],
+            // Summary metrics — aggregated in DB, never loaded into memory
+            'metrics' => [
+                'total'  => AuditLog::count(),
+                'today'  => AuditLog::whereDate('created_at', now()->toDateString())->count(),
+                'create' => AuditLog::where('action_type', AuditLog::ACTION_CREATE)->count(),
+                'update' => AuditLog::where('action_type', AuditLog::ACTION_UPDATE)->count(),
+                'delete' => AuditLog::where('action_type', AuditLog::ACTION_DELETE)->count(),
+            ],
         ]);
     }
 

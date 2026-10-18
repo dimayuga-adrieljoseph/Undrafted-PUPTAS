@@ -138,12 +138,33 @@ class AdmissionLogbookController extends Controller
      */
     public function serviceTimeKpi(Request $request): \Illuminate\Http\JsonResponse
     {
-        $target = 30; // target: average ≤ 30 minutes per applicant per step
-
+        // Manual baselines from client-provided logsheet transcription (S.Y. with 503 processed students).
+        // These are the pre-PUPTAS averages measured from the physical admission logbook.
+        // Source: Admission Office logbook sample — document-checking avg: 16.26 min,
+        //         grade-computation avg: 5.50 min, interview avg: 26.90 min.
+        // The system target is set to the manual baseline so we can measure improvement.
         $steps = [
-            1 => ['label' => 'Step 1 — Document Check',    'stage' => 'document_evaluator'],
-            2 => ['label' => 'Step 2 — Grade Computation', 'stage' => 'grade_evaluator'],
-            3 => ['label' => 'Step 3 — Interview',         'stage' => 'interviewer'],
+            1 => [
+                'label'           => 'Step 1 — Document Check',
+                'stage'           => 'document_evaluator',
+                'target'          => 16.26, // manual baseline from client logsheet
+                'manual_baseline' => 16.26,
+                'baseline_note'   => 'Client logsheet avg. (manual process)',
+            ],
+            2 => [
+                'label'           => 'Step 2 — Grade Computation',
+                'stage'           => 'grade_evaluator',
+                'target'          => 5.50,  // manual baseline from client logsheet
+                'manual_baseline' => 5.50,
+                'baseline_note'   => 'Client logsheet avg. (manual process)',
+            ],
+            3 => [
+                'label'           => 'Step 3 — Interview',
+                'stage'           => 'interviewer',
+                'target'          => 26.90, // manual baseline from client logsheet
+                'manual_baseline' => 26.90,
+                'baseline_note'   => 'Client logsheet avg. (manual process)',
+            ],
         ];
 
         $results = [];
@@ -164,28 +185,31 @@ class AdmissionLogbookController extends Controller
                 $from = $e->started_at ?? $e->created_at;
                 if (!$from || !$e->updated_at) return null;
                 $diff = (int) abs($e->updated_at->diffInMinutes($from));
-                // Exclude zero-duration records — these are seeded/batch-inserted rows
-                // where created_at = updated_at, not real timing measurements.
-                return $diff > 0 ? $diff : null;
+                // Exclude zero-duration records (seeded/batch-inserted rows where timestamps are identical)
+                // and records over 540 minutes (9 working hours) — these indicate an interviewer/evaluator
+                // who forgot to tag an applicant and completed the step the next day or later.
+                // Such records measure inaction, not processing speed, and would distort the average.
+                return ($diff > 0 && $diff <= 540) ? $diff : null;
             })->filter(fn ($v) => $v !== null);
 
             $timingCount = $minutes->count(); // records with measurable duration
             $avg = $timingCount > 0 ? round($minutes->avg(), 1) : null;
 
             $results[] = [
-                'step'         => $stepNum,
-                'label'        => $info['label'],
-                'count'        => $totalCount,    // total who completed this stage
-                'timing_count' => $timingCount,   // subset with measurable duration
-                'avg_min'      => $avg,
-                'target'       => $target,
-                'met'          => $avg !== null ? ($avg <= $target) : null,
+                'step'            => $stepNum,
+                'label'           => $info['label'],
+                'count'           => $totalCount,              // total who completed this stage
+                'timing_count'    => $timingCount,             // subset with measurable duration
+                'avg_min'         => $avg,
+                'target'          => $info['target'],          // step-specific manual baseline target
+                'manual_baseline' => $info['manual_baseline'], // pre-PUPTAS manual process average
+                'baseline_note'   => $info['baseline_note'],
+                'met'             => $avg !== null ? ($avg <= $info['target']) : null,
             ];
         }
 
         return response()->json([
-            'target' => $target,
-            'steps'  => $results,
+            'steps' => $results,
         ]);
     }
 

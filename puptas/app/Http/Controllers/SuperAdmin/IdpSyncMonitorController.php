@@ -165,12 +165,16 @@ class IdpSyncMonitorController extends Controller
 
         $successRate = $total > 0 ? round(($totalSuccessful / $total) * 100, 2) : 0;
 
+        $hourExpression = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m-%d %H:00:00', created_at)"
+            : "DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')";
+
         // Get hourly activity for chart (last 24 hours)
         $hourlyActivity = DB::table('audit_logs')
             ->where('module_name', 'IDP Account Type')
             ->where('created_at', '>=', Carbon::now()->subHours(24))
             ->select(
-                DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00') as hour"),
+                DB::raw("{$hourExpression} as hour"),
                 DB::raw('SUM(CASE WHEN action_type = "UPDATE" THEN 1 ELSE 0 END) as successful'),
                 DB::raw('SUM(CASE WHEN action_type = "FAILED" THEN 1 ELSE 0 END) as failed'),
                 DB::raw('SUM(CASE WHEN action_type = "ATTEMPTED" THEN 1 ELSE 0 END) as attempted')
@@ -332,12 +336,16 @@ class IdpSyncMonitorController extends Controller
                 }
             }
 
+            $idpService = app(\App\Services\IdpService::class);
+            $hasSudo = $idpService->hasSudoToken();
+
             return [
                 'pending_jobs' => $pendingJobs,
                 'failed_jobs' => $failedJobsCount,
                 'queue_connection' => $queueDriver,
                 'is_running' => $this->isQueueRunning(),
-                'sudo_active' => app(\App\Services\IdpService::class)->hasSudoToken(),
+                'sudo_active' => $hasSudo,
+                'sudo_session_based' => true,
             ];
         } catch (\Exception $e) {
             Log::error('Failed to get queue status', ['error' => $e->getMessage()]);

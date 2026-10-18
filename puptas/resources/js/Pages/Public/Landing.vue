@@ -1,40 +1,50 @@
-<!-- PUPTAS Landing Page — Organic/Natural Design System -->
+<!-- PUPTAS Landing Page — Editorial Institutional Design -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Head } from '@inertiajs/vue3'
 
+// ─── Props ────────────────────────────────────────────────────────────────────
 const props = defineProps({
-  isDevMode: { type: Boolean, default: false },
-  appDebug: { type: Boolean, default: false },
-  isEmergencyMode: { type: Boolean, default: false },
+  isDevMode:      { type: Boolean, default: false },
+  appDebug:       { type: Boolean, default: false },
+  isEmergencyMode:{ type: Boolean, default: false },
 })
 
+// ─── Utilities ────────────────────────────────────────────────────────────────
 const currentYear = computed(() => new Date().getFullYear())
 
-// Dark mode
-const isDark = ref(false)
+// ─── Dark mode ────────────────────────────────────────────────────────────────
+// Mirrors the same localStorage key used by useLayout across the rest of the system.
+const isDarkMode = ref(false)
+
 const toggleDarkMode = () => {
-  isDark.value = !isDark.value
-  if (isDark.value) {
-    document.documentElement.classList.add('dark')
-    localStorage.setItem('theme', 'dark')
-  } else {
-    document.documentElement.classList.remove('dark')
-    localStorage.setItem('theme', 'light')
-  }
+  isDarkMode.value = !isDarkMode.value
+  document.documentElement.classList.toggle('dark', isDarkMode.value)
+  try { localStorage.setItem('darkMode', String(isDarkMode.value)) } catch { /* noop */ }
 }
 
-onMounted(() => {
-  const saved = localStorage.getItem('theme')
-  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-    isDark.value = true
-    document.documentElement.classList.add('dark')
-  } else {
-    isDark.value = false
-    document.documentElement.classList.remove('dark')
-  }
-})
+// ─── Navigation ───────────────────────────────────────────────────────────────
+const mobileMenuOpen = ref(false)
+const navScrolled    = ref(false)
 
+const navLinks = [
+  { label: 'Admissions',  href: '#admissions'  },
+  { label: 'How to Apply',href: '#process'     },
+  { label: 'Programs',    href: '#programs'    },
+  { label: 'FAQ',         href: '#faq'         },
+]
+
+const scrollTo = (href) => {
+  mobileMenuOpen.value = false
+  const el = document.querySelector(href)
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const handleNavScroll = () => {
+  navScrolled.value = window.scrollY > 32
+}
+
+// ─── Login routing ────────────────────────────────────────────────────────────
 const goToLogin = () => {
   if (props.isEmergencyMode) {
     window.location.href = '/emergency-login'
@@ -45,419 +55,769 @@ const goToLogin = () => {
   }
 }
 
-const steps = ref([
-  { title: 'Receive Your PUPCET Result', description: 'After the PUP College Entrance Test, qualified applicants receive an email with their result and a Student Admission Receipt (SAR) form. Check your inbox — including spam.', icon: 'mail' },
-  { title: 'Register via PUP Identity Provider', description: 'Create your PUP account using the registration link in your results email. This single account is your key to the PUPTAS admission portal.', icon: 'key' },
-  { title: 'Complete Your Profile', description: 'On first login, fill in your personal information: full name, sex, SHS strand, school attended, date graduated, and your top three program choices.', icon: 'user' },
-  { title: 'Enter Your SHS Grades', description: 'Input your Grade 11 and 12 subject grades using the form for your strand (ABM, ICT, HUMSS, GAS, STEM, or TVL).', icon: 'chart' },
-  { title: 'Upload Required Documents', description: 'Upload your report cards and supporting documents directly to secure cloud storage. The system tells you exactly which files are needed based on your graduate type.', icon: 'folder' },
-  { title: 'Submit Your Application', description: 'Review the programs you qualify for based on your grades and strand, confirm your choices, and officially submit your application.', icon: 'check-circle' },
-  { title: 'Evaluation & Interview', description: "Staff will verify your documents and grades. Once cleared, you'll be scheduled for an interview. You'll receive email updates at every step.", icon: 'chat' },
-  { title: 'Medical Examination', description: 'After passing the interview, you will be scheduled for a medical examination as a final requirement before enrollment. Instructions will be sent to your email.', icon: 'graduation' },
+// ─── Scroll-reveal animation ──────────────────────────────────────────────────
+// Elements marked with data-reveal are animated when they enter the viewport.
+// We store a single observer and clean it up on unmount.
+let revealObserver = null
+
+const initReveal = () => {
+  revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-revealed')
+          revealObserver.unobserve(entry.target)
+        }
+      })
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -48px 0px' }
+  )
+  document.querySelectorAll('[data-reveal]').forEach((el) => {
+    revealObserver.observe(el)
+  })
+}
+
+// ─── Hero counter animation ───────────────────────────────────────────────────
+// Simple animated stat counters for the hero panel.
+const stats = ref([
+  { label: 'Degree Programs',    value: 0, target: 11,    suffix: ''  },
+  { label: 'Years of Excellence',value: 0, target: 36,    suffix: ''  },
 ])
 
-const capabilities = ref([
-  { icon: 'user',     title: 'Complete Your Profile',          desc: 'Set up your applicant profile with personal info, SHS strand, school details, and program choices on your first login.' },
-  { icon: 'chart',    title: 'Submit Your Grades',             desc: 'Enter your Grade 11 and 12 subject grades. The portal computes your GWA and eligible programs instantly.' },
-  { icon: 'folder',   title: 'Upload Documents',               desc: "Directly upload your report cards and supporting documents. The portal shows exactly what's needed." },
-  { icon: 'target',   title: 'See Your Eligible Programs',     desc: 'Know which college programs you qualify for based on your strand, GWA, and subject grades — instantly.' },
-  { icon: 'signal',   title: 'Track Application Status',       desc: 'Monitor your application in real time as it moves through evaluation, interview, medical, and enrollment.' },
-  { icon: 'download', title: 'Download Grade Verification Slip', desc: 'Once your application is submitted, download your official Grade Verification Slip directly from the portal.' },
-])
+let counterTimer = null
 
-const faqs = ref([
-  { q: 'Who can use PUPTAS?', a: 'PUPTAS is for PUPCET passers applying for admission to PUP Taguig Campus. You must have received a result email with a Student Admission Receipt (SAR) to be eligible.' },
-  { q: 'Do I need a separate account to log in?', a: "No. You log in using your PUP Identity Provider (IDP) account — the same account used for all PUP online services. If you don't have one, register using the link in your PUPCET results email." },
-  { q: 'What documents do I need to prepare?', a: "Typically: Grade 10 Report Card, Grade 11 Report Card (front and back), Grade 12 Report Card (front and back), and your PSA Birth Certificate. The system will tell you exactly what's required based on your graduate type." },
-  { q: 'Can I change my program choices after submitting?', a: 'Once your application is submitted and locked, you cannot change your program choices on your own. Contact the admissions office via Chat Support for assistance.' },
-  { q: 'How do I know if I qualify for a program?', a: 'After entering your grades, the system automatically shows which programs you are eligible for based on your GWA, strand, and subject grades. No guesswork needed.' },
-  { q: "What if I didn't receive my SAR form email?", a: "Check your spam or junk folder first. If it's still not there, verify you used the correct registered email. Contact admissions support if the issue continues." },
-])
+const animateCounters = () => {
+  const duration = 1600 // ms
+  const steps    = 60
+  const interval = duration / steps
+
+  let step = 0
+  counterTimer = setInterval(() => {
+    step++
+    const progress = step / steps
+    // ease-out cubic
+    const eased = 1 - Math.pow(1 - progress, 3)
+
+    stats.value = stats.value.map((s) => ({
+      ...s,
+      value: Math.round(s.target * eased),
+    }))
+
+    if (step >= steps) clearInterval(counterTimer)
+  }, interval)
+}
+
+// ─── Admissions process steps ────────────────────────────────────────────────
+const steps = [
+  {
+    number: '01',
+    phase:  'Results',
+    title:  'Receive Your PUPCET Result',
+    body:   'After the PUP College Entrance Test, qualified applicants receive an email with their result and a Student Admission Receipt (SAR). Check your inbox — including spam.',
+    icon:   'mail',
+  },
+  {
+    number: '02',
+    phase:  'Account',
+    title:  'Register via PUP IDP',
+    body:   'Create your PUP Identity Provider account using the registration link in your PUPCET results email. This single account is your key to the portal.',
+    icon:   'key',
+  },
+  {
+    number: '03',
+    phase:  'Profile',
+    title:  'Complete Your Profile',
+    body:   'On first login, fill in your personal information: full name, sex, SHS strand, school attended, date graduated, and your top three program choices.',
+    icon:   'user',
+  },
+  {
+    number: '04',
+    phase:  'Grades',
+    title:  'Enter Your SHS Grades',
+    body:   'Input your Grade 11 and 12 subject grades using the form for your strand (ABM, ICT, HUMSS, GAS, STEM, or TVL). The system computes your GWA instantly.',
+    icon:   'chart',
+  },
+  {
+    number: '05',
+    phase:  'Documents',
+    title:  'Upload Required Documents',
+    body:   'Upload your report cards and supporting documents directly to secure cloud storage. The system tells you exactly which files are needed.',
+    icon:   'folder',
+  },
+  {
+    number: '06',
+    phase:  'Evaluation',
+    title:  'Evaluation & Interview',
+    body:   "Staff will verify your documents and grades. Once cleared, you'll be scheduled for an interview. You'll receive email updates at every stage.",
+    icon:   'chat',
+  },
+  {
+    number: '07',
+    phase:  'Medical',
+    title:  'Medical Examination',
+    body:   'After passing the interview, you will be scheduled for a medical examination as a final requirement before enrollment.',
+    icon:   'heart',
+  },
+  {
+    number: '08',
+    phase:  'Enrollment',
+    title:  'Official Enrollment',
+    body:   'Receive your enrollment confirmation and complete the final enrollment requirements at PUP Taguig Campus.',
+    icon:   'graduation',
+  },
+]
+
+const activeStep = ref(0)
+
+// ─── FAQ ─────────────────────────────────────────────────────────────────────
+const faqs = [
+  {
+    q: 'Who can use PUPTAS?',
+    a: 'PUPTAS is for PUPCET passers applying for admission to PUP Taguig Campus. You must have received a result email with a Student Admission Receipt (SAR) to be eligible.',
+  },
+  {
+    q: 'Do I need a separate account to log in?',
+    a: 'No. You log in using your PUP Identity Provider (IDP) account — the same account used for all PUP online services. If you do not have one yet, register using the link in your PUPCET results email.',
+  },
+  {
+    q: 'What documents do I need to prepare?',
+    a: 'Typically: Grade 10 Report Card, Grade 11 Report Card (front and back), Grade 12 Report Card (front and back), and your PSA Birth Certificate. The system will confirm the exact requirements based on your graduate type.',
+  },
+  {
+    q: 'Can I change my program choices after submitting?',
+    a: 'Once your application is submitted and locked, you cannot change your program choices on your own. Contact the admissions office via Chat Support for assistance.',
+  },
+  {
+    q: 'How do I know if I qualify for a program?',
+    a: 'After entering your grades, the system automatically shows which programs you are eligible for based on your GWA, strand, and subject grades. No guesswork needed.',
+  },
+  {
+    q: "What if I didn't receive my SAR form email?",
+    a: "Check your spam or junk folder first. If it's still not there, verify you used the correct registered email. Contact admissions support if the issue continues.",
+  },
+]
 
 const openFaq = ref(null)
 const toggleFaq = (i) => { openFaq.value = openFaq.value === i ? null : i }
 
-const mobileMenuOpen = ref(false)
-
-const navLinks = [
-  { label: 'Features', href: '#features' },
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'FAQ', href: '#faq' },
+// ─── Programs directory ───────────────────────────────────────────────────────
+const programs = [
+  { code: 'BSBA-HRM',    name: 'BS Business Administration – Human Resource Management' },
+  { code: 'BSBA-MM',     name: 'BS Business Administration – Marketing Management' },
+  { code: 'BSOA',        name: 'BS Office Administration' },
+  { code: 'BSECE',       name: 'BS Electronics and Communications Engineering' },
+  { code: 'BSME',        name: 'BS Mechanical Engineering' },
+  { code: 'BSIT',        name: 'BS Information Technology' },
+  { code: 'BSED-ENGLISH',name: 'BS Education – English' },
+  { code: 'BSED-MATH',   name: 'BS Education – Mathematics' },
+  { code: 'BSPSYCH',     name: 'BS Psychology' },
+  { code: 'DIT',         name: 'Diploma in Information Technology' },
+  { code: 'DOMT',        name: 'Diploma in Office Management and Technology' },
 ]
 
-const scrollTo = (href) => {
-  mobileMenuOpen.value = false
-  const el = document.querySelector(href)
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
+// ─── Lifecycle ────────────────────────────────────────────────────────────────
+onMounted(() => {
+  window.addEventListener('scroll', handleNavScroll, { passive: true })
+  initReveal()
 
-const cardRadii = [
-  'rounded-tl-[3rem] rounded-tr-[1.5rem] rounded-bl-[1.5rem] rounded-br-[3rem]',
-  'rounded-tl-[1.5rem] rounded-tr-[3rem] rounded-bl-[3rem] rounded-br-[1.5rem]',
-  'rounded-tl-[2.5rem] rounded-tr-[2.5rem] rounded-bl-[1.5rem] rounded-br-[3rem]',
-  'rounded-tl-[3rem] rounded-tr-[1.5rem] rounded-bl-[3rem] rounded-br-[1.5rem]',
-  'rounded-tl-[1.5rem] rounded-tr-[3rem] rounded-bl-[1.5rem] rounded-br-[3rem]',
-  'rounded-tl-[3rem] rounded-tr-[3rem] rounded-bl-[1.5rem] rounded-br-[1.5rem]',
-]
+  // Sync dark mode with the rest of the system (same localStorage key)
+  try {
+    const saved = localStorage.getItem('darkMode') === 'true'
+    isDarkMode.value = saved
+    document.documentElement.classList.toggle('dark', saved)
+  } catch { /* noop */ }
+
+  // Kick off counters after a brief paint delay
+  setTimeout(animateCounters, 600)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleNavScroll)
+  revealObserver?.disconnect()
+  clearInterval(counterTimer)
+})
 </script>
 
 <template>
-  <Head title="PUP-T Admission System" />
-  <div class="min-h-screen bg-[#FDFCF8] dark:bg-gray-950 font-sans text-[#2C2C24] dark:text-gray-100 relative overflow-x-hidden transition-colors duration-300">
+  <Head>
+    <title>PUPTAS — PUP Taguig Admission System</title>
+    <meta name="description" content="The official online admission portal for Polytechnic University of the Philippines – Taguig Campus. Apply for admission, track your application, and begin your PUP journey." />
+    <meta property="og:title" content="PUPTAS — PUP Taguig Admission System" />
+    <meta property="og:description" content="The official digital admissions platform for PUP Taguig Campus. Complete your application online." />
+    <meta name="theme-color" content="#800000" />
+  </Head>
 
-    <!-- ── GLOBAL GRAIN TEXTURE ──────────────────────────────── -->
-    <div class="pointer-events-none fixed inset-0 z-[100] opacity-[0.035] mix-blend-multiply dark:mix-blend-soft-light dark:opacity-[0.02]"
-      style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E');
-      background-size: 200px 200px;"></div>
+  <div class="min-h-screen bg-white dark:bg-slate-950 text-[#151515] dark:text-gray-100 font-sans antialiased overflow-x-hidden">
 
-    <!-- ── NAVBAR ─────────────────────────────────────────────── -->
-    <nav class="sticky top-4 z-50 mx-4 sm:mx-6 lg:mx-auto lg:max-w-5xl">
-      <div class="bg-white/70 dark:bg-gray-900/80 backdrop-blur-md border border-[#DED8CF]/50 dark:border-gray-700/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.15)] dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.4)] rounded-full px-4 sm:px-6 h-16 flex items-center justify-between">
+    <!-- ═══════════════════════════════════════════════════════════════
+         NAVIGATION
+    ═══════════════════════════════════════════════════════════════ -->
+    <header
+      class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+      :class="navScrolled
+        ? 'bg-white/95 dark:bg-gray-900/80 backdrop-blur-md shadow-[0_1px_0_0_rgba(0,0,0,0.08)] dark:shadow-[0_1px_0_0_rgba(0,0,0,0.4)]'
+        : 'bg-transparent'"
+    >
+      <div class="max-w-screen-xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between gap-6">
+
         <!-- Logo -->
-        <div class="flex items-center gap-3">
-          <img src="/assets/images/pup_logo.png" alt="PUP Taguig Logo" class="h-10 w-10 object-contain flex-shrink-0" />
-          <div class="leading-tight hidden sm:block">
-            <p class="text-sm font-bold text-[#9E122C]">PUPTAS</p>
-            <p class="text-xs text-[#78786C] dark:text-gray-400">Admission Portal</p>
+        <a href="/" class="flex items-center gap-3 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000] focus-visible:ring-offset-2 rounded" aria-label="PUPTAS — Home">
+          <img src="/assets/images/pup_logo.png" alt="PUP Taguig Logo" class="h-9 w-9 object-contain" />
+          <div class="leading-tight">
+            <span class="block text-sm font-extrabold tracking-tight text-[#800000]">PUPTAS</span>
+            <span
+              class="block text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors duration-300"
+              :class="navScrolled ? 'text-[#555]' : 'text-[#800000]/70'"
+            >PUP Taguig</span>
           </div>
-        </div>
+        </a>
 
-        <!-- Desktop nav links (center) -->
-        <div class="hidden md:flex items-center gap-1">
+        <!-- Desktop nav -->
+        <nav class="hidden md:flex items-center gap-0.5" aria-label="Main navigation">
           <button
             v-for="link in navLinks"
             :key="link.label"
             @click="scrollTo(link.href)"
-            class="text-sm text-[#4A4A40] dark:text-gray-300 hover:text-[#9E122C] dark:hover:text-[#e85070] font-medium px-4 py-2 rounded-full hover:bg-[#9E122C]/5 dark:hover:bg-[#9E122C]/10 transition-all duration-300"
+            class="px-4 py-2 text-sm font-semibold rounded transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000] focus-visible:ring-offset-2"
+            :class="navScrolled
+              ? 'text-[#333] dark:text-gray-200 hover:text-[#800000] hover:bg-[#800000]/5'
+              : 'text-[#151515] dark:text-gray-200 hover:text-[#800000] hover:bg-[#800000]/5'"
           >
             {{ link.label }}
           </button>
-          <a href="/admission-results"
-            class="text-sm text-[#4A4A40] dark:text-gray-300 hover:text-[#9E122C] dark:hover:text-[#e85070] font-medium px-4 py-2 rounded-full hover:bg-[#9E122C]/5 dark:hover:bg-[#9E122C]/10 transition-all duration-300">
+          <a
+            href="/admission-results"
+            class="px-4 py-2 text-sm font-semibold rounded transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000] focus-visible:ring-offset-2"
+            :class="navScrolled ? 'text-[#333] dark:text-gray-200 hover:text-[#800000] hover:bg-[#800000]/5' : 'text-[#151515] dark:text-gray-200 hover:text-[#800000] hover:bg-[#800000]/5'"
+          >
             Check Status
           </a>
-        </div>
+        </nav>
 
-        <!-- Right: Dark mode toggle + Log In + mobile hamburger -->
-        <div class="flex items-center gap-2">
+        <!-- Right side: dark mode + CTA + mobile hamburger -->
+        <div class="flex items-center gap-3">
           <!-- Dark mode toggle -->
           <button
-            type="button"
             @click="toggleDarkMode"
-            :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-            :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-            class="flex items-center justify-center w-9 h-9 rounded-full border border-[#DED8CF]/60 dark:border-gray-700 bg-white/60 dark:bg-gray-800 text-[#78786C] dark:text-gray-300 hover:text-[#9E122C] dark:hover:text-yellow-300 hover:bg-[#9E122C]/5 dark:hover:bg-gray-700 transition-all duration-300"
+            class="flex items-center justify-center w-9 h-9 rounded transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000] focus-visible:ring-offset-2"
+            :class="navScrolled
+              ? 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
+              : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'"
+            :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+            :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
           >
-            <!-- Sun (shown in dark mode) -->
-            <svg v-if="isDark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-            </svg>
             <!-- Moon (shown in light mode) -->
-            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            <svg v-if="!isDarkMode" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            <!-- Sun (shown in dark mode) -->
+            <svg v-else class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
             </svg>
           </button>
 
-          <button @click="goToLogin"
-            class="px-5 py-2.5 rounded-full text-sm font-bold text-white bg-[#9E122C] shadow-[0_4px_20px_-2px_rgba(158,18,44,0.35)] hover:shadow-[0_6px_24px_-4px_rgba(158,18,44,0.45)] hover:scale-105 active:scale-95 transition-all duration-300">
-            Log In
+          <button
+            @click="goToLogin"
+            class="hidden sm:inline-flex items-center gap-2 px-5 py-2 rounded text-sm font-bold text-white bg-[#800000] hover:bg-[#6a0000] active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000] focus-visible:ring-offset-2 shadow-sm"
+          >
+            Log In to Apply
+            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 8h10M9 4l4 4-4 4"/>
+            </svg>
           </button>
-          <!-- Hamburger (mobile only) -->
+
+          <!-- Hamburger -->
           <button
             @click="mobileMenuOpen = !mobileMenuOpen"
-            class="md:hidden flex items-center justify-center w-10 h-10 rounded-full border border-[#DED8CF]/60 dark:border-gray-700 bg-white/60 dark:bg-gray-800 text-[#4A4A40] dark:text-gray-300 hover:bg-[#9E122C]/5 hover:text-[#9E122C] transition-all duration-300"
+            class="md:hidden flex items-center justify-center w-9 h-9 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000] focus-visible:ring-offset-2"
+            :aria-expanded="mobileMenuOpen"
             :aria-label="mobileMenuOpen ? 'Close menu' : 'Open menu'"
           >
-            <svg v-if="!mobileMenuOpen" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            <svg v-if="!mobileMenuOpen" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <line x1="3" y1="7"  x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/>
             </svg>
-            <svg v-else class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg v-else class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
         </div>
       </div>
 
-      <!-- Mobile dropdown menu -->
+      <!-- Mobile menu -->
       <transition
-        enter-active-class="transition-all duration-300 ease-out"
-        enter-from-class="opacity-0 -translate-y-2 scale-95"
-        enter-to-class="opacity-100 translate-y-0 scale-100"
-        leave-active-class="transition-all duration-200 ease-in"
-        leave-from-class="opacity-100 translate-y-0 scale-100"
-        leave-to-class="opacity-0 -translate-y-2 scale-95">
-        <div v-if="mobileMenuOpen"
-          class="md:hidden mt-2 bg-white/80 dark:bg-gray-900/90 backdrop-blur-md border border-[#DED8CF]/50 dark:border-gray-700/50 shadow-[0_10px_40px_-10px_rgba(93,112,82,0.2)] dark:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.4)] rounded-[2rem] px-4 py-4 flex flex-col gap-1">
-          <button
-            v-for="link in navLinks"
-            :key="link.label"
-            @click="scrollTo(link.href)"
-            class="w-full text-left text-sm font-semibold text-[#4A4A40] dark:text-gray-300 hover:text-[#9E122C] dark:hover:text-[#e85070] px-4 py-3 rounded-full hover:bg-[#9E122C]/5 dark:hover:bg-[#9E122C]/10 transition-all duration-300"
-          >
-            {{ link.label }}
-          </button>
-          <a href="/admission-results"
-            class="text-sm font-semibold text-[#4A4A40] dark:text-gray-300 hover:text-[#9E122C] dark:hover:text-[#e85070] px-4 py-3 rounded-full hover:bg-[#9E122C]/5 dark:hover:bg-[#9E122C]/10 transition-all duration-300">
-            Check Status
-          </a>
-          <div class="mt-1 pt-3 border-t border-[#DED8CF]/40 dark:border-gray-700/40">
-            <button @click="goToLogin"
-              class="w-full px-5 py-3 rounded-full text-sm font-bold text-white bg-[#9E122C] shadow-[0_4px_20px_-2px_rgba(158,18,44,0.35)] hover:scale-[1.02] active:scale-95 transition-all duration-300">
-              Log In to PUPTAS
+        enter-active-class="transition-all duration-200 ease-out"
+        enter-from-class="opacity-0 -translate-y-1"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition-all duration-150 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 -translate-y-1"
+      >
+        <div
+          v-if="mobileMenuOpen"
+          class="md:hidden bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-lg"
+          role="navigation"
+          aria-label="Mobile navigation"
+        >
+          <div class="max-w-screen-xl mx-auto px-6 py-4 flex flex-col gap-1">
+            <button
+              v-for="link in navLinks"
+              :key="link.label"
+              @click="scrollTo(link.href)"
+              class="w-full text-left px-4 py-3 text-sm font-semibold text-[#333] dark:text-gray-200 hover:text-[#800000] hover:bg-[#800000]/5 dark:hover:bg-gray-800 rounded transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000]"
+            >
+              {{ link.label }}
             </button>
+            <a
+              href="/admission-results"
+              @click="mobileMenuOpen = false"
+              class="px-4 py-3 text-sm font-semibold text-[#333] dark:text-gray-200 hover:text-[#800000] hover:bg-[#800000]/5 dark:hover:bg-gray-800 rounded transition-colors duration-200"
+            >
+              Check Status
+            </a>
+            <div class="pt-3 mt-1 border-t border-gray-100 dark:border-gray-800">
+              <button
+                @click="goToLogin"
+                class="w-full px-5 py-3 rounded text-sm font-bold text-white bg-[#800000] hover:bg-[#6a0000] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000]"
+              >
+                Log In to Apply
+              </button>
+            </div>
           </div>
         </div>
       </transition>
-    </nav>
+    </header>
 
-    <!-- ── HERO ───────────────────────────────────────────────── -->
-    <section class="relative overflow-hidden pt-16 pb-28 sm:pt-24 sm:pb-36">
-      <!-- Ambient blobs -->
-      <div class="absolute -top-32 -right-32 w-[480px] h-[480px] opacity-20 pointer-events-none"
-        style="background: radial-gradient(circle, #9E122C 0%, transparent 70%); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; filter: blur(60px);"></div>
-      <div class="absolute -bottom-24 -left-24 w-[400px] h-[400px] opacity-15 pointer-events-none"
-        style="background: radial-gradient(circle, #C18C5D 0%, transparent 70%); border-radius: 40% 60% 70% 30% / 40% 70% 30% 60%; filter: blur(50px);"></div>
+    <!-- ═══════════════════════════════════════════════════════════════
+         HERO
+    ═══════════════════════════════════════════════════════════════ -->
+    <section class="relative min-h-screen flex flex-col" aria-label="Hero">
 
-      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
-        <div class="flex flex-col items-center text-center">
+      <!-- Gold top bar — institutional accent -->
+      <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#800000] via-[#FFD700] to-[#800000] z-40"></div>
 
-          <!-- Pill badge -->
-          <div class="inline-flex items-center gap-2.5 mb-8 px-5 py-2.5 rounded-full bg-white dark:bg-gray-800 border border-[#DED8CF]/70 dark:border-gray-700 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.12)]">
-            <span class="relative flex h-2 w-2 flex-shrink-0">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#9E122C] opacity-60"></span>
-              <span class="relative inline-flex rounded-full h-2 w-2 bg-[#9E122C]"></span>
+      <!-- Split layout: left text column + right image column -->
+      <div class="flex flex-col lg:flex-row min-h-screen pt-16">
+
+        <!-- Left: Text panel -->
+        <div class="relative z-10 flex flex-col justify-center px-6 sm:px-10 lg:px-16 xl:px-24 pt-16 pb-16 lg:py-0 lg:w-[52%] bg-white dark:bg-slate-950">
+
+          <!-- Eyebrow -->
+          <div class="hero-eyebrow flex items-center gap-3 mb-8">
+            <div class="h-px w-12 bg-[#FFD700]"></div>
+            <span class="text-xs font-bold uppercase tracking-[0.2em] text-[#800000]">
+              Official Admissions Portal
             </span>
-            <span class="text-xs font-bold text-[#9E122C] uppercase tracking-widest">PUP Taguig Campus · Now Accepting</span>
           </div>
 
           <!-- Headline -->
-          <h1 class="text-5xl sm:text-6xl lg:text-7xl font-bold text-[#2C2C24] dark:text-white leading-[1.1] mb-6 max-w-4xl">
-            Welcome to the
-            <span class="relative inline-block text-[#9E122C]">
-              PUP - T Admission System
-              <svg class="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 300 8" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-                <path d="M2 6 C50 2, 100 7, 150 4 S250 1, 298 5" stroke="#C18C5D" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.6"/>
-              </svg>
-            </span>
+          <h1 class="hero-headline font-extrabold text-[#151515] dark:text-white leading-[1.05] mb-6">
+            <span class="block text-[clamp(2.5rem,5vw,4rem)]">Your PUP</span>
+            <span class="block text-[clamp(2.5rem,5vw,4rem)]">Journey</span>
+            <span class="block text-[clamp(2.5rem,5vw,4rem)] text-[#800000]">Starts Here.</span>
           </h1>
 
-          <!-- Subheadline -->
-          <p class="text-lg sm:text-xl text-[#78786C] dark:text-gray-400 leading-relaxed mb-10 max-w-2xl">
-            PUPTAS is the official online admission portal for PUP Taguig Campus. Complete your application, upload documents, and track your progress in real-time — all from one secure platform.
+          <!-- Sub -->
+          <p class="hero-sub text-base sm:text-lg text-[#555] dark:text-gray-400 leading-relaxed max-w-[44ch] mb-10">
+            PUPTAS is the official digital admissions platform for
+            <strong class="text-[#151515] font-semibold">PUP Taguig Campus</strong>.
+            Complete your application, submit documents, and track every stage of your admission — entirely online.
           </p>
 
-          <!-- CTA Buttons -->
-          <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <button @click="goToLogin"
-              class="group inline-flex items-center justify-center gap-2.5 px-9 py-4 rounded-full text-white font-bold text-base bg-[#9E122C] shadow-[0_4px_20px_-2px_rgba(158,18,44,0.4)] hover:shadow-[0_10px_40px_-10px_rgba(158,18,44,0.5)] hover:scale-105 active:scale-95 transition-all duration-300">
-              Log In to PUPTAS
-              <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
+          <!-- CTAs -->
+          <div class="hero-ctas flex flex-col sm:flex-row gap-3 mb-14">
+            <button
+              @click="goToLogin"
+              class="group inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded font-bold text-sm text-white bg-[#800000] hover:bg-[#6a0000] active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000] focus-visible:ring-offset-2"
+            >
+              Start Your Application
+              <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <path d="M3 8h10M9 4l4 4-4 4"/>
               </svg>
             </button>
-            <a href="/admission-results"
-              class="inline-flex items-center justify-center gap-2.5 px-9 py-4 rounded-full font-bold text-base border-2 border-[#DED8CF] dark:border-gray-600 text-[#4A4A40] dark:text-gray-300 bg-white/60 dark:bg-gray-800/60 hover:border-[#9E122C] hover:text-[#9E122C] hover:bg-[#9E122C]/5 dark:hover:border-[#9E122C] dark:hover:text-[#e85070] dark:hover:bg-[#9E122C]/10 transition-all duration-300">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <a
+              href="/admission-results"
+              class="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded font-bold text-sm text-[#800000] border-2 border-[#800000]/25 hover:border-[#800000] hover:bg-[#800000]/5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000] focus-visible:ring-offset-2"
+            >
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
-              Check My Status
+              Check Admission Status
             </a>
           </div>
 
+          <!-- Stats strip -->
+          <div class="hero-stats grid grid-cols-2 gap-4 sm:gap-8 pt-8 border-t border-gray-100 dark:border-gray-800">
+            <div v-for="stat in stats" :key="stat.label">
+              <div class="text-2xl sm:text-3xl font-extrabold text-[#800000] tabular-nums">
+                {{ stat.value.toLocaleString() }}{{ stat.suffix }}
+              </div>
+              <div class="text-xs text-[#888] dark:text-gray-500 font-semibold mt-0.5 leading-tight">{{ stat.label }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Image panel -->
+        <div class="relative lg:w-[48%] h-72 sm:h-96 lg:h-auto overflow-hidden bg-[#800000]">
+          <!-- Primary campus photo -->
+          <img
+            src="/assets/images/1.jpg"
+            alt="PUP Taguig Campus"
+            class="absolute inset-0 w-full h-full object-cover object-center"
+            fetchpriority="high"
+          />
+          <!-- Maroon overlay for brand cohesion -->
+          <div class="absolute inset-0 bg-[#800000]/40 mix-blend-multiply"></div>
+          <!-- Bottom gradient fade on mobile -->
+          <div class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent lg:hidden"></div>
+
+          <!-- Floating credential chip -->
+          <div class="absolute top-6 right-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur rounded shadow-lg px-4 py-3 max-w-[180px]">
+            <div class="flex items-center gap-2.5">
+              <img src="/assets/images/pup_logo.png" alt="" class="w-8 h-8 object-contain flex-shrink-0" aria-hidden="true" />
+              <div>
+                <div class="text-[11px] font-extrabold text-[#800000] leading-tight">PUP Taguig</div>
+                <div class="text-[10px] text-[#555] dark:text-gray-400 leading-tight">Campus Est. 1990</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gold accent bar — vertical, desktop only -->
+          <div class="hidden lg:block absolute left-0 top-1/4 bottom-1/4 w-1 bg-[#FFD700] rounded-r"></div>
         </div>
       </div>
     </section>
 
-    <!-- ── WHAT YOU CAN DO ────────────────────────────────────── -->
-    <section id="features" class="py-28 sm:py-32 bg-[#F0EBE5]/30 dark:bg-gray-900/50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-16">
-          <span class="inline-block text-xs font-bold text-[#9E122C] uppercase tracking-widest mb-3">Portal Features</span>
-          <h2 class="text-4xl sm:text-5xl font-bold text-[#2C2C24] dark:text-white mb-4">Everything You Need<br class="hidden sm:block"> in One Place</h2>
-          <p class="text-lg text-[#78786C] dark:text-gray-400 max-w-2xl mx-auto">Manage your entire admission process with intuitive tools designed for applicants.</p>
+    <!-- ═══════════════════════════════════════════════════════════════
+         MAROON BAND — ADMISSIONS OVERVIEW
+    ═══════════════════════════════════════════════════════════════ -->
+    <section id="admissions" class="bg-[#800000] py-16 sm:py-20 overflow-hidden" aria-label="Admissions overview">
+      <div class="max-w-screen-xl mx-auto px-6 lg:px-10">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-10">
+
+          <div data-reveal class="reveal-left lg:max-w-xl">
+            <p class="text-[#FFD700] text-xs font-bold uppercase tracking-[0.2em] mb-4">Admissions 2024–2025</p>
+            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-[1.1] mb-6">
+              PUP Taguig is Now<br>Accepting Applications.
+            </h2>
+            <p class="text-white/75 text-base leading-relaxed">
+              Qualified PUPCET passers are invited to complete their online application through PUPTAS. The portal manages every step from document submission to enrollment confirmation.
+            </p>
+          </div>
+
+          <div data-reveal class="reveal-right grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-4 lg:min-w-[280px]">
+            <!-- Feature chips -->
+            <div
+              v-for="(item, i) in [
+                { label: 'Secure document upload',       icon: 'lock'   },
+                { label: 'Real-time status tracking',    icon: 'eye'    },
+                { label: 'Online interview scheduling',  icon: 'cal'    },
+              ]"
+              :key="i"
+              class="flex items-center gap-3 bg-white/10 rounded px-4 py-3.5"
+            >
+              <!-- Icon -->
+              <div class="flex-shrink-0 w-8 h-8 rounded bg-[#FFD700]/15 flex items-center justify-center">
+                <svg v-if="item.icon === 'lock'" class="w-4 h-4 text-[#FFD700]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <svg v-else-if="item.icon === 'eye'" class="w-4 h-4 text-[#FFD700]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg v-else-if="item.icon === 'cal'" class="w-4 h-4 text-[#FFD700]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <span class="text-sm font-semibold text-white">{{ item.label }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         ADMISSIONS PROCESS
+    ═══════════════════════════════════════════════════════════════ -->
+    <section id="process" class="py-20 sm:py-28 bg-[#FAFAFA] dark:bg-gray-800" aria-label="Admissions process">
+      <div class="max-w-screen-xl mx-auto px-6 lg:px-10">
+
+        <!-- Section header -->
+        <div data-reveal class="reveal-up mb-14 max-w-2xl">
+          <p class="text-[#800000] text-xs font-bold uppercase tracking-[0.2em] mb-3">How to Apply</p>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-[#151515] dark:text-white leading-tight mb-4">
+            Eight Steps to<br>Your PUP Admission.
+          </h2>
+          <p class="text-[#666] dark:text-gray-400 text-base leading-relaxed">
+            From receiving your PUPCET results to official enrollment — follow this pathway through the PUPTAS admission process.
+          </p>
         </div>
 
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Process grid: 4 columns desktop, 2 tablet, 1 mobile -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-gray-200 dark:bg-gray-700 rounded overflow-hidden shadow-sm">
           <div
-            v-for="(item, idx) in capabilities"
-            :key="item.title"
-            class="group relative bg-[#FEFEFA] dark:bg-gray-800 border border-[#DED8CF]/50 dark:border-gray-700/50 p-7 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.10)] dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.3)] hover:-translate-y-1 hover:shadow-[0_20px_40px_-10px_rgba(93,112,82,0.15)] dark:hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.4)] transition-all duration-500 cursor-default"
-            :class="cardRadii[idx % cardRadii.length]"
+            v-for="(step, i) in steps"
+            :key="step.number"
+            data-reveal
+            :style="{ '--reveal-delay': `${i * 60}ms` }"
+            class="reveal-up bg-white dark:bg-gray-900 p-6 sm:p-8 flex flex-col gap-4 hover:bg-[#800000]/[0.02] dark:hover:bg-maroon-900/20 transition-colors duration-200 group cursor-default"
           >
-            <div class="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[#9E122C]/10 dark:bg-[#9E122C]/20 mb-5 group-hover:bg-[#9E122C] transition-colors duration-300">
-              <svg v-if="item.icon === 'user'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <svg v-else-if="item.icon === 'chart'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              <svg v-else-if="item.icon === 'folder'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-              <svg v-else-if="item.icon === 'target'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-              <svg v-else-if="item.icon === 'signal'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              <svg v-else-if="item.icon === 'download'" class="w-7 h-7 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            </div>
-            <h3 class="font-bold text-[#2C2C24] dark:text-white text-lg mb-2">{{ item.title }}</h3>
-            <p class="text-[#78786C] dark:text-gray-400 text-sm leading-relaxed">{{ item.desc }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── HOW IT WORKS ───────────────────────────────────────── -->
-    <section id="how-it-works" class="py-28 sm:py-32 bg-[#FDFCF8] dark:bg-gray-950">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-16">
-          <span class="inline-block text-xs font-bold text-[#9E122C] uppercase tracking-widest mb-3">Application Flow</span>
-          <h2 class="text-4xl sm:text-5xl font-bold text-[#2C2C24] dark:text-white mb-4">Your Admission Journey</h2>
-          <p class="text-lg text-[#78786C] dark:text-gray-400">From PUPCET results to official enrollment — 8 clear steps.</p>
-        </div>
-
-        <div class="relative">
-          <svg class="absolute left-1/2 top-0 -translate-x-1/2 w-1 hidden sm:block" style="height:100%;" preserveAspectRatio="none" viewBox="0 0 4 800" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <line x1="2" y1="0" x2="2" y2="800" stroke="#DED8CF" stroke-width="2" stroke-dasharray="8 6"/>
-          </svg>
-
-          <div class="space-y-8 sm:space-y-10">
-            <div v-for="(step, i) in steps" :key="step.title" class="relative flex flex-col sm:flex-row items-start gap-4 sm:gap-0">
-
-              <!-- Left side card (even) -->
-              <div v-if="i % 2 === 0" class="sm:w-1/2 sm:pr-10 w-full ml-14 sm:ml-0">
-                <div class="group bg-[#FEFEFA] dark:bg-gray-800 border border-[#DED8CF]/50 dark:border-gray-700/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.10)] dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_-10px_rgba(93,112,82,0.15)] hover:-translate-y-0.5 transition-all duration-500 p-6 rounded-[2rem] rounded-tr-[0.75rem]">
-                  <div class="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-[#9E122C]/10 dark:bg-[#9E122C]/20 mb-4 group-hover:bg-[#9E122C] transition-colors duration-300">
-                    <svg v-if="step.icon === 'mail'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
-                    <svg v-else-if="step.icon === 'user'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    <svg v-else-if="step.icon === 'folder'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                    <svg v-else-if="step.icon === 'chat'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <svg v-else-if="step.icon === 'graduation'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
-                    <svg v-else-if="step.icon === 'key'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
-                  </div>
-                  <h3 class="font-bold text-[#2C2C24] dark:text-white text-base mb-1.5">{{ step.title }}</h3>
-                  <p class="text-[#78786C] dark:text-gray-400 text-sm leading-relaxed">{{ step.description }}</p>
-                </div>
-              </div>
-              <!-- Right side card (odd) -->
-              <div v-else class="sm:w-1/2 sm:pl-10 w-full sm:ml-auto ml-14">
-                <div class="group bg-[#FEFEFA] dark:bg-gray-800 border border-[#DED8CF]/50 dark:border-gray-700/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.10)] dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_40px_-10px_rgba(93,112,82,0.15)] hover:-translate-y-0.5 transition-all duration-500 p-6 rounded-[2rem] rounded-tl-[0.75rem]">
-                  <div class="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-[#9E122C]/10 dark:bg-[#9E122C]/20 mb-4 group-hover:bg-[#9E122C] transition-colors duration-300">
-                    <svg v-if="step.icon === 'mail'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
-                    <svg v-else-if="step.icon === 'user'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    <svg v-else-if="step.icon === 'folder'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                    <svg v-else-if="step.icon === 'chat'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <svg v-else-if="step.icon === 'graduation'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
-                    <svg v-else-if="step.icon === 'chart'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                    <svg v-else-if="step.icon === 'check-circle'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                    <svg v-else-if="step.icon === 'key'" class="w-6 h-6 text-[#9E122C] group-hover:text-white transition-colors duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
-                  </div>
-                  <h3 class="font-bold text-[#2C2C24] dark:text-white text-base mb-1.5">{{ step.title }}</h3>
-                  <p class="text-[#78786C] dark:text-gray-400 text-sm leading-relaxed">{{ step.description }}</p>
-                </div>
-              </div>
-
-              <!-- Center step number (desktop) -->
-              <div class="absolute left-1/2 -translate-x-1/2 top-6 hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-[#9E122C] text-white font-bold text-sm shadow-[0_4px_12px_rgba(158,18,44,0.35)] border-4 border-[#FDFCF8] dark:border-gray-950 z-10">
-                {{ i + 1 }}
-              </div>
-              <!-- Mobile step number -->
-              <div class="absolute left-0 top-4 sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-[#9E122C] text-white font-bold text-sm shadow-[0_4px_12px_rgba(158,18,44,0.35)] border-4 border-[#FDFCF8] dark:border-gray-950 z-10">
-                {{ i + 1 }}
-              </div>
-
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── FAQ ───────────────────────────────────────────────── -->
-    <section id="faq" class="py-28 sm:py-32 bg-[#E6DCCD]/20 dark:bg-gray-900/50">
-      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-16">
-          <span class="inline-block text-xs font-bold text-[#9E122C] uppercase tracking-widest mb-3">Common Questions</span>
-          <h2 class="text-4xl sm:text-5xl font-bold text-[#2C2C24] dark:text-white mb-4">Frequently Asked<br>Questions</h2>
-          <p class="text-lg text-[#78786C] dark:text-gray-400">Answers to the most common questions from applicants.</p>
-        </div>
-
-        <div class="space-y-3">
-          <div v-for="(faq, i) in faqs" :key="i"
-            class="bg-[#FEFEFA] dark:bg-gray-800 border border-[#DED8CF]/50 dark:border-gray-700/50 shadow-[0_4px_20px_-2px_rgba(93,112,82,0.08)] dark:shadow-[0_4px_20px_-2px_rgba(0,0,0,0.3)] overflow-hidden transition-all duration-300"
-            :class="openFaq === i ? 'rounded-[1.5rem]' : 'rounded-[1.25rem]'">
-            <button type="button"
-              class="w-full flex items-center justify-between gap-4 px-6 py-5 text-left hover:bg-[#F0EBE5]/40 dark:hover:bg-gray-700/40 transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E122C]/30 focus-visible:ring-offset-2 rounded-[1.25rem]"
-              @click="toggleFaq(i)">
-              <span class="text-base font-semibold text-[#2C2C24] dark:text-white">{{ faq.q }}</span>
-              <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-[#9E122C]/10 dark:bg-[#9E122C]/20 transition-all duration-300" :class="openFaq === i ? 'bg-[#9E122C] dark:bg-[#9E122C]' : ''">
-                <svg class="w-4 h-4 transition-all duration-300" :class="openFaq === i ? 'rotate-180 text-white' : 'text-[#9E122C]'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
+            <!-- Step number + phase -->
+            <div class="flex items-start justify-between gap-2">
+              <span class="text-[2.5rem] font-extrabold text-[#800000]/10 group-hover:text-[#800000]/20 leading-none transition-colors duration-200 select-none">
+                {{ step.number }}
               </span>
-            </button>
-            <transition
-              enter-active-class="transition-all duration-300 ease-out"
-              enter-from-class="opacity-0 -translate-y-1"
-              enter-to-class="opacity-100 translate-y-0"
-              leave-active-class="transition-all duration-200 ease-in"
-              leave-from-class="opacity-100 translate-y-0"
-              leave-to-class="opacity-0 -translate-y-1">
-              <div v-show="openFaq === i" class="px-6 pb-5 border-t border-[#DED8CF]/30 dark:border-gray-700/40">
-                <p class="text-sm text-[#4A4A40] dark:text-gray-400 leading-relaxed pt-4">{{ faq.a }}</p>
-              </div>
-            </transition>
+              <span class="inline-block text-[10px] font-bold uppercase tracking-widest text-[#800000] bg-[#800000]/8 px-2 py-0.5 rounded mt-1 flex-shrink-0">
+                {{ step.phase }}
+              </span>
+            </div>
+
+            <!-- Icon -->
+            <div class="w-10 h-10 rounded bg-[#800000]/8 group-hover:bg-[#800000] flex items-center justify-center transition-colors duration-200 flex-shrink-0">
+              <svg v-if="step.icon === 'mail'"       class="w-5 h-5 text-[#800000] group-hover:text-white transition-colors duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
+              <svg v-else-if="step.icon === 'key'"   class="w-5 h-5 text-[#800000] group-hover:text-white transition-colors duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+              <svg v-else-if="step.icon === 'user'"  class="w-5 h-5 text-[#800000] group-hover:text-white transition-colors duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <svg v-else-if="step.icon === 'chart'" class="w-5 h-5 text-[#800000] group-hover:text-white transition-colors duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <svg v-else-if="step.icon === 'folder'"class="w-5 h-5 text-[#800000] group-hover:text-white transition-colors duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <svg v-else-if="step.icon === 'chat'"  class="w-5 h-5 text-[#800000] group-hover:text-white transition-colors duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <svg v-else-if="step.icon === 'heart'" class="w-5 h-5 text-[#800000] group-hover:text-white transition-colors duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <svg v-else-if="step.icon === 'graduation'" class="w-5 h-5 text-[#800000] group-hover:text-white transition-colors duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+            </div>
+
+            <!-- Text -->
+            <div>
+              <h3 class="text-sm font-bold text-[#151515] dark:text-white mb-1.5 leading-snug">{{ step.title }}</h3>
+              <p class="text-xs text-[#777] dark:text-gray-400 leading-relaxed">{{ step.body }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inline CTA -->
+        <div data-reveal class="reveal-up mt-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded">
+          <div>
+            <p class="text-sm font-bold text-[#151515] dark:text-white mb-0.5">Ready to begin?</p>
+            <p class="text-sm text-[#777] dark:text-gray-400">Log in to PUPTAS to start your application.</p>
+          </div>
+          <button
+            @click="goToLogin"
+            class="flex-shrink-0 inline-flex items-center gap-2 px-6 py-2.5 rounded text-sm font-bold text-white bg-[#800000] hover:bg-[#6a0000] active:scale-95 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000] focus-visible:ring-offset-2"
+          >
+            Log In to Apply
+            <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         CAMPUS PHOTO STRIP
+    ═══════════════════════════════════════════════════════════════ -->
+    <section class="relative h-72 sm:h-96 overflow-hidden" aria-hidden="true">
+      <img
+        src="/assets/images/3.jpg"
+        alt=""
+        class="absolute inset-0 w-full h-full object-cover object-center"
+        loading="lazy"
+      />
+      <!-- Maroon wash -->
+      <div class="absolute inset-0 bg-[#800000]/55 mix-blend-multiply"></div>
+      <!-- Content overlay -->
+      <div class="relative z-10 h-full flex items-center justify-center px-6">
+        <div class="text-center">
+          <p class="text-[#FFD700] text-xs font-bold uppercase tracking-[0.25em] mb-3">PUP Taguig Campus</p>
+          <p class="text-white text-2xl sm:text-3xl font-extrabold leading-tight max-w-xl mx-auto">
+            Delivering Quality Education<br class="hidden sm:block">Since 1990.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         PROGRAMS DIRECTORY
+    ═══════════════════════════════════════════════════════════════ -->
+    <section id="programs" class="py-20 sm:py-28 bg-white dark:bg-slate-950" aria-label="Academic programs">
+      <div class="max-w-screen-xl mx-auto px-6 lg:px-10">
+
+        <div class="flex flex-col lg:flex-row lg:gap-20">
+
+          <!-- Left: sticky label -->
+          <div class="lg:w-80 lg:flex-shrink-0 mb-12 lg:mb-0">
+            <div data-reveal class="reveal-left lg:sticky lg:top-24">
+              <p class="text-[#800000] text-xs font-bold uppercase tracking-[0.2em] mb-3">Academic Programs</p>
+              <h2 class="text-3xl sm:text-4xl font-extrabold text-[#151515] dark:text-white leading-tight mb-5">
+                Programs<br>Offered at<br>PUP Taguig.
+              </h2>
+              <p class="text-[#666] dark:text-gray-400 text-sm leading-relaxed mb-6">
+                PUP Taguig offers undergraduate programs across engineering, technology, business, and the sciences. Admission eligibility is determined by your PUPCET result, SHS strand, and grade average.
+              </p>
+              <a
+                href="/admission-results"
+                class="inline-flex items-center gap-2 text-sm font-bold text-[#800000] hover:text-[#6a0000] underline-offset-4 hover:underline transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800000] rounded"
+              >
+                Check your eligible programs
+                <svg class="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- Right: programs list -->
+          <div class="flex-1" data-reveal>
+            <ul class="reveal-up space-y-3" aria-label="Programs offered at PUP Taguig">
+              <li
+                v-for="program in programs"
+                :key="program.code"
+                class="flex items-center gap-3 text-sm text-[#444] dark:text-gray-300"
+              >
+                <span class="w-1.5 h-1.5 rounded-full bg-[#FFD700] flex-shrink-0" aria-hidden="true"></span>
+                {{ program.name }}
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         FAQ
+    ═══════════════════════════════════════════════════════════════ -->
+    <section id="faq" class="py-20 sm:py-28 bg-[#FAFAFA] dark:bg-gray-800" aria-label="Frequently asked questions">
+      <div class="max-w-screen-xl mx-auto px-6 lg:px-10">
+
+        <div class="max-w-screen-md mx-auto">
+          <!-- Header -->
+          <div data-reveal class="reveal-up text-center mb-14">
+            <p class="text-[#800000] text-xs font-bold uppercase tracking-[0.2em] mb-3">Common Questions</p>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-[#151515] dark:text-white leading-tight">
+              Frequently Asked Questions
+            </h2>
+          </div>
+
+          <!-- Accordion -->
+          <div class="space-y-2">
+            <div
+              v-for="(faq, i) in faqs"
+              :key="i"
+              data-reveal
+              :style="{ '--reveal-delay': `${i * 50}ms` }"
+              class="reveal-up bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded overflow-hidden"
+            >
+              <button
+                type="button"
+                class="w-full flex items-center justify-between gap-4 px-6 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#800000] group"
+                :aria-expanded="openFaq === i"
+                @click="toggleFaq(i)"
+              >
+                <span class="text-sm font-semibold text-[#151515] dark:text-gray-200 group-hover:text-[#800000] transition-colors duration-200 pr-2">{{ faq.q }}</span>
+                <span
+                  class="flex-shrink-0 w-6 h-6 rounded-full border border-gray-200 dark:border-gray-700 group-hover:border-[#800000] group-hover:bg-[#800000] flex items-center justify-center transition-all duration-200"
+                  :class="openFaq === i ? 'bg-[#800000] border-[#800000]' : ''"
+                  aria-hidden="true"
+                >
+                  <svg
+                    class="w-3 h-3 transition-transform duration-200"
+                    :class="openFaq === i ? 'rotate-180 text-white' : 'text-[#800000] group-hover:text-white'"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                  >
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </span>
+              </button>
+
+              <transition
+                enter-active-class="transition-all duration-200 ease-out"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="transition-all duration-150 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <div v-show="openFaq === i" class="px-6 pb-5 border-t border-gray-100 dark:border-gray-800">
+                  <p class="text-sm text-[#555] dark:text-gray-400 leading-relaxed pt-4">{{ faq.a }}</p>
+                </div>
+              </transition>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ── CTA ───────────────────────────────────────────────── -->
-    <section class="relative py-28 sm:py-32 overflow-hidden">
-      <div class="absolute inset-0 bg-[#9E122C]"></div>
-      <div class="absolute top-0 right-0 w-[500px] h-[500px] opacity-20 pointer-events-none"
-        style="background: radial-gradient(circle, #C18C5D 0%, transparent 70%); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; filter: blur(60px); transform: translate(30%, -30%);"></div>
-      <div class="absolute bottom-0 left-0 w-[400px] h-[400px] opacity-15 pointer-events-none"
-        style="background: radial-gradient(circle, #ffffff 0%, transparent 70%); border-radius: 40% 60% 70% 30% / 40% 70% 30% 60%; filter: blur(50px); transform: translate(-30%, 30%);"></div>
-      <div class="absolute inset-0 opacity-[0.04] mix-blend-soft-light pointer-events-none"
-        style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E'); background-size: 200px 200px;"></div>
+    <!-- ═══════════════════════════════════════════════════════════════
+         FINAL CTA
+    ═══════════════════════════════════════════════════════════════ -->
+    <section class="relative overflow-hidden bg-[#800000] py-20 sm:py-28" aria-label="Call to action">
 
-      <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 class="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
-          Ready to Pursue<br class="hidden sm:block"> Your PUP Dream?
-        </h2>
+      <!-- Geometric accent shapes -->
+      <div class="absolute top-0 right-0 w-72 h-72 bg-[#FFD700]/10 rounded-full translate-x-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true"></div>
+      <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -translate-x-1/2 translate-y-1/2 pointer-events-none" aria-hidden="true"></div>
+      <!-- Gold horizontal rule -->
+      <div class="absolute top-0 left-0 right-0 h-1 bg-[#FFD700]/40" aria-hidden="true"></div>
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-center mt-10 mb-8">
-          <button @click="goToLogin"
-            class="group inline-flex items-center justify-center gap-2.5 px-9 py-4 rounded-full font-bold text-base text-[#9E122C] bg-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] hover:bg-[#FDFCF8] hover:scale-105 active:scale-95 transition-all duration-300">
-            Log In to PUPTAS
-            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </button>
-          <a href="/admission-results"
-            class="inline-flex items-center justify-center gap-2.5 px-9 py-4 rounded-full font-bold text-base text-white border-2 border-white/40 hover:bg-white/10 hover:border-white/60 transition-all duration-300 w-full sm:w-auto">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            Check Admission Status
-          </a>
+      <div class="relative max-w-screen-xl mx-auto px-6 lg:px-10">
+        <div class="max-w-3xl">
+          <p data-reveal class="reveal-up text-[#FFD700] text-xs font-bold uppercase tracking-[0.2em] mb-5">Begin Your Application</p>
+          <h2 data-reveal class="reveal-up text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-[1.05] mb-8">
+            Ready to<br>Pursue Your<br class="hidden sm:block">PUP Dream?
+          </h2>
+          <p data-reveal class="reveal-up text-white/70 text-base sm:text-lg leading-relaxed mb-10 max-w-[48ch]">
+            Log in to PUPTAS using your PUP Identity Provider account. No account yet? Register using the link in your PUPCET results email.
+          </p>
+          <div data-reveal class="reveal-up flex flex-col sm:flex-row gap-4">
+            <button
+              @click="goToLogin"
+              class="group inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded font-bold text-sm text-[#800000] bg-white hover:bg-[#FFFBEA] active:scale-95 transition-all duration-200 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#800000]"
+            >
+              Log In to PUPTAS
+              <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <path d="M3 8h10M9 4l4 4-4 4"/>
+              </svg>
+            </button>
+            <a
+              href="/admission-results"
+              class="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded font-bold text-sm text-white border-2 border-white/30 hover:border-white/60 hover:bg-white/10 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#800000]"
+            >
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              Check Admission Status
+            </a>
+          </div>
         </div>
-
-        <p class="text-sm text-red-200/70">
-          No account yet? <span class="text-white font-semibold">Create one using the link in your PUPCET results email.</span>
-        </p>
       </div>
     </section>
 
-    <!-- ── FOOTER ─────────────────────────────────────────────── -->
-    <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700/50 py-4 px-6">
-      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          © 1998-{{ currentYear }} PUP Taguig. All rights reserved.
-        </p>
-        <div class="flex items-center gap-6">
+    <!-- ═══════════════════════════════════════════════════════════════
+         FOOTER
+    ═══════════════════════════════════════════════════════════════ -->
+    <footer class="bg-[#151515] text-white/60" role="contentinfo">
+      <div class="max-w-screen-xl mx-auto px-6 lg:px-10 py-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+
+        <!-- Brand -->
+        <div class="flex items-center gap-3">
+          <img src="/assets/images/pup_logo.png" alt="PUP Taguig Logo" class="h-8 w-8 object-contain opacity-70" />
+          <div>
+            <div class="text-sm font-bold text-white/80">PUPTAS</div>
+            <div class="text-xs">PUP Taguig Admission System</div>
+          </div>
+        </div>
+
+        <!-- Links -->
+        <nav class="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-medium" aria-label="Footer navigation">
           <a href="https://www.pup.edu.ph/terms/" target="_blank" rel="noopener noreferrer"
-            class="text-sm text-gray-600 dark:text-gray-400 hover:text-[#9E122C] dark:hover:text-[#e85070] transition-colors duration-200">
+            class="hover:text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white rounded">
             Terms of Use
           </a>
-          <span class="text-gray-300 dark:text-gray-600">|</span>
           <a href="https://www.pup.edu.ph/privacy/" target="_blank" rel="noopener noreferrer"
-            class="text-sm text-gray-600 dark:text-gray-400 hover:text-[#9E122C] dark:hover:text-[#e85070] transition-colors duration-200">
+            class="hover:text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white rounded">
             Privacy Statement
           </a>
-        </div>
+          <a href="/admission-results"
+            class="hover:text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white rounded">
+            Check Status
+          </a>
+        </nav>
+
+        <!-- Copyright -->
+        <p class="text-xs flex-shrink-0">
+          © 1990–{{ currentYear }} PUP Taguig. All rights reserved.
+        </p>
       </div>
     </footer>
 
@@ -465,23 +825,85 @@ const cardRadii = [
 </template>
 
 <style scoped>
+/* ── Scroll-reveal system ─────────────────────────────────────────────────── */
+[data-reveal] {
+  opacity: 0;
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal-up     { transform: translateY(28px); }
+.reveal-left   { transform: translateX(-28px); }
+.reveal-right  { transform: translateX(28px); }
+
+[data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Hero entrance sequence ───────────────────────────────────────────────── */
+.hero-eyebrow {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: heroIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+}
+.hero-headline {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: heroIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
+}
+.hero-sub {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: heroIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.45s forwards;
+}
+.hero-ctas {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: heroIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.6s forwards;
+}
+.hero-stats {
+  opacity: 0;
+  animation: heroFade 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.8s forwards;
+}
+
+@keyframes heroIn {
+  to { opacity: 1; transform: none; }
+}
+@keyframes heroFade {
+  to { opacity: 1; }
+}
+
+/* ── Reduced-motion overrides ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal],
+  .hero-eyebrow,
+  .hero-headline,
+  .hero-sub,
+  .hero-ctas,
+  .hero-stats {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ── Global transition baseline ──────────────────────────────────────────── */
 *, *::before, *::after {
-  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity, text-decoration-color;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
+  transition-duration: 200ms;
+}
+
+/* Prevent transition conflict with reveal animations */
+[data-reveal]:not(.is-revealed) * {
+  transition-duration: 0ms;
 }
 
 button:active, a:active {
   transition-duration: 0ms;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    transition-duration: 0ms !important;
-    animation-duration: 0ms !important;
-  }
-  .animate-ping {
-    animation: none !important;
-  }
 }
 </style>

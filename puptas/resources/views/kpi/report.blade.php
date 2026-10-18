@@ -23,7 +23,7 @@
         /* ── Header ─────────────────────────────────────────────────────── */
         .header {
             text-align: center;
-            border-bottom: 3px solid #1e3a5f;
+            border-bottom: 3px solid #9E122C;
             padding-bottom: 12px;
             margin-bottom: 20px;
         }
@@ -31,7 +31,7 @@
         .header .institution {
             font-size: 13pt;
             font-weight: bold;
-            color: #1e3a5f;
+            color: #9E122C;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -60,8 +60,8 @@
         .section-title {
             font-size: 11pt;
             font-weight: bold;
-            color: #1e3a5f;
-            border-bottom: 1.5px solid #1e3a5f;
+            color: #9E122C;
+            border-bottom: 1.5px solid #9E122C;
             padding-bottom: 4px;
             margin-top: 22px;
             margin-bottom: 10px;
@@ -116,7 +116,7 @@
         }
 
         table.data-table thead tr {
-            background-color: #1e3a5f;
+            background-color: #9E122C;
             color: #ffffff;
         }
 
@@ -125,7 +125,7 @@
             text-align: left;
             font-weight: bold;
             font-size: 10pt;
-            border: 1px solid #1e3a5f;
+            border: 1px solid #9E122C;
         }
 
         table.data-table thead th.col-center {
@@ -218,6 +218,59 @@
         </tr>
     </table>
 
+    {{-- ── PROCESS EFFICIENCY KPIs ─────────────────────────────────────── --}}
+    @if (!empty($serviceTimeKpi))
+    <div class="section-title">Process Efficiency KPIs — Average Service Time per Step</div>
+
+    <p style="font-size:8.5pt; color:#555; margin-bottom:8px;">
+        Targets are based on averages from the client's sample logsheet of the last school year.
+        A step is considered efficient when the PUPTAS average is at or below the manual baseline.
+    </p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 34%;">Admissions Step</th>
+                <th class="col-center" style="width: 16%;">PUPTAS Avg.</th>
+                <th class="col-center" style="width: 18%;">Manual Baseline</th>
+                <th class="col-center" style="width: 10%;">Count</th>
+                <th class="col-center" style="width: 10%;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($serviceTimeKpi as $step)
+            <tr>
+                <td>{{ $step['label'] }}</td>
+                <td class="col-value">
+                    @if ($step['avg_min'] !== null)
+                        {{ $step['avg_min'] }} min
+                    @else
+                        <span style="color:#999;">No data</span>
+                    @endif
+                </td>
+                <td class="col-value">
+                    @if (!empty($step['manual_baseline']))
+                        {{ $step['manual_baseline'] }} min
+                    @else
+                        <span style="color:#999;">—</span>
+                    @endif
+                </td>
+                <td class="col-center">{{ $step['count'] }}</td>
+                <td class="col-center">
+                    @if ($step['met'] === true)
+                        <span class="badge badge-pass">Pass</span>
+                    @elseif ($step['met'] === false)
+                        <span class="badge badge-fail">Fail</span>
+                    @else
+                        <span style="color:#999; font-size:9pt;">—</span>
+                    @endif
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
     {{-- ── KPI SUMMARY TABLE ────────────────────────────────────────────── --}}
     <div class="section-title">KPI Results</div>
 
@@ -278,46 +331,27 @@
     </table>
     @endif
 
-    {{-- ── PROCESS EFFICIENCY KPIs ─────────────────────────────────────── --}}
-    @if (!empty($serviceTimeKpi))
-    <div class="section-title">Process Efficiency KPIs — Average Service Time per Step</div>
-
+    {{-- ── MANUAL BASELINES — NOT YET ESTABLISHED ─────────────────────── --}}
+    @if (!empty($manualBaselines['not_established']))
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 40%;">Admissions Step</th>
-                <th class="col-center" style="width: 18%;">Avg. Time</th>
-                <th class="col-center" style="width: 18%;">Target</th>
-                <th class="col-center" style="width: 12%;">Applicants</th>
-                <th class="col-center" style="width: 12%;">Status</th>
+                <th style="width: 35%;">KPI</th>
+                <th style="width: 65%;">Data Required to Establish Baseline</th>
             </tr>
         </thead>
         <tbody>
-            @foreach ($serviceTimeKpi as $step)
+            @foreach ($manualBaselines['not_established'] as $kpiKey => $requirement)
             <tr>
-                <td>{{ $step['label'] }}</td>
-                <td class="col-value">
-                    @if ($step['avg_min'] !== null)
-                        {{ $step['avg_min'] }} min
-                    @else
-                        <span style="color:#999;">No data</span>
-                    @endif
-                </td>
-                <td class="col-value">≤ {{ $step['target'] }} min</td>
-                <td class="col-center">{{ $step['count'] }}</td>
-                <td class="col-center">
-                    @if ($step['met'] === true)
-                        <span class="badge badge-pass">Pass</span>
-                    @elseif ($step['met'] === false)
-                        <span class="badge badge-fail">Fail</span>
-                    @else
-                        <span style="color:#999; font-size:9pt;">—</span>
-                    @endif
-                </td>
+                <td><strong>{{ ucwords(str_replace('_', ' ', $kpiKey)) }}</strong></td>
+                <td style="color:#555;">{{ $requirement }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
+    <p style="font-size:8.5pt; color:#555; margin-top:6px;">
+        <em>These KPIs are computed live from the PUPTAS database. Manual baselines for comparison require historical records from the Admission Office that were not available at the time of report generation.</em>
+    </p>
     @endif
 
     {{-- ── FOOTER ──────────────────────────────────────────────────────── --}}
