@@ -1,1 +1,1 @@
-trigger ci: deploy without healthcheck on worker/scheduler
+trigger ci: deploy web service with healthcheck disabled in railway.json

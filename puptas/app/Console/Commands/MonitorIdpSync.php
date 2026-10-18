@@ -77,15 +77,15 @@ class MonitorIdpSync extends Command
      */
     protected function getMetrics(Carbon $since): array
     {
-        $logs = AuditLog::where('subject', 'IDP Account Type')
+        $logs = AuditLog::where('module_name', 'IDP Account Type')
             ->where('created_at', '>=', $since)
             ->get();
 
         return [
             'total' => $logs->count(),
-            'successful' => $logs->where('action', 'UPDATE')->count(),
-            'failed' => $logs->where('action', 'FAILED')->count(),
-            'mfa_required' => $logs->where('action', 'ATTEMPTED')->count(),
+            'successful' => $logs->where('action_type', 'UPDATE')->count(),
+            'failed' => $logs->where('action_type', 'FAILED')->count(),
+            'mfa_required' => $logs->where('action_type', 'ATTEMPTED')->count(),
             'last_operation' => $logs->max('created_at'),
             'first_operation' => $logs->min('created_at'),
         ];
@@ -210,7 +210,7 @@ class MonitorIdpSync extends Command
      */
     protected function displayRecentActivity(Carbon $since): void
     {
-        $recent = AuditLog::where('subject', 'IDP Account Type')
+        $recent = AuditLog::where('module_name', 'IDP Account Type')
             ->where('created_at', '>=', $since)
             ->orderBy('created_at', 'desc')
             ->limit(10)
@@ -224,7 +224,7 @@ class MonitorIdpSync extends Command
         $this->info('---------------------------');
 
         $rows = $recent->map(function ($log) {
-            $emoji = match($log->action) {
+            $emoji = match($log->action_type) {
                 'UPDATE' => '✅',
                 'FAILED' => '❌',
                 'ATTEMPTED' => '🔐',
@@ -233,9 +233,9 @@ class MonitorIdpSync extends Command
             };
 
             return [
-                $emoji . ' ' . $log->action,
+                $emoji . ' ' . $log->action_type,
                 Carbon::parse($log->created_at)->format('Y-m-d H:i:s'),
-                substr($log->details, 0, 60) . (strlen($log->details) > 60 ? '...' : ''),
+                substr($log->description, 0, 60) . (strlen($log->description) > 60 ? '...' : ''),
             ];
         });
 
@@ -274,16 +274,16 @@ class MonitorIdpSync extends Command
     {
         return Application::where('enrollment_status', 'officially_enrolled')
             ->whereNull('deleted_at')
-            ->whereHas('user', function ($q) {
+            ->whereHas('userAccount', function ($q) {
                 $q->whereNotNull('idp_user_id');
             })
-            ->whereDoesntHave('user', function ($q) {
+            ->whereDoesntHave('userAccount', function ($q) {
                 $q->whereExists(function ($query) {
                     $query->select(\DB::raw(1))
                         ->from('audit_logs')
-                        ->whereColumn('audit_logs.details', 'like', \DB::raw("CONCAT('%user ', users.id, '%')"))
-                        ->where('audit_logs.subject', 'IDP Account Type')
-                        ->where('audit_logs.action', 'UPDATE');
+                        ->whereColumn('audit_logs.user_id', 'users.id')
+                        ->where('audit_logs.module_name', 'IDP Account Type')
+                        ->where('audit_logs.action_type', 'UPDATE');
                 });
             })
             ->count();

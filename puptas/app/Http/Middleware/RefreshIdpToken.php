@@ -136,7 +136,10 @@ class RefreshIdpToken
                 \Illuminate\Support\Facades\Cookie::queue('access_token', $newTokenData['access_token'] ?? $tokenData['access_token'], $expiresIn / 60, '/', null, true, true);
                 \Illuminate\Support\Facades\Cookie::queue('refresh_token', $newTokenData['refresh_token'] ?? $tokenData['refresh_token'], 60 * 24 * 30, '/', null, true, true);
                 
-                Log::info('Successfully refreshed IDP access token via Redis storage');
+                // Keep session admin token in sync with the refreshed token
+                session(['idp_access_token' => $newTokenData['access_token'] ?? $tokenData['access_token']]);
+
+                Log::info('Successfully refreshed IDP access token via Redis storage and session');
             } else {
                 Log::error('Failed to refresh IDP token, killing active session for security', [
                     'status' => $response->status(),

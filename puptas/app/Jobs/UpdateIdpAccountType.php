@@ -32,7 +32,7 @@ class UpdateIdpAccountType implements ShouldQueue
     /**
      * The user ID to update
      *
-     * @var string
+     * @var int
      */
     protected $userId;
 
@@ -82,7 +82,7 @@ class UpdateIdpAccountType implements ShouldQueue
      * Create a new job instance.
      */
     public function __construct(
-        string $userId,
+        int $userId,
         string $idpUserId,
         string $userEmail,
         string $accessToken,
@@ -111,11 +111,14 @@ class UpdateIdpAccountType implements ShouldQueue
             'attempt' => $this->attempts(),
         ]);
 
+        // Prefer the active/sudo admin token if available, falling back to constructor token
+        $effectiveToken = $idpService->getAdminAccessToken() ?? $this->accessToken;
+
         // Account type ID 3 = student
         $result = $idpService->updateUserAccountType(
             $this->idpUserId,
             3,
-            $this->accessToken,
+            $effectiveToken,
             $this->mfaCode
         );
 
@@ -124,6 +127,10 @@ class UpdateIdpAccountType implements ShouldQueue
                 'user_id' => $this->userId,
                 'idp_user_id' => $this->idpUserId,
             ]);
+
+            // The IDP has accepted this token, so it is now in sudo mode.
+            // Cache it so later enrollments can reuse it without MFA.
+            $idpService->cacheSudoToken($effectiveToken);
 
             // Log audit trail
             try {
@@ -180,8 +187,14 @@ class UpdateIdpAccountType implements ShouldQueue
                 ]);
             }
 
-            // If MFA required or user not found, don't retry
-            if (in_array($error, ['MFA_REQUIRED', 'USER_NOT_FOUND', 'INVALID_ACCOUNT_TYPE'])) {
+            // Sudo window expired or token rejected: drop the cached token (only if it's
+            // the one that failed) so the next attempt falls back to a fresh token.
+            if (in_array($error, ['MFA_REQUIRED', 'UNAUTHORIZED'])) {
+                $idpService->clearSudoToken($this->accessToken);
+            }
+
+            // These errors won't fix themselves on retry with the same token
+            if (in_array($error, ['MFA_REQUIRED', 'UNAUTHORIZED', 'USER_NOT_FOUND', 'INVALID_ACCOUNT_TYPE', 'INVALID_MFA_FORMAT'])) {
                 Log::info('Not retrying job due to error type', [
                     'error' => $error,
                     'user_id' => $this->userId,

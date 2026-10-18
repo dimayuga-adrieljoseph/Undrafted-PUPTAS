@@ -145,7 +145,8 @@ class KpiService
         $programs = Program::all();
 
         $perProgramBreakdown = [];
-        $programValues       = [];
+        $totalProgramEnrolled = 0;
+        $totalProgramCapacity = 0;
 
         foreach ($programs as $program) {
             // Count applicants who are officially enrolled OR completed medical (for record in registrar)
@@ -176,13 +177,14 @@ class KpiService
                 'value'    => $programValue,
             ];
 
-            $programValues[] = $programValue;
+            // Track totals for weighted average calculation
+            $totalProgramEnrolled += $programEnrolled;
+            $totalProgramCapacity += $originalCapacity;
         }
 
-        // Per-program KPI value = average utilization across qualifying programs
-        $perProgramAvg = count($programValues) > 0
-            ? round(array_sum($programValues) / count($programValues), 2)
-            : 0.0;
+        // Per-program KPI value = WEIGHTED average (total enrolled / total capacity across all programs)
+        // This prevents small programs from disproportionately affecting the metric
+        $perProgramAvg = $this->safeDivide($totalProgramEnrolled, $totalProgramCapacity);
 
         // Per-program KPI met = true when the average utilization meets the 50% target
         $perProgramKpi = $this->buildKpi(
