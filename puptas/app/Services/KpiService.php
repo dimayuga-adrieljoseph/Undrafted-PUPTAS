@@ -118,7 +118,7 @@ class KpiService
             '%'
         );
 
-        // ── Document Conversion Rate ──────────────────────────────────────
+        // ── Document Submission Pass Rate ────────────────────────────────
         // Numerator: applications that have a completed document_evaluator stage process
         $docEvaluatedCount = Application::whereHas('processes', fn ($q) =>
             $q->where('stage', 'document_evaluator')
@@ -132,9 +132,10 @@ class KpiService
 
         $documentConversionValue = $this->safeDivide($docEvaluatedCount, $submittedCount);
 
+        // ── Document Conversion Rate ──────────────────────────────────────
         $documentConversionKpi = $this->buildKpi(
             'document_conversion',
-            'Document Conversion Rate',
+            'Document Submission Pass Rate',
             $documentConversionValue,
             self::TARGETS['document_conversion'],
             '%'
@@ -185,13 +186,7 @@ class KpiService
         // This prevents small programs from disproportionately affecting the metric
         $perProgramAvg = $this->safeDivide($totalProgramEnrolled, $totalProgramCapacity);
 
-        // Per-program KPI met = true only if ALL programs individually meet the 50% target
-        $perProgramMet = count($perProgramBreakdown) > 0 && array_reduce(
-            $perProgramBreakdown,
-            fn (bool $carry, array $entry) => $carry && ($entry['value'] >= self::TARGETS['per_program_utilization']),
-            true
-        );
-
+        // Per-program KPI met = true when the average utilization meets the 50% target
         $perProgramKpi = $this->buildKpi(
             'per_program_utilization',
             'Per-Program Slot Utilization',
@@ -199,9 +194,6 @@ class KpiService
             self::TARGETS['per_program_utilization'],
             '%'
         );
-
-        // Override the `met` field with the all-programs-pass logic
-        $perProgramKpi['met'] = $perProgramMet;
 
         // Attach the breakdown to the per-program KPI object
         $perProgramKpi['breakdown'] = $perProgramBreakdown;
@@ -302,6 +294,39 @@ class KpiService
                 $returnRateKpi,
             ],
             'per_program' => $perProgramBreakdown,
+
+            // ── Manual baselines from client-provided records ─────────────
+            // These are the pre-PUPTAS values measured from physical admission
+            // records (S.Y. with 503 processed first-year students).
+            // Percentage-based KPI baselines are NOT established yet — the
+            // Admission Office has not yet provided slot counts, enrollment
+            // lists, or application status tallies needed to calculate them.
+            // Only processing-time baselines are available from the logsheet sample.
+            'manual_baselines' => [
+                'source_note'          => 'Client-provided logsheet transcription — 503 processed first-year students (manual admission cycle)',
+                'applicant_population' => 503,
+                'overall_lead_time'    => [
+                    'display' => '7 working days, 1 hr, 10 min',
+                    'minutes' => 3430, // 7 × 480 + 70
+                    'note'    => 'Average total admission processing time per applicant in the manual cycle',
+                ],
+                'step_averages' => [
+                    'document_check'    => ['avg_min' => 16.26, 'note' => 'Document-checking average from transcribed logsheet sample'],
+                    'grade_computation' => ['avg_min' => 5.50,  'note' => 'Grade-computation average from transcribed logsheet sample'],
+                    'interview'         => ['avg_min' => 26.90, 'note' => 'Interview average from transcribed logsheet sample'],
+                ],
+                // Baselines NOT yet established (pending Admission Office data):
+                'not_established' => [
+                    'enrollment_rate'         => 'Requires: total enrolled students + total eligible applicants',
+                    'slot_utilization'        => 'Requires: total slots available + total slots filled (manual cycle)',
+                    'document_evaluation_rate' => 'Requires: count of applications passing document check + total submitted (manual cycle)',
+                    'per_program_utilization' => 'Requires: available and filled slots per program (manual cycle)',
+                    'medical_clearance_rate'  => 'Requires: count cleared medically + count required to obtain clearance',
+                    'completion_rate'         => 'Requires: completed applications + total applications started',
+                    'pullout_rate'            => 'Requires: count of pull-outs + applicant population denominator',
+                    'return_rate'             => 'Requires: count of returned documents + total documents processed',
+                ],
+            ],
         ];
     }
 
