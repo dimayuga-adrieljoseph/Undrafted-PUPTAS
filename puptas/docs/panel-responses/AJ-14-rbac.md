@@ -135,6 +135,12 @@ abort_if(!in_array(config('app.env'), ['local', 'staging']), 404);
    **Current Enforcement on Staging:** Separation of Duties (SoD) is strictly enforced in `RecordStaffDashboardController::tag()` (`app/Http/Controllers/RecordStaffDashboardController.php:567-577`). The system inspects `application_processes` for `ApplicationProcess::EVALUATION_STAGES` (`document_evaluator`, `grade_evaluator`, and `interviewer`) where `performed_by` matches `auth()->id()`. If any match exists, the tag action aborts with HTTP 403:
    > *"Separation of duties violation: You cannot tag an applicant whose evaluation or interview you personally performed."*
    An actor whose only prior stage record was `records` (e.g., from an administrative untag/re-tag cycle) is permitted to tag. This prevents any single user from evaluating and enrolling the same applicant while avoiding administrative deadlocks.
+3. **Audit of Alternative Enrollment Status Mutation Paths:**
+   A comprehensive code audit was conducted across the codebase (`app/`, `routes/`, `database/seeders`, `app/Console/`, `app/Jobs/`, and `app/Imports/`) to identify all locations that set `enrollment_status = 'officially_enrolled'` or `applications.status = 'accepted'` outside of `RecordStaffDashboardController::tag()`:
+   - **Legacy Bulk-Enroll Developer Harness (`POST /test-passers/bulk-enroll`):** A developer test harness in `TestPasserController::bulkEnroll` previously allowed Admin (2), Registrar (6), and SuperAdmin (7) to auto-enroll batches of test passers. It assigned a hardcoded default password (`Password123`), fabricated passing records across all five admission stages (`document_evaluator`, `grade_evaluator`, `interviewer`, `medical`, `records`), checked no prerequisite medical clearance or COR document upload, bypassed Separation of Duties, and logged only a single asynchronous batch audit log without per-applicant entries or reason. **Status: Completely removed.** The route, controller method, and dead frontend Vue state/modal in `TestPassers/Email.vue` were excised; the route now returns HTTP 404 for all roles (`BulkEnrollDisabledTest`).
+   - **`RecordStaffDashboardController::submitRecordsProcess`:** Contains logic updating an application's status to `accepted` and `enrollment_status` to `officially_enrolled`, but has no corresponding route registered in `routes/web.php` or `routes/api.php`. **Status: Unreachable dead code.** It cannot be triggered via HTTP.
+   - **`ApplicationService::tagAsOfficiallyEnrolled`:** A service helper method containing logic to update an application to `accepted` and `officially_enrolled`, but has zero callers across any controller, job, or console command. **Status: Unreachable dead code.**
+   - **Database Seeders (`database/seeders/ApplicantSeeder.php` and `ApiTestStudentsSeeder.php`):** Set mock applicant records directly in local/testing seed routines invoked only via CLI console (`php artisan db:seed`).
 
 ### Program Scoping Analysis across Staff Routes
 The table below inspects every controller method taking a `{userId}`, `{id}`, or `{applicationProcess}` parameter used by Document Evaluator, Grade Evaluator, Interviewer, or Registrar:
@@ -391,14 +397,15 @@ class RoleAccessMatrixTest extends TestCase
 ```
 
 ### Comprehensive Automated Test Suites
-All five dedicated security and RBAC feature test suites run clean via Pest SQLite:
+All six dedicated security and RBAC feature test suites run clean via Pest SQLite:
 1. **`RoleAccessMatrixTest.php`**: **63 passed** (70 assertions) — Verifies route-level middleware across all 8 roles and guests.
 2. **`EnrollmentTagAuditTest.php`**: **33 passed** (130 assertions) — Verifies SoD blocks on `document_evaluator`, `grade_evaluator`, and `interviewer`; confirms re-tagging allowed when prior action was only `records`; verifies mandatory reason (5-500 chars); confirms fail-closed synchronous audit logging.
 3. **`ProgramScopingReadTest.php`**: **32 passed** (83 assertions) — Verifies program scoping on `user-files`, `user-grades`, `start-review`, and `lazy-load` endpoints for roles 3 and 4, while preserving exemptions for roles 2, 5, 6, 7, and 8.
 4. **`CheckEmailSecurityTest.php`**: **12 passed** (45 assertions) — Verifies `/check-email` restricted exclusively to SuperAdmin (role 7) with 30 req/min rate limiting.
 5. **`EvaluatorApplicationsStageTest.php`**: **6 passed** (60 assertions) — Verifies stage preservation on Evaluator dashboard for Admin and Document Evaluator, confirming target links and authorization.
+6. **`BulkEnrollDisabledTest.php`**: **3 passed** (3 assertions) — Verifies that `POST /test-passers/bulk-enroll` returns HTTP 404 for Admin (2), Registrar (6), and SuperAdmin (7) following complete excision of the legacy developer harness.
 
-**Total passing suite:** **146 passed** (388 assertions).
+**Total passing suite:** **149 passed** (391 assertions).
 
 ### Live Staging Environment Verification (Conducted Oct 14, 2026)
 To confirm operational behavior on live infrastructure (Railway staging with background workers), an end-to-end verification of Separation of Duties and audit logging was executed:
@@ -460,6 +467,12 @@ To confirm operational behavior on live infrastructure (Railway staging with bac
 - **Architectural Tradeoff (Fail-Closed Enrollment Audit):** Unlike the asynchronous best-effort audit queue used elsewhere, enrollment `tag()` and `untag()` are now strictly **fail-closed**. If the synchronous audit log write fails for any reason (e.g., database constraint violation, disk exhaustion, or connection drop), the entire database transaction rolls back and the tag request is rejected with HTTP 500. This deliberate tradeoff prioritizes absolute regulatory audit integrity over operation availability: no applicant can transition to officially enrolled without an atomic, permanent audit record.
 - **Proposed Fix:** For other high-compliance operations (such as grade modifications, applicant rejection, and user role grants), migrate from asynchronous queue dispatch to transactional synchronous writes (`logActivitySync()`).
 
+### Gap 8: Legacy Bulk-Enroll Developer Harness and Dormant Enrollment Setters
+- **Severity:** Medium
+- **Description:** An endpoint previously existed at `POST /test-passers/bulk-enroll` (`TestPasserController::bulkEnroll`), originally introduced to replace a mock guidance account CLI seeder for developer testing. This endpoint bypassed all pipeline integrity controls: it set a hardcoded default password (`Password123`), fabricated passing records across all five admission stages with notes `[GUIDANCE-BULK-ENROLL]`, performed no checks for medical clearance or COR document uploads, lacked Separation of Duties enforcement, and logged only a single asynchronous batch audit summary without per-applicant records or reasons. Additionally, two dormant methods containing `officially_enrolled` update logic were identified in the codebase: `RecordStaffDashboardController::submitRecordsProcess` (an unrouted controller action) and `ApplicationService::tagAsOfficiallyEnrolled` (an orphaned service helper with zero call sites).
+- **Implemented Fix:** The `POST /test-passers/bulk-enroll` route, the `TestPasserController::bulkEnroll` method, and the dead frontend state and results modal in `TestPassers/Email.vue` were excised completely. Route constraints (`whereNumber('test_passer')`) were applied to route model binding parameters on sibling routes to ensure that `POST /test-passers/bulk-enroll` returns an unambiguous HTTP 404 Not Found for all roles, verified by `BulkEnrollDisabledTest` (3/3 passing).
+- **Documented Limitations (Dormant Dead Code):** `RecordStaffDashboardController::submitRecordsProcess` and `ApplicationService::tagAsOfficiallyEnrolled` remain in the codebase as unreachable dead code. Because they are not exposed to HTTP routing and have no callers, they cannot be triggered by any user role or external request.
+
 ---
 
 ## 7. Verdict
@@ -469,7 +482,9 @@ Server-side RBAC is actively enforced across all major route groups via middlewa
 2. Enrollment tagging and untagging require mandatory reasons (5-500 chars), with Separation of Duties enforced on `tag()` across `document_evaluator`, `grade_evaluator`, and `interviewer` (`EnrollmentTagAuditTest` passing 33/33).
 3. Evaluator dashboard "View All" link preserves evaluation stages, routing Document Evaluators and Admins directly to `/document-evaluator-applications` (`EvaluatorApplicationsStageTest` passing 6/6).
 4. Program scoping is enforced for roles 3 and 4 on `user-files`, `user-grades`, `start-review`, and `lazy-load` endpoints while preserving exemptions for administrative roles (`ProgramScopingReadTest` passing 32/32).
-5. All 5 dedicated feature test suites execute in a single command with **146 passed (388 assertions)**.
+5. All 6 dedicated security test suites execute cleanly in a single command with **149 passed (391 assertions)**.
 6. Live staging demonstration confirmed end-to-end: Admin evaluator was blocked by SoD with HTTP 403, Registrar successfully completed enrollment, and synchronous audit log was atomically recorded.
 7. As documented in Section 6 (Gap 7), audit logging remains asynchronous everywhere across the codebase except for enrollment `tag()` and `untag()`.
+8. The legacy developer test harness `POST /test-passers/bulk-enroll` has been completely excised along with its dead frontend state, ensuring that official enrollment can only be granted through legitimate registrar tagging (`RecordStaffDashboardController::tag()`) with atomic audit logging and SoD enforcement. Dormant dead code in `submitRecordsProcess` and `ApplicationService::tagAsOfficiallyEnrolled` is verified to be unreachable via HTTP routing.
+
 
