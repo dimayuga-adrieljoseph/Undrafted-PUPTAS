@@ -314,3 +314,212 @@ test('lazy-load returns 403 for roles 3 and 4 when applicant has zero applicatio
         ->assertForbidden()
         ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// user-files via EvaluatorDashboardController (role 3) & InterviewerDashboardController (role 4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test('assigned document evaluator (role 3) can access user-files', function () {
+    $progA = getScopingProgram('BSCS');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'in_progress',
+    ]);
+
+    $evaluator = User::factory()->create(['role_id' => RoleId::DocumentEvaluator->value]);
+    $evaluator->programs()->attach($progA->id, ['role_id' => RoleId::DocumentEvaluator->value]);
+
+    $this->actingAs($evaluator)
+        ->getJson("/dashboard/user-files/{$applicant->id}")
+        ->assertOk()
+        ->assertJsonStructure(['user', 'uploadedFiles']);
+});
+
+test('unassigned document evaluator (role 3) gets 403 on user-files', function () {
+    $progA = getScopingProgram('BSCS');
+    $progB = getScopingProgram('BSIT');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'in_progress',
+    ]);
+
+    $evaluator = User::factory()->create(['role_id' => RoleId::DocumentEvaluator->value]);
+    $evaluator->programs()->attach($progB->id, ['role_id' => RoleId::DocumentEvaluator->value]);
+
+    $this->actingAs($evaluator)
+        ->getJson("/dashboard/user-files/{$applicant->id}")
+        ->assertForbidden()
+        ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
+});
+
+test('user-files returns 403 for document evaluator (role 3) when applicant has zero applications', function () {
+    $progA = getScopingProgram('BSCS');
+    $applicantWithoutApp = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+
+    $evaluator = User::factory()->create(['role_id' => RoleId::DocumentEvaluator->value]);
+    $evaluator->programs()->attach($progA->id, ['role_id' => RoleId::DocumentEvaluator->value]);
+
+    $this->actingAs($evaluator)
+        ->getJson("/dashboard/user-files/{$applicantWithoutApp->id}")
+        ->assertForbidden()
+        ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
+});
+
+test('user-files allows access if applicant has several applications and ANY matches evaluator programs', function () {
+    $progA = getScopingProgram('BSCS');
+    $progB = getScopingProgram('BSIT');
+    $applicant = createApplicantWithProgram($progA);
+
+    $appB = Application::create([
+        'user_id'    => (string) $applicant->id,
+        'program_id' => $progB->id,
+        'status'     => 'submitted',
+    ]);
+
+    ApplicationProcess::create([
+        'application_id' => $appB->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'in_progress',
+    ]);
+
+    $evaluator = User::factory()->create(['role_id' => RoleId::DocumentEvaluator->value]);
+    $evaluator->programs()->attach($progB->id, ['role_id' => RoleId::DocumentEvaluator->value]);
+
+    $this->actingAs($evaluator)
+        ->getJson("/dashboard/user-files/{$applicant->id}")
+        ->assertOk()
+        ->assertJsonStructure(['user', 'uploadedFiles']);
+});
+
+test('exempt roles (Admin 2, SuperAdmin 7, Grade Evaluator 8) access user-files without program assignment', function (int $roleId) {
+    $progA = getScopingProgram('BSCS');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'grade_evaluator',
+        'status'         => 'in_progress',
+    ]);
+
+    $staff = User::factory()->create(['role_id' => $roleId]);
+
+    $this->actingAs($staff)
+        ->getJson("/dashboard/user-files/{$applicant->id}")
+        ->assertOk()
+        ->assertJsonStructure(['user', 'uploadedFiles']);
+})->with([
+    'admin (role 2)'           => RoleId::Admin->value,
+    'superadmin (role 7)'      => RoleId::SuperAdmin->value,
+    'grade evaluator (role 8)' => RoleId::GradeEvaluator->value,
+]);
+
+test('assigned interviewer (role 4) can access interviewer application files', function () {
+    $progA = getScopingProgram('BSCS');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'interviewer',
+        'status'         => 'in_progress',
+    ]);
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progA->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->getJson("/interviewer-dashboard/application/{$applicant->id}")
+        ->assertOk()
+        ->assertJsonStructure(['user', 'uploadedFiles']);
+});
+
+test('unassigned interviewer (role 4) gets 403 on interviewer application files', function () {
+    $progA = getScopingProgram('BSCS');
+    $progB = getScopingProgram('BSIT');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'interviewer',
+        'status'         => 'in_progress',
+    ]);
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progB->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->getJson("/interviewer-dashboard/application/{$applicant->id}")
+        ->assertForbidden()
+        ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
+});
+
+test('interviewer application files returns 403 for interviewer (role 4) when applicant has zero applications', function () {
+    $progA = getScopingProgram('BSCS');
+    $applicantWithoutApp = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progA->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->getJson("/interviewer-dashboard/application/{$applicantWithoutApp->id}")
+        ->assertForbidden()
+        ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
+});
+
+test('interviewer application files allows access if applicant has several applications and ANY matches interviewer programs', function () {
+    $progA = getScopingProgram('BSCS');
+    $progB = getScopingProgram('BSIT');
+    $applicant = createApplicantWithProgram($progA);
+
+    $appB = Application::create([
+        'user_id'    => (string) $applicant->id,
+        'program_id' => $progB->id,
+        'status'     => 'submitted',
+    ]);
+
+    ApplicationProcess::create([
+        'application_id' => $appB->id,
+        'stage'          => 'interviewer',
+        'status'         => 'in_progress',
+    ]);
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progB->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->getJson("/interviewer-dashboard/application/{$applicant->id}")
+        ->assertOk()
+        ->assertJsonStructure(['user', 'uploadedFiles']);
+});
+
+test('exempt roles (Admin 2, SuperAdmin 7) can access interviewer application files without program assignment', function (int $roleId) {
+    $progA = getScopingProgram('BSCS');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'interviewer',
+        'status'         => 'in_progress',
+    ]);
+
+    $staff = User::factory()->create(['role_id' => $roleId]);
+
+    $this->actingAs($staff)
+        ->getJson("/interviewer-dashboard/application/{$applicant->id}")
+        ->assertOk()
+        ->assertJsonStructure(['user', 'uploadedFiles']);
+})->with([
+    'admin (role 2)'      => RoleId::Admin->value,
+    'superadmin (role 7)' => RoleId::SuperAdmin->value,
+]);

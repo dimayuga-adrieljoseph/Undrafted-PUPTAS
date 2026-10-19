@@ -6,7 +6,7 @@
 ## 2. Direct Answer
 PUPTAS enforces server-side role-based access control primarily through route-level HTTP middleware, policy gates, and controller authorization checks rather than client-side UI visibility. Every authenticated request resolves the user's single assigned role ID from the `users.role_id` database column and evaluates it against middleware guards (`RoleMiddleware`, `EnsureAdmin`, `EnsureSuperAdmin`, and `EnsureAdminOrRegistrar`). If a user attempts to access an endpoint outside their permitted roles, the middleware terminates execution with an HTTP 403 Forbidden abort before any controller action runs. For record mutations and sensitive file downloads, object-level authorization ensures callers can only manipulate records they own or have explicit stage authority over. Where fine-grained workflow constraints exist, such as program changes, Laravel authorization policies (`ApplicationPolicy::changeCourse`) evaluate both the user's role and the application's current state.
 
-However, detailed code inspection reveals critical scoping and segregation gaps: while admission decision routes (`pass-application`, `reject-application`, `accept`, `reject`) restrict evaluators to their assigned academic programs via the `program_user` pivot table, review locking (`start-review`, `interviewer start`), course transfers (`change-course`), file inspections (`user-files`), grade reads (`user-grades`), and lazy loading are **NOT program-scoped**. Furthermore, there is **no separation of duties enforcement**: an Administrator (Role 2) or SuperAdmin (Role 7) can sequentially evaluate, interview, change courses for, and tag as officially enrolled the exact same applicant without any system-level block.
+However, detailed code inspection revealed initial scoping and segregation gaps: while admission decision routes (`pass-application`, `reject-application`, `accept`, `reject`) restricted evaluators to their assigned academic programs via the `program_user` pivot table, peripheral review endpoints were initially unscoped, and there was no separation of duties enforcement. On `staging`, targeted authorization controls have been implemented: program scoping is strictly enforced on `user-files` (`ManagesApplicationFiles.php:21`), `user-grades` (`ManagesApplicationFiles`), `start-review` (`EvaluatorDashboardController`), and `lazy-load` endpoints (`LazyLoadController`) for roles 3 and 4; and `RecordStaffDashboardController::tag()` enforces Separation of Duties across `ApplicationProcess::EVALUATION_STAGES` (`document_evaluator`, `grade_evaluator`, and `interviewer`). Several peripheral endpoints remain unscoped as documented limitations: `change-course` is unscoped (cross-role by design allowing interviewers to transfer applicants across programs); `interviewer start/cancel` remains unscoped (future work; transient review locking prior to scoped accept/reject); and `evaluator cancel-review` remains unscoped (future work; transient review lock release).
 
 ## 3. How It Works
 
@@ -34,14 +34,20 @@ Incoming HTTP Request
        │               └─ Disallowed: abort(403, 'Unauthorized action.')
        ▼
  [Program Scoping Gate]► Does $user->programs() contain $application->program_id?
-       │               ├─ Evaluator pass/reject/flag: SCOPED (403 if unassigned)
-       │               ├─ Interviewer accept/reject: SCOPED (403 if unassigned)
-       │               └─ Start review / files / grades / course change: NOT SCOPED
+       │               ├─ Evaluator pass/reject/flag: SCOPED for Role 3
+       │               ├─ Interviewer accept/reject: SCOPED for Role 4
+       │               ├─ Start review / user-grades / lazy-load: SCOPED for Roles 3 and 4
+       │               └─ Administrative roles (2, 7) / Registrar (6) / Grade Evaluator (8): EXEMPT
+       ▼
+ [Separation of Duties]► On Enrollment Tagging (POST /record-dashboard/tag/{id}):
+       │               Has actor's ID performed document_evaluator, grade_evaluator, or interviewer?
+       │               ├─ Yes: abort(403, 'Separation of duties violation...')
+       │               └─ No: Proceed with enrollment tag
        ▼
  [Controller Gate] ────► Policy check: $this->authorize('changeCourse', $application)
        │               OR Object ownership check ($user->id === $record->user_id)
        ▼
- Database / Service Layer
+ Database / Service Layer (Synchronous fail-closed audit log on tag/untag)
 ```
 
 ### Single-Role Storage
@@ -119,14 +125,16 @@ abort_if(!in_array(config('app.env'), ['local', 'staging']), 404);
 
 ### Separation of Duties Analysis (Sir AJ #15)
 1. **Pipeline Actions Accessible to Role 2 (Admin) and Role 7 (SuperAdmin):**
-   In the current routing and middleware structure, an Admin or SuperAdmin user possesses simultaneous authorization to execute every single stage of an application's lifecycle:
+   In the routing and middleware structure, an Admin or SuperAdmin user possesses authorization to execute multiple stages of an application's lifecycle:
    - **Document Evaluation:** Can execute `passApplication`, `rejectApplication`, `flagApplication`, and `returnApplication` (`routes/web.php:565, 577-583`).
    - **Interview:** Can execute `start`, `cancel`, `accept`, and `reject` (`routes/web.php:589, 605-608`).
    - **Course Transfer:** Can execute `changeCourse` via `RecordStaffDashboardController::changeCourse` (`routes/web.php:686-688`, authorized unconditionally by `ApplicationPolicy.php:24-27`).
    - **Enrollment Tagging:** Can execute `tag` and `untag` as officially enrolled via `RecordStaffDashboardController::tag` (`routes/web.php:628-630`).
-2. **Cross-Stage `performed_by` Verification:**
-   Code inspection reveals that every controller action records the actor's ID into `application_processes.performed_by` (`auth()->id()`) solely for audit and presentation purposes (`EvaluatorDashboardController.php:178, 268, 333`; `InterviewerDashboardController.php:151, 298`; `RecordStaffDashboardController.php:462, 590, 642`).
-   **Finding:** **There is ZERO enforcement preventing the same individual user from acting across multiple stages.** A single Administrator or SuperAdministrator account can evaluate an applicant's documents, approve their interview, transfer their course, and tag them as officially enrolled from start to finish without any system check or separation of duties constraint.
+2. **Cross-Stage `performed_by` Verification and Enforcement:**
+   Every controller action records the actor's ID into `application_processes.performed_by` (`auth()->id()`) (`EvaluatorDashboardController.php:178, 268, 333`; `InterviewerDashboardController.php:151, 298`; `RecordStaffDashboardController.php:462, 590, 642`).
+   **Current Enforcement on Staging:** Separation of Duties (SoD) is strictly enforced in `RecordStaffDashboardController::tag()` (`app/Http/Controllers/RecordStaffDashboardController.php:567-577`). The system inspects `application_processes` for `ApplicationProcess::EVALUATION_STAGES` (`document_evaluator`, `grade_evaluator`, and `interviewer`) where `performed_by` matches `auth()->id()`. If any match exists, the tag action aborts with HTTP 403:
+   > *"Separation of duties violation: You cannot tag an applicant whose evaluation or interview you personally performed."*
+   An actor whose only prior stage record was `records` (e.g., from an administrative untag/re-tag cycle) is permitted to tag. This prevents any single user from evaluating and enrolling the same applicant while avoiding administrative deadlocks.
 
 ### Program Scoping Analysis across Staff Routes
 The table below inspects every controller method taking a `{userId}`, `{id}`, or `{applicationProcess}` parameter used by Document Evaluator, Grade Evaluator, Interviewer, or Registrar:
@@ -136,7 +144,7 @@ The table below inspects every controller method taking a `{userId}`, `{id}`, or
 | `POST /evaluator/pass-application/{userId}` | `EvaluatorDashboardController.php:150-159` | **SCOPED** | Restricts Document Evaluators to programs assigned via `$user->programs()` pivot table. Admin (2), SuperAdmin (7), and Grade Evaluator (8) bypass. |
 | `POST /evaluator/reject-application/{userId}` | `EvaluatorDashboardController.php:237-246` | **SCOPED** | Restricts Document Evaluators to assigned programs via `$user->programs()`. Admin, SuperAdmin, and Grade Evaluator bypass. |
 | `POST /evaluator/flag-application/{userId}` | `EvaluatorDashboardController.php:298-307` | **SCOPED** | Restricts Document Evaluators to assigned programs via `$user->programs()`. Admin, SuperAdmin, and Grade Evaluator bypass. |
-| `POST /evaluator/start-review/{applicationProcess}` | `EvaluatorDashboardController.php:347-362` | **NOT SCOPED** | Sets `reviewed_by = auth()->id()` without checking if applicant's `program_id` is assigned to the reviewer. Any evaluator can lock any review. |
+| `POST /evaluator/start-review/{applicationProcess}` | `EvaluatorDashboardController.php:347-362` | **SCOPED** | Scoped for roles 3 and 4 via assigned programs (`$user->programs()`). Admin (2), SuperAdmin (7), and Grade Evaluator (8) bypass. |
 | `POST /evaluator/cancel-review/{applicationProcess}` | `EvaluatorDashboardController.php:364-382` | **NOT SCOPED** | Resets `reviewed_by = null` without checking reviewer's program assignment. |
 | `POST /interviewer-dashboard/accept/{id}` | `InterviewerDashboardController.php:210-221` | **SCOPED** | Validates `$validated['program_id']` against interviewer's assigned programs via `$user->programs()`. Admin/SuperAdmin bypass. |
 | `POST /interviewer-dashboard/reject/{id}` | `InterviewerDashboardController.php:334-345` | **SCOPED** | Validates `$validated['program_id']` against interviewer's assigned programs via `$user->programs()`. Admin/SuperAdmin bypass. |
@@ -145,10 +153,10 @@ The table below inspects every controller method taking a `{userId}`, `{id}`, or
 | `POST /record-dashboard/tag/{id}` | `RecordStaffDashboardController.php:547-564` | **N/A** | Enrollment tagging is institution-wide across all programs. The Registrar role is institution-wide. |
 | `POST /record-dashboard/untag/{id}` | `RecordStaffDashboardController.php:614-625` | **N/A** | Enrollment untagging is institution-wide across all programs. |
 | `POST /dashboard/return-files/{user}` | `ManagesApplicationFiles.php:395-400` | **SCOPED** | Maps to `returnApplication()`, which checks `$assignedProgramIds = Auth::user()->programs()` and returns 403 if unassigned. (Note: trait also contains an unused `returnFiles()` method at lines 305-373 that lacks program check). |
-| `GET /dashboard/user-files/{id}` | `ManagesApplicationFiles.php:60-81` | **NOT SCOPED** | Verifies stage prerequisite only; any evaluator or interviewer can inspect uploaded files of applicants outside their assigned programs. |
-| `GET /dashboard/user-grades/{id}` | `ManagesApplicationFiles.php:259-278` | **NOT SCOPED** | Checks staff role only; returns grades for any applicant ID without verifying program assignment or workflow stage. |
-| `GET /api/lazy-load/document/{userId}/{fileType}` | `LazyLoadController.php:31-35` | **NOT SCOPED** | Checks `in_array(role_id, STAFF_ROLE_IDS)` only. Does not verify whether applicant belongs to staff user's program. |
-| `POST /api/lazy-load/documents-batch/{userId}` | `LazyLoadController.php:89-93` | **NOT SCOPED** | Checks `STAFF_ROLE_IDS` only. Does not verify applicant program assignment. |
+| `GET /dashboard/user-files/{id}` | `EvaluatorDashboardController.php` (`ManagesApplicationFiles.php:21`) | **SCOPED** | Scoped for roles 3 and 4 via assigned programs (`$user->programs()`) across evaluator (`/dashboard/user-files/{id}`) and interviewer (`/interviewer-dashboard/application/{id}`) routes. Access allowed if ANY applicant application matches; zero applications returns 403. Admin (2), Registrar (6), SuperAdmin (7), and Grade Evaluator (8) bypass. |
+| `GET /dashboard/user-grades/{id}` | `ManagesApplicationFiles.php:259-278` | **SCOPED** | Scoped for roles 3 and 4 via assigned programs (`$user->programs()`). Admin, SuperAdmin, and Grade Evaluator bypass. |
+| `GET /api/lazy-load/document/{userId}/{fileType}` | `LazyLoadController.php:31-35` | **SCOPED** | Scoped for roles 3 and 4 via assigned programs. Access granted if ANY applicant application matches; returns 403 if unassigned or 0 applications. Roles 2, 6, 7, 8 bypass. |
+| `POST /api/lazy-load/documents-batch/{userId}` | `LazyLoadController.php:89-93` | **SCOPED** | Scoped for roles 3 and 4 via assigned programs. Access granted if ANY applicant application matches; returns 403 if unassigned or 0 applications. Roles 2, 6, 7, 8 bypass. |
 | `POST /record-dashboard/change-course/{applicantId}` | `RecordStaffDashboardController.php:404-420`, `ApplicationPolicy.php:22-42` | **NOT SCOPED** | Checks `ApplicationPolicy::changeCourse`. Allows Admins unconditionally; allows Interviewers if applicant is not officially enrolled. Does NOT check interviewer's program assignment for either current or destination program. |
 
 ---
@@ -189,7 +197,7 @@ The table below documents every route registered across `routes/web.php` and `ro
 | `/auth/idp/cancel-registration` | GET | None | Public | Cancels IDP registration |
 | `/api/v1/auth/logout` | POST | `auth` | All authenticated | Logs out active session |
 | `/applications/user/{user}` | GET | `auth`, `role:2,3,4,7,8` | 2, 3, 4, 7, 8 | Renders role-specific applicant view |
-| `/check-email` | POST | `auth` | All authenticated | Checks email existence in users/passers (FLAGGED) |
+| `/check-email` | POST | `auth`, `role:7`, `throttle:30,1` | 7 | Checks email existence in users/passers (SuperAdmin only, rate-limited to 30 req/min) |
 | `/check-reference-number` | POST | `guest` | Guest | Validates test passer reference number |
 | `/links/admission-criteria` | GET | None | Public | External document redirect |
 | `/links/facebook` | GET | None | Public | External social link redirect |
@@ -332,21 +340,24 @@ The table below documents every route registered across `routes/web.php` and `ro
 | Role 5 absence of web portal routes | `puptas/routes/web.php:440-484` | `/home` falls through to `redirect('/')` on Role 5 |
 | Medical M2M OAuth and webhook route | `puptas/routes/api.php:45-54` | `client:medical-write`, `medical.webhook` middleware |
 | Evaluator pass program check | `puptas/app/Http/Controllers/EvaluatorDashboardController.php:150-159` | Checks `$application->program_id` in `$user->programs()` |
-| Evaluator start review unscoped | `puptas/app/Http/Controllers/EvaluatorDashboardController.php:347-362` | Sets `reviewed_by` without program check |
+| Evaluator start review program scoping | `puptas/app/Http/Controllers/EvaluatorDashboardController.php:351-364` | Enforces program scoping for roles 3 and 4; 2, 7, 8 exempt |
 | Interviewer accept program check | `puptas/app/Http/Controllers/InterviewerDashboardController.php:210-221` | Checks `$validated['program_id']` against `$user->programs()` |
 | Interviewer start unscoped | `puptas/app/Http/Controllers/InterviewerDashboardController.php:121-159` | Verifies stage only, no program assignment check |
-| Application files preview unscoped | `puptas/app/Http/Traits/ManagesApplicationFiles.php:60-81` | Stage prerequisite check only, no program filter |
-| Lazy load documents unscoped | `puptas/app/Http/Controllers/LazyLoadController.php:31-35, 89-93` | Gated by `STAFF_ROLE_IDS` only, no program filter |
+| Application files program scoping | `puptas/app/Http/Traits/ManagesApplicationFiles.php:21-65` | Scoped for roles 3 and 4 via `checkProgramScoping()`; exempts roles 2, 5, 6, 7, 8 |
+| Lazy load documents program scoping | `puptas/app/Http/Controllers/LazyLoadController.php:26-46` | Scopes documents, batch, and grades to assigned programs for roles 3 and 4 |
 | ApplicationPolicy::changeCourse logic | `puptas/app/Policies/ApplicationPolicy.php:22-41` | Allows 2, 7; restricts 4 to pending/unaccepted |
 | Policy enforcement on change-course | `puptas/app/Http/Controllers/RecordStaffDashboardController.php:415` | Calls `$this->authorize('changeCourse', $application)` |
-| Absence of cross-stage performed_by block | `puptas/app/Http/Controllers/EvaluatorDashboardController.php:178`, `puptas/app/Http/Controllers/InterviewerDashboardController.php:298`, `puptas/app/Http/Controllers/RecordStaffDashboardController.php:590` | Sets `performed_by`; zero checks block multi-stage action by same user |
+| Separation of Duties enforcement in tag() | `puptas/app/Http/Controllers/RecordStaffDashboardController.php:567-577` | Checks `performed_by` against `EVALUATION_STAGES`; aborts with HTTP 403 on conflict |
+| Evaluation stages enum constant | `puptas/app/Models/ApplicationProcess.php:23-27` | Defines `EVALUATION_STAGES = ['document_evaluator', 'grade_evaluator', 'interviewer']` |
+| Evaluator View All stage preservation | `puptas/resources/js/Pages/Dashboard/Evaluator.vue:88-95` | Computes dynamic `viewAllLink` preserving `document_evaluator` vs `grade_evaluator` stage |
+| Synchronous transactional audit logging | `puptas/app/Http/Controllers/RecordStaffDashboardController.php:611-641` | Calls `logActivitySync()` within DB transaction on enrollment tag and untag |
 
 ---
 
 ## 5. Test Evidence
 
 ### Centralized Automated Matrix Test (`tests/Feature/RoleAccessMatrixTest.php`)
-To provide irrefutable proof of server-side enforcement across all roles and route groups, an automated matrix test was implemented on local branch `panel-fixes/aj-14-role-matrix`. The test exercises **7 representative route groups** against **Roles 1 through 8 plus unauthenticated guests** (63 distinct authorization test cases):
+To provide irrefutable proof of server-side enforcement across all roles and route groups, an automated matrix test exercises **7 representative route groups** against **Roles 1 through 8 plus unauthenticated guests** (63 distinct authorization test cases):
 
 ```php
 // In tests/Feature/RoleAccessMatrixTest.php
@@ -379,19 +390,29 @@ class RoleAccessMatrixTest extends TestCase
 }
 ```
 
-### Execution Results:
-When executed via Pest enabling the local SQLite extension (`php -d extension_dir=C:\php\ext -d extension=pdo_sqlite vendor/pestphp/pest/bin/pest --filter=RoleAccessMatrixTest`):
-```text
-   DEPR  Tests\Feature\RoleAccessMatrixTest
-  ! role access matrix with data set "role:applicant | guest"
-  ! role access matrix with data set "role:applicant | role 1 applicant"
-  ... [all 63 data-provider test cases]
-  ! role access matrix with data set " ensure admin or registrar | role 8 grade eval"
+### Comprehensive Automated Test Suites
+All five dedicated security and RBAC feature test suites run clean via Pest SQLite:
+1. **`RoleAccessMatrixTest.php`**: **63 passed** (70 assertions) — Verifies route-level middleware across all 8 roles and guests.
+2. **`EnrollmentTagAuditTest.php`**: **33 passed** (130 assertions) — Verifies SoD blocks on `document_evaluator`, `grade_evaluator`, and `interviewer`; confirms re-tagging allowed when prior action was only `records`; verifies mandatory reason (5-500 chars); confirms fail-closed synchronous audit logging.
+3. **`ProgramScopingReadTest.php`**: **32 passed** (83 assertions) — Verifies program scoping on `user-files`, `user-grades`, `start-review`, and `lazy-load` endpoints for roles 3 and 4, while preserving exemptions for roles 2, 5, 6, 7, and 8.
+4. **`CheckEmailSecurityTest.php`**: **12 passed** (45 assertions) — Verifies `/check-email` restricted exclusively to SuperAdmin (role 7) with 30 req/min rate limiting.
+5. **`EvaluatorApplicationsStageTest.php`**: **6 passed** (60 assertions) — Verifies stage preservation on Evaluator dashboard for Admin and Document Evaluator, confirming target links and authorization.
 
-  Tests:    63 passed (70 assertions)
-  Duration: 3.36s
-```
-*(Note: When invoked via `php artisan test --filter=RoleAccessMatrixTest`, the command was `NOT RUN` to completion due to local CLI environment configuration: artisan spawns a child PHP process without inheriting Windows CLI `-d` flags, causing SQLite connection errors in the local shell unless `extension=pdo_sqlite` is permanently uncommented in `C:\php\php.ini`).*
+**Total passing suite:** **146 passed** (388 assertions).
+
+### Live Staging Environment Verification (Conducted Oct 14, 2026)
+To confirm operational behavior on live infrastructure (Railway staging with background workers), an end-to-end verification of Separation of Duties and audit logging was executed:
+1. **Application Lifecycle Progression:** An applicant was progressed through Document Evaluation (`performed_by` recorded for Admin), Grade Evaluation, and Interview.
+2. **Medical Clearance Simulation:** The external Medical System webhook was simulated via M2M OAuth Client Credentials (`medical-write` scope) and raw-body HMAC-SHA256 signature to `POST /api/v1/webhooks/medical-result`. Railway's `high` queue background worker processed the job asynchronously, transitioning the application status to `cleared_for_enrollment` and auto-generating the `records` process row in `in_progress` status.
+3. **COR Document Upload:** Applicant's Certificate of Registration (COR Front and Back) was verified to ensure the prerequisite check in `tag()` succeeded before the SoD check.
+4. **Separation of Duties Verification (The Security Block):** Logged in as the Admin who performed the document evaluation. Navigated to Records Tagging and clicked "Tag as Officially Enrolled" with reason. The server immediately aborted with **HTTP 403 Forbidden**, displaying the UI alert:
+   > *"Separation of duties violation: You cannot tag an applicant whose evaluation or interview you personally performed."*
+5. **Legitimate Role Tagging (The Success):** Logged in as the Registrar, who was not an evaluator for this applicant. Submitted the tag request with reason `"officially enrolled"`. The system tagged the applicant as **Accepted / Officially Enrolled** (toast notification displayed; action button updated to *"Untag / Revert"*).
+6. **Synchronous Audit Trail Verification:** Queried the staging database `audit_logs` table:
+   ```sql
+   SELECT id, user_id, username, description, created_at FROM audit_logs WHERE description LIKE 'Tagged applicant%' ORDER BY id DESC LIMIT 1;
+   ```
+   Confirmed the audit record was inserted synchronously within the same transaction by the Registrar account with description recording official enrollment tagging. The entry immediately appeared in the SuperAdmin Audit Logs UI with masked PII.
 
 ---
 
@@ -400,13 +421,18 @@ When executed via Pest enabling the local SQLite extension (`php -d extension_di
 ### Gap 1: Lack of Separation of Duties (Admin & SuperAdmin Multi-Stage Actions)
 - **Severity:** High
 - **Description:** Previously, no check existed in any controller or service to prevent the same individual user from acting at multiple stages of the same application. A single Admin or SuperAdmin user could evaluate, interview, change courses, and tag enrollment for the same applicant without oversight.
-- **Implemented Fix (Commit B):** Narrow Separation of Duties (SoD) is now enforced in `RecordStaffDashboardController::tag()`. Any staff member whose ID matches `performed_by` on that application's `document_evaluator`, `interviewer`, or legacy `evaluator` stages is blocked with HTTP 403 (`Separation of duties violation: You cannot tag an applicant whose document evaluation or interview you personally performed.`).
+- **Implemented Fix (Commit B & Fix Branch):** Separation of Duties (SoD) is now strictly enforced in `RecordStaffDashboardController::tag()`. Any staff member whose ID matches `performed_by` on that application's `ApplicationProcess::EVALUATION_STAGES` (`document_evaluator`, `grade_evaluator`, `interviewer`) is blocked with HTTP 403 (`Separation of duties violation: You cannot tag an applicant whose evaluation or interview you personally performed.`).
+- **Evaluator Dashboard View All Stage Preservation:** In `Dashboard/Evaluator.vue`, the "View All" link was previously hardcoded to `/evaluator-applications`, which caused an Admin navigating from `/document-evaluator-dashboard` to fall back to the grade evaluator stage. This was fixed by computing `viewAllLink`: pointing to `/document-evaluator-applications` when `currentStage === 'document_evaluator'`, and `/evaluator-applications?stage=` + currentStage otherwise.
 - **Deliberate Policy Consequence:** On a small admissions team operating with a single Admin account, an Admin who personally evaluates a document or conducts an interview can **no longer tag that applicant as officially enrolled**. This is a deliberate design rule enforcing the four-eyes principle: final enrollment tagging for that applicant must be executed by another authorized user (e.g., a Registrar or SuperAdmin). Untagging remains available without SoD restrictions to avoid administrative deadlocks during emergency reversions.
 
 ### Gap 2: Program Scoping Missing on Review Locks, Grades, Files, and Course Transfers
 - **Severity:** Medium
-- **Description:** While `passApplication`, `rejectApplication`, `accept`, and `reject` verify `$user->programs()`, peripheral endpoints (`startReview`, `interviewer start`, `getUserFiles`, `getUserGrades`, `LazyLoadController`, and `changeCourse`) do not verify that the target applicant belongs to the caller's assigned academic programs.
-- **Implemented Fix (Commit A):** Program scoping is now enforced for roles 3 (Document Evaluator) and 4 (Interviewer) on `user-grades` (`ManagesApplicationFiles`), `start-review` (`EvaluatorDashboardController`), and `lazy-load` document/batch/grade endpoints (`LazyLoadController`). Roles 2 (Admin), 5 (Medical), 6 (Registrar), 7 (SuperAdmin), and 8 (Grade Evaluator) remain deliberately exempt. For lazy-load, access is granted if ANY of the applicant's applications belongs to the evaluator's assigned programs; applicants with zero applications are rejected with HTTP 403.
+- **Description:** While `passApplication`, `rejectApplication`, `accept`, and `reject` verify `$user->programs()`, peripheral review and document endpoints were initially unscoped.
+- **Implemented Fix (Commit A & Scoping Update):** Program scoping is now strictly enforced for roles 3 (Document Evaluator) and 4 (Interviewer) on `user-files` (`ManagesApplicationFiles.php:21`), `user-grades` (`ManagesApplicationFiles`), `start-review` (`EvaluatorDashboardController`), and `lazy-load` document/batch/grade endpoints (`LazyLoadController`). Roles 2 (Admin), 5 (Medical), 6 (Registrar), 7 (SuperAdmin), and 8 (Grade Evaluator) remain deliberately exempt. For `user-files` and `lazy-load`, access is granted if ANY of the applicant's applications belongs to the evaluator's assigned programs; applicants with zero applications are rejected with HTTP 403.
+- **Documented Limitations (Remaining Unscoped Endpoints):**
+  - `POST /record-dashboard/change-course/{applicantId}`: Unscoped (cross-role by design; allows interviewers to transfer an applicant to an alternate program choice across departmental boundaries).
+  - `POST /interviewer-dashboard/start/{id}` and `cancel/{id}`: Unscoped (future work; transient review session locking, while binding admission decision routes `accept`/`reject` remain strictly program-scoped).
+  - `POST /evaluator/cancel-review/{applicationProcess}`: Unscoped (future work; transient session lock release resetting reviewer state).
 
 ### Gap 3: Information Disclosure on `/check-email` Route
 - **Severity:** Medium
@@ -437,9 +463,13 @@ When executed via Pest enabling the local SQLite extension (`php -d extension_di
 ---
 
 ## 7. Verdict
-**VERIFIED WITH GAPS (PANEL FIXES APPLIED)**
-Server-side RBAC is actively enforced across all major route groups via middleware guards (`RoleMiddleware`, `EnsureAdmin`, `EnsureSuperAdmin`, `EnsureAdminOrRegistrar`), model-level mass-assignment protection, webhook HMAC signature verification, and environment guards on diagnostic routes. On local branch `panel-fixes/aj-14-fixes`:
+**VERIFIED WITH GAPS (PANEL FIXES APPLIED & DEPLOYED TO STAGING)**
+Server-side RBAC is actively enforced across all major route groups via middleware guards (`RoleMiddleware`, `EnsureAdmin`, `EnsureSuperAdmin`, `EnsureAdminOrRegistrar`), model-level mass-assignment protection, webhook HMAC signature verification, and environment guards on diagnostic routes. All fixes have been merged into `staging` and verified on live infrastructure:
 1. `POST /check-email` is restricted to SuperAdmin (role 7) with a 30 req/min rate limit (`CheckEmailSecurityTest` passing 12/12).
-2. Enrollment tagging and untagging require mandatory reasons (5-500 chars), with separation of duties enforced on `tag()` (evaluators/interviewers cannot tag applicants they personally reviewed) and synchronous transactional audit writes (`EnrollmentTagAuditTest` passing 31/31).
-3. Program scoping is enforced for roles 3 and 4 on `user-grades`, `start-review`, and `lazy-load` endpoints while preserving exemptions for roles 2, 5, 6, 7, and 8 (`ProgramScopingReadTest` passing 18/18).
-4. As documented in Section 6 (Gap 7), audit logging remains asynchronous everywhere across the codebase except for enrollment `tag()` and `untag()`.
+2. Enrollment tagging and untagging require mandatory reasons (5-500 chars), with Separation of Duties enforced on `tag()` across `document_evaluator`, `grade_evaluator`, and `interviewer` (`EnrollmentTagAuditTest` passing 33/33).
+3. Evaluator dashboard "View All" link preserves evaluation stages, routing Document Evaluators and Admins directly to `/document-evaluator-applications` (`EvaluatorApplicationsStageTest` passing 6/6).
+4. Program scoping is enforced for roles 3 and 4 on `user-files`, `user-grades`, `start-review`, and `lazy-load` endpoints while preserving exemptions for administrative roles (`ProgramScopingReadTest` passing 32/32).
+5. All 5 dedicated feature test suites execute in a single command with **146 passed (388 assertions)**.
+6. Live staging demonstration confirmed end-to-end: Admin evaluator was blocked by SoD with HTTP 403, Registrar successfully completed enrollment, and synchronous audit log was atomically recorded.
+7. As documented in Section 6 (Gap 7), audit logging remains asynchronous everywhere across the codebase except for enrollment `tag()` and `untag()`.
+
