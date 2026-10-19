@@ -137,10 +137,18 @@ abort_if(!in_array(config('app.env'), ['local', 'staging']), 404);
    An actor whose only prior stage record was `records` (e.g., from an administrative untag/re-tag cycle) is permitted to tag. This prevents any single user from evaluating and enrolling the same applicant while avoiding administrative deadlocks.
 3. **Audit of Alternative Enrollment Status Mutation Paths:**
    A comprehensive code audit was conducted across the codebase (`app/`, `routes/`, `database/seeders`, `app/Console/`, `app/Jobs/`, and `app/Imports/`) to identify all locations that set `enrollment_status = 'officially_enrolled'` or `applications.status = 'accepted'` outside of `RecordStaffDashboardController::tag()`:
-   - **Legacy Bulk-Enroll Developer Harness (`POST /test-passers/bulk-enroll`):** A developer test harness in `TestPasserController::bulkEnroll` previously allowed Admin (2), Registrar (6), and SuperAdmin (7) to auto-enroll batches of test passers. It assigned a hardcoded default password (`Password123`), fabricated passing records across all five admission stages (`document_evaluator`, `grade_evaluator`, `interviewer`, `medical`, `records`), checked no prerequisite medical clearance or COR document upload, bypassed Separation of Duties, and logged only a single asynchronous batch audit log without per-applicant entries or reason. **Status: Completely removed.** The route, controller method, and dead frontend Vue state/modal in `TestPassers/Email.vue` were excised; the route now returns HTTP 404 for all roles (`BulkEnrollDisabledTest`).
+   - **Legacy Bulk-Enroll Developer Harness (`POST /test-passers/bulk-enroll`):** A developer test harness in `TestPasserController::bulkEnroll` previously allowed Admin (2), Registrar (6), and SuperAdmin (7) to auto-enroll batches of test passers. It assigned a hardcoded default password (`Password123`), fabricated passing records across all five admission stages (`document_evaluator`, `grade_evaluator`, `interviewer`, `medical`, `records`), checked no prerequisite medical clearance or COR document upload, bypassed Separation of Duties, and logged only a single asynchronous batch audit log without per-applicant entries or reason.
+     - **Deployment Database Audit Findings:** `audit_logs` on the deployment database show the endpoint ran 3 times on May 10–11, 2026 (4, 25, and 1 passers; 30 total) from a SuperAdmin account.
+     - **Verification Checks Completed:** Forensic checks on the deployment database confirmed:
+       1. No `application_processes` rows with `BULK-ENROLL` notes remain.
+       2. No accounts were created or updated in that window.
+       3. No account tied to a test-passer email still has the default password.
+       4. The `ApiTestStudentsSeeder` users do not exist.
+     - **Not Verifiable:** Whether any real account's grades were overwritten cannot be verified from available logs.
+     - **Status:** Completely removed. The route, controller method, and dead frontend Vue state/modal in `TestPassers/Email.vue` were excised; the route now returns HTTP 404 for all roles (`BulkEnrollDisabledTest`).
    - **`RecordStaffDashboardController::submitRecordsProcess`:** Contains logic updating an application's status to `accepted` and `enrollment_status` to `officially_enrolled`, but has no corresponding route registered in `routes/web.php` or `routes/api.php`. **Status: Unreachable dead code.** It cannot be triggered via HTTP.
    - **`ApplicationService::tagAsOfficiallyEnrolled`:** A service helper method containing logic to update an application to `accepted` and `officially_enrolled`, but has zero callers across any controller, job, or console command. **Status: Unreachable dead code.**
-   - **Database Seeders (`database/seeders/ApplicantSeeder.php` and `ApiTestStudentsSeeder.php`):** Set mock applicant records directly in local/testing seed routines invoked only via CLI console (`php artisan db:seed`).
+   - **Database Seeders (`database/seeders/ApplicantSeeder.php` and `ApiTestStudentsSeeder.php`):** Set mock applicant records directly in local/testing seed routines invoked only via CLI console (`php artisan db:seed`). No HTTP route other than `RecordStaffDashboardController::tag()` sets official enrollment; the seeders are CLI-only.
 
 ### Program Scoping Analysis across Staff Routes
 The table below inspects every controller method taking a `{userId}`, `{id}`, or `{applicationProcess}` parameter used by Document Evaluator, Grade Evaluator, Interviewer, or Registrar:
@@ -405,7 +413,7 @@ All six dedicated security and RBAC feature test suites run clean via Pest SQLit
 5. **`EvaluatorApplicationsStageTest.php`**: **6 passed** (60 assertions) — Verifies stage preservation on Evaluator dashboard for Admin and Document Evaluator, confirming target links and authorization.
 6. **`BulkEnrollDisabledTest.php`**: **3 passed** (3 assertions) — Verifies that `POST /test-passers/bulk-enroll` returns HTTP 404 for Admin (2), Registrar (6), and SuperAdmin (7) following complete excision of the legacy developer harness.
 
-**Total passing suite:** **149 passed** (391 assertions).
+**Total suite result:** **149 tests, 391 assertions, 0 failures** (Pest labels them deprecated because of a PHP 8.5 PDO constant notice).
 
 ### Live Staging Environment Verification (Conducted Oct 14, 2026)
 To confirm operational behavior on live infrastructure (Railway staging with background workers), an end-to-end verification of Separation of Duties and audit logging was executed:
@@ -470,6 +478,12 @@ To confirm operational behavior on live infrastructure (Railway staging with bac
 ### Gap 8: Legacy Bulk-Enroll Developer Harness and Dormant Enrollment Setters
 - **Severity:** Medium
 - **Description:** An endpoint previously existed at `POST /test-passers/bulk-enroll` (`TestPasserController::bulkEnroll`), originally introduced to replace a mock guidance account CLI seeder for developer testing. This endpoint bypassed all pipeline integrity controls: it set a hardcoded default password (`Password123`), fabricated passing records across all five admission stages with notes `[GUIDANCE-BULK-ENROLL]`, performed no checks for medical clearance or COR document uploads, lacked Separation of Duties enforcement, and logged only a single asynchronous batch audit summary without per-applicant records or reasons. Additionally, two dormant methods containing `officially_enrolled` update logic were identified in the codebase: `RecordStaffDashboardController::submitRecordsProcess` (an unrouted controller action) and `ApplicationService::tagAsOfficiallyEnrolled` (an orphaned service helper with zero call sites).
+- **Deployment Database Audit Findings:** `audit_logs` on the deployment database show the endpoint ran 3 times on May 10–11, 2026 (4, 25, and 1 passers; 30 total) from a SuperAdmin account. Checks done on the deployment database confirmed:
+  - No `application_processes` rows with `BULK-ENROLL` notes remain.
+  - No accounts were created or updated in that window.
+  - No account tied to a test-passer email still has the default password.
+  - The `ApiTestStudentsSeeder` users do not exist.
+  - **Not verifiable:** Whether any real account's grades were overwritten cannot be verified from available logs.
 - **Implemented Fix:** The `POST /test-passers/bulk-enroll` route, the `TestPasserController::bulkEnroll` method, and the dead frontend state and results modal in `TestPassers/Email.vue` were excised completely. Route constraints (`whereNumber('test_passer')`) were applied to route model binding parameters on sibling routes to ensure that `POST /test-passers/bulk-enroll` returns an unambiguous HTTP 404 Not Found for all roles, verified by `BulkEnrollDisabledTest` (3/3 passing).
 - **Documented Limitations (Dormant Dead Code):** `RecordStaffDashboardController::submitRecordsProcess` and `ApplicationService::tagAsOfficiallyEnrolled` remain in the codebase as unreachable dead code. Because they are not exposed to HTTP routing and have no callers, they cannot be triggered by any user role or external request.
 
@@ -482,9 +496,9 @@ Server-side RBAC is actively enforced across all major route groups via middlewa
 2. Enrollment tagging and untagging require mandatory reasons (5-500 chars), with Separation of Duties enforced on `tag()` across `document_evaluator`, `grade_evaluator`, and `interviewer` (`EnrollmentTagAuditTest` passing 33/33).
 3. Evaluator dashboard "View All" link preserves evaluation stages, routing Document Evaluators and Admins directly to `/document-evaluator-applications` (`EvaluatorApplicationsStageTest` passing 6/6).
 4. Program scoping is enforced for roles 3 and 4 on `user-files`, `user-grades`, `start-review`, and `lazy-load` endpoints while preserving exemptions for administrative roles (`ProgramScopingReadTest` passing 32/32).
-5. All 6 dedicated security test suites execute cleanly in a single command with **149 passed (391 assertions)**.
+5. All 6 dedicated security test suites execute cleanly in a single command: **149 tests, 391 assertions, 0 failures** (Pest labels them deprecated because of a PHP 8.5 PDO constant notice).
 6. Live staging demonstration confirmed end-to-end: Admin evaluator was blocked by SoD with HTTP 403, Registrar successfully completed enrollment, and synchronous audit log was atomically recorded.
 7. As documented in Section 6 (Gap 7), audit logging remains asynchronous everywhere across the codebase except for enrollment `tag()` and `untag()`.
-8. The legacy developer test harness `POST /test-passers/bulk-enroll` has been completely excised along with its dead frontend state, ensuring that official enrollment can only be granted through legitimate registrar tagging (`RecordStaffDashboardController::tag()`) with atomic audit logging and SoD enforcement. Dormant dead code in `submitRecordsProcess` and `ApplicationService::tagAsOfficiallyEnrolled` is verified to be unreachable via HTTP routing.
+8. The legacy developer test harness `POST /test-passers/bulk-enroll` has been completely excised along with its dead frontend state. No HTTP route other than `RecordStaffDashboardController::tag()` sets official enrollment (`enrollment_status = 'officially_enrolled'` or `applications.status = 'accepted'`); the seeders (`ApplicantSeeder`, `ApiTestStudentsSeeder`) are CLI-only (`php artisan db:seed`). Dormant dead code in `submitRecordsProcess` and `ApplicationService::tagAsOfficiallyEnrolled` is verified to be unreachable via HTTP routing.
 
 
