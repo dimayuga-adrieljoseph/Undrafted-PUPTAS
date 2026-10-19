@@ -97,7 +97,7 @@ test('assigned interviewer (role 4) can access user-grades on interviewer dashbo
         ->assertJsonStructure(['grades']);
 });
 
-test('unassigned interviewer (role 4) gets 403 on user-grades', function () {
+test('unassigned interviewer (role 4) can access user-grades on interviewer dashboard (read-exempt)', function () {
     $progA = getScopingProgram('BSCS');
     $progB = getScopingProgram('BSIT');
     $applicant = createApplicantWithProgram($progA);
@@ -107,8 +107,8 @@ test('unassigned interviewer (role 4) gets 403 on user-grades', function () {
 
     $this->actingAs($interviewer)
         ->getJson("/interviewer-dashboard/user-grades/{$applicant->id}")
-        ->assertForbidden()
-        ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
+        ->assertOk()
+        ->assertJsonStructure(['grades']);
 });
 
 test('exempt roles (Admin 2, SuperAdmin 7, Grade Evaluator 8) access user-grades without program assignment', function (int $roleId) {
@@ -199,7 +199,7 @@ test('exempt roles (Admin 2, SuperAdmin 7, Grade Evaluator 8) can start review w
 // lazy-load endpoints (loadDocument, loadDocumentsBatch, loadGrades)
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('assigned evaluator/interviewer can lazy load documents and grades', function () {
+test('assigned evaluator (role 3) can lazy load documents and grades', function () {
     $progA = getScopingProgram('BSCS');
     $applicant = createApplicantWithProgram($progA);
 
@@ -221,7 +221,7 @@ test('assigned evaluator/interviewer can lazy load documents and grades', functi
         ->assertOk();
 });
 
-test('unassigned evaluator/interviewer gets 403 on all lazy-load endpoints', function () {
+test('unassigned evaluator (role 3) gets 403 on all lazy-load endpoints', function () {
     $progA = getScopingProgram('BSCS');
     $progB = getScopingProgram('BSIT');
     $applicant = createApplicantWithProgram($progA);
@@ -245,6 +245,29 @@ test('unassigned evaluator/interviewer gets 403 on all lazy-load endpoints', fun
         ->getJson("/api/lazy-load/grades/{$applicant->id}")
         ->assertForbidden()
         ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
+});
+
+test('unassigned interviewer (role 4) can access lazy-load endpoints (read-exempt)', function () {
+    $progA = getScopingProgram('BSCS');
+    $progB = getScopingProgram('BSIT');
+    $applicant = createApplicantWithProgram($progA);
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progB->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->getJson("/api/lazy-load/document/{$applicant->id}/grade_11_card")
+        ->assertOk();
+
+    $this->actingAs($interviewer)
+        ->postJson("/api/lazy-load/documents-batch/{$applicant->id}", [
+            'fileTypes' => ['grade_11_card']
+        ])
+        ->assertOk();
+
+    $this->actingAs($interviewer)
+        ->getJson("/api/lazy-load/grades/{$applicant->id}")
+        ->assertOk();
 });
 
 test('exempt roles (Admin 2, Registrar 6, Grade Evaluator 8) can access lazy-load without program assignment', function (int $roleId) {
@@ -297,7 +320,7 @@ test('lazy-load allows access if applicant has several applications and ANY matc
         ->assertOk();
 });
 
-test('lazy-load returns 403 for roles 3 and 4 when applicant has zero applications', function () {
+test('lazy-load returns 403 for document evaluator (role 3) when applicant has zero applications', function () {
     $progA = getScopingProgram('BSCS');
     $applicantWithoutApp = User::factory()->create(['role_id' => RoleId::Applicant->value]);
 
@@ -442,7 +465,7 @@ test('assigned interviewer (role 4) can access interviewer application files', f
         ->assertJsonStructure(['user', 'uploadedFiles']);
 });
 
-test('unassigned interviewer (role 4) gets 403 on interviewer application files', function () {
+test('unassigned interviewer (role 4) can access application files at interview stage with different first-choice program', function () {
     $progA = getScopingProgram('BSCS');
     $progB = getScopingProgram('BSIT');
     $applicant = createApplicantWithProgram($progA);
@@ -459,47 +482,90 @@ test('unassigned interviewer (role 4) gets 403 on interviewer application files'
 
     $this->actingAs($interviewer)
         ->getJson("/interviewer-dashboard/application/{$applicant->id}")
-        ->assertForbidden()
-        ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
+        ->assertOk()
+        ->assertJsonStructure(['user', 'uploadedFiles']);
 });
 
-test('interviewer application files returns 403 for interviewer (role 4) when applicant has zero applications', function () {
+test('interviewer (role 4) gets 403 on application files if applicant has no interviewer-stage process', function () {
     $progA = getScopingProgram('BSCS');
-    $applicantWithoutApp = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    // Application is only at document_evaluator stage, not interviewer stage
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'in_progress',
+    ]);
 
     $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
     $interviewer->programs()->attach($progA->id, ['role_id' => RoleId::Interviewer->value]);
 
     $this->actingAs($interviewer)
-        ->getJson("/interviewer-dashboard/application/{$applicantWithoutApp->id}")
+        ->getJson("/interviewer-dashboard/application/{$applicant->id}")
         ->assertForbidden()
-        ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
+        ->assertJson(['message' => 'Unauthorized access. Application is not at the interviewer stage.']);
 });
 
-test('interviewer application files allows access if applicant has several applications and ANY matches interviewer programs', function () {
+// ─────────────────────────────────────────────────────────────────────────────
+// interviewer accept / reject program scoping
+// ─────────────────────────────────────────────────────────────────────────────
+
+test('interviewer assigned to program A cannot accept applicant into program B (403)', function () {
     $progA = getScopingProgram('BSCS');
     $progB = getScopingProgram('BSIT');
     $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
 
-    $appB = Application::create([
-        'user_id'    => (string) $applicant->id,
-        'program_id' => $progB->id,
-        'status'     => 'submitted',
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'grade_evaluator',
+        'status'         => 'completed',
     ]);
 
     ApplicationProcess::create([
-        'application_id' => $appB->id,
+        'application_id' => $app->id,
         'stage'          => 'interviewer',
         'status'         => 'in_progress',
     ]);
 
     $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
-    $interviewer->programs()->attach($progB->id, ['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progA->id, ['role_id' => RoleId::Interviewer->value]);
 
     $this->actingAs($interviewer)
-        ->getJson("/interviewer-dashboard/application/{$applicant->id}")
+        ->postJson("/interviewer-dashboard/accept/{$applicant->id}", [
+            'program_id' => $progB->id,
+        ])
+        ->assertForbidden()
+        ->assertJson(['message' => 'You are not authorized to accept applicants for this program.']);
+});
+
+test('interviewer assigned to program A can accept applicant into program A', function () {
+    $progA = getScopingProgram('BSCS');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'grade_evaluator',
+        'status'         => 'completed',
+    ]);
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'interviewer',
+        'status'         => 'in_progress',
+    ]);
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progA->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->postJson("/interviewer-dashboard/accept/{$applicant->id}", [
+            'program_id' => $progA->id,
+        ])
         ->assertOk()
-        ->assertJsonStructure(['user', 'uploadedFiles']);
+        ->assertJson(['message' => 'Application accepted.']);
 });
 
 test('exempt roles (Admin 2, SuperAdmin 7) can access interviewer application files without program assignment', function (int $roleId) {

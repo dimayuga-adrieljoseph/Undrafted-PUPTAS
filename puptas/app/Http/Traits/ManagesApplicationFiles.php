@@ -257,15 +257,15 @@ trait ManagesApplicationFiles
     }
 
     /**
-     * Verify program scoping for roles 3 (Document Evaluator) and 4 (Interviewer).
-     * Roles 2 (Admin), 7 (SuperAdmin), 8 (Grade Evaluator), 5 (Medical), 6 (Registrar) are exempt.
+     * Verify program scoping for role 3 (Document Evaluator).
+     * Roles 2, 4 (Interviewer), 5, 6, 7, 8 are exempt from read scoping.
      * Allow access if ANY of the applicant's applications is in $user->programs().
      * Zero applications returns 403.
      */
     protected function checkProgramScoping($userId): ?\Illuminate\Http\JsonResponse
     {
         $authUser = auth()->user();
-        if (!$authUser || !in_array($authUser->role_id, [\App\Enums\RoleId::DocumentEvaluator->value, \App\Enums\RoleId::Interviewer->value])) {
+        if (!$authUser || $authUser->role_id !== \App\Enums\RoleId::DocumentEvaluator->value) {
             return null;
         }
 

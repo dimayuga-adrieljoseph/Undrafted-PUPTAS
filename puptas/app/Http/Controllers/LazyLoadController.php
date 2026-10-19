@@ -19,14 +19,14 @@ class LazyLoadController extends Controller
     private const STAFF_ROLE_IDS = [2, 3, 4, 5, 6, 7, 8];
 
     /**
-     * Enforce program scoping for roles 3 (Document Evaluator) and 4 (Interviewer) only.
-     * Roles 2 (Admin), 7 (SuperAdmin), 8 (Grade Evaluator), 5 (Medical), 6 (Registrar) are exempt.
+     * Enforce program scoping for role 3 (Document Evaluator) only.
+     * Roles 2, 4 (Interviewer), 7 (SuperAdmin), 8 (Grade Evaluator), 5 (Medical), 6 (Registrar) are exempt.
      * If the applicant has several applications, access is allowed if ANY program is in the user's assigned programs.
      */
     private function checkProgramScoping(int $userId): ?JsonResponse
     {
         $user = auth()->user();
-        if (!$user || !in_array($user->role_id, [\App\Enums\RoleId::DocumentEvaluator->value, \App\Enums\RoleId::Interviewer->value])) {
+        if (!$user || $user->role_id !== \App\Enums\RoleId::DocumentEvaluator->value) {
             return null;
         }
 
