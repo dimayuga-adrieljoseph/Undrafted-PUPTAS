@@ -258,6 +258,10 @@ class UserFileController extends Controller
             abort(Response::HTTP_FORBIDDEN);
         }
 
+        if ($stageError = \App\Http\Traits\ManagesApplicationFiles::checkInterviewerStage($file->user_id)) {
+            return $stageError;
+        }
+
         // resolveDiskForPath() already calls exists() on each candidate disk to find the
         // correct one, so we can trust its result — a second exists() call would double the
         // S3 round-trips and create a second failure point.

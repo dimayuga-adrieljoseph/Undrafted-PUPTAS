@@ -87,6 +87,13 @@ test('unassigned document evaluator (role 3) gets 403 on user-grades', function 
 test('assigned interviewer (role 4) can access user-grades on interviewer dashboard', function () {
     $progA = getScopingProgram('BSCS');
     $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'interviewer',
+        'status'         => 'in_progress',
+    ]);
 
     $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
     $interviewer->programs()->attach($progA->id, ['role_id' => RoleId::Interviewer->value]);
@@ -97,10 +104,17 @@ test('assigned interviewer (role 4) can access user-grades on interviewer dashbo
         ->assertJsonStructure(['grades']);
 });
 
-test('unassigned interviewer (role 4) can access user-grades on interviewer dashboard (read-exempt)', function () {
+test('unassigned interviewer (role 4) can access user-grades on interviewer dashboard at interview stage with different first-choice program', function () {
     $progA = getScopingProgram('BSCS');
     $progB = getScopingProgram('BSIT');
     $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'interviewer',
+        'status'         => 'in_progress',
+    ]);
 
     $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
     $interviewer->programs()->attach($progB->id, ['role_id' => RoleId::Interviewer->value]);
@@ -109,6 +123,26 @@ test('unassigned interviewer (role 4) can access user-grades on interviewer dash
         ->getJson("/interviewer-dashboard/user-grades/{$applicant->id}")
         ->assertOk()
         ->assertJsonStructure(['grades']);
+});
+
+test('interviewer (role 4) gets 403 on user-grades if applicant has no interviewer-stage process', function () {
+    $progA = getScopingProgram('BSCS');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'in_progress',
+    ]);
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progA->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->getJson("/interviewer-dashboard/user-grades/{$applicant->id}")
+        ->assertForbidden()
+        ->assertJson(['message' => 'Unauthorized access. Application is not at the interviewer stage.']);
 });
 
 test('exempt roles (Admin 2, SuperAdmin 7, Grade Evaluator 8) access user-grades without program assignment', function (int $roleId) {
@@ -247,10 +281,17 @@ test('unassigned evaluator (role 3) gets 403 on all lazy-load endpoints', functi
         ->assertJson(['message' => 'You are not authorized to evaluate applicants for this program.']);
 });
 
-test('unassigned interviewer (role 4) can access lazy-load endpoints (read-exempt)', function () {
+test('unassigned interviewer (role 4) can access lazy-load endpoints at interview stage with different first-choice program', function () {
     $progA = getScopingProgram('BSCS');
     $progB = getScopingProgram('BSIT');
     $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'interviewer',
+        'status'         => 'in_progress',
+    ]);
 
     $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
     $interviewer->programs()->attach($progB->id, ['role_id' => RoleId::Interviewer->value]);
@@ -268,6 +309,38 @@ test('unassigned interviewer (role 4) can access lazy-load endpoints (read-exemp
     $this->actingAs($interviewer)
         ->getJson("/api/lazy-load/grades/{$applicant->id}")
         ->assertOk();
+});
+
+test('interviewer (role 4) gets 403 on lazy-load endpoints if applicant has no interviewer-stage process', function () {
+    $progA = getScopingProgram('BSCS');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'in_progress',
+    ]);
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progA->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->getJson("/api/lazy-load/document/{$applicant->id}/grade_11_card")
+        ->assertForbidden()
+        ->assertJson(['message' => 'Unauthorized access. Application is not at the interviewer stage.']);
+
+    $this->actingAs($interviewer)
+        ->postJson("/api/lazy-load/documents-batch/{$applicant->id}", [
+            'fileTypes' => ['grade_11_card']
+        ])
+        ->assertForbidden()
+        ->assertJson(['message' => 'Unauthorized access. Application is not at the interviewer stage.']);
+
+    $this->actingAs($interviewer)
+        ->getJson("/api/lazy-load/grades/{$applicant->id}")
+        ->assertForbidden()
+        ->assertJson(['message' => 'Unauthorized access. Application is not at the interviewer stage.']);
 });
 
 test('exempt roles (Admin 2, Registrar 6, Grade Evaluator 8) can access lazy-load without program assignment', function (int $roleId) {
@@ -503,6 +576,103 @@ test('interviewer (role 4) gets 403 on application files if applicant has no int
 
     $this->actingAs($interviewer)
         ->getJson("/interviewer-dashboard/application/{$applicant->id}")
+        ->assertForbidden()
+        ->assertJson(['message' => 'Unauthorized access. Application is not at the interviewer stage.']);
+});
+
+test('interviewer (role 4) gets 404 on user-files, user-grades, and lazy-load when applicant has zero applications', function () {
+    $progA = getScopingProgram('BSCS');
+    $applicantWithoutApp = User::factory()->create(['role_id' => RoleId::Applicant->value]);
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progA->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->getJson("/interviewer-dashboard/application/{$applicantWithoutApp->id}")
+        ->assertNotFound()
+        ->assertJson(['message' => 'Application not found']);
+
+    $this->actingAs($interviewer)
+        ->getJson("/interviewer-dashboard/user-grades/{$applicantWithoutApp->id}")
+        ->assertNotFound()
+        ->assertJson(['message' => 'Application not found']);
+
+    $this->actingAs($interviewer)
+        ->getJson("/api/lazy-load/document/{$applicantWithoutApp->id}/grade_11_card")
+        ->assertNotFound()
+        ->assertJson(['message' => 'Application not found']);
+
+    $this->actingAs($interviewer)
+        ->postJson("/api/lazy-load/documents-batch/{$applicantWithoutApp->id}", [
+            'fileTypes' => ['grade_11_card']
+        ])
+        ->assertNotFound()
+        ->assertJson(['message' => 'Application not found']);
+
+    $this->actingAs($interviewer)
+        ->getJson("/api/lazy-load/grades/{$applicantWithoutApp->id}")
+        ->assertNotFound()
+        ->assertJson(['message' => 'Application not found']);
+});
+
+test('interviewer (role 4) can access files.preview at interview stage with different first-choice program', function () {
+    \Illuminate\Support\Facades\Storage::fake('public');
+    \Illuminate\Support\Facades\Storage::disk('public')->put('files/card.pdf', '%PDF-1.4 test');
+
+    $progA = getScopingProgram('BSCS');
+    $progB = getScopingProgram('BSIT');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'interviewer',
+        'status'         => 'in_progress',
+    ]);
+
+    $file = UserFile::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    $signedUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+        'files.preview',
+        now()->addMinutes(5),
+        ['file' => $file->id]
+    );
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progB->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->get($signedUrl)
+        ->assertOk();
+});
+
+test('interviewer (role 4) gets 403 on files.preview if applicant has no interviewer-stage process', function () {
+    \Illuminate\Support\Facades\Storage::fake('public');
+    \Illuminate\Support\Facades\Storage::disk('public')->put('files/card.pdf', '%PDF-1.4 test');
+
+    $progA = getScopingProgram('BSCS');
+    $applicant = createApplicantWithProgram($progA);
+    $app = Application::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    ApplicationProcess::create([
+        'application_id' => $app->id,
+        'stage'          => 'document_evaluator',
+        'status'         => 'in_progress',
+    ]);
+
+    $file = UserFile::where('user_id', (string) $applicant->id)->firstOrFail();
+
+    $signedUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+        'files.preview',
+        now()->addMinutes(5),
+        ['file' => $file->id]
+    );
+
+    $interviewer = User::factory()->create(['role_id' => RoleId::Interviewer->value]);
+    $interviewer->programs()->attach($progA->id, ['role_id' => RoleId::Interviewer->value]);
+
+    $this->actingAs($interviewer)
+        ->get($signedUrl)
         ->assertForbidden()
         ->assertJson(['message' => 'Unauthorized access. Application is not at the interviewer stage.']);
 });

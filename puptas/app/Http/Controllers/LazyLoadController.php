@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\UserFile;
 use App\Helpers\FileMapper;
+use App\Http\Traits\ManagesApplicationFiles;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -62,6 +63,10 @@ class LazyLoadController extends Controller
 
             if ($scopingError = $this->checkProgramScoping($userId)) {
                 return $scopingError;
+            }
+
+            if ($stageError = ManagesApplicationFiles::checkInterviewerStage($userId)) {
+                return $stageError;
             }
 
             // Find the file
@@ -124,6 +129,10 @@ class LazyLoadController extends Controller
 
             if ($scopingError = $this->checkProgramScoping($userId)) {
                 return $scopingError;
+            }
+
+            if ($stageError = ManagesApplicationFiles::checkInterviewerStage($userId)) {
+                return $stageError;
             }
 
             $fileTypes = $request->input('fileTypes', []);
@@ -216,6 +225,10 @@ class LazyLoadController extends Controller
 
             if ($scopingError = $this->checkProgramScoping($userId)) {
                 return $scopingError;
+            }
+
+            if ($stageError = ManagesApplicationFiles::checkInterviewerStage($userId)) {
+                return $stageError;
             }
 
             $user = User::with('grades')->find($userId);
