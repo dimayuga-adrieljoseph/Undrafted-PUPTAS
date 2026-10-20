@@ -7,6 +7,7 @@ use App\Helpers\FileMapper;
 use App\Models\Application;
 use App\Models\UserFile;
 use App\Models\ApplicationProcess;
+use App\Support\InterviewerStageGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -307,10 +308,15 @@ trait ManagesApplicationFiles
                 })
                 ->firstOrFail();
 
-            // Program scoping for roles 3 (Document Evaluator) and 4 (Interviewer) only.
+            // Program scoping for role 3 (Document Evaluator) only.
             // Roles 2 (Admin), 7 (SuperAdmin), 8 (Grade Evaluator), 5 (Medical), 6 (Registrar) are exempt.
             if ($scopingError = $this->checkProgramScoping($user->id)) {
                 return $scopingError;
+            }
+
+            // Interviewer stage check (role 4): requires interviewer-stage process
+            if ($stageError = InterviewerStageGuard::check($user->id)) {
+                return $stageError;
             }
 
             return response()->json([
