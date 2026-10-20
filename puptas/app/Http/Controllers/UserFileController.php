@@ -258,7 +258,7 @@ class UserFileController extends Controller
             abort(Response::HTTP_FORBIDDEN);
         }
 
-        if ($stageError = \App\Http\Traits\ManagesApplicationFiles::checkInterviewerStage($file->user_id)) {
+        if ($stageError = \App\Support\InterviewerStageGuard::check($file->user_id)) {
             return $stageError;
         }
 

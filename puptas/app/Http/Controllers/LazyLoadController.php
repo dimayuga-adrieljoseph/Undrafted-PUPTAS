@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\UserFile;
 use App\Helpers\FileMapper;
-use App\Http\Traits\ManagesApplicationFiles;
+use App\Support\InterviewerStageGuard;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -65,7 +65,7 @@ class LazyLoadController extends Controller
                 return $scopingError;
             }
 
-            if ($stageError = ManagesApplicationFiles::checkInterviewerStage($userId)) {
+            if ($stageError = InterviewerStageGuard::check($userId)) {
                 return $stageError;
             }
 
@@ -131,7 +131,7 @@ class LazyLoadController extends Controller
                 return $scopingError;
             }
 
-            if ($stageError = ManagesApplicationFiles::checkInterviewerStage($userId)) {
+            if ($stageError = InterviewerStageGuard::check($userId)) {
                 return $stageError;
             }
 
@@ -227,7 +227,7 @@ class LazyLoadController extends Controller
                 return $scopingError;
             }
 
-            if ($stageError = ManagesApplicationFiles::checkInterviewerStage($userId)) {
+            if ($stageError = InterviewerStageGuard::check($userId)) {
                 return $stageError;
             }
 
