@@ -77,6 +77,27 @@ k6 run -e BASE_URL=http://localhost:8000 tests/load/status-check.js
 k6 run -e TEST_USER_EMAIL=testapplicant@gmail.com -e TEST_USER_PASSWORD=your_password tests/load/auth-login.js
 ```
 
+### Running Parallel Race Condition Tests (PowerShell)
+
+To verify pessimistic database locking and concurrency protection on the interviewer accept endpoint without running a full k6 suite:
+
+> [!CAUTION]
+> **Safety Guard:** `interviewer-accept-race.ps1` contains a hardcoded host check and will immediately halt if run against production. Always target Staging or Local.
+
+```powershell
+# Run from puptas/ directory
+.\tests\load\interviewer-accept-race.ps1 `
+  -BaseUrl "https://pup-admission-system-staging.up.railway.app" `
+  -ApplicantId 123 `
+  -ProgramId 1 `
+  -InterviewerEmail "interviewer@example.com" `
+  -InterviewerPassword "your_password"
+```
+**Expected Outcome:**
+- Worker 1: HTTP 200 OK (Application accepted into program)
+- Worker 2: HTTP 409 Conflict (`"Application is no longer available for interviewer approval."` or `"This action has already been completed or is not available."`)
+- Zero HTTP 500 errors and exactly one program quota decrement.
+
 ---
 
 ---
