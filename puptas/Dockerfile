@@ -1,7 +1,8 @@
 # =============================================================================
 # Stage 1: PHP Dependencies
 # =============================================================================
-FROM php:8.4-cli AS php-dependencies
+# Pinned to >= 8.4.27 (PHP2Shell RCE fix, Oct 2026). Do not use floating tags.
+FROM php:8.4.27-cli AS php-dependencies
 
 RUN apt-get update && apt-get install -y \
     git curl unzip \
@@ -58,7 +59,11 @@ RUN echo "=== Build manifest check ===" && head -5 public/build/manifest.json &&
 # =============================================================================
 # Stage 3: Production Image (Apache)
 # =============================================================================
-FROM php:8.4-apache
+# Pinned to >= 8.4.27 (PHP2Shell RCE fix, Oct 2026). Do not use floating tags.
+FROM php:8.4.27-apache
+
+# Fail the build if the runtime PHP is older than the patched release
+RUN php -r 'if (version_compare(PHP_VERSION, "8.4.27", "<")) { fwrite(STDERR, "Vulnerable PHP " . PHP_VERSION . " (need >= 8.4.27)\n"); exit(1); } echo "PHP " . PHP_VERSION . " OK\n";'
 
 # Install additional PHP extensions
 RUN apt-get update && apt-get install -y \
