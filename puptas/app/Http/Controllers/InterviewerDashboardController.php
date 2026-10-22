@@ -335,6 +335,8 @@ class InterviewerDashboardController extends Controller
             $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer accepted application for applicant ID {$userId} into program ID {$programId}.", null, 'ADMISSION_DATA');
 
             return response()->json(['message' => 'Application accepted.']);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         } catch (\Throwable $e) {
             Log::error("Accept failed: " . $e->getMessage());
             return response()->json(['message' => $e->getMessage()], 400);
@@ -437,6 +439,8 @@ class InterviewerDashboardController extends Controller
             $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer rejected application for applicant ID {$userId} for program ID {$programId}. Applicant remains available for other interviewers.", null, 'ADMISSION_DATA');
 
             return response()->json(['message' => 'Application rejected for this program. Applicant can still be interviewed for other programs.']);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         } catch (\Throwable $e) {
             Log::error("Reject failed: " . $e->getMessage());
             return response()->json(['message' => 'An error occurred while rejecting the application.'], 400);

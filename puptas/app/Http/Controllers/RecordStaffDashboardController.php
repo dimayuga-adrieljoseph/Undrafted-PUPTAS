@@ -19,6 +19,7 @@ use App\Services\DashboardService;
 use App\Services\UserService;
 use App\Services\ApplicationService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use App\Http\Requests\ChangeCourseRequest;
 use App\Http\Requests\EnrollmentTagRequest;
 use App\Models\AuditLog;
@@ -414,7 +415,7 @@ class RecordStaffDashboardController extends Controller
         }
         
         // Call authorization check - Laravel will automatically return 403 if authorization fails
-        $this->authorize('changeCourse', $application);
+        Gate::authorize('changeCourse', $application);
 
         $request->validate([
             'program_id' => 'required|exists:programs,id'
@@ -423,7 +424,7 @@ class RecordStaffDashboardController extends Controller
         $newProgramId = $request->program_id;
 
         if ($application->program_id == $newProgramId) {
-            return response()->json(['message' => 'The selected program is the same as the current program.'], 422);
+            return response()->json(['message' => 'The selected program must be different from the current program.'], 422);
         }
 
         // Perform the update within a database transaction
@@ -434,7 +435,7 @@ class RecordStaffDashboardController extends Controller
 
             if ($freshApplication->program_id == $newProgramId) {
                 DB::rollBack();
-                return response()->json(['message' => 'The selected program is the same as the current program.'], 422);
+                return response()->json(['message' => 'The selected program must be different from the current program.'], 422);
             }
 
             // Store old program_id and enrollment_status before update

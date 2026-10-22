@@ -420,6 +420,8 @@ trait ManagesApplicationFiles
             return response()->json([
                 'message' => 'Files returned successfully.',
             ]);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         } catch (\Throwable $e) {
             \Log::error('Failed to return files', ['stage' => $this->getCurrentStage()]);
             return response()->json([
@@ -448,7 +450,7 @@ trait ManagesApplicationFiles
             return response()->json(['message' => 'Application not found'], 404);
         }
 
-        $assignedProgramIds = Auth::user()->programs()->pluck('programs.id')->toArray();
+        $assignedProgramIds = auth()->user()->programs()->pluck('programs.id')->toArray();
         if (!in_array($application->program_id, $assignedProgramIds)) {
             return response()->json([
                 'message' => 'You are not authorized to return applicants for this program.',
@@ -527,6 +529,8 @@ trait ManagesApplicationFiles
                 'updated_files' => $updatedFiles,
                 'not_found_files' => $notFoundFiles,
             ]);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         } catch (\Throwable $e) {
             \Log::error('Failed to return application', ['stage' => $this->getCurrentStage()]);
             return response()->json([

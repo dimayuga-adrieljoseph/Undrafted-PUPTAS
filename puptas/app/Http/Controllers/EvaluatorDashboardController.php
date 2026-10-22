@@ -228,6 +228,8 @@ class EvaluatorDashboardController extends Controller
             return response()->json([
                 'message' => 'Application successfully passed to the next step.',
             ]);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         } catch (\Throwable $e) {
             Log::error("Pass failed: " . $e->getMessage());
             return response()->json([
@@ -299,6 +301,8 @@ class EvaluatorDashboardController extends Controller
             $this->auditLogService->logActivity('UPDATE', 'Applications', "Application rejected for applicant ID {$userId}.", null, 'ADMISSION_DATA');
 
             return response()->json(['message' => 'Application successfully rejected.']);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
         } catch (\Throwable $e) {
             Log::error("Reject failed: " . $e->getMessage());
             return response()->json(['message' => 'An error occurred while rejecting the application.'], 500);
