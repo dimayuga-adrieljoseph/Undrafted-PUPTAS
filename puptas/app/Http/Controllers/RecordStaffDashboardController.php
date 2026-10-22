@@ -429,21 +429,27 @@ class RecordStaffDashboardController extends Controller
         // Perform the update within a database transaction
         DB::beginTransaction();
         try {
+            // Lock application row to prevent parallel duplicate course changes
+            $freshApplication = Application::lockForUpdate()->findOrFail($application->id);
+
+            if ($freshApplication->program_id == $newProgramId) {
+                DB::rollBack();
+                return response()->json(['message' => 'The selected program is the same as the current program.'], 422);
+            }
+
             // Store old program_id and enrollment_status before update
-            $oldProgramId = $application->program_id;
-            $isOfficiallyEnrolled = $application->enrollment_status === 'officially_enrolled';
-            
+            $oldProgramId = $freshApplication->program_id;
+            $isOfficiallyEnrolled = $freshApplication->enrollment_status === 'officially_enrolled';
+
             // Update application program_id
-            // If officially enrolled, keep status as 'accepted' and enrollment_status as 'officially_enrolled'
-            // If not officially enrolled, set status to 'transferred' (for interviewers during interview stage)
             $updateData = ['program_id' => $newProgramId];
-            
+
             // Only change status to 'transferred' if NOT officially enrolled
-            if (!$isOfficiallyEnrolled && $application->status !== 'transferred') {
+            if (!$isOfficiallyEnrolled && $freshApplication->status !== 'transferred') {
                 $updateData['status'] = 'transferred';
             }
-            
-            $application->update($updateData);
+
+            $freshApplication->update($updateData);
 
             // Safely compute performed_by: only use numeric IDs for FK constraint
             $authUser = auth()->user();
@@ -455,11 +461,11 @@ class RecordStaffDashboardController extends Controller
 
             // Create ApplicationProcess record with action='course_changed', stage='records', status='completed'
             ApplicationProcess::create([
-                'application_id' => $application->id,
+                'application_id' => $freshApplication->id,
                 'stage'          => 'records',
                 'action'         => 'course_changed',
                 'status'         => 'completed',
-                'reviewer_notes' => 'Changed from program ID ' . $oldProgramId . ' to ' . $newProgramId . 
+                'reviewer_notes' => 'Changed from program ID ' . $oldProgramId . ' to ' . $newProgramId .
                                    ($isOfficiallyEnrolled ? ' (officially enrolled - status preserved)' : ''),
                 'performed_by'   => $performedBy,
                 'ip_address'     => request()->ip()
@@ -594,14 +600,25 @@ class RecordStaffDashboardController extends Controller
 
         DB::beginTransaction();
         try {
-            $application->update([
+            // Lock the application row to prevent parallel double-tags
+            $freshApplication = Application::lockForUpdate()->findOrFail($application->id);
+
+            // Re-check enrollment status on the locked row
+            if ($freshApplication->enrollment_status === 'officially_enrolled') {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Application is already officially enrolled.',
+                ], 409);
+            }
+
+            $freshApplication->update([
                 'status'            => $newStatus,
                 'enrollment_status' => $newEnrollmentStatus,
             ]);
 
             ApplicationProcess::updateOrCreate(
                 [
-                    'application_id' => $application->id,
+                    'application_id' => $freshApplication->id,
                     'stage'          => 'records'
                 ],
                 [
@@ -616,7 +633,7 @@ class RecordStaffDashboardController extends Controller
             $this->auditLogService->logActivitySync(
                 AuditLog::ACTION_UPDATE,
                 'Applications',
-                "Tagged applicant (user_id: {$id}, application_id: {$application->id}) as officially enrolled (status: '{$oldStatus}' -> '{$newStatus}', enrollment_status: '{$oldEnrollmentStatus}' -> '{$newEnrollmentStatus}'). Reason: {$reason}",
+                "Tagged applicant (user_id: {$id}, application_id: {$freshApplication->id}) as officially enrolled (status: '{$oldStatus}' -> '{$newStatus}', enrollment_status: '{$oldEnrollmentStatus}' -> '{$newEnrollmentStatus}'). Reason: {$reason}",
                 auth()->user(),
                 AuditLog::CATEGORY_ADMISSION_DATA
             );
@@ -624,12 +641,12 @@ class RecordStaffDashboardController extends Controller
             DB::commit();
 
             // Return updated application data so frontend can update without full reload
-            $application->refresh();
+            $freshApplication->refresh();
 
             return response()->json([
                 'message'            => 'Tagged as officially enrolled successfully',
-                'enrollment_status'  => $application->enrollment_status,
-                'application_status' => $application->status,
+                'enrollment_status'  => $freshApplication->enrollment_status,
+                'application_status' => $freshApplication->status,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -660,13 +677,24 @@ class RecordStaffDashboardController extends Controller
 
         DB::beginTransaction();
         try {
-            $application->update([
+            // Lock the application row to prevent parallel double-untags
+            $freshApplication = Application::lockForUpdate()->findOrFail($application->id);
+
+            // Re-check enrollment status on the locked row
+            if ($freshApplication->enrollment_status !== 'officially_enrolled') {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Application is not officially enrolled.',
+                ], 400);
+            }
+
+            $freshApplication->update([
                 'status'            => $newStatus,
                 'enrollment_status' => $newEnrollmentStatus,
             ]);
 
             // Update records process
-            $recordsProcess = ApplicationProcess::where('application_id', $application->id)
+            $recordsProcess = ApplicationProcess::where('application_id', $freshApplication->id)
                 ->where('stage', 'records')
                 ->first();
 
@@ -683,7 +711,7 @@ class RecordStaffDashboardController extends Controller
             $this->auditLogService->logActivitySync(
                 AuditLog::ACTION_UPDATE,
                 'Applications',
-                "Untagged applicant (user_id: {$id}, application_id: {$application->id}) from officially enrolled to temporary (status: '{$oldStatus}' -> '{$newStatus}', enrollment_status: '{$oldEnrollmentStatus}' -> '{$newEnrollmentStatus}'). Reason: {$reason}",
+                "Untagged applicant (user_id: {$id}, application_id: {$freshApplication->id}) from officially enrolled to temporary (status: '{$oldStatus}' -> '{$newStatus}', enrollment_status: '{$oldEnrollmentStatus}' -> '{$newEnrollmentStatus}'). Reason: {$reason}",
                 auth()->user(),
                 AuditLog::CATEGORY_ADMISSION_DATA
             );

@@ -383,6 +383,16 @@ trait ManagesApplicationFiles
         // Wrap all mutations in transaction
         try {
             DB::transaction(function () use ($userId, $fileTypes, $note, $application, $inProgress) {
+                // Re-fetch and lock the process row inside the transaction
+                $freshProcess = ApplicationProcess::lockForUpdate()
+                    ->where('id', $inProgress->id)
+                    ->whereIn('status', ['in_progress', 'returned'])
+                    ->first();
+
+                if (!$freshProcess) {
+                    abort(409, 'This action has already been completed or is not available.');
+                }
+
                 // Only update files if specific files were selected
                 if (!empty($fileTypes)) {
                     UserFile::where('user_id', (string) $userId)
@@ -397,7 +407,7 @@ trait ManagesApplicationFiles
                     'status' => 'returned',
                 ]);
 
-                $inProgress->update([
+                $freshProcess->update([
                     'status' => 'returned',
                     'action' => 'returned',
                     'reviewer_notes' => $note,
@@ -468,10 +478,20 @@ trait ManagesApplicationFiles
         // Wrap all mutations in transaction
         try {
             DB::transaction(function () use ($application, $inProgress, $request, $files, $userId, $keyMap, &$updatedFiles, &$notFoundFiles) {
+                // Re-fetch and lock the process row inside the transaction
+                $freshProcess = ApplicationProcess::lockForUpdate()
+                    ->where('id', $inProgress->id)
+                    ->whereIn('status', ['in_progress', 'returned'])
+                    ->first();
+
+                if (!$freshProcess) {
+                    abort(409, 'This action has already been completed or is not available.');
+                }
+
                 $application->status = 'returned';
                 $application->save();
 
-                $inProgress->update([
+                $freshProcess->update([
                     'status' => 'returned',
                     'action' => 'returned',
                     'reviewer_notes' => $request->note,

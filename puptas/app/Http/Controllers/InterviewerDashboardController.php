@@ -257,6 +257,25 @@ class InterviewerDashboardController extends Controller
 
         try {
             DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress, $programId, $startTime, $customNotes) {
+                // Lock application row first (consistent lock order: application → program)
+                $freshApplication = \App\Models\Application::lockForUpdate()->findOrFail($application->id);
+
+                // Re-check application status on the freshly locked row
+                if (!in_array($freshApplication->status, ['submitted', 'returned', 'transferred'], true)) {
+                    abort(409, 'Application is no longer available for interviewer approval.');
+                }
+
+                // Re-check that the in-progress process row still exists
+                $freshProcess = ApplicationProcess::lockForUpdate()
+                    ->where('id', $interviewerInProgress->id)
+                    ->where('status', 'in_progress')
+                    ->first();
+
+                if (!$freshProcess) {
+                    abort(409, 'This action has already been completed or is not available.');
+                }
+
+                // Lock program second
                 $program = Program::lockForUpdate()->findOrFail($programId);
 
                 if ($program->slots <= 0) {
@@ -278,8 +297,8 @@ class InterviewerDashboardController extends Controller
                 }
 
                 // Update application to the interviewer's assigned program
-                $application->program_id = $programId;
-                $application->save();
+                $freshApplication->program_id = $programId;
+                $freshApplication->save();
 
                 // Decrement new program slots
                 $program->slots -= 1;
@@ -291,20 +310,26 @@ class InterviewerDashboardController extends Controller
                 }
 
                 // Close current interviewer in-progress process
-                $interviewerInProgress->update([
+                $freshProcess->update([
                     'status' => 'completed',
                     'action' => 'passed',
                     'reviewer_notes' => $notes,
                     'performed_by' => auth()->id(),
                 ]);
 
-                // Create next stage (medical)
-                ApplicationProcess::create([
-                    'application_id' => $application->id,
-                    'stage' => 'medical',
-                    'status' => 'in_progress',
-                    'performed_by' => null,
-                ]);
+                // Create next stage (medical) only if none exists yet
+                $medicalExists = ApplicationProcess::where('application_id', $freshApplication->id)
+                    ->where('stage', 'medical')
+                    ->exists();
+
+                if (!$medicalExists) {
+                    ApplicationProcess::create([
+                        'application_id' => $freshApplication->id,
+                        'stage' => 'medical',
+                        'status' => 'in_progress',
+                        'performed_by' => null,
+                    ]);
+                }
             });
 
             $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer accepted application for applicant ID {$userId} into program ID {$programId}.", null, 'ADMISSION_DATA');
@@ -375,6 +400,24 @@ class InterviewerDashboardController extends Controller
 
         try {
             DB::transaction(function () use ($application, $interviewerInProgress, $userId, $programId, $startTime, $customNotes) {
+                // Lock application row first (consistent lock order: application → program)
+                $freshApplication = \App\Models\Application::lockForUpdate()->findOrFail($application->id);
+
+                // Re-check application status on the freshly locked row
+                if (!in_array($freshApplication->status, ['submitted', 'returned', 'transferred'], true)) {
+                    abort(409, 'Application is no longer available for interviewer action.');
+                }
+
+                // Re-check that the in-progress process row still exists
+                $freshProcess = ApplicationProcess::lockForUpdate()
+                    ->where('id', $interviewerInProgress->id)
+                    ->where('status', 'in_progress')
+                    ->first();
+
+                if (!$freshProcess) {
+                    abort(409, 'This action has already been completed or is not available.');
+                }
+
                 $program = Program::findOrFail($programId);
 
                 $notes = "Rejected by interviewer (ID: " . auth()->id() . ") for program: {$program->code}";
@@ -385,7 +428,7 @@ class InterviewerDashboardController extends Controller
                 // Record the rejection but keep the interviewer process in_progress
                 // so the applicant can still be interviewed by another interviewer
                 // for a different program.
-                $interviewerInProgress->update([
+                $freshProcess->update([
                     'reviewer_notes' => $notes,
                     'started_at'     => null,
                 ]);

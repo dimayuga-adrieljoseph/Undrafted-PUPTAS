@@ -171,7 +171,17 @@ class EvaluatorDashboardController extends Controller
 
         try {
             DB::transaction(function () use ($application, $evaluatorProcess, $userId, $request) {
-                $evaluatorProcess->update([
+                // Re-fetch and lock the process row to guard against parallel requests
+                $freshProcess = ApplicationProcess::lockForUpdate()
+                    ->where('id', $evaluatorProcess->id)
+                    ->whereIn('status', ['in_progress', 'returned'])
+                    ->first();
+
+                if (!$freshProcess) {
+                    abort(409, 'This action has already been completed or is not available.');
+                }
+
+                $freshProcess->update([
                     'status' => 'completed',
                     'action' => 'passed',
                     'reviewer_notes' => $request->note,
@@ -196,14 +206,21 @@ class EvaluatorDashboardController extends Controller
 
                 Log::info("Updated application status to 'submitted' for application {$application->id}");
 
-                // Create next stage process
+                // Create next stage process only if none exists yet
                 $nextStage = $this->getCurrentStage() === 'document_evaluator' ? 'grade_evaluator' : 'interviewer';
-                ApplicationProcess::create([
-                    'application_id' => $application->id,
-                    'stage' => $nextStage,
-                    'status' => 'in_progress',
-                    'performed_by' => null,
-                ]);
+                $nextExists = ApplicationProcess::where('application_id', $application->id)
+                    ->where('stage', $nextStage)
+                    ->where('status', 'in_progress')
+                    ->exists();
+
+                if (!$nextExists) {
+                    ApplicationProcess::create([
+                        'application_id' => $application->id,
+                        'stage' => $nextStage,
+                        'status' => 'in_progress',
+                        'performed_by' => null,
+                    ]);
+                }
             });
 
             $this->auditLogService->logActivity('UPDATE', 'Applications', "Evaluator passed application for applicant ID {$userId} to interviewer stage.", null, 'ADMISSION_DATA');
@@ -258,10 +275,20 @@ class EvaluatorDashboardController extends Controller
 
         try {
             DB::transaction(function () use ($application, $inProgress, $request, $userId) {
+                // Re-fetch and lock the process row to guard against parallel requests
+                $freshProcess = ApplicationProcess::lockForUpdate()
+                    ->where('id', $inProgress->id)
+                    ->whereIn('status', ['in_progress', 'returned'])
+                    ->first();
+
+                if (!$freshProcess) {
+                    abort(409, 'This action has already been completed or is not available.');
+                }
+
                 $application->status = 'rejected';
                 $application->save();
 
-                $inProgress->update([
+                $freshProcess->update([
                     'status' => 'completed',
                     'action' => 'rejected',
                     'reviewer_notes' => $request->note,
