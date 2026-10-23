@@ -173,6 +173,7 @@ An alternative database-level constraint—adding a unique index on `(applicatio
 | Workflow concurrency feature test | `puptas/tests/Feature/WorkflowConcurrencyTest.php:1-280` | 8 sequential duplicate action tests across all roles |
 | Automated concurrent race test (k6) | `puptas/tests/load/double-submit-race.js:1-128` | k6 batch script firing 3 simultaneous submits per VU |
 | Parallel interviewer accept race script | `puptas/tests/load/interviewer-accept-race.ps1:1-290` | Multi-round parallel race test with synchronized start times |
+| OS-level multi-process race harness | `puptas/tests/load/parallel-race/` | CLI test harness (`run_parallel_race.ps1`, `seed.php`, `worker.php`, `README.md`) |
 
 ---
 
@@ -210,40 +211,47 @@ Executed on Railway Staging using 20 concurrent virtual users mapped to seeded t
 | Overall k6 Check Success Rate | **82.50%** | **100.00%** | **PASS** |
 | Duplicate Database Processes in MySQL | **14 duplicate sets** | **0 duplicate sets** | **RESOLVED** |
 
-### 4. Parallel Interviewer Accept Race Test (`tests/load/interviewer-accept-race.ps1` & OS-Level Multi-Process Harness)
+### 4. Parallel Workflow Actions Race Tests (`tests/load/parallel-race/`)
 To verify pessimistic database row locking (`lockForUpdate()`) and stateful idempotency under MySQL concurrency:
-- **Safety Allow-List:** Restricts execution strictly to allowed hosts (`pup-admission-system-staging.up.railway.app`, `localhost`, `127.0.0.1`). Any other host immediately aborts.
-- **Synchronized Dispatch:** Uses a millisecond epoch synchronization target (`[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + 2000`) so concurrent worker jobs fire simultaneously.
-- **Credential Protection:** Reads credentials dynamically from parameters, environment variables, or secure interactive prompt (`Read-Host -AsSecureString`), with an option to supply an already authenticated browser session cookie (`puptas_session`) and XSRF token for staging. Zero hardcoded secrets in code.
+- **Committed Harness Path:** `puptas/tests/load/parallel-race/` (contains `run_parallel_race.ps1`, `seed.php`, `worker.php`, and `README.md`).
+- **Hard Safety Guards:** Refuses to execute unless `DB_HOST` is `127.0.0.1` or `localhost` and `APP_ENV` is `local`.
+- **Database Integrity:** Never runs `SET FOREIGN_KEY_CHECKS=0`. Cleanups delete strictly in reverse foreign-key order using isolated prefixes (`prace_*`). No credentials stored in files.
+- **Synchronized Dispatch:** Uses a millisecond epoch synchronization target (`[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + 3000`) so concurrent worker processes invoke methods at the exact same millisecond.
 
 #### 4.1. Single-Process HTTP Negative Control Finding (`php artisan serve` on Windows)
 When tested over HTTP against `php artisan serve` (port 8001 baseline vs port 8000 fixed, $N=10$):
-- Both branches returned 10/10 rounds with 1x 200 and 1x 409, and zero duplicate medical rows.
+- Both branches returned 10/10 rounds with 1x 200 and 1x 409, and zero duplicate rows.
 - **Root Cause:** `php artisan serve` is strictly single-process and single-threaded on Windows (`PHP_CLI_SERVER_WORKERS` is unsupported on Windows). Incoming concurrent HTTP connections were queued and serialized at the webserver socket layer, masking any application-layer race window in the old code.
 
-#### 4.2. OS-Level Multi-Process Parallel Concurrency Benchmark (Real Multi-Process, $N=20$)
-To achieve genuine OS-level parallelism bypassing the single-threaded web server limitation, an automated test harness spawned two separate, independent PHP CLI processes via PowerShell `Start-Process` per applicant round:
-1. **Parallel Execution Architecture:** Each process independently booted Laravel, authenticated as the interviewer, synchronized to a shared UTC millisecond target (`now + 5000ms`), and called `InterviewerDashboardController::accept()` directly against local MySQL 8.0.
-2. **Concurrency Window Isolation:** To simulate heavy database load and isolate the race window between the pre-transaction status check and `DB::transaction`, a temporary `usleep(300000)` (300ms) delay was injected between the pre-transaction check and `DB::transaction` in both the baseline worktree (`8326deb4^` at `ade6ab1a`) and a throwaway test run of the fixed branch. Neither temporary delay was committed.
-3. **Execution Rounds:** Tested across $N=20$ freshly seeded applicants per run on Program 12 (`BSCS`, 50 initial slots).
+#### 4.2. OS-Level Multi-Process Parallel Concurrency Benchmark (Real Multi-Process, $N=20$ per action)
+To achieve genuine OS-level parallelism bypassing the single-threaded web server limitation, the committed harness (`puptas/tests/load/parallel-race/run_parallel_race.ps1`) spawned two separate, independent PHP CLI processes via PowerShell `Start-Process` per applicant round:
+1. **Parallel Execution Architecture:** Each process independently booted Laravel, authenticated as the designated actor, synchronized to a shared UTC millisecond target, and called the controller action directly against local MySQL 8.0.
+2. **Concurrency Stress Window:** To isolate and widen the check-then-act race window between the pre-transaction status check and `DB::transaction`, a temporary `usleep(300000)` (300ms) delay was injected in both the baseline worktree (`8326deb4^` at `ade6ab1a`) and a throwaway test run of the fixed branch. **Neither temporary delay was committed to production code.**
+3. **Execution Mode:** The harness calls the controller action directly rather than over HTTP to bypass web server connection queueing. The real-world frequency of the race was not measured.
+4. **Tested Actions ($N=20$ Fresh Local Applicants Per Run):**
+   - **Interviewer Accept (`InterviewerDashboardController::accept`)**: Parallel interviewer acceptance on Program 12 (`BSCS`, 50 initial slots).
+   - **Registrar Tag (`RecordStaffDashboardController::tag`)**: Parallel official enrollment tagging by registrar.
+   - **Evaluator Pass (`EvaluatorDashboardController::passApplication`)**: Parallel document evaluation approval to grade evaluation stage.
 
 #### Real Multi-Process Before vs. After Concurrency Comparison Table
 
-| Metric / Test Parameter | Before Fix (Parent of `8326deb4` / Baseline `ade6ab1a`) | After Fix (`panel-fixes/aj-38-workflow-concurrency`) | Outcome / Status |
+| Action / Test Parameter | Baseline Metric (`8326deb4^` / `ade6ab1a`) | Fixed Metric (`panel-fixes/aj-38-workflow-concurrency`) | Outcome / Status |
 | :--- | :---: | :---: | :---: |
-| Test Harness | OS-Level Parallel Processes (`Start-Process`) | OS-Level Parallel Processes (`Start-Process`) | True OS parallelism |
-| Tested Applicants ($N$) | 20 applicants (IDs 100–119) | 20 applicants (IDs 120–139) | Fresh, isolated test records |
-| Program Target & Starting Slots | Program 12 (`BSCS`), 50 slots | Program 12 (`BSCS`), 50 slots | Consistent quota baseline |
-| Concurrency Stress Window | `usleep(300000)` before `DB::transaction` | `usleep(300000)` before `DB::transaction` | Isolated race window |
-| Rounds with Double 200s (Race Failures) | **20 / 20 (100% failure rate)** | **0 / 20 (0% failure rate)** | **RESOLVED (100% fix)** |
-| Rounds with 1x 200 and 1x 409 (Clean Pass) | **0 / 20 (0%)** | **20 / 20 (100%)** | **RESOLVED** |
-| Final Program Slots | **10** | **30** | Program quota intact |
-| Net Slot Decrement vs Expected | **-40** (Expected: -20, **20 double decrements**) | **-20** (Expected: -20, **0 double decrements**) | **RESOLVED** |
-| Duplicate Medical Processes Query<br>`SELECT application_id, COUNT(*) FROM application_processes WHERE stage='medical' GROUP BY application_id HAVING COUNT(*)>1;` | **20 duplicate sets** (all 20 applicants had duplicate rows) | **0 rows** (`[]`) | **RESOLVED** |
-| Server 500 Error Count | **0** | **0** | Zero crashes / zero deadlocks |
-| Database Concurrency Protection | ❌ Guard runs outside transaction; no row lock | ✅ `Application::lockForUpdate()` + re-check inside transaction | Atomically serialized |
+| **Interviewer Accept: Double 200s** | **20 / 20 (100% race failure)** | **0 / 20 (0% race failure)** | **RESOLVED** |
+| **Interviewer Accept: Clean Passes (1x 200 & 1x 409)** | **0 / 20 (0%)** | **20 / 20 (100%)** | **RESOLVED** |
+| **Interviewer Accept: Final Program Slots** | **10** (Net change: -40 vs expected -20; **20 double decrements**) | **30** (Net change: -20 vs expected -20; **0 leaks**) | **RESOLVED** |
+| **Interviewer Accept: Duplicate Medical Processes** | **20 duplicate sets** (every applicant had 2 rows) | **0 rows** (`[]`) | **RESOLVED** |
+| **Registrar Tag: Double 200s** | **20 / 20 (100% race failure)** | **0 / 20 (0% race failure)** | **RESOLVED** |
+| **Registrar Tag: Clean Passes (1x 200 & 1x 409)** | **0 / 20 (0%)** | **20 / 20 (100%)** | **RESOLVED** |
+| **Registrar Tag: Duplicate Audit Log Sets** | **20 duplicate sets** (each applicant logged twice) | **0 duplicate sets** (`0`) | **RESOLVED** |
+| **Registrar Tag: Final Enrollment Status** | 20 / 20 `officially_enrolled` | 20 / 20 `officially_enrolled` | Correct final state |
+| **Evaluator Pass: Double 200s** | **20 / 20 (100% race failure)** | **0 / 20 (0% race failure)** | **RESOLVED** |
+| **Evaluator Pass: Clean Passes (1x 200 & 1x 409)** | **0 / 20 (0%)** | **20 / 20 (100%)** | **RESOLVED** |
+| **Evaluator Pass: Duplicate Next-Stage Rows** | **20 duplicate sets** (2 grade evaluator rows each) | **0 rows** (`[]`) | **RESOLVED** |
+| **Server 500 Error Count (All Runs)** | **0** | **0** | Zero crashes / zero deadlocks |
+| **Database Concurrency Mechanism** | ❌ Checks outside transaction; no row lock | ✅ `lockForUpdate()` + in-transaction guard re-check | Atomically serialized |
 
-*Staging Execution Note:* While local Windows development required OS-level CLI processes to produce parallel execution due to single-threaded `php artisan serve`, production/staging environments running PHP-FPM or Nginx naturally spawn multiple worker processes. The in-transaction pessimistic lock ensures that under multi-worker concurrency on Staging, race conditions cannot produce duplicate transitions or quota leaks. Staging verification is scheduled once Railway service is restored.
+*Staging Execution Note:* While local Windows development required OS-level CLI processes to produce parallel execution due to single-threaded `php artisan serve`, production/staging environments running PHP-FPM or Nginx naturally spawn multiple worker processes. The in-transaction pessimistic lock (`lockForUpdate()`) serializes the guarded execution paths: under concurrent execution, the second worker blocks on the locked row until the first worker commits, reads the updated state, and cleanly returns an HTTP 409 Conflict. Staging verification is scheduled once Railway service is restored.
 
 ---
 
@@ -256,6 +264,9 @@ To achieve genuine OS-level parallelism bypassing the single-threaded web server
 
 ---
 
-## 7. Verdict: Verified for applicant submission under load; workflow actions verified under real multi-process concurrency on local MySQL (before and after), staging run pending
-**VERIFIED**
-Applicant submission is verified under load on Railway Staging (dropping duplicate submissions from 14/20 to 0/20). Workflow actions across evaluator, interviewer, and registrar roles are implemented with the same pessimistic row locking pattern (`lockForUpdate()`), tested sequentially with Pest SQLite (`8 tests, 36 assertions, 0 failures`), and verified under real OS-level multi-process concurrency testing against local MySQL (20 rounds with independent PHP processes and injected concurrency window: baseline failed 20/20 with double 200s, 20 double-decrements, and 20 duplicate medical processes; fixed code achieved 0/20 double 200s, 20/20 clean passes, exactly expected slot decrements, and 0 duplicate processes). Staging multi-worker concurrency run remains pending until Railway staging is restored.
+## 7. Verdict: Verified for applicant submission under load; workflow actions verified under real multi-process concurrency on local MySQL (interviewer accept, registrar tag, evaluator pass), staging run pending
+Applicant submission is verified under load on Railway Staging (dropping duplicate submissions from 14/20 to 0/20). The real OS-level multi-process before/after concurrency test on local MySQL covers interviewer accept, registrar tag, and evaluator pass across $N=20$ rounds each with an injected 300 ms stress window:
+- In the baseline code (`8326deb4^` / `ade6ab1a`), all three actions failed in 20/20 rounds with two 200s, generating 20 duplicate quota decrements (interviewer accept), 20 duplicate audit log sets (registrar tag), and 20 duplicate next-stage process rows (evaluator pass).
+- In the fixed code (`panel-fixes/aj-38-workflow-concurrency`), pessimistic row locking (`lockForUpdate()`) serialized the guarded paths in 20/20 rounds (0/20 double 200s, 20/20 1x 200 and 1x 409 clean passes), with zero slot leaks, zero duplicate audit logs, and zero duplicate next-stage processes.
+Every other workflow action (interviewer reject, evaluator reject, evaluator return, untag, change course) uses the identical in-transaction `lockForUpdate()` pattern and is verified sequentially via Pest SQLite (`WorkflowConcurrencyTest`, 8 tests, 36 assertions, 0 failures). Staging multi-worker concurrency verification remains pending until Railway staging is restored.
+
