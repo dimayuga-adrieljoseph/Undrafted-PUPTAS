@@ -11,9 +11,14 @@ import http from 'k6/http';
 export const BASE_URL = (__ENV.BASE_URL || 'https://pup-admission-system-staging.up.railway.app').replace(/\/+$/, '');
 
 // Test account credentials (test-only accounts on staging)
+const testUserPassword = __ENV.TEST_USER_PASSWORD;
+if (!testUserPassword) {
+    throw new Error('TEST_USER_PASSWORD environment variable is required. Default password fallback has been removed for security.');
+}
+
 export const TEST_USER = {
     email: __ENV.TEST_USER_EMAIL || 'testapplicant@gmail.com',
-    password: __ENV.TEST_USER_PASSWORD || 'password',
+    password: testUserPassword,
 };
 
 // Standard ramp up, hold, and ramp down stages for normal load testing
