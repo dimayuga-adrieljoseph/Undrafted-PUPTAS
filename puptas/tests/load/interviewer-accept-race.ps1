@@ -27,11 +27,15 @@
 .PARAMETER ProgramId
     Target Program ID to accept the applicants into.
 
-.PARAMETER InterviewerEmail
-    Email of the interviewer account. If omitted, prompts securely or uses $env:INTERVIEWER_EMAIL.
+.PARAMETER SessionCookie
+    Raw 'puptas_session' cookie value from an already authenticated browser session.
+    Required for staging environments where /dev-login is disabled (APP_DEBUG=false) and IDP OAuth is active.
+    Can also be supplied via $env:PUPTAS_SESSION_COOKIE or entered at the interactive prompt.
 
-.PARAMETER InterviewerPassword
-    Password of the interviewer account. If omitted, prompts securely as a SecureString or uses $env:INTERVIEWER_PASSWORD.
+.PARAMETER XsrfToken
+    Raw 'XSRF-TOKEN' cookie value from the browser session. If omitted, the script auto-extracts
+    the active CSRF token by querying /interviewer-dashboard with the session cookie.
+    Can also be supplied via $env:PUPTAS_XSRF_TOKEN.
 #>
 
 [CmdletBinding()]
@@ -42,7 +46,9 @@ param(
     [Parameter(Mandatory = $true)]
     [int]$ProgramId,
     [string]$InterviewerEmail = $env:INTERVIEWER_EMAIL,
-    [string]$InterviewerPassword = $env:INTERVIEWER_PASSWORD
+    [string]$InterviewerPassword = $env:INTERVIEWER_PASSWORD,
+    [string]$SessionCookie = $env:PUPTAS_SESSION_COOKIE,
+    [string]$XsrfToken = $env:PUPTAS_XSRF_TOKEN
 )
 
 # -----------------------------------------------------------------------------
@@ -72,21 +78,33 @@ Allowed hosts:
 }
 
 # -----------------------------------------------------------------------------
-# 2. CREDENTIAL COLLECTION (PROMPT OR ENV, NEVER HARDCODED)
+# 2. CREDENTIAL / SESSION COLLECTION (ENV, PROMPT, OR PARAMETER)
 # -----------------------------------------------------------------------------
-if ([string]::IsNullOrWhiteSpace($InterviewerEmail)) {
-    $InterviewerEmail = Read-Host "Enter Interviewer Email"
-}
+$hasSessionCookie = -not [string]::IsNullOrWhiteSpace($SessionCookie)
+$hasCredentials = (-not [string]::IsNullOrWhiteSpace($InterviewerEmail)) -and (-not [string]::IsNullOrWhiteSpace($InterviewerPassword))
 
-if ([string]::IsNullOrWhiteSpace($InterviewerPassword)) {
-    $securePass = Read-Host "Enter Interviewer Password" -AsSecureString
-    $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePass)
-    $InterviewerPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-}
+if (-not $hasSessionCookie -and -not $hasCredentials) {
+    if ([string]::IsNullOrWhiteSpace($InterviewerEmail)) {
+        $inputEmail = Read-Host "Enter Interviewer Email (or press Enter to supply browser session cookie)"
+        if (-not [string]::IsNullOrWhiteSpace($inputEmail)) {
+            $InterviewerEmail = $inputEmail
+            $securePass = Read-Host "Enter Interviewer Password" -AsSecureString
+            $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePass)
+            $InterviewerPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+            $hasCredentials = $true
+        }
+    }
 
-if ([string]::IsNullOrWhiteSpace($InterviewerEmail) -or [string]::IsNullOrWhiteSpace($InterviewerPassword)) {
-    Write-Error "Interviewer credentials required. Supply parameters, environment variables, or respond to the prompt." -ErrorAction Stop
+    if (-not $hasCredentials) {
+        Write-Host "No credentials provided. Prompting for browser session cookie (staging mode)..." -ForegroundColor Yellow
+        $SessionCookie = Read-Host "Enter 'puptas_session' cookie value"
+        if ([string]::IsNullOrWhiteSpace($SessionCookie)) {
+            Write-Error "Either Interviewer credentials (email/password) or browser session cookie (puptas_session) required." -ErrorAction Stop
+        }
+        $XsrfToken = Read-Host "Enter 'XSRF-TOKEN' value (optional, press Enter to auto-extract)"
+        $hasSessionCookie = $true
+    }
 }
 
 # -----------------------------------------------------------------------------
@@ -117,62 +135,101 @@ Write-Host " Target URL   : $BaseUrl" -ForegroundColor Gray
 Write-Host " Program ID   : $ProgramId" -ForegroundColor Gray
 Write-Host " Rounds (N)   : $N applicants" -ForegroundColor Gray
 Write-Host " Host Check   : ALLOWED ($targetHost)" -ForegroundColor Green
+Write-Host " Auth Mode    : $(if (-not [string]::IsNullOrWhiteSpace($SessionCookie)) { 'Browser Session Cookie' } else { 'Direct Credentials / Login' })" -ForegroundColor Gray
 Write-Host "=============================================================" -ForegroundColor Cyan
 
 # -----------------------------------------------------------------------------
 # 4. AUTHENTICATE AND CAPTURE SESSION COOKIES + CSRF TOKEN
 # -----------------------------------------------------------------------------
-Write-Host "`n[1/4] Authenticating as $InterviewerEmail..." -ForegroundColor Yellow
+Write-Host "`n[1/4] Establishing authenticated session..." -ForegroundColor Yellow
 $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+$authenticated = $false
 
-try {
-    $authenticated = $false
-
-    # Try dev-login shortcut first if local or staging debug enabled
+# Mode A: User supplied browser session cookie directly (staging / IDP bypass)
+if (-not [string]::IsNullOrWhiteSpace($SessionCookie)) {
+    Write-Host "      Configuring session using provided browser cookie..." -ForegroundColor Green
+    $cleanSession = $SessionCookie.Trim()
+    $session.Cookies.Add((New-Object System.Net.Cookie("puptas_session", $cleanSession, "/", $uri.Host)))
+    
+    if (-not [string]::IsNullOrWhiteSpace($XsrfToken)) {
+        $cleanXsrf = $XsrfToken.Trim()
+        $session.Cookies.Add((New-Object System.Net.Cookie("XSRF-TOKEN", $cleanXsrf, "/", $uri.Host)))
+    }
+    $authenticated = $true
+} else {
+    # Mode B: Automated login via /dev-login or form POST
+    Write-Host "      Authenticating as $InterviewerEmail..." -ForegroundColor Yellow
     try {
-        $devRes = Invoke-WebRequest -Uri "$BaseUrl/dev-login?email=$InterviewerEmail" -WebSession $session -Method Get -UseBasicParsing -MaximumRedirection 5 -ErrorAction Stop
-        $sessCookie = $session.Cookies.GetCookies([System.Uri]$BaseUrl) | Where-Object { $_.Name -match "session" }
-        if ($sessCookie) {
+        # 1. Try dev-login shortcut first if local or staging debug enabled
+        try {
+            $devRes = Invoke-WebRequest -Uri "$BaseUrl/dev-login?email=$InterviewerEmail" -WebSession $session -Method Get -UseBasicParsing -MaximumRedirection 5 -ErrorAction Stop
+            $sessCookie = $session.Cookies.GetCookies($uri) | Where-Object { $_.Name -match "session" }
+            if ($sessCookie) {
+                $authenticated = $true
+                Write-Host "      Authenticated via dev-login session." -ForegroundColor Green
+            }
+        } catch {
+            $authenticated = $false
+        }
+
+        # 2. Fallback to standard form /login POST
+        if (-not $authenticated) {
+            $loginPage = Invoke-WebRequest -Uri "$BaseUrl/login?local=1" -WebSession $session -Method Get -UseBasicParsing
+            
+            if ($loginPage.Content -match 'name="_token"\s+value="([^"]+)"') {
+                $htmlToken = $matches[1]
+            } else {
+                throw "Could not obtain CSRF _token from login HTML."
+            }
+
+            $loginBody = @{
+                email    = $InterviewerEmail
+                password = $InterviewerPassword
+                _token   = $htmlToken
+            }
+
+            $null = Invoke-WebRequest -Uri "$BaseUrl/login" -WebSession $session -Method Post -Body $loginBody -Headers @{
+                "Accept" = "text/html,application/xhtml+xml,application/xml"
+            } -UseBasicParsing -MaximumRedirection 5
+
+            Write-Host "      Authenticated via standard login POST." -ForegroundColor Green
             $authenticated = $true
-            Write-Host "      Authenticated via dev-login session." -ForegroundColor Green
         }
     } catch {
-        $authenticated = $false
-    }
-
-    # Fallback to standard form /login POST
-    if (-not $authenticated) {
-        $loginPage = Invoke-WebRequest -Uri "$BaseUrl/login?local=1" -WebSession $session -Method Get -UseBasicParsing
-        
-        if ($loginPage.Content -match 'name="_token"\s+value="([^"]+)"') {
-            $htmlToken = $matches[1]
-        } else {
-            throw "Could not obtain CSRF _token from login HTML."
+        Write-Warning "Automated login failed: $_"
+        Write-Host "If running on Staging with APP_DEBUG=false or IDP OAuth, please supply browser session cookies:" -ForegroundColor Yellow
+        $SessionCookie = Read-Host "Enter 'puptas_session' cookie value (or press Enter to abort)"
+        if ([string]::IsNullOrWhiteSpace($SessionCookie)) {
+            Write-Error "Authentication failed and no session cookie provided. Halting." -ErrorAction Stop
         }
-
-        $loginBody = @{
-            email    = $InterviewerEmail
-            password = $InterviewerPassword
-            _token   = $htmlToken
+        $XsrfToken = Read-Host "Enter 'XSRF-TOKEN' value (optional, press Enter to auto-extract)"
+        $session.Cookies.Add((New-Object System.Net.Cookie("puptas_session", $SessionCookie.Trim(), "/", $uri.Host)))
+        if (-not [string]::IsNullOrWhiteSpace($XsrfToken)) {
+            $session.Cookies.Add((New-Object System.Net.Cookie("XSRF-TOKEN", $XsrfToken.Trim(), "/", $uri.Host)))
         }
-
-        $null = Invoke-WebRequest -Uri "$BaseUrl/login" -WebSession $session -Method Post -Body $loginBody -Headers @{
-            "Accept" = "text/html,application/xhtml+xml,application/xml"
-        } -UseBasicParsing -MaximumRedirection 5
-
-        Write-Host "      Authenticated via standard login POST." -ForegroundColor Green
+        $authenticated = $true
     }
-} catch {
-    Write-Error "Authentication failed: $_" -ErrorAction Stop
 }
 
 # Prime interviewer session and retrieve XSRF token
 $dash = Invoke-WebRequest -Uri "$BaseUrl/interviewer-dashboard" -WebSession $session -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
-$authXsrfCookie = $session.Cookies.GetCookies([System.Uri]$BaseUrl) | Where-Object { $_.Name -eq 'XSRF-TOKEN' }
-$activeCsrf = if ($authXsrfCookie) { [System.Uri]::UnescapeDataString($authXsrfCookie.Value) } else { "" }
+
+# Verify dashboard access (ensure cookie isn't expired / guest redirect)
+if ($dash.StatusCode -eq 302 -or $dash.BaseResponse.ResponseUri.AbsolutePath -match '/login') {
+    Write-Error "Session authentication failed: Request redirected to login. Verify interviewer role or fresh session cookie." -ErrorAction Stop
+}
+
+$authXsrfCookie = $session.Cookies.GetCookies($uri) | Where-Object { $_.Name -eq 'XSRF-TOKEN' }
+$activeCsrf = if (-not [string]::IsNullOrWhiteSpace($XsrfToken)) {
+    [System.Uri]::UnescapeDataString($XsrfToken.Trim())
+} elseif ($authXsrfCookie) {
+    [System.Uri]::UnescapeDataString($authXsrfCookie.Value)
+} else {
+    ""
+}
 
 # Convert session cookies into serializable objects for background worker jobs
-$rawCookies = $session.Cookies.GetCookies([System.Uri]$BaseUrl)
+$rawCookies = $session.Cookies.GetCookies($uri)
 $cookiePayload = @()
 foreach ($c in $rawCookies) {
     $cookiePayload += [PSCustomObject]@{
@@ -230,6 +287,7 @@ $workerScript = {
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $headers = @{
         "X-CSRF-TOKEN" = $csrf
+        "X-XSRF-TOKEN" = $csrf
         "Content-Type" = "application/json"
         "Accept"       = "application/json"
     }

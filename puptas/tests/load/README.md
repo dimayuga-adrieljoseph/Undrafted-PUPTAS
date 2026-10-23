@@ -82,21 +82,48 @@ k6 run -e TEST_USER_EMAIL=testapplicant@gmail.com -e TEST_USER_PASSWORD=your_pas
 To verify pessimistic database locking and concurrency protection on the interviewer accept endpoint without running a full k6 suite:
 
 > [!CAUTION]
-> **Safety Guard:** `interviewer-accept-race.ps1` contains a hardcoded host check and will immediately halt if run against production. Always target Staging or Local.
+> **Safety Guard:** `interviewer-accept-race.ps1` contains a strict allow-list host check (`pup-admission-system-staging.up.railway.app`, `localhost`, `127.0.0.1`) and will immediately abort if pointed at production.
+
+#### Option A: Local Development (Automated Login via Local Auth)
 
 ```powershell
-# Run from puptas/ directory
+# Run from puptas/ directory against local dev server
+.\tests\load\interviewer-accept-race.ps1 `
+  -BaseUrl "http://127.0.0.1:8000" `
+  -N 10 `
+  -ApplicantIds 101,102,103,104,105,106,107,108,109,110 `
+  -ProgramId 12 `
+  -InterviewerEmail "interviewer@puptas.edu.ph" `
+  -InterviewerPassword "Interviewer.1234"
+```
+
+#### Option B: Staging Environment (Browser Session Cookie & CSRF Token)
+
+On Railway Staging, `/dev-login` is disabled (`APP_DEBUG=false`, returning 404) and staff authentication enforces the PUP IDP OAuth workflow. Instead of passing passwords, supply your authenticated browser session cookie and XSRF token:
+
+1. Log into PUPTAS Staging as an Interviewer in your web browser.
+2. Open DevTools (`F12`) > **Application** / **Storage** > **Cookies** > `https://pup-admission-system-staging.up.railway.app`.
+3. Copy the values of `puptas_session` and `XSRF-TOKEN`.
+4. Run the script passing the session cookie (or set via environment variables `$env:PUPTAS_SESSION_COOKIE` and `$env:PUPTAS_XSRF_TOKEN`):
+
+```powershell
+# Via command-line arguments:
 .\tests\load\interviewer-accept-race.ps1 `
   -BaseUrl "https://pup-admission-system-staging.up.railway.app" `
-  -ApplicantId 123 `
+  -N 10 `
+  -ApplicantIds 501,502,503,504,505,506,507,508,509,510 `
   -ProgramId 1 `
-  -InterviewerEmail "interviewer@example.com" `
-  -InterviewerPassword "your_password"
+  -SessionCookie "eyJpdiI6I..." `
+  -XsrfToken "eyJpdiI6I..."
+
+# Or via interactive secure prompt:
+# Simply run without credentials, and the script will securely prompt for 'puptas_session'
 ```
+
 **Expected Outcome:**
-- Worker 1: HTTP 200 OK (Application accepted into program)
-- Worker 2: HTTP 409 Conflict (`"Application is no longer available for interviewer approval."` or `"This action has already been completed or is not available."`)
-- Zero HTTP 500 errors and exactly one program quota decrement.
+- Per round ($N$ rounds): exactly one worker receives HTTP 200 OK (accepted), exactly one worker receives HTTP 409 Conflict (`"This action has already been completed or is not available."`).
+- Zero HTTP 500 errors.
+- Target program quota decrements by exactly $N$ overall (no duplicate slot decrements).
 
 ---
 
