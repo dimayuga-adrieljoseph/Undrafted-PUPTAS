@@ -368,7 +368,27 @@ const confirmCancelReview = async () => {
         showToast("Review cancelled.", "info");
         showCancelModal.value = false;
     } catch (error) {
-        showToast(error.response?.data?.message || "Failed to cancel review.", "error");
+        const msg = error.response?.data?.message || "Failed to cancel review.";
+        showToast(msg, "error");
+        if ([400, 409, 422].includes(error.response?.status)) {
+            refreshDashboard();
+            if (selectedUser.value?.id) {
+                try {
+                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
+                    const userData = refetch.data.user;
+                    selectedUser.value = {
+                        ...selectedUser.value,
+                        ...userData,
+                        application: {
+                            ...userData.application,
+                            processes: userData.application?.processes || [],
+                        },
+                    };
+                } catch (e) {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isCancellingReview.value = false;
     }
@@ -417,7 +437,8 @@ const startReview = async () => {
                     },
                     grades: userData.grades || null,
                 };
-                showToast("Review was already started.");
+                refreshDashboard();
+                showToast(error.response?.data?.message || "Review was already started.", "error");
             } catch (refetchErr) {
                 console.error("Refetch failed:", refetchErr);
             }
@@ -608,8 +629,32 @@ const submitReturn = async () => {
     } catch (error) {
         console.error(error);
         showReturnModal.value = false;
-        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0];
-        evaluationError.value = msg || "Action failed. Please try again.";
+        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0] || "Action failed. Please try again.";
+        evaluationError.value = msg;
+        showToast(msg, "error");
+        if ([400, 409, 422].includes(error.response?.status)) {
+            refreshDashboard();
+            if (selectedUser.value?.id) {
+                try {
+                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
+                    const userData = refetch.data.user;
+                    selectedUser.value = {
+                        ...selectedUser.value,
+                        ...userData,
+                        application: {
+                            ...userData.application,
+                            processes: userData.application?.processes || [],
+                            program: userData.application?.program || null,
+                            second_choice: userData.application?.second_choice || null,
+                            third_choice: userData.application?.third_choice || null,
+                        },
+                        grades: userData.grades || null,
+                    };
+                } catch (refetchErr) {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isSubmitting.value = false;
     }
@@ -633,7 +678,32 @@ const submitPass = async () => {
     } catch (error) {
         console.error("Error passing application:", error);
         showPassModal.value = false;
-        evaluationError.value = error.response?.data?.message || "Failed to pass application.";
+        const msg = error.response?.data?.message || "Failed to pass application.";
+        evaluationError.value = msg;
+        showToast(msg, "error");
+        if ([400, 409, 422].includes(error.response?.status)) {
+            refreshDashboard();
+            if (selectedUser.value?.id) {
+                try {
+                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
+                    const userData = refetch.data.user;
+                    selectedUser.value = {
+                        ...selectedUser.value,
+                        ...userData,
+                        application: {
+                            ...userData.application,
+                            processes: userData.application?.processes || [],
+                            program: userData.application?.program || null,
+                            second_choice: userData.application?.second_choice || null,
+                            third_choice: userData.application?.third_choice || null,
+                        },
+                        grades: userData.grades || null,
+                    };
+                } catch (refetchErr) {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isSubmitting.value = false;
     }

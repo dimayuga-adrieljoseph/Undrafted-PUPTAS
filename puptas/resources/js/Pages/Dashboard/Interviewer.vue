@@ -533,6 +533,22 @@ const acceptApplication = async () => {
         console.error("Accept failed:", e);
         const msg = e.response?.data?.message || "Failed to accept application";
         showSnackbar(msg, "error");
+        if ([400, 409, 422].includes(e.response?.status)) {
+            showAcceptModal.value = false;
+            router.reload({
+                only: ['pendingUsers', 'summary', 'assignedPrograms'],
+                preserveState: true,
+                preserveScroll: true,
+            });
+            if (selectedUser.value?.id) {
+                try {
+                    const res = await axios.get(`/interviewer-dashboard/application/${selectedUser.value.id}`);
+                    selectedUser.value = { ...selectedUser.value, ...res.data.user };
+                } catch (err) {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isSubmitting.value = false;
     }
@@ -565,6 +581,22 @@ const rejectApplication = async () => {
         console.error("Reject failed:", e);
         const msg = e.response?.data?.message || "Failed to reject application";
         showSnackbar(msg, "error");
+        if ([400, 409, 422].includes(e.response?.status)) {
+            showRejectModal.value = false;
+            router.reload({
+                only: ['pendingUsers', 'summary', 'assignedPrograms'],
+                preserveState: true,
+                preserveScroll: true,
+            });
+            if (selectedUser.value?.id) {
+                try {
+                    const res = await axios.get(`/interviewer-dashboard/application/${selectedUser.value.id}`);
+                    selectedUser.value = { ...selectedUser.value, ...res.data.user };
+                } catch (err) {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isSubmitting.value = false;
     }

@@ -56,6 +56,15 @@ const changeCourseSelectedId = ref("");
 const isChangingCourse = ref(false);
 const courseChangeMessage = ref("");
 
+// Snackbar Notification
+const snackbar = ref({ visible: false, message: "", type: "info" });
+let snackbarTimer = null;
+const showSnackbar = (msg, type = "info", duration = 3000) => {
+    snackbar.value = { visible: true, message: msg, type };
+    clearTimeout(snackbarTimer);
+    snackbarTimer = setTimeout(() => { snackbar.value.visible = false; }, duration);
+};
+
 // Fetch programs for Admin/Registrar
 const fetchPrograms = async () => {
     try {
@@ -345,10 +354,22 @@ const changeCourse = async () => {
         }
     } catch (e) {
         console.error("Course change failed:", e);
-        courseChangeMessage.value =
+        const msg =
             e.response?.data?.message ??
             e.response?.data?.errors?.program_id?.[0] ??
             "Failed to change course.";
+        courseChangeMessage.value = msg;
+        showSnackbar(msg, "error");
+        if ([400, 409, 422].includes(e.response?.status)) {
+            await fetchUsers();
+            await fetchPrograms();
+            const refreshedUser = users.value.find((u) => u.id === selectedUser.value.id);
+            if (refreshedUser) {
+                await selectUser(refreshedUser);
+            } else {
+                selectedUser.value = null;
+            }
+        }
     } finally {
         isChangingCourse.value = false;
         setTimeout(() => { courseChangeMessage.value = ""; }, 5000);
@@ -671,6 +692,17 @@ const clearFilters = () => {
             :alt="previewAlt"
             @close="closeImageModal"
         />
+
+        <!-- Snackbar Notification -->
+        <transition name="fade">
+            <div
+                v-if="snackbar.visible"
+                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded shadow-lg z-50 text-white"
+                :class="snackbar.type === 'error' ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-900 dark:text-gray-900'"
+            >
+                {{ snackbar.message }}
+            </div>
+        </transition>
 
     </component>
 </template>

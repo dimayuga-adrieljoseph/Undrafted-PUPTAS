@@ -341,7 +341,8 @@ const startReview = async () => {
                     },
                     grades: userData.grades || null,
                 };
-                showToast("Review was already started.", "success");
+                await fetchUsers();
+                showToast(error.response?.data?.message || "Review was already started.", "error");
             } catch (refetchErr) {
                 console.error("Refetch failed:", refetchErr);
             }
@@ -382,7 +383,19 @@ const confirmCancelReview = async () => {
         showToast("Review cancelled.", "info");
         showCancelModal.value = false;
     } catch (error) {
-        showToast(error.response?.data?.message || "Failed to cancel review.", "error");
+        const msg = error.response?.data?.message || "Failed to cancel review.";
+        showToast(msg, "error");
+        if ([400, 409, 422].includes(error.response?.status)) {
+            await fetchUsers();
+            if (selectedUser.value?.id) {
+                const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
+                if (updatedUser) {
+                    await selectUser(updatedUser);
+                } else {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isCancellingReview.value = false;
     }
@@ -483,8 +496,20 @@ const submitFlag = async () => {
     } catch (error) {
         console.error(error);
         showFlagModal.value = false;
-        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0];
-        evaluationError.value = msg || "Action failed. Please try again.";
+        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0] || "Action failed. Please try again.";
+        evaluationError.value = msg;
+        showToast(msg, "error");
+        if ([400, 409, 422].includes(error.response?.status)) {
+            await fetchUsers();
+            if (selectedUser.value?.id) {
+                const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
+                if (updatedUser) {
+                    await selectUser(updatedUser);
+                } else {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isSubmitting.value = false;
     }
@@ -530,7 +555,19 @@ const submitPass = async () => {
         console.error("Error passing application:", error);
         showPassModal.value = false;
         const msg = error.response?.data?.message || "Failed to pass application.";
+        evaluationError.value = msg;
         showToast(msg, "error");
+        if ([400, 409, 422].includes(error.response?.status)) {
+            await fetchUsers();
+            if (selectedUser.value?.id) {
+                const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
+                if (updatedUser) {
+                    await selectUser(updatedUser);
+                } else {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isSubmitting.value = false;
     }

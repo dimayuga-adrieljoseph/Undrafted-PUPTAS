@@ -566,6 +566,18 @@ const acceptApplication = async () => {
             e.response?.data?.message ||
             "Failed to accept application due to an unexpected error.";
         showSnackbar(msg, "error");
+        if ([400, 409, 422].includes(e.response?.status)) {
+            showAcceptModal.value = false;
+            await fetchUsers();
+            if (selectedUser.value?.id) {
+                const updatedUser = users.value.find(u => u.id === currentUserId);
+                if (updatedUser) {
+                    await selectUser(updatedUser);
+                } else {
+                    selectedUser.value = null;
+                }
+            }
+        }
     } finally {
         isSubmitting.value = false;
     }
@@ -609,6 +621,18 @@ const rejectApplication = async () => {
             e.response?.data?.message ||
             "Failed to reject application due to an unexpected error.";
         showSnackbar(msg, "error");
+        if ([400, 409, 422].includes(e.response?.status)) {
+            showRejectModal.value = false;
+            await fetchUsers();
+            if (selectedUser.value?.id) {
+                const updatedUser = users.value.find(u => u.id === currentUserId);
+                if (updatedUser) {
+                    await selectUser(updatedUser);
+                } else {
+                    selectedUser.value = null;
+                }
+            }
+        }
     } finally {
         isSubmitting.value = false;
     }
